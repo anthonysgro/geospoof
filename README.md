@@ -32,6 +32,42 @@ Then in Firefox:
 
 Extension will be published to Firefox Add-ons store.
 
+### Building from Source (for Mozilla reviewers)
+
+These steps produce an exact copy of the distributed extension from source.
+
+**Requirements:**
+
+- OS: macOS, Linux, or Windows
+- Node.js 18+ (tested with v24.12.0)
+- npm 9+ (tested with v11.8.0)
+
+**Steps:**
+
+```bash
+# 1. Extract the source archive (or clone the repo)
+# 2. Install dependencies (exact versions locked in package-lock.json)
+npm install
+
+# 3. Copy the environment config
+cp .env.example .env
+
+# 4. Build the production extension
+npm run build:prod
+```
+
+The `dist/` folder now contains the extension. All output files are generated from the TypeScript source in `src/` using Vite (bundler) and esbuild (minifier). No source files are hand-minified or obfuscated.
+
+**What the build does:**
+
+- Compiles TypeScript (`src/`) to JavaScript via Vite + esbuild
+- Bundles each entry point into a standalone `.js` file (no code splitting)
+- Minifies production output and strips `console.log`/`console.debug` calls
+- Copies static assets (manifest.json, popup HTML/CSS, icons) to `dist/`
+- Syncs the version from `package.json` into `dist/manifest.json`
+
+**No other tools** (template engines, CSS preprocessors, code generators) are used.
+
 ## Quick Start
 
 1. Click the GeoSpoof icon in your toolbar

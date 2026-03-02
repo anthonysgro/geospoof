@@ -68,9 +68,12 @@ function updateInjectedScript(): void {
 }
 
 // Inject the override script into the page context IMMEDIATELY.
-// Use synchronous XHR to fetch the script content so it executes inline
-// via textContent — this guarantees the event listener is registered
-// before any page JS or settings dispatch runs.
+// Synchronous XHR is intentional: content scripts run at document_start and
+// must install API overrides before any page JavaScript executes. Async
+// alternatives (fetch, <script src>) create a race window where pages can
+// observe the real geolocation API. Sync XHR from a content script does not
+// block the browser UI thread — it only blocks this content script's execution,
+// which is the desired behavior.
 try {
   const xhr = new XMLHttpRequest();
   xhr.open("GET", browser.runtime.getURL("content/injected.js"), false); // synchronous
