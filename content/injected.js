@@ -11,6 +11,7 @@
   const originalWatchPosition = navigator.geolocation.watchPosition.bind(navigator.geolocation);
   const originalClearWatch = navigator.geolocation.clearWatch.bind(navigator.geolocation);
   const originalGetTimezoneOffset = Date.prototype.getTimezoneOffset;
+  const OriginalDateTimeFormat = Intl.DateTimeFormat;
   const originalResolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions;
   const originalToString = Date.prototype.toString;
   const originalToTimeString = Date.prototype.toTimeString;
@@ -205,6 +206,31 @@
     };
   } catch (error) {
     console.error('[GeoSpoof Injected] Failed to override getTimezoneOffset:', error);
+  }
+  
+  // Override Intl.DateTimeFormat constructor to inject timezone
+  try {
+    Intl.DateTimeFormat = function(locales, options) {
+      try {
+        // If spoofing is enabled and timezone data is available, inject timezone
+        if (spoofingEnabled && timezoneData) {
+          const opts = { ...options, timeZone: timezoneData.identifier };
+          return new OriginalDateTimeFormat(locales, opts);
+        }
+        
+        // Otherwise use original constructor
+        return new OriginalDateTimeFormat(locales, options);
+      } catch (error) {
+        console.error('[GeoSpoof Injected] Error in DateTimeFormat constructor override:', error);
+        return new OriginalDateTimeFormat(locales, options);
+      }
+    };
+    
+    // Copy static properties
+    Intl.DateTimeFormat.prototype = OriginalDateTimeFormat.prototype;
+    Intl.DateTimeFormat.supportedLocalesOf = OriginalDateTimeFormat.supportedLocalesOf;
+  } catch (error) {
+    console.error('[GeoSpoof Injected] Failed to override Intl.DateTimeFormat constructor:', error);
   }
   
   // Override Intl.DateTimeFormat.prototype.resolvedOptions()
