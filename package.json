@@ -12,7 +12,7 @@
     "lint": "eslint .",
     "build": "npm run build:clean && npm run build:package",
     "build:clean": "rm -rf dist && mkdir -p dist",
-    "build:package": "cd dist && zip -r ../geospoof-v$(node -p \"require('../package.json').version\").zip ../manifest.json ../background ../content ../popup ../icons -x '*.DS_Store' && cd .."
+    "build:package": "zip -r geospoof-v$(node -p \"require('./package.json').version\").zip manifest.json background content popup icons -x '*.DS_Store'"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",
