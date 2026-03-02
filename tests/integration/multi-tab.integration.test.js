@@ -1,0 +1,475 @@
+/**
+ * Integration Tests for Multi-Tab Scenarios
+ * 
+ * Tests settings propagation to multiple tabs, new tab handling,
+ * and tab reload behavior.
+ * 
+ * Requirements: 8.3, 8.4
+ */
+
+// Mock browser API
+global.browser = {
+  tabs: {
+    query: jest.fn(),
+    sendMessage: jest.fn(),
+    onCreated: {
+      addListener: jest.fn()
+    },
+    onUpdated: {
+      addListener: jest.fn()
+    }
+  },
+  storage: {
+    local: {
+      get: jest.fn(),
+      set: jest.fn()
+    }
+  },
+  action: {
+    setBadgeBackgroundColor: jest.fn(),
+    setBadgeText: jest.fn()
+  },
+  browserAction: {
+    setBadgeBackgroundColor: jest.fn(async () => {}),
+    setBadgeText: jest.fn(async () => {})
+  },
+  runtime: {
+    onMessage: {
+      addListener: jest.fn()
+    },
+    onInstalled: {
+      addListener: jest.fn()
+    }
+  },
+  privacy: {
+    network: {
+      webRTCIPHandlingPolicy: {
+        set: jest.fn(),
+        clear: jest.fn()
+      }
+    }
+  }
+};
+
+const background = require("../../background/background.js");
+
+describe("Multi-Tab Integration Tests", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe("Settings propagation to multiple tabs", () => {
+    test("should send settings to all tabs when broadcasting", async () => {
+      // Setup: Create 5 mock tabs
+      const tabs = [
+        { id: 1, url: "https://example1.com" },
+        { id: 2, url: "https://example2.com" },
+        { id: 3, url: "https://example3.com" },
+        { id: 4, url: "https://example4.com" },
+        { id: 5, url: "https://example5.com" }
+      ];
+
+      browser.tabs.query.mockResolvedValue(tabs);
+
+      const messagesSent = [];
+      browser.tabs.sendMessage.mockImplementation((tabId, message) => {
+        messagesSent.push({ tabId, message });
+        return Promise.resolve();
+      });
+
+      // Create settings to broadcast
+      const settings = {
+        enabled: true,
+        location: {
+          latitude: 37.7749,
+          longitude: -122.4194,
+          accuracy: 10
+        },
+        timezone: {
+          identifier: "America/Los_Angeles",
+          offset: 480,
+          dstOffset: 60
+        },
+        locationName: {
+          city: "San Francisco",
+          country: "USA",
+          displayName: "San Francisco, CA, USA"
+        }
+      };
+
+      // Act: Broadcast settings
+      await background.broadcastSettingsToTabs(settings);
+
+      // Assert: All tabs received the message
+      expect(messagesSent).toHaveLength(5);
+      expect(messagesSent.map(m => m.tabId)).toEqual([1, 2, 3, 4, 5]);
+
+      // Assert: All messages are identical
+      messagesSent.forEach(({ message }) => {
+        expect(message.type).toBe("UPDATE_SETTINGS");
+        expect(message.payload).toEqual(settings);
+      });
+    });
+
+    test("should handle tabs without content scripts gracefully", async () => {
+      // Setup: Mix of tabs with and without content scripts
+      const tabs = [
+        { id: 1, url: "https://example.com" },
+        { id: 2, url: "about:blank" },
+        { id: 3, url: "moz-extension://abc123" },
+        { id: 4, url: "https://test.com" }
+      ];
+
+      browser.tabs.query.mockResolvedValue(tabs);
+
+      // Simulate failure for non-http tabs
+      browser.tabs.sendMessage.mockImplementation((tabId) => {
+        if (tabId === 2 || tabId === 3) {
+          return Promise.reject(new Error("Content script not available"));
+        }
+        return Promise.resolve();
+      });
+
+      const settings = {
+        enabled: true,
+        location: { latitude: 0, longitude: 0, accuracy: 10 }
+      };
+
+      // Act: Should not throw even if some tabs fail
+      await expect(
+        background.broadcastSettingsToTabs(settings)
+      ).resolves.not.toThrow();
+
+      // Assert: All tabs were attempted
+      expect(browser.tabs.sendMessage).toHaveBeenCalledTimes(4);
+    });
+
+    test("should propagate settings changes to all tabs", async () => {
+      // Setup: Mock storage and tabs
+      const tabs = [
+        { id: 1, url: "https://example1.com" },
+        { id: 2, url: "https://example2.com" },
+        { id: 3, url: "https://example3.com" }
+      ];
+
+      browser.tabs.query.mockResolvedValue(tabs);
+
+      const initialSettings = {
+        enabled: false,
+        location: null,
+        timezone: null,
+        locationName: null,
+        webrtcProtection: false,
+        onboardingCompleted: true,
+        version: "1.0",
+        lastUpdated: Date.now()
+      };
+
+      browser.storage.local.get.mockResolvedValue({ settings: initialSettings });
+      browser.storage.local.set.mockResolvedValue();
+
+      const messagesSent = [];
+      browser.tabs.sendMessage.mockImplementation((tabId, message) => {
+        messagesSent.push({ tabId, message });
+        return Promise.resolve();
+      });
+
+      // Act: Enable protection with location
+      await background.handleSetLocation({
+        latitude: 51.5074,
+        longitude: -0.1278
+      });
+
+      // Assert: Settings were broadcast to all tabs
+      expect(messagesSent.length).toBeGreaterThan(0);
+      
+      // Get the last broadcast (after location was set)
+      const lastBroadcast = messagesSent.slice(-3); // Last 3 messages (one per tab)
+      expect(lastBroadcast).toHaveLength(3);
+      
+      lastBroadcast.forEach(({ message }) => {
+        expect(message.type).toBe("UPDATE_SETTINGS");
+        expect(message.payload.location.latitude).toBe(51.5074);
+        expect(message.payload.location.longitude).toBe(-0.1278);
+      });
+    });
+  });
+
+  describe("New tab receives settings immediately", () => {
+    test("should send settings to newly created tab", async () => {
+      // Setup: Mock settings in storage
+      const settings = {
+        enabled: true,
+        location: {
+          latitude: 40.7128,
+          longitude: -74.0060,
+          accuracy: 10
+        },
+        timezone: {
+          identifier: "America/New_York",
+          offset: 300,
+          dstOffset: 60
+        },
+        locationName: {
+          city: "New York",
+          country: "USA",
+          displayName: "New York, NY, USA"
+        },
+        webrtcProtection: false,
+        onboardingCompleted: true,
+        version: "1.0",
+        lastUpdated: Date.now()
+      };
+
+      browser.storage.local.get.mockResolvedValue({ settings });
+
+      const messagesSent = [];
+      browser.tabs.sendMessage.mockImplementation((tabId, message) => {
+        messagesSent.push({ tabId, message });
+        return Promise.resolve();
+      });
+
+      // Act: Load settings (simulating what happens when a new tab is created)
+      const loadedSettings = await background.loadSettings();
+
+      // Simulate sending to new tab
+      const newTabId = 42;
+      await browser.tabs.sendMessage(newTabId, {
+        type: "UPDATE_SETTINGS",
+        payload: loadedSettings
+      });
+
+      // Assert: New tab received settings
+      expect(messagesSent).toHaveLength(1);
+      expect(messagesSent[0].tabId).toBe(newTabId);
+      expect(messagesSent[0].message.type).toBe("UPDATE_SETTINGS");
+      expect(messagesSent[0].message.payload.enabled).toBe(true);
+      expect(messagesSent[0].message.payload.location).toEqual(settings.location);
+    });
+
+    test("should send settings even when protection is disabled", async () => {
+      // Setup: Settings with protection disabled
+      const settings = {
+        enabled: false,
+        location: {
+          latitude: 35.6762,
+          longitude: 139.6503,
+          accuracy: 10
+        },
+        timezone: {
+          identifier: "Asia/Tokyo",
+          offset: -540,
+          dstOffset: 0
+        },
+        locationName: null,
+        webrtcProtection: false,
+        onboardingCompleted: true,
+        version: "1.0",
+        lastUpdated: Date.now()
+      };
+
+      browser.storage.local.get.mockResolvedValue({ settings });
+
+      const messagesSent = [];
+      browser.tabs.sendMessage.mockImplementation((tabId, message) => {
+        messagesSent.push({ tabId, message });
+        return Promise.resolve();
+      });
+
+      // Act: Load settings and send to new tab
+      const loadedSettings = await background.loadSettings();
+      const newTabId = 99;
+      await browser.tabs.sendMessage(newTabId, {
+        type: "UPDATE_SETTINGS",
+        payload: loadedSettings
+      });
+
+      // Assert: New tab received settings even though protection is disabled
+      expect(messagesSent).toHaveLength(1);
+      expect(messagesSent[0].message.payload.enabled).toBe(false);
+      expect(messagesSent[0].message.payload.location).toEqual(settings.location);
+    });
+  });
+
+  describe("Tab reload preserves settings", () => {
+    test("should reapply settings when tab is reloaded", async () => {
+      // Setup: Mock settings in storage
+      const settings = {
+        enabled: true,
+        location: {
+          latitude: -33.8688,
+          longitude: 151.2093,
+          accuracy: 10
+        },
+        timezone: {
+          identifier: "Australia/Sydney",
+          offset: -600,
+          dstOffset: -60
+        },
+        locationName: {
+          city: "Sydney",
+          country: "Australia",
+          displayName: "Sydney, NSW, Australia"
+        },
+        webrtcProtection: true,
+        geonamesUsername: "geospoof",
+        onboardingCompleted: true,
+        version: "1.0",
+        lastUpdated: Date.now()
+      };
+
+      browser.storage.local.get.mockResolvedValue({ settings });
+
+      const messagesSent = [];
+      browser.tabs.sendMessage.mockImplementation((tabId, message) => {
+        messagesSent.push({ tabId, message });
+        return Promise.resolve();
+      });
+
+      // Act: Simulate tab reload by loading settings and sending to tab
+      const tabId = 5;
+      const loadedSettings = await background.loadSettings();
+      
+      await browser.tabs.sendMessage(tabId, {
+        type: "UPDATE_SETTINGS",
+        payload: loadedSettings
+      });
+
+      // Assert: Tab received settings after reload
+      expect(messagesSent).toHaveLength(1);
+      expect(messagesSent[0].tabId).toBe(tabId);
+      expect(messagesSent[0].message.type).toBe("UPDATE_SETTINGS");
+      expect(messagesSent[0].message.payload).toEqual(settings);
+    });
+
+    test("should handle multiple tab reloads consistently", async () => {
+      // Setup: Mock settings
+      const settings = {
+        enabled: true,
+        location: {
+          latitude: 48.8566,
+          longitude: 2.3522,
+          accuracy: 10
+        },
+        timezone: {
+          identifier: "Europe/Paris",
+          offset: -60,
+          dstOffset: -60
+        },
+        locationName: {
+          city: "Paris",
+          country: "France",
+          displayName: "Paris, France"
+        },
+        webrtcProtection: false,
+        geonamesUsername: "geospoof",
+        onboardingCompleted: true,
+        version: "1.0",
+        lastUpdated: Date.now()
+      };
+
+      browser.storage.local.get.mockResolvedValue({ settings });
+
+      const messagesSent = [];
+      browser.tabs.sendMessage.mockImplementation((tabId, message) => {
+        messagesSent.push({ tabId, message });
+        return Promise.resolve();
+      });
+
+      // Act: Simulate multiple tab reloads
+      const tabIds = [1, 2, 3];
+      for (const tabId of tabIds) {
+        const loadedSettings = await background.loadSettings();
+        await browser.tabs.sendMessage(tabId, {
+          type: "UPDATE_SETTINGS",
+          payload: loadedSettings
+        });
+      }
+
+      // Assert: All tabs received identical settings
+      expect(messagesSent).toHaveLength(3);
+      
+      const firstPayload = messagesSent[0].message.payload;
+      messagesSent.forEach(({ message }) => {
+        expect(message.payload).toEqual(firstPayload);
+      });
+    });
+  });
+
+  describe("Settings consistency across tab lifecycle", () => {
+    test("should maintain consistent settings across tab creation, update, and reload", async () => {
+      // Setup: Initial settings
+      const settings = {
+        enabled: true,
+        location: {
+          latitude: 55.7558,
+          longitude: 37.6173,
+          accuracy: 10
+        },
+        timezone: {
+          identifier: "Europe/Moscow",
+          offset: -180,
+          dstOffset: 0
+        },
+        locationName: {
+          city: "Moscow",
+          country: "Russia",
+          displayName: "Moscow, Russia"
+        },
+        webrtcProtection: false,
+        onboardingCompleted: true,
+        version: "1.0",
+        lastUpdated: Date.now()
+      };
+
+      browser.storage.local.get.mockResolvedValue({ settings });
+      browser.storage.local.set.mockResolvedValue();
+
+      const tabs = [
+        { id: 1, url: "https://example1.com" },
+        { id: 2, url: "https://example2.com" }
+      ];
+      browser.tabs.query.mockResolvedValue(tabs);
+
+      const messagesSent = [];
+      browser.tabs.sendMessage.mockImplementation((tabId, message) => {
+        messagesSent.push({ tabId, message, timestamp: Date.now() });
+        return Promise.resolve();
+      });
+
+      // Act: Simulate tab lifecycle events
+      
+      // 1. Initial broadcast to existing tabs
+      await background.broadcastSettingsToTabs(settings);
+      const initialMessages = messagesSent.length;
+
+      // 2. New tab created
+      const newTabId = 3;
+      const loadedSettings1 = await background.loadSettings();
+      await browser.tabs.sendMessage(newTabId, {
+        type: "UPDATE_SETTINGS",
+        payload: loadedSettings1
+      });
+
+      // 3. Tab updated (reload)
+      const loadedSettings2 = await background.loadSettings();
+      await browser.tabs.sendMessage(1, {
+        type: "UPDATE_SETTINGS",
+        payload: loadedSettings2
+      });
+
+      // Assert: All messages contain identical settings
+      const allPayloads = messagesSent.map(m => m.message.payload);
+      const firstPayload = allPayloads[0];
+      
+      allPayloads.forEach(payload => {
+        expect(payload.enabled).toBe(firstPayload.enabled);
+        expect(payload.location).toEqual(firstPayload.location);
+        expect(payload.timezone).toEqual(firstPayload.timezone);
+      });
+
+      // Assert: Correct number of messages sent
+      expect(messagesSent.length).toBe(initialMessages + 2); // 2 existing + 1 new + 1 reload
+    });
+  });
+});

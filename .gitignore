@@ -1,0 +1,31 @@
+# macOS
+.DS_Store
+
+# IDE
+.kiro
+.vscode
+.idea
+
+# Dependencies
+node_modules
+
+# Test coverage
+coverage
+
+# Build artifacts
+dist
+build
+*.zip
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment variables
+.env
+.env.local
+
+# Temporary files
+*.tmp
+*.temp
+.cache
