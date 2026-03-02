@@ -11,7 +11,6 @@ import {
   getBroadcastMessage,
   tabsSendMessageCallCount,
 } from "../helpers/mock-types";
-import { storageData } from "../setup";
 import { importBackground } from "../helpers/import-background";
 
 /** Arbitrary for a full Settings object with all internal fields populated. */

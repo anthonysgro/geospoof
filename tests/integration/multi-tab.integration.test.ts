@@ -7,10 +7,26 @@
  * Requirements: 8.3, 8.4
  */
 
+import { vi } from "vitest";
 import type { Settings } from "@/shared/types/settings";
 import type { Message } from "@/shared/types/messages";
+import { expectTabsSendMessage } from "../helpers/mock-types";
 
 const background = await import("@/background");
+
+// Typed mock accessors for browser APIs
+const tabsQuery = vi.mocked(browser.tabs.query);
+const tabsSendMessage = vi.mocked(browser.tabs.sendMessage);
+const storageGet = vi.mocked(
+  (browser.storage.local as unknown as Record<string, unknown>)[
+    "get"
+  ] as typeof browser.storage.local.get
+);
+const storageSet = vi.mocked(
+  (browser.storage.local as unknown as Record<string, unknown>)[
+    "set"
+  ] as typeof browser.storage.local.set
+);
 
 interface TrackedMessage {
   tabId: number;
@@ -32,10 +48,10 @@ describe("Multi-Tab Integration Tests", () => {
         { id: 4, url: "https://test.com" },
       ];
 
-      browser.tabs.query.mockResolvedValue(tabs);
+      tabsQuery.mockResolvedValue(tabs);
 
       // Simulate failure for non-http tabs
-      browser.tabs.sendMessage.mockImplementation((tabId: number) => {
+      tabsSendMessage.mockImplementation((tabId: number) => {
         if (tabId === 2 || tabId === 3) {
           return Promise.reject(new Error("Content script not available"));
         }
@@ -58,7 +74,7 @@ describe("Multi-Tab Integration Tests", () => {
       await expect(background.broadcastSettingsToTabs(settings)).resolves.not.toThrow();
 
       // Assert: All tabs were attempted
-      expect(browser.tabs.sendMessage).toHaveBeenCalledTimes(4);
+      expectTabsSendMessage().toHaveBeenCalledTimes(4);
     });
   });
 
@@ -88,10 +104,10 @@ describe("Multi-Tab Integration Tests", () => {
         lastUpdated: Date.now(),
       };
 
-      browser.storage.local.get.mockResolvedValue({ settings });
+      storageGet.mockResolvedValue({ settings });
 
       const messagesSent: TrackedMessage[] = [];
-      browser.tabs.sendMessage.mockImplementation((tabId: number, message: Message<Settings>) => {
+      tabsSendMessage.mockImplementation((tabId: number, message: Message<Settings>) => {
         messagesSent.push({ tabId, message });
         return Promise.resolve();
       });
@@ -101,7 +117,7 @@ describe("Multi-Tab Integration Tests", () => {
 
       // Simulate sending to new tab
       const newTabId = 42;
-      await browser.tabs.sendMessage(newTabId, {
+      await tabsSendMessage(newTabId, {
         type: "UPDATE_SETTINGS",
         payload: loadedSettings,
       });
@@ -136,10 +152,10 @@ describe("Multi-Tab Integration Tests", () => {
         lastUpdated: Date.now(),
       };
 
-      browser.storage.local.get.mockResolvedValue({ settings });
+      storageGet.mockResolvedValue({ settings });
 
       const messagesSent: TrackedMessage[] = [];
-      browser.tabs.sendMessage.mockImplementation((tabId: number, message: Message<Settings>) => {
+      tabsSendMessage.mockImplementation((tabId: number, message: Message<Settings>) => {
         messagesSent.push({ tabId, message });
         return Promise.resolve();
       });
@@ -147,7 +163,7 @@ describe("Multi-Tab Integration Tests", () => {
       // Act: Load settings and send to new tab
       const loadedSettings = await background.loadSettings();
       const newTabId = 99;
-      await browser.tabs.sendMessage(newTabId, {
+      await tabsSendMessage(newTabId, {
         type: "UPDATE_SETTINGS",
         payload: loadedSettings,
       });
@@ -187,10 +203,10 @@ describe("Multi-Tab Integration Tests", () => {
         lastUpdated: Date.now(),
       };
 
-      browser.storage.local.get.mockResolvedValue({ settings });
+      storageGet.mockResolvedValue({ settings });
 
       const messagesSent: TrackedMessage[] = [];
-      browser.tabs.sendMessage.mockImplementation((tabId: number, message: Message<Settings>) => {
+      tabsSendMessage.mockImplementation((tabId: number, message: Message<Settings>) => {
         messagesSent.push({ tabId, message });
         return Promise.resolve();
       });
@@ -199,7 +215,7 @@ describe("Multi-Tab Integration Tests", () => {
       const tabId = 5;
       const loadedSettings = await background.loadSettings();
 
-      await browser.tabs.sendMessage(tabId, {
+      await tabsSendMessage(tabId, {
         type: "UPDATE_SETTINGS",
         payload: loadedSettings,
       });
@@ -237,10 +253,10 @@ describe("Multi-Tab Integration Tests", () => {
         lastUpdated: Date.now(),
       };
 
-      browser.storage.local.get.mockResolvedValue({ settings });
+      storageGet.mockResolvedValue({ settings });
 
       const messagesSent: TrackedMessage[] = [];
-      browser.tabs.sendMessage.mockImplementation((tabId: number, message: Message<Settings>) => {
+      tabsSendMessage.mockImplementation((tabId: number, message: Message<Settings>) => {
         messagesSent.push({ tabId, message });
         return Promise.resolve();
       });
@@ -249,7 +265,7 @@ describe("Multi-Tab Integration Tests", () => {
       const tabIds = [1, 2, 3];
       for (const tabId of tabIds) {
         const loadedSettings = await background.loadSettings();
-        await browser.tabs.sendMessage(tabId, {
+        await tabsSendMessage(tabId, {
           type: "UPDATE_SETTINGS",
           payload: loadedSettings,
         });
@@ -292,17 +308,17 @@ describe("Multi-Tab Integration Tests", () => {
         lastUpdated: Date.now(),
       };
 
-      browser.storage.local.get.mockResolvedValue({ settings });
-      browser.storage.local.set.mockResolvedValue(undefined);
+      storageGet.mockResolvedValue({ settings });
+      storageSet.mockResolvedValue(undefined);
 
       const tabs = [
         { id: 1, url: "https://example1.com" },
         { id: 2, url: "https://example2.com" },
       ];
-      browser.tabs.query.mockResolvedValue(tabs);
+      tabsQuery.mockResolvedValue(tabs);
 
       const messagesSent: TimestampedMessage[] = [];
-      browser.tabs.sendMessage.mockImplementation((tabId: number, message: Message<Settings>) => {
+      tabsSendMessage.mockImplementation((tabId: number, message: Message<Settings>) => {
         messagesSent.push({ tabId, message, timestamp: Date.now() });
         return Promise.resolve();
       });
@@ -316,14 +332,14 @@ describe("Multi-Tab Integration Tests", () => {
       // 2. New tab created
       const newTabId = 3;
       const loadedSettings1 = await background.loadSettings();
-      await browser.tabs.sendMessage(newTabId, {
+      await tabsSendMessage(newTabId, {
         type: "UPDATE_SETTINGS",
         payload: loadedSettings1,
       });
 
       // 3. Tab updated (reload)
       const loadedSettings2 = await background.loadSettings();
-      await browser.tabs.sendMessage(1, {
+      await tabsSendMessage(1, {
         type: "UPDATE_SETTINGS",
         payload: loadedSettings2,
       });
