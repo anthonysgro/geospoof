@@ -243,13 +243,26 @@ document.getElementById("locationSearch").addEventListener("input", (e) => {
   clearTimeout(searchTimeout);
   const query = e.target.value.trim();
   
+  const container = document.getElementById("searchResults");
+  
   if (query.length < 3) {
-    document.getElementById("searchResults").innerHTML = "";
+    while (container.firstChild) {
+      container.removeChild(container.firstChild);
+    }
     return;
   }
   
   // Show loading indicator
-  document.getElementById("searchResults").innerHTML = '<div class="loading"><div class="spinner"></div>Searching...</div>';
+  while (container.firstChild) {
+    container.removeChild(container.firstChild);
+  }
+  const loadingDiv = document.createElement("div");
+  loadingDiv.className = "loading";
+  const spinner = document.createElement("div");
+  spinner.className = "spinner";
+  loadingDiv.appendChild(spinner);
+  loadingDiv.appendChild(document.createTextNode("Searching..."));
+  container.appendChild(loadingDiv);
   
   searchTimeout = setTimeout(async () => {
     try {
@@ -261,8 +274,13 @@ document.getElementById("locationSearch").addEventListener("input", (e) => {
       displaySearchResults(response.results || []);
     } catch (error) {
       console.error("Geocoding failed:", error);
-      document.getElementById("searchResults").innerHTML = 
-        '<div class="no-results">Search failed. Please try again.</div>';
+      while (container.firstChild) {
+        container.removeChild(container.firstChild);
+      }
+      const errorDiv = document.createElement("div");
+      errorDiv.className = "no-results";
+      errorDiv.textContent = "Search failed. Please try again.";
+      container.appendChild(errorDiv);
     }
   }, 300); // Debounce 300ms
 });
@@ -271,23 +289,41 @@ document.getElementById("locationSearch").addEventListener("input", (e) => {
 function displaySearchResults(results) {
   const container = document.getElementById("searchResults");
   
+  // Clear existing results
+  while (container.firstChild) {
+    container.removeChild(container.firstChild);
+  }
+  
   if (results.length === 0) {
-    container.innerHTML = "<div class='no-results'>No locations found</div>";
+    const noResults = document.createElement("div");
+    noResults.className = "no-results";
+    noResults.textContent = "No locations found";
+    container.appendChild(noResults);
     return;
   }
   
-  container.innerHTML = results.map(result => `
-    <div class="search-result" data-lat="${result.latitude}" data-lon="${result.longitude}">
-      <div class="result-name">${result.name}</div>
-      <div class="result-coords">${result.latitude.toFixed(4)}, ${result.longitude.toFixed(4)}</div>
-    </div>
-  `).join("");
-  
-  // Add click handlers
-  container.querySelectorAll(".search-result").forEach(el => {
-    el.addEventListener("click", () => {
-      const lat = parseFloat(el.dataset.lat);
-      const lon = parseFloat(el.dataset.lon);
+  results.forEach(result => {
+    const resultDiv = document.createElement("div");
+    resultDiv.className = "search-result";
+    resultDiv.dataset.lat = result.latitude;
+    resultDiv.dataset.lon = result.longitude;
+    
+    const nameDiv = document.createElement("div");
+    nameDiv.className = "result-name";
+    nameDiv.textContent = result.name;
+    
+    const coordsDiv = document.createElement("div");
+    coordsDiv.className = "result-coords";
+    coordsDiv.textContent = `${result.latitude.toFixed(4)}, ${result.longitude.toFixed(4)}`;
+    
+    resultDiv.appendChild(nameDiv);
+    resultDiv.appendChild(coordsDiv);
+    container.appendChild(resultDiv);
+    
+    // Add click handler
+    resultDiv.addEventListener("click", () => {
+      const lat = parseFloat(resultDiv.dataset.lat);
+      const lon = parseFloat(resultDiv.dataset.lon);
       setLocation(lat, lon);
     });
   });
@@ -295,9 +331,20 @@ function displaySearchResults(results) {
 
 // Set location
 async function setLocation(latitude, longitude) {
+  const container = document.getElementById("searchResults");
+  
   try {
     // Show loading indicator with spinner
-    document.getElementById("searchResults").innerHTML = '<div class="loading"><div class="spinner"></div>Setting location...</div>';
+    while (container.firstChild) {
+      container.removeChild(container.firstChild);
+    }
+    const loadingDiv = document.createElement("div");
+    loadingDiv.className = "loading";
+    const spinner = document.createElement("div");
+    spinner.className = "spinner";
+    loadingDiv.appendChild(spinner);
+    loadingDiv.appendChild(document.createTextNode("Setting location..."));
+    container.appendChild(loadingDiv);
     
     await browser.runtime.sendMessage({
       type: "SET_LOCATION",
@@ -306,13 +353,17 @@ async function setLocation(latitude, longitude) {
     
     // Clear search
     document.getElementById("locationSearch").value = "";
-    document.getElementById("searchResults").innerHTML = "";
+    while (container.firstChild) {
+      container.removeChild(container.firstChild);
+    }
     
     // Reload settings to update display
     await loadSettings();
   } catch (error) {
     console.error("Failed to set location:", error);
-    document.getElementById("searchResults").innerHTML = "";
+    while (container.firstChild) {
+      container.removeChild(container.firstChild);
+    }
     alert("Failed to set location. Please try again.");
   }
 }
