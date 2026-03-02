@@ -20,13 +20,13 @@ function setupContentScript(settings) {
           altitude: null,
           altitudeAccuracy: null,
           heading: null,
-          speed: null
+          speed: null,
         },
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }, 10);
   });
-  
+
   const originalWatchPosition = jest.fn((success) => {
     setTimeout(() => {
       success({
@@ -37,14 +37,14 @@ function setupContentScript(settings) {
           altitude: null,
           altitudeAccuracy: null,
           heading: null,
-          speed: null
+          speed: null,
         },
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
     }, 10);
     return 1;
   });
-  
+
   const originalClearWatch = jest.fn();
   const originalGetTimezoneOffset = Date.prototype.getTimezoneOffset;
   const OriginalDateTimeFormat = Intl.DateTimeFormat;
@@ -64,19 +64,19 @@ function setupContentScript(settings) {
     if (!tz) {
       return false;
     }
-    
-    if (typeof tz.identifier !== 'string' || tz.identifier.length === 0) {
+
+    if (typeof tz.identifier !== "string" || tz.identifier.length === 0) {
       return false;
     }
-    
-    if (typeof tz.offset !== 'number' || !Number.isFinite(tz.offset)) {
+
+    if (typeof tz.offset !== "number" || !Number.isFinite(tz.offset)) {
       return false;
     }
-    
-    if (typeof tz.dstOffset !== 'number' || !Number.isFinite(tz.dstOffset)) {
+
+    if (typeof tz.dstOffset !== "number" || !Number.isFinite(tz.dstOffset)) {
       return false;
     }
-    
+
     return true;
   }
 
@@ -99,17 +99,17 @@ function setupContentScript(settings) {
         altitude: null,
         altitudeAccuracy: null,
         heading: null,
-        speed: null
+        speed: null,
       },
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
   }
 
   // Override getCurrentPosition
-  const getCurrentPosition = function(successCallback, errorCallback, options) {
+  const getCurrentPosition = function (successCallback, errorCallback, options) {
     if (spoofingEnabled && spoofedLocation) {
       const position = createGeolocationPosition(spoofedLocation);
-      
+
       // Simulate realistic timing (10-50ms delay with variance)
       const delay = 10 + Math.random() * 40;
       setTimeout(() => {
@@ -123,20 +123,20 @@ function setupContentScript(settings) {
   };
 
   // Override watchPosition
-  const watchPosition = function(successCallback, errorCallback, options) {
+  const watchPosition = function (successCallback, errorCallback, options) {
     if (spoofingEnabled && spoofedLocation) {
       const watchId = watchIdCounter++;
       watchCallbacks.set(watchId, successCallback);
-      
+
       const position = createGeolocationPosition(spoofedLocation);
       const delay = 10 + Math.random() * 40;
-      
+
       setTimeout(() => {
         if (successCallback) {
           successCallback(position);
         }
       }, delay);
-      
+
       return watchId;
     } else {
       return originalWatchPosition.call(this, successCallback, errorCallback, options);
@@ -144,7 +144,7 @@ function setupContentScript(settings) {
   };
 
   // Override clearWatch
-  const clearWatch = function(watchId) {
+  const clearWatch = function (watchId) {
     if (spoofingEnabled) {
       watchCallbacks.delete(watchId);
     } else {
@@ -153,7 +153,7 @@ function setupContentScript(settings) {
   };
 
   // Override getTimezoneOffset
-  const getTimezoneOffset = function() {
+  const getTimezoneOffset = function () {
     if (spoofingEnabled && timezoneOverride) {
       return -timezoneOverride.offset;
     }
@@ -161,35 +161,35 @@ function setupContentScript(settings) {
   };
 
   // Override DateTimeFormat
-  const DateTimeFormat = function(...args) {
+  const DateTimeFormat = function (...args) {
     const instance = new OriginalDateTimeFormat(...args);
-    
+
     if (spoofingEnabled && timezoneOverride) {
       const originalResolvedOptions = instance.resolvedOptions;
-      instance.resolvedOptions = function() {
+      instance.resolvedOptions = function () {
         const options = originalResolvedOptions.call(this);
         options.timeZone = timezoneOverride.identifier;
         return options;
       };
     }
-    
+
     return instance;
   };
 
   // Override Date formatting methods
-  const toString = function() {
+  const toString = function () {
     if (spoofingEnabled && timezoneOverride) {
       try {
-        const formatter = new Intl.DateTimeFormat('en-US', {
+        const formatter = new Intl.DateTimeFormat("en-US", {
           timeZone: timezoneOverride.identifier,
-          weekday: 'short',
-          year: 'numeric',
-          month: 'short',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false
+          weekday: "short",
+          year: "numeric",
+          month: "short",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: false,
         });
         return formatter.format(this);
       } catch (error) {
@@ -199,15 +199,15 @@ function setupContentScript(settings) {
     return originalToString.call(this);
   };
 
-  const toTimeString = function() {
+  const toTimeString = function () {
     if (spoofingEnabled && timezoneOverride) {
       try {
-        const formatter = new Intl.DateTimeFormat('en-US', {
+        const formatter = new Intl.DateTimeFormat("en-US", {
           timeZone: timezoneOverride.identifier,
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: false,
         });
         return formatter.format(this);
       } catch (error) {
@@ -217,7 +217,7 @@ function setupContentScript(settings) {
     return originalToTimeString.call(this);
   };
 
-  const toLocaleString = function(locales, options) {
+  const toLocaleString = function (locales, options) {
     if (spoofingEnabled && timezoneOverride) {
       try {
         const opts = { ...options, timeZone: timezoneOverride.identifier };
@@ -229,7 +229,7 @@ function setupContentScript(settings) {
     return originalToLocaleString.call(this, locales, options);
   };
 
-  const toLocaleDateString = function(locales, options) {
+  const toLocaleDateString = function (locales, options) {
     if (spoofingEnabled && timezoneOverride) {
       try {
         const opts = { ...options, timeZone: timezoneOverride.identifier };
@@ -241,7 +241,7 @@ function setupContentScript(settings) {
     return originalToLocaleDateString.call(this, locales, options);
   };
 
-  const toLocaleTimeString = function(locales, options) {
+  const toLocaleTimeString = function (locales, options) {
     if (spoofingEnabled && timezoneOverride) {
       try {
         const opts = { ...options, timeZone: timezoneOverride.identifier };
@@ -259,8 +259,8 @@ function setupContentScript(settings) {
       geolocation: {
         getCurrentPosition,
         watchPosition,
-        clearWatch
-      }
+        clearWatch,
+      },
     },
     Date: {
       prototype: {
@@ -269,16 +269,16 @@ function setupContentScript(settings) {
         toTimeString,
         toLocaleString,
         toLocaleDateString,
-        toLocaleTimeString
-      }
+        toLocaleTimeString,
+      },
     },
     Intl: {
-      DateTimeFormat
+      DateTimeFormat,
     },
     updateSettings: (newSettings) => {
       spoofingEnabled = newSettings.enabled !== undefined ? newSettings.enabled : spoofingEnabled;
       spoofedLocation = newSettings.location !== undefined ? newSettings.location : spoofedLocation;
-      
+
       if (newSettings.timezone !== undefined) {
         if (newSettings.timezone && validateTimezoneData(newSettings.timezone)) {
           timezoneOverride = newSettings.timezone;
@@ -298,11 +298,11 @@ function setupContentScript(settings) {
       toTimeString: originalToTimeString,
       toLocaleString: originalToLocaleString,
       toLocaleDateString: originalToLocaleDateString,
-      toLocaleTimeString: originalToLocaleTimeString
-    }
+      toLocaleTimeString: originalToLocaleTimeString,
+    },
   };
 }
 
 module.exports = {
-  setupContentScript
+  setupContentScript,
 };

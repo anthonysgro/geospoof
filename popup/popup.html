@@ -1,183 +1,194 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>GeoSpoof</title>
-  <link rel="stylesheet" href="popup.css">
-</head>
-<body>
-  <div class="popup-container">
-    <!-- Onboarding Overlay -->
-    <div class="onboarding-overlay" id="onboardingOverlay" style="display: none;">
-      <div class="onboarding-content">
-        <h2>Welcome to GeoSpoof! 🌍</h2>
-        <div class="onboarding-steps">
-          <div class="onboarding-step">
-            <div class="step-number">1</div>
-            <div class="step-text">
-              <strong>Choose your input method:</strong> Search for a city or enter coordinates manually using the tabs
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GeoSpoof</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="popup-container">
+      <!-- Onboarding Overlay -->
+      <div class="onboarding-overlay" id="onboardingOverlay" style="display: none">
+        <div class="onboarding-content">
+          <h2>Welcome to GeoSpoof! 🌍</h2>
+          <div class="onboarding-steps">
+            <div class="onboarding-step">
+              <div class="step-number">1</div>
+              <div class="step-text">
+                <strong>Choose your input method:</strong> Search for a city or enter coordinates
+                manually using the tabs
+              </div>
+            </div>
+            <div class="onboarding-step">
+              <div class="step-number">2</div>
+              <div class="step-text">
+                <strong>Enable Location Protection</strong> to start spoofing
+              </div>
+            </div>
+            <div class="onboarding-step">
+              <div class="step-number">3</div>
+              <div class="step-text">
+                <strong>Optional:</strong> Enable WebRTC Protection for extra privacy
+              </div>
             </div>
           </div>
-          <div class="onboarding-step">
-            <div class="step-number">2</div>
-            <div class="step-text">
-              <strong>Enable Location Protection</strong> to start spoofing
+          <button id="closeOnboarding" class="onboarding-button">Get Started</button>
+        </div>
+      </div>
+
+      <!-- Header -->
+      <div class="header">
+        <h1>GeoSpoof</h1>
+        <div class="status-badge" id="statusBadge">
+          <span id="statusText">Disabled</span>
+        </div>
+      </div>
+
+      <!-- Tab Navigation -->
+      <div class="tab-navigation">
+        <button class="nav-tab active" id="mainTab">Main</button>
+        <button class="nav-tab" id="detailsTab">Details</button>
+      </div>
+
+      <!-- Main View -->
+      <div class="tab-content" id="mainView">
+        <!-- Protection Toggle -->
+        <div class="toggle-section">
+          <label class="toggle-label">
+            <span>Location Protection</span>
+            <div class="toggle-wrapper">
+              <input type="checkbox" id="protectionToggle" />
+              <span class="toggle-slider"></span>
             </div>
-          </div>
-          <div class="onboarding-step">
-            <div class="step-number">3</div>
-            <div class="step-text">
-              <strong>Optional:</strong> Enable WebRTC Protection for extra privacy
+          </label>
+        </div>
+
+        <!-- WebRTC Protection -->
+        <div class="webrtc-section">
+          <label class="toggle-label">
+            <span>WebRTC Protection</span>
+            <div class="toggle-wrapper">
+              <input type="checkbox" id="webrtcToggle" />
+              <span class="toggle-slider"></span>
             </div>
+          </label>
+        </div>
+
+        <!-- Current Location Display -->
+        <div class="current-location" id="currentLocation">
+          <div class="location-icon">📍</div>
+          <div class="location-info">
+            <div class="location-name" id="locationName">No location set</div>
+            <div class="location-coords" id="locationCoords">—</div>
           </div>
         </div>
-        <button id="closeOnboarding" class="onboarding-button">Get Started</button>
-      </div>
-    </div>
-    
-    <!-- Header -->
-    <div class="header">
-      <h1>GeoSpoof</h1>
-      <div class="status-badge" id="statusBadge">
-        <span id="statusText">Disabled</span>
-      </div>
-    </div>
-    
-    <!-- Tab Navigation -->
-    <div class="tab-navigation">
-      <button class="nav-tab active" id="mainTab">Main</button>
-      <button class="nav-tab" id="detailsTab">Details</button>
-    </div>
-    
-    <!-- Main View -->
-    <div class="tab-content" id="mainView">
-    
-    <!-- Protection Toggle -->
-    <div class="toggle-section">
-      <label class="toggle-label">
-        <span>Location Protection</span>
-        <div class="toggle-wrapper">
-          <input type="checkbox" id="protectionToggle">
-          <span class="toggle-slider"></span>
+
+        <!-- Location Input Mode Tabs -->
+        <div class="input-mode-tabs">
+          <button class="tab-button active" id="searchModeTab">Search City</button>
+          <button class="tab-button" id="coordsModeTab">Enter Coordinates</button>
         </div>
-      </label>
-    </div>
-    
-    <!-- WebRTC Protection -->
-    <div class="webrtc-section">
-      <label class="toggle-label">
-        <span>WebRTC Protection</span>
-        <div class="toggle-wrapper">
-          <input type="checkbox" id="webrtcToggle">
-          <span class="toggle-slider"></span>
+
+        <!-- Location Picker (Search Mode) -->
+        <div class="location-picker" id="searchMode">
+          <input
+            type="text"
+            id="locationSearch"
+            placeholder="Search for a city..."
+            autocomplete="off"
+          />
+          <div class="search-results" id="searchResults"></div>
         </div>
-      </label>
-    </div>
-    
-    <!-- Current Location Display -->
-    <div class="current-location" id="currentLocation">
-      <div class="location-icon">📍</div>
-      <div class="location-info">
-        <div class="location-name" id="locationName">No location set</div>
-        <div class="location-coords" id="locationCoords">—</div>
+
+        <!-- Manual Coordinates (Coords Mode) -->
+        <div class="manual-coords" id="coordsMode" style="display: none">
+          <input
+            type="number"
+            id="latitudeInput"
+            placeholder="Latitude (-90 to 90)"
+            step="0.0001"
+            min="-90"
+            max="90"
+          />
+          <input
+            type="number"
+            id="longitudeInput"
+            placeholder="Longitude (-180 to 180)"
+            step="0.0001"
+            min="-180"
+            max="180"
+          />
+          <button id="setManualCoords">Set Location</button>
+        </div>
+
+        <!-- Warning Message -->
+        <div class="warning" id="warningMessage" style="display: none">
+          ⚠️ Protection enabled but no location set
+        </div>
+
+        <!-- Injection Warning -->
+        <div class="warning" id="injectionWarning" style="display: none">
+          ⚠️ Refresh this page to apply protection
+        </div>
+
+        <!-- Restricted Page Notice -->
+        <div class="info-notice" id="restrictedPageNotice" style="display: none">
+          ℹ️ Extensions cannot run on this page
+        </div>
+
+        <!-- Test Links -->
+        <div class="test-links">
+          <div class="test-links-label">Test your protection:</div>
+          <a href="https://browserleaks.com/geo" target="_blank" class="test-link">Geolocation</a>
+          <span class="test-links-separator">•</span>
+          <a href="https://webbrowsertools.com/timezone/" target="_blank" class="test-link"
+            >Timezone</a
+          >
+          <span class="test-links-separator">•</span>
+          <a href="https://browserleaks.com/webrtc" target="_blank" class="test-link">IP Leak</a>
+        </div>
+
+        <!-- Support Link -->
+        <div class="support-link">
+          <a href="https://buymeacoffee.com/sgro" target="_blank" class="coffee-link"
+            >☕ Buy me a coffee</a
+          >
+        </div>
       </div>
-    </div>
-    
-    <!-- Location Input Mode Tabs -->
-    <div class="input-mode-tabs">
-      <button class="tab-button active" id="searchModeTab">Search City</button>
-      <button class="tab-button" id="coordsModeTab">Enter Coordinates</button>
-    </div>
-    
-    <!-- Location Picker (Search Mode) -->
-    <div class="location-picker" id="searchMode">
-      <input 
-        type="text" 
-        id="locationSearch" 
-        placeholder="Search for a city..."
-        autocomplete="off"
-      >
-      <div class="search-results" id="searchResults"></div>
-    </div>
-    
-    <!-- Manual Coordinates (Coords Mode) -->
-    <div class="manual-coords" id="coordsMode" style="display: none;">
-      <input 
-        type="number" 
-        id="latitudeInput" 
-        placeholder="Latitude (-90 to 90)"
-        step="0.0001"
-        min="-90"
-        max="90"
-      >
-      <input 
-        type="number" 
-        id="longitudeInput" 
-        placeholder="Longitude (-180 to 180)"
-        step="0.0001"
-        min="-180"
-        max="180"
-      >
-      <button id="setManualCoords">Set Location</button>
-    </div>
-    
-    <!-- Warning Message -->
-    <div class="warning" id="warningMessage" style="display: none;">
-      ⚠️ Protection enabled but no location set
-    </div>
-    
-    <!-- Injection Warning -->
-    <div class="warning" id="injectionWarning" style="display: none;">
-      ⚠️ Refresh this page to apply protection
-    </div>
-    
-    <!-- Test Links -->
-    <div class="test-links">
-      <div class="test-links-label">Test your protection:</div>
-      <a href="https://browserleaks.com/geo" target="_blank" class="test-link">Geolocation Test</a>
-      <span class="test-links-separator">•</span>
-      <a href="https://browserleaks.com/webrtc" target="_blank" class="test-link">IP Leak Test</a>
-    </div>
-    
-    <!-- Support Link -->
-    <div class="support-link">
-      <a href="https://buymeacoffee.com/sgro" target="_blank" class="coffee-link">☕ Buy me a coffee</a>
-    </div>
-    
-    </div><!-- End Main View -->
-    
-    <!-- Details View -->
-    <div class="tab-content" id="detailsView" style="display: none;">
-      <h3>Protection Details</h3>
-      
-      <!-- Location Details -->
-      <div class="detail-section">
-        <div class="detail-label">Spoofed Location</div>
-        <div id="detailLocation" class="detail-value">Not configured</div>
+      <!-- End Main View -->
+
+      <!-- Details View -->
+      <div class="tab-content" id="detailsView" style="display: none">
+        <h3>Protection Details</h3>
+
+        <!-- Location Details -->
+        <div class="detail-section">
+          <div class="detail-label">Spoofed Location</div>
+          <div id="detailLocation" class="detail-value">Not configured</div>
+        </div>
+
+        <!-- Timezone Details -->
+        <div class="detail-section">
+          <div class="detail-label">Spoofed Timezone</div>
+          <div id="detailTimezone" class="detail-value">Not configured</div>
+        </div>
+
+        <!-- WebRTC Details -->
+        <div class="detail-section">
+          <div class="detail-label">WebRTC Protection</div>
+          <div id="detailWebRTC" class="detail-value">✗ Inactive</div>
+        </div>
+
+        <!-- Overridden APIs -->
+        <div class="detail-section">
+          <div class="detail-label">Overridden APIs</div>
+          <div id="detailAPIs" class="detail-value">None</div>
+        </div>
       </div>
-      
-      <!-- Timezone Details -->
-      <div class="detail-section">
-        <div class="detail-label">Spoofed Timezone</div>
-        <div id="detailTimezone" class="detail-value">Not configured</div>
-      </div>
-      
-      <!-- WebRTC Details -->
-      <div class="detail-section">
-        <div class="detail-label">WebRTC Protection</div>
-        <div id="detailWebRTC" class="detail-value">✗ Inactive</div>
-      </div>
-      
-      <!-- Overridden APIs -->
-      <div class="detail-section">
-        <div class="detail-label">Overridden APIs</div>
-        <div id="detailAPIs" class="detail-value">None</div>
-      </div>
-    </div><!-- End Details View -->
-    
-  </div>
-  
-  <script src="popup.js"></script>
-</body>
+      <!-- End Details View -->
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
 </html>

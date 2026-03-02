@@ -24,28 +24,28 @@ global.browser = {
       }),
       clear: jest.fn(async () => {
         global.browser.storage.local.data = {};
-      })
-    }
+      }),
+    },
   },
   tabs: {
     query: jest.fn(async () => []),
-    sendMessage: jest.fn(async () => {})
+    sendMessage: jest.fn(async () => {}),
   },
   action: {
     setBadgeBackgroundColor: jest.fn(async () => {}),
-    setBadgeText: jest.fn(async () => {})
+    setBadgeText: jest.fn(async () => {}),
   },
   browserAction: {
     setBadgeBackgroundColor: jest.fn(async () => {}),
-    setBadgeText: jest.fn(async () => {})
+    setBadgeText: jest.fn(async () => {}),
   },
   runtime: {
     onMessage: {
-      addListener: jest.fn()
+      addListener: jest.fn(),
     },
     onInstalled: {
-      addListener: jest.fn()
-    }
+      addListener: jest.fn(),
+    },
   },
   privacy: {
     network: {
@@ -59,10 +59,10 @@ global.browser = {
         }),
         get: jest.fn(async () => {
           return { value: global.browser.privacy.network.webRTCIPHandlingPolicy.value };
-        })
-      }
-    }
-  }
+        }),
+      },
+    },
+  },
 };
 
 const backgroundPath = require("path").join(process.cwd(), "background/background.js");
@@ -71,19 +71,19 @@ beforeEach(() => {
   // Clear storage before each test
   global.browser.storage.local.data = {};
   jest.clearAllMocks();
-  
+
   // Clear require cache to get fresh module
   delete require.cache[backgroundPath];
-  
+
   // Reset WebRTC policy to default
   global.browser.privacy.network.webRTCIPHandlingPolicy.value = "default";
 });
 
 /**
  * Property 9: WebRTC Protection Toggle Round-Trip
- * 
+ *
  * Validates: Requirements 3.4
- * 
+ *
  * For any initial WebRTC protection state, enabling WebRTC protection then
  * disabling it should restore the original Firefox privacy settings.
  */
@@ -95,36 +95,35 @@ test("Property 9: WebRTC Protection Toggle Round-Trip", async () => {
         // Clear require cache to get fresh module
         delete require.cache[backgroundPath];
         const { setWebRTCProtection } = require(backgroundPath);
-        
+
         // Set initial state
         global.browser.privacy.network.webRTCIPHandlingPolicy.value = initialState;
-        
+
         // Store initial state
         const originalState = global.browser.privacy.network.webRTCIPHandlingPolicy.value;
-        
+
         // Enable WebRTC protection
         await setWebRTCProtection(true);
-        
+
         // Verify protection is enabled
         const enabledState = global.browser.privacy.network.webRTCIPHandlingPolicy.value;
         if (enabledState !== "disable_non_proxied_udp") {
           return false;
         }
-        
+
         // Disable WebRTC protection
         await setWebRTCProtection(false);
-        
+
         // Verify state is restored to default (not necessarily original)
         // When disabling, we restore to "default" state
         const restoredState = global.browser.privacy.network.webRTCIPHandlingPolicy.value;
         if (restoredState !== "default") {
           return false;
         }
-        
+
         return true;
       }
     ),
     { numRuns: 100 }
   );
 });
-

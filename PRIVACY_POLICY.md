@@ -86,3 +86,36 @@ For questions or concerns about this privacy policy:
 GeoSpoof is open source. You can review the complete source code to verify these privacy practices:
 
 [https://github.com/anthonysgro/geospoof](https://github.com/anthonysgro/geospoof)
+
+## Important Disclaimers
+
+### What This Extension Does NOT Do
+
+- **Does NOT change browser language or locale settings** - Your browser's language preferences remain unchanged, which may create detectable inconsistencies with your spoofed location
+- **Does NOT spoof IP address** - Your real IP address is still visible to websites unless you use a VPN
+- **Does NOT bypass server-side detection** - Websites can still detect your location through IP address, payment methods, account history, and other server-side signals
+
+### Terms of Service Compliance
+
+Using location spoofing may violate the terms of service of certain websites, particularly:
+
+- Streaming services (Netflix, HBO Max, Disney+, etc.)
+- Financial services
+- E-commerce platforms with region-specific pricing
+
+**You are responsible for ensuring your use of this extension complies with applicable terms of service and laws.** The extension developer is not liable for any violations or consequences resulting from your use of this extension.
+
+### Intended Use
+
+This extension is intended for:
+
+- Privacy protection and testing
+- Web development and testing
+- Educational purposes
+- Legitimate privacy enhancement
+
+This extension is NOT intended for:
+
+- Circumventing geo-restrictions on copyrighted content
+- Fraud or deception
+- Violating terms of service agreements

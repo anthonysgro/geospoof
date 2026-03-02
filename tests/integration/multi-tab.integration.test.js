@@ -1,9 +1,9 @@
 /**
  * Integration Tests for Multi-Tab Scenarios
- * 
+ *
  * Tests settings propagation to multiple tabs, new tab handling,
  * and tab reload behavior.
- * 
+ *
  * Requirements: 8.3, 8.4
  */
 
@@ -13,42 +13,42 @@ global.browser = {
     query: jest.fn(),
     sendMessage: jest.fn(),
     onCreated: {
-      addListener: jest.fn()
+      addListener: jest.fn(),
     },
     onUpdated: {
-      addListener: jest.fn()
-    }
+      addListener: jest.fn(),
+    },
   },
   storage: {
     local: {
       get: jest.fn(),
-      set: jest.fn()
-    }
+      set: jest.fn(),
+    },
   },
   action: {
     setBadgeBackgroundColor: jest.fn(),
-    setBadgeText: jest.fn()
+    setBadgeText: jest.fn(),
   },
   browserAction: {
     setBadgeBackgroundColor: jest.fn(async () => {}),
-    setBadgeText: jest.fn(async () => {})
+    setBadgeText: jest.fn(async () => {}),
   },
   runtime: {
     onMessage: {
-      addListener: jest.fn()
+      addListener: jest.fn(),
     },
     onInstalled: {
-      addListener: jest.fn()
-    }
+      addListener: jest.fn(),
+    },
   },
   privacy: {
     network: {
       webRTCIPHandlingPolicy: {
         set: jest.fn(),
-        clear: jest.fn()
-      }
-    }
-  }
+        clear: jest.fn(),
+      },
+    },
+  },
 };
 
 const background = require("../../background/background.js");
@@ -66,7 +66,7 @@ describe("Multi-Tab Integration Tests", () => {
         { id: 2, url: "https://example2.com" },
         { id: 3, url: "https://example3.com" },
         { id: 4, url: "https://example4.com" },
-        { id: 5, url: "https://example5.com" }
+        { id: 5, url: "https://example5.com" },
       ];
 
       browser.tabs.query.mockResolvedValue(tabs);
@@ -83,18 +83,18 @@ describe("Multi-Tab Integration Tests", () => {
         location: {
           latitude: 37.7749,
           longitude: -122.4194,
-          accuracy: 10
+          accuracy: 10,
         },
         timezone: {
           identifier: "America/Los_Angeles",
           offset: 480,
-          dstOffset: 60
+          dstOffset: 60,
         },
         locationName: {
           city: "San Francisco",
           country: "USA",
-          displayName: "San Francisco, CA, USA"
-        }
+          displayName: "San Francisco, CA, USA",
+        },
       };
 
       // Act: Broadcast settings
@@ -102,7 +102,7 @@ describe("Multi-Tab Integration Tests", () => {
 
       // Assert: All tabs received the message
       expect(messagesSent).toHaveLength(5);
-      expect(messagesSent.map(m => m.tabId)).toEqual([1, 2, 3, 4, 5]);
+      expect(messagesSent.map((m) => m.tabId)).toEqual([1, 2, 3, 4, 5]);
 
       // Assert: All messages are identical
       messagesSent.forEach(({ message }) => {
@@ -117,7 +117,7 @@ describe("Multi-Tab Integration Tests", () => {
         { id: 1, url: "https://example.com" },
         { id: 2, url: "about:blank" },
         { id: 3, url: "moz-extension://abc123" },
-        { id: 4, url: "https://test.com" }
+        { id: 4, url: "https://test.com" },
       ];
 
       browser.tabs.query.mockResolvedValue(tabs);
@@ -132,13 +132,11 @@ describe("Multi-Tab Integration Tests", () => {
 
       const settings = {
         enabled: true,
-        location: { latitude: 0, longitude: 0, accuracy: 10 }
+        location: { latitude: 0, longitude: 0, accuracy: 10 },
       };
 
       // Act: Should not throw even if some tabs fail
-      await expect(
-        background.broadcastSettingsToTabs(settings)
-      ).resolves.not.toThrow();
+      await expect(background.broadcastSettingsToTabs(settings)).resolves.not.toThrow();
 
       // Assert: All tabs were attempted
       expect(browser.tabs.sendMessage).toHaveBeenCalledTimes(4);
@@ -149,7 +147,7 @@ describe("Multi-Tab Integration Tests", () => {
       const tabs = [
         { id: 1, url: "https://example1.com" },
         { id: 2, url: "https://example2.com" },
-        { id: 3, url: "https://example3.com" }
+        { id: 3, url: "https://example3.com" },
       ];
 
       browser.tabs.query.mockResolvedValue(tabs);
@@ -162,7 +160,7 @@ describe("Multi-Tab Integration Tests", () => {
         webrtcProtection: false,
         onboardingCompleted: true,
         version: "1.0",
-        lastUpdated: Date.now()
+        lastUpdated: Date.now(),
       };
 
       browser.storage.local.get.mockResolvedValue({ settings: initialSettings });
@@ -177,16 +175,16 @@ describe("Multi-Tab Integration Tests", () => {
       // Act: Enable protection with location
       await background.handleSetLocation({
         latitude: 51.5074,
-        longitude: -0.1278
+        longitude: -0.1278,
       });
 
       // Assert: Settings were broadcast to all tabs
       expect(messagesSent.length).toBeGreaterThan(0);
-      
+
       // Get the last broadcast (after location was set)
       const lastBroadcast = messagesSent.slice(-3); // Last 3 messages (one per tab)
       expect(lastBroadcast).toHaveLength(3);
-      
+
       lastBroadcast.forEach(({ message }) => {
         expect(message.type).toBe("UPDATE_SETTINGS");
         expect(message.payload.location.latitude).toBe(51.5074);
@@ -202,23 +200,23 @@ describe("Multi-Tab Integration Tests", () => {
         enabled: true,
         location: {
           latitude: 40.7128,
-          longitude: -74.0060,
-          accuracy: 10
+          longitude: -74.006,
+          accuracy: 10,
         },
         timezone: {
           identifier: "America/New_York",
           offset: 300,
-          dstOffset: 60
+          dstOffset: 60,
         },
         locationName: {
           city: "New York",
           country: "USA",
-          displayName: "New York, NY, USA"
+          displayName: "New York, NY, USA",
         },
         webrtcProtection: false,
         onboardingCompleted: true,
         version: "1.0",
-        lastUpdated: Date.now()
+        lastUpdated: Date.now(),
       };
 
       browser.storage.local.get.mockResolvedValue({ settings });
@@ -236,7 +234,7 @@ describe("Multi-Tab Integration Tests", () => {
       const newTabId = 42;
       await browser.tabs.sendMessage(newTabId, {
         type: "UPDATE_SETTINGS",
-        payload: loadedSettings
+        payload: loadedSettings,
       });
 
       // Assert: New tab received settings
@@ -254,18 +252,18 @@ describe("Multi-Tab Integration Tests", () => {
         location: {
           latitude: 35.6762,
           longitude: 139.6503,
-          accuracy: 10
+          accuracy: 10,
         },
         timezone: {
           identifier: "Asia/Tokyo",
           offset: -540,
-          dstOffset: 0
+          dstOffset: 0,
         },
         locationName: null,
         webrtcProtection: false,
         onboardingCompleted: true,
         version: "1.0",
-        lastUpdated: Date.now()
+        lastUpdated: Date.now(),
       };
 
       browser.storage.local.get.mockResolvedValue({ settings });
@@ -281,7 +279,7 @@ describe("Multi-Tab Integration Tests", () => {
       const newTabId = 99;
       await browser.tabs.sendMessage(newTabId, {
         type: "UPDATE_SETTINGS",
-        payload: loadedSettings
+        payload: loadedSettings,
       });
 
       // Assert: New tab received settings even though protection is disabled
@@ -299,23 +297,23 @@ describe("Multi-Tab Integration Tests", () => {
         location: {
           latitude: -33.8688,
           longitude: 151.2093,
-          accuracy: 10
+          accuracy: 10,
         },
         timezone: {
           identifier: "Australia/Sydney",
           offset: -600,
-          dstOffset: -60
+          dstOffset: -60,
         },
         locationName: {
           city: "Sydney",
           country: "Australia",
-          displayName: "Sydney, NSW, Australia"
+          displayName: "Sydney, NSW, Australia",
         },
         webrtcProtection: true,
         geonamesUsername: "geospoof",
         onboardingCompleted: true,
         version: "1.0",
-        lastUpdated: Date.now()
+        lastUpdated: Date.now(),
       };
 
       browser.storage.local.get.mockResolvedValue({ settings });
@@ -329,10 +327,10 @@ describe("Multi-Tab Integration Tests", () => {
       // Act: Simulate tab reload by loading settings and sending to tab
       const tabId = 5;
       const loadedSettings = await background.loadSettings();
-      
+
       await browser.tabs.sendMessage(tabId, {
         type: "UPDATE_SETTINGS",
-        payload: loadedSettings
+        payload: loadedSettings,
       });
 
       // Assert: Tab received settings after reload
@@ -349,23 +347,23 @@ describe("Multi-Tab Integration Tests", () => {
         location: {
           latitude: 48.8566,
           longitude: 2.3522,
-          accuracy: 10
+          accuracy: 10,
         },
         timezone: {
           identifier: "Europe/Paris",
           offset: -60,
-          dstOffset: -60
+          dstOffset: -60,
         },
         locationName: {
           city: "Paris",
           country: "France",
-          displayName: "Paris, France"
+          displayName: "Paris, France",
         },
         webrtcProtection: false,
         geonamesUsername: "geospoof",
         onboardingCompleted: true,
         version: "1.0",
-        lastUpdated: Date.now()
+        lastUpdated: Date.now(),
       };
 
       browser.storage.local.get.mockResolvedValue({ settings });
@@ -382,13 +380,13 @@ describe("Multi-Tab Integration Tests", () => {
         const loadedSettings = await background.loadSettings();
         await browser.tabs.sendMessage(tabId, {
           type: "UPDATE_SETTINGS",
-          payload: loadedSettings
+          payload: loadedSettings,
         });
       }
 
       // Assert: All tabs received identical settings
       expect(messagesSent).toHaveLength(3);
-      
+
       const firstPayload = messagesSent[0].message.payload;
       messagesSent.forEach(({ message }) => {
         expect(message.payload).toEqual(firstPayload);
@@ -404,22 +402,22 @@ describe("Multi-Tab Integration Tests", () => {
         location: {
           latitude: 55.7558,
           longitude: 37.6173,
-          accuracy: 10
+          accuracy: 10,
         },
         timezone: {
           identifier: "Europe/Moscow",
           offset: -180,
-          dstOffset: 0
+          dstOffset: 0,
         },
         locationName: {
           city: "Moscow",
           country: "Russia",
-          displayName: "Moscow, Russia"
+          displayName: "Moscow, Russia",
         },
         webrtcProtection: false,
         onboardingCompleted: true,
         version: "1.0",
-        lastUpdated: Date.now()
+        lastUpdated: Date.now(),
       };
 
       browser.storage.local.get.mockResolvedValue({ settings });
@@ -427,7 +425,7 @@ describe("Multi-Tab Integration Tests", () => {
 
       const tabs = [
         { id: 1, url: "https://example1.com" },
-        { id: 2, url: "https://example2.com" }
+        { id: 2, url: "https://example2.com" },
       ];
       browser.tabs.query.mockResolvedValue(tabs);
 
@@ -438,7 +436,7 @@ describe("Multi-Tab Integration Tests", () => {
       });
 
       // Act: Simulate tab lifecycle events
-      
+
       // 1. Initial broadcast to existing tabs
       await background.broadcastSettingsToTabs(settings);
       const initialMessages = messagesSent.length;
@@ -448,21 +446,21 @@ describe("Multi-Tab Integration Tests", () => {
       const loadedSettings1 = await background.loadSettings();
       await browser.tabs.sendMessage(newTabId, {
         type: "UPDATE_SETTINGS",
-        payload: loadedSettings1
+        payload: loadedSettings1,
       });
 
       // 3. Tab updated (reload)
       const loadedSettings2 = await background.loadSettings();
       await browser.tabs.sendMessage(1, {
         type: "UPDATE_SETTINGS",
-        payload: loadedSettings2
+        payload: loadedSettings2,
       });
 
       // Assert: All messages contain identical settings
-      const allPayloads = messagesSent.map(m => m.message.payload);
+      const allPayloads = messagesSent.map((m) => m.message.payload);
       const firstPayload = allPayloads[0];
-      
-      allPayloads.forEach(payload => {
+
+      allPayloads.forEach((payload) => {
         expect(payload.enabled).toBe(firstPayload.enabled);
         expect(payload.location).toEqual(firstPayload.location);
         expect(payload.timezone).toEqual(firstPayload.timezone);

@@ -6,34 +6,34 @@
 // Helper functions for details view
 function formatLocationDetails(location, locationName) {
   if (!location) return "Not configured";
-  
+
   let details = `Latitude: ${location.latitude.toFixed(6)}\n`;
   details += `Longitude: ${location.longitude.toFixed(6)}\n`;
   details += `Accuracy: ±${location.accuracy}m\n`;
-  
+
   if (locationName && locationName.displayName) {
     details += `\nLocation: ${locationName.displayName}`;
   }
-  
+
   return details;
 }
 
 function formatTimezoneDetails(timezone) {
   if (!timezone) return "Not configured";
-  
+
   const offsetHours = Math.floor(Math.abs(timezone.offset) / 60);
   const offsetMinutes = Math.abs(timezone.offset) % 60;
-  const sign = timezone.offset >= 0 ? '+' : '-';
-  const offsetStr = `UTC${sign}${String(offsetHours).padStart(2, '0')}:${String(offsetMinutes).padStart(2, '0')}`;
-  
+  const sign = timezone.offset >= 0 ? "+" : "-";
+  const offsetStr = `UTC${sign}${String(offsetHours).padStart(2, "0")}:${String(offsetMinutes).padStart(2, "0")}`;
+
   let details = `Identifier: ${timezone.identifier}\n`;
   details += `Offset: ${offsetStr}\n`;
   details += `DST Offset: ${timezone.dstOffset} minutes`;
-  
+
   if (timezone.fallback) {
     details += "\n\n⚠️ Estimated (API unavailable)";
   }
-  
+
   return details;
 }
 
@@ -44,14 +44,14 @@ function formatWebRTCDetails(enabled) {
 
 function formatAPIsDetails(enabled, hasLocation, hasTimezone) {
   if (!enabled) return "None (protection disabled)";
-  
+
   const apis = [];
-  
+
   if (hasLocation) {
     apis.push("• navigator.geolocation.getCurrentPosition()");
     apis.push("• navigator.geolocation.watchPosition()");
   }
-  
+
   if (hasTimezone) {
     apis.push("• Date.prototype.getTimezoneOffset()");
     apis.push("• Intl.DateTimeFormat");
@@ -59,14 +59,19 @@ function formatAPIsDetails(enabled, hasLocation, hasTimezone) {
     apis.push("• Date.prototype.toLocaleString()");
     apis.push("• Date.prototype.toTimeString()");
   }
-  
+
   return apis.length > 0 ? apis.join("\n") : "None";
 }
 
 function updateDetailsView(settings) {
-  document.getElementById("detailLocation").textContent = formatLocationDetails(settings.location, settings.locationName);
+  document.getElementById("detailLocation").textContent = formatLocationDetails(
+    settings.location,
+    settings.locationName
+  );
   document.getElementById("detailTimezone").textContent = formatTimezoneDetails(settings.timezone);
-  document.getElementById("detailWebRTC").textContent = formatWebRTCDetails(settings.webrtcProtection);
+  document.getElementById("detailWebRTC").textContent = formatWebRTCDetails(
+    settings.webrtcProtection
+  );
   document.getElementById("detailAPIs").textContent = formatAPIsDetails(
     settings.enabled,
     !!settings.location,
@@ -78,41 +83,70 @@ function updateDetailsView(settings) {
 async function loadSettings() {
   try {
     const settings = await browser.runtime.sendMessage({ type: "GET_SETTINGS" });
-    
+
     // Show onboarding if not completed
     if (!settings.onboardingCompleted) {
       showOnboarding();
     }
-    
+
     // Update UI
     document.getElementById("protectionToggle").checked = settings.enabled;
     document.getElementById("webrtcToggle").checked = settings.webrtcProtection;
-    
+
     updateStatusBadge(settings.enabled);
-    
+
     if (settings.location) {
       displayLocation(settings.location, settings.locationName);
     }
-    
+
     // Update details view
     updateDetailsView(settings);
-    
+
     // Show warning if protection enabled without location
     if (settings.enabled && !settings.location) {
       document.getElementById("warningMessage").style.display = "block";
-      document.getElementById("warningMessage").textContent = "⚠️ Protection enabled but no location set";
+      document.getElementById("warningMessage").textContent =
+        "⚠️ Protection enabled but no location set";
     } else {
       document.getElementById("warningMessage").style.display = "none";
     }
-    
-    // Check for injection issues on current tab (non-blocking)
-    if (settings.enabled) {
-      checkInjectionStatus().catch(err => {
-        console.error("Failed to check injection status:", err);
-      });
-    }
+
+    // Check for restricted page and injection issues on current tab (non-blocking)
+    checkPageStatus().catch((err) => {
+      console.error("Failed to check page status:", err);
+    });
   } catch (error) {
     console.error("Failed to load settings:", error);
+  }
+}
+
+// Check if current page is restricted or has injection issues
+async function checkPageStatus() {
+  try {
+    // Get current tab
+    const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+    if (tabs.length === 0) return;
+
+    const currentTab = tabs[0];
+
+    // Check if this is a restricted URL where extensions can't run
+    if (isRestrictedUrl(currentTab.url)) {
+      // Show restricted page notice
+      document.getElementById("restrictedPageNotice").style.display = "block";
+      document.getElementById("injectionWarning").style.display = "none";
+      return;
+    }
+
+    // Not a restricted page, hide the notice
+    document.getElementById("restrictedPageNotice").style.display = "none";
+
+    // Check for injection issues (only if protection is enabled)
+    const settings = await browser.runtime.sendMessage({ type: "GET_SETTINGS" });
+    if (settings.enabled) {
+      await checkInjectionStatus();
+    }
+  } catch (error) {
+    console.error("Failed to check page status:", error);
   }
 }
 
@@ -122,18 +156,18 @@ async function checkInjectionStatus() {
     // Get current tab
     const tabs = await browser.tabs.query({ active: true, currentWindow: true });
     if (tabs.length === 0) return;
-    
+
     const currentTab = tabs[0];
-    
-    // Check if tab has a URL and it's injectable (http/https)
-    if (!currentTab.url || (!currentTab.url.startsWith("http://") && !currentTab.url.startsWith("https://"))) {
+
+    // Check if this is a restricted URL where extensions can't run
+    if (isRestrictedUrl(currentTab.url)) {
       // Not an injectable page, don't show warning
       return;
     }
-    
+
     // Get the badge for this tab to check if there's a warning
     const badgeText = await browser.browserAction.getBadgeText({ tabId: currentTab.id });
-    
+
     if (badgeText === "!") {
       // Show warning - page needs refresh
       const warningEl = document.getElementById("injectionWarning");
@@ -152,6 +186,52 @@ async function checkInjectionStatus() {
   }
 }
 
+/**
+ * Check if a URL is a restricted page where extensions cannot run
+ * @param {string} url - The URL to check
+ * @returns {boolean} True if the URL is restricted
+ */
+function isRestrictedUrl(url) {
+  if (!url) return true;
+
+  // Firefox privileged pages
+  const restrictedPrefixes = [
+    "about:",
+    "moz-extension:",
+    "chrome:",
+    "resource:",
+    "view-source:",
+    "data:",
+    "blob:",
+    "file:",
+  ];
+
+  // Firefox addons domain
+  const restrictedDomains = ["addons.mozilla.org", "accounts.firefox.com", "testpilot.firefox.com"];
+
+  // Check prefixes
+  for (const prefix of restrictedPrefixes) {
+    if (url.startsWith(prefix)) {
+      return true;
+    }
+  }
+
+  // Check domains
+  try {
+    const urlObj = new URL(url);
+    for (const domain of restrictedDomains) {
+      if (urlObj.hostname === domain || urlObj.hostname.endsWith("." + domain)) {
+        return true;
+      }
+    }
+  } catch (e) {
+    // Invalid URL, treat as restricted
+    return true;
+  }
+
+  return false;
+}
+
 // Show onboarding overlay
 function showOnboarding() {
   document.getElementById("onboardingOverlay").style.display = "flex";
@@ -160,7 +240,7 @@ function showOnboarding() {
 // Close onboarding overlay
 async function closeOnboarding() {
   document.getElementById("onboardingOverlay").style.display = "none";
-  
+
   try {
     await browser.runtime.sendMessage({ type: "COMPLETE_ONBOARDING" });
   } catch (error) {
@@ -172,7 +252,7 @@ async function closeOnboarding() {
 function updateStatusBadge(enabled) {
   const badge = document.getElementById("statusBadge");
   const text = document.getElementById("statusText");
-  
+
   if (enabled) {
     badge.classList.add("enabled");
     text.textContent = "Enabled";
@@ -186,7 +266,7 @@ function updateStatusBadge(enabled) {
 function displayLocation(location, locationName) {
   const nameEl = document.getElementById("locationName");
   const coordsEl = document.getElementById("locationCoords");
-  
+
   if (locationName && locationName.displayName) {
     nameEl.textContent = locationName.displayName;
   } else if (locationName && locationName.city) {
@@ -194,22 +274,22 @@ function displayLocation(location, locationName) {
   } else {
     nameEl.textContent = "Custom Location";
   }
-  
+
   coordsEl.textContent = `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`;
 }
 
 // Protection toggle handler
 document.getElementById("protectionToggle").addEventListener("change", async (e) => {
   const enabled = e.target.checked;
-  
+
   try {
     await browser.runtime.sendMessage({
       type: "SET_PROTECTION_STATUS",
-      payload: { enabled }
+      payload: { enabled },
     });
-    
+
     updateStatusBadge(enabled);
-    
+
     // Reload settings to update warning and details view
     await loadSettings();
   } catch (error) {
@@ -221,13 +301,13 @@ document.getElementById("protectionToggle").addEventListener("change", async (e)
 // WebRTC toggle handler
 document.getElementById("webrtcToggle").addEventListener("change", async (e) => {
   const enabled = e.target.checked;
-  
+
   try {
     await browser.runtime.sendMessage({
       type: "SET_WEBRTC_PROTECTION",
-      payload: { enabled }
+      payload: { enabled },
     });
-    
+
     // Update the details view
     document.getElementById("detailWebRTC").textContent = formatWebRTCDetails(enabled);
   } catch (error) {
@@ -242,16 +322,16 @@ let searchTimeout;
 document.getElementById("locationSearch").addEventListener("input", (e) => {
   clearTimeout(searchTimeout);
   const query = e.target.value.trim();
-  
+
   const container = document.getElementById("searchResults");
-  
+
   if (query.length < 3) {
     while (container.firstChild) {
       container.removeChild(container.firstChild);
     }
     return;
   }
-  
+
   // Show loading indicator
   while (container.firstChild) {
     container.removeChild(container.firstChild);
@@ -263,14 +343,14 @@ document.getElementById("locationSearch").addEventListener("input", (e) => {
   loadingDiv.appendChild(spinner);
   loadingDiv.appendChild(document.createTextNode("Searching..."));
   container.appendChild(loadingDiv);
-  
+
   searchTimeout = setTimeout(async () => {
     try {
       const response = await browser.runtime.sendMessage({
         type: "GEOCODE_QUERY",
-        payload: { query }
+        payload: { query },
       });
-      
+
       displaySearchResults(response.results || []);
     } catch (error) {
       console.error("Geocoding failed:", error);
@@ -288,12 +368,12 @@ document.getElementById("locationSearch").addEventListener("input", (e) => {
 // Display search results
 function displaySearchResults(results) {
   const container = document.getElementById("searchResults");
-  
+
   // Clear existing results
   while (container.firstChild) {
     container.removeChild(container.firstChild);
   }
-  
+
   if (results.length === 0) {
     const noResults = document.createElement("div");
     noResults.className = "no-results";
@@ -301,25 +381,25 @@ function displaySearchResults(results) {
     container.appendChild(noResults);
     return;
   }
-  
-  results.forEach(result => {
+
+  results.forEach((result) => {
     const resultDiv = document.createElement("div");
     resultDiv.className = "search-result";
     resultDiv.dataset.lat = result.latitude;
     resultDiv.dataset.lon = result.longitude;
-    
+
     const nameDiv = document.createElement("div");
     nameDiv.className = "result-name";
     nameDiv.textContent = result.name;
-    
+
     const coordsDiv = document.createElement("div");
     coordsDiv.className = "result-coords";
     coordsDiv.textContent = `${result.latitude.toFixed(4)}, ${result.longitude.toFixed(4)}`;
-    
+
     resultDiv.appendChild(nameDiv);
     resultDiv.appendChild(coordsDiv);
     container.appendChild(resultDiv);
-    
+
     // Add click handler
     resultDiv.addEventListener("click", () => {
       const lat = parseFloat(resultDiv.dataset.lat);
@@ -332,7 +412,7 @@ function displaySearchResults(results) {
 // Set location
 async function setLocation(latitude, longitude) {
   const container = document.getElementById("searchResults");
-  
+
   try {
     // Show loading indicator with spinner
     while (container.firstChild) {
@@ -345,18 +425,18 @@ async function setLocation(latitude, longitude) {
     loadingDiv.appendChild(spinner);
     loadingDiv.appendChild(document.createTextNode("Setting location..."));
     container.appendChild(loadingDiv);
-    
+
     await browser.runtime.sendMessage({
       type: "SET_LOCATION",
-      payload: { latitude, longitude }
+      payload: { latitude, longitude },
     });
-    
+
     // Clear search
     document.getElementById("locationSearch").value = "";
     while (container.firstChild) {
       container.removeChild(container.firstChild);
     }
-    
+
     // Reload settings to update display
     await loadSettings();
   } catch (error) {
@@ -372,20 +452,20 @@ async function setLocation(latitude, longitude) {
 document.getElementById("setManualCoords").addEventListener("click", async () => {
   const lat = parseFloat(document.getElementById("latitudeInput").value);
   const lon = parseFloat(document.getElementById("longitudeInput").value);
-  
+
   // Validate
   if (isNaN(lat) || lat < -90 || lat > 90) {
     alert("Invalid latitude. Must be between -90 and 90.");
     return;
   }
-  
+
   if (isNaN(lon) || lon < -180 || lon > 180) {
     alert("Invalid longitude. Must be between -180 and 180.");
     return;
   }
-  
+
   await setLocation(lat, lon);
-  
+
   // Clear inputs
   document.getElementById("latitudeInput").value = "";
   document.getElementById("longitudeInput").value = "";
@@ -412,7 +492,7 @@ document.getElementById("coordsModeTab").addEventListener("click", () => {
 document.addEventListener("DOMContentLoaded", () => {
   // Show body immediately
   document.body.classList.add("loaded");
-  
+
   // Load settings
   loadSettings();
 });

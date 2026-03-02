@@ -1,7 +1,7 @@
 /**
  * Unit Tests for Data Transmission in Content Script
  * Feature: timezone-spoofing-and-status-display
- * 
+ *
  * Tests CustomEvent structure, payload, error handling, and retry logic
  * Requirements: 4.1, 4.2, 4.3, 4.4
  */
@@ -10,25 +10,25 @@ describe("Content Script Data Transmission", () => {
   let mockWindow;
   let mockBrowser;
   let contentScriptCode;
-  
+
   beforeEach(() => {
     // Mock window object
     mockWindow = {
       dispatchEvent: jest.fn(() => true),
-      addEventListener: jest.fn()
+      addEventListener: jest.fn(),
     };
-    
+
     // Mock browser API
     mockBrowser = {
       runtime: {
         getURL: jest.fn((path) => `moz-extension://test/${path}`),
         sendMessage: jest.fn(),
         onMessage: {
-          addListener: jest.fn()
-        }
-      }
+          addListener: jest.fn(),
+        },
+      },
     };
-    
+
     global.window = mockWindow;
     global.browser = mockBrowser;
     global.CustomEvent = class CustomEvent {
@@ -37,10 +37,10 @@ describe("Content Script Data Transmission", () => {
         this.detail = options?.detail;
       }
     };
-    
+
     jest.clearAllMocks();
   });
-  
+
   afterEach(() => {
     delete global.window;
     delete global.browser;
@@ -52,15 +52,15 @@ describe("Content Script Data Transmission", () => {
       const settingsData = {
         enabled: true,
         location: { latitude: 35.6762, longitude: 139.6503, accuracy: 10 },
-        timezone: { identifier: "Asia/Tokyo", offset: -540, dstOffset: 0 }
+        timezone: { identifier: "Asia/Tokyo", offset: -540, dstOffset: 0 },
       };
-      
+
       const event = new CustomEvent("__geospoof_settings_update", {
-        detail: settingsData
+        detail: settingsData,
       });
-      
+
       mockWindow.dispatchEvent(event);
-      
+
       expect(mockWindow.dispatchEvent).toHaveBeenCalledTimes(1);
       const dispatchedEvent = mockWindow.dispatchEvent.mock.calls[0][0];
       expect(dispatchedEvent.type).toBe("__geospoof_settings_update");
@@ -70,13 +70,13 @@ describe("Content Script Data Transmission", () => {
       const settingsData = {
         enabled: true,
         location: { latitude: 35.6762, longitude: 139.6503, accuracy: 10 },
-        timezone: { identifier: "Asia/Tokyo", offset: -540, dstOffset: 0 }
+        timezone: { identifier: "Asia/Tokyo", offset: -540, dstOffset: 0 },
       };
-      
+
       const event = new CustomEvent("__geospoof_settings_update", {
-        detail: settingsData
+        detail: settingsData,
       });
-      
+
       expect(event.detail).toBeDefined();
       expect(event.detail.enabled).toBe(true);
       expect(event.detail.location).toBeDefined();
@@ -88,19 +88,19 @@ describe("Content Script Data Transmission", () => {
         identifier: "America/Los_Angeles",
         offset: 480,
         dstOffset: 60,
-        fallback: false
+        fallback: false,
       };
-      
+
       const settingsData = {
         enabled: true,
         location: { latitude: 37.7749, longitude: -122.4194, accuracy: 10 },
-        timezone: timezone
+        timezone: timezone,
       };
-      
+
       const event = new CustomEvent("__geospoof_settings_update", {
-        detail: settingsData
+        detail: settingsData,
       });
-      
+
       expect(event.detail.timezone).toEqual(timezone);
       expect(event.detail.timezone.identifier).toBe("America/Los_Angeles");
       expect(event.detail.timezone.offset).toBe(480);
@@ -114,19 +114,19 @@ describe("Content Script Data Transmission", () => {
       const timezone = {
         identifier: "Europe/London",
         offset: 0,
-        dstOffset: 60
+        dstOffset: 60,
       };
-      
+
       const settingsData = {
         enabled: true,
         location: { latitude: 51.5074, longitude: -0.1278, accuracy: 10 },
-        timezone: timezone
+        timezone: timezone,
       };
-      
+
       const event = new CustomEvent("__geospoof_settings_update", {
-        detail: settingsData
+        detail: settingsData,
       });
-      
+
       expect(event.detail.timezone.dstOffset).toBe(60);
     });
 
@@ -134,19 +134,19 @@ describe("Content Script Data Transmission", () => {
       const timezone = {
         identifier: "Asia/Tokyo",
         offset: -540,
-        dstOffset: 0
+        dstOffset: 0,
       };
-      
+
       const settingsData = {
         enabled: true,
         location: { latitude: 35.6762, longitude: 139.6503, accuracy: 10 },
-        timezone: timezone
+        timezone: timezone,
       };
-      
+
       const event = new CustomEvent("__geospoof_settings_update", {
-        detail: settingsData
+        detail: settingsData,
       });
-      
+
       expect(event.detail.timezone.dstOffset).toBe(0);
     });
 
@@ -155,19 +155,19 @@ describe("Content Script Data Transmission", () => {
         identifier: "UTC",
         offset: 0,
         dstOffset: 0,
-        fallback: true
+        fallback: true,
       };
-      
+
       const settingsData = {
         enabled: true,
         location: { latitude: 0, longitude: 0, accuracy: 10 },
-        timezone: timezone
+        timezone: timezone,
       };
-      
+
       const event = new CustomEvent("__geospoof_settings_update", {
-        detail: settingsData
+        detail: settingsData,
       });
-      
+
       expect(event.detail.timezone.fallback).toBe(true);
     });
 
@@ -175,13 +175,13 @@ describe("Content Script Data Transmission", () => {
       const settingsData = {
         enabled: true,
         location: { latitude: 37.7749, longitude: -122.4194, accuracy: 10 },
-        timezone: null
+        timezone: null,
       };
-      
+
       const event = new CustomEvent("__geospoof_settings_update", {
-        detail: settingsData
+        detail: settingsData,
       });
-      
+
       expect(event.detail.timezone).toBeNull();
       expect(event.detail.location).toBeDefined();
       expect(event.detail.enabled).toBe(true);
@@ -191,13 +191,13 @@ describe("Content Script Data Transmission", () => {
       const settingsData = {
         enabled: true,
         location: { latitude: 37.7749, longitude: -122.4194, accuracy: 10 },
-        timezone: undefined
+        timezone: undefined,
       };
-      
+
       const event = new CustomEvent("__geospoof_settings_update", {
-        detail: settingsData
+        detail: settingsData,
       });
-      
+
       expect(event.detail.timezone).toBeUndefined();
       expect(event.detail.location).toBeDefined();
     });
@@ -206,41 +206,41 @@ describe("Content Script Data Transmission", () => {
   describe("Error Handling", () => {
     test("should catch errors during event dispatch", () => {
       const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
-      
+
       mockWindow.dispatchEvent = jest.fn(() => {
         throw new Error("Dispatch failed");
       });
-      
+
       const settingsData = {
         enabled: true,
         location: { latitude: 35.6762, longitude: 139.6503, accuracy: 10 },
-        timezone: { identifier: "Asia/Tokyo", offset: -540, dstOffset: 0 }
+        timezone: { identifier: "Asia/Tokyo", offset: -540, dstOffset: 0 },
       };
-      
+
       const event = new CustomEvent("__geospoof_settings_update", {
-        detail: settingsData
+        detail: settingsData,
       });
-      
+
       try {
         mockWindow.dispatchEvent(event);
       } catch (error) {
         expect(error.message).toBe("Dispatch failed");
       }
-      
+
       consoleErrorSpy.mockRestore();
     });
 
     test("should log errors with [GeoSpoof Content] prefix", () => {
       const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
-      
+
       const error = new Error("Test error");
       console.error("[GeoSpoof Content] Failed to dispatch settings update:", error);
-      
+
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         "[GeoSpoof Content] Failed to dispatch settings update:",
         error
       );
-      
+
       consoleErrorSpy.mockRestore();
     });
   });
@@ -255,24 +255,24 @@ describe("Content Script Data Transmission", () => {
         }
         return true;
       });
-      
+
       const settingsData = {
         enabled: true,
         location: { latitude: 35.6762, longitude: 139.6503, accuracy: 10 },
-        timezone: { identifier: "Asia/Tokyo", offset: -540, dstOffset: 0 }
+        timezone: { identifier: "Asia/Tokyo", offset: -540, dstOffset: 0 },
       };
-      
+
       const event = new CustomEvent("__geospoof_settings_update", {
-        detail: settingsData
+        detail: settingsData,
       });
-      
+
       // First attempt
       try {
         mockWindow.dispatchEvent(event);
       } catch (error) {
         // Expected to fail
       }
-      
+
       // Retry after 100ms
       setTimeout(() => {
         try {
@@ -287,27 +287,27 @@ describe("Content Script Data Transmission", () => {
 
     test("should log retry success", () => {
       const consoleLogSpy = jest.spyOn(console, "log").mockImplementation();
-      
+
       console.log("[GeoSpoof Content] Retry successful: Dispatched settings update event");
-      
+
       expect(consoleLogSpy).toHaveBeenCalledWith(
         "[GeoSpoof Content] Retry successful: Dispatched settings update event"
       );
-      
+
       consoleLogSpy.mockRestore();
     });
 
     test("should log retry failure", () => {
       const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
-      
+
       const error = new Error("Retry failed");
       console.error("[GeoSpoof Content] Retry failed to dispatch settings update:", error);
-      
+
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         "[GeoSpoof Content] Retry failed to dispatch settings update:",
         error
       );
-      
+
       consoleErrorSpy.mockRestore();
     });
   });
@@ -319,10 +319,10 @@ describe("Content Script Data Transmission", () => {
         payload: {
           enabled: true,
           location: { latitude: 35.6762, longitude: 139.6503, accuracy: 10 },
-          timezone: { identifier: "Asia/Tokyo", offset: -540, dstOffset: 0 }
-        }
+          timezone: { identifier: "Asia/Tokyo", offset: -540, dstOffset: 0 },
+        },
       };
-      
+
       expect(message.payload.timezone).toBeDefined();
       expect(message.payload.timezone.identifier).toBe("Asia/Tokyo");
       expect(message.payload.timezone.offset).toBe(-540);
@@ -332,9 +332,9 @@ describe("Content Script Data Transmission", () => {
       const settings = {
         enabled: true,
         location: { latitude: 35.6762, longitude: 139.6503, accuracy: 10 },
-        timezone: { identifier: "Asia/Tokyo", offset: -540, dstOffset: 0 }
+        timezone: { identifier: "Asia/Tokyo", offset: -540, dstOffset: 0 },
       };
-      
+
       expect(settings.timezone).toBeDefined();
       expect(settings.timezone.identifier).toBe("Asia/Tokyo");
     });

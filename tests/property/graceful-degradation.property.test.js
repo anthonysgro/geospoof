@@ -1,9 +1,9 @@
 /**
  * Property-Based Tests for Graceful Degradation
- * 
+ *
  * Tests that timezone spoofing failures don't affect geolocation spoofing
  * and that fallback timezone data works correctly.
- * 
+ *
  * Feature: timezone-spoofing-and-status-display
  */
 
@@ -12,10 +12,10 @@ const { setupContentScript } = require("../../content/content.test.helper");
 
 /**
  * Property: Geolocation Spoofing Independence
- * 
+ *
  * For any geolocation API call, when timezone data is null, undefined, or invalid,
  * geolocation spoofing should continue to function normally.
- * 
+ *
  * **Validates: Requirements 10.4, 11.2, 12.5**
  */
 describe("Property: Geolocation Spoofing Independence", () => {
@@ -25,23 +25,23 @@ describe("Property: Geolocation Spoofing Independence", () => {
         fc.record({
           latitude: fc.double({ min: -90, max: 90, noNaN: true }),
           longitude: fc.double({ min: -180, max: 180, noNaN: true }),
-          accuracy: fc.double({ min: 1, max: 1000, noNaN: true })
+          accuracy: fc.double({ min: 1, max: 1000, noNaN: true }),
         }),
         async (location) => {
           // Setup content script with null timezone
           const contentScript = setupContentScript({
             enabled: true,
             location: location,
-            timezone: null
+            timezone: null,
           });
-          
+
           // Test geolocation API
           const position = await new Promise((resolve) => {
             contentScript.navigator.geolocation.getCurrentPosition((pos) => {
               resolve(pos);
             });
           });
-          
+
           // Geolocation should still work
           expect(position).not.toBeNull();
           expect(position.coords.latitude).toBe(location.latitude);
@@ -59,23 +59,23 @@ describe("Property: Geolocation Spoofing Independence", () => {
         fc.record({
           latitude: fc.double({ min: -90, max: 90, noNaN: true }),
           longitude: fc.double({ min: -180, max: 180, noNaN: true }),
-          accuracy: fc.double({ min: 1, max: 1000, noNaN: true })
+          accuracy: fc.double({ min: 1, max: 1000, noNaN: true }),
         }),
         async (location) => {
           // Setup content script without timezone property
           const contentScript = setupContentScript({
             enabled: true,
-            location: location
+            location: location,
             // timezone property omitted (undefined)
           });
-          
+
           // Test geolocation API
           const position = await new Promise((resolve) => {
             contentScript.navigator.geolocation.getCurrentPosition((pos) => {
               resolve(pos);
             });
           });
-          
+
           // Geolocation should still work
           expect(position).not.toBeNull();
           expect(position.coords.latitude).toBe(location.latitude);
@@ -92,7 +92,7 @@ describe("Property: Geolocation Spoofing Independence", () => {
         fc.record({
           latitude: fc.double({ min: -90, max: 90, noNaN: true }),
           longitude: fc.double({ min: -180, max: 180, noNaN: true }),
-          accuracy: fc.double({ min: 1, max: 1000, noNaN: true })
+          accuracy: fc.double({ min: 1, max: 1000, noNaN: true }),
         }),
         fc.oneof(
           // Invalid timezone structures
@@ -107,16 +107,16 @@ describe("Property: Geolocation Spoofing Independence", () => {
           const contentScript = setupContentScript({
             enabled: true,
             location: location,
-            timezone: invalidTimezone
+            timezone: invalidTimezone,
           });
-          
+
           // Test geolocation API
           const position = await new Promise((resolve) => {
             contentScript.navigator.geolocation.getCurrentPosition((pos) => {
               resolve(pos);
             });
           });
-          
+
           // Geolocation should still work despite invalid timezone
           expect(position).not.toBeNull();
           expect(position.coords.latitude).toBe(location.latitude);
@@ -133,16 +133,16 @@ describe("Property: Geolocation Spoofing Independence", () => {
         fc.record({
           latitude: fc.double({ min: -90, max: 90, noNaN: true }),
           longitude: fc.double({ min: -180, max: 180, noNaN: true }),
-          accuracy: fc.double({ min: 1, max: 1000, noNaN: true })
+          accuracy: fc.double({ min: 1, max: 1000, noNaN: true }),
         }),
         async (location) => {
           // Setup content script with null timezone
           const contentScript = setupContentScript({
             enabled: true,
             location: location,
-            timezone: null
+            timezone: null,
           });
-          
+
           // Test watchPosition API
           const position = await new Promise((resolve) => {
             const watchId = contentScript.navigator.geolocation.watchPosition((pos) => {
@@ -150,7 +150,7 @@ describe("Property: Geolocation Spoofing Independence", () => {
               contentScript.navigator.geolocation.clearWatch(watchId);
             });
           });
-          
+
           // watchPosition should still work
           expect(position).not.toBeNull();
           expect(position.coords.latitude).toBe(location.latitude);
@@ -164,10 +164,10 @@ describe("Property: Geolocation Spoofing Independence", () => {
 
 /**
  * Property: Fallback Timezone Spoofing
- * 
+ *
  * For any fallback timezone data (with fallback: true), timezone spoofing
  * should apply using the estimated offset values.
- * 
+ *
  * **Validates: Requirements 11.4**
  */
 describe("Property: Fallback Timezone Spoofing", () => {
@@ -178,7 +178,7 @@ describe("Property: Fallback Timezone Spoofing", () => {
           identifier: fc.constantFrom("UTC", "Etc/GMT", "Etc/GMT+0"),
           offset: fc.integer({ min: -720, max: 840 }),
           dstOffset: fc.integer({ min: 0, max: 60 }),
-          fallback: fc.constant(true) // Fallback flag
+          fallback: fc.constant(true), // Fallback flag
         }),
         (fallbackTimezone) => {
           // Setup content script with fallback timezone
@@ -187,15 +187,15 @@ describe("Property: Fallback Timezone Spoofing", () => {
             location: {
               latitude: 0,
               longitude: 0,
-              accuracy: 10
+              accuracy: 10,
             },
-            timezone: fallbackTimezone
+            timezone: fallbackTimezone,
           });
-          
+
           // Test getTimezoneOffset
           const date = new Date();
           const offset = contentScript.Date.prototype.getTimezoneOffset.call(date);
-          
+
           // Should return negative of the fallback offset
           expect(offset).toBe(-fallbackTimezone.offset);
         }
@@ -211,7 +211,7 @@ describe("Property: Fallback Timezone Spoofing", () => {
           identifier: fc.constantFrom("UTC", "Etc/GMT", "Etc/GMT+0", "Etc/GMT-0"),
           offset: fc.integer({ min: -720, max: 840 }),
           dstOffset: fc.constant(0),
-          fallback: fc.constant(true)
+          fallback: fc.constant(true),
         }),
         (fallbackTimezone) => {
           // Setup content script with fallback timezone
@@ -220,15 +220,15 @@ describe("Property: Fallback Timezone Spoofing", () => {
             location: {
               latitude: 0,
               longitude: 0,
-              accuracy: 10
+              accuracy: 10,
             },
-            timezone: fallbackTimezone
+            timezone: fallbackTimezone,
           });
-          
+
           // Test Intl.DateTimeFormat
           const formatter = new contentScript.Intl.DateTimeFormat();
           const options = formatter.resolvedOptions();
-          
+
           // Should use the fallback timezone identifier
           expect(options.timeZone).toBe(fallbackTimezone.identifier);
         }
@@ -244,7 +244,7 @@ describe("Property: Fallback Timezone Spoofing", () => {
           identifier: fc.constantFrom("UTC", "Etc/GMT"),
           offset: fc.integer({ min: -720, max: 840 }),
           dstOffset: fc.constant(0),
-          fallback: fc.constant(true)
+          fallback: fc.constant(true),
         }),
         fc.date(),
         (fallbackTimezone, date) => {
@@ -254,21 +254,21 @@ describe("Property: Fallback Timezone Spoofing", () => {
             location: {
               latitude: 0,
               longitude: 0,
-              accuracy: 10
+              accuracy: 10,
             },
-            timezone: fallbackTimezone
+            timezone: fallbackTimezone,
           });
-          
+
           // Test Date formatting methods
           const dateString = contentScript.Date.prototype.toString.call(date);
           const timeString = contentScript.Date.prototype.toTimeString.call(date);
           const localeString = contentScript.Date.prototype.toLocaleString.call(date);
-          
+
           // All should be strings (not throw errors)
           expect(typeof dateString).toBe("string");
           expect(typeof timeString).toBe("string");
           expect(typeof localeString).toBe("string");
-          
+
           // Should contain timezone information
           expect(dateString.length).toBeGreaterThan(0);
           expect(timeString.length).toBeGreaterThan(0);
@@ -288,24 +288,24 @@ describe("Property: Fallback Timezone Spoofing", () => {
             identifier: "UTC",
             offset: offset,
             dstOffset: 0,
-            fallback: true
+            fallback: true,
           };
-          
+
           // Setup content script
           const contentScript = setupContentScript({
             enabled: true,
             location: {
               latitude: 0,
               longitude: 0,
-              accuracy: 10
+              accuracy: 10,
             },
-            timezone: fallbackTimezone
+            timezone: fallbackTimezone,
           });
-          
+
           // Test getTimezoneOffset
           const date = new Date();
           const timezoneOffset = contentScript.Date.prototype.getTimezoneOffset.call(date);
-          
+
           // Should return negative of the offset
           expect(timezoneOffset).toBe(-offset);
         }
@@ -320,32 +320,32 @@ describe("Property: Fallback Timezone Spoofing", () => {
         fc.record({
           latitude: fc.double({ min: -90, max: 90, noNaN: true }),
           longitude: fc.double({ min: -180, max: 180, noNaN: true }),
-          accuracy: fc.double({ min: 1, max: 1000, noNaN: true })
+          accuracy: fc.double({ min: 1, max: 1000, noNaN: true }),
         }),
         fc.record({
           identifier: fc.constantFrom("UTC", "Etc/GMT"),
           offset: fc.integer({ min: -720, max: 840 }),
           dstOffset: fc.constant(0),
-          fallback: fc.constant(true)
+          fallback: fc.constant(true),
         }),
         async (location, fallbackTimezone) => {
           // Setup content script with both location and fallback timezone
           const contentScript = setupContentScript({
             enabled: true,
             location: location,
-            timezone: fallbackTimezone
+            timezone: fallbackTimezone,
           });
-          
+
           // Test both geolocation and timezone APIs
           const position = await new Promise((resolve) => {
             contentScript.navigator.geolocation.getCurrentPosition((pos) => {
               resolve(pos);
             });
           });
-          
+
           const date = new Date();
           const timezoneOffset = contentScript.Date.prototype.getTimezoneOffset.call(date);
-          
+
           // Both should work
           expect(position).not.toBeNull();
           expect(position.coords.latitude).toBe(location.latitude);
@@ -359,7 +359,7 @@ describe("Property: Fallback Timezone Spoofing", () => {
 
 /**
  * Property: Timezone Validation Doesn't Affect Geolocation
- * 
+ *
  * For any timezone data that fails validation, geolocation spoofing
  * should continue to work normally.
  */
@@ -370,7 +370,7 @@ describe("Property: Timezone Validation Doesn't Affect Geolocation", () => {
         fc.record({
           latitude: fc.double({ min: -90, max: 90, noNaN: true }),
           longitude: fc.double({ min: -180, max: 180, noNaN: true }),
-          accuracy: fc.double({ min: 1, max: 1000, noNaN: true })
+          accuracy: fc.double({ min: 1, max: 1000, noNaN: true }),
         }),
         fc.oneof(
           fc.constant(null),
@@ -387,17 +387,17 @@ describe("Property: Timezone Validation Doesn't Affect Geolocation", () => {
             timezone: {
               identifier: invalidIdentifier,
               offset: 0,
-              dstOffset: 0
-            }
+              dstOffset: 0,
+            },
           });
-          
+
           // Geolocation should still work
           const position = await new Promise((resolve) => {
             contentScript.navigator.geolocation.getCurrentPosition((pos) => {
               resolve(pos);
             });
           });
-          
+
           expect(position).not.toBeNull();
           expect(position.coords.latitude).toBe(location.latitude);
         }
@@ -412,7 +412,7 @@ describe("Property: Timezone Validation Doesn't Affect Geolocation", () => {
         fc.record({
           latitude: fc.double({ min: -90, max: 90, noNaN: true }),
           longitude: fc.double({ min: -180, max: 180, noNaN: true }),
-          accuracy: fc.double({ min: 1, max: 1000, noNaN: true })
+          accuracy: fc.double({ min: 1, max: 1000, noNaN: true }),
         }),
         fc.oneof(
           fc.constant(null),
@@ -429,17 +429,17 @@ describe("Property: Timezone Validation Doesn't Affect Geolocation", () => {
             timezone: {
               identifier: "UTC",
               offset: invalidOffset,
-              dstOffset: 0
-            }
+              dstOffset: 0,
+            },
           });
-          
+
           // Geolocation should still work
           const position = await new Promise((resolve) => {
             contentScript.navigator.geolocation.getCurrentPosition((pos) => {
               resolve(pos);
             });
           });
-          
+
           expect(position).not.toBeNull();
           expect(position.coords.latitude).toBe(location.latitude);
         }

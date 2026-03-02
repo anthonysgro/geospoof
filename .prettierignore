@@ -1,0 +1,28 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+build
+*.zip
+
+# Coverage
+coverage
+
+# Logs
+*.log
+
+# Cache
+.cache
+
+# IDE
+.kiro
+.vscode
+.idea
+
+# Test files (keep original formatting for readability)
+# Uncomment if you want to exclude tests from formatting
+# tests/**/*.test.js
+
+# Generated files
+package-lock.json

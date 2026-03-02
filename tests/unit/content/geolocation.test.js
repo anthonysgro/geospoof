@@ -9,7 +9,7 @@ describe("Geolocation API Override Edge Cases", () => {
   const testLocation = {
     latitude: 37.7749,
     longitude: -122.4194,
-    accuracy: 10
+    accuracy: 10,
   };
 
   describe("watchPosition callback management", () => {
@@ -17,7 +17,7 @@ describe("Geolocation API Override Edge Cases", () => {
       const contentScript = setupContentScript({
         enabled: true,
         location: testLocation,
-        timezone: null
+        timezone: null,
       });
 
       const callbacks = [];
@@ -27,16 +27,16 @@ describe("Geolocation API Override Edge Cases", () => {
       for (let i = 0; i < 3; i++) {
         const callback = jest.fn();
         callbacks.push(callback);
-        
+
         const watchId = contentScript.navigator.geolocation.watchPosition(callback);
         watchIds.push(watchId);
       }
 
       // Wait for callbacks to be invoked
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // All callbacks should have been called
-      callbacks.forEach(callback => {
+      callbacks.forEach((callback) => {
         expect(callback).toHaveBeenCalled();
         const position = callback.mock.calls[0][0];
         expect(position.coords.latitude).toBe(testLocation.latitude);
@@ -52,7 +52,7 @@ describe("Geolocation API Override Edge Cases", () => {
       const contentScript = setupContentScript({
         enabled: true,
         location: testLocation,
-        timezone: null
+        timezone: null,
       });
 
       const watchId1 = contentScript.navigator.geolocation.watchPosition(() => {});
@@ -70,14 +70,14 @@ describe("Geolocation API Override Edge Cases", () => {
       const contentScript = setupContentScript({
         enabled: true,
         location: testLocation,
-        timezone: null
+        timezone: null,
       });
 
       const callback = jest.fn();
       const watchId = contentScript.navigator.geolocation.watchPosition(callback);
 
       // Wait for initial callback
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       expect(callback).toHaveBeenCalledTimes(1);
 
       // Clear the watch
@@ -92,7 +92,7 @@ describe("Geolocation API Override Edge Cases", () => {
       const contentScript = setupContentScript({
         enabled: true,
         location: testLocation,
-        timezone: null
+        timezone: null,
       });
 
       // Should not throw error
@@ -105,7 +105,7 @@ describe("Geolocation API Override Edge Cases", () => {
       const contentScript = setupContentScript({
         enabled: false,
         location: testLocation,
-        timezone: null
+        timezone: null,
       });
 
       const watchId = 123;
@@ -121,7 +121,7 @@ describe("Geolocation API Override Edge Cases", () => {
       const contentScript = setupContentScript({
         enabled: true,
         location: testLocation,
-        timezone: null
+        timezone: null,
       });
 
       // Make 5 simultaneous calls
@@ -139,7 +139,7 @@ describe("Geolocation API Override Edge Cases", () => {
       const positions = await Promise.all(promises);
 
       // All should return the same spoofed location
-      positions.forEach(position => {
+      positions.forEach((position) => {
         expect(position.coords.latitude).toBe(testLocation.latitude);
         expect(position.coords.longitude).toBe(testLocation.longitude);
       });
@@ -149,7 +149,7 @@ describe("Geolocation API Override Edge Cases", () => {
       const contentScript = setupContentScript({
         enabled: true,
         location: testLocation,
-        timezone: null
+        timezone: null,
       });
 
       const results = await Promise.all([
@@ -167,11 +167,11 @@ describe("Geolocation API Override Edge Cases", () => {
           contentScript.navigator.geolocation.getCurrentPosition((pos) => {
             resolve({ type: "getCurrentPosition", position: pos });
           });
-        })
+        }),
       ]);
 
       // All should return spoofed coordinates
-      results.forEach(result => {
+      results.forEach((result) => {
         expect(result.position.coords.latitude).toBe(testLocation.latitude);
         expect(result.position.coords.longitude).toBe(testLocation.longitude);
       });
@@ -183,20 +183,17 @@ describe("Geolocation API Override Edge Cases", () => {
       const contentScript = setupContentScript({
         enabled: true,
         location: testLocation,
-        timezone: null
+        timezone: null,
       });
 
       const successCallback = jest.fn();
       const errorCallback = jest.fn();
 
       await new Promise((resolve) => {
-        contentScript.navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            successCallback(pos);
-            resolve();
-          },
-          errorCallback
-        );
+        contentScript.navigator.geolocation.getCurrentPosition((pos) => {
+          successCallback(pos);
+          resolve();
+        }, errorCallback);
       });
 
       expect(successCallback).toHaveBeenCalled();
@@ -209,7 +206,7 @@ describe("Geolocation API Override Edge Cases", () => {
       const contentScript = setupContentScript({
         enabled: true,
         location: testLocation,
-        timezone: null
+        timezone: null,
       });
 
       // Start with protection enabled

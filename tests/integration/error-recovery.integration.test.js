@@ -1,11 +1,11 @@
 /**
  * Integration Tests for Error Recovery
- * 
+ *
  * Tests error handling and recovery workflows:
  * - Geocoding timeout → display error → allow manual coordinates
  * - Reverse geocoding failure → display coordinates only
  * - Content script injection failure → display warning
- * 
+ *
  * Requirements: 9.3, 9.5, 9.6, 8.5
  */
 
@@ -15,42 +15,42 @@ global.browser = {
     query: jest.fn(),
     sendMessage: jest.fn(),
     onCreated: {
-      addListener: jest.fn()
+      addListener: jest.fn(),
     },
     onUpdated: {
-      addListener: jest.fn()
-    }
+      addListener: jest.fn(),
+    },
   },
   storage: {
     local: {
       get: jest.fn(),
-      set: jest.fn()
-    }
+      set: jest.fn(),
+    },
   },
   action: {
     setBadgeBackgroundColor: jest.fn(),
-    setBadgeText: jest.fn()
+    setBadgeText: jest.fn(),
   },
   browserAction: {
     setBadgeBackgroundColor: jest.fn(async () => {}),
-    setBadgeText: jest.fn(async () => {})
+    setBadgeText: jest.fn(async () => {}),
   },
   runtime: {
     onMessage: {
-      addListener: jest.fn()
+      addListener: jest.fn(),
     },
     onInstalled: {
-      addListener: jest.fn()
-    }
+      addListener: jest.fn(),
+    },
   },
   privacy: {
     network: {
       webRTCIPHandlingPolicy: {
         set: jest.fn(),
-        clear: jest.fn()
-      }
-    }
-  }
+        clear: jest.fn(),
+      },
+    },
+  },
 };
 
 // Mock fetch for geocoding
@@ -61,10 +61,10 @@ const background = require("../../background/background.js");
 describe("Error Recovery Integration Tests", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Clear timezone cache to prevent cache hits from previous tests
     background.clearTimezoneCache();
-    
+
     // Default storage mock
     browser.storage.local.get.mockResolvedValue({
       settings: {
@@ -75,17 +75,15 @@ describe("Error Recovery Integration Tests", () => {
         webrtcProtection: false,
         onboardingCompleted: true,
         version: "1.0",
-        lastUpdated: Date.now()
-      }
+        lastUpdated: Date.now(),
+      },
     });
-    
+
     browser.storage.local.set.mockResolvedValue();
-    
+
     // Default tabs mock
-    browser.tabs.query.mockResolvedValue([
-      { id: 1, url: "https://example.com" }
-    ]);
-    
+    browser.tabs.query.mockResolvedValue([{ id: 1, url: "https://example.com" }]);
+
     browser.tabs.sendMessage.mockResolvedValue();
   });
 
@@ -93,7 +91,7 @@ describe("Error Recovery Integration Tests", () => {
     test("should handle geocoding timeout and allow manual coordinate entry", async () => {
       // Step 1: User searches for location, but request times out
       const searchQuery = "San Francisco";
-      
+
       // Mock fetch to simulate timeout (AbortError)
       global.fetch.mockImplementationOnce(() => {
         return new Promise((resolve, reject) => {
@@ -104,7 +102,7 @@ describe("Error Recovery Integration Tests", () => {
           }, 100);
         });
       });
-      
+
       // Act: Attempt geocoding
       let result;
       try {
@@ -112,26 +110,26 @@ describe("Error Recovery Integration Tests", () => {
       } catch (error) {
         result = { error: error.message };
       }
-      
+
       // Assert: Error returned with timeout message
       expect(result.error).toBe("TIMEOUT");
-      
+
       // Step 2: User enters manual coordinates instead
       const manualLocation = {
         latitude: 37.7749,
-        longitude: -122.4194
+        longitude: -122.4194,
       };
-      
+
       // Mock timezone API (should still work)
       global.fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           timezoneId: "America/Los_Angeles",
           rawOffset: -8,
-          dstOffset: 1
-        })
+          dstOffset: 1,
+        }),
       });
-      
+
       // Mock reverse geocoding (should still work)
       global.fetch.mockResolvedValueOnce({
         ok: true,
@@ -139,14 +137,14 @@ describe("Error Recovery Integration Tests", () => {
           display_name: "San Francisco, CA, USA",
           address: {
             city: "San Francisco",
-            country: "USA"
-          }
-        })
+            country: "USA",
+          },
+        }),
       });
-      
+
       // Act: Set location manually
       await background.handleSetLocation(manualLocation);
-      
+
       // Assert: Location set successfully despite geocoding timeout
       expect(browser.storage.local.set).toHaveBeenCalled();
       const savedSettings = browser.storage.local.set.mock.calls[0][0].settings;
@@ -157,46 +155,46 @@ describe("Error Recovery Integration Tests", () => {
     test("should handle network error during geocoding", async () => {
       // Step 1: Simulate network error
       global.fetch.mockRejectedValueOnce(new Error("Network request failed"));
-      
+
       let result;
       try {
         result = await background.geocodeQuery("London");
       } catch (error) {
         result = { error: error.message };
       }
-      
+
       // Assert: Error returned
       expect(result.error).toBe("NETWORK");
-      
+
       // Step 2: User can still set manual coordinates
       const manualLocation = {
         latitude: 51.5074,
-        longitude: -0.1278
+        longitude: -0.1278,
       };
-      
+
       // Mock successful timezone and reverse geocoding
       global.fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           timezoneId: "Europe/London",
           rawOffset: 0,
-          dstOffset: 1
-        })
+          dstOffset: 1,
+        }),
       });
-      
+
       global.fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           display_name: "London, England, UK",
           address: {
             city: "London",
-            country: "UK"
-          }
-        })
+            country: "UK",
+          },
+        }),
       });
-      
+
       await background.handleSetLocation(manualLocation);
-      
+
       // Assert: Manual coordinates work
       const savedSettings = browser.storage.local.set.mock.calls[0][0].settings;
       expect(savedSettings.location.latitude).toBe(51.5074);
@@ -207,47 +205,47 @@ describe("Error Recovery Integration Tests", () => {
       global.fetch.mockResolvedValueOnce({
         ok: false,
         status: 500,
-        statusText: "Internal Server Error"
+        statusText: "Internal Server Error",
       });
-      
+
       let result;
       try {
         result = await background.geocodeQuery("Tokyo");
       } catch (error) {
         result = { error: error.message };
       }
-      
+
       // Assert: Error returned
       expect(result.error).toBeDefined();
-      
+
       // Step 2: Manual coordinates still work
       const manualLocation = {
         latitude: 35.6762,
-        longitude: 139.6503
+        longitude: 139.6503,
       };
-      
+
       global.fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           timezoneId: "Asia/Tokyo",
           rawOffset: 9,
-          dstOffset: 0
-        })
+          dstOffset: 0,
+        }),
       });
-      
+
       global.fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           display_name: "Tokyo, Japan",
           address: {
             city: "Tokyo",
-            country: "Japan"
-          }
-        })
+            country: "Japan",
+          },
+        }),
       });
-      
+
       await background.handleSetLocation(manualLocation);
-      
+
       const savedSettings = browser.storage.local.set.mock.calls[0][0].settings;
       expect(savedSettings.location.latitude).toBe(35.6762);
     });
@@ -256,40 +254,40 @@ describe("Error Recovery Integration Tests", () => {
       // Step 1: API returns empty results
       global.fetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => []
+        json: async () => [],
       });
-      
+
       const result = await background.geocodeQuery("NonexistentPlace12345");
-      
+
       // Assert: Empty results returned (not an error)
       expect(Array.isArray(result)).toBe(true);
       expect(result).toHaveLength(0);
-      
+
       // Step 2: User can enter manual coordinates
       const manualLocation = {
         latitude: 0,
-        longitude: 0
+        longitude: 0,
       };
-      
+
       global.fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           timezoneId: "UTC",
           rawOffset: 0,
-          dstOffset: 0
-        })
+          dstOffset: 0,
+        }),
       });
-      
+
       global.fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           display_name: "Atlantic Ocean",
-          address: {}
-        })
+          address: {},
+        }),
       });
-      
+
       await background.handleSetLocation(manualLocation);
-      
+
       const savedSettings = browser.storage.local.set.mock.calls[0][0].settings;
       expect(savedSettings.location).toBeDefined();
     });
@@ -300,53 +298,55 @@ describe("Error Recovery Integration Tests", () => {
       // Step 1: User sets location via coordinates
       const location = {
         latitude: 45.0,
-        longitude: 90.0
+        longitude: 90.0,
       };
-      
+
       // Mock timezone API (succeeds)
       global.fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           timezoneId: "Asia/Urumqi",
           rawOffset: 6,
-          dstOffset: 0
-        })
+          dstOffset: 0,
+        }),
       });
-      
+
       // Mock reverse geocoding failure
       global.fetch.mockRejectedValueOnce(new Error("Reverse geocoding failed"));
-      
+
       // Act: Set location
       await background.handleSetLocation(location);
-      
+
       // Assert: Location saved despite reverse geocoding failure
       expect(browser.storage.local.set).toHaveBeenCalled();
       const savedSettings = browser.storage.local.set.mock.calls[0][0].settings;
       expect(savedSettings.location.latitude).toBe(45.0);
       expect(savedSettings.location.longitude).toBe(90.0);
       expect(savedSettings.timezone.identifier).toBe("Asia/Urumqi");
-      
+
       // Assert: locationName is null or has fallback
       // (Implementation should handle this gracefully)
-      expect(savedSettings.locationName === null || savedSettings.locationName.displayName).toBeTruthy();
+      expect(
+        savedSettings.locationName === null || savedSettings.locationName.displayName
+      ).toBeTruthy();
     });
 
     test("should handle reverse geocoding timeout", async () => {
       const location = {
         latitude: -15.0,
-        longitude: -60.0
+        longitude: -60.0,
       };
-      
+
       // Mock timezone API (succeeds)
       global.fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           timezoneId: "America/Cuiaba",
           rawOffset: -4,
-          dstOffset: 0
-        })
+          dstOffset: 0,
+        }),
       });
-      
+
       // Mock reverse geocoding timeout
       global.fetch.mockImplementationOnce(() => {
         return new Promise((resolve, reject) => {
@@ -357,9 +357,9 @@ describe("Error Recovery Integration Tests", () => {
           }, 100);
         });
       });
-      
+
       await background.handleSetLocation(location);
-      
+
       // Assert: Location saved with coordinates
       const savedSettings = browser.storage.local.set.mock.calls[0][0].settings;
       expect(savedSettings.location.latitude).toBe(-15.0);
@@ -369,30 +369,30 @@ describe("Error Recovery Integration Tests", () => {
     test("should handle reverse geocoding returning no results", async () => {
       const location = {
         latitude: -50.0,
-        longitude: 150.0
+        longitude: 150.0,
       };
-      
+
       // Mock timezone API
       global.fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           timezoneId: "Australia/Melbourne",
           rawOffset: 10,
-          dstOffset: 1
-        })
+          dstOffset: 1,
+        }),
       });
-      
+
       // Mock reverse geocoding with empty/invalid result
       global.fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           display_name: "",
-          address: {}
-        })
+          address: {},
+        }),
       });
-      
+
       await background.handleSetLocation(location);
-      
+
       // Assert: Location saved
       const savedSettings = browser.storage.local.set.mock.calls[0][0].settings;
       expect(savedSettings.location.latitude).toBe(-50.0);
@@ -402,28 +402,28 @@ describe("Error Recovery Integration Tests", () => {
     test("should handle reverse geocoding API error status", async () => {
       const location = {
         latitude: 60.0,
-        longitude: 100.0
+        longitude: 100.0,
       };
-      
+
       // Mock timezone API
       global.fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           timezoneId: "Asia/Krasnoyarsk",
           rawOffset: 7,
-          dstOffset: 0
-        })
+          dstOffset: 0,
+        }),
       });
-      
+
       // Mock reverse geocoding API error
       global.fetch.mockResolvedValueOnce({
         ok: false,
         status: 503,
-        statusText: "Service Unavailable"
+        statusText: "Service Unavailable",
       });
-      
+
       await background.handleSetLocation(location);
-      
+
       // Assert: Location saved despite API error
       const savedSettings = browser.storage.local.set.mock.calls[0][0].settings;
       expect(savedSettings.location.latitude).toBe(60.0);
@@ -436,53 +436,53 @@ describe("Error Recovery Integration Tests", () => {
       // Step 1: Set up location and enable protection
       const location = {
         latitude: 40.7128,
-        longitude: -74.0060
+        longitude: -74.006,
       };
-      
+
       global.fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           timezoneId: "America/New_York",
           rawOffset: -5,
-          dstOffset: 1
-        })
+          dstOffset: 1,
+        }),
       });
-      
+
       global.fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           display_name: "New York, NY, USA",
           address: {
             city: "New York",
-            country: "USA"
-          }
-        })
+            country: "USA",
+          },
+        }),
       });
-      
+
       await background.handleSetLocation(location);
       await background.handleSetProtectionStatus({ enabled: true });
-      
+
       // Step 2: Simulate content script injection failure
       const failedTabId = 42;
-      
+
       browser.tabs.sendMessage.mockImplementationOnce((tabId) => {
         if (tabId === failedTabId) {
           return Promise.reject(new Error("Could not establish connection"));
         }
         return Promise.resolve();
       });
-      
+
       // Act: Try to send message to tab (simulating broadcast)
       try {
         await browser.tabs.sendMessage(failedTabId, {
           type: "UPDATE_SETTINGS",
-          payload: {}
+          payload: {},
         });
       } catch (error) {
         // Expected to fail
         expect(error.message).toContain("Could not establish connection");
       }
-      
+
       // Assert: Error was caught (in real implementation, would update badge)
       // The background script should handle this gracefully
     });
@@ -493,11 +493,11 @@ describe("Error Recovery Integration Tests", () => {
         { id: 1, url: "https://example.com" },
         { id: 2, url: "about:blank" }, // Will fail
         { id: 3, url: "https://test.com" },
-        { id: 4, url: "moz-extension://abc" } // Will fail
+        { id: 4, url: "moz-extension://abc" }, // Will fail
       ];
-      
+
       browser.tabs.query.mockResolvedValue(tabs);
-      
+
       // Mock sendMessage to fail for certain tabs
       browser.tabs.sendMessage.mockImplementation((tabId) => {
         if (tabId === 2 || tabId === 4) {
@@ -505,26 +505,24 @@ describe("Error Recovery Integration Tests", () => {
         }
         return Promise.resolve();
       });
-      
+
       const settings = {
         enabled: true,
         location: {
           latitude: 51.5074,
           longitude: -0.1278,
-          accuracy: 10
+          accuracy: 10,
         },
         timezone: {
           identifier: "Europe/London",
           offset: 0,
-          dstOffset: 60
-        }
+          dstOffset: 60,
+        },
       };
-      
+
       // Act: Broadcast settings (should not throw)
-      await expect(
-        background.broadcastSettingsToTabs(settings)
-      ).resolves.not.toThrow();
-      
+      await expect(background.broadcastSettingsToTabs(settings)).resolves.not.toThrow();
+
       // Assert: All tabs were attempted
       expect(browser.tabs.sendMessage).toHaveBeenCalledTimes(4);
     });
@@ -533,41 +531,41 @@ describe("Error Recovery Integration Tests", () => {
       // Setup: Enable protection with location
       const location = {
         latitude: 48.8566,
-        longitude: 2.3522
+        longitude: 2.3522,
       };
-      
+
       global.fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           timezoneId: "Europe/Paris",
           rawOffset: 1,
-          dstOffset: 1
-        })
+          dstOffset: 1,
+        }),
       });
-      
+
       global.fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           display_name: "Paris, France",
           address: {
             city: "Paris",
-            country: "France"
-          }
-        })
+            country: "France",
+          },
+        }),
       });
-      
+
       await background.handleSetLocation(location);
-      
+
       // Mock tabs with mixed success/failure
       browser.tabs.query.mockResolvedValue([
         { id: 1, url: "https://example1.com" },
         { id: 2, url: "https://example2.com" },
-        { id: 3, url: "https://example3.com" }
+        { id: 3, url: "https://example3.com" },
       ]);
-      
+
       let successCount = 0;
       let failureCount = 0;
-      
+
       browser.tabs.sendMessage.mockImplementation((tabId) => {
         if (tabId === 2) {
           failureCount++;
@@ -576,16 +574,18 @@ describe("Error Recovery Integration Tests", () => {
         successCount++;
         return Promise.resolve();
       });
-      
+
       // Act: Enable protection (triggers broadcast)
       await background.handleSetProtectionStatus({ enabled: true });
-      
+
       // Assert: Some tabs succeeded
       expect(successCount).toBeGreaterThan(0);
       expect(failureCount).toBeGreaterThan(0);
-      
+
       // Assert: Protection still enabled despite failures
-      const savedSettings = browser.storage.local.set.mock.calls[browser.storage.local.set.mock.calls.length - 1][0].settings;
+      const savedSettings =
+        browser.storage.local.set.mock.calls[browser.storage.local.set.mock.calls.length - 1][0]
+          .settings;
       expect(savedSettings.enabled).toBe(true);
     });
   });
@@ -594,36 +594,36 @@ describe("Error Recovery Integration Tests", () => {
     test("should handle multiple errors in sequence", async () => {
       // Step 1: Geocoding fails
       global.fetch.mockRejectedValueOnce(new Error("Network error"));
-      
+
       let geocodeResult;
       try {
         geocodeResult = await background.geocodeQuery("Berlin");
       } catch (error) {
         geocodeResult = { error: error.message };
       }
-      
+
       expect(geocodeResult.error).toBe("NETWORK");
-      
+
       // Step 2: User enters manual coordinates
       const location = {
-        latitude: 52.5200,
-        longitude: 13.4050
+        latitude: 52.52,
+        longitude: 13.405,
       };
-      
+
       // Step 3: Timezone API fails, should use fallback
       global.fetch.mockRejectedValueOnce(new Error("Timezone API error"));
-      
+
       // Step 4: Reverse geocoding also fails
       global.fetch.mockRejectedValueOnce(new Error("Reverse geocoding error"));
-      
+
       // Act: Set location (should handle all failures gracefully)
       await background.handleSetLocation(location);
-      
+
       // Assert: Location still saved with fallback timezone
       expect(browser.storage.local.set).toHaveBeenCalled();
       const savedSettings = browser.storage.local.set.mock.calls[0][0].settings;
-      expect(savedSettings.location.latitude).toBe(52.5200);
-      expect(savedSettings.location.longitude).toBe(13.4050);
+      expect(savedSettings.location.latitude).toBe(52.52);
+      expect(savedSettings.location.longitude).toBe(13.405);
       // Timezone should have fallback value
       expect(savedSettings.timezone).toBeDefined();
     });
@@ -631,16 +631,16 @@ describe("Error Recovery Integration Tests", () => {
     test("should recover from errors and continue normal operation", async () => {
       // Step 1: First attempt fails
       global.fetch.mockRejectedValueOnce(new Error("Network error"));
-      
+
       let failedResult;
       try {
         failedResult = await background.geocodeQuery("Sydney");
       } catch (error) {
         failedResult = { error: error.message };
       }
-      
+
       expect(failedResult.error).toBeDefined();
-      
+
       // Step 2: Second attempt succeeds
       global.fetch.mockResolvedValueOnce({
         ok: true,
@@ -651,14 +651,14 @@ describe("Error Recovery Integration Tests", () => {
             lon: "151.2093",
             address: {
               city: "Sydney",
-              country: "Australia"
-            }
-          }
-        ]
+              country: "Australia",
+            },
+          },
+        ],
       });
-      
+
       const successResult = await background.geocodeQuery("Sydney");
-      
+
       // Assert: Recovery successful
       expect(Array.isArray(successResult)).toBe(true);
       expect(successResult).toHaveLength(1);
@@ -668,32 +668,32 @@ describe("Error Recovery Integration Tests", () => {
     test("should handle storage errors gracefully", async () => {
       // Simulate storage error
       browser.storage.local.set.mockRejectedValueOnce(new Error("Storage quota exceeded"));
-      
+
       const location = {
         latitude: 35.6762,
-        longitude: 139.6503
+        longitude: 139.6503,
       };
-      
+
       global.fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           timezoneId: "Asia/Tokyo",
           rawOffset: 9,
-          dstOffset: 0
-        })
+          dstOffset: 0,
+        }),
       });
-      
+
       global.fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           display_name: "Tokyo, Japan",
           address: {
             city: "Tokyo",
-            country: "Japan"
-          }
-        })
+            country: "Japan",
+          },
+        }),
       });
-      
+
       // Act: Try to set location
       try {
         await background.handleSetLocation(location);
@@ -701,7 +701,7 @@ describe("Error Recovery Integration Tests", () => {
         // Expected to fail
         expect(error.message).toContain("Storage quota exceeded");
       }
-      
+
       // In real implementation, should handle this error and notify user
     });
 
@@ -710,7 +710,7 @@ describe("Error Recovery Integration Tests", () => {
       browser.privacy.network.webRTCIPHandlingPolicy.set.mockRejectedValueOnce(
         new Error("Permission denied")
       );
-      
+
       // Act: Try to enable WebRTC protection
       try {
         await background.handleSetWebRTCProtection({ enabled: true });
@@ -718,7 +718,7 @@ describe("Error Recovery Integration Tests", () => {
         // Expected to fail
         expect(error.message).toContain("Permission denied");
       }
-      
+
       // In real implementation, should display error to user
     });
   });
@@ -729,32 +729,32 @@ describe("Error Recovery Integration Tests", () => {
       global.fetch.mockRejectedValueOnce(new Error("API unavailable"));
       global.fetch.mockRejectedValueOnce(new Error("API unavailable")); // Retry 1
       global.fetch.mockRejectedValueOnce(new Error("API unavailable")); // Retry 2
-      
+
       let geocodeResult;
       try {
         geocodeResult = await background.geocodeQuery("Moscow");
       } catch (error) {
         geocodeResult = { error: error.message };
       }
-      
+
       expect(geocodeResult.error).toBeDefined();
-      
+
       // Step 2: User switches to manual coordinates
       const location = {
         latitude: 55.7558,
-        longitude: 37.6173
+        longitude: 37.6173,
       };
-      
+
       // Step 3: Timezone API succeeds
       global.fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           timezoneId: "Europe/Moscow",
           rawOffset: 3,
-          dstOffset: 0
-        })
+          dstOffset: 0,
+        }),
       });
-      
+
       // Step 4: Reverse geocoding succeeds
       global.fetch.mockResolvedValueOnce({
         ok: true,
@@ -762,48 +762,49 @@ describe("Error Recovery Integration Tests", () => {
           display_name: "Moscow, Russia",
           address: {
             city: "Moscow",
-            country: "Russia"
-          }
-        })
+            country: "Russia",
+          },
+        }),
       });
-      
+
       await background.handleSetLocation(location);
-      
+
       // Step 4: Enable protection
       // Mock storage to return settings with location set
       browser.storage.local.get.mockResolvedValueOnce({
         settings: {
           ...browser.storage.local.set.mock.calls[0][0].settings,
-          enabled: false
-        }
+          enabled: false,
+        },
       });
-      
+
       await background.handleSetProtectionStatus({ enabled: true });
-      
+
       // Assert: Workflow completed successfully
-      const savedSettings = browser.storage.local.set.mock.calls[browser.storage.local.set.mock.calls.length - 1][0].settings;
+      const savedSettings =
+        browser.storage.local.set.mock.calls[browser.storage.local.set.mock.calls.length - 1][0]
+          .settings;
       expect(savedSettings.enabled).toBe(true);
       expect(savedSettings.location.latitude).toBe(55.7558);
       // Timezone may be fallback if API fails, but location should still work
       expect(savedSettings.timezone).toBeDefined();
       expect(savedSettings.timezone.identifier).toBeDefined();
-      
+
       // Assert: Badge updated
       expect(browser.browserAction.setBadgeBackgroundColor).toHaveBeenCalledWith({
-        color: "green"
+        color: "green",
       });
     });
   });
 });
 
-
 describe("Timezone Error Recovery Tests", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Clear timezone cache to prevent cache hits from previous tests
     background.clearTimezoneCache();
-    
+
     // Reset storage to clean state before each test
     browser.storage.local.get.mockResolvedValue({
       settings: {
@@ -814,17 +815,15 @@ describe("Timezone Error Recovery Tests", () => {
         webrtcProtection: false,
         onboardingCompleted: true,
         version: "1.0",
-        lastUpdated: Date.now()
-      }
+        lastUpdated: Date.now(),
+      },
     });
-    
+
     browser.storage.local.set.mockResolvedValue();
-    
+
     // Default tabs mock
-    browser.tabs.query.mockResolvedValue([
-      { id: 1, url: "https://example.com" }
-    ]);
-    
+    browser.tabs.query.mockResolvedValue([{ id: 1, url: "https://example.com" }]);
+
     browser.tabs.sendMessage.mockResolvedValue();
   });
 
@@ -833,15 +832,15 @@ describe("Timezone Error Recovery Tests", () => {
       // Set location without timezone
       const location = {
         latitude: 35.6762,
-        longitude: 139.6503
+        longitude: 139.6503,
       };
-      
+
       // Mock timezone API to return 404 (first fetch call)
       global.fetch.mockResolvedValueOnce({
         ok: false,
-        status: 404
+        status: 404,
       });
-      
+
       // Mock reverse geocoding (second fetch call)
       global.fetch.mockResolvedValueOnce({
         ok: true,
@@ -849,18 +848,18 @@ describe("Timezone Error Recovery Tests", () => {
           display_name: "Tokyo, Japan",
           address: {
             city: "Tokyo",
-            country: "Japan"
-          }
-        })
+            country: "Japan",
+          },
+        }),
       });
-      
+
       // Act: Set location
       await background.handleSetLocation(location);
-      
+
       // Assert: Location saved with fallback timezone
       expect(browser.storage.local.set).toHaveBeenCalled();
       const savedSettings = browser.storage.local.set.mock.calls[0][0].settings;
-      
+
       expect(savedSettings.location).toBeDefined();
       expect(savedSettings.location.latitude).toBe(35.6762);
       expect(savedSettings.timezone).toBeDefined();
@@ -871,12 +870,12 @@ describe("Timezone Error Recovery Tests", () => {
       // Set location
       const location = {
         latitude: 48.8566,
-        longitude: 2.3522
+        longitude: 2.3522,
       };
-      
+
       // Mock timezone API to fail
       global.fetch.mockRejectedValueOnce(new Error("Network error"));
-      
+
       // Mock reverse geocoding to succeed
       global.fetch.mockResolvedValueOnce({
         ok: true,
@@ -884,38 +883,38 @@ describe("Timezone Error Recovery Tests", () => {
           display_name: "Paris, France",
           address: {
             city: "Paris",
-            country: "France"
-          }
-        })
+            country: "France",
+          },
+        }),
       });
-      
+
       // Act: Set location
       await background.handleSetLocation(location);
-      
+
       // Assert: Location saved despite timezone API failure
       expect(browser.storage.local.set).toHaveBeenCalled();
       const savedSettings = browser.storage.local.set.mock.calls[0][0].settings;
-      
+
       expect(savedSettings.location).toBeDefined();
       expect(savedSettings.location.latitude).toBe(48.8566);
       expect(savedSettings.timezone).toBeDefined(); // Fallback timezone
       expect(savedSettings.timezone.fallback).toBe(true);
-      
+
       // Enable protection
       browser.storage.local.get.mockResolvedValueOnce({
         settings: {
           ...savedSettings,
-          enabled: false
-        }
+          enabled: false,
+        },
       });
-      
+
       await background.handleSetProtectionStatus({ enabled: true });
-      
+
       // Assert: Protection enabled and settings broadcast
       expect(browser.tabs.sendMessage).toHaveBeenCalled();
       const broadcastCalls = browser.tabs.sendMessage.mock.calls;
       const lastBroadcast = broadcastCalls[broadcastCalls.length - 1];
-      
+
       expect(lastBroadcast[1].payload.enabled).toBe(true);
       expect(lastBroadcast[1].payload.location).toBeDefined();
     });
@@ -926,19 +925,19 @@ describe("Timezone Error Recovery Tests", () => {
       // Set location
       const location = {
         latitude: 40.7128,
-        longitude: -74.0060
+        longitude: -74.006,
       };
-      
+
       // Mock timezone API to return invalid identifier
       global.fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           timezoneId: null, // Invalid
           rawOffset: -5,
-          dstOffset: 1
-        })
+          dstOffset: 1,
+        }),
       });
-      
+
       // Mock reverse geocoding
       global.fetch.mockResolvedValueOnce({
         ok: true,
@@ -946,18 +945,18 @@ describe("Timezone Error Recovery Tests", () => {
           display_name: "New York, NY, USA",
           address: {
             city: "New York",
-            country: "USA"
-          }
-        })
+            country: "USA",
+          },
+        }),
       });
-      
+
       // Act: Set location
       await background.handleSetLocation(location);
-      
+
       // Assert: Location saved with fallback timezone
       expect(browser.storage.local.set).toHaveBeenCalled();
       const savedSettings = browser.storage.local.set.mock.calls[0][0].settings;
-      
+
       expect(savedSettings.location).toBeDefined();
       expect(savedSettings.timezone).toBeDefined();
       expect(savedSettings.timezone.fallback).toBe(true);
@@ -967,19 +966,19 @@ describe("Timezone Error Recovery Tests", () => {
       // Set location
       const location = {
         latitude: -33.8688,
-        longitude: 151.2093
+        longitude: 151.2093,
       };
-      
+
       // Mock timezone API to return invalid offset
       global.fetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           timezoneId: "Australia/Sydney",
           rawOffset: "invalid", // Invalid type
-          dstOffset: 1
-        })
+          dstOffset: 1,
+        }),
       });
-      
+
       // Mock reverse geocoding
       global.fetch.mockResolvedValueOnce({
         ok: true,
@@ -987,18 +986,18 @@ describe("Timezone Error Recovery Tests", () => {
           display_name: "Sydney, Australia",
           address: {
             city: "Sydney",
-            country: "Australia"
-          }
-        })
+            country: "Australia",
+          },
+        }),
       });
-      
+
       // Act: Set location
       await background.handleSetLocation(location);
-      
+
       // Assert: Location saved with fallback timezone
       expect(browser.storage.local.set).toHaveBeenCalled();
       const savedSettings = browser.storage.local.set.mock.calls[0][0].settings;
-      
+
       expect(savedSettings.location).toBeDefined();
       expect(savedSettings.timezone).toBeDefined();
       expect(savedSettings.timezone.fallback).toBe(true);
@@ -1009,16 +1008,16 @@ describe("Timezone Error Recovery Tests", () => {
     test("should log warning when timezone data is missing but continue operation", async () => {
       // Mock console.warn
       const consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation();
-      
+
       // Set location
       const location = {
-        latitude: 52.5200,
-        longitude: 13.4050
+        latitude: 52.52,
+        longitude: 13.405,
       };
-      
+
       // Mock timezone API to fail (first fetch call)
       global.fetch.mockRejectedValueOnce(new Error("API unavailable"));
-      
+
       // Mock reverse geocoding to succeed (second fetch call)
       global.fetch.mockResolvedValueOnce({
         ok: true,
@@ -1026,27 +1025,27 @@ describe("Timezone Error Recovery Tests", () => {
           display_name: "Berlin, Germany",
           address: {
             city: "Berlin",
-            country: "Germany"
-          }
-        })
+            country: "Germany",
+          },
+        }),
       });
-      
+
       // Act: Set location
       await background.handleSetLocation(location);
-      
+
       // Assert: Warning logged about timezone API failure
       expect(consoleWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining("Timezone API failed"),
         expect.any(Error)
       );
-      
+
       // Assert: Location still saved with fallback timezone
       expect(browser.storage.local.set).toHaveBeenCalled();
       const savedSettings = browser.storage.local.set.mock.calls[0][0].settings;
       expect(savedSettings.location).toBeDefined();
       expect(savedSettings.timezone).toBeDefined();
       expect(savedSettings.timezone.fallback).toBe(true);
-      
+
       consoleWarnSpy.mockRestore();
     });
   });
@@ -1059,11 +1058,11 @@ describe("Timezone Error Recovery Tests", () => {
         location: {
           latitude: 25.2048,
           longitude: 55.2708,
-          accuracy: 10
+          accuracy: 10,
         },
-        timezone: null
+        timezone: null,
       };
-      
+
       // Popup should display "Not configured" for timezone
       // This is tested in unit tests, but we verify the data structure here
       expect(settings.location).toBeDefined();
@@ -1077,16 +1076,16 @@ describe("Timezone Error Recovery Tests", () => {
         location: {
           latitude: 55.7558,
           longitude: 37.6173,
-          accuracy: 10
+          accuracy: 10,
         },
         timezone: {
           identifier: "UTC",
           offset: 180,
           dstOffset: 0,
-          fallback: true
-        }
+          fallback: true,
+        },
       };
-      
+
       // Popup should display timezone with "(estimated)" indicator
       expect(settings.timezone).toBeDefined();
       expect(settings.timezone.fallback).toBe(true);
@@ -1098,12 +1097,12 @@ describe("Timezone Error Recovery Tests", () => {
       // Set location
       const location = {
         latitude: 1.3521,
-        longitude: 103.8198
+        longitude: 103.8198,
       };
-      
+
       // Mock timezone API to be completely unavailable
       global.fetch.mockRejectedValueOnce(new Error("Service unavailable"));
-      
+
       // Mock reverse geocoding
       global.fetch.mockResolvedValueOnce({
         ok: true,
@@ -1111,32 +1110,32 @@ describe("Timezone Error Recovery Tests", () => {
           display_name: "Singapore",
           address: {
             city: "Singapore",
-            country: "Singapore"
-          }
-        })
+            country: "Singapore",
+          },
+        }),
       });
-      
+
       // Act: Set location
       await background.handleSetLocation(location);
-      
+
       // Get the saved settings
       const savedSettings = browser.storage.local.set.mock.calls[0][0].settings;
-      
+
       // Mock storage to return these settings for subsequent loads
       browser.storage.local.get.mockResolvedValue({
         settings: {
           ...savedSettings,
-          enabled: false
-        }
+          enabled: false,
+        },
       });
-      
+
       // Enable protection
       await background.handleSetProtectionStatus({ enabled: true });
-      
+
       // Assert: Geolocation spoofing is active
       const broadcastCalls = browser.tabs.sendMessage.mock.calls;
       const lastBroadcast = broadcastCalls[broadcastCalls.length - 1];
-      
+
       expect(lastBroadcast[1].type).toBe("UPDATE_SETTINGS");
       expect(lastBroadcast[1].payload.enabled).toBe(true);
       expect(lastBroadcast[1].payload.location).toBeDefined();
@@ -1149,16 +1148,16 @@ describe("Timezone Error Recovery Tests", () => {
       const locations = [
         { latitude: 19.4326, longitude: -99.1332 }, // Mexico City
         { latitude: -23.5505, longitude: -46.6333 }, // São Paulo
-        { latitude: 41.9028, longitude: 12.4964 }    // Rome
+        { latitude: 41.9028, longitude: 12.4964 }, // Rome
       ];
-      
+
       // Track initial call count
       const initialCallCount = browser.storage.local.set.mock.calls.length;
-      
+
       for (const location of locations) {
         // Mock timezone API to fail
         global.fetch.mockRejectedValueOnce(new Error("Timeout"));
-        
+
         // Mock reverse geocoding to succeed
         global.fetch.mockResolvedValueOnce({
           ok: true,
@@ -1166,20 +1165,22 @@ describe("Timezone Error Recovery Tests", () => {
             display_name: "City",
             address: {
               city: "City",
-              country: "Country"
-            }
-          })
+              country: "Country",
+            },
+          }),
         });
-        
+
         // Act: Set location
         await background.handleSetLocation(location);
-        
+
         // Assert: Location saved
-        const savedSettings = browser.storage.local.set.mock.calls[browser.storage.local.set.mock.calls.length - 1][0].settings;
+        const savedSettings =
+          browser.storage.local.set.mock.calls[browser.storage.local.set.mock.calls.length - 1][0]
+            .settings;
         expect(savedSettings.location.latitude).toBe(location.latitude);
         expect(savedSettings.location.longitude).toBe(location.longitude);
       }
-      
+
       // All locations should have been saved successfully (at least once per location)
       const finalCallCount = browser.storage.local.set.mock.calls.length;
       expect(finalCallCount - initialCallCount).toBeGreaterThanOrEqual(locations.length);
@@ -1188,12 +1189,12 @@ describe("Timezone Error Recovery Tests", () => {
     test("should handle rapid location changes with intermittent timezone failures", async () => {
       // Simulate rapid location changes with some timezone failures
       const locations = [
-        { lat: 51.5074, lon: -0.1278, tzSuccess: true },  // London
-        { lat: 48.8566, lon: 2.3522, tzSuccess: false },  // Paris - timezone fails
-        { lat: 52.5200, lon: 13.4050, tzSuccess: true },  // Berlin
-        { lat: 55.7558, lon: 37.6173, tzSuccess: false }  // Moscow - timezone fails
+        { lat: 51.5074, lon: -0.1278, tzSuccess: true }, // London
+        { lat: 48.8566, lon: 2.3522, tzSuccess: false }, // Paris - timezone fails
+        { lat: 52.52, lon: 13.405, tzSuccess: true }, // Berlin
+        { lat: 55.7558, lon: 37.6173, tzSuccess: false }, // Moscow - timezone fails
       ];
-      
+
       for (const loc of locations) {
         if (loc.tzSuccess) {
           // Mock successful timezone API
@@ -1202,31 +1203,33 @@ describe("Timezone Error Recovery Tests", () => {
             json: async () => ({
               timezoneId: "Europe/London",
               rawOffset: 0,
-              dstOffset: 1
-            })
+              dstOffset: 1,
+            }),
           });
         } else {
           // Mock failed timezone API
           global.fetch.mockRejectedValueOnce(new Error("API error"));
         }
-        
+
         // Mock reverse geocoding
         global.fetch.mockResolvedValueOnce({
           ok: true,
           json: async () => ({
             display_name: "City",
-            address: { city: "City", country: "Country" }
-          })
+            address: { city: "City", country: "Country" },
+          }),
         });
-        
+
         // Act: Set location
         await background.handleSetLocation({
           latitude: loc.lat,
-          longitude: loc.lon
+          longitude: loc.lon,
         });
-        
+
         // Assert: Location saved regardless of timezone success
-        const savedSettings = browser.storage.local.set.mock.calls[browser.storage.local.set.mock.calls.length - 1][0].settings;
+        const savedSettings =
+          browser.storage.local.set.mock.calls[browser.storage.local.set.mock.calls.length - 1][0]
+            .settings;
         expect(savedSettings.location.latitude).toBe(loc.lat);
         expect(savedSettings.location.longitude).toBe(loc.lon);
         expect(savedSettings.timezone).toBeDefined(); // Either real or fallback

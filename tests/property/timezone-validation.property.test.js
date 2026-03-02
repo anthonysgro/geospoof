@@ -11,29 +11,29 @@ describe("Timezone Data Validation Properties", () => {
     if (!tz) {
       return false;
     }
-    
-    if (typeof tz.identifier !== 'string' || tz.identifier.length === 0) {
+
+    if (typeof tz.identifier !== "string" || tz.identifier.length === 0) {
       return false;
     }
-    
-    if (typeof tz.offset !== 'number' || !Number.isFinite(tz.offset)) {
+
+    if (typeof tz.offset !== "number" || !Number.isFinite(tz.offset)) {
       return false;
     }
-    
-    if (typeof tz.dstOffset !== 'number' || !Number.isFinite(tz.dstOffset)) {
+
+    if (typeof tz.dstOffset !== "number" || !Number.isFinite(tz.dstOffset)) {
       return false;
     }
-    
+
     return true;
   }
 
   /**
    * Property 13: Timezone Data Validation
-   * 
+   *
    * For any received timezone data object, validation should verify that
    * identifier is a string, offset is a number, and dstOffset is a number,
    * rejecting the data if any check fails.
-   * 
+   *
    * **Validates: Requirements 12.1, 12.2, 12.3**
    */
   test("Property 13: Timezone Data Validation - valid data passes", () => {
@@ -43,7 +43,7 @@ describe("Timezone Data Validation Properties", () => {
           identifier: fc.string({ minLength: 1 }),
           offset: fc.integer({ min: -720, max: 840 }),
           dstOffset: fc.integer({ min: 0, max: 120 }),
-          fallback: fc.option(fc.boolean())
+          fallback: fc.option(fc.boolean()),
         }),
         (timezoneData) => {
           // Valid timezone data should pass validation
@@ -76,9 +76,9 @@ describe("Timezone Data Validation Properties", () => {
           const timezoneData = {
             identifier: invalidIdentifier,
             offset: offset,
-            dstOffset: dstOffset
+            dstOffset: dstOffset,
           };
-          
+
           // Invalid identifier should fail validation
           expect(validateTimezoneData(timezoneData)).toBe(false);
         }
@@ -106,9 +106,9 @@ describe("Timezone Data Validation Properties", () => {
           const timezoneData = {
             identifier: identifier,
             offset: invalidOffset,
-            dstOffset: dstOffset
+            dstOffset: dstOffset,
           };
-          
+
           // Invalid offset should fail validation
           expect(validateTimezoneData(timezoneData)).toBe(false);
         }
@@ -136,9 +136,9 @@ describe("Timezone Data Validation Properties", () => {
           const timezoneData = {
             identifier: identifier,
             offset: offset,
-            dstOffset: invalidDstOffset
+            dstOffset: invalidDstOffset,
           };
-          
+
           // Invalid dstOffset should fail validation
           expect(validateTimezoneData(timezoneData)).toBe(false);
         }
@@ -156,10 +156,10 @@ describe("Timezone Data Validation Properties", () => {
         (identifier, offset, dstOffset) => {
           // Missing identifier
           expect(validateTimezoneData({ offset, dstOffset })).toBe(false);
-          
+
           // Missing offset
           expect(validateTimezoneData({ identifier, dstOffset })).toBe(false);
-          
+
           // Missing dstOffset
           expect(validateTimezoneData({ identifier, offset })).toBe(false);
         }

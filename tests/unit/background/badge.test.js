@@ -23,43 +23,43 @@ global.browser = {
       }),
       clear: jest.fn(async () => {
         global.browser.storage.local.data = {};
-      })
-    }
+      }),
+    },
   },
   tabs: {
     query: jest.fn(async () => []),
     sendMessage: jest.fn(async () => {}),
     onCreated: {
-      addListener: jest.fn()
+      addListener: jest.fn(),
     },
     onUpdated: {
-      addListener: jest.fn()
-    }
+      addListener: jest.fn(),
+    },
   },
   action: {
     setBadgeBackgroundColor: jest.fn(async () => {}),
-    setBadgeText: jest.fn(async () => {})
+    setBadgeText: jest.fn(async () => {}),
   },
   browserAction: {
     setBadgeBackgroundColor: jest.fn(async () => {}),
-    setBadgeText: jest.fn(async () => {})
+    setBadgeText: jest.fn(async () => {}),
   },
   runtime: {
     onMessage: {
-      addListener: jest.fn()
+      addListener: jest.fn(),
     },
     onInstalled: {
-      addListener: jest.fn()
-    }
+      addListener: jest.fn(),
+    },
   },
   privacy: {
     network: {
       webRTCIPHandlingPolicy: {
         set: jest.fn(async () => {}),
-        clear: jest.fn(async () => {})
-      }
-    }
-  }
+        clear: jest.fn(async () => {}),
+      },
+    },
+  },
 };
 
 // Mock fetch
@@ -71,7 +71,7 @@ beforeEach(() => {
   // Clear storage before each test
   global.browser.storage.local.data = {};
   jest.clearAllMocks();
-  
+
   // Clear require cache to get fresh module
   delete require.cache[backgroundPath];
 });
@@ -83,71 +83,71 @@ describe("Badge Icon Colors", () => {
    */
   test("should display green badge with checkmark when protection is enabled", () => {
     const { updateBadge } = require(backgroundPath);
-    
+
     updateBadge(true);
-    
+
     // Verify badge color is set to green
     expect(global.browser.browserAction.setBadgeBackgroundColor).toHaveBeenCalledWith({
-      color: "green"
+      color: "green",
     });
-    
+
     // Verify badge text is set to checkmark
     expect(global.browser.browserAction.setBadgeText).toHaveBeenCalledWith({
-      text: "✓"
+      text: "✓",
     });
   });
-  
+
   /**
    * Test gray badge when protection disabled
    * Validates: Requirements 5.7, 5.8
    */
   test("should display gray badge with empty text when protection is disabled", () => {
     const { updateBadge } = require(backgroundPath);
-    
+
     updateBadge(false);
-    
+
     // Verify badge color is set to gray
     expect(global.browser.browserAction.setBadgeBackgroundColor).toHaveBeenCalledWith({
-      color: "gray"
+      color: "gray",
     });
-    
+
     // Verify badge text is empty
     expect(global.browser.browserAction.setBadgeText).toHaveBeenCalledWith({
-      text: ""
+      text: "",
     });
   });
-  
+
   test("should call both badge API methods when updating badge", () => {
     const { updateBadge } = require(backgroundPath);
-    
+
     updateBadge(true);
-    
+
     // Both methods should be called
     expect(global.browser.browserAction.setBadgeBackgroundColor).toHaveBeenCalledTimes(1);
     expect(global.browser.browserAction.setBadgeText).toHaveBeenCalledTimes(1);
   });
-  
+
   test("should handle multiple badge updates", () => {
     const { updateBadge } = require(backgroundPath);
-    
+
     // Enable
     updateBadge(true);
     expect(global.browser.browserAction.setBadgeBackgroundColor).toHaveBeenLastCalledWith({
-      color: "green"
+      color: "green",
     });
-    
+
     // Disable
     updateBadge(false);
     expect(global.browser.browserAction.setBadgeBackgroundColor).toHaveBeenLastCalledWith({
-      color: "gray"
+      color: "gray",
     });
-    
+
     // Enable again
     updateBadge(true);
     expect(global.browser.browserAction.setBadgeBackgroundColor).toHaveBeenLastCalledWith({
-      color: "green"
+      color: "green",
     });
-    
+
     // Should have been called 3 times total
     expect(global.browser.browserAction.setBadgeBackgroundColor).toHaveBeenCalledTimes(3);
     expect(global.browser.browserAction.setBadgeText).toHaveBeenCalledTimes(3);

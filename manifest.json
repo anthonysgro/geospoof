@@ -6,7 +6,7 @@
   "author": "Anthony Sgro",
   "homepage_url": "https://github.com/anthonysgro/geospoof",
   "incognito": "spanning",
-  
+
   "browser_specific_settings": {
     "gecko": {
       "id": "{a8f7e9c2-4d3b-4a1e-9f8c-7b6d5e4a3c2b}",
@@ -16,12 +16,8 @@
       }
     }
   },
-  
-  "permissions": [
-    "storage",
-    "privacy",
-    "<all_urls>"
-  ],
+
+  "permissions": ["storage", "privacy", "<all_urls>"],
   "background": {
     "scripts": ["background/background.js"],
     "persistent": true
@@ -34,9 +30,7 @@
       "all_frames": true
     }
   ],
-  "web_accessible_resources": [
-    "content/injected.js"
-  ],
+  "web_accessible_resources": ["content/injected.js"],
   "browser_action": {
     "default_popup": "popup/popup.html",
     "default_icon": {

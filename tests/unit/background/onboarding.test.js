@@ -22,43 +22,43 @@ global.browser = {
       }),
       clear: jest.fn(async () => {
         global.browser.storage.local.data = {};
-      })
-    }
+      }),
+    },
   },
   action: {
     setBadgeBackgroundColor: jest.fn(async () => {}),
-    setBadgeText: jest.fn(async () => {})
+    setBadgeText: jest.fn(async () => {}),
   },
   browserAction: {
     setBadgeBackgroundColor: jest.fn(async () => {}),
-    setBadgeText: jest.fn(async () => {})
+    setBadgeText: jest.fn(async () => {}),
   },
   tabs: {
     query: jest.fn(async () => []),
     sendMessage: jest.fn(async () => {}),
     onCreated: {
-      addListener: jest.fn()
+      addListener: jest.fn(),
     },
     onUpdated: {
-      addListener: jest.fn()
-    }
+      addListener: jest.fn(),
+    },
   },
   runtime: {
     onMessage: {
-      addListener: jest.fn()
+      addListener: jest.fn(),
     },
     onInstalled: {
-      addListener: jest.fn()
-    }
+      addListener: jest.fn(),
+    },
   },
   privacy: {
     network: {
       webRTCIPHandlingPolicy: {
         set: jest.fn(async () => {}),
-        clear: jest.fn(async () => {})
-      }
-    }
-  }
+        clear: jest.fn(async () => {}),
+      },
+    },
+  },
 };
 
 // Mock fetch for geocoding
@@ -68,7 +68,7 @@ const {
   DEFAULT_SETTINGS,
   loadSettings,
   saveSettings,
-  handleCompleteOnboarding
+  handleCompleteOnboarding,
 } = require("../../../background/background.js");
 
 describe("Onboarding Functionality", () => {
@@ -98,7 +98,7 @@ describe("Onboarding Functionality", () => {
         locationName: null,
         webrtcProtection: false,
         version: "1.0",
-        lastUpdated: Date.now()
+        lastUpdated: Date.now(),
         // onboardingCompleted not present
       };
 
@@ -112,7 +112,7 @@ describe("Onboarding Functionality", () => {
     test("should set onboardingCompleted to true when completed", async () => {
       global.browser.storage.local.data.settings = {
         ...DEFAULT_SETTINGS,
-        onboardingCompleted: false
+        onboardingCompleted: false,
       };
 
       await handleCompleteOnboarding();
@@ -124,7 +124,7 @@ describe("Onboarding Functionality", () => {
     test("should persist onboardingCompleted flag in storage", async () => {
       const settingsWithOnboarding = {
         ...DEFAULT_SETTINGS,
-        onboardingCompleted: true
+        onboardingCompleted: true,
       };
 
       await saveSettings(settingsWithOnboarding);
@@ -137,7 +137,7 @@ describe("Onboarding Functionality", () => {
     test("should load onboardingCompleted flag from storage", async () => {
       global.browser.storage.local.data.settings = {
         ...DEFAULT_SETTINGS,
-        onboardingCompleted: true
+        onboardingCompleted: true,
       };
 
       const settings = await loadSettings();
@@ -148,7 +148,7 @@ describe("Onboarding Functionality", () => {
     test("should validate onboardingCompleted as boolean", async () => {
       global.browser.storage.local.data.settings = {
         ...DEFAULT_SETTINGS,
-        onboardingCompleted: "true" // Invalid type
+        onboardingCompleted: "true", // Invalid type
       };
 
       const settings = await loadSettings();
@@ -163,7 +163,7 @@ describe("Onboarding Functionality", () => {
       // Initial state: not completed
       global.browser.storage.local.data.settings = {
         ...DEFAULT_SETTINGS,
-        onboardingCompleted: false
+        onboardingCompleted: false,
       };
 
       const initialSettings = await loadSettings();
@@ -180,7 +180,7 @@ describe("Onboarding Functionality", () => {
     test("should remain completed after being set", async () => {
       global.browser.storage.local.data.settings = {
         ...DEFAULT_SETTINGS,
-        onboardingCompleted: true
+        onboardingCompleted: true,
       };
 
       // Load multiple times
@@ -200,14 +200,18 @@ describe("Onboarding Functionality", () => {
         ...DEFAULT_SETTINGS,
         enabled: true,
         location: { latitude: 37.7749, longitude: -122.4194, accuracy: 10 },
-        onboardingCompleted: false
+        onboardingCompleted: false,
       };
 
       await handleCompleteOnboarding();
 
       const savedSettings = global.browser.storage.local.data.settings;
       expect(savedSettings.enabled).toBe(true);
-      expect(savedSettings.location).toEqual({ latitude: 37.7749, longitude: -122.4194, accuracy: 10 });
+      expect(savedSettings.location).toEqual({
+        latitude: 37.7749,
+        longitude: -122.4194,
+        accuracy: 10,
+      });
       expect(savedSettings.onboardingCompleted).toBe(true);
     });
 
@@ -215,7 +219,7 @@ describe("Onboarding Functionality", () => {
       const settings = {
         ...DEFAULT_SETTINGS,
         onboardingCompleted: true,
-        enabled: false
+        enabled: false,
       };
 
       await saveSettings(settings);

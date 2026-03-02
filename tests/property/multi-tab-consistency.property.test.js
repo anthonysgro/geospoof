@@ -1,11 +1,11 @@
 /**
  * Property-Based Tests for Multi-Tab Consistency
- * 
+ *
  * Feature: geolocation-spoof-extension-mvp
  * Property 23: Multi-Tab Consistency
- * 
+ *
  * **Validates: Requirements 8.3**
- * 
+ *
  * For any set of open tabs, when protection is enabled, all tabs should have
  * the same spoofing settings applied consistently.
  */
@@ -18,42 +18,42 @@ global.browser = {
     query: jest.fn(),
     sendMessage: jest.fn(),
     onCreated: {
-      addListener: jest.fn()
+      addListener: jest.fn(),
     },
     onUpdated: {
-      addListener: jest.fn()
-    }
+      addListener: jest.fn(),
+    },
   },
   storage: {
     local: {
       get: jest.fn(),
-      set: jest.fn()
-    }
+      set: jest.fn(),
+    },
   },
   action: {
     setBadgeBackgroundColor: jest.fn(),
-    setBadgeText: jest.fn()
+    setBadgeText: jest.fn(),
   },
   browserAction: {
     setBadgeBackgroundColor: jest.fn(async () => {}),
-    setBadgeText: jest.fn(async () => {})
+    setBadgeText: jest.fn(async () => {}),
   },
   runtime: {
     onMessage: {
-      addListener: jest.fn()
+      addListener: jest.fn(),
     },
     onInstalled: {
-      addListener: jest.fn()
-    }
+      addListener: jest.fn(),
+    },
   },
   privacy: {
     network: {
       webRTCIPHandlingPolicy: {
         set: jest.fn(),
-        clear: jest.fn()
-      }
-    }
-  }
+        clear: jest.fn(),
+      },
+    },
+  },
 };
 
 // Import after mocking
@@ -73,7 +73,7 @@ describe("Property 23: Multi-Tab Consistency", () => {
         fc.record({
           latitude: fc.double({ min: -90, max: 90 }),
           longitude: fc.double({ min: -180, max: 180 }),
-          accuracy: fc.double({ min: 1, max: 100 })
+          accuracy: fc.double({ min: 1, max: 100 }),
         }),
         // Generate random enabled state
         fc.boolean(),
@@ -81,7 +81,7 @@ describe("Property 23: Multi-Tab Consistency", () => {
           // Create mock tabs
           const tabs = Array.from({ length: numTabs }, (_, i) => ({
             id: i + 1,
-            url: `https://example${i}.com`
+            url: `https://example${i}.com`,
           }));
 
           // Mock tabs.query to return our tabs
@@ -101,13 +101,13 @@ describe("Property 23: Multi-Tab Consistency", () => {
             timezone: {
               identifier: "America/Los_Angeles",
               offset: 480,
-              dstOffset: 60
+              dstOffset: 60,
             },
             locationName: {
               city: "Test City",
               country: "Test Country",
-              displayName: "Test City, Test Country"
-            }
+              displayName: "Test City, Test Country",
+            },
           };
 
           // Broadcast settings
@@ -140,12 +140,16 @@ describe("Property 23: Multi-Tab Consistency", () => {
         fc.record({
           latitude: fc.double({ min: -90, max: 90, noNaN: true }),
           longitude: fc.double({ min: -180, max: 180, noNaN: true }),
-          accuracy: fc.double({ min: 1, max: 100, noNaN: true })
+          accuracy: fc.double({ min: 1, max: 100, noNaN: true }),
         }),
         fc.boolean(),
         async (location, enabled) => {
           // Skip if coordinates are invalid (NaN, Infinity, etc.)
-          if (!isFinite(location.latitude) || !isFinite(location.longitude) || !isFinite(location.accuracy)) {
+          if (
+            !isFinite(location.latitude) ||
+            !isFinite(location.longitude) ||
+            !isFinite(location.accuracy)
+          ) {
             return true; // Skip this test case
           }
 
@@ -156,13 +160,13 @@ describe("Property 23: Multi-Tab Consistency", () => {
             timezone: {
               identifier: "Europe/London",
               offset: 0,
-              dstOffset: 60
+              dstOffset: 60,
             },
             locationName: null,
             webrtcProtection: false,
             onboardingCompleted: true,
             version: "1.0",
-            lastUpdated: Date.now()
+            lastUpdated: Date.now(),
           };
 
           browser.storage.local.get.mockResolvedValue({ settings });
@@ -184,10 +188,10 @@ describe("Property 23: Multi-Tab Consistency", () => {
           const loadedSettings = await background.loadSettings();
 
           // Simulate sending settings to new tab (with delay)
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise((resolve) => setTimeout(resolve, 100));
           await browser.tabs.sendMessage(newTabId, {
             type: "UPDATE_SETTINGS",
-            payload: loadedSettings
+            payload: loadedSettings,
           });
 
           // Verify message was sent
@@ -211,7 +215,7 @@ describe("Property 23: Multi-Tab Consistency", () => {
           fc.record({
             latitude: fc.double({ min: -90, max: 90 }),
             longitude: fc.double({ min: -180, max: 180 }),
-            accuracy: fc.double({ min: 1, max: 100 })
+            accuracy: fc.double({ min: 1, max: 100 }),
           }),
           { minLength: 2, maxLength: 5 }
         ),
@@ -219,7 +223,7 @@ describe("Property 23: Multi-Tab Consistency", () => {
           // Create mock tabs
           const tabs = Array.from({ length: numTabs }, (_, i) => ({
             id: i + 1,
-            url: `https://example${i}.com`
+            url: `https://example${i}.com`,
           }));
 
           browser.tabs.query.mockResolvedValue(tabs);
@@ -242,16 +246,16 @@ describe("Property 23: Multi-Tab Consistency", () => {
               timezone: {
                 identifier: "Asia/Tokyo",
                 offset: 540,
-                dstOffset: 0
+                dstOffset: 0,
               },
-              locationName: null
+              locationName: null,
             };
 
             await background.broadcastSettingsToTabs(settings);
 
             // Verify all tabs received the same settings for this broadcast
             const currentMessages = Array.from(tabMessages.values()).map(
-              messages => messages[messages.length - 1]
+              (messages) => messages[messages.length - 1]
             );
 
             for (let i = 1; i < currentMessages.length; i++) {
@@ -260,9 +264,7 @@ describe("Property 23: Multi-Tab Consistency", () => {
           }
 
           // Verify each tab received the same number of updates
-          const messageCounts = Array.from(tabMessages.values()).map(
-            messages => messages.length
-          );
+          const messageCounts = Array.from(tabMessages.values()).map((messages) => messages.length);
           const firstCount = messageCounts[0];
           for (const count of messageCounts) {
             expect(count).toBe(firstCount);
@@ -280,7 +282,7 @@ describe("Property 23: Multi-Tab Consistency", () => {
         fc.integer({ min: 0, max: 9 }),
         fc.record({
           latitude: fc.double({ min: -90, max: 90 }),
-          longitude: fc.double({ min: -180, max: 180 })
+          longitude: fc.double({ min: -180, max: 180 }),
         }),
         async (numTabs, failingTabIndex, location) => {
           // Ensure failing tab index is within range
@@ -289,7 +291,7 @@ describe("Property 23: Multi-Tab Consistency", () => {
           // Create mock tabs
           const tabs = Array.from({ length: numTabs }, (_, i) => ({
             id: i + 1,
-            url: `https://example${i}.com`
+            url: `https://example${i}.com`,
           }));
 
           browser.tabs.query.mockResolvedValue(tabs);
@@ -308,13 +310,11 @@ describe("Property 23: Multi-Tab Consistency", () => {
           const settings = {
             enabled: true,
             location,
-            timezone: { identifier: "UTC", offset: 0, dstOffset: 0 }
+            timezone: { identifier: "UTC", offset: 0, dstOffset: 0 },
           };
 
           // Broadcast should not throw even if one tab fails
-          await expect(
-            background.broadcastSettingsToTabs(settings)
-          ).resolves.not.toThrow();
+          await expect(background.broadcastSettingsToTabs(settings)).resolves.not.toThrow();
 
           // Verify other tabs still received the message
           expect(successfulMessages.size).toBe(numTabs - 1);
