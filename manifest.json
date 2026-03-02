@@ -10,9 +10,9 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "geospoof@anthonysgro.com",
-      "strict_min_version": "115.0",
+      "strict_min_version": "140.0",
       "data_collection_permissions": {
-        "data_collection": false
+        "required": false
       }
     }
   },
