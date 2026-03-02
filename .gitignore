@@ -12,16 +12,18 @@ node_modules
 # Test coverage
 coverage
 
-# Build artifacts
+# Build output
 dist
 build
+
+# Packaged extension
 *.zip
 
 # Logs
 *.log
 npm-debug.log*
 
-# Environment variables
+# Environment variables (keep .env.example)
 .env
 .env.local
 

@@ -53,37 +53,47 @@ All overrides are applied at `document_start` before page scripts execute.
 
 ### Prerequisites
 
-- Node.js 16+
-- npm 8+
+- Node.js 18+
+- npm 9+
 - Firefox 115+
 
 ### Setup
 
 ```bash
 npm install
-cp .env.example .env  # Configure build settings
+cp .env.example .env
 ```
 
 ### Build Commands
 
 ```bash
-npm run build:dev   # Development build with source maps and console logs
-npm run build:prod  # Production build (minified, no console logs, stealth mode)
-npm run watch       # Auto-rebuild on file changes
-npm run package     # Create distribution ZIP file
-npm run clean       # Remove build artifacts
+npm run build:dev    # Development build (source maps, console logs)
+npm run build:prod   # Production build (minified, no console.log)
+npm run dev          # Watch mode — rebuilds on file changes
+npm run package      # Production build + create distribution ZIP
+npm run clean        # Remove dist/, coverage/, and zip files
 ```
 
 ### Code Quality
 
 ```bash
-npm run format      # Format all files with Prettier
+npm run type-check   # TypeScript type checking
+npm run lint         # Check for linting issues
+npm run lint:fix     # Auto-fix linting issues
+npm run format       # Format all files with Prettier
 npm run format:check # Check formatting without changes
-npm run lint        # Check for linting issues
-npm run lint:fix    # Auto-fix linting issues
-npm test            # Run all tests (357 tests)
-npm run test:watch  # Run tests in watch mode
-npm run test:coverage # Generate coverage report
+npm run validate     # Run type-check + lint + format:check + test
+```
+
+### Testing
+
+```bash
+npm test                  # Run all tests
+npm run test:unit         # Unit tests only
+npm run test:property     # Property-based tests only
+npm run test:integration  # Integration tests only
+npm run test:watch        # Watch mode
+npm run test:coverage     # Generate coverage report
 ```
 
 ### Environment Variables
@@ -91,8 +101,8 @@ npm run test:coverage # Generate coverage report
 Create a `.env` file (copy from `.env.example`):
 
 ```env
-NODE_ENV=production        # development or production
-EVENT_NAME=_gsu           # Custom event name for stealth
+DEBUG=false
+EVENT_NAME=_gsu
 ```
 
 **Production vs Development:**
@@ -109,27 +119,31 @@ EVENT_NAME=_gsu           # Custom event name for stealth
 
 ```
 geospoof/
-├── background/       # Background script (settings, geocoding, timezone)
-├── content/          # Content scripts (API overrides)
-│   ├── content.js    # Content script coordinator
-│   └── injected.js   # Page context overrides
-├── popup/            # Extension popup UI
-│   ├── popup.html
-│   ├── popup.css
-│   └── popup.js
-├── icons/            # Extension icons
+├── src/
+│   ├── background/   # Background script (settings, geocoding, timezone)
+│   ├── content/      # Content scripts (API overrides)
+│   ├── popup/        # Extension popup UI
+│   ├── shared/       # Shared types and utilities
+│   └── types/        # Global type declarations
 ├── tests/            # Test suite
 │   ├── unit/         # Unit tests
 │   ├── integration/  # Integration tests
 │   └── property/     # Property-based tests
+├── popup/            # Popup HTML/CSS assets
+├── icons/            # Extension icons
 ├── .env.example      # Environment variables template
-├── webpack.config.js # Build configuration
+├── vite.config.ts    # Build configuration
+├── tsconfig.json     # TypeScript configuration
 └── manifest.json     # Extension manifest
 ```
 
+### TypeScript
+
+All source code is TypeScript with strict mode enabled. Shared type definitions live in `src/shared/types/`. Path aliases (`@/background`, `@/content`, `@/popup`, `@/shared`) are available for imports.
+
 ### Testing
 
-We use Jest with property-based testing (fast-check):
+We use Vitest with property-based testing (fast-check):
 
 ```bash
 npm run test:unit          # Unit tests only
@@ -138,7 +152,7 @@ npm run test:property      # Property-based tests only
 npm run test:coverage      # With coverage report
 ```
 
-**Test Coverage:** 357 tests covering:
+**Test Coverage:** Tests covering:
 
 - Unit tests for individual functions
 - Integration tests for user workflows
@@ -159,12 +173,11 @@ npm run test:coverage      # With coverage report
 
 ### Build System
 
-- **Bundler**: Webpack 5
-- **Minification**: Terser
-- **Environment**: dotenv-webpack
-- **Testing**: Jest + fast-check
-
-See [API Documentation](.kiro/steering/api-documentation.md) for detailed technical docs.
+- **Language**: TypeScript 5.x (strict mode)
+- **Bundler**: Vite 5.x
+- **Test Runner**: Vitest + fast-check
+- **Linter**: ESLint 9 with TypeScript support
+- **Formatter**: Prettier 3
 
 ## Privacy & Security
 
@@ -232,58 +245,15 @@ See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for full details.
 
 ## Contributing
 
-Contributions are welcome! Here's how to get started:
+Contributions are welcome.
 
-### 1. Fork and Clone
+1. Fork and clone the repo
+2. `npm install && cp .env.example .env`
+3. Create a branch: `git checkout -b feature/your-feature`
+4. Write tests, make changes, run `npm run validate`
+5. Push and open a pull request
 
-```bash
-git clone https://github.com/yourusername/geospoof.git
-cd geospoof
-npm install
-```
-
-### 2. Create a Branch
-
-```bash
-git checkout -b feature/your-feature-name
-```
-
-### 3. Make Changes
-
-- Write clear, descriptive commit messages
-- Add tests for new features
-- Update documentation as needed
-- Follow the existing code style
-
-### 4. Ensure Quality
-
-```bash
-npm run format      # Format code
-npm run lint        # Check linting
-npm test            # Run all tests
-npm run build:prod  # Verify production build works
-```
-
-### 5. Submit Pull Request
-
-Push your branch and create a pull request on GitHub.
-
-### Commit Message Guidelines
-
-- `feat: Add timezone spoofing support`
-- `fix: Resolve geolocation accuracy issue`
-- `docs: Update installation instructions`
-- `test: Add property tests for geocoding`
-- `refactor: Simplify settings validation`
-- `chore: Update dependencies`
-
-### Adding New Features
-
-1. Update requirements in `.kiro/specs/` (if major feature)
-2. Write tests first (TDD approach)
-3. Implement the feature
-4. Add JSDoc comments
-5. Update documentation
+Pre-commit hooks automatically lint and format staged files. Use conventional commit messages (`feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:`).
 
 ## License
 
@@ -292,8 +262,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ## Support & Resources
 
 - 📖 [User Guide](USER_GUIDE.md) - Detailed usage instructions
-- 🔧 [API Documentation](.kiro/steering/api-documentation.md) - Technical API docs
-- 🐛 [Report Issues](https://github.com/anthonysgro/geospoof/issues)
+- � [Report Issues](https://github.com/anthonysgro/geospoof/issues)
 - ☕ [Buy me a coffee](https://buymeacoffee.com/sgro)
 
 ## Acknowledgments
