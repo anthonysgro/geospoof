@@ -22,6 +22,7 @@
     "validate": "npm run type-check && npm run lint && npm run format:check && npm run test",
     "clean": "rm -rf dist coverage geospoof-*.zip",
     "package": "npm run build:prod && cd dist && zip -r ../geospoof-v$(node -p \"require('../package.json').version\").zip * -x '*.DS_Store'",
+    "package:source": "zip -r geospoof-source-v$(node -p \"require('./package.json').version\").zip . -x 'node_modules/*' 'dist/*' 'coverage/*' '.git/*' '*.zip' '.DS_Store' '.kiro/*'",
     "prepare": "husky"
   },
   "devDependencies": {
