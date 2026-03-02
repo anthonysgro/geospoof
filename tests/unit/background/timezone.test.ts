@@ -164,4 +164,30 @@ describe("Timezone Edge Cases", () => {
     await getTimezoneForCoordinates(lat, lon);
     expect(fetch).toHaveBeenCalledTimes(1);
   });
+
+  test("should recalculate timezone within 100ms for any location change", async () => {
+    const { getTimezoneForCoordinates } = await importBackground();
+
+    // Mock successful GeoNames API response
+    vi.mocked(fetch).mockImplementation(() =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            timezoneId: "America/Los_Angeles",
+            rawOffset: -8,
+            dstOffset: -7,
+          }),
+      } as Response)
+    );
+
+    const startTime = Date.now();
+    await getTimezoneForCoordinates(37.7749, -122.4194);
+    const endTime = Date.now();
+
+    const responseTime = endTime - startTime;
+
+    // Should complete within 100ms (being generous with network mock)
+    expect(responseTime).toBeLessThan(100);
+  });
 });

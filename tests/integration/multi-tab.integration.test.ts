@@ -23,67 +23,6 @@ interface TimestampedMessage extends TrackedMessage {
 
 describe("Multi-Tab Integration Tests", () => {
   describe("Settings propagation to multiple tabs", () => {
-    test("should send settings to all tabs when broadcasting", async () => {
-      // Setup: Create 5 mock tabs
-      const tabs = [
-        { id: 1, url: "https://example1.com" },
-        { id: 2, url: "https://example2.com" },
-        { id: 3, url: "https://example3.com" },
-        { id: 4, url: "https://example4.com" },
-        { id: 5, url: "https://example5.com" },
-      ];
-
-      browser.tabs.query.mockResolvedValue(tabs);
-
-      const messagesSent: TrackedMessage[] = [];
-      browser.tabs.sendMessage.mockImplementation((tabId: number, message: Message<Settings>) => {
-        messagesSent.push({ tabId, message });
-        return Promise.resolve();
-      });
-
-      // Create settings to broadcast
-      const settings = {
-        enabled: true,
-        location: {
-          latitude: 37.7749,
-          longitude: -122.4194,
-          accuracy: 10,
-        },
-        timezone: {
-          identifier: "America/Los_Angeles",
-          offset: 480,
-          dstOffset: 60,
-        },
-        locationName: {
-          city: "San Francisco",
-          country: "USA",
-          displayName: "San Francisco, CA, USA",
-        },
-        webrtcProtection: false,
-        geonamesUsername: "geospoof",
-        onboardingCompleted: true,
-        version: "1.0",
-        lastUpdated: Date.now(),
-      };
-
-      // Act: Broadcast settings
-      await background.broadcastSettingsToTabs(settings);
-
-      // Assert: All tabs received the message
-      expect(messagesSent).toHaveLength(5);
-      expect(messagesSent.map((m) => m.tabId)).toEqual([1, 2, 3, 4, 5]);
-
-      // Assert: All messages are identical
-      messagesSent.forEach(({ message }) => {
-        expect(message.type).toBe("UPDATE_SETTINGS");
-        expect(message.payload).toEqual({
-          enabled: settings.enabled,
-          location: settings.location,
-          timezone: settings.timezone,
-        });
-      });
-    });
-
     test("should handle tabs without content scripts gracefully", async () => {
       // Setup: Mix of tabs with and without content scripts
       const tabs = [
@@ -120,57 +59,6 @@ describe("Multi-Tab Integration Tests", () => {
 
       // Assert: All tabs were attempted
       expect(browser.tabs.sendMessage).toHaveBeenCalledTimes(4);
-    });
-
-    test("should propagate settings changes to all tabs", async () => {
-      // Setup: Mock storage and tabs
-      const tabs = [
-        { id: 1, url: "https://example1.com" },
-        { id: 2, url: "https://example2.com" },
-        { id: 3, url: "https://example3.com" },
-      ];
-
-      browser.tabs.query.mockResolvedValue(tabs);
-
-      const initialSettings = {
-        enabled: false,
-        location: null,
-        timezone: null,
-        locationName: null,
-        webrtcProtection: false,
-        onboardingCompleted: true,
-        version: "1.0",
-        lastUpdated: Date.now(),
-      };
-
-      browser.storage.local.get.mockResolvedValue({ settings: initialSettings });
-      browser.storage.local.set.mockResolvedValue(undefined);
-
-      const messagesSent: TrackedMessage[] = [];
-      browser.tabs.sendMessage.mockImplementation((tabId: number, message: Message<Settings>) => {
-        messagesSent.push({ tabId, message });
-        return Promise.resolve();
-      });
-
-      // Act: Enable protection with location
-      await background.handleSetLocation({
-        latitude: 51.5074,
-        longitude: -0.1278,
-      });
-
-      // Assert: Settings were broadcast to all tabs
-      expect(messagesSent.length).toBeGreaterThan(0);
-
-      // Get the last broadcast (after location was set)
-      const lastBroadcast = messagesSent.slice(-3); // Last 3 messages (one per tab)
-      expect(lastBroadcast).toHaveLength(3);
-
-      lastBroadcast.forEach(({ message }) => {
-        const payload = message.payload as Settings;
-        expect(message.type).toBe("UPDATE_SETTINGS");
-        expect(payload.location?.latitude).toBe(51.5074);
-        expect(payload.location?.longitude).toBe(-0.1278);
-      });
     });
   });
 

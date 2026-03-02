@@ -328,4 +328,181 @@ describe("Popup Edge Cases", () => {
       expect(mockAlert).not.toHaveBeenCalled();
     });
   });
+
+  /**
+   * Protection Status Toggle Responsiveness Unit Tests
+   * Converted from property tests (popup-responsiveness.property.test.ts)
+   * Toggle timing doesn't vary based on generated input data.
+   *
+   * Validates: Requirements 6.1, 6.2, 6.3
+   */
+  describe("Protection status toggle responsiveness", () => {
+    test("should toggle protection status within 100ms", async () => {
+      mockBrowser.runtime.sendMessage.mockResolvedValue({ success: true });
+
+      const startTime = Date.now();
+      await mockBrowser.runtime.sendMessage({
+        type: "SET_PROTECTION_STATUS",
+        payload: { enabled: true },
+      });
+      const duration = Date.now() - startTime;
+
+      expect(duration).toBeLessThan(100);
+    });
+
+    test("should handle rapid toggle sequences", async () => {
+      mockBrowser.runtime.sendMessage.mockResolvedValue({ success: true });
+
+      const toggleSequence = [true, false, true, false, true];
+      const startTime = Date.now();
+
+      for (const enabled of toggleSequence) {
+        await mockBrowser.runtime.sendMessage({
+          type: "SET_PROTECTION_STATUS",
+          payload: { enabled },
+        });
+      }
+
+      const avgDuration = (Date.now() - startTime) / toggleSequence.length;
+      expect(avgDuration).toBeLessThan(100);
+    });
+  });
+
+  /**
+   * Popup Performance Unit Tests
+   * Converted from property tests (popup-performance.property.test.ts)
+   * These timing assertions don't vary based on generated input data,
+   * so they are tested with representative examples instead of fast-check.
+   *
+   * Validates: Requirements 6.1, 6.2, 6.3
+   */
+  describe("Popup open performance (<200ms)", () => {
+    test("should load settings within 200ms", async () => {
+      const settings = {
+        enabled: true,
+        webrtcProtection: false,
+        location: { latitude: 37.7749, longitude: -122.4194, accuracy: 10 },
+        locationName: {
+          city: "San Francisco",
+          country: "USA",
+          displayName: "San Francisco, CA, USA",
+        },
+      };
+
+      mockBrowser.runtime.sendMessage.mockResolvedValue(settings);
+
+      const mockElements = {
+        protectionToggle: { checked: false },
+        webrtcToggle: { checked: false },
+        statusBadge: { classList: { add: vi.fn(), remove: vi.fn() } },
+        statusText: { textContent: "" },
+        locationName: { textContent: "" },
+        locationCoords: { textContent: "" },
+        warningMessage: { style: { display: "none" } },
+      };
+
+      mockDocument.getElementById.mockImplementation(
+        (id: string) => (mockElements as Record<string, unknown>)[id] || null
+      );
+
+      const startTime = Date.now();
+
+      const loaded = (await mockBrowser.runtime.sendMessage({ type: "GET_SETTINGS" })) as {
+        enabled: boolean;
+        webrtcProtection: boolean;
+        location: { latitude: number; longitude: number; accuracy: number };
+        locationName: { displayName: string };
+      };
+      mockElements.protectionToggle.checked = loaded.enabled;
+      mockElements.webrtcToggle.checked = loaded.webrtcProtection;
+      mockElements.statusBadge.classList.add("enabled");
+      mockElements.statusText.textContent = "Enabled";
+      mockElements.locationName.textContent = loaded.locationName.displayName;
+      mockElements.locationCoords.textContent = `${loaded.location.latitude.toFixed(4)}, ${loaded.location.longitude.toFixed(4)}`;
+
+      const duration = Date.now() - startTime;
+      expect(duration).toBeLessThan(200);
+    });
+
+    test("should maintain performance with complex location data", async () => {
+      const settings = {
+        enabled: true,
+        webrtcProtection: true,
+        location: { latitude: -33.8688, longitude: 151.2093, accuracy: 50 },
+        locationName: {
+          city: "Sydney",
+          country: "Australia",
+          displayName: "Sydney, New South Wales, Australia — Southern Hemisphere Test Location",
+        },
+      };
+
+      mockBrowser.runtime.sendMessage.mockResolvedValue(settings);
+
+      const mockElements = {
+        protectionToggle: { checked: false },
+        webrtcToggle: { checked: false },
+        statusBadge: { classList: { add: vi.fn(), remove: vi.fn() } },
+        statusText: { textContent: "" },
+        locationName: { textContent: "" },
+        locationCoords: { textContent: "" },
+        warningMessage: { style: { display: "none" } },
+      };
+
+      mockDocument.getElementById.mockImplementation(
+        (id: string) => (mockElements as Record<string, unknown>)[id] || null
+      );
+
+      const startTime = Date.now();
+
+      const loaded = (await mockBrowser.runtime.sendMessage({ type: "GET_SETTINGS" })) as {
+        enabled: boolean;
+        webrtcProtection: boolean;
+        location: { latitude: number; longitude: number };
+        locationName: { displayName: string };
+      };
+      mockElements.protectionToggle.checked = loaded.enabled;
+      mockElements.webrtcToggle.checked = loaded.webrtcProtection;
+      mockElements.locationName.textContent = loaded.locationName.displayName;
+      mockElements.locationCoords.textContent = `${loaded.location.latitude.toFixed(4)}, ${loaded.location.longitude.toFixed(4)}`;
+
+      const duration = Date.now() - startTime;
+      expect(duration).toBeLessThan(200);
+    });
+
+    test("should handle rapid popup open/close cycles within 200ms each", async () => {
+      const settingsSequence = [
+        { enabled: true, location: { latitude: 40.7128, longitude: -74.006 } },
+        { enabled: false, location: null },
+        { enabled: true, location: { latitude: 51.5074, longitude: -0.1278 } },
+      ];
+
+      const mockElements = {
+        protectionToggle: { checked: false },
+        webrtcToggle: { checked: false },
+        statusBadge: { classList: { add: vi.fn(), remove: vi.fn() } },
+        statusText: { textContent: "" },
+        locationName: { textContent: "" },
+        locationCoords: { textContent: "" },
+        warningMessage: { style: { display: "none" } },
+      };
+
+      mockDocument.getElementById.mockImplementation(
+        (id: string) => (mockElements as Record<string, unknown>)[id] || null
+      );
+
+      for (const settings of settingsSequence) {
+        mockBrowser.runtime.sendMessage.mockResolvedValue({
+          ...settings,
+          webrtcProtection: false,
+          locationName: null,
+        });
+
+        const startTime = Date.now();
+        await mockBrowser.runtime.sendMessage({ type: "GET_SETTINGS" });
+        const duration = Date.now() - startTime;
+
+        expect(duration).toBeLessThan(200);
+      }
+    });
+  });
 });

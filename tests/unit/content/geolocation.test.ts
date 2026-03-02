@@ -208,6 +208,35 @@ describe("Geolocation API Override Edge Cases", () => {
     });
   });
 
+  /**
+   * Geolocation API Performance Unit Tests
+   * Converted from property tests (geolocation.property.test.ts Property 3, Property 25)
+   * Timing assertions don't vary based on generated input data.
+   *
+   * Validates: Requirements 6.1, 6.2, 6.3
+   */
+  describe("geolocation API overhead (<50ms)", () => {
+    test("should return spoofed position within 50ms", async () => {
+      vi.useRealTimers();
+
+      const contentScript = setupContentScript({
+        enabled: true,
+        location: testLocation,
+        timezone: null,
+      });
+
+      const startTime = Date.now();
+      await new Promise<SpoofedGeolocationPosition>((resolve) => {
+        contentScript.navigator.geolocation.getCurrentPosition((pos) => {
+          resolve(pos);
+        });
+      });
+      const duration = Date.now() - startTime;
+
+      expect(duration).toBeLessThan(50);
+    });
+  });
+
   describe("protection state transitions", () => {
     test("should switch from spoofed to real location when protection disabled mid-call", async () => {
       const contentScript = setupContentScript({
