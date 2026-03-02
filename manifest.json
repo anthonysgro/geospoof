@@ -9,7 +9,7 @@
   
   "browser_specific_settings": {
     "gecko": {
-      "id": "geospoof@anthonysgro.com",
+      "id": "{a8f7e9c2-4d3b-4a1e-9f8c-7b6d5e4a3c2b}",
       "strict_min_version": "142.0",
       "data_collection_permissions": {
         "required": ["none"]
