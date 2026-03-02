@@ -43,11 +43,27 @@ See [USER_GUIDE.md](USER_GUIDE.md) for detailed usage instructions.
 
 ## How It Works
 
-- **Geolocation API**: Overrides `navigator.geolocation` methods
-- **Timezone API**: Overrides `Date.prototype.getTimezoneOffset()` and `Intl.DateTimeFormat`
-- **WebRTC Protection**: Uses Firefox privacy API to disable non-proxied UDP
+Firefox extensions run in isolated security layers that can't be merged, so GeoSpoof uses three scripts that pass data down a chain:
 
-All overrides are applied at `document_start` before page scripts execute.
+```
+┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
+│   Background     │ ───► │  Content Script  │ ───► │ Injected Script │
+│                  │      │                  │      │                 │
+│ Stores settings, │      │ Bridge between   │      │ Runs inside the │
+│ calls APIs,      │      │ the extension    │      │ webpage — the   │
+│ manages tabs     │      │ and the webpage  │      │ only place that │
+│                  │      │                  │      │ can override     │
+│ ✓ Extension APIs │      │ ✓ DOM access     │      │ geolocation &   │
+│ ✗ Page access    │      │ ✗ Page globals   │      │ timezone APIs   │
+└─────────────────┘      └─────────────────┘      └─────────────────┘
+   browser.runtime  ───►    CustomEvent     ───►    API overrides
+```
+
+Why three? Firefox enforces strict boundaries between extension code and page code. No single script has both extension API access (storage, networking) and the ability to modify a page's JavaScript globals (`navigator.geolocation`). The content script exists solely to bridge that gap.
+
+The injection happens synchronously before any page JavaScript runs, so there's no window where a site could read your real location.
+
+**WebRTC protection** works separately — it uses Firefox's built-in privacy API to prevent IP leaks through WebRTC connections. No script injection needed.
 
 ## Development
 

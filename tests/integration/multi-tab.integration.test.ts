@@ -76,7 +76,11 @@ describe("Multi-Tab Integration Tests", () => {
       // Assert: All messages are identical
       messagesSent.forEach(({ message }) => {
         expect(message.type).toBe("UPDATE_SETTINGS");
-        expect(message.payload).toEqual(settings);
+        expect(message.payload).toEqual({
+          enabled: settings.enabled,
+          location: settings.location,
+          timezone: settings.timezone,
+        });
       });
     });
 

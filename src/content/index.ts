@@ -68,23 +68,28 @@ function updateInjectedScript(): void {
 }
 
 // Inject the override script into the page context IMMEDIATELY.
-// We need to inject it synchronously before any page JS runs.
-void (async function (): Promise<void> {
-  try {
-    const response = await fetch(browser.runtime.getURL("content/injected.js"));
-    const scriptContent = await response.text();
+// Use synchronous XHR to fetch the script content so it executes inline
+// via textContent — this guarantees the event listener is registered
+// before any page JS or settings dispatch runs.
+try {
+  const xhr = new XMLHttpRequest();
+  xhr.open("GET", browser.runtime.getURL("content/injected.js"), false); // synchronous
+  xhr.send();
 
+  if (xhr.status === 200) {
     const script = document.createElement("script");
-    script.textContent = scriptContent;
+    script.textContent = xhr.responseText;
     (document.head || document.documentElement).prepend(script);
     script.remove();
-
-    // Send initial settings after script is injected
-    updateInjectedScript();
-  } catch (err) {
-    console.error("[GeoSpoof Content] Failed to inject script:", err);
+  } else {
+    console.error("[GeoSpoof Content] Failed to load injected script:", xhr.status);
   }
-})();
+} catch (e) {
+  console.error("[GeoSpoof Content] Failed to inject script:", e);
+}
+
+// Send initial settings after script is injected
+updateInjectedScript();
 
 // Listen for settings updates from background script
 browser.runtime.onMessage.addListener(

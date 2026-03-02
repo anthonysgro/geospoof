@@ -113,42 +113,41 @@ declare var process: { env: Record<string, string | undefined> };
     return true;
   }
 
-  /** Determine if DST is active for a given date in the specified timezone. */
-  function isDSTActive(date: Date, timezone: TimezoneData): boolean {
-    if (!timezone || timezone.dstOffset === 0) {
-      return false;
-    }
-
-    const month = date.getMonth(); // 0-11
-
-    const northernPrefixes = ["America/", "Europe/", "Asia/"];
-    const isNorthern = northernPrefixes.some((prefix) => timezone.identifier.startsWith(prefix));
-
-    const southernPrefixes = ["Australia/", "Pacific/", "Antarctica/"];
-    const isSouthern = southernPrefixes.some((prefix) => timezone.identifier.startsWith(prefix));
-
-    if (isNorthern) {
-      // Northern hemisphere: DST typically March–November (months 2–10)
-      return month >= 2 && month <= 10;
-    } else if (isSouthern) {
-      // Southern hemisphere: DST typically October–March (months 9–11 or 0–2)
-      return month >= 9 || month <= 2;
-    }
-
-    return false;
-  }
-
-  /** Calculate current offset including DST adjustment. */
-  function getCurrentOffset(timezone: TimezoneData, date: Date = new Date()): number {
-    if (!timezone) {
+  /** Parse a GMT offset string like "GMT+5:30" or "GMT-8" into minutes from UTC. */
+  function parseGMTOffset(gmtString: string): number {
+    if (gmtString === "GMT" || gmtString === "UTC") {
       return 0;
     }
 
-    const baseOffset = timezone.offset;
-    if (isDSTActive(date, timezone)) {
-      return baseOffset + timezone.dstOffset;
+    const match = gmtString.match(/^GMT([+-])(\d{1,2})(?::(\d{2}))?$/);
+    if (!match) {
+      return 0;
     }
-    return baseOffset;
+
+    const sign = match[1] === "+" ? 1 : -1;
+    const hours = parseInt(match[2], 10);
+    const minutes = parseInt(match[3] || "0", 10);
+    return sign * (hours * 60 + minutes);
+  }
+
+  /**
+   * Resolve the actual UTC offset for a given date and IANA timezone using
+   * Intl.DateTimeFormat. Returns offset in minutes from UTC (positive = east).
+   * Falls back to the stored timezone.offset on any error.
+   */
+  function getIntlBasedOffset(date: Date, timezoneId: string, fallbackOffset: number): number {
+    try {
+      const formatter = new OriginalDateTimeFormat("en-US", {
+        timeZone: timezoneId,
+        timeZoneName: "shortOffset",
+      });
+      const parts = formatter.formatToParts(date);
+      const tzPart = parts.find((p) => p.type === "timeZoneName");
+      return parseGMTOffset(tzPart?.value ?? "GMT");
+    } catch {
+      // Invalid IANA identifier or unsupported environment — use fallback
+      return fallbackOffset;
+    }
   }
 
   // ── Settings listener ──────────────────────────────────────────────────
@@ -271,9 +270,13 @@ declare var process: { env: Record<string, string | undefined> };
     Date.prototype.getTimezoneOffset = function (this: Date): number {
       try {
         if (spoofingEnabled && timezoneData) {
-          const currentOffset = getCurrentOffset(timezoneData, this);
-          // Return negative of offset (getTimezoneOffset returns offset TO GET TO UTC)
-          return -currentOffset;
+          const offsetMinutes = getIntlBasedOffset(
+            this,
+            timezoneData.identifier,
+            timezoneData.offset
+          );
+          // getTimezoneOffset returns the offset TO GET TO UTC (negative of UTC offset)
+          return -offsetMinutes;
         }
         return originalGetTimezoneOffset.call(this);
       } catch (error) {

@@ -1,6 +1,6 @@
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import { resolve } from "path";
-import { cpSync, existsSync } from "fs";
+import { cpSync, existsSync, readFileSync, writeFileSync } from "fs";
 
 /**
  * Custom Vite plugin to copy static assets (manifest, HTML, CSS, icons)
@@ -27,6 +27,30 @@ function copyStaticAssets(): Plugin {
       const iconsSrc = resolve(__dirname, "icons");
       if (existsSync(iconsSrc)) {
         cpSync(iconsSrc, resolve(__dirname, "dist/icons"), { recursive: true });
+      }
+    },
+  };
+}
+
+/**
+ * Vite plugin that reads the version from package.json and writes it
+ * into both the root manifest.json and dist/manifest.json after the
+ * bundle is written, keeping all version references in sync.
+ */
+function syncManifestVersion(): Plugin {
+  return {
+    name: "sync-manifest-version",
+    writeBundle() {
+      const pkg = JSON.parse(readFileSync(resolve(__dirname, "package.json"), "utf-8"));
+      const version: string | undefined = pkg.version;
+      if (!version || !/^\d+\.\d+\.\d+$/.test(version)) {
+        throw new Error(`Invalid or missing version in package.json: "${version}"`);
+      }
+      for (const rel of ["manifest.json", "dist/manifest.json"]) {
+        const manifestPath = resolve(__dirname, rel);
+        const manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
+        manifest.version = version;
+        writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
       }
     },
   };
@@ -75,7 +99,7 @@ export default defineConfig(({ mode }) => {
       },
     },
 
-    plugins: [copyStaticAssets()],
+    plugins: [copyStaticAssets(), syncManifestVersion()],
 
     resolve: {
       alias: {

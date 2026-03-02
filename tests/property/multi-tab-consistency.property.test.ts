@@ -103,7 +103,11 @@ describe("Property 23: Multi-Tab Consistency", () => {
           // Verify the message structure
           const firstMessage = allMessages[0];
           expect(firstMessage.type).toBe("UPDATE_SETTINGS");
-          expect(firstMessage.payload).toEqual(settings);
+          expect(firstMessage.payload).toEqual({
+            enabled: settings.enabled,
+            location: settings.location,
+            timezone: settings.timezone,
+          });
           expect(firstMessage.payload!.enabled).toBe(enabled);
           expect(firstMessage.payload!.location).toEqual(location);
         }

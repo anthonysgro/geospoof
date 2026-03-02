@@ -15,6 +15,7 @@ import type {
   GeocodeResult,
   CheckTabInjectionPayload,
   InjectionStatus,
+  UpdateSettingsPayload,
 } from "@/shared/types/messages";
 import { isValidIANATimezone } from "@/shared/utils/type-guards";
 
@@ -130,6 +131,11 @@ function validateSettings(settings: Partial<Settings>): Settings {
     validated.webrtcProtection = settings.webrtcProtection;
   }
 
+  // Validate geonamesUsername
+  if (typeof settings.geonamesUsername === "string" && settings.geonamesUsername.length > 0) {
+    validated.geonamesUsername = settings.geonamesUsername;
+  }
+
   // Validate onboardingCompleted
   if (typeof settings.onboardingCompleted === "boolean") {
     validated.onboardingCompleted = settings.onboardingCompleted;
@@ -224,6 +230,8 @@ async function updateBadge(enabled: boolean): Promise<void> {
 
 // Broadcast settings to all tabs
 async function broadcastSettingsToTabs(settings: Settings): Promise<void> {
+  const { enabled, location, timezone } = settings;
+  const payload: UpdateSettingsPayload = { enabled, location, timezone };
   const tabs = await browser.tabs.query({});
 
   const promises: Promise<void>[] = [];
@@ -233,7 +241,7 @@ async function broadcastSettingsToTabs(settings: Settings): Promise<void> {
     const promise = browser.tabs
       .sendMessage(tab.id!, {
         type: "UPDATE_SETTINGS",
-        payload: settings,
+        payload,
       })
       .catch((error: Error) => {
         // Tab may not have content script injected (e.g., about:, moz-extension:, etc.)
@@ -248,71 +256,56 @@ async function broadcastSettingsToTabs(settings: Settings): Promise<void> {
 }
 
 // Message Handling
-browser.runtime.onMessage.addListener(
-  (
-    message: Message,
-    sender: browser.runtime.MessageSender,
-    sendResponse: (response: unknown) => void
-  ) => {
-    void handleMessage(message, sender, sendResponse);
-    return true; // Keep channel open for async response
-  }
-);
+browser.runtime.onMessage.addListener((message: Message, sender: browser.runtime.MessageSender) => {
+  return handleMessage(message, sender);
+});
 
 async function handleMessage(
   message: Message,
-  sender: browser.runtime.MessageSender,
-  sendResponse: (response: unknown) => void
-): Promise<void> {
+  _sender: browser.runtime.MessageSender
+): Promise<unknown> {
   try {
     switch (message.type) {
       case "GET_SETTINGS": {
         const settings = await loadSettings();
-        sendResponse(settings);
-        break;
+        return settings;
       }
 
       case "SET_LOCATION":
         await handleSetLocation(message.payload as SetLocationPayload);
-        sendResponse({ success: true });
-        break;
+        return { success: true };
 
       case "SET_PROTECTION_STATUS":
         await handleSetProtectionStatus(message.payload as SetProtectionStatusPayload);
-        sendResponse({ success: true });
-        break;
+        return { success: true };
 
       case "SET_WEBRTC_PROTECTION":
         await handleSetWebRTCProtection(message.payload as SetWebRTCProtectionPayload);
-        sendResponse({ success: true });
-        break;
+        return { success: true };
 
       case "GEOCODE_QUERY": {
         const results = await geocodeQuery((message.payload as GeocodeQueryPayload).query);
-        sendResponse({ results });
-        break;
+        return { results };
       }
 
       case "COMPLETE_ONBOARDING":
         await handleCompleteOnboarding();
-        sendResponse({ success: true });
-        break;
+        return { success: true };
 
       case "CHECK_TAB_INJECTION": {
         const injectionStatus = await checkTabInjection(
           (message.payload as CheckTabInjectionPayload).tabId
         );
-        sendResponse(injectionStatus);
-        break;
+        return injectionStatus;
       }
 
       default:
         console.warn("Unknown message type:", message.type);
-        sendResponse({ error: "Unknown message type" });
+        return { error: "Unknown message type" };
     }
   } catch (error) {
     console.error("Error handling message:", error);
-    sendResponse({ error: error instanceof Error ? error.message : String(error) });
+    return { error: error instanceof Error ? error.message : String(error) };
   }
 }
 
@@ -772,7 +765,7 @@ async function getTimezoneForCoordinates(latitude: number, longitude: number): P
       // Check if it's a rate limit error
       if (errorMsg.includes("daily limit") || errorMsg.includes("demo has been exceeded")) {
         console.error(
-          "GeoNames API limit exceeded. The shared 'demo' account has hit its daily limit.\n" +
+          `GeoNames API limit exceeded. The GeoNames account '${username}' has hit its daily limit.\n` +
             "To fix this, create a free account at https://www.geonames.org and enable web services.\n" +
             "Then update your username in the extension settings."
         );
@@ -865,6 +858,8 @@ if (browser.tabs && browser.tabs.onCreated) {
   browser.tabs.onCreated.addListener((tab: browser.tabs.Tab) => {
     void (async () => {
       const settings = await loadSettings();
+      const { enabled, location, timezone } = settings;
+      const scopedPayload: UpdateSettingsPayload = { enabled, location, timezone };
 
       // Wait a moment for content script to be injected
       setTimeout(() => {
@@ -874,7 +869,7 @@ if (browser.tabs && browser.tabs.onCreated) {
           try {
             await browser.tabs.sendMessage(tab.id!, {
               type: "UPDATE_SETTINGS",
-              payload: settings,
+              payload: scopedPayload,
             });
           } catch (error) {
             // Content script may not be ready yet
@@ -895,6 +890,8 @@ if (browser.tabs && browser.tabs.onUpdated) {
       if (changeInfo.status === "loading") {
         void (async () => {
           const settings = await loadSettings();
+          const { enabled, location, timezone } = settings;
+          const scopedPayload: UpdateSettingsPayload = { enabled, location, timezone };
 
           // Check if this is a restricted URL where extensions can't run
           const isRestricted = isRestrictedUrl(tab.url!);
@@ -917,7 +914,7 @@ if (browser.tabs && browser.tabs.onUpdated) {
           try {
             await browser.tabs.sendMessage(tabId, {
               type: "UPDATE_SETTINGS",
-              payload: settings,
+              payload: scopedPayload,
             });
 
             // If successful, set green checkmark badge for this tab

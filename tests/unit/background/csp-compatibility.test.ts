@@ -186,8 +186,7 @@ describe("CSP Compatibility Tests", () => {
 
       await background.handleMessage(
         { type: "CHECK_TAB_INJECTION", payload: { tabId } },
-        {} as browser.runtime.MessageSender,
-        () => {}
+        {} as browser.runtime.MessageSender
       );
 
       expectTabsSendMessage().toHaveBeenCalledWith(tabId, { type: "PING" });
