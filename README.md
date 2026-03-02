@@ -46,16 +46,16 @@ See [USER_GUIDE.md](USER_GUIDE.md) for detailed usage instructions.
 Firefox extensions run in isolated security layers that can't be merged, so GeoSpoof uses three scripts that pass data down a chain:
 
 ```
-┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
+┌──────────────────┐      ┌──────────────────┐      ┌─────────────────┐
 │   Background     │ ───► │  Content Script  │ ───► │ Injected Script │
 │                  │      │                  │      │                 │
 │ Stores settings, │      │ Bridge between   │      │ Runs inside the │
 │ calls APIs,      │      │ the extension    │      │ webpage — the   │
 │ manages tabs     │      │ and the webpage  │      │ only place that │
-│                  │      │                  │      │ can override     │
+│                  │      │                  │      │ can override    │
 │ ✓ Extension APIs │      │ ✓ DOM access     │      │ geolocation &   │
 │ ✗ Page access    │      │ ✗ Page globals   │      │ timezone APIs   │
-└─────────────────┘      └─────────────────┘      └─────────────────┘
+└──────────────────┘      └──────────────────┘      └─────────────────┘
    browser.runtime  ───►    CustomEvent     ───►    API overrides
 ```
 
