@@ -33,6 +33,17 @@ body.loaded {
   margin-bottom: 16px;
 }
 
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-icon {
+  width: 24px;
+  height: 24px;
+}
+
 .header h1 {
   font-size: 20px;
   font-weight: 600;
