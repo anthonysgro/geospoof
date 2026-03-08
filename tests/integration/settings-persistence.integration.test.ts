@@ -18,12 +18,25 @@ import {
   tabsSendMessageCallCount,
 } from "../helpers/mock-types";
 
+// Mock browser-geo-tz — timezone resolution is now offline
+vi.mock("browser-geo-tz", () => ({
+  find: vi.fn(),
+}));
+
 const background = await import("@/background");
 
 const fetchMock = vi.mocked(fetch);
 
+// Import the mocked find function
+const { find: findMock } = await import("browser-geo-tz");
+const mockedFind = vi.mocked(findMock);
+
 describe("Settings Persistence Integration Tests", () => {
   beforeEach(() => {
+    // Clear timezone cache to prevent cache hits from previous tests
+    background.clearTimezoneCache();
+    mockedFind.mockReset();
+
     // Default tabs mock
     browser.tabs.query.mockResolvedValue([{ id: 1, url: "https://example.com" }]);
 
@@ -54,16 +67,8 @@ describe("Settings Persistence Integration Tests", () => {
         longitude: -122.4194,
       };
 
-      // Mock timezone API
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            timezoneId: "America/Los_Angeles",
-            rawOffset: -8,
-            dstOffset: 1,
-          }),
-      } as Response);
+      // Mock timezone resolution via browser-geo-tz
+      mockedFind.mockResolvedValue(["America/Los_Angeles"]);
 
       // Mock reverse geocoding
       fetchMock.mockResolvedValueOnce({
@@ -120,15 +125,7 @@ describe("Settings Persistence Integration Tests", () => {
         longitude: -74.006,
       };
 
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            timezoneId: "America/New_York",
-            rawOffset: -5,
-            dstOffset: 1,
-          }),
-      } as Response);
+      mockedFind.mockResolvedValue(["America/New_York"]);
 
       fetchMock.mockResolvedValueOnce({
         ok: true,
@@ -156,15 +153,7 @@ describe("Settings Persistence Integration Tests", () => {
         longitude: -0.1278,
       };
 
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            timezoneId: "Europe/London",
-            rawOffset: 0,
-            dstOffset: 1,
-          }),
-      } as Response);
+      mockedFind.mockResolvedValue(["Europe/London"]);
 
       fetchMock.mockResolvedValueOnce({
         ok: true,
@@ -218,15 +207,7 @@ describe("Settings Persistence Integration Tests", () => {
         longitude: 139.6503,
       };
 
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            timezoneId: "Asia/Tokyo",
-            rawOffset: 9,
-            dstOffset: 0,
-          }),
-      } as Response);
+      mockedFind.mockResolvedValue(["Asia/Tokyo"]);
 
       fetchMock.mockResolvedValueOnce({
         ok: true,
@@ -476,15 +457,7 @@ describe("Settings Persistence Integration Tests", () => {
         longitude: 13.405,
       };
 
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            timezoneId: "Europe/Berlin",
-            rawOffset: 1,
-            dstOffset: 1,
-          }),
-      } as Response);
+      mockedFind.mockResolvedValue(["Europe/Berlin"]);
 
       fetchMock.mockResolvedValueOnce({
         ok: true,
@@ -554,15 +527,7 @@ describe("Settings Persistence Integration Tests", () => {
       browser.storage.local.set.mockResolvedValue(undefined);
 
       // Mock timezone and reverse geocoding
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            timezoneId: "America/Chicago",
-            rawOffset: -6,
-            dstOffset: 1,
-          }),
-      } as Response);
+      mockedFind.mockResolvedValue(["America/Chicago"]);
 
       fetchMock.mockResolvedValueOnce({
         ok: true,

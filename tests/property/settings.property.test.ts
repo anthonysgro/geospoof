@@ -47,7 +47,6 @@ const settingsArb: fc.Arbitrary<Settings> = fc.record({
     { nil: null }
   ),
   webrtcProtection: fc.boolean(),
-  geonamesUsername: fc.string({ minLength: 1, maxLength: 30 }),
   onboardingCompleted: fc.boolean(),
   version: fc.constant("1.0"),
   lastUpdated: fc.integer({ min: 0 }),
@@ -55,7 +54,6 @@ const settingsArb: fc.Arbitrary<Settings> = fc.record({
 
 /** The keys that MUST NOT appear in the broadcast payload. */
 const FORBIDDEN_KEYS: (keyof Settings)[] = [
-  "geonamesUsername",
   "onboardingCompleted",
   "webrtcProtection",
   "locationName",

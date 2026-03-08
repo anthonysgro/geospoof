@@ -85,10 +85,6 @@ export function validateSettings(settings: Partial<Settings>): Settings {
     validated.webrtcProtection = settings.webrtcProtection;
   }
 
-  if (typeof settings.geonamesUsername === "string" && settings.geonamesUsername.length > 0) {
-    validated.geonamesUsername = settings.geonamesUsername;
-  }
-
   if (typeof settings.onboardingCompleted === "boolean") {
     validated.onboardingCompleted = settings.onboardingCompleted;
   }

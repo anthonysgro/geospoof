@@ -28,7 +28,7 @@ export {
   GEOCODING_TIMEOUT,
   MAX_RETRIES,
 } from "./geocoding";
-export { getTimezoneForCoordinates, clearTimezoneCache, GEONAMES_USERNAME } from "./timezone";
+export { getTimezoneForCoordinates, clearTimezoneCache, computeOffsets } from "./timezone";
 export { setWebRTCProtection } from "./webrtc";
 export { updateBadge } from "./badge";
 export { broadcastSettingsToTabs, isRestrictedUrl, checkTabInjection } from "./tabs";

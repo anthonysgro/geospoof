@@ -219,8 +219,8 @@ npm run test:coverage      # With coverage report
 
 ### External APIs
 
-- **Geocoding**: OpenStreetMap Nominatim API
-- **Timezone**: GeoNames API (free tier)
+- **Geocoding**: [Nominatim](https://nominatim.org/) (OpenStreetMap)
+- **Timezone**: [browser-geo-tz](https://github.com/kevmo314/browser-geo-tz) (CDN-backed boundary-data lookup)
 - **Testing**: BrowserLeaks.com
 
 ### Build System
@@ -256,7 +256,8 @@ All settings are stored locally in Firefox's storage API:
 When you search for a city or set a location, the extension makes API calls to:
 
 - **Nominatim (OpenStreetMap)**: For geocoding
-- **GeoNames**: For timezone lookup
+
+Timezone resolution uses `browser-geo-tz`, which loads boundary data via CDN range requests. No personal data is sent for timezone lookups.
 
 These calls are made directly from your browser. We don't log or have access to this data.
 
@@ -320,6 +321,6 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ## Acknowledgments
 
 - [OpenStreetMap Nominatim](https://nominatim.org/) for geocoding
-- [GeoNames](https://www.geonames.org/) for timezone data
+- [browser-geo-tz](https://github.com/kevmo314/browser-geo-tz) for timezone boundary-data lookup
 - [BrowserLeaks](https://browserleaks.com/) for testing tools
 - All contributors and users

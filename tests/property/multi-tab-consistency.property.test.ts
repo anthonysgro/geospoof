@@ -25,7 +25,6 @@ function makeSettings(partial: Partial<Settings>): Settings {
     timezone: null,
     locationName: null,
     webrtcProtection: false,
-    geonamesUsername: "geospoof",
     onboardingCompleted: true,
     version: "1.0",
     lastUpdated: Date.now(),

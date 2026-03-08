@@ -30,21 +30,21 @@ This data never leaves your device and is only accessible by the extension.
 
 When you use certain features, the extension communicates with external services:
 
-### 1. Nominatim (OpenStreetMap)
+### 1. [Nominatim](https://nominatim.org/) (OpenStreetMap)
 
 **When:** When you search for a city or the extension performs reverse geocoding
 **Data Sent:** Search query (city name) or coordinates
 **Purpose:** To find location coordinates or city names
 **Privacy Policy:** [OpenStreetMap Privacy Policy](https://wiki.osmfoundation.org/wiki/Privacy_Policy)
 
-### 2. GeoNames
+### 2. [browser-geo-tz](https://github.com/kevmo314/browser-geo-tz) (Timezone Boundary Data)
 
-**When:** When setting a location to determine the timezone
-**Data Sent:** Latitude and longitude coordinates
-**Purpose:** To determine the correct timezone for the spoofed location
-**Privacy Policy:** [GeoNames Terms of Service](https://www.geonames.org/)
+**When:** Used to determine the correct Timezone ID (e.g., `America/New_York`) for a selected location
+**Data Sent:** The extension makes secure HTTPS Range Requests to a Cloud-Fronted Network (CDN) to fetch small "chunks" of geographic boundary data.
+**Purpose:** This allows the extension to resolve your timezone entirely within your browser's memory using high-precision boundary maps, without needing a centralized API account.
+**Note:** Your coordinates are never sent as a query or stored by a third-party API. The extension simply "downloads" the map data it needs to do the math locally on your machine.
 
-**Important:** These API calls are made directly from your browser to these services. The extension developer does not receive, log, or have access to this data.
+**Important:** These data fetches are made directly from your browser to the CDN. The extension developer never receives, logs, or has access to your location or these requests.
 
 ## Permissions Explained
 

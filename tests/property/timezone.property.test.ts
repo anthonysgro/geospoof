@@ -7,6 +7,19 @@ import fc from "fast-check";
 import { importBackground } from "../helpers/import-background";
 import { setupContentScript } from "../helpers/content.test.helper";
 
+// Mock browser-geo-tz at the module level (no longer uses GeoNames fetch)
+vi.mock("browser-geo-tz", () => ({
+  find: vi.fn(),
+}));
+
+/**
+ * Helper: get the mocked `find` function from browser-geo-tz.
+ */
+async function getMockedFind() {
+  const mod = await import("browser-geo-tz");
+  return vi.mocked(mod.find);
+}
+
 /**
  * Property 8: IANA Timezone Identifier Format
  *
@@ -17,6 +30,7 @@ import { setupContentScript } from "../helpers/content.test.helper";
  */
 test("Property 8: IANA Timezone Identifier Format", async () => {
   const { getTimezoneForCoordinates, isValidIANATimezone } = await importBackground();
+  const mockedFind = await getMockedFind();
 
   await fc.assert(
     fc.asyncProperty(
@@ -25,18 +39,11 @@ test("Property 8: IANA Timezone Identifier Format", async () => {
         longitude: fc.double({ min: -180, max: 180, noNaN: true }),
       }),
       async ({ latitude, longitude }) => {
-        // Mock successful GeoNames API response
-        vi.mocked(fetch).mockImplementation(() =>
-          Promise.resolve({
-            ok: true,
-            json: () =>
-              Promise.resolve({
-                timezoneId: "America/Los_Angeles",
-                rawOffset: -8,
-                dstOffset: -7,
-              }),
-          } as Response)
-        );
+        const { clearTimezoneCache } = await importBackground();
+        clearTimezoneCache();
+
+        // Mock browser-geo-tz to return a known timezone
+        mockedFind.mockResolvedValue(["America/Los_Angeles"]);
 
         const timezone = await getTimezoneForCoordinates(latitude, longitude);
 
@@ -49,9 +56,11 @@ test("Property 8: IANA Timezone Identifier Format", async () => {
 });
 
 /**
- * Test timezone fallback when API fails
+ * Test timezone fallback when browser-geo-tz find() fails
  */
-test("Timezone fallback when API fails", async () => {
+test("Timezone fallback when browser-geo-tz fails", async () => {
+  const mockedFind = await getMockedFind();
+
   await fc.assert(
     fc.asyncProperty(
       fc.record({
@@ -60,10 +69,11 @@ test("Timezone fallback when API fails", async () => {
         longitude: fc.double({ min: 170, max: 180, noNaN: true }),
       }),
       async ({ latitude, longitude }) => {
-        const { getTimezoneForCoordinates } = await importBackground();
+        const { getTimezoneForCoordinates, clearTimezoneCache } = await importBackground();
+        clearTimezoneCache();
 
-        // Mock API failure
-        vi.mocked(fetch).mockImplementation(() => Promise.reject(new Error("API unavailable")));
+        // Mock browser-geo-tz failure
+        mockedFind.mockRejectedValue(new Error("CDN unavailable"));
 
         const timezone = await getTimezoneForCoordinates(latitude, longitude);
 

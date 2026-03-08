@@ -104,7 +104,8 @@ Use the built-in test links at the bottom of the extension:
 
 - No data collection or tracking
 - All settings stored locally in your browser
-- Geocoding uses public APIs (OpenStreetMap, GeoNames)
+- Geocoding uses public APIs (OpenStreetMap Nominatim)
+- Timezone resolution uses offline boundary data (browser-geo-tz)
 
 ## Support
 

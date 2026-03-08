@@ -1,25 +1,12 @@
 /**
  * Timezone
- * Timezone lookup using the GeoNames API with longitude-based fallback.
+ * Offline timezone lookup using browser-geo-tz boundary data with longitude-based fallback.
  */
 
 import type { Timezone } from "@/shared/types/settings";
 import { isValidIANATimezone } from "@/shared/utils/type-guards";
-import { getCacheKey, GEOCODING_TIMEOUT } from "./geocoding";
-import { loadSettings } from "./settings";
-
-const GEONAMES_TIMEZONE_URL = "https://secure.geonames.org/timezoneJSON";
-export const GEONAMES_USERNAME = "demo";
-
-/** Internal interface for GeoNames timezone API response */
-interface GeoNamesTimezoneResult {
-  timezoneId: string;
-  rawOffset: number;
-  dstOffset: number;
-  status?: {
-    message?: string;
-  };
-}
+import { getCacheKey } from "./geocoding";
+import { find } from "browser-geo-tz";
 
 // In-memory cache for timezone lookups
 const timezoneCache: Map<string, Timezone> = new Map();
@@ -32,7 +19,83 @@ export function clearTimezoneCache(): void {
 }
 
 /**
- * Get timezone for coordinates using GeoNames API with fallback
+ * Parse a short-offset timezone name (e.g. "GMT-8", "GMT+5:30") into minutes from UTC.
+ */
+function parseShortOffset(tzName: string): number {
+  if (tzName === "GMT" || tzName === "UTC") {
+    return 0;
+  }
+  const match = tzName.match(/^GMT([+-])(\d{1,2})(?::(\d{2}))?$/);
+  if (!match) {
+    return 0;
+  }
+  const sign = match[1] === "+" ? 1 : -1;
+  const hours = parseInt(match[2], 10);
+  const minutes = parseInt(match[3] || "0", 10);
+  return sign * (hours * 60 + minutes);
+}
+
+/**
+ * Get the UTC offset in minutes for a given IANA timezone identifier at a specific date.
+ */
+function getOffsetAtDate(identifier: string, date: Date): number {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: identifier,
+    timeZoneName: "shortOffset",
+  });
+  const parts = formatter.formatToParts(date);
+  const tzPart = parts.find((p) => p.type === "timeZoneName");
+  return parseShortOffset(tzPart?.value ?? "GMT");
+}
+
+/**
+ * Compute the current UTC offset and DST offset for an IANA timezone identifier.
+ *
+ * The DST offset is derived by comparing winter (Jan 1) and summer (Jul 1) offsets
+ * for the current year. The difference between the two (if any) is the DST adjustment.
+ */
+export function computeOffsets(identifier: string): { offset: number; dstOffset: number } {
+  const now = new Date();
+  const currentOffset = getOffsetAtDate(identifier, now);
+
+  const year = now.getFullYear();
+  const winterOffset = getOffsetAtDate(identifier, new Date(year, 0, 1));
+  const summerOffset = getOffsetAtDate(identifier, new Date(year, 6, 1));
+
+  // DST offset is the difference between the two seasonal offsets.
+  // If they're the same, there's no DST.
+  const dstOffset = Math.abs(summerOffset - winterOffset);
+
+  return { offset: currentOffset, dstOffset };
+}
+
+/**
+ * Build a longitude-based fallback timezone (Etc/GMT±N).
+ */
+function buildFallbackTimezone(longitude: number): Timezone {
+  const estimatedOffset = Math.round(longitude / 15) * 60;
+  const offsetHours = Math.round(estimatedOffset / 60);
+
+  let identifier: string;
+  if (offsetHours === 0) {
+    identifier = "Etc/GMT";
+  } else if (offsetHours > 0) {
+    // Etc/GMT uses inverted sign convention
+    identifier = `Etc/GMT-${offsetHours}`;
+  } else {
+    identifier = `Etc/GMT+${Math.abs(offsetHours)}`;
+  }
+
+  return {
+    identifier,
+    offset: estimatedOffset,
+    dstOffset: 0,
+    fallback: true,
+  };
+}
+
+/**
+ * Get timezone for coordinates using browser-geo-tz boundary data with fallback.
  */
 export async function getTimezoneForCoordinates(
   latitude: number,
@@ -43,83 +106,33 @@ export async function getTimezoneForCoordinates(
     return timezoneCache.get(cacheKey)!;
   }
 
-  const settings = await loadSettings();
-  const username = settings.geonamesUsername || GEONAMES_USERNAME;
-
   try {
-    const params = new URLSearchParams({
-      lat: latitude.toString(),
-      lng: longitude.toString(),
-      username: username,
-    });
+    const results = await find(latitude, longitude);
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), GEOCODING_TIMEOUT);
-
-    const response = await fetch(`${GEONAMES_TIMEZONE_URL}?${params}`, {
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      throw new Error(`Timezone API failed: ${response.status}`);
+    if (results.length === 0) {
+      const fallback = buildFallbackTimezone(longitude);
+      timezoneCache.set(cacheKey, fallback);
+      return fallback;
     }
 
-    const data = (await response.json()) as GeoNamesTimezoneResult;
+    const identifier = results[0];
 
-    if (data.status) {
-      const errorMsg = data.status.message || "Unknown error";
-
-      if (errorMsg.includes("daily limit") || errorMsg.includes("demo has been exceeded")) {
-        console.error(
-          `GeoNames API limit exceeded. The GeoNames account '${username}' has hit its daily limit.\n` +
-            "To fix this, create a free account at https://www.geonames.org and enable web services.\n" +
-            "Then update your username in the extension settings."
-        );
-      }
-
-      throw new Error(`Timezone API error: ${errorMsg}`);
+    if (!isValidIANATimezone(identifier)) {
+      const fallback = buildFallbackTimezone(longitude);
+      timezoneCache.set(cacheKey, fallback);
+      return fallback;
     }
 
-    const timezone: Timezone = {
-      identifier: data.timezoneId,
-      offset: Math.round(data.rawOffset * 60),
-      dstOffset: Math.round(data.dstOffset * 60),
-    };
+    const { offset, dstOffset } = computeOffsets(identifier);
 
-    if (!isValidIANATimezone(timezone.identifier)) {
-      throw new Error("Invalid timezone identifier");
-    }
-
+    const timezone: Timezone = { identifier, offset, dstOffset };
     timezoneCache.set(cacheKey, timezone);
-
     return timezone;
   } catch (error) {
-    console.warn("Timezone API failed, using fallback:", error);
+    console.warn("Timezone lookup failed, using fallback:", error);
 
-    const estimatedOffset = Math.round(longitude / 15) * 60;
-
-    let identifier = "Etc/GMT";
-    const offsetHours = Math.round(estimatedOffset / 60);
-
-    if (offsetHours === 0) {
-      identifier = "Etc/GMT";
-    } else if (offsetHours > 0) {
-      identifier = `Etc/GMT-${offsetHours}`;
-    } else {
-      identifier = `Etc/GMT+${Math.abs(offsetHours)}`;
-    }
-
-    const fallbackTimezone: Timezone = {
-      identifier: identifier,
-      offset: estimatedOffset,
-      dstOffset: 0,
-      fallback: true,
-    };
-
-    timezoneCache.set(cacheKey, fallbackTimezone);
-
-    return fallbackTimezone;
+    const fallback = buildFallbackTimezone(longitude);
+    timezoneCache.set(cacheKey, fallback);
+    return fallback;
   }
 }

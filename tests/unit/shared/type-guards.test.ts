@@ -111,7 +111,6 @@ describe("isValidSettings", () => {
     timezone: null,
     locationName: null,
     webrtcProtection: false,
-    geonamesUsername: "geospoof",
     onboardingCompleted: false,
     version: "1.0",
     lastUpdated: Date.now(),

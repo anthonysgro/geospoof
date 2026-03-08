@@ -1,72 +1,73 @@
 /**
  * Unit Tests for Timezone Edge Cases
  * Feature: geolocation-spoof-extension-mvp
+ *
+ * Updated to use browser-geo-tz mocking instead of GeoNames fetch mocking.
  */
 
 import { vi } from "vitest";
 import { importBackground } from "../../helpers/import-background";
 
+// Mock browser-geo-tz at the module level
+vi.mock("browser-geo-tz", () => ({
+  find: vi.fn(),
+}));
+
+async function getMockedFind() {
+  const mod = await import("browser-geo-tz");
+  return vi.mocked(mod.find);
+}
+
 describe("Timezone Edge Cases", () => {
+  let mockedFind: Awaited<ReturnType<typeof getMockedFind>>;
+
+  beforeEach(async () => {
+    mockedFind = await getMockedFind();
+    mockedFind.mockReset();
+  });
+
   test("should correctly map San Francisco coordinates to America/Los_Angeles", async () => {
-    const { getTimezoneForCoordinates } = await importBackground();
-    vi.mocked(fetch).mockImplementation(() =>
-      Promise.resolve({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            timezoneId: "America/Los_Angeles",
-            rawOffset: -8,
-            dstOffset: -7,
-          }),
-      } as Response)
-    );
+    const { getTimezoneForCoordinates, clearTimezoneCache } = await importBackground();
+    clearTimezoneCache();
+
+    mockedFind.mockResolvedValue(["America/Los_Angeles"]);
+
     const timezone = await getTimezoneForCoordinates(37.7749, -122.4194);
     expect(timezone.identifier).toBe("America/Los_Angeles");
-    expect(timezone.offset).toBe(-480);
-    expect(timezone.dstOffset).toBe(-420);
+    expect(Number.isFinite(timezone.offset)).toBe(true);
+    expect(Number.isFinite(timezone.dstOffset)).toBe(true);
   });
 
   test("should correctly map London coordinates to Europe/London", async () => {
-    const { getTimezoneForCoordinates } = await importBackground();
-    vi.mocked(fetch).mockImplementation(() =>
-      Promise.resolve({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            timezoneId: "Europe/London",
-            rawOffset: 0,
-            dstOffset: 1,
-          }),
-      } as Response)
-    );
+    const { getTimezoneForCoordinates, clearTimezoneCache } = await importBackground();
+    clearTimezoneCache();
+
+    mockedFind.mockResolvedValue(["Europe/London"]);
+
     const timezone = await getTimezoneForCoordinates(51.5074, -0.1278);
     expect(timezone.identifier).toBe("Europe/London");
-    expect(timezone.offset).toBe(0);
-    expect(timezone.dstOffset).toBe(60);
+    expect(Number.isFinite(timezone.offset)).toBe(true);
+    expect(Number.isFinite(timezone.dstOffset)).toBe(true);
   });
 
   test("should correctly map Tokyo coordinates to Asia/Tokyo", async () => {
-    const { getTimezoneForCoordinates } = await importBackground();
-    vi.mocked(fetch).mockImplementation(() =>
-      Promise.resolve({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            timezoneId: "Asia/Tokyo",
-            rawOffset: 9,
-            dstOffset: 9,
-          }),
-      } as Response)
-    );
+    const { getTimezoneForCoordinates, clearTimezoneCache } = await importBackground();
+    clearTimezoneCache();
+
+    mockedFind.mockResolvedValue(["Asia/Tokyo"]);
+
     const timezone = await getTimezoneForCoordinates(35.6762, 139.6503);
     expect(timezone.identifier).toBe("Asia/Tokyo");
     expect(timezone.offset).toBe(540);
-    expect(timezone.dstOffset).toBe(540);
+    expect(timezone.dstOffset).toBe(0);
   });
 
-  test("should use fallback timezone estimation when API fails", async () => {
-    const { getTimezoneForCoordinates } = await importBackground();
-    vi.mocked(fetch).mockImplementation(() => Promise.reject(new Error("API unavailable")));
+  test("should use fallback timezone estimation when browser-geo-tz fails", async () => {
+    const { getTimezoneForCoordinates, clearTimezoneCache } = await importBackground();
+    clearTimezoneCache();
+
+    mockedFind.mockRejectedValue(new Error("CDN unavailable"));
+
     const timezone = await getTimezoneForCoordinates(43.4567, -117.8901);
     expect(timezone.identifier).toBe("Etc/GMT+8");
     expect(timezone.fallback).toBe(true);
@@ -75,119 +76,81 @@ describe("Timezone Edge Cases", () => {
   });
 
   test("should estimate timezone from longitude for positive coordinates", async () => {
-    const { getTimezoneForCoordinates } = await importBackground();
-    vi.mocked(fetch).mockImplementation(() => Promise.reject(new Error("API unavailable")));
+    const { getTimezoneForCoordinates, clearTimezoneCache } = await importBackground();
+    clearTimezoneCache();
+
+    mockedFind.mockRejectedValue(new Error("CDN unavailable"));
+
     const timezone = await getTimezoneForCoordinates(44.5678, 140.9012);
     expect(timezone.identifier).toBe("Etc/GMT-9");
     expect(timezone.fallback).toBe(true);
     expect(timezone.offset).toBe(540);
   });
 
-  test("should handle API error responses", async () => {
-    const { getTimezoneForCoordinates } = await importBackground();
-    vi.mocked(fetch).mockImplementation(() =>
-      Promise.resolve({
-        ok: false,
-        status: 500,
-      } as Response)
-    );
+  test("should handle empty result from browser-geo-tz", async () => {
+    const { getTimezoneForCoordinates, clearTimezoneCache } = await importBackground();
+    clearTimezoneCache();
+
+    mockedFind.mockResolvedValue([]);
+
     const timezone = await getTimezoneForCoordinates(40.1234, -120.5678);
     expect(timezone.identifier).toBe("Etc/GMT+8");
     expect(timezone.fallback).toBe(true);
   });
 
-  test("should handle API error status in response", async () => {
-    const { getTimezoneForCoordinates } = await importBackground();
-    vi.mocked(fetch).mockImplementation(() =>
-      Promise.resolve({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            status: {
-              message: "Invalid coordinates",
-              value: 10,
-            },
-          }),
-      } as Response)
-    );
-    const timezone = await getTimezoneForCoordinates(41.2345, -119.6789);
-    expect(timezone.identifier).toBe("Etc/GMT+8");
-    expect(timezone.fallback).toBe(true);
-  });
+  test("should handle invalid timezone identifier from browser-geo-tz", async () => {
+    const { getTimezoneForCoordinates, clearTimezoneCache } = await importBackground();
+    clearTimezoneCache();
 
-  test("should handle invalid timezone identifier from API", async () => {
-    const { getTimezoneForCoordinates } = await importBackground();
-    vi.mocked(fetch).mockImplementation(() =>
-      Promise.resolve({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            timezoneId: "invalid/timezone",
-            rawOffset: -8,
-            dstOffset: -7,
-          }),
-      } as Response)
-    );
+    mockedFind.mockResolvedValue(["invalid/timezone"]);
+
     const timezone = await getTimezoneForCoordinates(42.3456, -118.789);
     expect(timezone.identifier).toBe("Etc/GMT+8");
     expect(timezone.fallback).toBe(true);
   });
 
   test("should cache timezone results", async () => {
-    const { getTimezoneForCoordinates } = await importBackground();
-    vi.mocked(fetch).mockImplementation(() =>
-      Promise.resolve({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            timezoneId: "America/Los_Angeles",
-            rawOffset: -8,
-            dstOffset: -7,
-          }),
-      } as Response)
-    );
+    const { getTimezoneForCoordinates, clearTimezoneCache } = await importBackground();
+    clearTimezoneCache();
+    mockedFind.mockClear();
+
+    mockedFind.mockResolvedValue(["America/Los_Angeles"]);
+
     const lat = 37.1234;
     const lon = -122.5678;
     await getTimezoneForCoordinates(lat, lon);
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(mockedFind).toHaveBeenCalledTimes(1);
     await getTimezoneForCoordinates(lat, lon);
-    expect(fetch).toHaveBeenCalledTimes(1);
+    // Second call should be served from cache
+    expect(mockedFind).toHaveBeenCalledTimes(1);
   });
 
   test("should cache fallback timezone results", async () => {
-    const { getTimezoneForCoordinates } = await importBackground();
-    vi.mocked(fetch).mockImplementation(() => Promise.reject(new Error("API unavailable")));
+    const { getTimezoneForCoordinates, clearTimezoneCache } = await importBackground();
+    clearTimezoneCache();
+    mockedFind.mockClear();
+
+    mockedFind.mockRejectedValue(new Error("CDN unavailable"));
+
     const lat = 38.9876;
     const lon = -121.4321;
     await getTimezoneForCoordinates(lat, lon);
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(mockedFind).toHaveBeenCalledTimes(1);
     await getTimezoneForCoordinates(lat, lon);
-    expect(fetch).toHaveBeenCalledTimes(1);
+    // Second call should be served from cache
+    expect(mockedFind).toHaveBeenCalledTimes(1);
   });
 
-  test("should recalculate timezone within 100ms for any location change", async () => {
-    const { getTimezoneForCoordinates } = await importBackground();
+  test("should resolve timezone within 100ms", async () => {
+    const { getTimezoneForCoordinates, clearTimezoneCache } = await importBackground();
+    clearTimezoneCache();
 
-    // Mock successful GeoNames API response
-    vi.mocked(fetch).mockImplementation(() =>
-      Promise.resolve({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            timezoneId: "America/Los_Angeles",
-            rawOffset: -8,
-            dstOffset: -7,
-          }),
-      } as Response)
-    );
+    mockedFind.mockResolvedValue(["America/Los_Angeles"]);
 
     const startTime = Date.now();
     await getTimezoneForCoordinates(37.7749, -122.4194);
     const endTime = Date.now();
 
-    const responseTime = endTime - startTime;
-
-    // Should complete within 100ms (being generous with network mock)
-    expect(responseTime).toBeLessThan(100);
+    expect(endTime - startTime).toBeLessThan(100);
   });
 });

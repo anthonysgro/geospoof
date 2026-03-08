@@ -245,7 +245,7 @@ Verify graceful handling of error scenarios.
 
 #### 9.1 Missing Timezone Data
 
-1. Use browser dev tools to block requests to GeoNames API
+1. Use browser dev tools to block requests to the browser-geo-tz CDN (unpkg.com)
 2. Set location to any coordinates
 3. Enable protection
 4. Verify:
@@ -472,6 +472,6 @@ After completing all tests, verify:
 ## Notes
 
 - Some tests require specific dates to verify DST behavior
-- Timezone API responses may vary based on GeoNames API availability
+- Timezone resolution uses browser-geo-tz boundary data loaded from CDN; results may vary if CDN is unavailable
 - Fallback timezone is estimated and may not be 100% accurate
 - Manual testing should be performed on a clean Firefox profile to avoid conflicts with other extensions

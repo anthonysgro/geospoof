@@ -23,11 +23,22 @@ import {
   tabsSendMessageCallCount,
 } from "../helpers/mock-types";
 
+// Mock browser-geo-tz — timezone resolution is now offline
+vi.mock("browser-geo-tz", () => ({
+  find: vi.fn(),
+}));
+
 const background = await import("@/background");
 const fetchMock = vi.mocked(fetch);
 
+const { find: findMock } = await import("browser-geo-tz");
+const mockedFind = vi.mocked(findMock);
+
 describe("User Workflow Integration Tests", () => {
   beforeEach(() => {
+    background.clearTimezoneCache();
+    mockedFind.mockReset();
+
     // Default storage mock
     browser.storage.local.get.mockResolvedValue({
       settings: {
@@ -96,16 +107,8 @@ describe("User Workflow Integration Tests", () => {
         longitude: results[0].longitude,
       };
 
-      // Mock timezone API response
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            timezoneId: "America/Los_Angeles",
-            rawOffset: -8,
-            dstOffset: 1,
-          }),
-      } as Response);
+      // Mock timezone resolution via browser-geo-tz
+      mockedFind.mockResolvedValue(["America/Los_Angeles"]);
 
       // Mock reverse geocoding response
       fetchMock.mockResolvedValueOnce({
@@ -210,16 +213,8 @@ describe("User Workflow Integration Tests", () => {
         longitude: results[1].longitude,
       };
 
-      // Mock timezone API
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            timezoneId: "America/Toronto",
-            rawOffset: -5,
-            dstOffset: 1,
-          }),
-      } as Response);
+      // Mock timezone resolution via browser-geo-tz
+      mockedFind.mockResolvedValue(["America/Toronto"]);
 
       // Mock reverse geocoding
       fetchMock.mockResolvedValueOnce({
@@ -252,16 +247,8 @@ describe("User Workflow Integration Tests", () => {
         longitude: 139.6503,
       };
 
-      // Mock timezone API response
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            timezoneId: "Asia/Tokyo",
-            rawOffset: 9,
-            dstOffset: 0,
-          }),
-      } as Response);
+      // Mock timezone resolution via browser-geo-tz
+      mockedFind.mockResolvedValue(["Asia/Tokyo"]);
 
       // Mock reverse geocoding response
       fetchMock.mockResolvedValueOnce({
@@ -322,16 +309,8 @@ describe("User Workflow Integration Tests", () => {
         longitude: 45.0,
       };
 
-      // Mock timezone API (Arctic)
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            timezoneId: "UTC",
-            rawOffset: 0,
-            dstOffset: 0,
-          }),
-      } as Response);
+      // Mock timezone resolution via browser-geo-tz (Arctic)
+      mockedFind.mockResolvedValue(["Etc/GMT-3"]);
 
       // Mock reverse geocoding (may fail for polar regions)
       fetchMock.mockResolvedValueOnce({
@@ -368,16 +347,10 @@ describe("User Workflow Integration Tests", () => {
       ];
 
       for (const location of boundaryLocations) {
-        // Mock timezone API
-        fetchMock.mockResolvedValueOnce({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              timezoneId: "UTC",
-              rawOffset: 0,
-              dstOffset: 0,
-            }),
-        } as Response);
+        background.clearTimezoneCache();
+
+        // Mock timezone resolution via browser-geo-tz
+        mockedFind.mockResolvedValue(["Etc/GMT"]);
 
         // Mock reverse geocoding
         fetchMock.mockResolvedValueOnce({
@@ -441,16 +414,8 @@ describe("User Workflow Integration Tests", () => {
         longitude: 2.3522,
       };
 
-      // Mock timezone API
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            timezoneId: "Europe/Paris",
-            rawOffset: 1,
-            dstOffset: 1,
-          }),
-      } as Response);
+      // Mock timezone resolution via browser-geo-tz
+      mockedFind.mockResolvedValue(["Europe/Paris"]);
 
       // Mock reverse geocoding
       fetchMock.mockResolvedValueOnce({
@@ -533,16 +498,8 @@ describe("User Workflow Integration Tests", () => {
         longitude: results[0].longitude,
       };
 
-      // Mock timezone API
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            timezoneId: "Europe/Berlin",
-            rawOffset: 1,
-            dstOffset: 1,
-          }),
-      } as Response);
+      // Mock timezone resolution via browser-geo-tz
+      mockedFind.mockResolvedValue(["Europe/Berlin"]);
 
       // Mock reverse geocoding
       fetchMock.mockResolvedValueOnce({

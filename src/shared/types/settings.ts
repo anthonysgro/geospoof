@@ -50,8 +50,6 @@ export interface Settings {
   locationName: LocationName | null;
   /** Whether WebRTC IP leak protection is enabled */
   webrtcProtection: boolean;
-  /** GeoNames API username */
-  geonamesUsername: string;
   /** Whether the user has completed onboarding */
   onboardingCompleted: boolean;
   /** Settings schema version (for migrations) */
@@ -69,7 +67,6 @@ export const DEFAULT_SETTINGS: Settings = {
   timezone: null,
   locationName: null,
   webrtcProtection: false,
-  geonamesUsername: "geospoof",
   onboardingCompleted: false,
   version: "1.0",
   lastUpdated: Date.now(),
