@@ -13,6 +13,10 @@ Firefox extension to spoof your browser's geolocation, timezone, and prevent Web
 
 ## Installation
 
+### From Firefox Add-ons
+
+- https://addons.mozilla.org/en-US/firefox/addon/geo-spoof
+
 ### From Source (Development)
 
 ```bash
@@ -27,10 +31,6 @@ Then in Firefox:
 1. Navigate to `about:debugging`
 2. Click "This Firefox" → "Load Temporary Add-on"
 3. Select `dist/manifest.json`
-
-### From Firefox Add-ons (Coming Soon)
-
-Extension will be published to Firefox Add-ons store.
 
 ### Building from Source (for Mozilla reviewers)
 
