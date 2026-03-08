@@ -58,6 +58,7 @@ export function formatAPIsDetails(
   if (hasLocation) {
     apis.push("• navigator.geolocation.getCurrentPosition()");
     apis.push("• navigator.geolocation.watchPosition()");
+    apis.push("• navigator.permissions.query()");
   }
 
   if (hasTimezone) {

@@ -263,6 +263,53 @@ declare var process: { env: Record<string, string | undefined> };
     }
   };
 
+  // ── Permissions query override ───────────────────────────────────────────
+
+  const originalPermissionsQuery = navigator.permissions?.query?.bind(navigator.permissions);
+
+  /** Create a spoofed PermissionStatus object with state "granted". */
+  function createSpoofedPermissionStatus(): PermissionStatus {
+    const target = new EventTarget();
+    let onchangeHandler: ((this: PermissionStatus, ev: Event) => unknown) | null = null;
+
+    Object.defineProperty(target, "state", {
+      get: () => "granted" as PermissionState,
+      enumerable: true,
+      configurable: false,
+    });
+
+    Object.defineProperty(target, "onchange", {
+      get: () => onchangeHandler,
+      set: (value: ((this: PermissionStatus, ev: Event) => unknown) | null) => {
+        onchangeHandler = value;
+      },
+      enumerable: true,
+      configurable: true,
+    });
+
+    return target as unknown as PermissionStatus;
+  }
+
+  if (originalPermissionsQuery) {
+    navigator.permissions.query = function (
+      descriptor: PermissionDescriptor
+    ): Promise<PermissionStatus> {
+      try {
+        if (spoofingEnabled && descriptor?.name === "geolocation") {
+          return Promise.resolve(createSpoofedPermissionStatus());
+        }
+        return originalPermissionsQuery(descriptor);
+      } catch (error) {
+        console.error("[GeoSpoof Injected] Error in permissions.query override:", error);
+        return originalPermissionsQuery(descriptor);
+      }
+    };
+  } else {
+    console.warn(
+      "[GeoSpoof Injected] navigator.permissions.query not available, skipping override"
+    );
+  }
+
   // ── Timezone overrides ─────────────────────────────────────────────────
 
   // Override Date.prototype.getTimezoneOffset()

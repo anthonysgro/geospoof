@@ -40,6 +40,9 @@ export interface ContentScriptTestInterface {
       ) => number;
       clearWatch: (watchId: number) => void;
     };
+    permissions: {
+      query: (descriptor: { name: string }) => Promise<PermissionStatus>;
+    };
   };
   Date: {
     prototype: {
@@ -68,6 +71,7 @@ export interface ContentScriptTestInterface {
     getCurrentPosition: ReturnType<typeof vi.fn>;
     watchPosition: ReturnType<typeof vi.fn>;
     clearWatch: ReturnType<typeof vi.fn>;
+    permissionsQuery: ReturnType<typeof vi.fn>;
     getTimezoneOffset: typeof Date.prototype.getTimezoneOffset;
     DateTimeFormat: typeof Intl.DateTimeFormat;
     toString: typeof Date.prototype.toString;
@@ -128,6 +132,27 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
   );
 
   const originalClearWatch = vi.fn();
+
+  // Original permissions.query mock — returns "prompt" for geolocation by default
+  const originalPermissionsQuery = vi.fn(
+    (descriptor: { name: string }): Promise<PermissionStatus> => {
+      const target = new EventTarget();
+      const state = descriptor?.name === "geolocation" ? "prompt" : "granted";
+      Object.defineProperty(target, "state", {
+        get: () => state as PermissionState,
+        enumerable: true,
+        configurable: false,
+      });
+      Object.defineProperty(target, "onchange", {
+        value: null,
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      });
+      return Promise.resolve(target as unknown as PermissionStatus);
+    }
+  );
+
   // Store prototype method references via index access to avoid unbound-method lint errors.
   // These are always invoked via .call(dateInstance) with the correct receiver.
   const dateProto = Date.prototype as unknown as Record<string, (...args: unknown[]) => unknown>;
@@ -372,6 +397,42 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
     return originalToLocaleTimeString.call(this, locales, options);
   };
 
+  // Create spoofed PermissionStatus
+  function createSpoofedPermissionStatus(): PermissionStatus {
+    const target = new EventTarget();
+    let onchangeHandler: ((this: PermissionStatus, ev: Event) => unknown) | null = null;
+
+    Object.defineProperty(target, "state", {
+      get: () => "granted" as PermissionState,
+      enumerable: true,
+      configurable: false,
+    });
+
+    Object.defineProperty(target, "onchange", {
+      get: () => onchangeHandler,
+      set: (value: ((this: PermissionStatus, ev: Event) => unknown) | null) => {
+        onchangeHandler = value;
+      },
+      enumerable: true,
+      configurable: true,
+    });
+
+    return target as unknown as PermissionStatus;
+  }
+
+  // Override permissions.query
+  const permissionsQuery = function (descriptor: { name: string }): Promise<PermissionStatus> {
+    try {
+      if (spoofingEnabled && descriptor?.name === "geolocation") {
+        return Promise.resolve(createSpoofedPermissionStatus());
+      }
+      return originalPermissionsQuery(descriptor);
+    } catch (error) {
+      console.error("[GeoSpoof Test] Error in permissions.query override:", error);
+      return originalPermissionsQuery(descriptor);
+    }
+  };
+
   // Return test interface
   return {
     navigator: {
@@ -379,6 +440,9 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
         getCurrentPosition,
         watchPosition,
         clearWatch,
+      },
+      permissions: {
+        query: permissionsQuery,
       },
     },
     Date: {
@@ -412,6 +476,7 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
       getCurrentPosition: originalGetCurrentPosition,
       watchPosition: originalWatchPosition,
       clearWatch: originalClearWatch,
+      permissionsQuery: originalPermissionsQuery,
       getTimezoneOffset: originalGetTimezoneOffset,
       DateTimeFormat: OriginalDateTimeFormat,
       toString: originalToString,
