@@ -4,7 +4,7 @@ Firefox extension that spoofs your geolocation, timezone, and WebRTC to prevent 
 
 Install: [Firefox Add-ons Store](https://addons.mozilla.org/en-US/firefox/addon/geo-spoof/)
 
-![GeoSpoof screenshot](assets/screenshot1.png)
+<img src="assets/screenshot1.png" alt="GeoSpoof screenshot" width="400" />
 
 ## Overridden APIs
 
