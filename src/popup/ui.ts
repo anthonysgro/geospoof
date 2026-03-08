@@ -49,27 +49,39 @@ export function formatWebRTCDetails(enabled: boolean): string {
 export function formatAPIsDetails(
   enabled: boolean,
   hasLocation: boolean,
-  hasTimezone: boolean
+  hasTimezone: boolean,
+  hasWebRTC: boolean = false
 ): string {
   if (!enabled) return "None (protection disabled)";
 
-  const apis: string[] = [];
+  const sections: string[] = [];
 
   if (hasLocation) {
-    apis.push("• navigator.geolocation.getCurrentPosition()");
-    apis.push("• navigator.geolocation.watchPosition()");
-    apis.push("• navigator.permissions.query()");
+    sections.push("Geolocation");
+    sections.push("    • navigator.geolocation.getCurrentPosition()");
+    sections.push("    • navigator.geolocation.watchPosition()");
+    sections.push("    • navigator.geolocation.clearWatch()");
+    sections.push("    • navigator.permissions.query()");
   }
 
   if (hasTimezone) {
-    apis.push("• Date.prototype.getTimezoneOffset()");
-    apis.push("• Intl.DateTimeFormat");
-    apis.push("• Date.prototype.toString()");
-    apis.push("• Date.prototype.toLocaleString()");
-    apis.push("• Date.prototype.toTimeString()");
+    sections.push("Timezone");
+    sections.push("    • Date.prototype.getTimezoneOffset()");
+    sections.push("    • Intl.DateTimeFormat() constructor");
+    sections.push("    • Intl.DateTimeFormat.resolvedOptions()");
+    sections.push("    • Date.prototype.toString()");
+    sections.push("    • Date.prototype.toTimeString()");
+    sections.push("    • Date.prototype.toLocaleString()");
+    sections.push("    • Date.prototype.toLocaleDateString()");
+    sections.push("    • Date.prototype.toLocaleTimeString()");
   }
 
-  return apis.length > 0 ? apis.join("\n") : "None";
+  if (hasWebRTC) {
+    sections.push("WebRTC");
+    sections.push("    • privacy.network.webRTCIPHandlingPolicy");
+  }
+
+  return sections.length > 0 ? sections.join("\n") : "None";
 }
 
 export function updateDetailsView(settings: Settings): void {
@@ -91,7 +103,8 @@ export function updateDetailsView(settings: Settings): void {
     detailAPIs.textContent = formatAPIsDetails(
       settings.enabled,
       !!settings.location,
-      !!settings.timezone
+      !!settings.timezone,
+      settings.webrtcProtection
     );
   }
 }

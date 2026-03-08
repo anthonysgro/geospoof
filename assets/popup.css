@@ -586,7 +586,7 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   color: #333;
   line-height: 1.5;
   word-break: break-word;
-  white-space: pre-line;
+  white-space: pre-wrap;
 }
 
 #detailsView h3 {

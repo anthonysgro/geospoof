@@ -254,10 +254,11 @@ describe("Permissions Query Override Properties", () => {
             timezone: null,
           });
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          /* eslint-disable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any */
           await contentScript.navigator.permissions.query(invalidDescriptor as any);
 
           expect(contentScript.originals.permissionsQuery).toHaveBeenCalledWith(invalidDescriptor);
+          /* eslint-enable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any */
         }
       ),
       { numRuns: 100 }
