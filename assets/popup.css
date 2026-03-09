@@ -250,17 +250,17 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 
 .search-results {
   position: absolute;
-  top: 100%;
+  bottom: 100%;
   left: 0;
   right: 0;
   background: white;
   border: 1px solid #ddd;
   border-radius: 8px;
-  margin-top: 4px;
-  max-height: 200px;
+  margin-bottom: 4px;
+  max-height: min(200px, 40vh);
   overflow-y: auto;
   z-index: 10;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .search-result {
@@ -594,4 +594,18 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   font-weight: 600;
   color: #2c3e50;
   margin-bottom: 16px;
+}
+
+/* Firefox for Android renders the popup as a full page in a new tab */
+@media (hover: none) and (pointer: coarse) {
+  body {
+    width: 100%;
+    max-width: 100%;
+    max-height: none;
+  }
+
+  .popup-container {
+    max-width: 500px;
+    margin: 0 auto;
+  }
 }

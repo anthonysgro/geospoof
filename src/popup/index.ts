@@ -93,6 +93,15 @@ document.getElementById("webrtcToggle")?.addEventListener("change", (e: Event) =
 // Location search with debounce
 let searchTimeout: ReturnType<typeof setTimeout> | undefined;
 
+document.getElementById("locationSearch")?.addEventListener("focus", () => {
+  // On mobile, scroll the search input into view above the virtual keyboard
+  setTimeout(() => {
+    document
+      .getElementById("locationSearch")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 300);
+});
+
 document.getElementById("locationSearch")?.addEventListener("input", (e: Event) => {
   clearTimeout(searchTimeout);
   const target = e.target as HTMLInputElement;
@@ -126,6 +135,12 @@ document.getElementById("locationSearch")?.addEventListener("input", (e: Event) 
         displaySearchResults(response.results ?? [], (lat, lon) => {
           void setLocation(lat, lon);
         });
+
+        // On mobile, scroll results into view so they're not hidden behind the keyboard
+        const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
+        if (isTouchDevice && container.children.length > 0) {
+          container.scrollIntoView({ behavior: "smooth", block: "end" });
+        }
       } catch (error: unknown) {
         console.error("Geocoding failed:", error);
         clearChildren(container);
