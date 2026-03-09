@@ -64,9 +64,10 @@ cd geospoof
 npm install
 cp .env.example .env
 npm run build:dev
+npm start              # Launches Firefox with the extension loaded
 ```
 
-Then load `dist/manifest.json` as a temporary add-on via `about:debugging`.
+Or load `dist/manifest.json` manually as a temporary add-on via `about:debugging`.
 
 ## Usage
 
@@ -99,23 +100,28 @@ No data is sent to the extension developer. See [PRIVACY_POLICY.md](PRIVACY_POLI
 ```bash
 npm run build:dev      # Dev build (source maps, console logs)
 npm run build:prod     # Production build (minified)
-npm run dev            # Watch mode
-npm run validate       # Type-check + lint + format + test
+npm run dev            # Watch mode (rebuilds on file changes)
+npm start              # Launch Firefox with extension loaded
+npm run validate       # Type-check + lint + extension lint + format + test
 npm test               # All tests
 npm run test:unit      # Unit tests
 npm run test:property  # Property-based tests
 npm run test:integration  # Integration tests
+npm run lint:ext       # Lint extension manifest and files
+npm run package        # Production build + package .zip for AMO
 ```
+
+For the best dev experience, run `npm run dev` and `npm start` in separate terminals. Vite rebuilds on file changes and `web-ext` auto-reloads the extension in Firefox.
 
 ### Building for Mozilla Review
 
 ```bash
 npm install
 cp .env.example .env
-npm run build:prod
+npm run package
 ```
 
-The `dist/` folder contains the extension. TypeScript source in `src/` is compiled via Vite + esbuild. No hand-minification or obfuscation.
+This runs a production build and packages the extension into `web-ext-artifacts/geospoof-<version>.zip` for AMO submission. TypeScript source in `src/` is compiled via Vite + esbuild. No hand-minification or obfuscation.
 
 ### Project Structure
 

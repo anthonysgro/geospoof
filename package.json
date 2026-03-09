@@ -11,6 +11,9 @@
     "type-check": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "start": "web-ext run",
+    "lint:ext": "web-ext lint",
+    "build:ext": "web-ext build",
     "format": "prettier --write \"**/*.{js,ts,json,md,css,html}\"",
     "format:check": "prettier --check \"**/*.{js,ts,json,md,css,html}\"",
     "test": "vitest run",
@@ -19,10 +22,10 @@
     "test:integration": "vitest run tests/integration",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "validate": "npm run type-check && npm run lint && npm run format:check && npm run test",
-    "clean": "rm -rf dist coverage geospoof-*.zip",
-    "package": "npm run build:prod && prettier --write manifest.json && cd dist && zip -r ../geospoof-v$(node -p \"require('../package.json').version\").zip * -x '*.DS_Store'",
-    "package:source": "zip -r geospoof-source-v$(node -p \"require('./package.json').version\").zip . -x 'node_modules/*' 'dist/*' 'coverage/*' '.git/*' '*.zip' '.DS_Store' '.kiro/*'",
+    "validate": "npm run type-check && npm run lint && npm run lint:ext && npm run format:check && npm run test",
+    "clean": "rm -rf dist coverage web-ext-artifacts geospoof-*.zip",
+    "package": "npm run build:prod && web-ext build",
+    "package:source": "zip -r geospoof-source-v$(node -p \"require('./package.json').version\").zip . -x 'node_modules/*' 'dist/*' 'coverage/*' '.git/*' '*.zip' '.DS_Store' '.kiro/*' 'web-ext-artifacts/*'",
     "prepare": "husky"
   },
   "devDependencies": {
@@ -45,7 +48,8 @@
     "typescript-eslint": "^8.56.1",
     "vite": "~5.4",
     "vite-plugin-checker": "^0.12.0",
-    "vitest": "^4.0.18"
+    "vitest": "^4.0.18",
+    "web-ext": "^9.4.0"
   },
   "lint-staged": {
     "*.{ts,js}": [
