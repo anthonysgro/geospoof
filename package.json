@@ -12,6 +12,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "start": "web-ext run",
+    "start:android": "web-ext run --target=firefox-android --adb-remove-old-artifacts --android-device",
     "lint:ext": "web-ext lint",
     "build:ext": "web-ext build",
     "format": "prettier --write \"**/*.{js,ts,json,md,css,html}\"",

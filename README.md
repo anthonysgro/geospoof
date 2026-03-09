@@ -109,9 +109,26 @@ npm run test:property  # Property-based tests
 npm run test:integration  # Integration tests
 npm run lint:ext       # Lint extension manifest and files
 npm run package        # Production build + package .zip for AMO
+npm run start:android  # Launch on Firefox for Android (USB)
 ```
 
 For the best dev experience, run `npm run dev` and `npm start` in separate terminals. Vite rebuilds on file changes and `web-ext` auto-reloads the extension in Firefox.
+
+### Testing on Android
+
+Requires `adb` (`brew install android-platform-tools`) and a USB-connected Android device with Firefox installed.
+
+1. Enable Developer Options on your device (Settings → About Phone → tap Build Number 7 times)
+2. Enable USB Debugging (Settings → Developer Options → USB Debugging)
+3. In Firefox for Android: Settings → Remote debugging via USB → On
+4. Connect via USB and run:
+
+```bash
+npm run build:dev
+npm run start:android -- <device-id>
+```
+
+Get your device ID from `adb devices`.
 
 ### Building for Mozilla Review
 
