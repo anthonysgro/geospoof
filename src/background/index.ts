@@ -7,7 +7,7 @@ import type { Message, UpdateSettingsPayload } from "@/shared/types/messages";
 import { loadSettings } from "./settings";
 import { setWebRTCProtection } from "./webrtc";
 import { updateBadge } from "./badge";
-import { broadcastSettingsToTabs, isRestrictedUrl } from "./tabs";
+import { broadcastSettingsToTabs, isRestrictedUrl, checkTabInjection } from "./tabs";
 import { handleMessage } from "./messages";
 
 // Re-export everything so `import("@/background")` keeps working for tests
@@ -100,6 +100,11 @@ if (browser.tabs && browser.tabs.onCreated) {
   });
 }
 
+// Track pending injection checks per tab so we can cancel stale ones on re-navigation
+const pendingChecks = new Map<number, number[]>();
+
+export { pendingChecks };
+
 if (browser.tabs && browser.tabs.onUpdated) {
   browser.tabs.onUpdated.addListener(
     (tabId: number, changeInfo: browser.tabs._OnUpdatedChangeInfo, tab: browser.tabs.Tab) => {
@@ -123,27 +128,71 @@ if (browser.tabs && browser.tabs.onUpdated) {
             return;
           }
 
-          try {
-            await browser.tabs.sendMessage(tabId, {
-              type: "UPDATE_SETTINGS",
-              payload: scopedPayload,
-            });
-
-            void browser.browserAction.setBadgeBackgroundColor({ color: "green", tabId });
-            void browser.browserAction.setBadgeText({ text: "✓", tabId });
-          } catch (error) {
-            console.debug(`Could not send settings to updated tab ${tabId}:`, error);
-
-            if (settings.enabled && changeInfo.status === "loading") {
-              console.error(
-                `Content script injection may have failed for tab ${tabId} (${tab.url}):`,
-                error
-              );
-
-              void browser.browserAction.setBadgeBackgroundColor({ color: "orange", tabId });
-              void browser.browserAction.setBadgeText({ text: "!", tabId });
+          // Cancel any pending checks for this tab (re-navigation)
+          const existing = pendingChecks.get(tabId);
+          if (existing) {
+            for (const tid of existing) {
+              clearTimeout(tid);
             }
           }
+          pendingChecks.delete(tabId);
+
+          // Deferred retry with backoff: 500ms, 1000ms, 2000ms
+          const delays = [500, 1000, 2000];
+          const timeoutIds: number[] = [];
+          let settled = false;
+
+          for (let i = 0; i < delays.length; i++) {
+            const cumulativeDelay = delays.slice(0, i + 1).reduce((a, b) => a + b, 0);
+            const tid = setTimeout(() => {
+              void (async () => {
+                if (settled) return;
+
+                try {
+                  const result = await checkTabInjection(tabId);
+                  if (result.injected) {
+                    settled = true;
+                    pendingChecks.delete(tabId);
+
+                    try {
+                      await browser.tabs.sendMessage(tabId, {
+                        type: "UPDATE_SETTINGS",
+                        payload: scopedPayload,
+                      });
+                    } catch {
+                      // Tab may have closed; ignore
+                    }
+
+                    void browser.browserAction.setBadgeBackgroundColor({ color: "green", tabId });
+                    void browser.browserAction.setBadgeText({ text: "✓", tabId });
+                  } else if (i === delays.length - 1) {
+                    // Last attempt failed
+                    if (!settled) {
+                      settled = true;
+                      pendingChecks.delete(tabId);
+                      void browser.browserAction.setBadgeBackgroundColor({
+                        color: "orange",
+                        tabId,
+                      });
+                      void browser.browserAction.setBadgeText({ text: "!", tabId });
+                    }
+                  }
+                } catch {
+                  // Tab closed during retry; ignore
+                  if (i === delays.length - 1 && !settled) {
+                    settled = true;
+                    pendingChecks.delete(tabId);
+                    void browser.browserAction.setBadgeBackgroundColor({ color: "orange", tabId });
+                    void browser.browserAction.setBadgeText({ text: "!", tabId });
+                  }
+                }
+              })();
+            }, cumulativeDelay) as unknown as number;
+
+            timeoutIds.push(tid);
+          }
+
+          pendingChecks.set(tabId, timeoutIds);
         })();
       }
     }

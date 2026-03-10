@@ -101,13 +101,15 @@ export async function checkInjectionStatus(): Promise<void> {
       return;
     }
 
-    const badgeText = await browser.browserAction.getBadgeText({
-      tabId: currentTab.id,
-    });
+    // Live PING via background's CHECK_TAB_INJECTION instead of stale badge text
+    const result = (await browser.runtime.sendMessage({
+      type: "CHECK_TAB_INJECTION",
+      payload: { tabId: currentTab.id },
+    })) as { injected: boolean; error: string | null };
 
     const warningEl = document.getElementById("injectionWarning");
     if (warningEl) {
-      warningEl.style.display = badgeText === "!" ? "block" : "none";
+      warningEl.style.display = result.injected ? "none" : "block";
     }
   } catch (error: unknown) {
     console.error("Failed to check injection status:", error);

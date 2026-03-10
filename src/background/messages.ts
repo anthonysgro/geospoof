@@ -21,6 +21,7 @@ import {
   broadcastSettingsToTabs,
   injectContentScriptIntoExistingTabs,
   checkTabInjection,
+  isRestrictedUrl,
 } from "./tabs";
 
 export async function handleMessage(
@@ -31,6 +32,20 @@ export async function handleMessage(
     switch (message.type) {
       case "GET_SETTINGS": {
         const settings = await loadSettings();
+
+        // Badge recovery: when a content script sends GET_SETTINGS, it confirms
+        // it is alive. Update the badge to green if protection is enabled and
+        // the tab URL is not restricted.
+        const senderTabId = _sender.tab?.id;
+        const senderTabUrl = _sender.tab?.url;
+        if (senderTabId != null && settings.enabled && !isRestrictedUrl(senderTabUrl ?? "")) {
+          void browser.browserAction.setBadgeBackgroundColor({
+            color: "green",
+            tabId: senderTabId,
+          });
+          void browser.browserAction.setBadgeText({ text: "✓", tabId: senderTabId });
+        }
+
         return settings;
       }
 
