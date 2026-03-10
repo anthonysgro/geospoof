@@ -20,7 +20,7 @@ GeoSpoof allows you to maintain a Synchronized Identity:
 - **Silent Protection**: Prevents "leakage" from WebRTC and Timezone offsets that can reveal your true location even when a VPN is active.
 - **Development & QA**: Test location-dependent features without physically being in the target region — useful for developers building geofenced apps, localized content, or location-aware UIs.
 
-> **Note:** Use of this tool is legal, but may violate the Terms of Service of certain websites. Providing false location data to high-security platforms (like banking or regulated betting) can result in account suspension. Use responsibly.
+> **Note:** Use of this tool is legal, but may violate the Terms of Service of certain websites. I absolutely **do not endorse any illegitimate or illegal use of this tool**, this is purely in the interest of legitimate privacy use and development purposes. Use responsibly.
 
 ## Overridden APIs
 
