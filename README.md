@@ -11,16 +11,16 @@ Install: [Firefox Add-ons Store](https://addons.mozilla.org/en-US/firefox/addon/
 
 ## Why Use GeoSpoof?
 
-When using a VPN, your browser's geolocation creates a problem either way. If you "Block" geolocation requests, modern web security systems using Digital Consistency Checking treat that as a signal you're hiding data, leading to restricted access or account flags. If you "Allow" geolocation, your real GPS coordinates are sent to the site and contradict your VPN's IP address — a mismatch that immediately identifies you as using a VPN.
+When using a VPN, your browser's geolocation creates a problem either way. If you "Block" geolocation requests, websites treat that as a signal you're hiding data, leading to restricted access or account flags. If you "Allow" geolocation, your real GPS coordinates are sent to the site — and geolocation consistency checks compare those against your VPN's IP address, timezone, and other signals. The mismatch immediately identifies you as using a VPN.
 
-GeoSpoof allows you to maintain a Synchronized Identity:
+GeoSpoof allows your browser to maintain a synchronized identity with your VPN.
 
 - **Consistency**: Aligns your GPS, IANA Timezone, and WebRTC interface to match your VPN endpoint, making your connection appear as a legitimate local user.
-- **Bypass "Hard Gates"**: Access services (like regional streaming or local retail inventory) that refuse to load unless geolocation is granted.
-- **Silent Protection**: Prevents "leakage" from WebRTC and Timezone offsets that can reveal your true location even when a VPN is active.
+- **Bypass "Hard Gates"**: Access services that refuse to load unless geolocation is granted.
+- **Silent Protection**: Prevents leakage from WebRTC and Timezone offsets that can reveal your local IP even when a VPN is active.
 - **Development & QA**: Test location-dependent features without physically being in the target region — useful for developers building geofenced apps, localized content, or location-aware UIs.
 
-> **Note:** Use of this tool is legal, but may violate the Terms of Service of certain websites. I absolutely **do not endorse any illegitimate or illegal use of this tool**, this is purely in the interest of legitimate privacy use and development purposes. Use responsibly.
+> **Note:** Use of this tool may violate the Terms of Service of certain websites. I absolutely **do not endorse any illegitimate or illegal use of this tool**, this is purely in the interest of legitimate privacy use and development purposes. Use responsibly.
 
 ## Overridden APIs
 
