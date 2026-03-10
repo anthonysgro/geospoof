@@ -119,3 +119,5 @@ This extension is NOT intended for:
 - Circumventing geo-restrictions on copyrighted content
 - Fraud or deception
 - Violating terms of service agreements
+
+I absolutely **do not endorse any illegitimate or illegal use of this tool** whatsoever. Use responsibly and in accordance with local laws and regulations.

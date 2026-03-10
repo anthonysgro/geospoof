@@ -15,12 +15,19 @@ When using a VPN, your browser's geolocation creates a problem either way. If yo
 
 GeoSpoof allows your browser to maintain a synchronized identity with your VPN.
 
-- **Consistency**: Aligns your GPS, IANA Timezone, and WebRTC interface to match your VPN endpoint, making your connection appear as a legitimate local user.
+- **Consistency**: Aligns your GPS, IANA Timezone, and WebRTC interface to match your VPN tunnel.
 - **Bypass "Hard Gates"**: Access services that refuse to load unless geolocation is granted.
 - **Silent Protection**: Prevents leakage from WebRTC and Timezone offsets that can reveal your local IP even when a VPN is active.
-- **Development & QA**: Test location-dependent features without physically being in the target region — useful for developers building geofenced apps, localized content, or location-aware UIs.
+- **Development & QA**: Useful for developers building geofenced apps, localized content, or location-aware UIs.
 
-> **Note:** Use of this tool may violate the Terms of Service of certain websites. I absolutely **do not endorse any illegitimate or illegal use of this tool**, this is purely in the interest of legitimate privacy use and development purposes. Use responsibly.
+> **Note:** Use of this tool may violate the Terms of Service of certain websites. This is purely in the interest of legitimate privacy use and development purposes. Use responsibly.
+
+## What This Does NOT Do
+
+- Does NOT spoof your IP address (use a VPN for that)
+- Does NOT change browser language or locale
+- Does NOT bypass server-side detection (IP, payment info, account history)
+- Does NOT track your browsing activity, collect telemetry, store data on external servers, or share data with third parties for advertising for marketing.
 
 ## Overridden APIs
 
@@ -90,12 +97,6 @@ Or load `dist/manifest.json` manually as a temporary add-on via `about:debugging
 4. Refresh open tabs to apply
 
 See [USER_GUIDE.md](USER_GUIDE.md) for details.
-
-## What This Does NOT Do
-
-- Does not change browser language or locale
-- Does not spoof your IP address (use a VPN for that)
-- Does not bypass server-side detection (IP, payment info, account history)
 
 ## External Services
 
