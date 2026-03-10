@@ -9,6 +9,19 @@ Install: [Firefox Add-ons Store](https://addons.mozilla.org/en-US/firefox/addon/
   <img src="assets/screenshot2.png" alt="GeoSpoof details view" width="350"  />
 </p>
 
+## Why Use GeoSpoof?
+
+When using a VPN, your browser's geolocation creates a problem either way. If you "Block" geolocation requests, modern web security systems using Digital Consistency Checking treat that as a signal you're hiding data, leading to restricted access or account flags. If you "Allow" geolocation, your real GPS coordinates are sent to the site and contradict your VPN's IP address — a mismatch that immediately identifies you as using a VPN.
+
+GeoSpoof allows you to maintain a Synchronized Identity:
+
+- **Consistency**: Aligns your GPS, IANA Timezone, and WebRTC interface to match your VPN endpoint, making your connection appear as a legitimate local user.
+- **Bypass "Hard Gates"**: Access services (like regional streaming or local retail inventory) that refuse to load unless geolocation is granted.
+- **Silent Protection**: Prevents "leakage" from WebRTC and Timezone offsets that can reveal your true location even when a VPN is active.
+- **Development & QA**: Test location-dependent features without physically being in the target region — useful for developers building geofenced apps, localized content, or location-aware UIs.
+
+> **Note:** Use of this tool is legal, but may violate the Terms of Service of certain websites. Providing false location data to high-security platforms (like banking or regulated betting) can result in account suspension. Use responsibly.
+
 ## Overridden APIs
 
 When protection is enabled, GeoSpoof overrides the following browser APIs on every page. All overrides are injected synchronously at `document_start` before any page JavaScript runs.
