@@ -37,13 +37,13 @@ When you use certain features, the extension communicates with external services
 **Purpose:** To find location coordinates or city names
 **Privacy Policy:** [OpenStreetMap Privacy Policy](https://wiki.osmfoundation.org/wiki/Privacy_Policy)
 
-### 2. VPN Sync Services (ipify and ipapi.co)
+### 2. VPN Sync Services (ipify and FreeIPAPI)
 
 **When:** Only when you explicitly enable the "Sync with VPN" feature or click the "Re-sync" button in the extension popup. This never happens automatically unless you have previously enabled VPN sync mode.
 **Data Sent:** Your public IP address is sent to two external services:
 
 - **[ipify](https://www.ipify.org/)** (`api.ipify.org`): Detects your current public IP address. No data is sent to this service other than the HTTPS request itself; it returns your public-facing IP.
-- **[ipapi.co](https://ipapi.co/)** (`ipapi.co`): Receives your public IP address and returns approximate geographic coordinates (latitude, longitude), city, and country for that IP.
+- **[FreeIPAPI](https://freeipapi.com/)** (`freeipapi.com`): Receives your public IP address and returns approximate geographic coordinates (latitude, longitude), city, and country for that IP.
 
 **Purpose:** To determine the geographic location of your VPN exit server so the extension can set your spoofed location to match your VPN region.
 **Privacy Safeguards:**

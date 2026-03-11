@@ -6,7 +6,7 @@ Install: [Firefox Add-ons Store](https://addons.mozilla.org/en-US/firefox/addon/
 
 <p>
   <img src="assets/screenshot1.png" alt="GeoSpoof main view" width="350"  />
-  <img src="assets/screenshot2.png" alt="GeoSpoof details view" width="350"  />
+  <img src="assets/screenshot3.png" alt="GeoSpoof details view" width="350"  />
 </p>
 
 ## Why Use GeoSpoof?
@@ -106,9 +106,9 @@ See [USER_GUIDE.md](USER_GUIDE.md) for details.
 | [Nominatim](https://nominatim.org/) (OpenStreetMap)              | City search, reverse geocoding | Search query or coordinates                                            |
 | [browser-geo-tz](https://github.com/kevmo314/browser-geo-tz) CDN | Timezone resolution            | HTTPS range requests for boundary data chunks (coordinates stay local) |
 | [ipify](https://www.ipify.org/)                                  | VPN sync enabled               | HTTPS request to detect your public IP                                 |
-| [ipapi.co](https://ipapi.co/)                                    | VPN sync enabled               | Your public IP (to geolocate VPN exit region)                          |
+| [FreeIPAPI](https://freeipapi.com/)                              | VPN sync enabled               | Your public IP (to geolocate VPN exit region)                          |
 
-> **VPN Sync privacy note:** When you enable "Sync with VPN," your public IP is sent to `api.ipify.org` and `ipapi.co` over HTTPS to determine your VPN exit region. Your IP is never saved to disk — it's held only in memory and cleared when you disable VPN sync. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for full details.
+> **VPN Sync privacy note:** When you enable "Sync with VPN," your public IP is sent to `api.ipify.org` and `freeipapi.com` over HTTPS to determine your VPN exit region. Your IP is never saved to disk — it's held only in memory and cleared when you disable VPN sync. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for full details.
 
 No data is sent to the extension developer. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
 
