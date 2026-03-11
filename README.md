@@ -5,8 +5,9 @@ Your VPN changes your IP address. Your browser is still telling websites where y
 Install: [Firefox Add-ons Store](https://addons.mozilla.org/en-US/firefox/addon/geo-spoof/)
 
 <p>
-  <img src="assets/screenshot1.png" alt="GeoSpoof main view" width="350"  />
-  <img src="assets/screenshot3.png" alt="GeoSpoof details view" width="350"  />
+  <img src="assets/screenshot1.png" alt="GeoSpoof main view" width="250"  />
+    <img src="assets/screenshot2.png" alt="GeoSpoof details view" width="250"  />
+  <img src="assets/screenshot3.png" alt="GeoSpoof details view" width="250"  />
 </p>
 
 ## Why GeoSpoof?
