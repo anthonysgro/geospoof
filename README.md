@@ -1,6 +1,6 @@
 # GeoSpoof
 
-Firefox extension that spoofs your geolocation, timezone, and WebRTC to prevent websites from identifying your real location.
+Your VPN changes your IP address. Your browser is still telling websites where you actually are.
 
 Install: [Firefox Add-ons Store](https://addons.mozilla.org/en-US/firefox/addon/geo-spoof/)
 
@@ -9,26 +9,33 @@ Install: [Firefox Add-ons Store](https://addons.mozilla.org/en-US/firefox/addon/
   <img src="assets/screenshot3.png" alt="GeoSpoof details view" width="350"  />
 </p>
 
-## Why Use GeoSpoof?
+## Why GeoSpoof?
 
-When using a VPN, your browser's geolocation creates a problem either way. If you "Block" geolocation requests, websites treat that as a signal you're hiding data, leading to restricted access or account flags. If you "Allow" geolocation, your real GPS coordinates are sent to the site — and geolocation consistency checks compare those against your VPN's IP address, timezone, and other signals. The mismatch immediately identifies you as using a VPN.
+### The Problem
 
-GeoSpoof allows your browser to maintain a synchronized identity with your VPN.
+A VPN alone doesn't hide your location from websites. Your browser exposes it through other channels — the Geolocation API, timezone offsets, `Intl.DateTimeFormat`, and WebRTC. Sites cross-reference these signals against your IP, and when they don't match, you're flagged as a VPN user.
 
-- **Consistency**: Aligns your GPS, IANA Timezone, and WebRTC interface to match your VPN tunnel.
-- **VPN Region Sync**: Automatically detects your VPN exit region and sets your spoofed location to match — one click, no manual coordinates needed.
-- **Bypass "Hard Gates"**: Access services that refuse to load unless geolocation is granted.
-- **Silent Protection**: Prevents leakage from WebRTC and Timezone offsets that can reveal your local IP even when a VPN is active.
-- **Development & QA**: Useful for developers building geofenced apps, localized content, or location-aware UIs.
+Blocking geolocation requests is your right, but some sites treat it as evasion — restricting access or flagging your account. And if you allow it, your real coordinates go straight to the site. GeoSpoof gives you a third option: respond with coordinates that match your VPN, so you stay consistent without giving up real data.
+
+### The Fix
+
+GeoSpoof spoofs your browser's geolocation, timezone, and WebRTC so they all match your VPN exit region. One consistent identity, no mismatches.
+
+- **VPN Region Sync**: Detects your VPN exit IP and sets your spoofed location to match — one click, no manual coordinates.
+- **Full Signal Alignment**: GPS coordinates, IANA timezone, `Intl` locale data, and WebRTC all report the same location.
+- **Bypass Hard Gates**: Sites that refuse to load without geolocation permission get a clean, consistent response.
+- **Dev & QA**: Test geofenced apps, localized content, or location-aware UIs without leaving your desk.
 
 > **Note:** Use of this tool may violate the Terms of Service of certain websites. This is purely in the interest of legitimate privacy use and development purposes. Use responsibly.
 
-## What This Does NOT Do
+### What This Does NOT Do
+
+GeoSpoof is designed to work alongside a VPN, not replace one.
 
 - Does NOT spoof your IP address (use a VPN for that)
 - Does NOT change browser language or locale
 - Does NOT bypass server-side detection (IP, payment info, account history)
-- Does NOT track your browsing activity, collect telemetry, store data on external servers, or share data with third parties for advertising for marketing.
+- Does NOT track your browsing activity, collect telemetry, store data on external servers, or share data with third parties
 
 ## Overridden APIs
 
