@@ -6,7 +6,7 @@
 
 // --- Constants ---
 const PUBLIC_IP_URL = "https://api.ipify.org?format=json";
-const FREEIPAPI_URL = "https://freeipapi.com/api/json/";
+const FREEIPAPI_URL = "https://free.freeipapi.com/api/json/";
 const REQUEST_TIMEOUT = 5000; // 5 seconds
 const MIN_REQUEST_INTERVAL = 2000; // 2 seconds between API calls
 

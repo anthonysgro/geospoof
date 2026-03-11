@@ -710,7 +710,7 @@ describe("Feature: freeipapi-migration, Property 1: Two HTTPS requests per sync"
         const secondUrl = vi.mocked(fetch).mock.calls[1][0] as string;
 
         expect(firstUrl).toBe("https://api.ipify.org?format=json");
-        expect(secondUrl).toMatch(/^https:\/\/freeipapi\.com\/api\/json\//);
+        expect(secondUrl).toMatch(/^https:\/\/free\.freeipapi\.com\/api\/json\//);
         expect(firstUrl.startsWith("https://")).toBe(true);
         expect(secondUrl.startsWith("https://")).toBe(true);
       }),
