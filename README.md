@@ -71,17 +71,6 @@ When protection is enabled, GeoSpoof overrides the following browser APIs on eve
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | `privacy.network.webRTCIPHandlingPolicy` | Configured via Firefox's built-in privacy API to prevent IP leaks — no script injection needed |
 
-## How It Works
-
-Firefox enforces strict boundaries between extension code and page code. No single script has both extension API access and the ability to modify page globals like `navigator.geolocation`. GeoSpoof uses three scripts:
-
-```
-Background Script  ──►  Content Script  ──►  Injected Script
-(settings, APIs)        (bridge)              (API overrides)
-```
-
-The background script resolves timezone from coordinates using [browser-geo-tz](https://github.com/kevmo314/browser-geo-tz) boundary data (fetched via CDN range requests). Reverse geocoding uses [Nominatim](https://nominatim.org/) (OpenStreetMap). The content script bridges settings to the injected script, which runs in the page context and overrides the APIs listed above.
-
 ## Installation
 
 **From Firefox Add-ons:** https://addons.mozilla.org/en-US/firefox/addon/geo-spoof
@@ -110,12 +99,12 @@ See [USER_GUIDE.md](USER_GUIDE.md) for details.
 
 ## External Services
 
-| Service                                                          | When                           | What's sent                                                            |
-| ---------------------------------------------------------------- | ------------------------------ | ---------------------------------------------------------------------- |
-| [Nominatim](https://nominatim.org/) (OpenStreetMap)              | City search, reverse geocoding | Search query or coordinates                                            |
-| [browser-geo-tz](https://github.com/kevmo314/browser-geo-tz) CDN | Timezone resolution            | HTTPS range requests for boundary data chunks (coordinates stay local) |
-| [ipify](https://www.ipify.org/)                                  | VPN sync enabled               | HTTPS request to detect your public IP                                 |
-| [FreeIPAPI](https://freeipapi.com/)                              | VPN sync enabled               | Your public IP (to geolocate VPN exit region)                          |
+| Service                                                            | When                           | What's sent                                                            | Source                                                                 |
+| ------------------------------------------------------------------ | ------------------------------ | ---------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| [Nominatim](https://nominatim.org/) (OpenStreetMap)                | City search, reverse geocoding | Search query or coordinates                                            | [GitHub](https://github.com/osm-search/Nominatim)                      |
+| [browser-geo-tz](https://www.npmjs.com/package/browser-geo-tz) CDN | Timezone resolution            | HTTPS range requests for boundary data chunks (coordinates stay local) | [GitHub](https://github.com/kevmo314/browser-geo-tz)                   |
+| [ipify](https://www.ipify.org/)                                    | VPN sync enabled               | HTTPS request to detect your public IP                                 | [GitHub](https://github.com/rdegges/ipify-api)                         |
+| [FreeIPAPI](https://freeipapi.com/)                                | VPN sync enabled               | Your public IP (to geolocate VPN exit region)                          | Closed source ([Privacy Policy](https://freeipapi.com/privacy-policy)) |
 
 > **VPN Sync privacy note:** When you enable "Sync with VPN," your public IP is sent to `api.ipify.org` and `freeipapi.com` over HTTPS to determine your VPN exit region. Your IP is never saved to disk — it's held only in memory and cleared when you disable VPN sync. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for full details.
 
