@@ -37,7 +37,7 @@ GeoSpoof is designed to work alongside a VPN, not replace one.
 - Does NOT spoof your IP address (use a VPN for that)
 - Does NOT change browser language or locale
 - Does NOT bypass server-side detection (IP, payment info, account history)
-- Does NOT track your browsing activity, collect telemetry, store data on external servers, or share data with third parties
+- Does NOT track your browsing activity, collect telemetry, or store data on external servers. Some features (city search, VPN sync) call third-party APIs to function. See [External Services](#external-services) for exactly what's sent and to whom.
 
 ## Overridden APIs
 
