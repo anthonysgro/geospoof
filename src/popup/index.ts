@@ -218,6 +218,18 @@ document.getElementById("vpnResyncButton")?.addEventListener("click", () => {
   void handleVpnSync(true);
 });
 
+// Clear location button
+document.getElementById("clearLocationBtn")?.addEventListener("click", () => {
+  void (async () => {
+    try {
+      await browser.runtime.sendMessage({ type: "CLEAR_LOCATION" });
+      await loadSettings();
+    } catch (error: unknown) {
+      console.error("Failed to clear location:", error);
+    }
+  })();
+});
+
 /** Activate VPN sync mode: hide tabs and search/coords, show VPN panel, trigger sync */
 function activateVpnSyncMode(): void {
   const inputModeTabs = document.getElementById("inputModeTabs");

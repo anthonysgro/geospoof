@@ -85,6 +85,28 @@ declare var process: { env: Record<string, string | undefined> };
   let spoofedLocation: SpoofedLocation | null = null;
   let timezoneData: TimezoneData | null = null;
 
+  // Track whether we've received settings at least once from the content script.
+  // Until settings arrive, geolocation/permissions calls are deferred rather than
+  // falling through to the real API (which would leak the user's real location).
+  let settingsReceived = false;
+  const SETTINGS_WAIT_TIMEOUT = 500; // ms to wait for settings before falling through
+
+  /** Returns a promise that resolves when settings arrive or timeout expires. */
+  function waitForSettings(): Promise<void> {
+    if (settingsReceived) return Promise.resolve();
+    return new Promise<void>((resolve) => {
+      const onSettings = (): void => {
+        window.removeEventListener(EVENT_NAME, onSettings);
+        resolve();
+      };
+      window.addEventListener(EVENT_NAME, onSettings);
+      setTimeout(() => {
+        window.removeEventListener(EVENT_NAME, onSettings);
+        resolve();
+      }, SETTINGS_WAIT_TIMEOUT);
+    });
+  }
+
   // ── Timezone helpers ───────────────────────────────────────────────────
 
   /** Validate timezone data structure. */
@@ -156,6 +178,7 @@ declare var process: { env: Record<string, string | undefined> };
     if (event.detail) {
       spoofingEnabled = event.detail.enabled;
       spoofedLocation = event.detail.location;
+      settingsReceived = true;
 
       if (event.detail.timezone) {
         if (validateTimezoneData(event.detail.timezone)) {
@@ -210,22 +233,44 @@ declare var process: { env: Record<string, string | undefined> };
       "[GeoSpoof Injected] getCurrentPosition called. Enabled:",
       spoofingEnabled,
       "Location:",
-      spoofedLocation
+      spoofedLocation,
+      "Settings received:",
+      settingsReceived
     );
 
-    if (spoofingEnabled && spoofedLocation) {
-      const position = createGeolocationPosition(spoofedLocation);
-      console.log("[GeoSpoof Injected] Returning spoofed position:", position);
-
-      const delay = 10 + Math.random() * 40;
-      setTimeout(() => {
-        if (successCallback) {
-          successCallback(position as GeolocationPosition);
-        }
-      }, delay);
+    if (settingsReceived) {
+      // Settings already loaded — respond immediately
+      if (spoofingEnabled && spoofedLocation) {
+        const position = createGeolocationPosition(spoofedLocation);
+        console.log("[GeoSpoof Injected] Returning spoofed position:", position);
+        const delay = 10 + Math.random() * 40;
+        setTimeout(() => {
+          if (successCallback) {
+            successCallback(position as GeolocationPosition);
+          }
+        }, delay);
+      } else {
+        console.log("[GeoSpoof Injected] Using original geolocation");
+        originalGetCurrentPosition(successCallback, errorCallback, options);
+      }
     } else {
-      console.log("[GeoSpoof Injected] Using original geolocation");
-      originalGetCurrentPosition(successCallback, errorCallback, options);
+      // Settings not yet received — wait for them before responding
+      console.log("[GeoSpoof Injected] Deferring getCurrentPosition until settings arrive");
+      void waitForSettings().then(() => {
+        if (spoofingEnabled && spoofedLocation) {
+          const position = createGeolocationPosition(spoofedLocation);
+          console.log("[GeoSpoof Injected] Deferred: returning spoofed position:", position);
+          const delay = 10 + Math.random() * 40;
+          setTimeout(() => {
+            if (successCallback) {
+              successCallback(position as GeolocationPosition);
+            }
+          }, delay);
+        } else {
+          console.log("[GeoSpoof Injected] Deferred: using original geolocation");
+          originalGetCurrentPosition(successCallback, errorCallback, options);
+        }
+      });
     }
   };
 
@@ -295,8 +340,20 @@ declare var process: { env: Record<string, string | undefined> };
       descriptor: PermissionDescriptor
     ): Promise<PermissionStatus> {
       try {
-        if (spoofingEnabled && descriptor?.name === "geolocation") {
-          return Promise.resolve(createSpoofedPermissionStatus());
+        if (descriptor?.name === "geolocation") {
+          if (settingsReceived) {
+            if (spoofingEnabled) {
+              return Promise.resolve(createSpoofedPermissionStatus());
+            }
+            return originalPermissionsQuery(descriptor);
+          }
+          // Defer until settings arrive
+          return waitForSettings().then(() => {
+            if (spoofingEnabled) {
+              return createSpoofedPermissionStatus();
+            }
+            return originalPermissionsQuery(descriptor);
+          });
         }
         return originalPermissionsQuery(descriptor);
       } catch (error) {

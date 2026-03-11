@@ -6,7 +6,7 @@ export default {
     overwriteDest: true,
   },
   run: {
-    startUrl: ["https://browserleaks.com/geo"],
+    startUrl: ["https://webbrowsertools.com/geolocation/"],
   },
   lint: {
     warningsAsErrors: false,

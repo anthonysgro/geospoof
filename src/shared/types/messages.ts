@@ -14,7 +14,8 @@ export type MessageType =
   | "CHECK_TAB_INJECTION"
   | "PING"
   | "SYNC_VPN"
-  | "DISABLE_VPN_SYNC";
+  | "DISABLE_VPN_SYNC"
+  | "CLEAR_LOCATION";
 
 /**
  * Generic message structure for runtime messaging.

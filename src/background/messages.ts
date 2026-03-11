@@ -99,6 +99,16 @@ export async function handleMessage(
         return { success: true };
       }
 
+      case "CLEAR_LOCATION": {
+        const clearedSettings = await updateSettings({
+          location: null,
+          timezone: null,
+          locationName: null,
+        });
+        await broadcastSettingsToTabs(clearedSettings);
+        return { success: true };
+      }
+
       case "CHECK_TAB_INJECTION": {
         const injectionStatus = await checkTabInjection(
           (message.payload as CheckTabInjectionPayload).tabId

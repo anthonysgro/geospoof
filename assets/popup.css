@@ -213,6 +213,27 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   color: #666;
 }
 
+/* Clear Location Button */
+.clear-location-btn {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition:
+    color 0.2s,
+    background 0.2s;
+  flex-shrink: 0;
+}
+
+.clear-location-btn:hover {
+  color: #d32f2f;
+  background: #fdecea;
+}
+
 /* VPN Sync Toggle */
 .vpn-sync-toggle {
   background: white;

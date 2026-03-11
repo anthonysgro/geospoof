@@ -38,6 +38,12 @@ export async function loadSettings(): Promise<void> {
       if (coordsEl) coordsEl.textContent = "—";
     }
 
+    // Show clear button only when location is set and VPN sync is not active
+    const clearBtn = document.getElementById("clearLocationBtn");
+    if (clearBtn) {
+      clearBtn.style.display = settings.location && !settings.vpnSyncEnabled ? "block" : "none";
+    }
+
     updateDetailsView(settings);
 
     // Restore VPN sync toggle state (Req 4.1–4.4)
