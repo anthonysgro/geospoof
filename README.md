@@ -14,17 +14,17 @@ Install: [Firefox Add-ons Store](https://addons.mozilla.org/en-US/firefox/addon/
 
 ### The Problem
 
-A VPN alone doesn't hide your location from websites. Your browser exposes it through other channels: the Geolocation API, timezone offsets, `Intl.DateTimeFormat`, and WebRTC. Sites cross-reference these signals against your IP, and when they don't match, you're flagged as a VPN user.
+Your browser leaks your location through multiple channels: the Geolocation API, timezone offsets, `Intl.DateTimeFormat`, and WebRTC. You get almost no control over it. A VPN changes your IP, but these signals still point right back to where you're sitting. Sites cross-reference them against your IP, and when they don't match, you're flagged.
 
-Blocking geolocation requests is your right, but some sites treat it as evasion and restrict access or flag your account. And if you allow it, your real coordinates go straight to the site. GeoSpoof gives you a third option: respond with coordinates that match your VPN, so you stay consistent without giving up real data.
+Blocking geolocation requests is your right, but some sites treat it as evasion and restrict access or flag your account. And if you allow it, your real coordinates go straight to the site. You're stuck choosing between access and privacy.
 
 ### The Fix
 
-GeoSpoof spoofs your browser's geolocation, timezone, and WebRTC so they all match your VPN exit region. One consistent identity, no mismatches.
+GeoSpoof gives you full control over what your browser reports. Set your location to match your VPN, mismatch it on purpose for extra obfuscation, or pick somewhere entirely different. GPS coordinates, timezone, `Intl` locale data, and WebRTC all stay in sync with whatever you choose.
 
-- **VPN Region Sync**: Detects your VPN exit IP and sets your spoofed location to match — one click, no manual coordinates.
-- **Manual Coordinates**: Search for a city or enter any latitude/longitude directly for full control over your spoofed location.
-- **Full Signal Alignment**: GPS coordinates, IANA timezone, `Intl` locale data, and WebRTC all report the same location.
+- **VPN Region Sync**: Detects your VPN exit IP and sets your spoofed location to match. One click, no manual coordinates.
+- **Manual Coordinates**: Search for a city or enter any latitude/longitude directly. Your location doesn't have to match your VPN.
+- **Full Signal Alignment**: All location signals report the same place, so sites see one consistent identity instead of mismatched data.
 - **Bypass Hard Gates**: Sites that refuse to load without geolocation permission get a clean, consistent response.
 - **Dev & QA**: Test geofenced apps, localized content, or location-aware UIs without leaving your desk.
 
