@@ -116,22 +116,43 @@ No data is sent to the extension developer. See [PRIVACY_POLICY.md](PRIVACY_POLI
 
 **Requirements:** Node.js 18+, npm 9+, Firefox 115+
 
+### Quick Start
+
 ```bash
-npm run build:dev      # Dev build (source maps, console logs)
-npm run build:prod     # Production build (minified)
-npm run dev            # Watch mode (rebuilds on file changes)
-npm start              # Launch Firefox with extension loaded
-npm run validate       # Type-check + lint + extension lint + format + test
-npm test               # All tests
-npm run test:unit      # Unit tests
-npm run test:property  # Property-based tests
-npm run test:integration  # Integration tests
-npm run lint:ext       # Lint extension manifest and files
-npm run package        # Production build + package .zip for AMO
-npm run start:android  # Launch on Firefox for Android (USB)
+git clone https://github.com/anthonysgro/geospoof.git
+cd geospoof
+npm install
+cp .env.example .env
 ```
 
-For the best dev experience, run `npm run dev` and `npm start` in separate terminals. Vite rebuilds on file changes and `web-ext` auto-reloads the extension in Firefox.
+### Day-to-Day Development
+
+Open two terminals:
+
+```bash
+# Terminal 1 — watches your source files and rebuilds on every save
+npm run dev
+
+# Terminal 2 — launches Firefox with the extension loaded, auto-reloads on rebuild
+npm start
+```
+
+That's it. Edit code, save, Firefox reloads. If something looks wrong, check the browser console (`about:debugging` → Inspect for background, F12 for content scripts).
+
+### Scripts Reference
+
+| Command                  | What it does                                                       |
+| ------------------------ | ------------------------------------------------------------------ |
+| `npm run dev`            | Watch mode — Vite rebuilds `dist/` on every file change            |
+| `npm start`              | Launch Firefox with the extension loaded from `dist/`              |
+| `npm run build:dev`      | One-time dev build (source maps, console logs)                     |
+| `npm run build:prod`     | One-time production build (minified, no logs)                      |
+| `npm test`               | Run all tests                                                      |
+| `npm run lint:ext`       | Lint the extension manifest and files                              |
+| `npm run validate`       | Type-check + lint + format check + tests (run before PRs)          |
+| `npm run package`        | Production build + zip for AMO submission                          |
+| `npm run package:source` | Zip source code for AMO review (excludes node_modules, dist, etc.) |
+| `npm run start:android`  | Launch on Firefox for Android (USB, auto-detects device)           |
 
 ### Testing on Android
 
@@ -144,10 +165,16 @@ Requires `adb` (`brew install android-platform-tools`) and a USB-connected Andro
 
 ```bash
 npm run build:dev
+npm run start:android
+```
+
+The script auto-detects the first connected device via `adb`. To target a specific device, pass its ID manually:
+
+```bash
 npm run start:android -- <device-id>
 ```
 
-Get your device ID from `adb devices`.
+You can find device IDs with `adb devices`.
 
 ### Building for Mozilla Review
 

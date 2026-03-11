@@ -103,13 +103,27 @@
 
         <!-- VPN Sync Toggle -->
         <div class="vpn-sync-toggle">
-          <label class="toggle-label">
-            <span>Sync with VPN</span>
+          <label class="toggle-label" for="vpnSyncToggle">
+            <span class="label-with-info">
+              Sync with VPN
+              <button
+                type="button"
+                class="info-icon"
+                id="vpnSyncInfo"
+                aria-label="More info about Sync with VPN"
+              >
+                ⓘ
+              </button>
+            </span>
             <div class="toggle-wrapper">
               <input type="checkbox" id="vpnSyncToggle" />
               <span class="toggle-slider"></span>
             </div>
           </label>
+          <div class="info-tooltip" id="vpnSyncTooltip" role="tooltip">
+            This is a one-time sync to your current public IP location. It does not auto-update when
+            your VPN changes servers — use Re-sync to update manually.
+          </div>
         </div>
 
         <!-- Location Input Mode Tabs -->

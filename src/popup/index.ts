@@ -95,13 +95,25 @@ document.getElementById("webrtcToggle")?.addEventListener("change", (e: Event) =
 let searchTimeout: ReturnType<typeof setTimeout> | undefined;
 
 document.getElementById("locationSearch")?.addEventListener("focus", () => {
-  // On mobile, scroll the search input into view above the virtual keyboard
+  // On mobile, scroll the search input into view above the virtual keyboard.
+  // Use "center" so it sits in the visible area between the header and keyboard.
   setTimeout(() => {
     document
       .getElementById("locationSearch")
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, 300);
 });
+
+// When the virtual keyboard opens/closes on Android, the visual viewport shrinks.
+// Re-scroll the focused search input into view so it isn't hidden.
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", () => {
+    const searchInput = document.getElementById("locationSearch");
+    if (document.activeElement === searchInput) {
+      searchInput?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  });
+}
 
 document.getElementById("locationSearch")?.addEventListener("input", (e: Event) => {
   clearTimeout(searchTimeout);
@@ -137,10 +149,16 @@ document.getElementById("locationSearch")?.addEventListener("input", (e: Event) 
           void setLocation(lat, lon);
         });
 
-        // On mobile, scroll results into view so they're not hidden behind the keyboard
+        // On mobile, re-scroll the search input into view after results render
+        // so the keyboard doesn't end up covering it.
         const isTouchDevice = window.matchMedia("(pointer: coarse)").matches;
-        if (isTouchDevice && container.children.length > 0) {
-          container.scrollIntoView({ behavior: "smooth", block: "end" });
+        if (isTouchDevice) {
+          const searchInput = document.getElementById("locationSearch");
+          if (searchInput && document.activeElement === searchInput) {
+            requestAnimationFrame(() => {
+              searchInput.scrollIntoView({ behavior: "smooth", block: "center" });
+            });
+          }
         }
       } catch (error: unknown) {
         console.error("Geocoding failed:", error);
@@ -303,6 +321,23 @@ document.getElementById("detailsTab")?.addEventListener("click", () => {
 // Onboarding close
 document.getElementById("closeOnboarding")?.addEventListener("click", () => {
   void closeOnboarding();
+});
+
+// VPN Sync info tooltip — tap to toggle on mobile, click on desktop
+document.getElementById("vpnSyncInfo")?.addEventListener("click", (e: Event) => {
+  e.preventDefault();
+  e.stopPropagation();
+  const tooltip = document.getElementById("vpnSyncTooltip");
+  tooltip?.classList.toggle("visible");
+});
+
+// Dismiss tooltip when tapping elsewhere
+document.addEventListener("click", (e: Event) => {
+  const tooltip = document.getElementById("vpnSyncTooltip");
+  const infoBtn = document.getElementById("vpnSyncInfo");
+  if (tooltip && e.target !== infoBtn && !infoBtn?.contains(e.target as Node)) {
+    tooltip.classList.remove("visible");
+  }
 });
 
 // Initialize
