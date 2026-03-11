@@ -22,6 +22,7 @@ Blocking geolocation requests is your right, but some sites treat it as evasion 
 GeoSpoof spoofs your browser's geolocation, timezone, and WebRTC so they all match your VPN exit region. One consistent identity, no mismatches.
 
 - **VPN Region Sync**: Detects your VPN exit IP and sets your spoofed location to match — one click, no manual coordinates.
+- **Manual Coordinates**: Search for a city or enter any latitude/longitude directly for full control over your spoofed location.
 - **Full Signal Alignment**: GPS coordinates, IANA timezone, `Intl` locale data, and WebRTC all report the same location.
 - **Bypass Hard Gates**: Sites that refuse to load without geolocation permission get a clean, consistent response.
 - **Dev & QA**: Test geofenced apps, localized content, or location-aware UIs without leaving your desk.
