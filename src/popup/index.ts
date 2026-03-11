@@ -8,6 +8,7 @@ import { loadSettings } from "./settings";
 import { closeOnboarding } from "./onboarding";
 import { displaySearchResults } from "./search";
 import { updateStatusBadge, formatWebRTCDetails, clearChildren } from "./ui";
+import { handleVpnSync } from "./vpn-sync";
 
 // --- Location setting ---
 
@@ -179,7 +180,17 @@ document.getElementById("setManualCoords")?.addEventListener("click", () => {
   });
 });
 
-// Tab switching: search / coordinates mode
+// VPN Sync toggle
+document.getElementById("vpnSyncToggle")?.addEventListener("change", (e: Event) => {
+  const target = e.target as HTMLInputElement;
+  if (target.checked) {
+    activateVpnSyncMode();
+  } else {
+    void deactivateVpnSyncMode();
+  }
+});
+
+// Tab switching: search / coordinates
 document.getElementById("searchModeTab")?.addEventListener("click", () => {
   document.getElementById("searchModeTab")?.classList.add("active");
   document.getElementById("coordsModeTab")?.classList.remove("active");
@@ -197,6 +208,66 @@ document.getElementById("coordsModeTab")?.addEventListener("click", () => {
   if (coordsMode) coordsMode.style.display = "block";
   if (searchMode) searchMode.style.display = "none";
 });
+
+// VPN Sync / Re-sync buttons
+document.getElementById("vpnSyncButton")?.addEventListener("click", () => {
+  void handleVpnSync(false);
+});
+
+document.getElementById("vpnResyncButton")?.addEventListener("click", () => {
+  void handleVpnSync(true);
+});
+
+/** Activate VPN sync mode: hide tabs and search/coords, show VPN panel, trigger sync */
+function activateVpnSyncMode(): void {
+  const inputModeTabs = document.getElementById("inputModeTabs");
+  const searchMode = document.getElementById("searchMode");
+  const coordsMode = document.getElementById("coordsMode");
+  const vpnSyncMode = document.getElementById("vpnSyncMode");
+
+  if (inputModeTabs) inputModeTabs.style.display = "none";
+  if (searchMode) searchMode.style.display = "none";
+  if (coordsMode) coordsMode.style.display = "none";
+  if (vpnSyncMode) vpnSyncMode.style.display = "block";
+
+  void handleVpnSync(false);
+}
+
+/** Deactivate VPN sync mode: hide VPN panel, show tabs with search as default, notify background */
+async function deactivateVpnSyncMode(): Promise<void> {
+  const inputModeTabs = document.getElementById("inputModeTabs");
+  const searchMode = document.getElementById("searchMode");
+  const coordsMode = document.getElementById("coordsMode");
+  const vpnSyncMode = document.getElementById("vpnSyncMode");
+
+  if (vpnSyncMode) vpnSyncMode.style.display = "none";
+  if (inputModeTabs) inputModeTabs.style.display = "flex";
+  if (searchMode) searchMode.style.display = "block";
+  if (coordsMode) coordsMode.style.display = "none";
+
+  // Reset tab active states
+  document.getElementById("searchModeTab")?.classList.add("active");
+  document.getElementById("coordsModeTab")?.classList.remove("active");
+
+  try {
+    await browser.runtime.sendMessage({ type: "DISABLE_VPN_SYNC" });
+  } catch {
+    // Best-effort
+  }
+
+  // Reset VPN panel UI state
+  const statusEl = document.getElementById("vpnSyncStatus");
+  const syncBtn = document.getElementById("vpnSyncButton");
+  const resyncBtn = document.getElementById("vpnResyncButton");
+  const errorEl = document.getElementById("vpnSyncError");
+  if (statusEl) statusEl.style.display = "none";
+  if (syncBtn) syncBtn.style.display = "block";
+  if (resyncBtn) resyncBtn.style.display = "none";
+  if (errorEl) errorEl.style.display = "none";
+
+  // Reload settings so the location display reflects the cleared state
+  await loadSettings();
+}
 
 // Tab switching: main / details view
 document.getElementById("mainTab")?.addEventListener("click", () => {

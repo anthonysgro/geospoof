@@ -56,6 +56,8 @@ export interface Settings {
   version: string;
   /** Timestamp of last settings update (milliseconds since epoch) */
   lastUpdated: number;
+  /** Whether VPN sync mode is the active location method */
+  vpnSyncEnabled: boolean;
 }
 
 /**
@@ -70,4 +72,5 @@ export const DEFAULT_SETTINGS: Settings = {
   onboardingCompleted: false,
   version: "1.0",
   lastUpdated: Date.now(),
+  vpnSyncEnabled: false,
 };

@@ -97,6 +97,10 @@ export function validateSettings(settings: Partial<Settings>): Settings {
     validated.lastUpdated = settings.lastUpdated;
   }
 
+  if (typeof settings.vpnSyncEnabled === "boolean") {
+    validated.vpnSyncEnabled = settings.vpnSyncEnabled;
+  }
+
   return validated;
 }
 

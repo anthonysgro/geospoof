@@ -20,6 +20,7 @@ function makeSettings(overrides?: Partial<Settings>): Settings {
     onboardingCompleted: true,
     version: "1.0",
     lastUpdated: Date.now(),
+    vpnSyncEnabled: false,
     ...overrides,
   };
 }

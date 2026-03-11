@@ -50,6 +50,7 @@ const settingsArb: fc.Arbitrary<Settings> = fc.record({
   onboardingCompleted: fc.boolean(),
   version: fc.constant("1.0"),
   lastUpdated: fc.integer({ min: 0 }),
+  vpnSyncEnabled: fc.boolean(),
 });
 
 /** The keys that MUST NOT appear in the broadcast payload. */
@@ -59,6 +60,7 @@ const FORBIDDEN_KEYS: (keyof Settings)[] = [
   "locationName",
   "version",
   "lastUpdated",
+  "vpnSyncEnabled",
 ];
 
 /** The keys that MUST appear in the broadcast payload. */

@@ -11,6 +11,7 @@ import type {
   SetWebRTCProtectionPayload,
   GeocodeQueryPayload,
   CheckTabInjectionPayload,
+  SyncVpnPayload,
 } from "@/shared/types/messages";
 import { loadSettings, updateSettings } from "./settings";
 import { geocodeQuery, reverseGeocode } from "./geocoding";
@@ -23,6 +24,7 @@ import {
   checkTabInjection,
   isRestrictedUrl,
 } from "./tabs";
+import { syncVpnLocation, clearIpGeoCache } from "./vpn-sync";
 
 export async function handleMessage(
   message: Message,
@@ -70,6 +72,33 @@ export async function handleMessage(
         await handleCompleteOnboarding();
         return { success: true };
 
+      case "SYNC_VPN": {
+        const payload = message.payload as SyncVpnPayload | undefined;
+        const result = await syncVpnLocation(payload?.forceRefresh ?? false);
+
+        if ("error" in result) {
+          return result;
+        }
+
+        await handleSetLocation({ latitude: result.latitude, longitude: result.longitude });
+        await updateSettings({ vpnSyncEnabled: true });
+
+        return result;
+      }
+
+      case "DISABLE_VPN_SYNC": {
+        clearIpGeoCache();
+        await updateSettings({
+          vpnSyncEnabled: false,
+          location: null,
+          timezone: null,
+          locationName: null,
+        });
+        const disabledSettings = await loadSettings();
+        await broadcastSettingsToTabs(disabledSettings);
+        return { success: true };
+      }
+
       case "CHECK_TAB_INJECTION": {
         const injectionStatus = await checkTabInjection(
           (message.payload as CheckTabInjectionPayload).tabId
@@ -99,10 +128,21 @@ export async function handleSetLocation(payload: SetLocationPayload): Promise<vo
     console.warn("Reverse geocoding failed:", error);
   }
 
+  const currentSettings = await loadSettings();
+
+  // If VPN sync was active and a manual location is being set,
+  // disable VPN sync and clear the IP geolocation cache (Req 9.3)
+  const vpnUpdates: Record<string, unknown> = {};
+  if (currentSettings.vpnSyncEnabled) {
+    clearIpGeoCache();
+    vpnUpdates.vpnSyncEnabled = false;
+  }
+
   const settings = await updateSettings({
     location: { latitude, longitude, accuracy: 10 },
     timezone,
     locationName,
+    ...vpnUpdates,
   });
 
   await broadcastSettingsToTabs(settings);

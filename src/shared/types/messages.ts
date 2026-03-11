@@ -12,7 +12,9 @@ export type MessageType =
   | "UPDATE_SETTINGS"
   | "COMPLETE_ONBOARDING"
   | "CHECK_TAB_INJECTION"
-  | "PING";
+  | "PING"
+  | "SYNC_VPN"
+  | "DISABLE_VPN_SYNC";
 
 /**
  * Generic message structure for runtime messaging.
@@ -79,3 +81,26 @@ export interface UpdateSettingsPayload {
  * Response shape for GET_SETTINGS messages.
  */
 export type GetSettingsResponse = Settings;
+
+// --- VPN Sync types ---
+
+export type VpnSyncErrorCode = "IP_DETECTION_FAILED" | "GEOLOCATION_FAILED" | "NETWORK";
+
+export interface SyncVpnPayload {
+  forceRefresh?: boolean;
+}
+
+export interface SyncVpnSuccessResponse {
+  latitude: number;
+  longitude: number;
+  city: string;
+  country: string;
+  ip: string;
+}
+
+export interface SyncVpnErrorResponse {
+  error: VpnSyncErrorCode;
+  message: string;
+}
+
+export type SyncVpnResponse = SyncVpnSuccessResponse | SyncVpnErrorResponse;

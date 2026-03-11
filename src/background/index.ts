@@ -8,7 +8,8 @@ import { loadSettings } from "./settings";
 import { setWebRTCProtection } from "./webrtc";
 import { updateBadge } from "./badge";
 import { broadcastSettingsToTabs, isRestrictedUrl, checkTabInjection } from "./tabs";
-import { handleMessage } from "./messages";
+import { handleMessage, handleSetLocation } from "./messages";
+import { syncVpnLocation } from "./vpn-sync";
 
 // Re-export everything so `import("@/background")` keeps working for tests
 export { DEFAULT_SETTINGS } from "@/shared/types/settings";
@@ -39,6 +40,18 @@ export {
   handleSetWebRTCProtection,
   handleCompleteOnboarding,
 } from "./messages";
+export {
+  isValidIpAddress,
+  detectPublicIp,
+  geolocateIp,
+  syncVpnLocation,
+  clearIpGeoCache,
+  resetRateLimiter,
+  ipGeoCache,
+  MIN_REQUEST_INTERVAL,
+  REQUEST_TIMEOUT,
+} from "./vpn-sync";
+export type { IpGeolocationResult, VpnSyncError, VpnSyncResponse } from "./vpn-sync";
 
 // --- Initialization ---
 
@@ -58,6 +71,18 @@ async function initialize(): Promise<void> {
   }
 
   await updateBadge(settings.enabled);
+
+  // Auto-sync VPN location on startup if enabled
+  if (settings.vpnSyncEnabled) {
+    try {
+      const result = await syncVpnLocation(false);
+      if (!("error" in result)) {
+        await handleSetLocation({ latitude: result.latitude, longitude: result.longitude });
+      }
+    } catch (error) {
+      console.warn("VPN auto-sync on startup failed:", error);
+    }
+  }
 }
 
 export { initialize };

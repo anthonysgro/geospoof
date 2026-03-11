@@ -67,6 +67,7 @@ describe("Multi-Tab Integration Tests", () => {
         onboardingCompleted: true,
         version: "1.0",
         lastUpdated: Date.now(),
+        vpnSyncEnabled: false,
       };
 
       // Act: Should not throw even if some tabs fail
@@ -101,6 +102,7 @@ describe("Multi-Tab Integration Tests", () => {
         onboardingCompleted: true,
         version: "1.0",
         lastUpdated: Date.now(),
+        vpnSyncEnabled: false,
       };
 
       storageGet.mockResolvedValue({ settings });
@@ -149,6 +151,7 @@ describe("Multi-Tab Integration Tests", () => {
         onboardingCompleted: true,
         version: "1.0",
         lastUpdated: Date.now(),
+        vpnSyncEnabled: false,
       };
 
       storageGet.mockResolvedValue({ settings });
@@ -199,6 +202,7 @@ describe("Multi-Tab Integration Tests", () => {
         onboardingCompleted: true,
         version: "1.0",
         lastUpdated: Date.now(),
+        vpnSyncEnabled: false,
       };
 
       storageGet.mockResolvedValue({ settings });
@@ -248,6 +252,7 @@ describe("Multi-Tab Integration Tests", () => {
         onboardingCompleted: true,
         version: "1.0",
         lastUpdated: Date.now(),
+        vpnSyncEnabled: false,
       };
 
       storageGet.mockResolvedValue({ settings });
@@ -302,6 +307,7 @@ describe("Multi-Tab Integration Tests", () => {
         onboardingCompleted: true,
         version: "1.0",
         lastUpdated: Date.now(),
+        vpnSyncEnabled: false,
       };
 
       storageGet.mockResolvedValue({ settings });

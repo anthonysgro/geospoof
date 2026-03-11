@@ -170,6 +170,21 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 }
 
 /* Current Location */
+.section-divider {
+  border: none;
+  border-top: 1px solid #e0e0e0;
+  margin: 4px 0 12px;
+}
+
+.section-heading {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4caf50;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
 .current-location {
   background: white;
   padding: 12px;
@@ -196,6 +211,14 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 .location-coords {
   font-size: 12px;
   color: #666;
+}
+
+/* VPN Sync Toggle */
+.vpn-sync-toggle {
+  background: white;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
 }
 
 /* Location Input Mode Tabs */
@@ -356,6 +379,111 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 
 .manual-coords button:hover {
   background: #45a049;
+}
+
+/* VPN Sync Panel */
+.vpn-sync-panel {
+  background: white;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.vpn-sync-description {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.vpn-sync-status {
+  background: #f5f5f5;
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.vpn-sync-ip {
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.vpn-sync-region {
+  font-weight: 500;
+  color: #333;
+}
+
+.vpn-sync-error {
+  background: #fdecea;
+  color: #b71c1c;
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.vpn-sync-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.vpn-sync-btn,
+.vpn-resync-btn {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.vpn-sync-btn {
+  background: #4caf50;
+  color: white;
+}
+
+.vpn-sync-btn:hover {
+  background: #45a049;
+}
+
+.vpn-resync-btn {
+  background: #4caf50;
+  color: white;
+}
+
+.vpn-resync-btn:hover {
+  background: #45a049;
+}
+
+.vpn-sync-btn:disabled,
+.vpn-resync-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.vpn-sync-btn.loading,
+.vpn-resync-btn.loading {
+  position: relative;
+  color: transparent;
+}
+
+.vpn-sync-btn.loading::after,
+.vpn-resync-btn.loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border: 2px solid #e0e0e0;
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
 
 /* Warning */

@@ -1,0 +1,225 @@
+/**
+ * VPN Sync Module
+ * Detects the user's public IP, geolocates it, and provides coordinates
+ * for the VPN exit region. Includes caching and rate limiting.
+ */
+
+// --- Constants ---
+const PUBLIC_IP_URL = "https://api.ipify.org?format=json";
+const IP_GEOLOCATION_URL = "http://ip-api.com/json/";
+const REQUEST_TIMEOUT = 5000; // 5 seconds
+const MIN_REQUEST_INTERVAL = 2000; // 2 seconds between API calls
+
+// --- Types ---
+export interface IpGeolocationResult {
+  latitude: number;
+  longitude: number;
+  city: string;
+  country: string;
+  ip: string;
+}
+
+export interface VpnSyncError {
+  error: "IP_DETECTION_FAILED" | "GEOLOCATION_FAILED" | "NETWORK";
+  message: string;
+}
+
+export type VpnSyncResponse = IpGeolocationResult | VpnSyncError;
+
+// --- Cache ---
+const ipGeoCache: Map<string, IpGeolocationResult> = new Map();
+
+// --- Rate Limiting ---
+let lastRequestTime = 0;
+
+async function throttle(): Promise<void> {
+  const now = Date.now();
+  const elapsed = now - lastRequestTime;
+  if (elapsed < MIN_REQUEST_INTERVAL) {
+    await new Promise((resolve) => setTimeout(resolve, MIN_REQUEST_INTERVAL - elapsed));
+  }
+  lastRequestTime = Date.now();
+}
+
+// --- IP Validation ---
+
+/**
+ * Validate an IP address string (IPv4 or IPv6).
+ */
+export function isValidIpAddress(ip: string): boolean {
+  if (typeof ip !== "string" || ip.length === 0) {
+    return false;
+  }
+
+  // IPv4: four octets 0-255
+  const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+  const ipv4Match = ip.match(ipv4);
+  if (ipv4Match) {
+    return ipv4Match.slice(1).every((octet) => {
+      const n = parseInt(octet, 10);
+      return n >= 0 && n <= 255;
+    });
+  }
+
+  // IPv6: simplified check for colon-hex groups
+  const ipv6 = /^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$/;
+  return ipv6.test(ip);
+}
+
+// --- Public IP Detection ---
+
+/**
+ * Detect the user's public IP address via external API.
+ * @throws Error with code IP_DETECTION_FAILED
+ */
+export async function detectPublicIp(): Promise<string> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+
+  try {
+    const response = await fetch(PUBLIC_IP_URL, { signal: controller.signal });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = (await response.json()) as { ip?: string };
+    const ip = data.ip;
+
+    if (!ip || !isValidIpAddress(ip)) {
+      throw new Error("Invalid IP address in response");
+    }
+
+    return ip;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    const message =
+      error instanceof Error && error.name === "AbortError"
+        ? "IP detection request timed out"
+        : error instanceof Error
+          ? error.message
+          : "Unknown error during IP detection";
+    throw Object.assign(new Error(message), { code: "IP_DETECTION_FAILED" });
+  }
+}
+
+// --- IP Geolocation ---
+
+/**
+ * Geolocate an IP address to coordinates via external API.
+ * @param ip - IPv4 or IPv6 address
+ * @throws Error with code GEOLOCATION_FAILED
+ */
+export async function geolocateIp(ip: string): Promise<IpGeolocationResult> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+
+  try {
+    const response = await fetch(`${IP_GEOLOCATION_URL}${ip}`, { signal: controller.signal });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = (await response.json()) as {
+      status?: string;
+      lat?: number;
+      lon?: number;
+      city?: string;
+      country?: string;
+      query?: string;
+    };
+
+    if (data.status !== "success") {
+      throw new Error("Geolocation lookup failed");
+    }
+
+    const { lat, lon, city, country } = data;
+
+    if (
+      typeof lat !== "number" ||
+      typeof lon !== "number" ||
+      lat < -90 ||
+      lat > 90 ||
+      lon < -180 ||
+      lon > 180
+    ) {
+      throw new Error("Invalid coordinates from geolocation service");
+    }
+
+    return {
+      latitude: lat,
+      longitude: lon,
+      city: city ?? "",
+      country: country ?? "",
+      ip,
+    };
+  } catch (error) {
+    clearTimeout(timeoutId);
+    const message =
+      error instanceof Error && error.name === "AbortError"
+        ? "Geolocation request timed out"
+        : error instanceof Error
+          ? error.message
+          : "Unknown error during geolocation";
+    throw Object.assign(new Error(message), { code: "GEOLOCATION_FAILED" });
+  }
+}
+
+// --- Orchestrator ---
+
+/**
+ * Perform a full VPN sync: detect public IP, geolocate it, return result.
+ * @param forceRefresh - bypass cache (used by Re-sync button)
+ */
+export async function syncVpnLocation(forceRefresh: boolean): Promise<VpnSyncResponse> {
+  try {
+    await throttle();
+
+    const ip = await detectPublicIp();
+
+    // Check cache unless force refresh
+    if (!forceRefresh && ipGeoCache.has(ip)) {
+      return ipGeoCache.get(ip)!;
+    }
+
+    const result = await geolocateIp(ip);
+
+    // Cache the result
+    ipGeoCache.set(ip, result);
+
+    return result;
+  } catch (error) {
+    const err = error as Error & { code?: string };
+    const errorCode =
+      err.code === "IP_DETECTION_FAILED"
+        ? "IP_DETECTION_FAILED"
+        : err.code === "GEOLOCATION_FAILED"
+          ? "GEOLOCATION_FAILED"
+          : "NETWORK";
+
+    return {
+      error: errorCode,
+      message: err.message || "A network error occurred. Please try again.",
+    };
+  }
+}
+
+/**
+ * Clear the IP geolocation cache (called when user disables sync mode).
+ */
+export function clearIpGeoCache(): void {
+  ipGeoCache.clear();
+}
+
+// Exported for testing
+export { ipGeoCache, MIN_REQUEST_INTERVAL, REQUEST_TIMEOUT };
+
+/**
+ * Reset the rate limiter timestamp (for testing).
+ */
+export function resetRateLimiter(): void {
+  lastRequestTime = 0;
+}

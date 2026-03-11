@@ -37,7 +37,23 @@ When you use certain features, the extension communicates with external services
 **Purpose:** To find location coordinates or city names
 **Privacy Policy:** [OpenStreetMap Privacy Policy](https://wiki.osmfoundation.org/wiki/Privacy_Policy)
 
-### 2. [browser-geo-tz](https://github.com/kevmo314/browser-geo-tz) (Timezone Boundary Data)
+### 2. VPN Sync Services (ipify and ipapi.co)
+
+**When:** Only when you explicitly enable the "Sync with VPN" feature or click the "Re-sync" button in the extension popup. This never happens automatically unless you have previously enabled VPN sync mode.
+**Data Sent:** Your public IP address is sent to two external services:
+
+- **[ipify](https://www.ipify.org/)** (`api.ipify.org`): Detects your current public IP address. No data is sent to this service other than the HTTPS request itself; it returns your public-facing IP.
+- **[ipapi.co](https://ipapi.co/)** (`ipapi.co`): Receives your public IP address and returns approximate geographic coordinates (latitude, longitude), city, and country for that IP.
+
+**Purpose:** To determine the geographic location of your VPN exit server so the extension can set your spoofed location to match your VPN region.
+**Privacy Safeguards:**
+
+- All requests use HTTPS encryption.
+- Your IP address is **never persisted to disk**. It is only held in an in-memory cache for the duration of your browser session.
+- The in-memory geolocation cache is **cleared immediately** when you disable VPN sync mode or switch to a different location input method.
+- IP data only appears in transient message responses between the popup and background script and is discarded when the popup closes.
+
+### 3. [browser-geo-tz](https://github.com/kevmo314/browser-geo-tz) (Timezone Boundary Data)
 
 **When:** Used to determine the correct Timezone ID (e.g., `America/New_York`) for a selected location
 **Data Sent:** The extension makes secure HTTPS Range Requests to a Cloud-Fronted Network (CDN) to fetch small "chunks" of geographic boundary data.

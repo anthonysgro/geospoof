@@ -31,9 +31,46 @@ export async function loadSettings(): Promise<void> {
 
     if (settings.location) {
       displayLocation(settings.location, settings.locationName);
+    } else {
+      const nameEl = document.getElementById("locationName");
+      const coordsEl = document.getElementById("locationCoords");
+      if (nameEl) nameEl.textContent = "No location set";
+      if (coordsEl) coordsEl.textContent = "—";
     }
 
     updateDetailsView(settings);
+
+    // Restore VPN sync toggle state (Req 4.1–4.4)
+    const vpnSyncToggle = document.getElementById("vpnSyncToggle") as HTMLInputElement | null;
+    const inputModeTabs = document.getElementById("inputModeTabs");
+    const vpnPanel = document.getElementById("vpnSyncMode");
+    const searchPanel = document.getElementById("searchMode");
+    const coordsPanel = document.getElementById("coordsMode");
+
+    if (vpnSyncToggle) {
+      vpnSyncToggle.checked = !!settings.vpnSyncEnabled;
+    }
+
+    if (settings.vpnSyncEnabled) {
+      if (inputModeTabs) inputModeTabs.style.display = "none";
+      if (searchPanel) searchPanel.style.display = "none";
+      if (coordsPanel) coordsPanel.style.display = "none";
+      if (vpnPanel) vpnPanel.style.display = "block";
+
+      // If a previous sync succeeded, show re-sync button instead of sync button
+      if (settings.locationName) {
+        const syncBtn = document.getElementById("vpnSyncButton");
+        const resyncBtn = document.getElementById("vpnResyncButton");
+
+        if (syncBtn) syncBtn.style.display = "none";
+        if (resyncBtn) resyncBtn.style.display = "block";
+      }
+    } else {
+      if (inputModeTabs) inputModeTabs.style.display = "";
+      if (searchPanel) searchPanel.style.display = "block";
+      if (coordsPanel) coordsPanel.style.display = "none";
+      if (vpnPanel) vpnPanel.style.display = "none";
+    }
 
     const warningMessage = document.getElementById("warningMessage");
     if (warningMessage) {

@@ -16,6 +16,7 @@ When using a VPN, your browser's geolocation creates a problem either way. If yo
 GeoSpoof allows your browser to maintain a synchronized identity with your VPN.
 
 - **Consistency**: Aligns your GPS, IANA Timezone, and WebRTC interface to match your VPN tunnel.
+- **VPN Region Sync**: Automatically detects your VPN exit region and sets your spoofed location to match — one click, no manual coordinates needed.
 - **Bypass "Hard Gates"**: Access services that refuse to load unless geolocation is granted.
 - **Silent Protection**: Prevents leakage from WebRTC and Timezone offsets that can reveal your local IP even when a VPN is active.
 - **Development & QA**: Useful for developers building geofenced apps, localized content, or location-aware UIs.
@@ -92,7 +93,7 @@ Or load `dist/manifest.json` manually as a temporary add-on via `about:debugging
 ## Usage
 
 1. Click the GeoSpoof icon in your toolbar
-2. Search for a city or enter coordinates manually
+2. Search for a city, enter coordinates manually, or use "Sync with VPN" to auto-detect your VPN exit region
 3. Enable "Location Protection" and "WebRTC Protection"
 4. Refresh open tabs to apply
 
@@ -104,6 +105,10 @@ See [USER_GUIDE.md](USER_GUIDE.md) for details.
 | ---------------------------------------------------------------- | ------------------------------ | ---------------------------------------------------------------------- |
 | [Nominatim](https://nominatim.org/) (OpenStreetMap)              | City search, reverse geocoding | Search query or coordinates                                            |
 | [browser-geo-tz](https://github.com/kevmo314/browser-geo-tz) CDN | Timezone resolution            | HTTPS range requests for boundary data chunks (coordinates stay local) |
+| [ipify](https://www.ipify.org/)                                  | VPN sync enabled               | HTTPS request to detect your public IP                                 |
+| [ipapi.co](https://ipapi.co/)                                    | VPN sync enabled               | Your public IP (to geolocate VPN exit region)                          |
+
+> **VPN Sync privacy note:** When you enable "Sync with VPN," your public IP is sent to `api.ipify.org` and `ipapi.co` over HTTPS to determine your VPN exit region. Your IP is never saved to disk — it's held only in memory and cleared when you disable VPN sync. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for full details.
 
 No data is sent to the extension developer. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
 

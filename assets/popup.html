@@ -78,6 +78,11 @@
           </label>
         </div>
 
+        <!-- Divider between protection toggles and location controls -->
+        <hr class="section-divider" />
+
+        <div class="section-heading">Location</div>
+
         <!-- Current Location Display -->
         <div class="current-location" id="currentLocation">
           <div class="location-icon">📍</div>
@@ -87,8 +92,19 @@
           </div>
         </div>
 
+        <!-- VPN Sync Toggle -->
+        <div class="vpn-sync-toggle">
+          <label class="toggle-label">
+            <span>Sync with VPN</span>
+            <div class="toggle-wrapper">
+              <input type="checkbox" id="vpnSyncToggle" />
+              <span class="toggle-slider"></span>
+            </div>
+          </label>
+        </div>
+
         <!-- Location Input Mode Tabs -->
-        <div class="input-mode-tabs">
+        <div class="input-mode-tabs" id="inputModeTabs">
           <button class="tab-button active" id="searchModeTab">Search City</button>
           <button class="tab-button" id="coordsModeTab">Enter Coordinates</button>
         </div>
@@ -123,6 +139,20 @@
             max="180"
           />
           <button id="setManualCoords">Set Location</button>
+        </div>
+
+        <!-- VPN Sync Mode -->
+        <div class="vpn-sync-panel" id="vpnSyncMode" style="display: none">
+          <div class="vpn-sync-status" id="vpnSyncStatus" style="display: none">
+            <div class="vpn-sync-ip" id="vpnSyncIp"></div>
+          </div>
+          <div class="vpn-sync-error" id="vpnSyncError" style="display: none"></div>
+          <div class="vpn-sync-actions">
+            <button id="vpnSyncButton" class="vpn-sync-btn">Sync Now</button>
+            <button id="vpnResyncButton" class="vpn-resync-btn" style="display: none">
+              Re-sync
+            </button>
+          </div>
         </div>
 
         <!-- Warning Message -->
