@@ -13,9 +13,9 @@ Install: [Firefox Add-ons Store](https://addons.mozilla.org/en-US/firefox/addon/
 
 ### The Problem
 
-A VPN alone doesn't hide your location from websites. Your browser exposes it through other channels — the Geolocation API, timezone offsets, `Intl.DateTimeFormat`, and WebRTC. Sites cross-reference these signals against your IP, and when they don't match, you're flagged as a VPN user.
+A VPN alone doesn't hide your location from websites. Your browser exposes it through other channels: the Geolocation API, timezone offsets, `Intl.DateTimeFormat`, and WebRTC. Sites cross-reference these signals against your IP, and when they don't match, you're flagged as a VPN user.
 
-Blocking geolocation requests is your right, but some sites treat it as evasion — restricting access or flagging your account. And if you allow it, your real coordinates go straight to the site. GeoSpoof gives you a third option: respond with coordinates that match your VPN, so you stay consistent without giving up real data.
+Blocking geolocation requests is your right, but some sites treat it as evasion and restrict access or flag your account. And if you allow it, your real coordinates go straight to the site. GeoSpoof gives you a third option: respond with coordinates that match your VPN, so you stay consistent without giving up real data.
 
 ### The Fix
 
