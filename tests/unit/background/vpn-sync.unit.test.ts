@@ -18,11 +18,11 @@ function mockFetchForVpnSync(ip: string, lat: number, lon: number, city: string,
       ok: true,
       json: () =>
         Promise.resolve({
+          ipAddress: ip,
           latitude: lat,
           longitude: lon,
-          city,
-          country_name: country,
-          ip,
+          cityName: city,
+          countryName: country,
         }),
     } as Response)
     // reverse geocode call from handleSetLocation
@@ -151,7 +151,11 @@ describe("SYNC_VPN message handler", () => {
         ok: true,
         json: () => Promise.resolve({ ip: "203.0.113.42" }),
       } as Response)
-      .mockRejectedValueOnce(new Error("Geolocation service unavailable"));
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: () => Promise.resolve({}),
+      } as Response);
 
     const result = await handleMessage(
       { type: "SYNC_VPN", payload: { forceRefresh: false } },
@@ -289,79 +293,6 @@ describe("DISABLE_VPN_SYNC message handler", () => {
   });
 });
 
-describe("DISABLE_VPN_SYNC message handler", () => {
-  /**
-   * Test DISABLE_VPN_SYNC sets vpnSyncEnabled to false in storage
-   * Validates: Requirements 9.3, 3.5
-   */
-  test("should set vpnSyncEnabled to false in storage", async () => {
-    const { handleMessage, clearIpGeoCache, resetRateLimiter, loadSettings, updateSettings } =
-      await importBackground();
-    clearIpGeoCache();
-    resetRateLimiter();
-
-    // First enable VPN sync
-    await updateSettings({ vpnSyncEnabled: true });
-    let settings = await loadSettings();
-    expect(settings.vpnSyncEnabled).toBe(true);
-
-    // Send DISABLE_VPN_SYNC
-    const result = await handleMessage(
-      { type: "DISABLE_VPN_SYNC" },
-      {} as browser.runtime.MessageSender
-    );
-
-    expect(result).toEqual({ success: true });
-
-    settings = await loadSettings();
-    expect(settings.vpnSyncEnabled).toBe(false);
-  });
-
-  /**
-   * Test DISABLE_VPN_SYNC clears the in-memory IP geolocation cache
-   * Validates: Requirements 9.3
-   */
-  test("should clear the IP geolocation cache", async () => {
-    const { handleMessage, ipGeoCache, resetRateLimiter } = await importBackground();
-    resetRateLimiter();
-
-    // Populate cache with a fake entry
-    ipGeoCache.set("203.0.113.42", {
-      latitude: 40.7128,
-      longitude: -74.006,
-      city: "New York",
-      country: "United States",
-      ip: "203.0.113.42",
-    });
-    expect(ipGeoCache.size).toBe(1);
-
-    // Send DISABLE_VPN_SYNC
-    await handleMessage({ type: "DISABLE_VPN_SYNC" }, {} as browser.runtime.MessageSender);
-
-    expect(ipGeoCache.size).toBe(0);
-  });
-
-  /**
-   * Test DISABLE_VPN_SYNC prevents auto-sync on next startup
-   * Validates: Requirements 9.3, 3.5
-   */
-  test("should prevent auto-sync on next startup after disabling", async () => {
-    const { handleMessage, clearIpGeoCache, resetRateLimiter, updateSettings } =
-      await importBackground();
-    clearIpGeoCache();
-    resetRateLimiter();
-
-    // Enable VPN sync, then disable it
-    await updateSettings({ vpnSyncEnabled: true });
-    await handleMessage({ type: "DISABLE_VPN_SYNC" }, {} as browser.runtime.MessageSender);
-
-    // Verify vpnSyncEnabled is now false
-    const { loadSettings } = await importBackground();
-    const settings = await loadSettings();
-    expect(settings.vpnSyncEnabled).toBe(false);
-  });
-});
-
 describe("Startup auto-sync", () => {
   /**
    * Test auto-sync triggers when vpnSyncEnabled is true
@@ -385,11 +316,11 @@ describe("Startup auto-sync", () => {
         ok: true,
         json: () =>
           Promise.resolve({
+            ipAddress: "203.0.113.42",
             latitude: 37.7749,
             longitude: -122.4194,
-            city: "San Francisco",
-            country_name: "United States",
-            ip: "203.0.113.42",
+            cityName: "San Francisco",
+            countryName: "United States",
           }),
       } as Response)
       .mockResolvedValueOnce({
@@ -488,11 +419,11 @@ describe("Startup auto-sync", () => {
         ok: true,
         json: () =>
           Promise.resolve({
+            ipAddress: "10.0.0.1",
             latitude: 52.52,
             longitude: 13.405,
-            city: "Berlin",
-            country_name: "Germany",
-            ip: "10.0.0.1",
+            cityName: "Berlin",
+            countryName: "Germany",
           }),
       } as Response)
       .mockResolvedValueOnce({

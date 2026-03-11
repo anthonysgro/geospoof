@@ -31,12 +31,11 @@ function mockVpnSyncFetch(ip: string, lat: number, lon: number, city: string, co
       ok: true,
       json: () =>
         Promise.resolve({
-          status: "success",
-          lat,
-          lon,
-          city,
-          country,
-          query: ip,
+          ipAddress: ip,
+          latitude: lat,
+          longitude: lon,
+          cityName: city,
+          countryName: country,
         }),
     } as Response)
     .mockResolvedValueOnce({
@@ -368,13 +367,17 @@ describe("VPN Sync Integration Tests", () => {
       resetRateLimiter();
       clearTimezoneCache();
 
-      // First attempt: IP detection succeeds but geolocation fails
+      // First attempt: IP detection succeeds but geolocation returns non-2xx
       vi.mocked(fetch)
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve({ ip: "203.0.113.42" }),
         } as Response)
-        .mockRejectedValueOnce(new Error("Geolocation service unavailable"));
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: () => Promise.resolve({}),
+        } as Response);
 
       const failResult = await handleMessage(
         { type: "SYNC_VPN", payload: { forceRefresh: false } },
@@ -427,12 +430,11 @@ describe("VPN Sync Integration Tests", () => {
           ok: true,
           json: () =>
             Promise.resolve({
-              status: "success",
-              lat: 35.6762,
-              lon: 139.6503,
-              city: "Tokyo",
-              country: "Japan",
-              query: "203.0.113.42",
+              ipAddress: "203.0.113.42",
+              latitude: 35.6762,
+              longitude: 139.6503,
+              cityName: "Tokyo",
+              countryName: "Japan",
             }),
         } as Response)
         // Reverse geocode fails (3 attempts: initial + 2 retries from fetchWithRetry)

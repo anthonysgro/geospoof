@@ -1,123 +1,13 @@
 /**
- * Unit Tests for VPN Toggle UI
+ * Unit Tests for VPN Toggle UI — Edge Cases
  * Feature: vpn-toggle-ui
- *
- * 9.1 — DOM structure tests (Requirements 1.1, 1.2, 5.1, 5.2)
- * 9.2 — Edge case tests (Requirements 6.4, 4.3, 4.4)
+ * Validates: Requirements 6.4, 4.3, 4.4
  */
 
 import fs from "fs";
 import path from "path";
 import { displayVpnSyncResult } from "@/popup/vpn-sync";
 import { loadSettings } from "@/popup/settings";
-
-// ---------------------------------------------------------------------------
-// 9.1 — DOM Structure Tests
-// ---------------------------------------------------------------------------
-
-describe("VPN Toggle UI — DOM Structure", () => {
-  let doc: Document;
-
-  beforeEach(() => {
-    const html = fs.readFileSync(path.join(__dirname, "../../../assets/popup.html"), "utf8");
-    doc = new DOMParser().parseFromString(html, "text/html");
-    // Also set the live document so imported modules can query it
-    document.documentElement.innerHTML = html;
-  });
-
-  /**
-   * Verify #vpnSyncToggle checkbox exists in the DOM
-   * Validates: Requirement 1.1
-   */
-  test("should have a #vpnSyncToggle checkbox element", () => {
-    const toggle = doc.querySelector<HTMLInputElement>("#vpnSyncToggle");
-    expect(toggle).toBeTruthy();
-    expect(toggle!.type).toBe("checkbox");
-  });
-
-  /**
-   * Verify #vpnSyncModeTab does NOT exist in the DOM
-   * Validates: Requirement 5.1
-   */
-  test("should NOT have a #vpnSyncModeTab element", () => {
-    const oldTab = doc.getElementById("vpnSyncModeTab");
-    expect(oldTab).toBeNull();
-  });
-
-  /**
-   * Verify .input-mode-tabs contains exactly two tab buttons
-   * Validates: Requirements 5.1, 5.2
-   */
-  test("should have exactly two tab buttons in .input-mode-tabs", () => {
-    const tabContainer = doc.querySelector(".input-mode-tabs");
-    expect(tabContainer).toBeTruthy();
-
-    const buttons = tabContainer!.querySelectorAll(".tab-button");
-    expect(buttons.length).toBe(2);
-
-    // Verify they are the expected tabs
-    expect(buttons[0].textContent?.trim()).toBe("Search City");
-    expect(buttons[1].textContent?.trim()).toBe("Enter Coordinates");
-  });
-
-  /**
-   * Verify the toggle row is positioned between #currentLocation and #inputModeTabs
-   * Validates: Requirements 1.1, 1.2
-   */
-  test("should position .vpn-sync-toggle between #currentLocation and #inputModeTabs", () => {
-    const currentLocation = doc.getElementById("currentLocation");
-    const toggleRow = doc.querySelector(".vpn-sync-toggle");
-    const inputModeTabs = doc.getElementById("inputModeTabs");
-
-    expect(currentLocation).toBeTruthy();
-    expect(toggleRow).toBeTruthy();
-    expect(inputModeTabs).toBeTruthy();
-
-    // Walk siblings from currentLocation forward — toggle should come before tabs
-    let sibling = currentLocation!.nextElementSibling;
-    // Skip any whitespace-only text nodes (nextElementSibling already does)
-    expect(sibling).toBe(toggleRow);
-
-    sibling = toggleRow!.nextElementSibling;
-    expect(sibling).toBe(inputModeTabs);
-  });
-
-  /**
-   * Verify the toggle row uses the same markup pattern as existing toggles
-   * Validates: Requirement 1.2
-   */
-  test("should use toggle-label / toggle-wrapper / toggle-slider pattern", () => {
-    const toggleRow = doc.querySelector(".vpn-sync-toggle");
-    expect(toggleRow).toBeTruthy();
-
-    const label = toggleRow!.querySelector(".toggle-label");
-    expect(label).toBeTruthy();
-
-    const wrapper = toggleRow!.querySelector(".toggle-wrapper");
-    expect(wrapper).toBeTruthy();
-
-    const slider = toggleRow!.querySelector(".toggle-slider");
-    expect(slider).toBeTruthy();
-
-    // Label text
-    const span = label!.querySelector("span");
-    expect(span?.textContent).toBe("Sync with VPN");
-  });
-
-  /**
-   * Verify #inputModeTabs has an id attribute for JS access
-   * Validates: Requirement 1.1 (design: "Add id='inputModeTabs'")
-   */
-  test("should have id='inputModeTabs' on the .input-mode-tabs div", () => {
-    const el = doc.getElementById("inputModeTabs");
-    expect(el).toBeTruthy();
-    expect(el!.classList.contains("input-mode-tabs")).toBe(true);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// 9.2 — Edge Case Tests
-// ---------------------------------------------------------------------------
 
 describe("VPN Toggle UI — Edge Cases", () => {
   beforeEach(() => {

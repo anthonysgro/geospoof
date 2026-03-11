@@ -43,7 +43,6 @@ export {
 export {
   isValidIpAddress,
   detectPublicIp,
-  geolocateIp,
   syncVpnLocation,
   clearIpGeoCache,
   resetRateLimiter,

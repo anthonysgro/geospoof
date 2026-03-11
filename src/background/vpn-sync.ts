@@ -6,7 +6,7 @@
 
 // --- Constants ---
 const PUBLIC_IP_URL = "https://api.ipify.org?format=json";
-const IP_GEOLOCATION_URL = "http://ip-api.com/json/";
+const FREEIPAPI_URL = "https://freeipapi.com/api/json/";
 const REQUEST_TIMEOUT = 5000; // 5 seconds
 const MIN_REQUEST_INTERVAL = 2000; // 2 seconds between API calls
 
@@ -25,6 +25,21 @@ export interface VpnSyncError {
 }
 
 export type VpnSyncResponse = IpGeolocationResult | VpnSyncError;
+
+// --- FreeIPAPI Response Shape (internal) ---
+interface FreeIpApiResponse {
+  ipVersion: number;
+  ipAddress: string;
+  latitude: number;
+  longitude: number;
+  countryName: string;
+  countryCode: string;
+  cityName: string;
+  regionName: string;
+  continent: string;
+  continentCode: string;
+  isProxy: boolean;
+}
 
 // --- Cache ---
 const ipGeoCache: Map<string, IpGeolocationResult> = new Map();
@@ -107,64 +122,81 @@ export async function detectPublicIp(): Promise<string> {
 // --- IP Geolocation ---
 
 /**
- * Geolocate an IP address to coordinates via external API.
+ * Geolocate an IP address to coordinates via FreeIPAPI (HTTPS).
  * @param ip - IPv4 or IPv6 address
- * @throws Error with code GEOLOCATION_FAILED
+ * @throws Error with code GEOLOCATION_FAILED or NETWORK
  */
-export async function geolocateIp(ip: string): Promise<IpGeolocationResult> {
+async function geolocateWithFreeIpApi(ip: string): Promise<IpGeolocationResult> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
   try {
-    const response = await fetch(`${IP_GEOLOCATION_URL}${ip}`, { signal: controller.signal });
+    const response = await fetch(`${FREEIPAPI_URL}${ip}`, {
+      signal: controller.signal,
+      headers: { "User-Agent": "GeoSpoof-Extension/1.0" },
+    });
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      const err = new Error(`HTTP ${response.status}`);
+      throw Object.assign(err, { code: "GEOLOCATION_FAILED" });
     }
 
-    const data = (await response.json()) as {
-      status?: string;
-      lat?: number;
-      lon?: number;
-      city?: string;
-      country?: string;
-      query?: string;
-    };
-
-    if (data.status !== "success") {
-      throw new Error("Geolocation lookup failed");
+    let data: FreeIpApiResponse;
+    try {
+      data = (await response.json()) as FreeIpApiResponse;
+    } catch {
+      throw Object.assign(new Error("Failed to parse geolocation response"), {
+        code: "GEOLOCATION_FAILED",
+      });
     }
 
-    const { lat, lon, city, country } = data;
+    if (!data.ipAddress || !isValidIpAddress(data.ipAddress)) {
+      throw Object.assign(new Error("Invalid IP address in geolocation response"), {
+        code: "GEOLOCATION_FAILED",
+      });
+    }
 
+    const { latitude, longitude } = data;
     if (
-      typeof lat !== "number" ||
-      typeof lon !== "number" ||
-      lat < -90 ||
-      lat > 90 ||
-      lon < -180 ||
-      lon > 180
+      typeof latitude !== "number" ||
+      typeof longitude !== "number" ||
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      latitude < -90 ||
+      latitude > 90 ||
+      longitude < -180 ||
+      longitude > 180
     ) {
-      throw new Error("Invalid coordinates from geolocation service");
+      throw Object.assign(new Error("Invalid coordinates from geolocation service"), {
+        code: "GEOLOCATION_FAILED",
+      });
     }
 
     return {
-      latitude: lat,
-      longitude: lon,
-      city: city ?? "",
-      country: country ?? "",
-      ip,
+      latitude,
+      longitude,
+      city: typeof data.cityName === "string" ? data.cityName : "",
+      country: typeof data.countryName === "string" ? data.countryName : "",
+      ip: data.ipAddress,
     };
   } catch (error) {
     clearTimeout(timeoutId);
-    const message =
-      error instanceof Error && error.name === "AbortError"
-        ? "Geolocation request timed out"
-        : error instanceof Error
-          ? error.message
-          : "Unknown error during geolocation";
-    throw Object.assign(new Error(message), { code: "GEOLOCATION_FAILED" });
+    const err = error as Error & { code?: string };
+
+    if (err.code === "GEOLOCATION_FAILED") {
+      throw err;
+    }
+
+    if (err.name === "AbortError") {
+      throw Object.assign(new Error("Geolocation request timed out"), {
+        code: "GEOLOCATION_FAILED",
+      });
+    }
+
+    throw Object.assign(new Error(err.message || "Network error during geolocation"), {
+      code: "NETWORK",
+    });
   }
 }
 
@@ -185,7 +217,7 @@ export async function syncVpnLocation(forceRefresh: boolean): Promise<VpnSyncRes
       return ipGeoCache.get(ip)!;
     }
 
-    const result = await geolocateIp(ip);
+    const result = await geolocateWithFreeIpApi(ip);
 
     // Cache the result
     ipGeoCache.set(ip, result);
