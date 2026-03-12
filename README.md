@@ -88,6 +88,18 @@ npm start              # Launches Firefox with the extension loaded
 
 Or load `dist/manifest.json` manually as a temporary add-on via `about:debugging`.
 
+**From GitHub Releases (sideloading):**
+
+For Gecko-based browsers that support unsigned extensions (LibreWolf, Waterfox, Floorp, Pale Moon, unbranded Firefox, or Firefox with `xpinstall.signatures.required` set to `false`):
+
+1. Go to the [Releases](https://github.com/anthonysgro/geospoof/releases) page
+2. Download the `geospoof-<version>.xpi` file from the latest release
+3. In your browser, open `about:addons`
+4. Click the gear icon (⚙) and select **Install Add-on From File…**
+5. Select the downloaded `.xpi` file
+
+> **Note:** Unsigned `.xpi` files cannot be installed on standard Firefox unless you set `xpinstall.signatures.required` to `false` in `about:config`. Most Firefox forks listed above allow unsigned extensions by default.
+
 ## Usage
 
 1. Click the GeoSpoof icon in your toolbar
@@ -149,6 +161,7 @@ That's it. Edit code, save, Firefox reloads. If something looks wrong, check the
 | `npm run lint:ext`       | Lint the extension manifest and files                              |
 | `npm run validate`       | Type-check + lint + format check + tests (run before PRs)          |
 | `npm run package`        | Production build + zip for AMO submission                          |
+| `npm run package:xpi`    | Production build + package as `.xpi` for sideloading               |
 | `npm run package:source` | Zip source code for AMO review (excludes node_modules, dist, etc.) |
 | `npm run start:android`  | Launch on Firefox for Android (USB, auto-detects device)           |
 

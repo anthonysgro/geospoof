@@ -32,3 +32,6 @@ npm-debug.log*
 *.tmp
 *.temp
 .cache
+
+# Personal notes
+.instructions
