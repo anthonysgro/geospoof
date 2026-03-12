@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "GeoSpoof",
-  "version": "1.11.1",
+  "version": "1.11.2",
   "description": "Spoof your browser's geolocation and timezone. Prevent WebRTC IP leaks.",
   "author": "Anthony Sgro",
   "homepage_url": "https://github.com/anthonysgro/geospoof",
