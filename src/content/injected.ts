@@ -76,6 +76,7 @@ declare var process: { env: Record<string, string | undefined> };
   const originalToTimeString = Date.prototype.toTimeString;
   const originalToLocaleString = Date.prototype.toLocaleString;
   const originalToLocaleDateString = Date.prototype.toLocaleDateString;
+  const originalToDateString = Date.prototype.toDateString;
   const originalToLocaleTimeString = Date.prototype.toLocaleTimeString;
   /* eslint-enable @typescript-eslint/unbound-method */
 
@@ -169,6 +170,30 @@ declare var process: { env: Record<string, string | undefined> };
     } catch {
       // Invalid IANA identifier or unsupported environment — use fallback
       return fallbackOffset;
+    }
+  }
+
+  /** Convert an offset in minutes from UTC to a `GMT±HHMM` string. */
+  function formatGMTOffset(offsetMinutes: number): string {
+    const sign = offsetMinutes >= 0 ? "+" : "-";
+    const abs = Math.abs(offsetMinutes);
+    const hours = Math.floor(abs / 60);
+    const minutes = abs % 60;
+    return `GMT${sign}${String(hours).padStart(2, "0")}${String(minutes).padStart(2, "0")}`;
+  }
+
+  /** Extract the long timezone name (e.g. "Pacific Daylight Time") for a date and IANA tz. */
+  function getLongTimezoneName(date: Date, timezoneId: string): string {
+    try {
+      const formatter = new OriginalDateTimeFormat("en-US", {
+        timeZone: timezoneId,
+        timeZoneName: "long",
+      });
+      const parts = formatter.formatToParts(date);
+      const tzPart = parts.find((p) => p.type === "timeZoneName");
+      return tzPart?.value ?? timezoneId;
+    } catch {
+      return timezoneId;
     }
   }
 
@@ -449,12 +474,43 @@ declare var process: { env: Record<string, string | undefined> };
 
   // ── Date formatting overrides ──────────────────────────────────────────
 
+  // Override Date.prototype.toDateString()
+  try {
+    Date.prototype.toDateString = function (this: Date): string {
+      try {
+        if (spoofingEnabled && timezoneData) {
+          const formatter = new OriginalDateTimeFormat("en-US", {
+            timeZone: timezoneData.identifier,
+            weekday: "short",
+            year: "numeric",
+            month: "short",
+            day: "2-digit",
+          });
+          const parts = formatter.formatToParts(this);
+          const get = (type: string): string => parts.find((p) => p.type === type)?.value ?? "";
+          return `${get("weekday")} ${get("month")} ${get("day")} ${get("year")}`;
+        }
+        return originalToDateString.call(this);
+      } catch (error) {
+        console.error("[GeoSpoof Injected] Error in toDateString override:", error);
+        return originalToDateString.call(this);
+      }
+    };
+  } catch (error) {
+    console.error("[GeoSpoof Injected] Failed to override Date.toDateString:", error);
+  }
+
   // Override Date.prototype.toString()
   try {
     Date.prototype.toString = function (this: Date): string {
       try {
         if (spoofingEnabled && timezoneData) {
-          const formatter = new Intl.DateTimeFormat("en-US", {
+          const offsetMinutes = getIntlBasedOffset(
+            this,
+            timezoneData.identifier,
+            timezoneData.offset
+          );
+          const formatter = new OriginalDateTimeFormat("en-US", {
             timeZone: timezoneData.identifier,
             weekday: "short",
             year: "numeric",
@@ -465,7 +521,11 @@ declare var process: { env: Record<string, string | undefined> };
             second: "2-digit",
             hour12: false,
           });
-          return formatter.format(this);
+          const parts = formatter.formatToParts(this);
+          const get = (type: string): string => parts.find((p) => p.type === type)?.value ?? "";
+          const gmtOffset = formatGMTOffset(offsetMinutes);
+          const longName = getLongTimezoneName(this, timezoneData.identifier);
+          return `${get("weekday")} ${get("month")} ${get("day")} ${get("year")} ${get("hour")}:${get("minute")}:${get("second")} ${gmtOffset} (${longName})`;
         }
         return originalToString.call(this);
       } catch (error) {
@@ -482,14 +542,23 @@ declare var process: { env: Record<string, string | undefined> };
     Date.prototype.toTimeString = function (this: Date): string {
       try {
         if (spoofingEnabled && timezoneData) {
-          const formatter = new Intl.DateTimeFormat("en-US", {
+          const offsetMinutes = getIntlBasedOffset(
+            this,
+            timezoneData.identifier,
+            timezoneData.offset
+          );
+          const formatter = new OriginalDateTimeFormat("en-US", {
             timeZone: timezoneData.identifier,
             hour: "2-digit",
             minute: "2-digit",
             second: "2-digit",
             hour12: false,
           });
-          return formatter.format(this);
+          const parts = formatter.formatToParts(this);
+          const get = (type: string): string => parts.find((p) => p.type === type)?.value ?? "";
+          const gmtOffset = formatGMTOffset(offsetMinutes);
+          const longName = getLongTimezoneName(this, timezoneData.identifier);
+          return `${get("hour")}:${get("minute")}:${get("second")} ${gmtOffset} (${longName})`;
         }
         return originalToTimeString.call(this);
       } catch (error) {

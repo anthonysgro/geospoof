@@ -49,6 +49,7 @@ export interface ContentScriptTestInterface {
       getTimezoneOffset: () => number;
       toString: () => string;
       toTimeString: () => string;
+      toDateString: () => string;
       toLocaleString: (locales?: string | string[], options?: Intl.DateTimeFormatOptions) => string;
       toLocaleDateString: (
         locales?: string | string[],
@@ -76,6 +77,7 @@ export interface ContentScriptTestInterface {
     DateTimeFormat: typeof Intl.DateTimeFormat;
     toString: typeof Date.prototype.toString;
     toTimeString: typeof Date.prototype.toTimeString;
+    toDateString: typeof Date.prototype.toDateString;
     toLocaleString: typeof Date.prototype.toLocaleString;
     toLocaleDateString: typeof Date.prototype.toLocaleDateString;
     toLocaleTimeString: typeof Date.prototype.toLocaleTimeString;
@@ -159,6 +161,7 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
   const originalGetTimezoneOffset = dateProto["getTimezoneOffset"] as (this: Date) => number;
   const originalToString = dateProto["toString"] as (this: Date) => string;
   const originalToTimeString = dateProto["toTimeString"] as (this: Date) => string;
+  const originalToDateString = dateProto["toDateString"] as (this: Date) => string;
   const originalToLocaleString = dateProto["toLocaleString"] as (
     this: Date,
     locales?: string | string[],
@@ -205,6 +208,58 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
   // Validate initial timezone
   if (timezoneOverride && !validateTimezoneData(timezoneOverride)) {
     timezoneOverride = null;
+  }
+
+  // ── Timezone formatting helpers ──────────────────────────────────────
+
+  /** Parse a GMT offset string like "GMT+5:30" or "GMT-8" into minutes from UTC. */
+  function parseGMTOffset(gmtString: string): number {
+    if (gmtString === "GMT" || gmtString === "UTC") return 0;
+    const match = gmtString.match(/^GMT([+-])(\d{1,2})(?::(\d{2}))?$/);
+    if (!match) return 0;
+    const sign = match[1] === "+" ? 1 : -1;
+    const hours = parseInt(match[2], 10);
+    const minutes = parseInt(match[3] || "0", 10);
+    return sign * (hours * 60 + minutes);
+  }
+
+  /** Resolve the actual UTC offset for a given date and IANA timezone. */
+  function getIntlBasedOffset(date: Date, timezoneId: string, fallbackOffset: number): number {
+    try {
+      const formatter = new OriginalDateTimeFormat("en-US", {
+        timeZone: timezoneId,
+        timeZoneName: "shortOffset",
+      });
+      const parts = formatter.formatToParts(date);
+      const tzPart = parts.find((p) => p.type === "timeZoneName");
+      return parseGMTOffset(tzPart?.value ?? "GMT");
+    } catch {
+      return fallbackOffset;
+    }
+  }
+
+  /** Convert an offset in minutes from UTC to a `GMT±HHMM` string. */
+  function formatGMTOffset(offsetMinutes: number): string {
+    const sign = offsetMinutes >= 0 ? "+" : "-";
+    const abs = Math.abs(offsetMinutes);
+    const hours = Math.floor(abs / 60);
+    const minutes = abs % 60;
+    return `GMT${sign}${String(hours).padStart(2, "0")}${String(minutes).padStart(2, "0")}`;
+  }
+
+  /** Extract the long timezone name for a date and IANA tz. */
+  function getLongTimezoneName(date: Date, timezoneId: string): string {
+    try {
+      const formatter = new OriginalDateTimeFormat("en-US", {
+        timeZone: timezoneId,
+        timeZoneName: "long",
+      });
+      const parts = formatter.formatToParts(date);
+      const tzPart = parts.find((p) => p.type === "timeZoneName");
+      return tzPart?.value ?? timezoneId;
+    } catch {
+      return timezoneId;
+    }
   }
 
   // Watch callbacks storage
@@ -309,10 +364,37 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
   };
 
   // Override Date formatting methods
+
+  const toDateString = function (this: Date): string {
+    if (spoofingEnabled && timezoneOverride) {
+      try {
+        const formatter = new OriginalDateTimeFormat("en-US", {
+          timeZone: timezoneOverride.identifier,
+          weekday: "short",
+          year: "numeric",
+          month: "short",
+          day: "2-digit",
+        });
+        const parts = formatter.formatToParts(this);
+        const get = (type: string): string => parts.find((p) => p.type === type)?.value ?? "";
+        return `${get("weekday")} ${get("month")} ${get("day")} ${get("year")}`;
+      } catch (error) {
+        console.error("[GeoSpoof Injected] Error in toDateString override:", error);
+        return originalToDateString.call(this);
+      }
+    }
+    return originalToDateString.call(this);
+  };
+
   const toString = function (this: Date): string {
     if (spoofingEnabled && timezoneOverride) {
       try {
-        const formatter = new Intl.DateTimeFormat("en-US", {
+        const offsetMinutes = getIntlBasedOffset(
+          this,
+          timezoneOverride.identifier,
+          timezoneOverride.offset
+        );
+        const formatter = new OriginalDateTimeFormat("en-US", {
           timeZone: timezoneOverride.identifier,
           weekday: "short",
           year: "numeric",
@@ -323,8 +405,13 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
           second: "2-digit",
           hour12: false,
         });
-        return formatter.format(this);
-      } catch {
+        const parts = formatter.formatToParts(this);
+        const get = (type: string): string => parts.find((p) => p.type === type)?.value ?? "";
+        const gmtOffset = formatGMTOffset(offsetMinutes);
+        const longName = getLongTimezoneName(this, timezoneOverride.identifier);
+        return `${get("weekday")} ${get("month")} ${get("day")} ${get("year")} ${get("hour")}:${get("minute")}:${get("second")} ${gmtOffset} (${longName})`;
+      } catch (error) {
+        console.error("[GeoSpoof Injected] Error in toString override:", error);
         return originalToString.call(this);
       }
     }
@@ -334,15 +421,25 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
   const toTimeString = function (this: Date): string {
     if (spoofingEnabled && timezoneOverride) {
       try {
-        const formatter = new Intl.DateTimeFormat("en-US", {
+        const offsetMinutes = getIntlBasedOffset(
+          this,
+          timezoneOverride.identifier,
+          timezoneOverride.offset
+        );
+        const formatter = new OriginalDateTimeFormat("en-US", {
           timeZone: timezoneOverride.identifier,
           hour: "2-digit",
           minute: "2-digit",
           second: "2-digit",
           hour12: false,
         });
-        return formatter.format(this);
-      } catch {
+        const parts = formatter.formatToParts(this);
+        const get = (type: string): string => parts.find((p) => p.type === type)?.value ?? "";
+        const gmtOffset = formatGMTOffset(offsetMinutes);
+        const longName = getLongTimezoneName(this, timezoneOverride.identifier);
+        return `${get("hour")}:${get("minute")}:${get("second")} ${gmtOffset} (${longName})`;
+      } catch (error) {
+        console.error("[GeoSpoof Injected] Error in toTimeString override:", error);
         return originalToTimeString.call(this);
       }
     }
@@ -450,6 +547,7 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
         getTimezoneOffset,
         toString,
         toTimeString,
+        toDateString,
         toLocaleString,
         toLocaleDateString,
         toLocaleTimeString,
@@ -481,6 +579,7 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
       DateTimeFormat: OriginalDateTimeFormat,
       toString: originalToString,
       toTimeString: originalToTimeString,
+      toDateString: originalToDateString,
       toLocaleString: originalToLocaleString,
       toLocaleDateString: originalToLocaleDateString,
       toLocaleTimeString: originalToLocaleTimeString,
