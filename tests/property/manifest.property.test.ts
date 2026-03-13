@@ -1,11 +1,15 @@
 /**
  * Property-Based Tests for Manifest Configuration
- * Feature: geolocation-spoof-extension-mvp, mv3-manifest-compat
+ * Feature: geolocation-spoof-extension-mvp, mv3-manifest-compat, chromium-browser-compat
  */
 
-import fs from "fs";
-import path from "path";
 import type { Manifest } from "../../src/shared/types/manifest";
+import { generateManifest } from "../../src/build/manifest";
+
+/** Helper: generate a Firefox manifest with a test version and cast to Manifest type. */
+function firefoxManifest(): Manifest {
+  return generateManifest("firefox", "0.0.1") as unknown as Manifest;
+}
 
 /**
  * Example 10: Manifest Permissions
@@ -16,9 +20,7 @@ import type { Manifest } from "../../src/shared/types/manifest";
  * and uses MV3 structure (host_permissions for <all_urls>).
  */
 test("Example 10: Manifest Permissions - manifest.json contains required permissions", () => {
-  const manifestPath = path.join(__dirname, "../../manifest.json");
-  const manifestContent = fs.readFileSync(manifestPath, "utf-8");
-  const manifest = JSON.parse(manifestContent) as Manifest;
+  const manifest = firefoxManifest();
 
   // Required permissions (MV3: <all_urls> moved to host_permissions)
   const requiredPermissions = ["storage", "privacy", "scripting", "alarms"];
@@ -68,13 +70,11 @@ test("Example 10: Manifest Permissions - manifest.json contains required permiss
 /**
  * Property: Manifest structure is valid JSON and contains required fields
  *
- * This property verifies that the manifest.json file is valid JSON and
- * contains all required fields for a Firefox MV3 extension.
+ * This property verifies that the generated manifest contains all required
+ * fields for a Firefox MV3 extension.
  */
 test("Manifest is valid JSON with required fields", () => {
-  const manifestPath = path.join(__dirname, "../../manifest.json");
-  const manifestContent = fs.readFileSync(manifestPath, "utf-8");
-  const manifest = JSON.parse(manifestContent) as Manifest;
+  const manifest = firefoxManifest();
 
   // Required fields
   expect(manifest.manifest_version).toBeDefined();

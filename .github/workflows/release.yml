@@ -19,11 +19,13 @@ jobs:
       - run: npm ci
       - run: cp .env.example .env
       - run: npm run package:xpi
+      - run: npm run package:chromium
       - run: npm run package:source
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             web-ext-artifacts/geospoof-*.xpi
+            web-ext-artifacts/geospoof-chromium-*.zip
             geospoof-source-*.zip
           generate_release_notes: true

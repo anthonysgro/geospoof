@@ -169,6 +169,8 @@ export function isRestrictedUrl(url: string | undefined): boolean {
     "about:",
     "moz-extension:",
     "chrome:",
+    "chrome-extension:",
+    "edge:",
     "resource:",
     "view-source:",
     "data:",
@@ -180,6 +182,7 @@ export function isRestrictedUrl(url: string | undefined): boolean {
     "addons.mozilla.org",
     "accounts.firefox.com",
     "testpilot.firefox.com",
+    "chrome.google.com",
   ];
 
   for (const prefix of restrictedPrefixes) {

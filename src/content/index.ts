@@ -25,6 +25,12 @@ interface SettingsEventDetail {
 }
 
 /**
+ * Build-time constant set by the browser target Vite plugin.
+ * `true` when building for Chromium-based browsers, `false` for Firefox.
+ */
+declare const __CHROMIUM__: boolean;
+
+/**
  * Declare Firefox-specific `cloneInto` helper that makes objects accessible
  * across content-script / page-context boundaries.
  */
@@ -68,27 +74,31 @@ function updateInjectedScript(): void {
 }
 
 // Inject the override script into the page context IMMEDIATELY.
-// Synchronous XHR is intentional: content scripts run at document_start and
-// must install API overrides before any page JavaScript executes. Async
+// On Chromium, the injected script is loaded by the manifest as a content script
+// with world: "MAIN", so no XHR injection is needed.
+// On Firefox, synchronous XHR is intentional: content scripts run at document_start
+// and must install API overrides before any page JavaScript executes. Async
 // alternatives (fetch, <script src>) create a race window where pages can
 // observe the real geolocation API. Sync XHR from a content script does not
 // block the browser UI thread — it only blocks this content script's execution,
 // which is the desired behavior.
-try {
-  const xhr = new XMLHttpRequest();
-  xhr.open("GET", browser.runtime.getURL("content/injected.js"), false); // synchronous
-  xhr.send();
+if (!__CHROMIUM__) {
+  try {
+    const xhr = new XMLHttpRequest();
+    xhr.open("GET", browser.runtime.getURL("content/injected.js"), false); // synchronous
+    xhr.send();
 
-  if (xhr.status === 200) {
-    const script = document.createElement("script");
-    script.textContent = xhr.responseText;
-    (document.head || document.documentElement).prepend(script);
-    script.remove();
-  } else {
-    console.error("[GeoSpoof Content] Failed to load injected script:", xhr.status);
+    if (xhr.status === 200) {
+      const script = document.createElement("script");
+      script.textContent = xhr.responseText;
+      (document.head || document.documentElement).prepend(script);
+      script.remove();
+    } else {
+      console.error("[GeoSpoof Content] Failed to load injected script:", xhr.status);
+    }
+  } catch (e) {
+    console.error("[GeoSpoof Content] Failed to inject script:", e);
   }
-} catch (e) {
-  console.error("[GeoSpoof Content] Failed to inject script:", e);
 }
 
 // Send initial settings after script is injected

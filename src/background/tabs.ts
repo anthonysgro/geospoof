@@ -90,6 +90,8 @@ export function isRestrictedUrl(url: string): boolean {
     "about:",
     "moz-extension:",
     "chrome:",
+    "chrome-extension:",
+    "edge:",
     "resource:",
     "view-source:",
     "data:",
@@ -97,7 +99,12 @@ export function isRestrictedUrl(url: string): boolean {
     "file:",
   ];
 
-  const restrictedDomains = ["addons.mozilla.org", "accounts.firefox.com", "testpilot.firefox.com"];
+  const restrictedDomains = [
+    "addons.mozilla.org",
+    "accounts.firefox.com",
+    "testpilot.firefox.com",
+    "chrome.google.com",
+  ];
 
   for (const prefix of restrictedPrefixes) {
     if (url.startsWith(prefix)) {

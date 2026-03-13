@@ -7,6 +7,7 @@
  * Timer-based retry logic uses browser.alarms instead of setTimeout.
  */
 
+import type { Runtime, Tabs, Alarms } from "webextension-polyfill";
 import type { Message, UpdateSettingsPayload } from "@/shared/types/messages";
 import { loadSettings } from "./settings";
 import { setWebRTCProtection } from "./webrtc";
@@ -142,7 +143,7 @@ export { initialize };
 
 // --- Alarm handler ---
 
-async function onAlarm(alarm: browser.alarms.Alarm): Promise<void> {
+async function onAlarm(alarm: Alarms.Alarm): Promise<void> {
   const parsed = parseAlarmName(alarm.name);
   if (!parsed) return;
 
@@ -187,11 +188,11 @@ export { onAlarm };
 
 // --- Event Listeners (registered synchronously at top level) ---
 
-browser.runtime.onMessage.addListener((message: Message, sender: browser.runtime.MessageSender) => {
+browser.runtime.onMessage.addListener((message: Message, sender: Runtime.MessageSender) => {
   return handleMessage(message, sender);
 });
 
-browser.runtime.onInstalled.addListener((details: browser.runtime._OnInstalledDetails) => {
+browser.runtime.onInstalled.addListener((details: Runtime.OnInstalledDetailsType) => {
   if (details.reason === "install") {
     console.log("Extension installed - onboarding will be displayed");
   }
@@ -202,12 +203,12 @@ browser.runtime.onStartup.addListener(() => {
   void initialize();
 });
 
-browser.alarms.onAlarm.addListener((alarm: browser.alarms.Alarm) => {
+browser.alarms.onAlarm.addListener((alarm: Alarms.Alarm) => {
   void onAlarm(alarm);
 });
 
 if (browser.tabs && browser.tabs.onCreated) {
-  browser.tabs.onCreated.addListener((tab: browser.tabs.Tab) => {
+  browser.tabs.onCreated.addListener((tab: Tabs.Tab) => {
     void (async () => {
       const settings = await loadSettings();
       const { enabled, location, timezone } = settings;
@@ -231,7 +232,7 @@ if (browser.tabs && browser.tabs.onCreated) {
 
 if (browser.tabs && browser.tabs.onUpdated) {
   browser.tabs.onUpdated.addListener(
-    (tabId: number, changeInfo: browser.tabs._OnUpdatedChangeInfo, tab: browser.tabs.Tab) => {
+    (tabId: number, changeInfo: Tabs.OnUpdatedChangeInfoType, tab: Tabs.Tab) => {
       if (changeInfo.status === "loading") {
         void (async () => {
           const settings = await loadSettings();
