@@ -54,16 +54,17 @@ When protection is enabled, GeoSpoof overrides the following browser APIs on eve
 
 ### Timezone
 
-| API                                               | Behavior                                                                       |
-| ------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `Date.prototype.getTimezoneOffset()`              | Returns the correct offset for the spoofed timezone, including DST transitions |
-| `Intl.DateTimeFormat()` constructor               | Injects the spoofed IANA timezone into all format options                      |
-| `Intl.DateTimeFormat.prototype.resolvedOptions()` | Returns the spoofed timezone identifier                                        |
-| `Date.prototype.toString()`                       | Formats using the spoofed timezone                                             |
-| `Date.prototype.toTimeString()`                   | Formats using the spoofed timezone                                             |
-| `Date.prototype.toLocaleString()`                 | Formats using the spoofed timezone                                             |
-| `Date.prototype.toLocaleDateString()`             | Formats using the spoofed timezone                                             |
-| `Date.prototype.toLocaleTimeString()`             | Formats using the spoofed timezone                                             |
+| API                                               | Behavior                                                                                                         |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `Date.prototype.getTimezoneOffset()`              | Returns the correct offset for the spoofed timezone, including DST transitions                                   |
+| `Intl.DateTimeFormat()` constructor               | Injects the spoofed IANA timezone into all format options                                                        |
+| `Intl.DateTimeFormat.prototype.resolvedOptions()` | Returns the spoofed timezone identifier                                                                          |
+| `Date.prototype.toString()`                       | Outputs `{weekday} {month} {day} {year} {HH:mm:ss} GMT{±HHMM} ({timezone long name})` using the spoofed timezone |
+| `Date.prototype.toDateString()`                   | Outputs `{weekday} {month} {day} {year}` formatted in the spoofed timezone                                       |
+| `Date.prototype.toTimeString()`                   | Outputs `{HH:mm:ss} GMT{±HHMM} ({timezone long name})` using the spoofed timezone                                |
+| `Date.prototype.toLocaleString()`                 | Delegates to `Intl.DateTimeFormat` with the spoofed timezone injected                                            |
+| `Date.prototype.toLocaleDateString()`             | Delegates to `Intl.DateTimeFormat` with the spoofed timezone injected                                            |
+| `Date.prototype.toLocaleTimeString()`             | Delegates to `Intl.DateTimeFormat` with the spoofed timezone injected                                            |
 
 ### WebRTC
 

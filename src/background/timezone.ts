@@ -6,16 +6,14 @@
 import type { Timezone } from "@/shared/types/settings";
 import { isValidIANATimezone } from "@/shared/utils/type-guards";
 import { getCacheKey } from "./geocoding";
+import { sessionGet, sessionSet, sessionClearNamespace } from "./session-cache";
 import { find } from "browser-geo-tz";
-
-// In-memory cache for timezone lookups
-const timezoneCache: Map<string, Timezone> = new Map();
 
 /**
  * Clear the timezone cache (for testing)
  */
-export function clearTimezoneCache(): void {
-  timezoneCache.clear();
+export async function clearTimezoneCache(): Promise<void> {
+  await sessionClearNamespace("timezone");
 }
 
 /**
@@ -102,8 +100,9 @@ export async function getTimezoneForCoordinates(
   longitude: number
 ): Promise<Timezone> {
   const cacheKey = getCacheKey(latitude, longitude);
-  if (timezoneCache.has(cacheKey)) {
-    return timezoneCache.get(cacheKey)!;
+  const cached = await sessionGet<Timezone>("timezone:" + cacheKey);
+  if (cached !== undefined) {
+    return cached;
   }
 
   try {
@@ -111,7 +110,7 @@ export async function getTimezoneForCoordinates(
 
     if (results.length === 0) {
       const fallback = buildFallbackTimezone(longitude);
-      timezoneCache.set(cacheKey, fallback);
+      await sessionSet("timezone:" + cacheKey, fallback);
       return fallback;
     }
 
@@ -119,20 +118,20 @@ export async function getTimezoneForCoordinates(
 
     if (!isValidIANATimezone(identifier)) {
       const fallback = buildFallbackTimezone(longitude);
-      timezoneCache.set(cacheKey, fallback);
+      await sessionSet("timezone:" + cacheKey, fallback);
       return fallback;
     }
 
     const { offset, dstOffset } = computeOffsets(identifier);
 
     const timezone: Timezone = { identifier, offset, dstOffset };
-    timezoneCache.set(cacheKey, timezone);
+    await sessionSet("timezone:" + cacheKey, timezone);
     return timezone;
   } catch (error) {
     console.warn("Timezone lookup failed, using fallback:", error);
 
     const fallback = buildFallbackTimezone(longitude);
-    timezoneCache.set(cacheKey, fallback);
+    await sessionSet("timezone:" + cacheKey, fallback);
     return fallback;
   }
 }

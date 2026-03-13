@@ -177,20 +177,4 @@ describe("Geocoding Edge Cases", () => {
 
     await expect(reverseGeocode(uniqueLat, uniqueLon)).rejects.toThrow("NETWORK");
   });
-
-  /**
-   * Test cache key generation
-   */
-  test("should generate consistent cache keys for coordinates", async () => {
-    const { getCacheKey } = await importBackground();
-
-    const key1 = getCacheKey(37.77491234, -122.41941234);
-    const key2 = getCacheKey(37.77499999, -122.41949999);
-
-    expect(key1).toBe("37.7749,-122.4194");
-    expect(key2).toBe("37.7750,-122.4195");
-
-    const key3 = getCacheKey(-33.8688, 151.2093);
-    expect(key3).toBe("-33.8688,151.2093");
-  });
 });

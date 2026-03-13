@@ -42,11 +42,43 @@ describe("Multi-Tab Integration Tests", () => {
     test("should handle tabs without content scripts gracefully", async () => {
       // Setup: Mix of tabs with and without content scripts
       const tabs = [
-        { id: 1, url: "https://example.com" },
-        { id: 2, url: "about:blank" },
-        { id: 3, url: "moz-extension://abc123" },
-        { id: 4, url: "https://test.com" },
-      ];
+        {
+          id: 1,
+          url: "https://example.com",
+          index: 0,
+          highlighted: false,
+          active: false,
+          pinned: false,
+          incognito: false,
+        },
+        {
+          id: 2,
+          url: "about:blank",
+          index: 1,
+          highlighted: false,
+          active: false,
+          pinned: false,
+          incognito: false,
+        },
+        {
+          id: 3,
+          url: "moz-extension://abc123",
+          index: 2,
+          highlighted: false,
+          active: false,
+          pinned: false,
+          incognito: false,
+        },
+        {
+          id: 4,
+          url: "https://test.com",
+          index: 3,
+          highlighted: false,
+          active: false,
+          pinned: false,
+          incognito: false,
+        },
+      ] as browser.tabs.Tab[];
 
       tabsQuery.mockResolvedValue(tabs);
 
@@ -314,9 +346,25 @@ describe("Multi-Tab Integration Tests", () => {
       storageSet.mockResolvedValue(undefined);
 
       const tabs = [
-        { id: 1, url: "https://example1.com" },
-        { id: 2, url: "https://example2.com" },
-      ];
+        {
+          id: 1,
+          url: "https://example1.com",
+          index: 0,
+          highlighted: false,
+          active: false,
+          pinned: false,
+          incognito: false,
+        },
+        {
+          id: 2,
+          url: "https://example2.com",
+          index: 1,
+          highlighted: false,
+          active: false,
+          pinned: false,
+          incognito: false,
+        },
+      ] as browser.tabs.Tab[];
       tabsQuery.mockResolvedValue(tabs);
 
       const messagesSent: TimestampedMessage[] = [];

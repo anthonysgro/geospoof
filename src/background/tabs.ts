@@ -48,9 +48,9 @@ export async function injectContentScriptIntoExistingTabs(): Promise<void> {
           }
         } catch {
           try {
-            await browser.tabs.executeScript(tab.id!, {
-              file: "content/content.js",
-              runAt: "document_start",
+            await browser.scripting.executeScript({
+              target: { tabId: tab.id! },
+              files: ["content/content.js"],
             });
             console.log(`Injected content script into tab ${tab.id}`);
           } catch (error) {

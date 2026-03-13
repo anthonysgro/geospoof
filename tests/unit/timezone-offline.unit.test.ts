@@ -105,8 +105,8 @@ describe("computeOffsets", () => {
 });
 
 describe("Known-city lookups", () => {
-  beforeEach(() => {
-    background.clearTimezoneCache();
+  beforeEach(async () => {
+    await background.clearTimezoneCache();
     mockedFind.mockReset();
   });
 

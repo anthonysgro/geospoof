@@ -4,7 +4,7 @@
  * Validates: Requirements 4.3, 6.1, 6.2, 6.3
  */
 
-import { storageData } from "../../setup";
+import { storageData, sessionStorageData } from "../../setup";
 import { importBackground } from "../../helpers/import-background";
 import { DEFAULT_SETTINGS } from "@/shared/types/settings";
 
@@ -53,8 +53,8 @@ describe("SYNC_VPN message handler", () => {
    */
   test("should handle SYNC_VPN message and return success response", async () => {
     const { handleMessage, clearIpGeoCache, resetRateLimiter } = await importBackground();
-    clearIpGeoCache();
-    resetRateLimiter();
+    await clearIpGeoCache();
+    await resetRateLimiter();
 
     mockFetchForVpnSync("203.0.113.42", 40.7128, -74.006, "New York", "United States");
 
@@ -78,8 +78,8 @@ describe("SYNC_VPN message handler", () => {
   test("should persist vpnSyncEnabled on success", async () => {
     const { handleMessage, clearIpGeoCache, resetRateLimiter, loadSettings } =
       await importBackground();
-    clearIpGeoCache();
-    resetRateLimiter();
+    await clearIpGeoCache();
+    await resetRateLimiter();
 
     mockFetchForVpnSync("198.51.100.1", 51.5074, -0.1278, "London", "United Kingdom");
 
@@ -99,8 +99,8 @@ describe("SYNC_VPN message handler", () => {
   test("should call handleSetLocation with coordinates from VPN sync", async () => {
     const { handleMessage, clearIpGeoCache, resetRateLimiter, loadSettings } =
       await importBackground();
-    clearIpGeoCache();
-    resetRateLimiter();
+    await clearIpGeoCache();
+    await resetRateLimiter();
 
     mockFetchForVpnSync("203.0.113.42", 35.6762, 139.6503, "Tokyo", "Japan");
 
@@ -121,8 +121,8 @@ describe("SYNC_VPN message handler", () => {
    */
   test("should return error response when IP detection fails", async () => {
     const { handleMessage, clearIpGeoCache, resetRateLimiter } = await importBackground();
-    clearIpGeoCache();
-    resetRateLimiter();
+    await clearIpGeoCache();
+    await resetRateLimiter();
 
     vi.mocked(fetch).mockRejectedValueOnce(new Error("Network error"));
 
@@ -143,8 +143,8 @@ describe("SYNC_VPN message handler", () => {
    */
   test("should return error response when geolocation fails", async () => {
     const { handleMessage, clearIpGeoCache, resetRateLimiter } = await importBackground();
-    clearIpGeoCache();
-    resetRateLimiter();
+    await clearIpGeoCache();
+    await resetRateLimiter();
 
     vi.mocked(fetch)
       .mockResolvedValueOnce({
@@ -174,8 +174,8 @@ describe("SYNC_VPN message handler", () => {
   test("should not persist vpnSyncEnabled on failure", async () => {
     const { handleMessage, clearIpGeoCache, resetRateLimiter, loadSettings } =
       await importBackground();
-    clearIpGeoCache();
-    resetRateLimiter();
+    await clearIpGeoCache();
+    await resetRateLimiter();
 
     vi.mocked(fetch).mockRejectedValueOnce(new Error("Network error"));
 
@@ -194,8 +194,8 @@ describe("SYNC_VPN message handler", () => {
    */
   test("should default forceRefresh to false when no payload provided", async () => {
     const { handleMessage, clearIpGeoCache, resetRateLimiter } = await importBackground();
-    clearIpGeoCache();
-    resetRateLimiter();
+    await clearIpGeoCache();
+    await resetRateLimiter();
 
     mockFetchForVpnSync("203.0.113.42", 48.8566, 2.3522, "Paris", "France");
 
@@ -215,8 +215,8 @@ describe("DISABLE_VPN_SYNC message handler", () => {
   test("should set vpnSyncEnabled to false in storage", async () => {
     const { handleMessage, clearIpGeoCache, resetRateLimiter, loadSettings, updateSettings } =
       await importBackground();
-    clearIpGeoCache();
-    resetRateLimiter();
+    await clearIpGeoCache();
+    await resetRateLimiter();
 
     // First enable VPN sync
     await updateSettings({ vpnSyncEnabled: true });
@@ -240,23 +240,27 @@ describe("DISABLE_VPN_SYNC message handler", () => {
    * Validates: Requirements 9.3
    */
   test("should clear the IP geolocation cache", async () => {
-    const { handleMessage, ipGeoCache, resetRateLimiter } = await importBackground();
-    resetRateLimiter();
+    const { handleMessage, resetRateLimiter } = await importBackground();
+    await resetRateLimiter();
 
-    // Populate cache with a fake entry
-    ipGeoCache.set("203.0.113.42", {
+    // Populate session storage cache with a fake entry (using the "cache:" prefix from session-cache)
+    sessionStorageData["cache:ipGeo:203.0.113.42"] = {
       latitude: 40.7128,
       longitude: -74.006,
       city: "New York",
       country: "United States",
       ip: "203.0.113.42",
-    });
-    expect(ipGeoCache.size).toBe(1);
+    };
+    expect(
+      Object.keys(sessionStorageData).filter((k) => k.startsWith("cache:ipGeo:"))
+    ).toHaveLength(1);
 
     // Send DISABLE_VPN_SYNC
     await handleMessage({ type: "DISABLE_VPN_SYNC" }, {} as browser.runtime.MessageSender);
 
-    expect(ipGeoCache.size).toBe(0);
+    expect(
+      Object.keys(sessionStorageData).filter((k) => k.startsWith("cache:ipGeo:"))
+    ).toHaveLength(0);
   });
 
   /**
@@ -266,8 +270,8 @@ describe("DISABLE_VPN_SYNC message handler", () => {
   test("should prevent auto-sync on next startup after disabling", async () => {
     const { handleMessage, clearIpGeoCache, resetRateLimiter, updateSettings } =
       await importBackground();
-    clearIpGeoCache();
-    resetRateLimiter();
+    await clearIpGeoCache();
+    await resetRateLimiter();
 
     // Enable VPN sync, then disable it
     await updateSettings({ vpnSyncEnabled: true });

@@ -252,8 +252,8 @@ describe("Property 20: Settings Initialization Responsiveness", () => {
           expect(duration).toBeLessThan(1000);
 
           // Verify badge was updated
-          expect(browser.browserAction.setBadgeBackgroundColor).toHaveBeenCalled();
-          expect(browser.browserAction.setBadgeText).toHaveBeenCalled();
+          expect(browser.action.setBadgeBackgroundColor).toHaveBeenCalled();
+          expect(browser.action.setBadgeText).toHaveBeenCalled();
 
           // Verify settings were broadcast to tabs if protection enabled
           if (settingsData.enabled && settingsData.location) {
@@ -300,13 +300,13 @@ describe("Property 20: Settings Initialization Responsiveness", () => {
         expect(duration).toBeLessThan(1000);
 
         // Verify badge reflects protection status
-        expect(browser.browserAction.setBadgeBackgroundColor).toHaveBeenCalledWith(
+        expect(browser.action.setBadgeBackgroundColor).toHaveBeenCalledWith(
           expect.objectContaining({
             color: enabled ? "green" : "gray",
           })
         );
 
-        expect(browser.browserAction.setBadgeText).toHaveBeenCalledWith(
+        expect(browser.action.setBadgeText).toHaveBeenCalledWith(
           expect.objectContaining({
             text: enabled ? "✓" : "",
           })
@@ -394,13 +394,13 @@ describe("Property 20: Settings Initialization Responsiveness", () => {
     expect(duration).toBeLessThan(1000);
 
     // Verify badge was updated with default state (disabled)
-    expect(browser.browserAction.setBadgeBackgroundColor).toHaveBeenCalledWith(
+    expect(browser.action.setBadgeBackgroundColor).toHaveBeenCalledWith(
       expect.objectContaining({
         color: "gray",
       })
     );
 
-    expect(browser.browserAction.setBadgeText).toHaveBeenCalledWith(
+    expect(browser.action.setBadgeText).toHaveBeenCalledWith(
       expect.objectContaining({
         text: "",
       })

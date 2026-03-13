@@ -35,8 +35,8 @@ const { find: findMock } = await import("browser-geo-tz");
 const mockedFind = vi.mocked(findMock);
 
 describe("User Workflow Integration Tests", () => {
-  beforeEach(() => {
-    background.clearTimezoneCache();
+  beforeEach(async () => {
+    await background.clearTimezoneCache();
     mockedFind.mockReset();
 
     // Default storage mock
@@ -347,7 +347,7 @@ describe("User Workflow Integration Tests", () => {
       ];
 
       for (const location of boundaryLocations) {
-        background.clearTimezoneCache();
+        await background.clearTimezoneCache();
 
         // Mock timezone resolution via browser-geo-tz
         mockedFind.mockResolvedValue(["Etc/GMT"]);

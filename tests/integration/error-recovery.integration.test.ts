@@ -27,9 +27,9 @@ const { find: findMock } = await import("browser-geo-tz");
 const mockedFind = vi.mocked(findMock);
 
 describe("Error Recovery Integration Tests", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     // Clear timezone cache to prevent cache hits from previous tests
-    background.clearTimezoneCache();
+    await background.clearTimezoneCache();
     mockedFind.mockReset();
 
     // Default storage mock
@@ -696,7 +696,7 @@ describe("Error Recovery Integration Tests", () => {
       expect(savedSettings.timezone!.identifier).toBeDefined();
 
       // Assert: Badge updated
-      expect(browser.browserAction.setBadgeBackgroundColor).toHaveBeenCalledWith(
+      expect(browser.action.setBadgeBackgroundColor).toHaveBeenCalledWith(
         expect.objectContaining({ color: "green" })
       );
     });
@@ -704,9 +704,9 @@ describe("Error Recovery Integration Tests", () => {
 });
 
 describe("Timezone Error Recovery Tests", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     // Clear timezone cache to prevent cache hits from previous tests
-    background.clearTimezoneCache();
+    await background.clearTimezoneCache();
     mockedFind.mockReset();
 
     // Reset storage to clean state before each test

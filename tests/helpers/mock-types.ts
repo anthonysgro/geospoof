@@ -229,15 +229,15 @@ export function expectWebRTCPolicyClear() {
   return expect(policy["clear"]);
 }
 
-/** expect(browser.browserAction.setBadgeBackgroundColor) without detaching. */
+/** expect(browser.action.setBadgeBackgroundColor) without detaching. */
 export function expectBadgeColor() {
-  const action = browser.browserAction as unknown as Record<string, unknown>;
+  const action = browser.action as unknown as Record<string, unknown>;
   return expect(action["setBadgeBackgroundColor"]);
 }
 
-/** expect(browser.browserAction.setBadgeText) without detaching. */
+/** expect(browser.action.setBadgeText) without detaching. */
 export function expectBadgeText() {
-  const action = browser.browserAction as unknown as Record<string, unknown>;
+  const action = browser.action as unknown as Record<string, unknown>;
   return expect(action["setBadgeText"]);
 }
 

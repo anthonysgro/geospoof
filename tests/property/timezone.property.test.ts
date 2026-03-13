@@ -40,7 +40,7 @@ test("Property 8: IANA Timezone Identifier Format", async () => {
       }),
       async ({ latitude, longitude }) => {
         const { clearTimezoneCache } = await importBackground();
-        clearTimezoneCache();
+        await clearTimezoneCache();
 
         // Mock browser-geo-tz to return a known timezone
         mockedFind.mockResolvedValue(["America/Los_Angeles"]);
@@ -70,7 +70,7 @@ test("Timezone fallback when browser-geo-tz fails", async () => {
       }),
       async ({ latitude, longitude }) => {
         const { getTimezoneForCoordinates, clearTimezoneCache } = await importBackground();
-        clearTimezoneCache();
+        await clearTimezoneCache();
 
         // Mock browser-geo-tz failure
         mockedFind.mockRejectedValue(new Error("CDN unavailable"));

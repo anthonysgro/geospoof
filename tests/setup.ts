@@ -8,6 +8,7 @@ import { vi, beforeEach } from "vitest";
 
 // In-memory storage backing for the mock
 const storageData: Record<string, unknown> = {};
+const sessionStorageData: Record<string, unknown> = {};
 
 // Mock browser WebExtension API
 const browserMock: typeof browser = {
@@ -33,10 +34,38 @@ const browserMock: typeof browser = {
         return Promise.resolve();
       }),
     },
+    session: {
+      get: vi.fn((keyOrNull: string | null) => {
+        if (keyOrNull === null) {
+          return Promise.resolve({ ...sessionStorageData });
+        }
+        return Promise.resolve(
+          keyOrNull in sessionStorageData ? { [keyOrNull]: sessionStorageData[keyOrNull] } : {}
+        );
+      }),
+      set: vi.fn((obj: Record<string, unknown>) => {
+        Object.assign(sessionStorageData, obj);
+        return Promise.resolve();
+      }),
+      remove: vi.fn((keys: string | string[]) => {
+        const keyList = Array.isArray(keys) ? keys : [keys];
+        for (const k of keyList) {
+          delete sessionStorageData[k];
+        }
+        return Promise.resolve();
+      }),
+      clear: vi.fn(() => {
+        for (const key of Object.keys(sessionStorageData)) {
+          delete sessionStorageData[key];
+        }
+        return Promise.resolve();
+      }),
+    },
   },
   runtime: {
     onMessage: { addListener: vi.fn(), removeListener: vi.fn() },
     onInstalled: { addListener: vi.fn() },
+    onStartup: { addListener: vi.fn() },
     getURL: vi.fn((path: string) => `moz-extension://test/${path}`),
     sendMessage: vi.fn(),
     getManifest: vi.fn(() => ({ version: "1.0.0", name: "GeoSpoof" })),
@@ -51,9 +80,15 @@ const browserMock: typeof browser = {
     setBadgeBackgroundColor: vi.fn().mockResolvedValue(undefined),
     setBadgeText: vi.fn().mockResolvedValue(undefined),
   },
-  browserAction: {
-    setBadgeBackgroundColor: vi.fn().mockResolvedValue(undefined),
-    setBadgeText: vi.fn().mockResolvedValue(undefined),
+  scripting: {
+    executeScript: vi.fn().mockResolvedValue([]),
+  },
+  alarms: {
+    create: vi.fn().mockResolvedValue(undefined),
+    clear: vi.fn().mockResolvedValue(true),
+    clearAll: vi.fn().mockResolvedValue(true),
+    getAll: vi.fn().mockResolvedValue([]),
+    onAlarm: { addListener: vi.fn(), removeListener: vi.fn() },
   },
   privacy: {
     network: {
@@ -86,7 +121,7 @@ Object.assign(globalThis, {
  * in-memory storage backing can import them instead of reaching through
  * `(global as any).browser.storage.local.data`.
  */
-export { storageData };
+export { storageData, sessionStorageData };
 
 /**
  * Reset all mocks and clear in-memory storage between tests.
@@ -96,5 +131,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   for (const key of Object.keys(storageData)) {
     delete storageData[key];
+  }
+  for (const key of Object.keys(sessionStorageData)) {
+    delete sessionStorageData[key];
   }
 });

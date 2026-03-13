@@ -11,6 +11,7 @@
  */
 
 import { importBackground } from "../helpers/import-background";
+import { sessionStorageData } from "../setup";
 
 // Hoist the browser-geo-tz mock so it survives vi.resetModules()
 vi.mock("browser-geo-tz", () => ({
@@ -65,9 +66,9 @@ describe("VPN Sync Integration Tests", () => {
     test("should complete full VPN sync and update location", async () => {
       const { handleMessage, clearIpGeoCache, resetRateLimiter, clearTimezoneCache, loadSettings } =
         await importBackground();
-      clearIpGeoCache();
-      resetRateLimiter();
-      clearTimezoneCache();
+      await clearIpGeoCache();
+      await resetRateLimiter();
+      await clearTimezoneCache();
 
       await setupTimezoneMock("America/New_York");
       mockVpnSyncFetch("203.0.113.42", 40.7128, -74.006, "New York", "United States");
@@ -101,9 +102,9 @@ describe("VPN Sync Integration Tests", () => {
     test("should populate locationName from reverse geocoding", async () => {
       const { handleMessage, clearIpGeoCache, resetRateLimiter, clearTimezoneCache, loadSettings } =
         await importBackground();
-      clearIpGeoCache();
-      resetRateLimiter();
-      clearTimezoneCache();
+      await clearIpGeoCache();
+      await resetRateLimiter();
+      await clearTimezoneCache();
 
       await setupTimezoneMock("Europe/Paris");
       mockVpnSyncFetch("198.51.100.1", 48.8566, 2.3522, "Paris", "France");
@@ -126,17 +127,11 @@ describe("VPN Sync Integration Tests", () => {
      * Validates: Requirements 3.5, 5.1
      */
     test("should deactivate VPN sync when user switches to another input method", async () => {
-      const {
-        handleMessage,
-        clearIpGeoCache,
-        resetRateLimiter,
-        clearTimezoneCache,
-        loadSettings,
-        ipGeoCache,
-      } = await importBackground();
-      clearIpGeoCache();
-      resetRateLimiter();
-      clearTimezoneCache();
+      const { handleMessage, clearIpGeoCache, resetRateLimiter, clearTimezoneCache, loadSettings } =
+        await importBackground();
+      await clearIpGeoCache();
+      await resetRateLimiter();
+      await clearTimezoneCache();
 
       // Step 1: Activate VPN sync
       await setupTimezoneMock("America/New_York");
@@ -149,14 +144,18 @@ describe("VPN Sync Integration Tests", () => {
 
       let settings = await loadSettings();
       expect(settings.vpnSyncEnabled).toBe(true);
-      expect(ipGeoCache.size).toBeGreaterThan(0);
+      const cacheKeys = Object.keys(sessionStorageData).filter((k) => k.startsWith("cache:ipGeo:"));
+      expect(cacheKeys.length).toBeGreaterThan(0);
 
       // Step 2: User switches to "Search City" tab → popup sends DISABLE_VPN_SYNC
       await handleMessage({ type: "DISABLE_VPN_SYNC" }, {} as browser.runtime.MessageSender);
 
       settings = await loadSettings();
       expect(settings.vpnSyncEnabled).toBe(false);
-      expect(ipGeoCache.size).toBe(0);
+      const cacheKeysAfter = Object.keys(sessionStorageData).filter((k) =>
+        k.startsWith("cache:ipGeo:")
+      );
+      expect(cacheKeysAfter.length).toBe(0);
     });
 
     /**
@@ -166,9 +165,9 @@ describe("VPN Sync Integration Tests", () => {
     test("should allow manual location after disabling VPN sync", async () => {
       const { handleMessage, clearIpGeoCache, resetRateLimiter, clearTimezoneCache, loadSettings } =
         await importBackground();
-      clearIpGeoCache();
-      resetRateLimiter();
-      clearTimezoneCache();
+      await clearIpGeoCache();
+      await resetRateLimiter();
+      await clearTimezoneCache();
 
       // Step 1: Activate VPN sync
       await setupTimezoneMock("America/New_York");
@@ -183,7 +182,7 @@ describe("VPN Sync Integration Tests", () => {
       await handleMessage({ type: "DISABLE_VPN_SYNC" }, {} as browser.runtime.MessageSender);
 
       // Step 3: Set manual location (Tokyo)
-      clearTimezoneCache();
+      await clearTimezoneCache();
       await setupTimezoneMock("Asia/Tokyo");
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
@@ -214,9 +213,9 @@ describe("VPN Sync Integration Tests", () => {
     test("should update location when user re-syncs after VPN server change", async () => {
       const { handleMessage, clearIpGeoCache, resetRateLimiter, clearTimezoneCache, loadSettings } =
         await importBackground();
-      clearIpGeoCache();
-      resetRateLimiter();
-      clearTimezoneCache();
+      await clearIpGeoCache();
+      await resetRateLimiter();
+      await clearTimezoneCache();
 
       // First sync: US VPN server
       await setupTimezoneMock("America/New_York");
@@ -231,8 +230,8 @@ describe("VPN Sync Integration Tests", () => {
       expect(settings.location!.latitude).toBe(40.7128);
 
       // User switches VPN to London server, clicks Re-sync (forceRefresh: true)
-      resetRateLimiter();
-      clearTimezoneCache();
+      await resetRateLimiter();
+      await clearTimezoneCache();
       await setupTimezoneMock("Europe/London");
       mockVpnSyncFetch("198.51.100.99", 51.5074, -0.1278, "London", "United Kingdom");
 
@@ -261,9 +260,9 @@ describe("VPN Sync Integration Tests", () => {
     test("should use cache when IP unchanged and forceRefresh is false", async () => {
       const { handleMessage, clearIpGeoCache, resetRateLimiter, clearTimezoneCache } =
         await importBackground();
-      clearIpGeoCache();
-      resetRateLimiter();
-      clearTimezoneCache();
+      await clearIpGeoCache();
+      await resetRateLimiter();
+      await clearTimezoneCache();
 
       // First sync
       await setupTimezoneMock("America/New_York");
@@ -275,8 +274,8 @@ describe("VPN Sync Integration Tests", () => {
       );
 
       // Second sync with same IP — only IP detection fetch needed, geolocation from cache
-      resetRateLimiter();
-      clearTimezoneCache();
+      await resetRateLimiter();
+      await clearTimezoneCache();
       await setupTimezoneMock("America/New_York");
 
       // Only mock IP detection (cache will serve geolocation) + reverse geocode from handleSetLocation
@@ -314,9 +313,9 @@ describe("VPN Sync Integration Tests", () => {
       vi.mocked(fetch).mockReset();
       const { handleMessage, clearIpGeoCache, resetRateLimiter, clearTimezoneCache, loadSettings } =
         await importBackground();
-      clearIpGeoCache();
-      resetRateLimiter();
-      clearTimezoneCache();
+      await clearIpGeoCache();
+      await resetRateLimiter();
+      await clearTimezoneCache();
 
       // First attempt: IP detection fails
       vi.mocked(fetch).mockRejectedValueOnce(new Error("Network error"));
@@ -336,8 +335,8 @@ describe("VPN Sync Integration Tests", () => {
       expect(settings.vpnSyncEnabled).toBe(false);
 
       // User clicks Re-sync → succeeds this time
-      resetRateLimiter();
-      clearTimezoneCache();
+      await resetRateLimiter();
+      await clearTimezoneCache();
       await setupTimezoneMock("America/Los_Angeles");
       mockVpnSyncFetch("203.0.113.42", 37.7749, -122.4194, "San Francisco", "United States");
 
@@ -363,9 +362,9 @@ describe("VPN Sync Integration Tests", () => {
       vi.mocked(fetch).mockReset();
       const { handleMessage, clearIpGeoCache, resetRateLimiter, clearTimezoneCache, loadSettings } =
         await importBackground();
-      clearIpGeoCache();
-      resetRateLimiter();
-      clearTimezoneCache();
+      await clearIpGeoCache();
+      await resetRateLimiter();
+      await clearTimezoneCache();
 
       // First attempt: IP detection succeeds but geolocation returns non-2xx
       vi.mocked(fetch)
@@ -388,8 +387,8 @@ describe("VPN Sync Integration Tests", () => {
       expect(errorResponse.error).toBe("GEOLOCATION_FAILED");
 
       // User clicks Re-sync → succeeds
-      resetRateLimiter();
-      clearTimezoneCache();
+      await resetRateLimiter();
+      await clearTimezoneCache();
       await setupTimezoneMock("Europe/Berlin");
       mockVpnSyncFetch("203.0.113.42", 52.52, 13.405, "Berlin", "Germany");
 
@@ -415,9 +414,9 @@ describe("VPN Sync Integration Tests", () => {
       vi.mocked(fetch).mockReset();
       const { handleMessage, clearIpGeoCache, resetRateLimiter, clearTimezoneCache, loadSettings } =
         await importBackground();
-      clearIpGeoCache();
-      resetRateLimiter();
-      clearTimezoneCache();
+      await clearIpGeoCache();
+      await resetRateLimiter();
+      await clearTimezoneCache();
 
       await setupTimezoneMock("Asia/Tokyo");
 
@@ -467,9 +466,9 @@ describe("VPN Sync Integration Tests", () => {
     test("should disable VPN sync when manual location is set", async () => {
       const { handleMessage, clearIpGeoCache, resetRateLimiter, clearTimezoneCache, loadSettings } =
         await importBackground();
-      clearIpGeoCache();
-      resetRateLimiter();
-      clearTimezoneCache();
+      await clearIpGeoCache();
+      await resetRateLimiter();
+      await clearTimezoneCache();
 
       // Step 1: Activate VPN sync
       await setupTimezoneMock("America/New_York");
@@ -484,7 +483,7 @@ describe("VPN Sync Integration Tests", () => {
       expect(settings.vpnSyncEnabled).toBe(true);
 
       // Step 2: User sets manual location via SET_LOCATION
-      clearTimezoneCache();
+      await clearTimezoneCache();
       await setupTimezoneMock("Europe/Berlin");
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,

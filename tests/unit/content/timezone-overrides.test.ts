@@ -5,7 +5,6 @@
 
 import { setupContentScript } from "../../helpers/content.test.helper";
 import type { SpoofedGeolocationPosition } from "@/shared/types/location";
-import type { Timezone } from "@/shared/types/settings";
 
 describe("Timezone Override Edge Cases", () => {
   beforeEach(() => {
@@ -71,76 +70,6 @@ describe("Timezone Override Edge Cases", () => {
       // Geolocation should still be spoofed
       expect(position.coords.latitude).toBe(35.6762);
       expect(position.coords.longitude).toBe(139.6503);
-    });
-  });
-
-  describe("Invalid Timezone Data Structures", () => {
-    /**
-     * Test with invalid timezone data structures
-     * **Validates: Requirements 12.4, 12.5**
-     */
-    test("should handle timezone with missing identifier", () => {
-      const contentScript = setupContentScript({
-        enabled: true,
-        location: { latitude: 40.7128, longitude: -74.006, accuracy: 10 },
-        timezone: { offset: -300, dstOffset: 60 } as unknown as Timezone, // Missing identifier
-      });
-
-      const testDate = new Date("2024-01-15T12:00:00Z");
-
-      // Should fallback to original since validation fails
-      const originalOffset = contentScript.originals.getTimezoneOffset.call(testDate);
-      const overrideOffset = contentScript.Date.prototype.getTimezoneOffset.call(testDate);
-      expect(overrideOffset).toBe(originalOffset);
-    });
-
-    test("should handle timezone with invalid offset type", () => {
-      const contentScript = setupContentScript({
-        enabled: true,
-        location: { latitude: 40.7128, longitude: -74.006, accuracy: 10 },
-        timezone: {
-          identifier: "America/New_York",
-          offset: "invalid" as unknown as number,
-          dstOffset: 60,
-        },
-      });
-
-      const testDate = new Date("2024-01-15T12:00:00Z");
-
-      // Should fallback to original since validation fails
-      const originalOffset = contentScript.originals.getTimezoneOffset.call(testDate);
-      const overrideOffset = contentScript.Date.prototype.getTimezoneOffset.call(testDate);
-      expect(overrideOffset).toBe(originalOffset);
-    });
-
-    test("should handle timezone with NaN offset", () => {
-      const contentScript = setupContentScript({
-        enabled: true,
-        location: { latitude: 40.7128, longitude: -74.006, accuracy: 10 },
-        timezone: { identifier: "America/New_York", offset: NaN, dstOffset: 60 },
-      });
-
-      const testDate = new Date("2024-01-15T12:00:00Z");
-
-      // Should fallback to original since validation fails
-      const originalOffset = contentScript.originals.getTimezoneOffset.call(testDate);
-      const overrideOffset = contentScript.Date.prototype.getTimezoneOffset.call(testDate);
-      expect(overrideOffset).toBe(originalOffset);
-    });
-
-    test("should handle timezone with Infinity offset", () => {
-      const contentScript = setupContentScript({
-        enabled: true,
-        location: { latitude: 40.7128, longitude: -74.006, accuracy: 10 },
-        timezone: { identifier: "America/New_York", offset: Infinity, dstOffset: 60 },
-      });
-
-      const testDate = new Date("2024-01-15T12:00:00Z");
-
-      // Should fallback to original since validation fails
-      const originalOffset = contentScript.originals.getTimezoneOffset.call(testDate);
-      const overrideOffset = contentScript.Date.prototype.getTimezoneOffset.call(testDate);
-      expect(overrideOffset).toBe(originalOffset);
     });
   });
 

@@ -5,14 +5,12 @@
 
 import type { LocationName } from "@/shared/types/settings";
 import type { GeocodeResult } from "@/shared/types/messages";
+import { sessionGet, sessionSet } from "./session-cache";
 
 export const NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search";
 export const NOMINATIM_REVERSE_URL = "https://nominatim.openstreetmap.org/reverse";
 export const GEOCODING_TIMEOUT = 5000;
 export const MAX_RETRIES = 2;
-
-// In-memory cache for reverse geocoding
-const reverseGeocodeCache: Map<string, LocationName> = new Map();
 
 /** Internal interface for Nominatim search API response */
 interface NominatimSearchResult {
@@ -143,8 +141,9 @@ export async function geocodeQuery(query: string): Promise<GeocodeResult[]> {
  */
 export async function reverseGeocode(latitude: number, longitude: number): Promise<LocationName> {
   const cacheKey = getCacheKey(latitude, longitude);
-  if (reverseGeocodeCache.has(cacheKey)) {
-    return reverseGeocodeCache.get(cacheKey)!;
+  const cached = await sessionGet<LocationName>("reverseGeo:" + cacheKey);
+  if (cached !== undefined) {
+    return cached;
   }
 
   const params = new URLSearchParams({
@@ -175,7 +174,7 @@ export async function reverseGeocode(latitude: number, longitude: number): Promi
       displayName: data.display_name || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
     };
 
-    reverseGeocodeCache.set(cacheKey, locationName);
+    await sessionSet("reverseGeo:" + cacheKey, locationName);
 
     return locationName;
   } catch (error) {

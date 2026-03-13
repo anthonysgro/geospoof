@@ -30,12 +30,12 @@ describe("Badge Icon Colors", () => {
     await updateBadge(true);
 
     // Verify badge color is set to green
-    expect(browser.browserAction.setBadgeBackgroundColor).toHaveBeenCalledWith({
+    expect(browser.action.setBadgeBackgroundColor).toHaveBeenCalledWith({
       color: "green",
     });
 
     // Verify badge text is set to checkmark
-    expect(browser.browserAction.setBadgeText).toHaveBeenCalledWith({
+    expect(browser.action.setBadgeText).toHaveBeenCalledWith({
       text: "✓",
     });
   });
@@ -50,12 +50,12 @@ describe("Badge Icon Colors", () => {
     await updateBadge(false);
 
     // Verify badge color is set to gray
-    expect(browser.browserAction.setBadgeBackgroundColor).toHaveBeenCalledWith({
+    expect(browser.action.setBadgeBackgroundColor).toHaveBeenCalledWith({
       color: "gray",
     });
 
     // Verify badge text is empty
-    expect(browser.browserAction.setBadgeText).toHaveBeenCalledWith({
+    expect(browser.action.setBadgeText).toHaveBeenCalledWith({
       text: "",
     });
   });
@@ -66,8 +66,8 @@ describe("Badge Icon Colors", () => {
     await updateBadge(true);
 
     // Both methods should be called
-    expect(browser.browserAction.setBadgeBackgroundColor).toHaveBeenCalledTimes(1);
-    expect(browser.browserAction.setBadgeText).toHaveBeenCalledTimes(1);
+    expect(browser.action.setBadgeBackgroundColor).toHaveBeenCalledTimes(1);
+    expect(browser.action.setBadgeText).toHaveBeenCalledTimes(1);
   });
 
   test("should handle multiple badge updates", async () => {
@@ -75,24 +75,24 @@ describe("Badge Icon Colors", () => {
 
     // Enable
     await updateBadge(true);
-    expect(browser.browserAction.setBadgeBackgroundColor).toHaveBeenLastCalledWith({
+    expect(browser.action.setBadgeBackgroundColor).toHaveBeenLastCalledWith({
       color: "green",
     });
 
     // Disable
     await updateBadge(false);
-    expect(browser.browserAction.setBadgeBackgroundColor).toHaveBeenLastCalledWith({
+    expect(browser.action.setBadgeBackgroundColor).toHaveBeenLastCalledWith({
       color: "gray",
     });
 
     // Enable again
     await updateBadge(true);
-    expect(browser.browserAction.setBadgeBackgroundColor).toHaveBeenLastCalledWith({
+    expect(browser.action.setBadgeBackgroundColor).toHaveBeenLastCalledWith({
       color: "green",
     });
 
     // Should have been called 3 times total
-    expect(browser.browserAction.setBadgeBackgroundColor).toHaveBeenCalledTimes(3);
-    expect(browser.browserAction.setBadgeText).toHaveBeenCalledTimes(3);
+    expect(browser.action.setBadgeBackgroundColor).toHaveBeenCalledTimes(3);
+    expect(browser.action.setBadgeText).toHaveBeenCalledTimes(3);
   });
 });

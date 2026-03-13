@@ -4,7 +4,6 @@
  */
 
 import fc from "fast-check";
-import { type MockBrowser, assignGlobal } from "../helpers/mock-types";
 
 /**
  * Property 14: Coordinate Validation
@@ -141,95 +140,5 @@ describe("Property 14: Coordinate Validation", () => {
     expect(validateCoordinates(90.01, 0).valid).toBe(false);
     expect(validateCoordinates(0, -180.01).valid).toBe(false);
     expect(validateCoordinates(0, 180.01).valid).toBe(false);
-  });
-});
-
-/**
- * Property 15: Valid Coordinate Update Responsiveness
- * For any valid coordinate input, the spoofed location should be updated within 200ms.
- *
- * Validates: Requirements 4.9
- */
-describe("Property 15: Valid Coordinate Update Responsiveness", () => {
-  // Mock browser API
-  const mockBrowser: MockBrowser = {
-    runtime: {
-      sendMessage: vi.fn(),
-    },
-  };
-
-  beforeAll(() => {
-    assignGlobal("browser", mockBrowser);
-  });
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    // Mock successful response
-    mockBrowser.runtime.sendMessage.mockResolvedValue({ success: true });
-  });
-
-  test("should update location within 200ms for any valid coordinates", async () => {
-    await fc.assert(
-      fc.asyncProperty(
-        fc.record({
-          latitude: fc.double({ min: -90, max: 90, noNaN: true }),
-          longitude: fc.double({ min: -180, max: 180, noNaN: true }),
-        }),
-        async ({ latitude, longitude }) => {
-          const startTime = Date.now();
-
-          // Simulate the setLocation function from popup.js
-          await mockBrowser.runtime.sendMessage({
-            type: "SET_LOCATION",
-            payload: { latitude, longitude },
-          });
-
-          const endTime = Date.now();
-          const duration = endTime - startTime;
-
-          // Should complete within 200ms
-          expect(duration).toBeLessThan(200);
-
-          // Verify message was sent with correct data
-          expect(mockBrowser.runtime.sendMessage).toHaveBeenCalledWith({
-            type: "SET_LOCATION",
-            payload: { latitude, longitude },
-          });
-        }
-      ),
-      { numRuns: 100 }
-    );
-  });
-
-  test("should handle rapid coordinate updates", async () => {
-    await fc.assert(
-      fc.asyncProperty(
-        fc.array(
-          fc.record({
-            latitude: fc.double({ min: -90, max: 90, noNaN: true }),
-            longitude: fc.double({ min: -180, max: 180, noNaN: true }),
-          }),
-          { minLength: 1, maxLength: 5 }
-        ),
-        async (coordinates) => {
-          const startTime = Date.now();
-
-          // Send multiple location updates
-          for (const coord of coordinates) {
-            await mockBrowser.runtime.sendMessage({
-              type: "SET_LOCATION",
-              payload: coord,
-            });
-          }
-
-          const endTime = Date.now();
-          const avgDuration = (endTime - startTime) / coordinates.length;
-
-          // Average time per update should be under 200ms
-          expect(avgDuration).toBeLessThan(200);
-        }
-      ),
-      { numRuns: 50 }
-    );
   });
 });

@@ -1,6 +1,10 @@
 /**
  * Background Script — Entry Point
  * Wires up initialization, event listeners, and re-exports all modules.
+ *
+ * MV3 event-page lifecycle: all listeners registered synchronously at the
+ * top level; initialization runs inside onInstalled / onStartup callbacks.
+ * Timer-based retry logic uses browser.alarms instead of setTimeout.
  */
 
 import type { Message, UpdateSettingsPayload } from "@/shared/types/messages";
@@ -46,11 +50,61 @@ export {
   syncVpnLocation,
   clearIpGeoCache,
   resetRateLimiter,
-  ipGeoCache,
   MIN_REQUEST_INTERVAL,
   REQUEST_TIMEOUT,
 } from "./vpn-sync";
 export type { IpGeolocationResult, VpnSyncError, VpnSyncResponse } from "./vpn-sync";
+
+// --- Alarm constants ---
+
+/** Prefix for injection-check alarm names */
+const ALARM_PREFIX = "injection-check:";
+
+/** Cumulative delays (ms) for injection check retries */
+const ALARM_DELAYS = [500, 1500, 3500];
+
+/** Maximum attempt index (0-based) */
+const MAX_ATTEMPT = ALARM_DELAYS.length - 1;
+
+export { ALARM_PREFIX, ALARM_DELAYS, MAX_ATTEMPT };
+
+// --- Alarm helpers ---
+
+/**
+ * Build an alarm name encoding tab ID and attempt number.
+ */
+export function buildAlarmName(tabId: number, attempt: number): string {
+  return `${ALARM_PREFIX}${tabId}:${attempt}`;
+}
+
+/**
+ * Parse an injection-check alarm name. Returns null if the name doesn't match.
+ */
+export function parseAlarmName(name: string): { tabId: number; attempt: number } | null {
+  if (!name.startsWith(ALARM_PREFIX)) return null;
+  const rest = name.slice(ALARM_PREFIX.length);
+  const parts = rest.split(":");
+  if (parts.length !== 2) return null;
+  const tabId = parseInt(parts[0], 10);
+  const attempt = parseInt(parts[1], 10);
+  if (isNaN(tabId) || isNaN(attempt)) return null;
+  return { tabId, attempt };
+}
+
+/**
+ * Clear all pending injection-check alarms for a given tab.
+ */
+async function clearAlarmsForTab(tabId: number): Promise<void> {
+  for (let i = 0; i <= MAX_ATTEMPT; i++) {
+    try {
+      await browser.alarms.clear(buildAlarmName(tabId, i));
+    } catch {
+      // Alarm may not exist; ignore
+    }
+  }
+}
+
+export { clearAlarmsForTab };
 
 // --- Initialization ---
 
@@ -86,7 +140,52 @@ async function initialize(): Promise<void> {
 
 export { initialize };
 
-// --- Event Listeners ---
+// --- Alarm handler ---
+
+async function onAlarm(alarm: browser.alarms.Alarm): Promise<void> {
+  const parsed = parseAlarmName(alarm.name);
+  if (!parsed) return;
+
+  const { tabId, attempt } = parsed;
+
+  const settings = await loadSettings();
+  const { enabled, location, timezone } = settings;
+  const scopedPayload: UpdateSettingsPayload = { enabled, location, timezone };
+
+  try {
+    const result = await checkTabInjection(tabId);
+    if (result.injected) {
+      // Clear remaining alarms for this tab
+      await clearAlarmsForTab(tabId);
+
+      try {
+        await browser.tabs.sendMessage(tabId, {
+          type: "UPDATE_SETTINGS",
+          payload: scopedPayload,
+        });
+      } catch {
+        // Tab may have closed; ignore
+      }
+
+      void browser.action.setBadgeBackgroundColor({ color: "green", tabId });
+      void browser.action.setBadgeText({ text: "✓", tabId });
+    } else if (attempt >= MAX_ATTEMPT) {
+      // Final attempt failed
+      void browser.action.setBadgeBackgroundColor({ color: "orange", tabId });
+      void browser.action.setBadgeText({ text: "!", tabId });
+    }
+  } catch {
+    // Tab closed during check
+    if (attempt >= MAX_ATTEMPT) {
+      void browser.action.setBadgeBackgroundColor({ color: "orange", tabId });
+      void browser.action.setBadgeText({ text: "!", tabId });
+    }
+  }
+}
+
+export { onAlarm };
+
+// --- Event Listeners (registered synchronously at top level) ---
 
 browser.runtime.onMessage.addListener((message: Message, sender: browser.runtime.MessageSender) => {
   return handleMessage(message, sender);
@@ -99,7 +198,13 @@ browser.runtime.onInstalled.addListener((details: browser.runtime._OnInstalledDe
   void initialize();
 });
 
-void initialize();
+browser.runtime.onStartup.addListener(() => {
+  void initialize();
+});
+
+browser.alarms.onAlarm.addListener((alarm: browser.alarms.Alarm) => {
+  void onAlarm(alarm);
+});
 
 if (browser.tabs && browser.tabs.onCreated) {
   browser.tabs.onCreated.addListener((tab: browser.tabs.Tab) => {
@@ -124,99 +229,39 @@ if (browser.tabs && browser.tabs.onCreated) {
   });
 }
 
-// Track pending injection checks per tab so we can cancel stale ones on re-navigation
-const pendingChecks = new Map<number, number[]>();
-
-export { pendingChecks };
-
 if (browser.tabs && browser.tabs.onUpdated) {
   browser.tabs.onUpdated.addListener(
     (tabId: number, changeInfo: browser.tabs._OnUpdatedChangeInfo, tab: browser.tabs.Tab) => {
       if (changeInfo.status === "loading") {
         void (async () => {
           const settings = await loadSettings();
-          const { enabled, location, timezone } = settings;
-          const scopedPayload: UpdateSettingsPayload = { enabled, location, timezone };
-
-          const isRestricted = isRestrictedUrl(tab.url!);
 
           if (!settings.enabled) {
-            void browser.browserAction.setBadgeBackgroundColor({ color: "gray", tabId });
-            void browser.browserAction.setBadgeText({ text: "", tabId });
+            void browser.action.setBadgeBackgroundColor({ color: "gray", tabId });
+            void browser.action.setBadgeText({ text: "", tabId });
             return;
           }
 
+          const isRestricted = isRestrictedUrl(tab.url!);
           if (isRestricted) {
-            void browser.browserAction.setBadgeBackgroundColor({ color: "gray", tabId });
-            void browser.browserAction.setBadgeText({ text: "", tabId });
+            void browser.action.setBadgeBackgroundColor({ color: "gray", tabId });
+            void browser.action.setBadgeText({ text: "", tabId });
             return;
           }
 
-          // Cancel any pending checks for this tab (re-navigation)
-          const existing = pendingChecks.get(tabId);
-          if (existing) {
-            for (const tid of existing) {
-              clearTimeout(tid);
+          // Clear existing alarms for this tab (re-navigation cleanup)
+          await clearAlarmsForTab(tabId);
+
+          // Schedule injection checks via browser.alarms
+          for (let i = 0; i < ALARM_DELAYS.length; i++) {
+            try {
+              browser.alarms.create(buildAlarmName(tabId, i), {
+                delayInMinutes: ALARM_DELAYS[i] / 60000,
+              });
+            } catch (error) {
+              console.debug(`Failed to create alarm for tab ${tabId} attempt ${i}:`, error);
             }
           }
-          pendingChecks.delete(tabId);
-
-          // Deferred retry with backoff: 500ms, 1000ms, 2000ms
-          const delays = [500, 1000, 2000];
-          const timeoutIds: number[] = [];
-          let settled = false;
-
-          for (let i = 0; i < delays.length; i++) {
-            const cumulativeDelay = delays.slice(0, i + 1).reduce((a, b) => a + b, 0);
-            const tid = setTimeout(() => {
-              void (async () => {
-                if (settled) return;
-
-                try {
-                  const result = await checkTabInjection(tabId);
-                  if (result.injected) {
-                    settled = true;
-                    pendingChecks.delete(tabId);
-
-                    try {
-                      await browser.tabs.sendMessage(tabId, {
-                        type: "UPDATE_SETTINGS",
-                        payload: scopedPayload,
-                      });
-                    } catch {
-                      // Tab may have closed; ignore
-                    }
-
-                    void browser.browserAction.setBadgeBackgroundColor({ color: "green", tabId });
-                    void browser.browserAction.setBadgeText({ text: "✓", tabId });
-                  } else if (i === delays.length - 1) {
-                    // Last attempt failed
-                    if (!settled) {
-                      settled = true;
-                      pendingChecks.delete(tabId);
-                      void browser.browserAction.setBadgeBackgroundColor({
-                        color: "orange",
-                        tabId,
-                      });
-                      void browser.browserAction.setBadgeText({ text: "!", tabId });
-                    }
-                  }
-                } catch {
-                  // Tab closed during retry; ignore
-                  if (i === delays.length - 1 && !settled) {
-                    settled = true;
-                    pendingChecks.delete(tabId);
-                    void browser.browserAction.setBadgeBackgroundColor({ color: "orange", tabId });
-                    void browser.browserAction.setBadgeText({ text: "!", tabId });
-                  }
-                }
-              })();
-            }, cumulativeDelay) as unknown as number;
-
-            timeoutIds.push(tid);
-          }
-
-          pendingChecks.set(tabId, timeoutIds);
         })();
       }
     }

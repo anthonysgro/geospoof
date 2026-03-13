@@ -1,5 +1,5 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "GeoSpoof",
   "version": "1.11.2",
   "description": "Spoof your browser's geolocation and timezone. Prevent WebRTC IP leaks.",
@@ -18,10 +18,11 @@
       "strict_min_version": "142.0"
     }
   },
-  "permissions": ["storage", "privacy", "<all_urls>"],
+  "permissions": ["storage", "privacy", "scripting", "alarms"],
+  "host_permissions": ["<all_urls>"],
   "background": {
     "scripts": ["background/background.js"],
-    "persistent": true
+    "type": "module"
   },
   "content_scripts": [
     {
@@ -31,8 +32,13 @@
       "all_frames": true
     }
   ],
-  "web_accessible_resources": ["content/injected.js"],
-  "browser_action": {
+  "web_accessible_resources": [
+    {
+      "resources": ["content/injected.js"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {
       "16": "icons/icon-16.png",

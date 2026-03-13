@@ -4,6 +4,8 @@
  * for the VPN exit region. Includes caching and rate limiting.
  */
 
+import { sessionGet, sessionSet, sessionDelete, sessionClearNamespace } from "./session-cache";
+
 // --- Constants ---
 const PUBLIC_IP_URL = "https://api.ipify.org?format=json";
 const FREEIPAPI_URL = "https://free.freeipapi.com/api/json/";
@@ -41,19 +43,16 @@ interface FreeIpApiResponse {
   isProxy: boolean;
 }
 
-// --- Cache ---
-const ipGeoCache: Map<string, IpGeolocationResult> = new Map();
-
 // --- Rate Limiting ---
-let lastRequestTime = 0;
 
 async function throttle(): Promise<void> {
+  const lastRequestTime = (await sessionGet<number>("vpnRateLimit")) ?? 0;
   const now = Date.now();
   const elapsed = now - lastRequestTime;
   if (elapsed < MIN_REQUEST_INTERVAL) {
     await new Promise((resolve) => setTimeout(resolve, MIN_REQUEST_INTERVAL - elapsed));
   }
-  lastRequestTime = Date.now();
+  await sessionSet("vpnRateLimit", Date.now());
 }
 
 // --- IP Validation ---
@@ -213,14 +212,17 @@ export async function syncVpnLocation(forceRefresh: boolean): Promise<VpnSyncRes
     const ip = await detectPublicIp();
 
     // Check cache unless force refresh
-    if (!forceRefresh && ipGeoCache.has(ip)) {
-      return ipGeoCache.get(ip)!;
+    if (!forceRefresh) {
+      const cached = await sessionGet<IpGeolocationResult>("ipGeo:" + ip);
+      if (cached !== undefined) {
+        return cached;
+      }
     }
 
     const result = await geolocateWithFreeIpApi(ip);
 
     // Cache the result
-    ipGeoCache.set(ip, result);
+    await sessionSet("ipGeo:" + ip, result);
 
     return result;
   } catch (error) {
@@ -242,16 +244,16 @@ export async function syncVpnLocation(forceRefresh: boolean): Promise<VpnSyncRes
 /**
  * Clear the IP geolocation cache (called when user disables sync mode).
  */
-export function clearIpGeoCache(): void {
-  ipGeoCache.clear();
+export async function clearIpGeoCache(): Promise<void> {
+  await sessionClearNamespace("ipGeo");
 }
 
 // Exported for testing
-export { ipGeoCache, MIN_REQUEST_INTERVAL, REQUEST_TIMEOUT };
+export { MIN_REQUEST_INTERVAL, REQUEST_TIMEOUT };
 
 /**
  * Reset the rate limiter timestamp (for testing).
  */
-export function resetRateLimiter(): void {
-  lastRequestTime = 0;
+export async function resetRateLimiter(): Promise<void> {
+  await sessionDelete("vpnRateLimit");
 }

@@ -10,6 +10,7 @@ import fc from "fast-check";
 import type { Settings } from "@/shared/types/settings";
 import { DEFAULT_SETTINGS } from "@/shared/types/settings";
 import { importBackground } from "../helpers/import-background";
+import { sessionStorageData } from "../setup";
 
 // --- Helpers ---
 
@@ -154,8 +155,8 @@ describe("Feature: vpn-region-sync, Property 2: Out-of-range coordinate rejectio
         fc.double({ min: -180, max: 180, noNaN: true }),
         async (lat, lon) => {
           const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
-          clearIpGeoCache();
-          resetRateLimiter();
+          await clearIpGeoCache();
+          await resetRateLimiter();
 
           const testIp = "1.2.3.4";
           vi.mocked(fetch)
@@ -193,8 +194,8 @@ describe("Feature: vpn-region-sync, Property 2: Out-of-range coordinate rejectio
         fc.double({ min: -180, max: 180, noNaN: true }),
         async (lat, lon) => {
           const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
-          clearIpGeoCache();
-          resetRateLimiter();
+          await clearIpGeoCache();
+          await resetRateLimiter();
 
           const testIp = "1.2.3.4";
           vi.mocked(fetch)
@@ -232,8 +233,8 @@ describe("Feature: vpn-region-sync, Property 2: Out-of-range coordinate rejectio
         fc.double({ min: 181, max: 1000, noNaN: true }),
         async (lat, lon) => {
           const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
-          clearIpGeoCache();
-          resetRateLimiter();
+          await clearIpGeoCache();
+          await resetRateLimiter();
 
           const testIp = "1.2.3.4";
           vi.mocked(fetch)
@@ -280,8 +281,8 @@ describe("Feature: vpn-region-sync, Property 3: Sync coordinates flow-through", 
         fc.string({ minLength: 1, maxLength: 30 }),
         async (lat, lon, city, country) => {
           const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
-          clearIpGeoCache();
-          resetRateLimiter();
+          await clearIpGeoCache();
+          await resetRateLimiter();
 
           const testIp = "203.0.113.42";
           vi.mocked(fetch)
@@ -332,8 +333,8 @@ describe("Feature: vpn-region-sync, Property 4: Success response completeness", 
         fc.string({ minLength: 1, maxLength: 30 }),
         async (lat, lon, city, country) => {
           const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
-          clearIpGeoCache();
-          resetRateLimiter();
+          await clearIpGeoCache();
+          await resetRateLimiter();
 
           const testIp = "198.51.100.1";
           vi.mocked(fetch)
@@ -383,8 +384,8 @@ describe("Feature: vpn-region-sync, Property 5: Error response structure", () =>
     await fc.assert(
       fc.asyncProperty(fc.string({ minLength: 1, maxLength: 50 }), async (errorMsg) => {
         const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
-        clearIpGeoCache();
-        resetRateLimiter();
+        await clearIpGeoCache();
+        await resetRateLimiter();
 
         vi.mocked(fetch).mockRejectedValueOnce(new Error(errorMsg));
 
@@ -404,8 +405,8 @@ describe("Feature: vpn-region-sync, Property 5: Error response structure", () =>
     await fc.assert(
       fc.asyncProperty(fc.string({ minLength: 1, maxLength: 50 }), async (errorMsg) => {
         const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
-        clearIpGeoCache();
-        resetRateLimiter();
+        await clearIpGeoCache();
+        await resetRateLimiter();
 
         const testIp = "203.0.113.42";
         vi.mocked(fetch)
@@ -433,8 +434,8 @@ describe("Feature: vpn-region-sync, Property 5: Error response structure", () =>
     await fc.assert(
       fc.asyncProperty(fc.constantFrom("ip_fail", "geo_fail", "network"), async (failureType) => {
         const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
-        clearIpGeoCache();
-        resetRateLimiter();
+        await clearIpGeoCache();
+        await resetRateLimiter();
 
         if (failureType === "ip_fail") {
           vi.mocked(fetch).mockRejectedValueOnce(new Error("timeout"));
@@ -491,8 +492,8 @@ describe("Feature: vpn-region-sync, Property 7: Cache hit returns cached result"
         fc.double({ min: -180, max: 180, noNaN: true, noDefaultInfinity: true }),
         async (lat, lon) => {
           const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
-          clearIpGeoCache();
-          resetRateLimiter();
+          await clearIpGeoCache();
+          await resetRateLimiter();
 
           const testIp = "203.0.113.42";
 
@@ -518,7 +519,7 @@ describe("Feature: vpn-region-sync, Property 7: Cache hit returns cached result"
           expect("error" in firstResult).toBe(false);
 
           vi.mocked(fetch).mockReset();
-          resetRateLimiter();
+          await resetRateLimiter();
 
           // Second call: cache hit — only ipify fetch, no FreeIPAPI
           vi.mocked(fetch).mockResolvedValueOnce({
@@ -556,8 +557,8 @@ describe("Feature: vpn-region-sync, Property 8: Force refresh bypasses cache", (
         fc.double({ min: -180, max: 180, noNaN: true, noDefaultInfinity: true }),
         async (lat1, lon1, lat2, lon2) => {
           const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
-          clearIpGeoCache();
-          resetRateLimiter();
+          await clearIpGeoCache();
+          await resetRateLimiter();
 
           const testIp = "203.0.113.42";
 
@@ -580,7 +581,7 @@ describe("Feature: vpn-region-sync, Property 8: Force refresh bypasses cache", (
             } as Response);
 
           await syncVpnLocation(true);
-          resetRateLimiter();
+          await resetRateLimiter();
 
           // Second call with forceRefresh=true
           vi.mocked(fetch)
@@ -625,8 +626,8 @@ describe("Feature: vpn-region-sync, Property 9: Rate limiting enforces minimum i
       fc.asyncProperty(fc.integer({ min: 2, max: 4 }), async (callCount) => {
         const { syncVpnLocation, clearIpGeoCache, resetRateLimiter, MIN_REQUEST_INTERVAL } =
           await importBackground();
-        clearIpGeoCache();
-        resetRateLimiter();
+        await clearIpGeoCache();
+        await resetRateLimiter();
 
         vi.useFakeTimers();
 
@@ -695,8 +696,8 @@ describe("Feature: freeipapi-migration, Property 1: Two HTTPS requests per sync"
     await fc.assert(
       fc.asyncProperty(ipv4Arb(), async (ip) => {
         const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
-        clearIpGeoCache();
-        resetRateLimiter();
+        await clearIpGeoCache();
+        await resetRateLimiter();
         vi.mocked(fetch).mockReset();
 
         mockTwoStepFetch(ip, { latitude: 40, longitude: -74 });
@@ -739,10 +740,9 @@ describe("Feature: freeipapi-migration, Property 2: Field mapping correctness", 
         fc.string({ minLength: 0, maxLength: 50 }),
         fc.string({ minLength: 0, maxLength: 50 }),
         async (ip, lat, lon, cityName, countryName) => {
-          const { syncVpnLocation, clearIpGeoCache, resetRateLimiter, ipGeoCache } =
-            await importBackground();
-          clearIpGeoCache();
-          resetRateLimiter();
+          const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
+          await clearIpGeoCache();
+          await resetRateLimiter();
 
           mockTwoStepFetch(ip, { latitude: lat, longitude: lon, cityName, countryName });
 
@@ -755,9 +755,14 @@ describe("Feature: freeipapi-migration, Property 2: Field mapping correctness", 
             expect(result.city).toBe(cityName);
             expect(result.country).toBe(countryName);
 
-            // Cache should contain the result keyed by IP
-            expect(ipGeoCache.has(ip)).toBe(true);
-            const cached = ipGeoCache.get(ip)!;
+            // Cache should contain the result keyed by IP in session storage
+            const cacheKey = `cache:ipGeo:${ip}`;
+            expect(cacheKey in sessionStorageData).toBe(true);
+            const cached = sessionStorageData[cacheKey] as {
+              ip: string;
+              latitude: number;
+              longitude: number;
+            };
             expect(cached.ip).toBe(ip);
             expect(cached.latitude).toBe(lat);
             expect(cached.longitude).toBe(lon);
@@ -801,8 +806,8 @@ describe("Feature: freeipapi-migration, Property 3: Invalid coordinate rejection
         ),
         async ([lat, lon]) => {
           const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
-          clearIpGeoCache();
-          resetRateLimiter();
+          await clearIpGeoCache();
+          await resetRateLimiter();
 
           const testIp = "203.0.113.42";
           vi.mocked(fetch)
@@ -844,8 +849,8 @@ describe("Feature: freeipapi-migration, Property 3: Invalid coordinate rejection
         ),
         async ([lat, lon]) => {
           const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
-          clearIpGeoCache();
-          resetRateLimiter();
+          await clearIpGeoCache();
+          await resetRateLimiter();
 
           const testIp = "203.0.113.42";
           vi.mocked(fetch)
@@ -908,8 +913,8 @@ describe("Feature: freeipapi-migration, Property 4: Missing city/country default
         ),
         async ([cityName, countryName]) => {
           const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
-          clearIpGeoCache();
-          resetRateLimiter();
+          await clearIpGeoCache();
+          await resetRateLimiter();
 
           const testIp = "203.0.113.42";
           vi.mocked(fetch)
@@ -976,8 +981,8 @@ describe("Feature: freeipapi-migration, Property 5: Invalid IP rejection", () =>
     await fc.assert(
       fc.asyncProperty(invalidIpArb, async (badIp) => {
         const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
-        clearIpGeoCache();
-        resetRateLimiter();
+        await clearIpGeoCache();
+        await resetRateLimiter();
 
         const detectedIp = "203.0.113.42";
         vi.mocked(fetch)
@@ -1013,8 +1018,8 @@ describe("Feature: freeipapi-migration, Property 5: Invalid IP rejection", () =>
         fc.oneof(fc.constant(undefined), fc.constant(null), fc.constant("")),
         async (missingIp) => {
           const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
-          clearIpGeoCache();
-          resetRateLimiter();
+          await clearIpGeoCache();
+          await resetRateLimiter();
 
           const detectedIp = "203.0.113.42";
           vi.mocked(fetch)
@@ -1067,8 +1072,8 @@ describe("Feature: freeipapi-migration, Property 6: Non-2xx HTTP status returns 
     await fc.assert(
       fc.asyncProperty(non2xxStatusArb, async (status) => {
         const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
-        clearIpGeoCache();
-        resetRateLimiter();
+        await clearIpGeoCache();
+        await resetRateLimiter();
 
         vi.mocked(fetch).mockResolvedValueOnce({
           ok: false,
@@ -1091,8 +1096,8 @@ describe("Feature: freeipapi-migration, Property 6: Non-2xx HTTP status returns 
     await fc.assert(
       fc.asyncProperty(non2xxStatusArb, async (status) => {
         const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
-        clearIpGeoCache();
-        resetRateLimiter();
+        await clearIpGeoCache();
+        await resetRateLimiter();
 
         vi.mocked(fetch)
           .mockResolvedValueOnce({
@@ -1131,8 +1136,8 @@ describe("Feature: freeipapi-migration, Property 7: Network error returns approp
     await fc.assert(
       fc.asyncProperty(fc.string({ minLength: 1, maxLength: 50 }), async (errorMsg) => {
         const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
-        clearIpGeoCache();
-        resetRateLimiter();
+        await clearIpGeoCache();
+        await resetRateLimiter();
 
         vi.mocked(fetch).mockRejectedValueOnce(new Error(errorMsg));
 
@@ -1154,8 +1159,8 @@ describe("Feature: freeipapi-migration, Property 7: Network error returns approp
     await fc.assert(
       fc.asyncProperty(fc.string({ minLength: 1, maxLength: 50 }), async (errorMsg) => {
         const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
-        clearIpGeoCache();
-        resetRateLimiter();
+        await clearIpGeoCache();
+        await resetRateLimiter();
 
         vi.mocked(fetch)
           .mockResolvedValueOnce({
@@ -1195,8 +1200,8 @@ describe("Feature: freeipapi-migration, Property 8: Cache hit avoids FreeIPAPI c
         fc.double({ min: -180, max: 180, noNaN: true, noDefaultInfinity: true }),
         async (ip, lat, lon) => {
           const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
-          clearIpGeoCache();
-          resetRateLimiter();
+          await clearIpGeoCache();
+          await resetRateLimiter();
 
           // First call: populate cache
           mockTwoStepFetch(ip, { latitude: lat, longitude: lon });
@@ -1204,7 +1209,7 @@ describe("Feature: freeipapi-migration, Property 8: Cache hit avoids FreeIPAPI c
           expect("error" in firstResult).toBe(false);
 
           vi.mocked(fetch).mockReset();
-          resetRateLimiter();
+          await resetRateLimiter();
 
           // Second call: cache hit — only ipify, no FreeIPAPI
           vi.mocked(fetch).mockResolvedValueOnce({
@@ -1247,15 +1252,15 @@ describe("Feature: freeipapi-migration, Property 9: Force refresh bypasses cache
         fc.double({ min: -180, max: 180, noNaN: true, noDefaultInfinity: true }),
         async (ip, lat1, lon1, lat2, lon2) => {
           const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
-          clearIpGeoCache();
-          resetRateLimiter();
+          await clearIpGeoCache();
+          await resetRateLimiter();
 
           // First call: populate cache
           mockTwoStepFetch(ip, { latitude: lat1, longitude: lon1, cityName: "First" });
           await syncVpnLocation(true);
 
           vi.mocked(fetch).mockReset();
-          resetRateLimiter();
+          await resetRateLimiter();
 
           // Second call: force refresh
           mockTwoStepFetch(ip, { latitude: lat2, longitude: lon2, cityName: "Second" });
@@ -1290,8 +1295,8 @@ describe("Feature: freeipapi-migration, Property 10: Rate limiting enforces mini
       fc.asyncProperty(fc.integer({ min: 2, max: 4 }), async (callCount) => {
         const { syncVpnLocation, clearIpGeoCache, resetRateLimiter, MIN_REQUEST_INTERVAL } =
           await importBackground();
-        clearIpGeoCache();
-        resetRateLimiter();
+        await clearIpGeoCache();
+        await resetRateLimiter();
 
         vi.useFakeTimers();
 

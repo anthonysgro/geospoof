@@ -5,6 +5,9 @@
  *   Validates: Requirements 1.1, 1.2, 1.3, 1.4
  * Property 2: Preservation (MUST PASS on unfixed code)
  *   Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.5
+ *
+ * Updated for MV3 alarm-based retry logic: the onUpdated listener schedules
+ * browser.alarms; badge updates happen in the onAlarm handler.
  */
 
 import fc from "fast-check";
@@ -40,21 +43,33 @@ type Listener = (
   tab: browser.tabs.Tab
 ) => void;
 
-async function captureListener(s: Settings): Promise<Listener> {
+type AlarmHandler = (alarm: browser.alarms.Alarm) => void;
+
+interface CapturedHandlers {
+  onUpdated: Listener;
+  onAlarm: AlarmHandler;
+}
+
+async function captureHandlers(s: Settings): Promise<CapturedHandlers> {
   vi.clearAllMocks();
   vi.resetModules();
   browser.storage.local.get = vi.fn().mockResolvedValue({ settings: s });
   browser.storage.local.set = vi.fn().mockResolvedValue(undefined);
   await import("@/background");
-  const m = browser.tabs.onUpdated as unknown as Record<string, ReturnType<typeof vi.fn>>;
-  expect(m["addListener"]).toHaveBeenCalled();
-  return m["addListener"].mock.calls[0][0] as Listener;
+
+  const updatedMock = browser.tabs.onUpdated as unknown as Record<string, ReturnType<typeof vi.fn>>;
+  expect(updatedMock["addListener"]).toHaveBeenCalled();
+  const onUpdated = updatedMock["addListener"].mock.calls[0][0] as Listener;
+
+  const alarmMock = browser.alarms.onAlarm as unknown as Record<string, ReturnType<typeof vi.fn>>;
+  expect(alarmMock["addListener"]).toHaveBeenCalled();
+  const onAlarm = alarmMock["addListener"].mock.calls[0][0] as AlarmHandler;
+
+  return { onUpdated, onAlarm };
 }
 
 /** Flush microtasks so the listener's inner async IIFE completes */
 async function flushMicrotasks(): Promise<void> {
-  // Use Promise.resolve() chain instead of setTimeout to avoid
-  // interaction with fake timers
   for (let i = 0; i < 10; i++) {
     await Promise.resolve();
   }
@@ -82,15 +97,10 @@ const restrictedUrlArb = fc.oneof(
 // ---------------------------------------------------------------------------
 
 describe("Property 1: Bug Condition", () => {
-  let listener: Listener;
+  let handlers: CapturedHandlers;
 
   beforeEach(async () => {
-    listener = await captureListener(makeSettings());
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
+    handlers = await captureHandlers(makeSettings());
   });
 
   test("badge converges to green when content script becomes ready after initial failure", async () => {
@@ -105,15 +115,26 @@ describe("Property 1: Bug Condition", () => {
           if (callCount === 1) return Promise.reject(new Error("no connection"));
           return Promise.resolve({ pong: true });
         });
-        listener(
+
+        // Trigger navigation — schedules alarms
+        handlers.onUpdated(
           tabId,
           { status: "loading" } as browser.tabs._OnUpdatedChangeInfo,
           { id: tabId, url } as browser.tabs.Tab
         );
-        await vi.advanceTimersByTimeAsync(5000);
         await flushMicrotasks();
-        const calls = (browser.browserAction.setBadgeText as ReturnType<typeof vi.fn>).mock
-          .calls as Array<[{ text: string; tabId: number }]>;
+
+        // Simulate alarm 0 firing (first check fails, second succeeds via sendMessage mock)
+        handlers.onAlarm({ name: `injection-check:${tabId}:0`, scheduledTime: Date.now() });
+        await flushMicrotasks();
+
+        // Simulate alarm 1 firing (injection now succeeds)
+        handlers.onAlarm({ name: `injection-check:${tabId}:1`, scheduledTime: Date.now() });
+        await flushMicrotasks();
+
+        const calls = (browser.action.setBadgeText as ReturnType<typeof vi.fn>).mock.calls as Array<
+          [{ text: string; tabId: number }]
+        >;
         const last = [...calls].reverse().find((c) => c[0].tabId === tabId);
         expect(last).toBeDefined();
         expect(last![0].text).toBe("\u2713");
@@ -129,23 +150,28 @@ describe("Property 1: Bug Condition", () => {
         const s = makeSettings();
         browser.storage.local.get = vi.fn().mockResolvedValue({ settings: s });
         browser.tabs.sendMessage = vi.fn().mockRejectedValue(new Error("no connection"));
-        listener(
+
+        handlers.onUpdated(
           tabId,
           { status: "loading" } as browser.tabs._OnUpdatedChangeInfo,
           { id: tabId, url } as browser.tabs.Tab
         );
         await flushMicrotasks();
-        (browser.browserAction.setBadgeText as ReturnType<typeof vi.fn>).mockClear();
-        (browser.browserAction.setBadgeBackgroundColor as ReturnType<typeof vi.fn>).mockClear();
-        // Import handleMessage directly (already cached from captureListener)
+
+        (browser.action.setBadgeText as ReturnType<typeof vi.fn>).mockClear();
+        (browser.action.setBadgeBackgroundColor as ReturnType<typeof vi.fn>).mockClear();
+
+        // Import handleMessage directly (already cached from captureHandlers)
         const { handleMessage } = await import("@/background");
         await handleMessage(
           { type: "GET_SETTINGS" },
           { tab: { id: tabId, url } as browser.tabs.Tab }
         );
         await flushMicrotasks();
-        const calls = (browser.browserAction.setBadgeText as ReturnType<typeof vi.fn>).mock
-          .calls as Array<[{ text: string; tabId: number }]>;
+
+        const calls = (browser.action.setBadgeText as ReturnType<typeof vi.fn>).mock.calls as Array<
+          [{ text: string; tabId: number }]
+        >;
         const recovery = calls.find((c) => c[0].tabId === tabId);
         expect(recovery).toBeDefined();
         expect(recovery![0].text).toBe("\u2713");
@@ -155,7 +181,6 @@ describe("Property 1: Bug Condition", () => {
   });
 
   test("popup injection check uses live PING, not stale badge text", async () => {
-    vi.useRealTimers(); // popup tests don't need fake timers
     await fc.assert(
       fc.asyncProperty(tidArb, urlArb, async (tabId, url) => {
         vi.clearAllMocks();
@@ -170,7 +195,7 @@ describe("Property 1: Bug Condition", () => {
         };
         vi.stubGlobal("document", mockDoc);
         browser.tabs.query = vi.fn().mockResolvedValue([{ id: tabId, url }]);
-        browser.browserAction.getBadgeText = vi.fn().mockResolvedValue("!");
+        browser.action.getBadgeText = vi.fn().mockResolvedValue("!");
         browser.runtime.sendMessage = vi.fn().mockImplementation((msg: { type: string }) => {
           if (msg.type === "GET_SETTINGS") return Promise.resolve(makeSettings());
           if (msg.type === "CHECK_TAB_INJECTION")
@@ -179,9 +204,7 @@ describe("Property 1: Bug Condition", () => {
         });
         const popupSettings = await import("@/popup/settings");
         await popupSettings.checkInjectionStatus();
-        expect(
-          browser.browserAction.getBadgeText as ReturnType<typeof vi.fn>
-        ).not.toHaveBeenCalled();
+        expect(browser.action.getBadgeText as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
       }),
       { numRuns: 10 }
     );
@@ -193,172 +216,154 @@ describe("Property 1: Bug Condition", () => {
 // ---------------------------------------------------------------------------
 
 describe("Property 2: Preservation", () => {
-  let listener: Listener;
-
   // 2a. Protection disabled -> badge is gray with no text
   test("disabled protection: badge is always gray/empty for any URL", async () => {
     const disabled = makeSettings({ enabled: false });
-    listener = await captureListener(disabled);
-    vi.useFakeTimers();
+    const handlers = await captureHandlers(disabled);
 
-    try {
-      await fc.assert(
-        fc.asyncProperty(tidArb, urlArb, async (tabId, url) => {
-          (browser.browserAction.setBadgeText as ReturnType<typeof vi.fn>).mockClear();
-          (browser.browserAction.setBadgeBackgroundColor as ReturnType<typeof vi.fn>).mockClear();
-          browser.storage.local.get = vi.fn().mockResolvedValue({ settings: disabled });
+    await fc.assert(
+      fc.asyncProperty(tidArb, urlArb, async (tabId, url) => {
+        (browser.action.setBadgeText as ReturnType<typeof vi.fn>).mockClear();
+        (browser.action.setBadgeBackgroundColor as ReturnType<typeof vi.fn>).mockClear();
+        browser.storage.local.get = vi.fn().mockResolvedValue({ settings: disabled });
 
-          listener(
-            tabId,
-            { status: "loading" } as browser.tabs._OnUpdatedChangeInfo,
-            { id: tabId, url } as browser.tabs.Tab
-          );
-          await vi.advanceTimersByTimeAsync(100);
-          await flushMicrotasks();
+        handlers.onUpdated(
+          tabId,
+          { status: "loading" } as browser.tabs._OnUpdatedChangeInfo,
+          { id: tabId, url } as browser.tabs.Tab
+        );
+        await flushMicrotasks();
 
-          const textCalls = (browser.browserAction.setBadgeText as ReturnType<typeof vi.fn>).mock
-            .calls as Array<[{ text: string; tabId: number }]>;
-          const colorCalls = (
-            browser.browserAction.setBadgeBackgroundColor as ReturnType<typeof vi.fn>
-          ).mock.calls as Array<[{ color: string; tabId: number }]>;
-          const lastText = [...textCalls].reverse().find((c) => c[0].tabId === tabId);
-          const lastColor = [...colorCalls].reverse().find((c) => c[0].tabId === tabId);
+        const textCalls = (browser.action.setBadgeText as ReturnType<typeof vi.fn>).mock
+          .calls as Array<[{ text: string; tabId: number }]>;
+        const colorCalls = (browser.action.setBadgeBackgroundColor as ReturnType<typeof vi.fn>).mock
+          .calls as Array<[{ color: string; tabId: number }]>;
+        const lastText = [...textCalls].reverse().find((c) => c[0].tabId === tabId);
+        const lastColor = [...colorCalls].reverse().find((c) => c[0].tabId === tabId);
 
-          expect(lastText).toBeDefined();
-          expect(lastText![0].text).toBe("");
-          expect(lastColor).toBeDefined();
-          expect(lastColor![0].color).toBe("gray");
-        }),
-        { numRuns: 30 }
-      );
-    } finally {
-      vi.useRealTimers();
-    }
+        expect(lastText).toBeDefined();
+        expect(lastText![0].text).toBe("");
+        expect(lastColor).toBeDefined();
+        expect(lastColor![0].color).toBe("gray");
+      }),
+      { numRuns: 30 }
+    );
   });
 
   // 2b. Restricted URL -> badge is gray with no text regardless of protection
   test("restricted URL: badge is always gray/empty regardless of protection", async () => {
     const enabled = makeSettings({ enabled: true });
-    listener = await captureListener(enabled);
-    vi.useFakeTimers();
+    const handlers = await captureHandlers(enabled);
 
-    try {
-      await fc.assert(
-        fc.asyncProperty(tidArb, restrictedUrlArb, fc.boolean(), async (tabId, url, prot) => {
-          (browser.browserAction.setBadgeText as ReturnType<typeof vi.fn>).mockClear();
-          (browser.browserAction.setBadgeBackgroundColor as ReturnType<typeof vi.fn>).mockClear();
-          const s = makeSettings({ enabled: prot });
-          browser.storage.local.get = vi.fn().mockResolvedValue({ settings: s });
+    await fc.assert(
+      fc.asyncProperty(tidArb, restrictedUrlArb, fc.boolean(), async (tabId, url, prot) => {
+        (browser.action.setBadgeText as ReturnType<typeof vi.fn>).mockClear();
+        (browser.action.setBadgeBackgroundColor as ReturnType<typeof vi.fn>).mockClear();
+        const s = makeSettings({ enabled: prot });
+        browser.storage.local.get = vi.fn().mockResolvedValue({ settings: s });
 
-          listener(
-            tabId,
-            { status: "loading" } as browser.tabs._OnUpdatedChangeInfo,
-            { id: tabId, url } as browser.tabs.Tab
-          );
-          await vi.advanceTimersByTimeAsync(100);
-          await flushMicrotasks();
+        handlers.onUpdated(
+          tabId,
+          { status: "loading" } as browser.tabs._OnUpdatedChangeInfo,
+          { id: tabId, url } as browser.tabs.Tab
+        );
+        await flushMicrotasks();
 
-          const textCalls = (browser.browserAction.setBadgeText as ReturnType<typeof vi.fn>).mock
-            .calls as Array<[{ text: string; tabId: number }]>;
-          const colorCalls = (
-            browser.browserAction.setBadgeBackgroundColor as ReturnType<typeof vi.fn>
-          ).mock.calls as Array<[{ color: string; tabId: number }]>;
-          const lastText = [...textCalls].reverse().find((c) => c[0].tabId === tabId);
-          const lastColor = [...colorCalls].reverse().find((c) => c[0].tabId === tabId);
+        const textCalls = (browser.action.setBadgeText as ReturnType<typeof vi.fn>).mock
+          .calls as Array<[{ text: string; tabId: number }]>;
+        const colorCalls = (browser.action.setBadgeBackgroundColor as ReturnType<typeof vi.fn>).mock
+          .calls as Array<[{ color: string; tabId: number }]>;
+        const lastText = [...textCalls].reverse().find((c) => c[0].tabId === tabId);
+        const lastColor = [...colorCalls].reverse().find((c) => c[0].tabId === tabId);
 
-          expect(lastText).toBeDefined();
-          expect(lastText![0].text).toBe("");
-          expect(lastColor).toBeDefined();
-          expect(lastColor![0].color).toBe("gray");
-        }),
-        { numRuns: 30 }
-      );
-    } finally {
-      vi.useRealTimers();
-    }
+        expect(lastText).toBeDefined();
+        expect(lastText![0].text).toBe("");
+        expect(lastColor).toBeDefined();
+        expect(lastColor![0].color).toBe("gray");
+      }),
+      { numRuns: 30 }
+    );
   });
 
   // 2c. Genuine failure -> badge is orange "!"
   test("genuine failure: badge is orange '!' when sendMessage always rejects", async () => {
     const enabled = makeSettings({ enabled: true });
-    listener = await captureListener(enabled);
-    vi.useFakeTimers();
+    const handlers = await captureHandlers(enabled);
 
-    try {
-      await fc.assert(
-        fc.asyncProperty(tidArb, urlArb, async (tabId, url) => {
-          (browser.browserAction.setBadgeText as ReturnType<typeof vi.fn>).mockClear();
-          (browser.browserAction.setBadgeBackgroundColor as ReturnType<typeof vi.fn>).mockClear();
-          browser.storage.local.get = vi.fn().mockResolvedValue({ settings: enabled });
-          browser.tabs.sendMessage = vi.fn().mockRejectedValue(new Error("no connection"));
+    await fc.assert(
+      fc.asyncProperty(tidArb, urlArb, async (tabId, url) => {
+        (browser.action.setBadgeText as ReturnType<typeof vi.fn>).mockClear();
+        (browser.action.setBadgeBackgroundColor as ReturnType<typeof vi.fn>).mockClear();
+        browser.storage.local.get = vi.fn().mockResolvedValue({ settings: enabled });
+        browser.tabs.sendMessage = vi.fn().mockRejectedValue(new Error("no connection"));
 
-          listener(
-            tabId,
-            { status: "loading" } as browser.tabs._OnUpdatedChangeInfo,
-            { id: tabId, url } as browser.tabs.Tab
-          );
-          await vi.advanceTimersByTimeAsync(5000);
+        // Trigger navigation
+        handlers.onUpdated(
+          tabId,
+          { status: "loading" } as browser.tabs._OnUpdatedChangeInfo,
+          { id: tabId, url } as browser.tabs.Tab
+        );
+        await flushMicrotasks();
+
+        // Simulate all 3 alarm attempts firing and failing
+        for (let i = 0; i <= 2; i++) {
+          handlers.onAlarm({ name: `injection-check:${tabId}:${i}`, scheduledTime: Date.now() });
           await flushMicrotasks();
+        }
 
-          const textCalls = (browser.browserAction.setBadgeText as ReturnType<typeof vi.fn>).mock
-            .calls as Array<[{ text: string; tabId: number }]>;
-          const colorCalls = (
-            browser.browserAction.setBadgeBackgroundColor as ReturnType<typeof vi.fn>
-          ).mock.calls as Array<[{ color: string; tabId: number }]>;
-          const lastText = [...textCalls].reverse().find((c) => c[0].tabId === tabId);
-          const lastColor = [...colorCalls].reverse().find((c) => c[0].tabId === tabId);
+        const textCalls = (browser.action.setBadgeText as ReturnType<typeof vi.fn>).mock
+          .calls as Array<[{ text: string; tabId: number }]>;
+        const colorCalls = (browser.action.setBadgeBackgroundColor as ReturnType<typeof vi.fn>).mock
+          .calls as Array<[{ color: string; tabId: number }]>;
+        const lastText = [...textCalls].reverse().find((c) => c[0].tabId === tabId);
+        const lastColor = [...colorCalls].reverse().find((c) => c[0].tabId === tabId);
 
-          expect(lastText).toBeDefined();
-          expect(lastText![0].text).toBe("!");
-          expect(lastColor).toBeDefined();
-          expect(lastColor![0].color).toBe("orange");
-        }),
-        { numRuns: 30 }
-      );
-    } finally {
-      vi.useRealTimers();
-    }
+        expect(lastText).toBeDefined();
+        expect(lastText![0].text).toBe("!");
+        expect(lastColor).toBeDefined();
+        expect(lastColor![0].color).toBe("orange");
+      }),
+      { numRuns: 30 }
+    );
   });
 
   // 2d. Immediate success -> badge is green checkmark
   test("immediate success: badge is green when sendMessage resolves on first try", async () => {
     const enabled = makeSettings({ enabled: true });
-    listener = await captureListener(enabled);
-    vi.useFakeTimers();
+    const handlers = await captureHandlers(enabled);
 
-    try {
-      await fc.assert(
-        fc.asyncProperty(tidArb, urlArb, async (tabId, url) => {
-          (browser.browserAction.setBadgeText as ReturnType<typeof vi.fn>).mockClear();
-          (browser.browserAction.setBadgeBackgroundColor as ReturnType<typeof vi.fn>).mockClear();
-          browser.storage.local.get = vi.fn().mockResolvedValue({ settings: enabled });
-          browser.tabs.sendMessage = vi.fn().mockResolvedValue(undefined);
+    await fc.assert(
+      fc.asyncProperty(tidArb, urlArb, async (tabId, url) => {
+        (browser.action.setBadgeText as ReturnType<typeof vi.fn>).mockClear();
+        (browser.action.setBadgeBackgroundColor as ReturnType<typeof vi.fn>).mockClear();
+        browser.storage.local.get = vi.fn().mockResolvedValue({ settings: enabled });
+        browser.tabs.sendMessage = vi.fn().mockResolvedValue(undefined);
 
-          listener(
-            tabId,
-            { status: "loading" } as browser.tabs._OnUpdatedChangeInfo,
-            { id: tabId, url } as browser.tabs.Tab
-          );
-          await vi.advanceTimersByTimeAsync(1000);
-          await flushMicrotasks();
+        // Trigger navigation
+        handlers.onUpdated(
+          tabId,
+          { status: "loading" } as browser.tabs._OnUpdatedChangeInfo,
+          { id: tabId, url } as browser.tabs.Tab
+        );
+        await flushMicrotasks();
 
-          const textCalls = (browser.browserAction.setBadgeText as ReturnType<typeof vi.fn>).mock
-            .calls as Array<[{ text: string; tabId: number }]>;
-          const colorCalls = (
-            browser.browserAction.setBadgeBackgroundColor as ReturnType<typeof vi.fn>
-          ).mock.calls as Array<[{ color: string; tabId: number }]>;
-          const lastText = [...textCalls].reverse().find((c) => c[0].tabId === tabId);
-          const lastColor = [...colorCalls].reverse().find((c) => c[0].tabId === tabId);
+        // Simulate first alarm firing — injection succeeds
+        handlers.onAlarm({ name: `injection-check:${tabId}:0`, scheduledTime: Date.now() });
+        await flushMicrotasks();
 
-          expect(lastText).toBeDefined();
-          expect(lastText![0].text).toBe("\u2713");
-          expect(lastColor).toBeDefined();
-          expect(lastColor![0].color).toBe("green");
-        }),
-        { numRuns: 30 }
-      );
-    } finally {
-      vi.useRealTimers();
-    }
+        const textCalls = (browser.action.setBadgeText as ReturnType<typeof vi.fn>).mock
+          .calls as Array<[{ text: string; tabId: number }]>;
+        const colorCalls = (browser.action.setBadgeBackgroundColor as ReturnType<typeof vi.fn>).mock
+          .calls as Array<[{ color: string; tabId: number }]>;
+        const lastText = [...textCalls].reverse().find((c) => c[0].tabId === tabId);
+        const lastColor = [...colorCalls].reverse().find((c) => c[0].tabId === tabId);
+
+        expect(lastText).toBeDefined();
+        expect(lastText![0].text).toBe("\u2713");
+        expect(lastColor).toBeDefined();
+        expect(lastColor![0].color).toBe("green");
+      }),
+      { numRuns: 30 }
+    );
   });
 });

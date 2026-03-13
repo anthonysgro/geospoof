@@ -32,9 +32,9 @@ const { find: findMock } = await import("browser-geo-tz");
 const mockedFind = vi.mocked(findMock);
 
 describe("Settings Persistence Integration Tests", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     // Clear timezone cache to prevent cache hits from previous tests
-    background.clearTimezoneCache();
+    await background.clearTimezoneCache();
     mockedFind.mockReset();
 
     // Default tabs mock

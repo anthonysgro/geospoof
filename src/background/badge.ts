@@ -13,18 +13,18 @@ export async function updateBadge(enabled: boolean): Promise<void> {
       const isRestricted = isRestrictedUrl(tab.url ?? "");
 
       if (!enabled || isRestricted) {
-        void browser.browserAction.setBadgeBackgroundColor({ color: "gray", tabId: tab.id });
-        void browser.browserAction.setBadgeText({ text: "", tabId: tab.id });
+        void browser.action.setBadgeBackgroundColor({ color: "gray", tabId: tab.id });
+        void browser.action.setBadgeText({ text: "", tabId: tab.id });
       } else {
-        void browser.browserAction.setBadgeBackgroundColor({ color: "green", tabId: tab.id });
-        void browser.browserAction.setBadgeText({ text: "✓", tabId: tab.id });
+        void browser.action.setBadgeBackgroundColor({ color: "green", tabId: tab.id });
+        void browser.action.setBadgeText({ text: "✓", tabId: tab.id });
       }
     }
   } catch (error) {
     console.error("Failed to update badge:", error);
     const color = enabled ? "green" : "gray";
     const text = enabled ? "✓" : "";
-    void browser.browserAction.setBadgeBackgroundColor({ color });
-    void browser.browserAction.setBadgeText({ text });
+    void browser.action.setBadgeBackgroundColor({ color });
+    void browser.action.setBadgeText({ text });
   }
 }

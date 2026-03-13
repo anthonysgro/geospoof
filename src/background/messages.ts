@@ -41,11 +41,11 @@ export async function handleMessage(
         const senderTabId = _sender.tab?.id;
         const senderTabUrl = _sender.tab?.url;
         if (senderTabId != null && settings.enabled && !isRestrictedUrl(senderTabUrl ?? "")) {
-          void browser.browserAction.setBadgeBackgroundColor({
+          void browser.action.setBadgeBackgroundColor({
             color: "green",
             tabId: senderTabId,
           });
-          void browser.browserAction.setBadgeText({ text: "✓", tabId: senderTabId });
+          void browser.action.setBadgeText({ text: "✓", tabId: senderTabId });
         }
 
         return settings;
@@ -87,7 +87,7 @@ export async function handleMessage(
       }
 
       case "DISABLE_VPN_SYNC": {
-        clearIpGeoCache();
+        await clearIpGeoCache();
         await updateSettings({
           vpnSyncEnabled: false,
           location: null,
@@ -144,7 +144,7 @@ export async function handleSetLocation(payload: SetLocationPayload): Promise<vo
   // disable VPN sync and clear the IP geolocation cache (Req 9.3)
   const vpnUpdates: Record<string, unknown> = {};
   if (currentSettings.vpnSyncEnabled) {
-    clearIpGeoCache();
+    await clearIpGeoCache();
     vpnUpdates.vpnSyncEnabled = false;
   }
 
@@ -172,8 +172,8 @@ export async function handleSetProtectionStatus(
   } else {
     const tabs = await browser.tabs.query({});
     for (const tab of tabs) {
-      void browser.browserAction.setBadgeBackgroundColor({ color: "gray", tabId: tab.id });
-      void browser.browserAction.setBadgeText({ text: "", tabId: tab.id });
+      void browser.action.setBadgeBackgroundColor({ color: "gray", tabId: tab.id });
+      void browser.action.setBadgeText({ text: "", tabId: tab.id });
     }
   }
 

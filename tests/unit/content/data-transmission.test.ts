@@ -289,32 +289,4 @@ describe("Content Script Data Transmission", () => {
       consoleErrorSpy.mockRestore();
     });
   });
-
-  describe("Integration with Background Script", () => {
-    test("should receive timezone data from background script UPDATE_SETTINGS message", () => {
-      const message = {
-        type: "UPDATE_SETTINGS",
-        payload: {
-          enabled: true,
-          location: { latitude: 35.6762, longitude: 139.6503, accuracy: 10 },
-          timezone: { identifier: "Asia/Tokyo", offset: -540, dstOffset: 0 },
-        },
-      };
-
-      expect(message.payload.timezone).toBeDefined();
-      expect(message.payload.timezone.identifier).toBe("Asia/Tokyo");
-      expect(message.payload.timezone.offset).toBe(-540);
-    });
-
-    test("should receive timezone data from background script GET_SETTINGS response", () => {
-      const settings = {
-        enabled: true,
-        location: { latitude: 35.6762, longitude: 139.6503, accuracy: 10 },
-        timezone: { identifier: "Asia/Tokyo", offset: -540, dstOffset: 0 },
-      };
-
-      expect(settings.timezone).toBeDefined();
-      expect(settings.timezone.identifier).toBe("Asia/Tokyo");
-    });
-  });
 });

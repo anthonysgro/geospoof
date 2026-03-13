@@ -81,7 +81,7 @@ test("Property 1: Offline resolution returns valid timezone for any coordinates"
       async (latitude, longitude) => {
         const { getTimezoneForCoordinates, clearTimezoneCache, isValidIANATimezone } =
           await importBackground();
-        clearTimezoneCache();
+        await clearTimezoneCache();
 
         // Mock find to return a known timezone
         mockedFind.mockResolvedValue(["America/New_York"]);
@@ -121,7 +121,7 @@ test("Property 2: Offset matches Intl API for resolved timezone", async () => {
       fc.constantFrom(...KNOWN_TIMEZONES),
       async (latitude, longitude, tzId) => {
         const { getTimezoneForCoordinates, clearTimezoneCache } = await importBackground();
-        clearTimezoneCache();
+        await clearTimezoneCache();
 
         mockedFind.mockResolvedValue([tzId]);
 
@@ -155,7 +155,7 @@ test("Property 3: Fallback behavior for uncovered coordinates", async () => {
       fc.boolean(), // true = empty array, false = throw
       async (longitude, emptyVsThrow) => {
         const { getTimezoneForCoordinates, clearTimezoneCache } = await importBackground();
-        clearTimezoneCache();
+        await clearTimezoneCache();
 
         if (emptyVsThrow) {
           mockedFind.mockResolvedValue([]);
@@ -206,7 +206,7 @@ test("Property 4: Cache idempotency", async () => {
       fc.double({ min: -180, max: 180, noNaN: true }),
       async (latitude, longitude) => {
         const { getTimezoneForCoordinates, clearTimezoneCache } = await importBackground();
-        clearTimezoneCache();
+        await clearTimezoneCache();
         mockedFind.mockClear();
 
         mockedFind.mockResolvedValue(["Europe/London"]);

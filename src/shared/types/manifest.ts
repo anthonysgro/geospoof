@@ -1,5 +1,5 @@
 /**
- * Type definitions for Firefox WebExtension manifest.json (Manifest V2).
+ * Type definitions for Firefox WebExtension manifest.json (Manifest V3).
  *
  * Used in tests that parse and validate the manifest file.
  */
@@ -13,10 +13,17 @@ export interface ManifestContentScript {
 
 export interface ManifestBackground {
   scripts: string[];
+  type?: string;
 }
 
-export interface ManifestBrowserAction {
+export interface ManifestAction {
   default_popup: string;
+  default_icon?: Record<string, string>;
+}
+
+export interface ManifestWebAccessibleResource {
+  resources: string[];
+  matches: string[];
 }
 
 export interface Manifest {
@@ -24,7 +31,11 @@ export interface Manifest {
   name: string;
   version: string;
   permissions: string[];
+  host_permissions?: string[];
   content_scripts: ManifestContentScript[];
   background: ManifestBackground;
-  browser_action: ManifestBrowserAction;
+  action: ManifestAction;
+  web_accessible_resources?: ManifestWebAccessibleResource[];
+  /** @deprecated MV2 only */
+  browser_action?: ManifestAction;
 }

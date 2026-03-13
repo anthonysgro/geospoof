@@ -1,10 +1,14 @@
 /**
  * Property-based tests for WebRTC UI reflection
  * Feature: geolocation-spoof-extension-mvp
+ *
+ * Validates: Requirements 4.4, 5.1
  */
 
 import fc from "fast-check";
-import { type MockBrowser, type MockDocument, assignGlobal } from "../helpers/mock-types";
+import fs from "fs";
+import path from "path";
+import { loadSettings } from "@/popup/settings";
 
 /**
  * Property 10: WebRTC Protection UI Reflection
@@ -14,71 +18,74 @@ import { type MockBrowser, type MockDocument, assignGlobal } from "../helpers/mo
  * Validates: Requirements 3.5
  */
 describe("Property 10: WebRTC Protection UI Reflection", () => {
-  let mockBrowser: MockBrowser;
-  let mockDocument: MockDocument;
-
   beforeEach(() => {
-    // Mock browser API
-    mockBrowser = {
-      runtime: {
-        sendMessage: vi.fn(),
-      },
-    };
-    assignGlobal("browser", mockBrowser);
-
-    // Mock DOM elements
-    mockDocument = {
-      getElementById: vi.fn(),
-    };
-    assignGlobal("document", mockDocument);
+    const html = fs.readFileSync(path.join(__dirname, "../../assets/popup.html"), "utf8");
+    document.documentElement.innerHTML = html;
+    vi.mocked(browser.tabs.query).mockResolvedValue([]);
   });
+
+  /** Helper to build a valid settings response */
+  function makeSettings(overrides: Record<string, unknown> = {}) {
+    return {
+      enabled: false,
+      location: null,
+      timezone: null,
+      locationName: null,
+      webrtcProtection: false,
+      onboardingCompleted: true,
+      version: "1.0",
+      lastUpdated: Date.now(),
+      ...overrides,
+    };
+  }
 
   test("should reflect WebRTC protection status in UI toggle", async () => {
     await fc.assert(
       fc.asyncProperty(fc.boolean(), async (webrtcEnabled) => {
-        // Mock settings response
-        mockBrowser.runtime.sendMessage.mockResolvedValue({
-          enabled: false,
-          location: null,
-          webrtcProtection: webrtcEnabled,
-        });
+        document.documentElement.innerHTML = fs.readFileSync(
+          path.join(__dirname, "../../assets/popup.html"),
+          "utf8"
+        );
+        vi.mocked(browser.runtime.sendMessage).mockResolvedValueOnce(
+          makeSettings({ webrtcProtection: webrtcEnabled })
+        );
+        vi.mocked(browser.tabs.query).mockResolvedValue([]);
 
-        // Mock WebRTC toggle element
-        const mockWebrtcToggle = { checked: false };
-        mockDocument.getElementById.mockImplementation((id: string) => {
-          if (id === "webrtcToggle") return mockWebrtcToggle;
-          return null;
-        });
+        await loadSettings();
 
-        // Simulate loadSettings function from popup.js
-        const settings = (await mockBrowser.runtime.sendMessage({ type: "GET_SETTINGS" })) as {
-          webrtcProtection: boolean;
-        };
-        mockWebrtcToggle.checked = settings.webrtcProtection;
-
-        // Verify UI reflects the WebRTC status
-        expect(mockWebrtcToggle.checked).toBe(webrtcEnabled);
+        const toggle = document.getElementById("webrtcToggle") as HTMLInputElement;
+        expect(toggle.checked).toBe(webrtcEnabled);
       }),
       { numRuns: 100 }
     );
   });
 
-  test("should update UI when WebRTC status changes", () => {
-    fc.assert(
-      fc.property(fc.boolean(), fc.boolean(), (initialStatus, newStatus) => {
-        // Mock WebRTC toggle element
-        const mockWebrtcToggle = { checked: initialStatus };
-        mockDocument.getElementById.mockImplementation((id: string) => {
-          if (id === "webrtcToggle") return mockWebrtcToggle;
-          return null;
-        });
+  test("should update UI when WebRTC status changes across loadSettings calls", async () => {
+    await fc.assert(
+      fc.asyncProperty(fc.boolean(), fc.boolean(), async (firstStatus, secondStatus) => {
+        // First load
+        document.documentElement.innerHTML = fs.readFileSync(
+          path.join(__dirname, "../../assets/popup.html"),
+          "utf8"
+        );
+        vi.mocked(browser.runtime.sendMessage).mockResolvedValueOnce(
+          makeSettings({ webrtcProtection: firstStatus })
+        );
+        vi.mocked(browser.tabs.query).mockResolvedValue([]);
 
-        // Simulate status change
-        mockBrowser.runtime.sendMessage.mockResolvedValue({ success: true });
-        mockWebrtcToggle.checked = newStatus;
+        await loadSettings();
 
-        // Verify UI updated correctly
-        expect(mockWebrtcToggle.checked).toBe(newStatus);
+        const toggle = document.getElementById("webrtcToggle") as HTMLInputElement;
+        expect(toggle.checked).toBe(firstStatus);
+
+        // Second load with different status
+        vi.mocked(browser.runtime.sendMessage).mockResolvedValueOnce(
+          makeSettings({ webrtcProtection: secondStatus })
+        );
+
+        await loadSettings();
+
+        expect(toggle.checked).toBe(secondStatus);
       }),
       { numRuns: 100 }
     );
@@ -89,27 +96,22 @@ describe("Property 10: WebRTC Protection UI Reflection", () => {
       fc.asyncProperty(
         fc.array(fc.boolean(), { minLength: 1, maxLength: 10 }),
         async (statusSequence) => {
-          // Mock WebRTC toggle element
-          const mockWebrtcToggle = { checked: false };
-          mockDocument.getElementById.mockImplementation((id: string) => {
-            if (id === "webrtcToggle") return mockWebrtcToggle;
-            return null;
-          });
+          document.documentElement.innerHTML = fs.readFileSync(
+            path.join(__dirname, "../../assets/popup.html"),
+            "utf8"
+          );
+          vi.mocked(browser.tabs.query).mockResolvedValue([]);
 
-          mockBrowser.runtime.sendMessage.mockResolvedValue({ success: true });
-
-          // Apply each status change
           for (const status of statusSequence) {
-            mockWebrtcToggle.checked = status;
-            await mockBrowser.runtime.sendMessage({
-              type: "SET_WEBRTC_PROTECTION",
-              payload: { enabled: status },
-            });
+            vi.mocked(browser.runtime.sendMessage).mockResolvedValueOnce(
+              makeSettings({ webrtcProtection: status })
+            );
+            await loadSettings();
           }
 
-          // Verify final state matches last status
           const finalStatus = statusSequence[statusSequence.length - 1];
-          expect(mockWebrtcToggle.checked).toBe(finalStatus);
+          const toggle = document.getElementById("webrtcToggle") as HTMLInputElement;
+          expect(toggle.checked).toBe(finalStatus);
         }
       ),
       { numRuns: 50 }
@@ -119,33 +121,22 @@ describe("Property 10: WebRTC Protection UI Reflection", () => {
   test("should handle WebRTC toggle independently of protection status", async () => {
     await fc.assert(
       fc.asyncProperty(fc.boolean(), fc.boolean(), async (protectionEnabled, webrtcEnabled) => {
-        // Mock settings response with both statuses
-        mockBrowser.runtime.sendMessage.mockResolvedValue({
-          enabled: protectionEnabled,
-          location: null,
-          webrtcProtection: webrtcEnabled,
-        });
+        document.documentElement.innerHTML = fs.readFileSync(
+          path.join(__dirname, "../../assets/popup.html"),
+          "utf8"
+        );
+        vi.mocked(browser.runtime.sendMessage).mockResolvedValueOnce(
+          makeSettings({ enabled: protectionEnabled, webrtcProtection: webrtcEnabled })
+        );
+        vi.mocked(browser.tabs.query).mockResolvedValue([]);
 
-        // Mock UI elements
-        const mockProtectionToggle = { checked: false };
-        const mockWebrtcToggle = { checked: false };
-        mockDocument.getElementById.mockImplementation((id: string) => {
-          if (id === "protectionToggle") return mockProtectionToggle;
-          if (id === "webrtcToggle") return mockWebrtcToggle;
-          return null;
-        });
+        await loadSettings();
 
-        // Simulate loadSettings
-        const settings = (await mockBrowser.runtime.sendMessage({ type: "GET_SETTINGS" })) as {
-          enabled: boolean;
-          webrtcProtection: boolean;
-        };
-        mockProtectionToggle.checked = settings.enabled;
-        mockWebrtcToggle.checked = settings.webrtcProtection;
+        const protectionToggle = document.getElementById("protectionToggle") as HTMLInputElement;
+        const webrtcToggle = document.getElementById("webrtcToggle") as HTMLInputElement;
 
-        // Verify both toggles reflect their respective states independently
-        expect(mockProtectionToggle.checked).toBe(protectionEnabled);
-        expect(mockWebrtcToggle.checked).toBe(webrtcEnabled);
+        expect(protectionToggle.checked).toBe(protectionEnabled);
+        expect(webrtcToggle.checked).toBe(webrtcEnabled);
       }),
       { numRuns: 100 }
     );

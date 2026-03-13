@@ -1,9 +1,8 @@
 /**
  * Property-Based Tests for Manifest Configuration
- * Feature: geolocation-spoof-extension-mvp
+ * Feature: geolocation-spoof-extension-mvp, mv3-manifest-compat
  */
 
-import fc from "fast-check";
 import fs from "fs";
 import path from "path";
 import type { Manifest } from "../../src/shared/types/manifest";
@@ -11,21 +10,19 @@ import type { Manifest } from "../../src/shared/types/manifest";
 /**
  * Example 10: Manifest Permissions
  *
- * Validates: Requirements 7.7
+ * Validates: Requirements 1.1, 1.3, 1.5, 1.6
  *
  * Verify that the manifest.json requests only necessary permissions
- * (storage, geolocation, privacy, <all_urls>)
+ * and uses MV3 structure (host_permissions for <all_urls>).
  */
 test("Example 10: Manifest Permissions - manifest.json contains required permissions", () => {
-  // Read manifest.json
   const manifestPath = path.join(__dirname, "../../manifest.json");
   const manifestContent = fs.readFileSync(manifestPath, "utf-8");
   const manifest = JSON.parse(manifestContent) as Manifest;
 
-  // Required permissions
-  const requiredPermissions = ["storage", "privacy", "<all_urls>"];
+  // Required permissions (MV3: <all_urls> moved to host_permissions)
+  const requiredPermissions = ["storage", "privacy", "scripting", "alarms"];
 
-  // Verify all required permissions are present
   expect(manifest.permissions).toBeDefined();
   expect(Array.isArray(manifest.permissions)).toBe(true);
 
@@ -33,8 +30,13 @@ test("Example 10: Manifest Permissions - manifest.json contains required permiss
     expect(manifest.permissions).toContain(permission);
   }
 
-  // Verify manifest version (Manifest V2 for Firefox compatibility)
-  expect(manifest.manifest_version).toBe(2);
+  // <all_urls> should be in host_permissions, not permissions
+  expect(manifest.permissions).not.toContain("<all_urls>");
+  expect(manifest.host_permissions).toBeDefined();
+  expect(manifest.host_permissions).toContain("<all_urls>");
+
+  // Verify manifest version is 3
+  expect(manifest.manifest_version).toBe(3);
 
   // Verify content scripts configuration
   expect(manifest.content_scripts).toBeDefined();
@@ -42,72 +44,48 @@ test("Example 10: Manifest Permissions - manifest.json contains required permiss
   expect(manifest.content_scripts.length).toBeGreaterThan(0);
 
   const contentScript = manifest.content_scripts[0];
-
-  // Verify content script matches all URLs
   expect(contentScript.matches).toContain("<all_urls>");
-
-  // Verify content script runs at document_start
   expect(contentScript.run_at).toBe("document_start");
-
-  // Verify content script injects into all frames
   expect(contentScript.all_frames).toBe(true);
-
-  // Verify content script file exists
   expect(contentScript.js).toBeDefined();
   expect(Array.isArray(contentScript.js)).toBe(true);
   expect(contentScript.js.length).toBeGreaterThan(0);
 
-  // Verify background script configuration
+  // Verify background script configuration (MV3: type module, no persistent)
   expect(manifest.background).toBeDefined();
   expect(manifest.background.scripts).toBeDefined();
   expect(Array.isArray(manifest.background.scripts)).toBe(true);
   expect(manifest.background.scripts.length).toBeGreaterThan(0);
+  expect(manifest.background.type).toBe("module");
+  expect((manifest.background as unknown as Record<string, unknown>).persistent).toBeUndefined();
 
-  // Verify action (popup) configuration - Manifest V2 uses browser_action
-  expect(manifest.browser_action).toBeDefined();
-  expect(manifest.browser_action.default_popup).toBeDefined();
+  // Verify action (popup) configuration - MV3 uses "action" not "browser_action"
+  expect(manifest.action).toBeDefined();
+  expect(manifest.action.default_popup).toBeDefined();
+  expect(manifest.browser_action).toBeUndefined();
 });
 
 /**
  * Property: Manifest structure is valid JSON and contains required fields
  *
  * This property verifies that the manifest.json file is valid JSON and
- * contains all required fields for a Firefox extension.
+ * contains all required fields for a Firefox MV3 extension.
  */
-test("Property: Manifest is valid JSON with required fields", () => {
-  fc.assert(
-    fc.property(
-      fc.constant(null), // No random input needed, we're testing a static file
-      () => {
-        // Read manifest.json
-        const manifestPath = path.join(__dirname, "../../manifest.json");
-        const manifestContent = fs.readFileSync(manifestPath, "utf-8");
+test("Manifest is valid JSON with required fields", () => {
+  const manifestPath = path.join(__dirname, "../../manifest.json");
+  const manifestContent = fs.readFileSync(manifestPath, "utf-8");
+  const manifest = JSON.parse(manifestContent) as Manifest;
 
-        // Should parse as valid JSON
-        let manifest: Manifest | undefined;
-        expect(() => {
-          manifest = JSON.parse(manifestContent) as Manifest;
-        }).not.toThrow();
+  // Required fields
+  expect(manifest.manifest_version).toBeDefined();
+  expect(manifest.name).toBeDefined();
+  expect(manifest.version).toBeDefined();
+  expect(manifest.permissions).toBeDefined();
+  expect(manifest.content_scripts).toBeDefined();
+  expect(manifest.background).toBeDefined();
+  // MV3 uses "action" instead of "browser_action"
+  expect(manifest.action).toBeDefined();
 
-        // Required fields
-        expect(manifest!.manifest_version).toBeDefined();
-        expect(manifest!.name).toBeDefined();
-        expect(manifest!.version).toBeDefined();
-        expect(manifest!.permissions).toBeDefined();
-        expect(manifest!.content_scripts).toBeDefined();
-        expect(manifest!.background).toBeDefined();
-        // Manifest V2 uses browser_action instead of action
-        expect(manifest!.browser_action).toBeDefined();
-
-        // Permissions should be an array
-        expect(Array.isArray(manifest!.permissions)).toBe(true);
-
-        // Content scripts should be an array
-        expect(Array.isArray(manifest!.content_scripts)).toBe(true);
-
-        return true;
-      }
-    ),
-    { numRuns: 1 } // Only need to run once since we're testing a static file
-  );
+  expect(Array.isArray(manifest.permissions)).toBe(true);
+  expect(Array.isArray(manifest.content_scripts)).toBe(true);
 });
