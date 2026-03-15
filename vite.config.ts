@@ -179,7 +179,7 @@ export default defineConfig(({ mode }) => {
         input: {
           "background/background": resolve(__dirname, "src/background/index.ts"),
           "content/content": resolve(__dirname, "src/content/index.ts"),
-          "content/injected": resolve(__dirname, "src/content/injected.ts"),
+          "content/injected": resolve(__dirname, "src/content/injected/index.ts"),
           "popup/popup": resolve(__dirname, "src/popup/index.ts"),
         },
         treeshake: isDev
