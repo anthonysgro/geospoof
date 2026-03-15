@@ -6,6 +6,37 @@
  * Vite/Rollup bundles this back into a single IIFE for page-context injection.
  */
 
+// ── Known Limitations ────────────────────────────────────────────────
+//
+// The following detection vectors CANNOT be fully mitigated from a
+// content script and are acknowledged as known limitations:
+//
+// 1. Iframe timing side-channels — A cross-origin iframe can compare
+//    its own Date/Intl results against the parent frame's postMessage
+//    timestamps, revealing discrepancies that content-script overrides
+//    cannot prevent.
+//
+// 2. Web Worker timezone leaks — Content scripts cannot inject into
+//    Web Worker or SharedWorker contexts. Code running inside a Worker
+//    will see the real system timezone via Date and Intl APIs.
+//
+// 3. SharedArrayBuffer timing attacks — High-resolution timing via
+//    SharedArrayBuffer can be used to fingerprint execution patterns
+//    introduced by API overrides, which cannot be masked at the
+//    content-script level.
+//
+// 4. Proxy/engine-internal detection — Some fingerprinting techniques
+//    rely on engine-internal checks (e.g., brand checks, internal
+//    slots) that can distinguish overridden functions from true native
+//    implementations. These require browser-level changes to mitigate.
+//
+// Content-script-based API overrides cannot prevent all fingerprinting
+// techniques. Some detection vectors require browser-level changes.
+// This extension does NOT attempt to override APIs in Web Worker
+// contexts, as content scripts cannot inject into workers.
+//
+// ────────────────────────────────────────────────────────────────────
+
 // 1. Function masking infrastructure — toString masking must be installed
 //    first so all subsequent overrides are indistinguishable from native code.
 import { initFunctionMasking } from "./function-masking";

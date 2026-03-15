@@ -99,18 +99,22 @@ function browserTargetPlugin(target: BrowserTarget): Plugin {
         cpSync(iconsSrc, resolve(__dirname, "dist/icons"), { recursive: true });
       }
 
-      // Inject "use strict" into the injected script for Firefox builds.
-      // esbuild minification strips the directive (ES modules are implicitly
-      // strict), but the compiled output runs as a classic IIFE in page
-      // context where strict mode is NOT automatic. Without it,
-      // .arguments/.caller access returns undefined instead of throwing
-      // TypeError (arkenfox tests p, q).
-      // For Chromium builds, the esbuild re-bundling banner handles this.
+      // Wrap the injected script in an IIFE for Firefox builds.
+      // The modular source compiles to top-level statements in ES module
+      // format, but the output runs as a classic <script> in page context.
+      // Without an IIFE wrapper, top-level const/let declarations live in
+      // the global lexical scope and can shadow page variables. The IIFE
+      // also carries "use strict" since esbuild minification strips the
+      // directive (ES modules are implicitly strict) but the classic script
+      // context is NOT automatically strict — without it, .arguments/.caller
+      // access returns undefined instead of throwing TypeError (arkenfox
+      // tests p, q).
+      // For Chromium builds, the esbuild re-bundling handles both concerns.
       if (target !== "chromium") {
         const injectedPath = resolve(__dirname, "dist/content/injected.js");
         if (existsSync(injectedPath)) {
           const content = readFileSync(injectedPath, "utf-8");
-          writeFileSync(injectedPath, `"use strict";\n${content}`);
+          writeFileSync(injectedPath, `"use strict";(function(){${content}})();\n`);
         }
       }
 

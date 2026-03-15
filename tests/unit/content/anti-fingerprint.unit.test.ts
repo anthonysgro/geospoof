@@ -55,7 +55,10 @@ describe("Anti-Fingerprint Hardening Unit Tests", () => {
 });
 
 describe("Known Limitations Comment Block", () => {
-  const source = readFileSync(resolve(__dirname, "../../../src/content/injected.ts"), "utf-8");
+  const source = readFileSync(
+    resolve(__dirname, "../../../src/content/injected/index.ts"),
+    "utf-8"
+  );
 
   /**
    * Validates: Requirement 8.1
