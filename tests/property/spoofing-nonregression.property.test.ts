@@ -134,10 +134,13 @@ describe("Prototype Lie Detection Fix — Spoofing Non-Regression Properties", (
         const gmtStr = tzPart?.value ?? "GMT";
         let expectedUtcOffset = 0;
         if (gmtStr !== "GMT" && gmtStr !== "UTC") {
-          const m = gmtStr.match(/^GMT([+-])(\d{1,2})(?::(\d{2}))?$/);
+          // Handle GMT±H:MM:SS (historical sub-minute offsets)
+          const m = gmtStr.match(/^GMT([+-])(\d{1,2})(?::(\d{2}))?(?::(\d{2}))?$/);
           if (m) {
             const sign = m[1] === "+" ? 1 : -1;
-            expectedUtcOffset = sign * (parseInt(m[2], 10) * 60 + parseInt(m[3] || "0", 10));
+            const secs = parseInt(m[4] || "0", 10);
+            expectedUtcOffset =
+              sign * (parseInt(m[2], 10) * 60 + parseInt(m[3] || "0", 10) + (secs >= 30 ? 1 : 0));
           }
         }
         // getTimezoneOffset returns the negation of the UTC offset

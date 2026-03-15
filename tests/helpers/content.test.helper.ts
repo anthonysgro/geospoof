@@ -261,12 +261,14 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
   /** Parse a GMT offset string like "GMT+5:30" or "GMT-8" into minutes from UTC. */
   function parseGMTOffset(gmtString: string): number {
     if (gmtString === "GMT" || gmtString === "UTC") return 0;
-    const match = gmtString.match(/^GMT([+-])(\d{1,2})(?::(\d{2}))?$/);
+    // Handle GMT±H:MM:SS (historical sub-minute offsets like GMT+0:53:28)
+    const match = gmtString.match(/^GMT([+-])(\d{1,2})(?::(\d{2}))?(?::(\d{2}))?$/);
     if (!match) return 0;
     const sign = match[1] === "+" ? 1 : -1;
     const hours = parseInt(match[2], 10);
     const minutes = parseInt(match[3] || "0", 10);
-    return sign * (hours * 60 + minutes);
+    const seconds = parseInt(match[4] || "0", 10);
+    return sign * (hours * 60 + minutes + (seconds >= 30 ? 1 : 0));
   }
 
   /** Resolve the actual UTC offset for a given date and IANA timezone. */
@@ -342,7 +344,22 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
     const realOffsetMinutes = originalGetTimezoneOffset.call(parsedDate);
     const spoofedUtcOffset = getIntlBasedOffset(parsedDate, timezoneId, fallbackOffset);
     const spoofedOffsetMinutes = -spoofedUtcOffset;
-    return (spoofedOffsetMinutes - realOffsetMinutes) * 60000;
+    const initialAdjustment = (spoofedOffsetMinutes - realOffsetMinutes) * 60000;
+
+    // Iterative refinement: re-resolve the spoofed offset at the adjusted epoch
+    // to handle DST boundary crossings between real and spoofed timezones.
+    try {
+      const adjustedDate = new OriginalDate(parsedDate.getTime() + initialAdjustment);
+      const refinedSpoofedUtcOffset = getIntlBasedOffset(adjustedDate, timezoneId, fallbackOffset);
+      if (refinedSpoofedUtcOffset !== spoofedUtcOffset) {
+        const refinedSpoofedOffsetMinutes = -refinedSpoofedUtcOffset;
+        return (refinedSpoofedOffsetMinutes - realOffsetMinutes) * 60000;
+      }
+    } catch {
+      // Fall back to initial un-refined adjustment
+    }
+
+    return initialAdjustment;
   }
 
   // ── Date constructor and Date.parse overrides ──────────────────────────
@@ -532,14 +549,19 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
   const explicitTimezoneInstances = new WeakSet<Intl.DateTimeFormat>();
 
   // Override DateTimeFormat — scoped: only inject spoofed tz when caller did NOT
-  // provide an explicit timeZone option.
+  // provide an explicit timeZone option, or when the explicit tz matches the spoofed tz.
   const DateTimeFormat = function (
     ...args: ConstructorParameters<typeof Intl.DateTimeFormat>
   ): Intl.DateTimeFormat {
     const [locales, options] = args;
     const hasExplicitTimezone = options?.timeZone != null;
+    const matchesSpoofedTz =
+      hasExplicitTimezone &&
+      spoofingEnabled &&
+      timezoneOverride &&
+      options.timeZone!.toLowerCase() === timezoneOverride.identifier.toLowerCase();
 
-    if (spoofingEnabled && timezoneOverride && !hasExplicitTimezone) {
+    if (spoofingEnabled && timezoneOverride && (!hasExplicitTimezone || matchesSpoofedTz)) {
       const opts: Intl.DateTimeFormatOptions = {
         ...options,
         timeZone: timezoneOverride.identifier,

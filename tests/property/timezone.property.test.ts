@@ -208,10 +208,14 @@ describe("getTimezoneOffset Override Properties", () => {
             const tzPart = parts.find((p) => p.type === "timeZoneName");
             const gmtStr = tzPart?.value ?? "GMT";
             if (gmtStr === "GMT" || gmtStr === "UTC") return 0;
-            const m = gmtStr.match(/^GMT([+-])(\d{1,2})(?::(\d{2}))?$/);
+            // Handle GMT±H:MM:SS (historical sub-minute offsets)
+            const m = gmtStr.match(/^GMT([+-])(\d{1,2})(?::(\d{2}))?(?::(\d{2}))?$/);
             if (!m) return 0;
             const sign = m[1] === "+" ? 1 : -1;
-            return sign * (parseInt(m[2], 10) * 60 + parseInt(m[3] || "0", 10));
+            const secs = parseInt(m[4] || "0", 10);
+            return (
+              sign * (parseInt(m[2], 10) * 60 + parseInt(m[3] || "0", 10) + (secs >= 30 ? 1 : 0))
+            );
           })();
           expect(result).toBe(-expectedOffset);
         }

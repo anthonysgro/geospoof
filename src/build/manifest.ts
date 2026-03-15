@@ -73,13 +73,13 @@ export function generateManifest(target: BrowserTarget, version: string): Record
       browser_specific_settings: {
         gecko: {
           id: "{a8f7e9c2-4d3b-4a1e-9f8c-7b6d5e4a3c2b}",
-          strict_min_version: "142.0",
+          strict_min_version: "140.0",
           data_collection_permissions: {
             required: ["none"],
           },
         },
         gecko_android: {
-          strict_min_version: "142.0",
+          strict_min_version: "140.0",
         },
       },
       background: {

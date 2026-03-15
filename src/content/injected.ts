@@ -363,7 +363,9 @@ declare var process: { env: Record<string, string | undefined> };
       return 0;
     }
 
-    const match = gmtString.match(/^GMT([+-])(\d{1,2})(?::(\d{2}))?$/);
+    // Handle GMT±H:MM:SS (historical sub-minute offsets like GMT+0:53:28)
+    // as well as the standard GMT±H:MM and GMT±H formats.
+    const match = gmtString.match(/^GMT([+-])(\d{1,2})(?::(\d{2}))?(?::(\d{2}))?$/);
     if (!match) {
       return 0;
     }
@@ -371,7 +373,9 @@ declare var process: { env: Record<string, string | undefined> };
     const sign = match[1] === "+" ? 1 : -1;
     const hours = parseInt(match[2], 10);
     const minutes = parseInt(match[3] || "0", 10);
-    return sign * (hours * 60 + minutes);
+    const seconds = parseInt(match[4] || "0", 10);
+    // Round to nearest minute to match getTimezoneOffset() convention
+    return sign * (hours * 60 + minutes + (seconds >= 30 ? 1 : 0));
   }
 
   /**
@@ -466,7 +470,23 @@ declare var process: { env: Record<string, string | undefined> };
     const spoofedUtcOffset = getIntlBasedOffset(parsedDate, timezoneId, fallbackOffset);
     // Convert to same sign convention as getTimezoneOffset (positive = west)
     const spoofedOffsetMinutes = -spoofedUtcOffset;
-    return (spoofedOffsetMinutes - realOffsetMinutes) * 60000;
+    const initialAdjustment = (spoofedOffsetMinutes - realOffsetMinutes) * 60000;
+
+    // Iterative refinement: re-resolve the spoofed offset at the adjusted epoch
+    // to handle DST boundary crossings between real and spoofed timezones.
+    // Converges in at most 2 iterations since offsets change at most once per DST transition.
+    try {
+      const adjustedDate = new OriginalDate(parsedDate.getTime() + initialAdjustment);
+      const refinedSpoofedUtcOffset = getIntlBasedOffset(adjustedDate, timezoneId, fallbackOffset);
+      if (refinedSpoofedUtcOffset !== spoofedUtcOffset) {
+        const refinedSpoofedOffsetMinutes = -refinedSpoofedUtcOffset;
+        return (refinedSpoofedOffsetMinutes - realOffsetMinutes) * 60000;
+      }
+    } catch {
+      // Fall back to initial un-refined adjustment
+    }
+
+    return initialAdjustment;
   }
 
   // ── Date constructor and Date.parse overrides ──────────────────────────
@@ -960,15 +980,24 @@ declare var process: { env: Record<string, string | undefined> };
     ): Intl.DateTimeFormat {
       try {
         const hasExplicitTimezone = options?.timeZone != null;
+        // Treat explicit timezone matching the spoofed timezone as non-explicit
+        // so that resolvedOptions() returns the spoofed identifier consistently
+        // for both the no-timezone and explicit-spoofed-timezone paths.
+        const matchesSpoofedTz =
+          hasExplicitTimezone &&
+          spoofingEnabled &&
+          timezoneData &&
+          options.timeZone!.toLowerCase() === timezoneData.identifier.toLowerCase();
 
-        if (spoofingEnabled && timezoneData && !hasExplicitTimezone) {
-          // Only inject spoofed timezone when caller did NOT provide an explicit one
+        if (spoofingEnabled && timezoneData && (!hasExplicitTimezone || matchesSpoofedTz)) {
+          // Inject spoofed timezone when caller did NOT provide an explicit one,
+          // or when the explicit timezone matches the spoofed timezone
           const opts: Intl.DateTimeFormatOptions = {
             ...options,
             timeZone: timezoneData.identifier,
           };
           const instance = new OriginalDateTimeFormat(locales, opts);
-          // Do NOT add to explicitTimezoneInstances — this is a default-timezone instance
+          // Do NOT add to explicitTimezoneInstances — treat as default-timezone instance
           return instance;
         }
 
