@@ -2,7 +2,9 @@
 
 Your VPN changes your IP address. Your browser is still telling websites where you actually are.
 
-Install: [Firefox Add-ons Store](https://addons.mozilla.org/en-US/firefox/addon/geo-spoof/)
+Install: [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/geo-spoof/) · Chrome Web Store (coming soon)
+
+Supports Firefox 140+, Firefox Android, Chrome, Brave, and Edge.
 
 <p>
   <img src="assets/screenshot1.png" alt="GeoSpoof main view" width="250"  />
@@ -20,11 +22,13 @@ Blocking geolocation requests is your right, but some sites treat it as evasion 
 
 ### The Fix
 
-GeoSpoof gives you full control over what your browser reports. Set your location to match your VPN, mismatch it on purpose for extra obfuscation, or pick somewhere entirely different. GPS coordinates, timezone, `Intl` locale data, and WebRTC all stay in sync with whatever you choose.
+GeoSpoof gives you full control over what your browser reports. Set your location to match your VPN, mismatch it on purpose for extra obfuscation, or pick somewhere entirely different. GPS coordinates, timezone, `Intl` locale data, Date APIs, the Temporal API, and WebRTC all stay in sync with whatever you choose.
 
 - **VPN Region Sync**: Detects your VPN exit IP and sets your spoofed location to match. One click, no manual coordinates.
 - **Manual Coordinates**: Search for a city or enter any latitude/longitude directly. Your location doesn't have to match your VPN.
-- **Full Signal Alignment**: All location signals report the same place, so sites see one consistent identity instead of mismatched data.
+- **Full Signal Alignment**: All location signals — geolocation, timezone offset, `Intl.DateTimeFormat`, Date getters, Date constructor, `Temporal.Now`, and WebRTC — report the same place. Sites see one consistent identity instead of mismatched data.
+- **Real-World Timezone Offsets**: Offsets are derived from the browser's own IANA timezone database via `Intl.DateTimeFormat`, so historical and DST-aware offsets match what a real user in that timezone would produce. No hardcoded offset tables that go stale.
+- **Cross-Browser**: Works on Firefox, Chrome, Brave, and Edge. Single codebase, MV3 on both platforms.
 - **Bypass Hard Gates**: Sites that refuse to load without geolocation permission get a clean, consistent response.
 - **Dev & QA**: Test geofenced apps, localized content, or location-aware UIs without leaving your desk.
 
@@ -52,7 +56,7 @@ When protection is enabled, GeoSpoof overrides the following browser APIs on eve
 | `navigator.geolocation.clearWatch()`                   | Clears spoofed watch callbacks    |
 | `navigator.permissions.query({ name: "geolocation" })` | Reports permission as `"granted"` |
 
-### Timezone
+### Timezone & Date
 
 | API                                               | Behavior                                                                                                         |
 | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
@@ -65,31 +69,84 @@ When protection is enabled, GeoSpoof overrides the following browser APIs on eve
 | `Date.prototype.toLocaleString()`                 | Delegates to `Intl.DateTimeFormat` with the spoofed timezone injected                                            |
 | `Date.prototype.toLocaleDateString()`             | Delegates to `Intl.DateTimeFormat` with the spoofed timezone injected                                            |
 | `Date.prototype.toLocaleTimeString()`             | Delegates to `Intl.DateTimeFormat` with the spoofed timezone injected                                            |
+| `Date.prototype.getHours()`                       | Returns hours in the spoofed timezone                                                                            |
+| `Date.prototype.getMinutes()`                     | Returns minutes in the spoofed timezone                                                                          |
+| `Date.prototype.getSeconds()`                     | Returns seconds in the spoofed timezone                                                                          |
+| `Date.prototype.getDate()`                        | Returns day of month in the spoofed timezone                                                                     |
+| `Date.prototype.getDay()`                         | Returns day of week in the spoofed timezone                                                                      |
+| `Date.prototype.getMonth()`                       | Returns month in the spoofed timezone                                                                            |
+| `Date.prototype.getFullYear()`                    | Returns year in the spoofed timezone                                                                             |
+| `new Date(string)` (ambiguous strings)            | Adjusts epoch so the date is interpreted in the spoofed timezone instead of the real one                         |
+| `new Date(year, month, ...)` (multi-arg)          | Adjusts epoch so the date is interpreted in the spoofed timezone instead of the real one                         |
+| `Date.parse(string)` (ambiguous strings)          | Same epoch adjustment as the constructor                                                                         |
+
+### Temporal API
+
+Feature-detected at runtime. If the browser supports `Temporal`, these are overridden:
+
+| API                               | Behavior                                                  |
+| --------------------------------- | --------------------------------------------------------- |
+| `Temporal.Now.timeZoneId()`       | Returns the spoofed IANA timezone identifier              |
+| `Temporal.Now.plainDateTimeISO()` | Uses the spoofed timezone when no explicit timezone given |
+| `Temporal.Now.plainDateISO()`     | Uses the spoofed timezone when no explicit timezone given |
+| `Temporal.Now.plainTimeISO()`     | Uses the spoofed timezone when no explicit timezone given |
+| `Temporal.Now.zonedDateTimeISO()` | Uses the spoofed timezone when no explicit timezone given |
 
 ### WebRTC
 
-| API                                      | Behavior                                                                                       |
-| ---------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `privacy.network.webRTCIPHandlingPolicy` | Configured via Firefox's built-in privacy API to prevent IP leaks — no script injection needed |
+| API                                      | Behavior                                                                                           |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `privacy.network.webRTCIPHandlingPolicy` | Configured via the browser's built-in privacy API to prevent IP leaks — no script injection needed |
+
+### Anti-Fingerprinting
+
+Overridden functions are disguised to pass standard detection checks used by most fingerprinting scripts:
+
+| Technique                       | What it does                                                                                                           |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `Function.prototype.toString`   | All overrides return `function name() { [native code] }` — indistinguishable from real builtins                        |
+| Method shorthand wrapping       | Overrides have no `prototype` property and no `[[Construct]]`, matching native method behavior                         |
+| Iframe `contentWindow` patching | Iframes get their `toString` patched synchronously on access, before fingerprinting scripts can grab a clean reference |
+| DOM insertion wrapping          | `appendChild`, `insertBefore`, `innerHTML`, etc. (11 methods) synchronously patch iframes on insertion                 |
+
+> **Privacy caveat:** These overrides pass the checks that real-world fingerprinting scripts typically run. Dedicated forensic tools like [arkenfox](https://github.com/nicolo-ribaudo/nicolo-ribaudo.github.io) and [CreepJS](https://abrahamjuliot.github.io/creepjs/) can still detect content-script-level overrides through engine internals, Web Worker context leaks, and timing side-channels. Full undetectability requires browser-level changes (Tor Browser, Mullvad Browser). GeoSpoof does the best that's possible from an extension.
 
 ## Installation
 
-**From Firefox Add-ons:** https://addons.mozilla.org/en-US/firefox/addon/geo-spoof
+**Firefox:** https://addons.mozilla.org/en-US/firefox/addon/geo-spoof
 
-**From source:**
+**Chrome / Brave / Edge:** Chrome Web Store listing coming soon. You can sideload from [GitHub Releases](https://github.com/anthonysgro/geospoof/releases) — see below.
+
+**From source (Firefox):**
 
 ```bash
 git clone https://github.com/anthonysgro/geospoof.git
 cd geospoof
 npm install
 cp .env.example .env
-npm run build:dev
-npm start              # Launches Firefox with the extension loaded
+npm run build:firefox
+npm run start:firefox   # Launches Firefox with the extension loaded
 ```
 
-Or load `dist/manifest.json` manually as a temporary add-on via `about:debugging`.
+**From source (Chrome / Brave / Edge):**
 
-**From GitHub Releases (sideloading):**
+```bash
+git clone https://github.com/anthonysgro/geospoof.git
+cd geospoof
+npm install
+cp .env.example .env
+npm run build:chromium
+```
+
+Then load `dist/` as an unpacked extension:
+
+1. Go to `chrome://extensions` (or `brave://extensions`, `edge://extensions`)
+2. Enable "Developer mode"
+3. Click "Load unpacked" and select the `dist/` folder
+
+Or use `npm run start:chrome` / `npm run start:brave` to build and launch automatically.
+
+**From GitHub Releases (Firefox sideloading):**
 
 For Gecko-based browsers that support unsigned extensions (LibreWolf, Waterfox, Floorp, Pale Moon, unbranded Firefox, or Firefox with `xpinstall.signatures.required` set to `false`):
 
@@ -100,6 +157,15 @@ For Gecko-based browsers that support unsigned extensions (LibreWolf, Waterfox, 
 5. Select the downloaded `.xpi` file
 
 > **Note:** Unsigned `.xpi` files cannot be installed on standard Firefox unless you set `xpinstall.signatures.required` to `false` in `about:config`. Most Firefox forks listed above allow unsigned extensions by default.
+
+**From GitHub Releases (Chromium sideloading):**
+
+1. Go to the [Releases](https://github.com/anthonysgro/geospoof/releases) page
+2. Download the `geospoof-chromium-v<version>.zip` file from the latest release
+3. Unzip it to a folder on your machine
+4. Go to `chrome://extensions` (or `brave://extensions`, `edge://extensions`)
+5. Enable "Developer mode"
+6. Click "Load unpacked" and select the unzipped folder
 
 ## Usage
 
@@ -125,7 +191,7 @@ No data is sent to the extension developer. See [PRIVACY_POLICY.md](PRIVACY_POLI
 
 ## Development
 
-**Requirements:** Node.js 18+, npm 9+, Firefox 115+
+**Requirements:** Node.js 18+, npm 9+, Firefox 140+ or any Chromium-based browser
 
 ### Quick Start
 
@@ -150,21 +216,29 @@ npm start
 
 That's it. Edit code, save, Firefox reloads. If something looks wrong, check the browser console (`about:debugging` → Inspect for background, F12 for content scripts).
 
+For Chromium development, use `npm run start:chrome` or `npm run start:brave` instead.
+
 ### Scripts Reference
 
-| Command                  | What it does                                                       |
-| ------------------------ | ------------------------------------------------------------------ |
-| `npm run dev`            | Watch mode — Vite rebuilds `dist/` on every file change            |
-| `npm start`              | Launch Firefox with the extension loaded from `dist/`              |
-| `npm run build:dev`      | One-time dev build (source maps, console logs)                     |
-| `npm run build:prod`     | One-time production build (minified, no logs)                      |
-| `npm test`               | Run all tests                                                      |
-| `npm run lint:ext`       | Lint the extension manifest and files                              |
-| `npm run validate`       | Type-check + lint + format check + tests (run before PRs)          |
-| `npm run package`        | Production build + zip for AMO submission                          |
-| `npm run package:xpi`    | Production build + package as `.xpi` for sideloading               |
-| `npm run package:source` | Zip source code for AMO review (excludes node_modules, dist, etc.) |
-| `npm run start:android`  | Launch on Firefox for Android (USB, auto-detects device)           |
+| Command                    | What it does                                                       |
+| -------------------------- | ------------------------------------------------------------------ |
+| `npm run dev`              | Watch mode — Vite rebuilds `dist/` on every file change            |
+| `npm start`                | Launch Firefox with the extension loaded from `dist/`              |
+| `npm run build:dev`        | One-time dev build (source maps, console logs)                     |
+| `npm run build:prod`       | One-time production build (minified, no logs)                      |
+| `npm run build:firefox`    | Production build targeting Firefox                                 |
+| `npm run build:chromium`   | Production build targeting Chrome/Brave/Edge                       |
+| `npm test`                 | Run all tests                                                      |
+| `npm run lint:ext`         | Lint the extension manifest and files                              |
+| `npm run validate`         | Type-check + lint + format check + tests (run before PRs)          |
+| `npm run package`          | Firefox production build + zip for AMO submission                  |
+| `npm run package:chromium` | Chromium production build + zip for Chrome Web Store               |
+| `npm run package:xpi`      | Production build + package as `.xpi` for sideloading               |
+| `npm run package:source`   | Zip source code for AMO review (excludes node_modules, dist, etc.) |
+| `npm run start:firefox`    | Launch Firefox with the extension loaded                           |
+| `npm run start:chrome`     | Build for Chromium + launch Chrome                                 |
+| `npm run start:brave`      | Build for Chromium + launch Brave                                  |
+| `npm run start:android`    | Launch on Firefox for Android (USB, auto-detects device)           |
 
 ### Testing on Android
 
@@ -188,7 +262,9 @@ npm run start:android -- <device-id>
 
 You can find device IDs with `adb devices`.
 
-### Building for Mozilla Review
+### Building for Review
+
+**Firefox (AMO):**
 
 ```bash
 npm install
@@ -198,18 +274,31 @@ npm run package
 
 This runs a production build and packages the extension into `web-ext-artifacts/geospoof-<version>.zip` for AMO submission. TypeScript source in `src/` is compiled via Vite + esbuild. No hand-minification or obfuscation.
 
+**Chromium (Chrome Web Store):**
+
+```bash
+npm install
+cp .env.example .env
+npm run package:chromium
+```
+
+This produces `web-ext-artifacts/geospoof-chromium-v<version>.zip`.
+
 ### Project Structure
 
 ```
 src/
-├── background/   # Settings, geocoding, timezone resolution
-├── content/      # Content + injected scripts (API overrides)
-├── popup/        # Extension popup UI
-└── shared/       # Shared types and utilities
+├── background/          # Settings, geocoding, timezone resolution, VPN sync
+├── build/               # Manifest generator (Firefox/Chromium targets)
+├── content/
+│   ├── index.ts         # Content script (bridge between background and injected)
+│   └── injected/        # Page-context API overrides (12 modules)
+├── popup/               # Extension popup UI
+└── shared/              # Shared types and utilities
 tests/
-├── unit/         # Unit tests
-├── integration/  # Integration tests
-└── property/     # Property-based tests (fast-check)
+├── unit/                # Unit tests
+├── integration/         # Integration tests
+└── property/            # Property-based tests (fast-check)
 ```
 
 ## Legal
