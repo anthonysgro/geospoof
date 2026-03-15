@@ -44,6 +44,10 @@ export interface ContentScriptTestInterface {
       query: (descriptor: { name: string }) => Promise<PermissionStatus>;
     };
   };
+  DateConstructor: (...args: unknown[]) => Date;
+  DateParse: (str: string) => number;
+  isAmbiguousDateString: (str: string) => boolean;
+  computeEpochAdjustment: (parsedDate: Date, timezoneId: string, fallbackOffset: number) => number;
   Date: {
     prototype: {
       getTimezoneOffset: () => number;
@@ -59,12 +63,30 @@ export interface ContentScriptTestInterface {
         locales?: string | string[],
         options?: Intl.DateTimeFormatOptions
       ) => string;
+      getHours: () => number;
+      getMinutes: () => number;
+      getSeconds: () => number;
+      getMilliseconds: () => number;
+      getDate: () => number;
+      getDay: () => number;
+      getMonth: () => number;
+      getFullYear: () => number;
     };
   };
   Intl: {
     DateTimeFormat: (
       ...args: ConstructorParameters<typeof Intl.DateTimeFormat>
     ) => Intl.DateTimeFormat;
+    resolvedOptions: (instance: Intl.DateTimeFormat) => Intl.ResolvedDateTimeFormatOptions;
+  };
+  Temporal: {
+    Now: {
+      timeZoneId: () => string;
+      plainDateTimeISO: (tzLike?: string) => TemporalPlainDateTime;
+      plainDateISO: (tzLike?: string) => TemporalPlainDate;
+      plainTimeISO: (tzLike?: string) => TemporalPlainTime;
+      zonedDateTimeISO: (tzLike?: string) => TemporalZonedDateTime;
+    };
   };
   updateSettings: (newSettings: SettingsUpdate) => void;
   getWatchCallbacks: () => Map<number, PositionCallback>;
@@ -75,12 +97,28 @@ export interface ContentScriptTestInterface {
     permissionsQuery: ReturnType<typeof vi.fn>;
     getTimezoneOffset: typeof Date.prototype.getTimezoneOffset;
     DateTimeFormat: typeof Intl.DateTimeFormat;
+    resolvedOptions: typeof Intl.DateTimeFormat.prototype.resolvedOptions;
     toString: typeof Date.prototype.toString;
     toTimeString: typeof Date.prototype.toTimeString;
     toDateString: typeof Date.prototype.toDateString;
     toLocaleString: typeof Date.prototype.toLocaleString;
     toLocaleDateString: typeof Date.prototype.toLocaleDateString;
     toLocaleTimeString: typeof Date.prototype.toLocaleTimeString;
+    getHours: typeof Date.prototype.getHours;
+    getMinutes: typeof Date.prototype.getMinutes;
+    getSeconds: typeof Date.prototype.getSeconds;
+    getMilliseconds: typeof Date.prototype.getMilliseconds;
+    getDate: typeof Date.prototype.getDate;
+    getDay: typeof Date.prototype.getDay;
+    getMonth: typeof Date.prototype.getMonth;
+    getFullYear: typeof Date.prototype.getFullYear;
+    temporalTimeZoneId: () => string;
+    temporalPlainDateTimeISO: (tzLike?: string) => TemporalPlainDateTime;
+    temporalPlainDateISO: (tzLike?: string) => TemporalPlainDate;
+    temporalPlainTimeISO: (tzLike?: string) => TemporalPlainTime;
+    temporalZonedDateTimeISO: (tzLike?: string) => TemporalZonedDateTime;
+    DateConstructor: DateConstructor;
+    DateParse: typeof Date.parse;
   };
 }
 
@@ -177,6 +215,14 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
     locales?: string | string[],
     options?: Intl.DateTimeFormatOptions
   ) => string;
+  const originalGetHours = dateProto["getHours"] as (this: Date) => number;
+  const originalGetMinutes = dateProto["getMinutes"] as (this: Date) => number;
+  const originalGetSeconds = dateProto["getSeconds"] as (this: Date) => number;
+  const originalGetMilliseconds = dateProto["getMilliseconds"] as (this: Date) => number;
+  const originalGetDate = dateProto["getDate"] as (this: Date) => number;
+  const originalGetDay = dateProto["getDay"] as (this: Date) => number;
+  const originalGetMonth = dateProto["getMonth"] as (this: Date) => number;
+  const originalGetFullYear = dateProto["getFullYear"] as (this: Date) => number;
   const OriginalDateTimeFormat = Intl.DateTimeFormat;
 
   // Settings
@@ -262,6 +308,138 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
     }
   }
 
+  // ── Date constructor helpers ─────────────────────────────────────────
+
+  /** Store original Date references before any overrides */
+  const OriginalDate = Date;
+  const OriginalDateParse = Date.parse;
+
+  /**
+   * Determine if a date string lacks an explicit timezone indicator.
+   * Returns true if the string is "ambiguous" (no tz info).
+   */
+  function isAmbiguousDateString(str: string): boolean {
+    // ISO 8601 date-only: YYYY-MM-DD with no time component → UTC per ECMAScript spec
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str.trim())) {
+      return false;
+    }
+    const hasExplicitTz =
+      /Z$/i.test(str.trim()) ||
+      /\b(?:UTC|GMT)\b/i.test(str) ||
+      /[+-]\d{2}(?::?\d{2})?$/.test(str.trim());
+    return !hasExplicitTz;
+  }
+
+  /**
+   * Compute the epoch adjustment in milliseconds to shift a timestamp
+   * from real-local-time interpretation to spoofed-local-time interpretation.
+   */
+  function computeEpochAdjustment(
+    parsedDate: Date,
+    timezoneId: string,
+    fallbackOffset: number
+  ): number {
+    const realOffsetMinutes = originalGetTimezoneOffset.call(parsedDate);
+    const spoofedUtcOffset = getIntlBasedOffset(parsedDate, timezoneId, fallbackOffset);
+    const spoofedOffsetMinutes = -spoofedUtcOffset;
+    return (spoofedOffsetMinutes - realOffsetMinutes) * 60000;
+  }
+
+  // ── Date constructor and Date.parse overrides ──────────────────────────
+
+  function DateOverride(...args: unknown[]): Date {
+    // When spoofing is disabled, delegate entirely to OriginalDate
+    if (!spoofingEnabled || !timezoneOverride) {
+      if (args.length === 0) return new OriginalDate();
+      if (args.length === 1) return new OriginalDate(args[0] as number | string);
+      return new OriginalDate(
+        args[0] as number,
+        args[1] as number,
+        (args[2] ?? 1) as number,
+        (args[3] ?? 0) as number,
+        (args[4] ?? 0) as number,
+        (args[5] ?? 0) as number,
+        (args[6] ?? 0) as number
+      );
+    }
+
+    if (args.length === 0) return new OriginalDate();
+
+    if (args.length === 1) {
+      const arg = args[0];
+      if (typeof arg === "number") return new OriginalDate(arg);
+      if (typeof arg === "string") {
+        try {
+          const parsed = new OriginalDate(arg);
+          if (isNaN(parsed.getTime())) return parsed;
+          if (isAmbiguousDateString(arg)) {
+            const adjustment = computeEpochAdjustment(
+              parsed,
+              timezoneOverride.identifier,
+              timezoneOverride.offset
+            );
+            return new OriginalDate(parsed.getTime() + adjustment);
+          }
+          return parsed;
+        } catch {
+          return new OriginalDate(arg);
+        }
+      }
+      return new OriginalDate(arg as number | string);
+    }
+
+    // Multi-argument
+    try {
+      const parsed = new OriginalDate(
+        args[0] as number,
+        args[1] as number,
+        (args[2] ?? 1) as number,
+        (args[3] ?? 0) as number,
+        (args[4] ?? 0) as number,
+        (args[5] ?? 0) as number,
+        (args[6] ?? 0) as number
+      );
+      const adjustment = computeEpochAdjustment(
+        parsed,
+        timezoneOverride.identifier,
+        timezoneOverride.offset
+      );
+      return new OriginalDate(parsed.getTime() + adjustment);
+    } catch {
+      return new OriginalDate(
+        args[0] as number,
+        args[1] as number,
+        (args[2] ?? 1) as number,
+        (args[3] ?? 0) as number,
+        (args[4] ?? 0) as number,
+        (args[5] ?? 0) as number,
+        (args[6] ?? 0) as number
+      );
+    }
+  }
+
+  function dateParseOverride(str: string): number {
+    if (!spoofingEnabled || !timezoneOverride) {
+      return OriginalDateParse(str);
+    }
+    try {
+      const epoch = OriginalDateParse(str);
+      if (isNaN(epoch)) return NaN;
+      if (isAmbiguousDateString(str)) {
+        const parsed = new OriginalDate(epoch);
+        const adjustment = computeEpochAdjustment(
+          parsed,
+          timezoneOverride.identifier,
+          timezoneOverride.offset
+        );
+        return epoch + adjustment;
+      }
+      return epoch;
+    } catch {
+      return OriginalDateParse(str);
+    }
+  }
+
   // Watch callbacks storage
   const watchCallbacks = new Map<number, PositionCallback>();
   let watchIdCounter = 1;
@@ -337,30 +515,59 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
     }
   };
 
-  // Override getTimezoneOffset
+  // Override getTimezoneOffset — uses Intl-based offset (varies by date per IANA rules)
   const getTimezoneOffset = function (this: Date): number {
     if (spoofingEnabled && timezoneOverride) {
-      return -timezoneOverride.offset;
+      const offsetMinutes = getIntlBasedOffset(
+        this,
+        timezoneOverride.identifier,
+        timezoneOverride.offset
+      );
+      return -offsetMinutes;
     }
     return originalGetTimezoneOffset.call(this);
   };
 
-  // Override DateTimeFormat
+  // Track Intl.DateTimeFormat instances created with an explicit timeZone option.
+  const explicitTimezoneInstances = new WeakSet<Intl.DateTimeFormat>();
+
+  // Override DateTimeFormat — scoped: only inject spoofed tz when caller did NOT
+  // provide an explicit timeZone option.
   const DateTimeFormat = function (
     ...args: ConstructorParameters<typeof Intl.DateTimeFormat>
   ): Intl.DateTimeFormat {
-    const instance = new OriginalDateTimeFormat(...args);
+    const [locales, options] = args;
+    const hasExplicitTimezone = options?.timeZone != null;
 
-    if (spoofingEnabled && timezoneOverride) {
-      const boundResolvedOptions = instance.resolvedOptions.bind(instance);
-      instance.resolvedOptions = function (): Intl.ResolvedDateTimeFormatOptions {
-        const resolvedOpts = boundResolvedOptions();
-        resolvedOpts.timeZone = timezoneOverride!.identifier;
-        return resolvedOpts;
+    if (spoofingEnabled && timezoneOverride && !hasExplicitTimezone) {
+      const opts: Intl.DateTimeFormatOptions = {
+        ...options,
+        timeZone: timezoneOverride.identifier,
       };
+      return new OriginalDateTimeFormat(locales, opts);
     }
 
+    const instance = new OriginalDateTimeFormat(locales, options);
+    if (hasExplicitTimezone) {
+      explicitTimezoneInstances.add(instance);
+    }
     return instance;
+  };
+
+  // Override resolvedOptions — scoped: only inject spoofed tz for default-timezone instances
+  const dtfProto = OriginalDateTimeFormat.prototype as unknown as Record<
+    string,
+    (...args: unknown[]) => unknown
+  >;
+  const originalResolvedOptions = dtfProto["resolvedOptions"] as (
+    this: Intl.DateTimeFormat
+  ) => Intl.ResolvedDateTimeFormatOptions;
+  const resolvedOptions = function (this: Intl.DateTimeFormat): Intl.ResolvedDateTimeFormatOptions {
+    const opts = originalResolvedOptions.call(this);
+    if (spoofingEnabled && timezoneOverride && !explicitTimezoneInstances.has(this)) {
+      opts.timeZone = timezoneOverride.identifier;
+    }
+    return opts;
   };
 
   // Override Date formatting methods
@@ -453,8 +660,12 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
   ): string {
     if (spoofingEnabled && timezoneOverride) {
       try {
-        const opts = { ...options, timeZone: timezoneOverride.identifier };
-        return originalToLocaleString.call(this, locales, opts);
+        const hasExplicitTimezone = options?.timeZone != null;
+        if (!hasExplicitTimezone) {
+          const opts = { ...options, timeZone: timezoneOverride.identifier };
+          return originalToLocaleString.call(this, locales, opts);
+        }
+        return originalToLocaleString.call(this, locales, options);
       } catch {
         return originalToLocaleString.call(this, locales, options);
       }
@@ -469,8 +680,12 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
   ): string {
     if (spoofingEnabled && timezoneOverride) {
       try {
-        const opts = { ...options, timeZone: timezoneOverride.identifier };
-        return originalToLocaleDateString.call(this, locales, opts);
+        const hasExplicitTimezone = options?.timeZone != null;
+        if (!hasExplicitTimezone) {
+          const opts = { ...options, timeZone: timezoneOverride.identifier };
+          return originalToLocaleDateString.call(this, locales, opts);
+        }
+        return originalToLocaleDateString.call(this, locales, options);
       } catch {
         return originalToLocaleDateString.call(this, locales, options);
       }
@@ -485,13 +700,279 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
   ): string {
     if (spoofingEnabled && timezoneOverride) {
       try {
-        const opts = { ...options, timeZone: timezoneOverride.identifier };
-        return originalToLocaleTimeString.call(this, locales, opts);
+        const hasExplicitTimezone = options?.timeZone != null;
+        if (!hasExplicitTimezone) {
+          const opts = { ...options, timeZone: timezoneOverride.identifier };
+          return originalToLocaleTimeString.call(this, locales, opts);
+        }
+        return originalToLocaleTimeString.call(this, locales, options);
       } catch {
         return originalToLocaleTimeString.call(this, locales, options);
       }
     }
     return originalToLocaleTimeString.call(this, locales, options);
+  };
+
+  // ── Date getter helpers & overrides ──────────────────────────────────
+
+  /** Extract a date component for a given date in the specified IANA timezone. */
+  function getDateComponent(
+    date: Date,
+    timezoneId: string,
+    component: "hour" | "minute" | "second" | "day" | "month" | "year" | "weekday"
+  ): number {
+    const options: Intl.DateTimeFormatOptions = { timeZone: timezoneId };
+    switch (component) {
+      case "hour":
+        options.hour = "numeric";
+        options.hour12 = false;
+        break;
+      case "minute":
+        options.minute = "numeric";
+        break;
+      case "second":
+        options.second = "numeric";
+        break;
+      case "day":
+        options.day = "numeric";
+        break;
+      case "month":
+        options.month = "numeric";
+        break;
+      case "year":
+        options.year = "numeric";
+        break;
+      case "weekday":
+        options.weekday = "short";
+        break;
+    }
+    const formatter = new OriginalDateTimeFormat("en-US", options);
+    const parts = formatter.formatToParts(date);
+
+    if (component === "weekday") {
+      const weekdayStr = parts.find((p) => p.type === "weekday")?.value ?? "";
+      const dayMap: Record<string, number> = {
+        Sun: 0,
+        Mon: 1,
+        Tue: 2,
+        Wed: 3,
+        Thu: 4,
+        Fri: 5,
+        Sat: 6,
+      };
+      return dayMap[weekdayStr] ?? 0;
+    }
+
+    const partType =
+      component === "day"
+        ? "day"
+        : component === "month"
+          ? "month"
+          : component === "year"
+            ? "year"
+            : component;
+    const part = parts.find((p) => p.type === partType);
+    return parseInt(part?.value ?? "0", 10);
+  }
+
+  const getHours = function (this: Date): number {
+    try {
+      if (spoofingEnabled && timezoneOverride) {
+        return getDateComponent(this, timezoneOverride.identifier, "hour");
+      }
+      return originalGetHours.call(this);
+    } catch {
+      return originalGetHours.call(this);
+    }
+  };
+
+  const getMinutes = function (this: Date): number {
+    try {
+      if (spoofingEnabled && timezoneOverride) {
+        return getDateComponent(this, timezoneOverride.identifier, "minute");
+      }
+      return originalGetMinutes.call(this);
+    } catch {
+      return originalGetMinutes.call(this);
+    }
+  };
+
+  const getSeconds = function (this: Date): number {
+    try {
+      if (spoofingEnabled && timezoneOverride) {
+        return getDateComponent(this, timezoneOverride.identifier, "second");
+      }
+      return originalGetSeconds.call(this);
+    } catch {
+      return originalGetSeconds.call(this);
+    }
+  };
+
+  const getMilliseconds = function (this: Date): number {
+    try {
+      if (spoofingEnabled && timezoneOverride) {
+        // Milliseconds are timezone-independent
+        return originalGetMilliseconds.call(this);
+      }
+      return originalGetMilliseconds.call(this);
+    } catch {
+      return originalGetMilliseconds.call(this);
+    }
+  };
+
+  const getDate = function (this: Date): number {
+    try {
+      if (spoofingEnabled && timezoneOverride) {
+        return getDateComponent(this, timezoneOverride.identifier, "day");
+      }
+      return originalGetDate.call(this);
+    } catch {
+      return originalGetDate.call(this);
+    }
+  };
+
+  const getDay = function (this: Date): number {
+    try {
+      if (spoofingEnabled && timezoneOverride) {
+        return getDateComponent(this, timezoneOverride.identifier, "weekday");
+      }
+      return originalGetDay.call(this);
+    } catch {
+      return originalGetDay.call(this);
+    }
+  };
+
+  const getMonth = function (this: Date): number {
+    try {
+      if (spoofingEnabled && timezoneOverride) {
+        return getDateComponent(this, timezoneOverride.identifier, "month") - 1;
+      }
+      return originalGetMonth.call(this);
+    } catch {
+      return originalGetMonth.call(this);
+    }
+  };
+
+  const getFullYear = function (this: Date): number {
+    try {
+      if (spoofingEnabled && timezoneOverride) {
+        return getDateComponent(this, timezoneOverride.identifier, "year");
+      }
+      return originalGetFullYear.call(this);
+    } catch {
+      return originalGetFullYear.call(this);
+    }
+  };
+
+  // ── Temporal API mock & overrides ──────────────────────────────────
+
+  // Mock Temporal.Now for testing (jsdom/Node.js doesn't have Temporal natively).
+  // The "originals" simulate what a real browser's Temporal.Now would return.
+  const systemTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  const originalTemporalTimeZoneId = (): string => systemTimezone;
+  const originalTemporalPlainDateTimeISO = (tzLike?: string): TemporalPlainDateTime => {
+    const tz = tzLike ?? systemTimezone;
+    const now = new Date();
+    const fmt = new OriginalDateTimeFormat("en-US", {
+      timeZone: tz,
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      second: "numeric",
+      hour12: false,
+    });
+    const parts = fmt.formatToParts(now);
+    const get = (type: string): number =>
+      parseInt(parts.find((p) => p.type === type)?.value ?? "0", 10);
+    return {
+      year: get("year"),
+      month: get("month"),
+      day: get("day"),
+      hour: get("hour"),
+      minute: get("minute"),
+      second: get("second"),
+      millisecond: 0,
+      microsecond: 0,
+      nanosecond: 0,
+      toString: () =>
+        `${get("year")}-${String(get("month")).padStart(2, "0")}-${String(get("day")).padStart(2, "0")}T${String(get("hour")).padStart(2, "0")}:${String(get("minute")).padStart(2, "0")}:${String(get("second")).padStart(2, "0")}`,
+    };
+  };
+  const originalTemporalPlainDateISO = (tzLike?: string): TemporalPlainDate => {
+    const dt = originalTemporalPlainDateTimeISO(tzLike);
+    return {
+      year: dt.year,
+      month: dt.month,
+      day: dt.day,
+      toString: () =>
+        `${dt.year}-${String(dt.month).padStart(2, "0")}-${String(dt.day).padStart(2, "0")}`,
+    };
+  };
+  const originalTemporalPlainTimeISO = (tzLike?: string): TemporalPlainTime => {
+    const dt = originalTemporalPlainDateTimeISO(tzLike);
+    return {
+      hour: dt.hour,
+      minute: dt.minute,
+      second: dt.second,
+      millisecond: 0,
+      microsecond: 0,
+      nanosecond: 0,
+      toString: () =>
+        `${String(dt.hour).padStart(2, "0")}:${String(dt.minute).padStart(2, "0")}:${String(dt.second).padStart(2, "0")}`,
+    };
+  };
+  const originalTemporalZonedDateTimeISO = (tzLike?: string): TemporalZonedDateTime => {
+    const tz = tzLike ?? systemTimezone;
+    const dt = originalTemporalPlainDateTimeISO(tz);
+    return {
+      year: dt.year,
+      month: dt.month,
+      day: dt.day,
+      hour: dt.hour,
+      minute: dt.minute,
+      second: dt.second,
+      timeZoneId: tz,
+      toString: () => `${dt.toString()}[${tz}]`,
+    };
+  };
+
+  // Temporal.Now overrides (mirrors injected.ts logic)
+  const temporalTimeZoneId = (): string => {
+    if (spoofingEnabled && timezoneOverride) {
+      return timezoneOverride.identifier;
+    }
+    return originalTemporalTimeZoneId();
+  };
+
+  const temporalPlainDateTimeISO = (tzLike?: string): TemporalPlainDateTime => {
+    if (spoofingEnabled && timezoneOverride && tzLike === undefined) {
+      return originalTemporalPlainDateTimeISO(timezoneOverride.identifier);
+    }
+    return originalTemporalPlainDateTimeISO(tzLike);
+  };
+
+  const temporalPlainDateISO = (tzLike?: string): TemporalPlainDate => {
+    if (spoofingEnabled && timezoneOverride && tzLike === undefined) {
+      return originalTemporalPlainDateISO(timezoneOverride.identifier);
+    }
+    return originalTemporalPlainDateISO(tzLike);
+  };
+
+  const temporalPlainTimeISO = (tzLike?: string): TemporalPlainTime => {
+    if (spoofingEnabled && timezoneOverride && tzLike === undefined) {
+      return originalTemporalPlainTimeISO(timezoneOverride.identifier);
+    }
+    return originalTemporalPlainTimeISO(tzLike);
+  };
+
+  const temporalZonedDateTimeISO = (tzLike?: string): TemporalZonedDateTime => {
+    if (spoofingEnabled && timezoneOverride && tzLike === undefined) {
+      return originalTemporalZonedDateTimeISO(timezoneOverride.identifier);
+    }
+    return originalTemporalZonedDateTimeISO(tzLike);
   };
 
   // Create spoofed PermissionStatus
@@ -542,6 +1023,10 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
         query: permissionsQuery,
       },
     },
+    DateConstructor: DateOverride,
+    DateParse: dateParseOverride,
+    isAmbiguousDateString,
+    computeEpochAdjustment,
     Date: {
       prototype: {
         getTimezoneOffset,
@@ -551,10 +1036,28 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
         toLocaleString,
         toLocaleDateString,
         toLocaleTimeString,
+        getHours,
+        getMinutes,
+        getSeconds,
+        getMilliseconds,
+        getDate,
+        getDay,
+        getMonth,
+        getFullYear,
       },
     },
     Intl: {
       DateTimeFormat,
+      resolvedOptions: (instance: Intl.DateTimeFormat) => resolvedOptions.call(instance),
+    },
+    Temporal: {
+      Now: {
+        timeZoneId: temporalTimeZoneId,
+        plainDateTimeISO: temporalPlainDateTimeISO,
+        plainDateISO: temporalPlainDateISO,
+        plainTimeISO: temporalPlainTimeISO,
+        zonedDateTimeISO: temporalZonedDateTimeISO,
+      },
     },
     updateSettings: (newSettings: SettingsUpdate): void => {
       spoofingEnabled = newSettings.enabled !== undefined ? newSettings.enabled : spoofingEnabled;
@@ -577,12 +1080,28 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
       permissionsQuery: originalPermissionsQuery,
       getTimezoneOffset: originalGetTimezoneOffset,
       DateTimeFormat: OriginalDateTimeFormat,
+      resolvedOptions: originalResolvedOptions,
       toString: originalToString,
       toTimeString: originalToTimeString,
       toDateString: originalToDateString,
       toLocaleString: originalToLocaleString,
       toLocaleDateString: originalToLocaleDateString,
       toLocaleTimeString: originalToLocaleTimeString,
+      getHours: originalGetHours,
+      getMinutes: originalGetMinutes,
+      getSeconds: originalGetSeconds,
+      getMilliseconds: originalGetMilliseconds,
+      getDate: originalGetDate,
+      getDay: originalGetDay,
+      getMonth: originalGetMonth,
+      getFullYear: originalGetFullYear,
+      temporalTimeZoneId: originalTemporalTimeZoneId,
+      temporalPlainDateTimeISO: originalTemporalPlainDateTimeISO,
+      temporalPlainDateISO: originalTemporalPlainDateISO,
+      temporalPlainTimeISO: originalTemporalPlainTimeISO,
+      temporalZonedDateTimeISO: originalTemporalZonedDateTimeISO,
+      DateConstructor: OriginalDate as unknown as DateConstructor,
+      DateParse: OriginalDateParse,
     },
   };
 }

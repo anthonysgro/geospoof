@@ -92,8 +92,8 @@ describe("Timezone Override Edge Cases", () => {
       const summerOffset = contentScript.Date.prototype.getTimezoneOffset.call(summerDate);
       const winterOffset = contentScript.Date.prototype.getTimezoneOffset.call(winterDate);
 
-      expect(summerOffset).toBe(540); // Negative of -540
-      expect(winterOffset).toBe(540);
+      expect(summerOffset).toBe(-540); // Asia/Tokyo is UTC+9, getTimezoneOffset returns -540
+      expect(winterOffset).toBe(-540);
       expect(summerOffset).toBe(winterOffset);
     });
 
@@ -137,8 +137,9 @@ describe("Timezone Override Edge Cases", () => {
       const offset = contentScript.Date.prototype.getTimezoneOffset.call(testDate);
 
       // Should still apply timezone spoofing even with fallback flag
+      // Intl-based offset for America/New_York in January is -5h = -300min, getTimezoneOffset returns 300
       expect(typeof offset).toBe("number");
-      expect(offset).toBe(300); // Negative of -300
+      expect(offset).toBe(300); // America/New_York EST = UTC-5
     });
   });
 
@@ -189,7 +190,7 @@ describe("Timezone Override Edge Cases", () => {
 
       const testDate = new Date("2024-01-15T12:00:00Z");
       const offset1 = contentScript.Date.prototype.getTimezoneOffset.call(testDate);
-      expect(offset1).toBe(300);
+      expect(offset1).toBe(300); // America/New_York EST = UTC-5, getTimezoneOffset = 300
 
       // Update timezone
       contentScript.updateSettings({
@@ -197,7 +198,7 @@ describe("Timezone Override Edge Cases", () => {
       });
 
       const offset2 = contentScript.Date.prototype.getTimezoneOffset.call(testDate);
-      expect(offset2).toBe(540);
+      expect(offset2).toBe(-540); // Asia/Tokyo = UTC+9, getTimezoneOffset = -540
     });
 
     test("should handle protection being disabled after being enabled", () => {

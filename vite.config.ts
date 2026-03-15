@@ -99,6 +99,21 @@ function browserTargetPlugin(target: BrowserTarget): Plugin {
         cpSync(iconsSrc, resolve(__dirname, "dist/icons"), { recursive: true });
       }
 
+      // Inject "use strict" into the injected script for Firefox builds.
+      // esbuild minification strips the directive (ES modules are implicitly
+      // strict), but the compiled output runs as a classic IIFE in page
+      // context where strict mode is NOT automatic. Without it,
+      // .arguments/.caller access returns undefined instead of throwing
+      // TypeError (arkenfox tests p, q).
+      // For Chromium builds, the esbuild re-bundling banner handles this.
+      if (target !== "chromium") {
+        const injectedPath = resolve(__dirname, "dist/content/injected.js");
+        if (existsSync(injectedPath)) {
+          const content = readFileSync(injectedPath, "utf-8");
+          writeFileSync(injectedPath, `"use strict";\n${content}`);
+        }
+      }
+
       // Chromium: re-bundle content scripts as IIFE.
       // Content scripts in Chromium MV3 load as classic scripts — they cannot
       // use ES module import/export. The main Vite build produces ES modules,
@@ -116,10 +131,28 @@ function browserTargetPlugin(target: BrowserTarget): Plugin {
               outfile: scriptPath,
               allowOverwrite: true,
               target: "chrome120",
+              // Inject "use strict" for the injected script to ensure
+              // .arguments/.caller access throws TypeError (arkenfox tests p, q)
+              ...(script === "content/injected.js" ? { banner: { js: '"use strict";' } } : {}),
               // Resolve bare imports from node_modules
               nodePaths: [resolve(__dirname, "node_modules")],
             });
           }
+        }
+      }
+
+      // Build-time validation: verify "use strict" is present in the
+      // compiled injected script. Without it, .arguments/.caller access
+      // returns undefined instead of throwing TypeError, breaking
+      // arkenfox proxy error tests p and q.
+      const injectedOutputPath = resolve(__dirname, "dist/content/injected.js");
+      if (existsSync(injectedOutputPath)) {
+        const injectedContent = readFileSync(injectedOutputPath, "utf-8");
+        const first100 = injectedContent.substring(0, 100);
+        if (!first100.includes('"use strict"') && !first100.includes("'use strict'")) {
+          throw new Error(
+            'Build validation failed: "use strict" not found in the first 100 characters of dist/content/injected.js'
+          );
         }
       }
     },
@@ -164,7 +197,30 @@ export default defineConfig(({ mode }) => {
       },
     },
 
-    plugins: [browserTargetPlugin(browserTarget)],
+    plugins: [
+      browserTargetPlugin(browserTarget),
+      // Strip console.error/console.warn calls containing "GeoSpoof" from
+      // injected.ts in production builds so the extension name is not leaked
+      // into page context. Development builds preserve all console calls.
+      ...(!isDev
+        ? [
+            {
+              name: "strip-geospoof-console",
+              transform(code: string, id: string) {
+                if (!id.includes("injected")) return null;
+                // Replace console.error(...) and console.warn(...) calls that
+                // contain the literal string "GeoSpoof" with `void 0`.
+                const replaced = code.replace(
+                  /console\.(error|warn)\([^)]*["'].*?GeoSpoof.*?["'][^)]*\)/g,
+                  "void 0"
+                );
+                if (replaced === code) return null;
+                return { code: replaced, map: null };
+              },
+            } satisfies Plugin,
+          ]
+        : []),
+    ],
 
     resolve: {
       alias: {
@@ -177,7 +233,7 @@ export default defineConfig(({ mode }) => {
     },
 
     define: {
-      "process.env.EVENT_NAME": JSON.stringify(env.EVENT_NAME || "__geospoof_settings_update"),
+      "process.env.EVENT_NAME": JSON.stringify(env.EVENT_NAME || "__x_evt"),
       "process.env.NODE_ENV": JSON.stringify(mode),
       "process.env.DEBUG": JSON.stringify(env.DEBUG || "false"),
     },
@@ -187,7 +243,7 @@ export default defineConfig(({ mode }) => {
       : {
           drop: [],
           pure: ["console.log", "console.debug", "console.info"],
-          keepNames: true,
+          keepNames: false,
         },
   };
 });

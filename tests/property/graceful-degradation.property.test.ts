@@ -206,8 +206,23 @@ describe("Property: Fallback Timezone Spoofing", () => {
           const date = new Date();
           const offset = contentScript.Date.prototype.getTimezoneOffset.call(date);
 
-          // Should return negative of the fallback offset
-          expect(offset).toBe(-fallbackTimezone.offset);
+          // With Intl-based offset, the offset comes from the IANA identifier, not the offset field.
+          // For UTC/Etc/GMT identifiers, the Intl offset is always 0.
+          const expectedOffset = (() => {
+            const fmt = new Intl.DateTimeFormat("en-US", {
+              timeZone: fallbackTimezone.identifier,
+              timeZoneName: "shortOffset",
+            });
+            const parts = fmt.formatToParts(date);
+            const tzPart = parts.find((p) => p.type === "timeZoneName");
+            const gmtStr = tzPart?.value ?? "GMT";
+            if (gmtStr === "GMT" || gmtStr === "UTC") return 0;
+            const m = gmtStr.match(/^GMT([+-])(\d{1,2})(?::(\d{2}))?$/);
+            if (!m) return 0;
+            const sign = m[1] === "+" ? 1 : -1;
+            return sign * (parseInt(m[2], 10) * 60 + parseInt(m[3] || "0", 10));
+          })();
+          expect(offset).toBe(-expectedOffset);
         }
       ),
       { numRuns: 100 }
@@ -239,8 +254,11 @@ describe("Property: Fallback Timezone Spoofing", () => {
           const formatter = contentScript.Intl.DateTimeFormat();
           const options = formatter.resolvedOptions();
 
-          // Should use the fallback timezone identifier
-          expect(options.timeZone).toBe(fallbackTimezone.identifier);
+          // Intl may normalize timezone aliases (e.g., Etc/GMT+0 → UTC)
+          const expectedTz = new Intl.DateTimeFormat("en-US", {
+            timeZone: fallbackTimezone.identifier,
+          }).resolvedOptions().timeZone;
+          expect(options.timeZone).toBe(expectedTz);
         }
       ),
       { numRuns: 100 }
@@ -316,8 +334,9 @@ describe("Property: Fallback Timezone Spoofing", () => {
           const date = new Date();
           const timezoneOffset = contentScript.Date.prototype.getTimezoneOffset.call(date);
 
-          // Should return negative of the offset
-          expect(timezoneOffset).toBe(-offset);
+          // With Intl-based offset, UTC always resolves to offset 0 regardless of the offset field
+          // eslint-disable-next-line no-compare-neg-zero
+          expect(timezoneOffset === 0 || timezoneOffset === -0).toBe(true);
         }
       ),
       { numRuns: 100 }
@@ -361,7 +380,22 @@ describe("Property: Fallback Timezone Spoofing", () => {
           // Both should work
           expect(position).not.toBeNull();
           expect(position.coords.latitude).toBe(location.latitude);
-          expect(timezoneOffset).toBe(-fallbackTimezone.offset);
+          // With Intl-based offset, the offset comes from the IANA identifier
+          const expectedOffset = (() => {
+            const fmt = new Intl.DateTimeFormat("en-US", {
+              timeZone: fallbackTimezone.identifier,
+              timeZoneName: "shortOffset",
+            });
+            const parts = fmt.formatToParts(date);
+            const tzPart = parts.find((p) => p.type === "timeZoneName");
+            const gmtStr = tzPart?.value ?? "GMT";
+            if (gmtStr === "GMT" || gmtStr === "UTC") return 0;
+            const m = gmtStr.match(/^GMT([+-])(\d{1,2})(?::(\d{2}))?$/);
+            if (!m) return 0;
+            const sign = m[1] === "+" ? 1 : -1;
+            return sign * (parseInt(m[2], 10) * 60 + parseInt(m[3] || "0", 10));
+          })();
+          expect(timezoneOffset).toBe(-expectedOffset);
         }
       ),
       { numRuns: 100 }

@@ -15,7 +15,7 @@ let spoofedLocation: Location | null = null;
 let timezoneOverride: Timezone | null = null;
 
 // Event name for settings updates (configurable for stealth)
-const EVENT_NAME: string = process.env.EVENT_NAME || "__geospoof_settings_update";
+const EVENT_NAME: string = process.env.EVENT_NAME || "__x_evt";
 
 /** Data dispatched to the injected script via CustomEvent. */
 interface SettingsEventDetail {
