@@ -9,7 +9,7 @@
 import {
   spoofingEnabled,
   timezoneData,
-  OriginalDateTimeFormat,
+  engineTruncatesOffset,
   originalToString,
   originalToTimeString,
   originalToDateString,
@@ -18,7 +18,36 @@ import {
   originalToLocaleTimeString,
 } from "./state";
 import { installOverride } from "./function-masking";
-import { getIntlBasedOffset, formatGMTOffset, getLongTimezoneName } from "./timezone-helpers";
+import {
+  resolvePartsForDate,
+  formatGMTOffset,
+  getLongTimezoneName,
+  deriveOffsetFromParts,
+  getLocalDateViaOffset,
+  getIntlBasedOffset,
+} from "./timezone-helpers";
+
+const SHORT_MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+const SHORT_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/** Zero-pad a number to 2 digits. */
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
 
 /**
  * Install Date formatting overrides on `Date.prototype`.
@@ -29,16 +58,23 @@ export function installDateFormattingOverrides(): void {
     installOverride(Date.prototype, "toDateString", function (this: Date): string {
       try {
         if (spoofingEnabled && timezoneData) {
-          const formatter = new OriginalDateTimeFormat("en-US", {
-            timeZone: timezoneData.identifier,
-            weekday: "short",
-            year: "numeric",
-            month: "short",
-            day: "2-digit",
-          });
-          const parts = formatter.formatToParts(this);
-          const get = (type: string): string => parts.find((p) => p.type === type)?.value ?? "";
-          return `${get("weekday")} ${get("month")} ${get("day")} ${get("year")}`;
+          if (engineTruncatesOffset) {
+            // Chrome: use shortOffset-derived local date (matches native getter path)
+            const local = getLocalDateViaOffset(this, timezoneData.identifier, timezoneData.offset);
+            const weekday = SHORT_DAYS[local.getUTCDay()];
+            const month = SHORT_MONTHS[local.getUTCMonth()];
+            const day = pad2(local.getUTCDate());
+            const year = local.getUTCFullYear();
+            return `${weekday} ${month} ${day} ${year}`;
+          }
+          const parts = resolvePartsForDate(this, timezoneData.identifier);
+          if (parts) {
+            const weekday = parts.weekday;
+            const month = SHORT_MONTHS[parts.month - 1];
+            const day = pad2(parts.day);
+            const year = parts.year;
+            return `${weekday} ${month} ${day} ${year}`;
+          }
         }
         return originalToDateString.call(this);
       } catch (error) {
@@ -55,27 +91,39 @@ export function installDateFormattingOverrides(): void {
     installOverride(Date.prototype, "toString", function (this: Date): string {
       try {
         if (spoofingEnabled && timezoneData) {
-          const offsetMinutes = getIntlBasedOffset(
-            this,
-            timezoneData.identifier,
-            timezoneData.offset
-          );
-          const formatter = new OriginalDateTimeFormat("en-US", {
-            timeZone: timezoneData.identifier,
-            weekday: "short",
-            year: "numeric",
-            month: "short",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-            hour12: false,
-          });
-          const parts = formatter.formatToParts(this);
-          const get = (type: string): string => parts.find((p) => p.type === type)?.value ?? "";
-          const gmtOffset = formatGMTOffset(offsetMinutes);
-          const longName = getLongTimezoneName(this, timezoneData.identifier);
-          return `${get("weekday")} ${get("month")} ${get("day")} ${get("year")} ${get("hour")}:${get("minute")}:${get("second")} ${gmtOffset} (${longName})`;
+          if (engineTruncatesOffset) {
+            // Chrome: shortOffset-derived components (matches native getter path)
+            const local = getLocalDateViaOffset(this, timezoneData.identifier, timezoneData.offset);
+            const offsetMinutes = getIntlBasedOffset(
+              this,
+              timezoneData.identifier,
+              timezoneData.offset
+            );
+            const weekday = SHORT_DAYS[local.getUTCDay()];
+            const month = SHORT_MONTHS[local.getUTCMonth()];
+            const day = pad2(local.getUTCDate());
+            const year = local.getUTCFullYear();
+            const hours = pad2(local.getUTCHours());
+            const minutes = pad2(local.getUTCMinutes());
+            const seconds = pad2(local.getUTCSeconds());
+            const gmtOffset = formatGMTOffset(offsetMinutes);
+            const longName = getLongTimezoneName(this, timezoneData.identifier);
+            return `${weekday} ${month} ${day} ${year} ${hours}:${minutes}:${seconds} ${gmtOffset} (${longName})`;
+          }
+          const parts = resolvePartsForDate(this, timezoneData.identifier);
+          if (parts) {
+            const offsetMinutes = deriveOffsetFromParts(this, timezoneData.identifier);
+            const weekday = parts.weekday;
+            const month = SHORT_MONTHS[parts.month - 1];
+            const day = pad2(parts.day);
+            const year = parts.year;
+            const hours = pad2(parts.hour);
+            const minutes = pad2(parts.minute);
+            const seconds = pad2(parts.second);
+            const gmtOffset = formatGMTOffset(offsetMinutes ?? 0);
+            const longName = getLongTimezoneName(this, timezoneData.identifier);
+            return `${weekday} ${month} ${day} ${year} ${hours}:${minutes}:${seconds} ${gmtOffset} (${longName})`;
+          }
         }
         return originalToString.call(this);
       } catch (error) {
@@ -92,23 +140,31 @@ export function installDateFormattingOverrides(): void {
     installOverride(Date.prototype, "toTimeString", function (this: Date): string {
       try {
         if (spoofingEnabled && timezoneData) {
-          const offsetMinutes = getIntlBasedOffset(
-            this,
-            timezoneData.identifier,
-            timezoneData.offset
-          );
-          const formatter = new OriginalDateTimeFormat("en-US", {
-            timeZone: timezoneData.identifier,
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-            hour12: false,
-          });
-          const parts = formatter.formatToParts(this);
-          const get = (type: string): string => parts.find((p) => p.type === type)?.value ?? "";
-          const gmtOffset = formatGMTOffset(offsetMinutes);
-          const longName = getLongTimezoneName(this, timezoneData.identifier);
-          return `${get("hour")}:${get("minute")}:${get("second")} ${gmtOffset} (${longName})`;
+          if (engineTruncatesOffset) {
+            // Chrome: shortOffset-derived components
+            const local = getLocalDateViaOffset(this, timezoneData.identifier, timezoneData.offset);
+            const offsetMinutes = getIntlBasedOffset(
+              this,
+              timezoneData.identifier,
+              timezoneData.offset
+            );
+            const hours = pad2(local.getUTCHours());
+            const minutes = pad2(local.getUTCMinutes());
+            const seconds = pad2(local.getUTCSeconds());
+            const gmtOffset = formatGMTOffset(offsetMinutes);
+            const longName = getLongTimezoneName(this, timezoneData.identifier);
+            return `${hours}:${minutes}:${seconds} ${gmtOffset} (${longName})`;
+          }
+          const parts = resolvePartsForDate(this, timezoneData.identifier);
+          if (parts) {
+            const offsetMinutes = deriveOffsetFromParts(this, timezoneData.identifier);
+            const hours = pad2(parts.hour);
+            const minutes = pad2(parts.minute);
+            const seconds = pad2(parts.second);
+            const gmtOffset = formatGMTOffset(offsetMinutes ?? 0);
+            const longName = getLongTimezoneName(this, timezoneData.identifier);
+            return `${hours}:${minutes}:${seconds} ${gmtOffset} (${longName})`;
+          }
         }
         return originalToTimeString.call(this);
       } catch (error) {

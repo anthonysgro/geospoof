@@ -47,7 +47,13 @@ interface TemporalZonedDateTime {
   readonly minute: number;
   readonly second: number;
   readonly timeZoneId: string;
+  readonly offsetNanoseconds: number;
+  readonly offset: string;
   toString(): string;
+}
+
+interface TemporalZonedDateTimeConstructor {
+  prototype: TemporalZonedDateTime;
 }
 
 interface TemporalNow {
@@ -60,6 +66,7 @@ interface TemporalNow {
 
 interface TemporalNamespace {
   readonly Now: TemporalNow;
+  readonly ZonedDateTime: TemporalZonedDateTimeConstructor;
 }
 
 // Temporal may or may not exist at runtime (feature-detected)

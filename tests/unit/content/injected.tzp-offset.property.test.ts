@@ -43,7 +43,7 @@ function resolveRealOffset(date: Date, timezoneId: string): number {
   if (!m) return 0;
   const sign = m[1] === "+" ? 1 : -1;
   const seconds = parseInt(m[4] || "0", 10);
-  return sign * (parseInt(m[2], 10) * 60 + parseInt(m[3] || "0", 10) + (seconds >= 30 ? 1 : 0));
+  return sign * (parseInt(m[2], 10) * 60 + parseInt(m[3] || "0", 10) + seconds / 60);
 }
 
 /** Arbitrary for a timezone identifier from the test set. */
@@ -118,7 +118,8 @@ describe("Property 1: Arithmetic offset consistency", () => {
         // The expected offset is the spoofed timezone's UTC offset at the UTC date's epoch,
         // resolved via Intl (which is what the adjusted epoch should reflect).
         const spoofedOffsetMinutes = resolveRealOffset(utcDate, tzId);
-        const expectedDiff = spoofedOffsetMinutes === 0 ? 0 : -spoofedOffsetMinutes * 60000;
+        const expectedDiff =
+          spoofedOffsetMinutes === 0 ? 0 : Math.round(-spoofedOffsetMinutes * 60000);
 
         expect(diff).toBe(expectedDiff);
       }),

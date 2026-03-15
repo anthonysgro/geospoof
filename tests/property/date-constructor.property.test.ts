@@ -48,12 +48,13 @@ const ALL_TEST_ZONES = [
 
 function parseGMTOffset(gmtString: string): number {
   if (gmtString === "GMT" || gmtString === "UTC") return 0;
-  const match = gmtString.match(/^GMT([+-])(\d{1,2})(?::(\d{2}))?$/);
+  const match = gmtString.match(/^GMT([+-])(\d{1,2})(?::(\d{2}))?(?::(\d{2}))?$/);
   if (!match) return 0;
   const sign = match[1] === "+" ? 1 : -1;
   const hours = parseInt(match[2], 10);
   const minutes = parseInt(match[3] || "0", 10);
-  return sign * (hours * 60 + minutes);
+  const seconds = parseInt(match[4] || "0", 10);
+  return sign * (hours * 60 + minutes + seconds / 60);
 }
 
 function referenceIntlOffset(date: Date, timezoneId: string): number {
@@ -269,23 +270,22 @@ describe("Date Constructor Spoofing Properties", () => {
         const originalEpoch = cs.originals.DateParse(dateStr);
         if (isNaN(originalEpoch)) return; // skip unparseable
 
-        // Compute expected adjustment using corrected formula:
-        // adjustment = (spoofedOffset - realOffset) * 60000
-        // This shifts from real-local interpretation to spoofed-local interpretation
+        // The adjusted epoch must be consistent with getTimezoneOffset on the result.
+        // computeEpochAdjustment iterates until the offset at the final adjusted date
+        // is stable, so we verify the result's getTimezoneOffset matches the epoch shift.
+        const constructedDate = cs.DateConstructor(dateStr);
+        const resultEpoch = constructedDate.getTime();
+
+        // The offset at the result date should match the epoch arithmetic
+        const resultOffset = referenceIntlOffset(constructedDate, timezone.identifier);
         const parsedDate = new Date(originalEpoch);
         const realOffset = cs.originals.getTimezoneOffset.call(parsedDate);
-        const spoofedUtcOffset = referenceIntlOffset(parsedDate, timezone.identifier);
-        const spoofedOffset = -spoofedUtcOffset;
-        const expectedAdjustment = (spoofedOffset - realOffset) * 60000;
-        const expectedEpoch = originalEpoch + expectedAdjustment;
+        const expectedAdjustment = Math.round((-resultOffset - realOffset) * 60000);
+        expect(resultEpoch).toBe(originalEpoch + expectedAdjustment);
 
-        // Test Date constructor override
-        const constructedDate = cs.DateConstructor(dateStr);
-        expect(constructedDate.getTime()).toBe(expectedEpoch);
-
-        // Test Date.parse override
+        // Date.parse should produce the same epoch
         const parsedEpoch = cs.DateParse(dateStr);
-        expect(parsedEpoch).toBe(expectedEpoch);
+        expect(parsedEpoch).toBe(resultEpoch);
       }),
       { numRuns: 100 }
     );
@@ -392,14 +392,9 @@ describe("Date Constructor Spoofing Properties", () => {
         const originalEpoch = originalDate.getTime();
         if (isNaN(originalEpoch)) return;
 
-        // Compute expected adjustment using corrected formula
-        const realOffset = cs.originals.getTimezoneOffset.call(originalDate);
-        const spoofedUtcOffset = referenceIntlOffset(originalDate, timezone.identifier);
-        const spoofedOffset = -spoofedUtcOffset;
-        const expectedAdjustment = (spoofedOffset - realOffset) * 60000;
-        const expectedEpoch = originalEpoch + expectedAdjustment;
-
-        // Test override
+        // Compute expected adjustment using corrected formula:
+        // The adjustment must be consistent with the offset at the *final* adjusted date,
+        // not the original date. computeEpochAdjustment iterates until stable.
         const result = cs.DateConstructor(
           comps.year,
           comps.month,
@@ -408,7 +403,13 @@ describe("Date Constructor Spoofing Properties", () => {
           comps.minute,
           comps.second
         );
-        expect(result.getTime()).toBe(expectedEpoch);
+        const resultEpoch = result.getTime();
+
+        // Verify: the offset at the result date matches the epoch shift
+        const realOffset = cs.originals.getTimezoneOffset.call(originalDate);
+        const resultOffset = referenceIntlOffset(result, timezone.identifier);
+        const expectedAdjustment = Math.round((-resultOffset - realOffset) * 60000);
+        expect(resultEpoch).toBe(originalEpoch + expectedAdjustment);
       }),
       { numRuns: 100 }
     );

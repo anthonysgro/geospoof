@@ -258,7 +258,7 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
 
   // ── Timezone formatting helpers ──────────────────────────────────────
 
-  /** Parse a GMT offset string like "GMT+5:30" or "GMT-8" into minutes from UTC. */
+  /** Parse a GMT offset string like "GMT+5:30" or "GMT-8" into fractional minutes from UTC. */
   function parseGMTOffset(gmtString: string): number {
     if (gmtString === "GMT" || gmtString === "UTC") return 0;
     // Handle GMT±H:MM:SS (historical sub-minute offsets like GMT+0:53:28)
@@ -268,11 +268,21 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
     const hours = parseInt(match[2], 10);
     const minutes = parseInt(match[3] || "0", 10);
     const seconds = parseInt(match[4] || "0", 10);
-    return sign * (hours * 60 + minutes + (seconds >= 30 ? 1 : 0));
+    return sign * (hours * 60 + minutes + seconds / 60);
   }
 
-  /** Resolve the actual UTC offset for a given date and IANA timezone. */
+  /** Resolve the actual UTC offset for a given date and IANA timezone.
+   *  Cached per (epoch, timezoneId) to guarantee deterministic results on Chrome
+   *  where shortOffset can be non-deterministic for sub-minute LMT offsets. */
+  let _offsetCacheEpoch = NaN;
+  let _offsetCacheTz = "";
+  let _offsetCacheValue = 0;
+
   function getIntlBasedOffset(date: Date, timezoneId: string, fallbackOffset: number): number {
+    const epoch = date.getTime();
+    if (epoch === _offsetCacheEpoch && timezoneId === _offsetCacheTz) {
+      return _offsetCacheValue;
+    }
     try {
       const formatter = new OriginalDateTimeFormat("en-US", {
         timeZone: timezoneId,
@@ -280,7 +290,11 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
       });
       const parts = formatter.formatToParts(date);
       const tzPart = parts.find((p) => p.type === "timeZoneName");
-      return parseGMTOffset(tzPart?.value ?? "GMT");
+      const result = parseGMTOffset(tzPart?.value ?? "GMT");
+      _offsetCacheEpoch = epoch;
+      _offsetCacheTz = timezoneId;
+      _offsetCacheValue = result;
+      return result;
     } catch {
       return fallbackOffset;
     }
@@ -289,7 +303,7 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
   /** Convert an offset in minutes from UTC to a `GMT±HHMM` string. */
   function formatGMTOffset(offsetMinutes: number): string {
     const sign = offsetMinutes >= 0 ? "+" : "-";
-    const abs = Math.abs(offsetMinutes);
+    const abs = Math.round(Math.abs(offsetMinutes));
     const hours = Math.floor(abs / 60);
     const minutes = abs % 60;
     return `GMT${sign}${String(hours).padStart(2, "0")}${String(minutes).padStart(2, "0")}`;
@@ -335,31 +349,53 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
   /**
    * Compute the epoch adjustment in milliseconds to shift a timestamp
    * from real-local-time interpretation to spoofed-local-time interpretation.
+   *
+   * The algorithm resolves the spoofed offset at the correct UTC instant
+   * and then verifies the offset at the *final* adjusted epoch, iterating
+   * until stable. This guarantees getUTC* component differences match
+   * getTimezoneOffset for historical sub-minute LMT dates.
    */
   function computeEpochAdjustment(
     parsedDate: Date,
     timezoneId: string,
     fallbackOffset: number
   ): number {
-    const realOffsetMinutes = originalGetTimezoneOffset.call(parsedDate);
-    const spoofedUtcOffset = getIntlBasedOffset(parsedDate, timezoneId, fallbackOffset);
-    const spoofedOffsetMinutes = -spoofedUtcOffset;
-    const initialAdjustment = (spoofedOffsetMinutes - realOffsetMinutes) * 60000;
+    // (a) Real system offset in minutes (positive = west of UTC, getTimezoneOffset convention)
+    const realOffset = originalGetTimezoneOffset.call(parsedDate);
 
-    // Iterative refinement: re-resolve the spoofed offset at the adjusted epoch
-    // to handle DST boundary crossings between real and spoofed timezones.
+    // (b) Compute the wall-clock time as a UTC epoch.
+    const utcEpoch = parsedDate.getTime() + realOffset * 60000;
+
     try {
-      const adjustedDate = new OriginalDate(parsedDate.getTime() + initialAdjustment);
-      const refinedSpoofedUtcOffset = getIntlBasedOffset(adjustedDate, timezoneId, fallbackOffset);
-      if (refinedSpoofedUtcOffset !== spoofedUtcOffset) {
-        const refinedSpoofedOffsetMinutes = -refinedSpoofedUtcOffset;
-        return (refinedSpoofedOffsetMinutes - realOffsetMinutes) * 60000;
-      }
-    } catch {
-      // Fall back to initial un-refined adjustment
-    }
+      // (c) Create a probe date at the estimated UTC instant for the spoofed timezone.
+      const probeDate = new OriginalDate(utcEpoch - fallbackOffset * 60000);
 
-    return initialAdjustment;
+      // (d) Resolve the actual spoofed offset at the probe instant (positive = east).
+      let spoofedOffset = getIntlBasedOffset(probeDate, timezoneId, fallbackOffset);
+
+      // (e) Refine for DST boundary crossings.
+      if (spoofedOffset !== fallbackOffset) {
+        const refinedProbe = new OriginalDate(utcEpoch - spoofedOffset * 60000);
+        spoofedOffset = getIntlBasedOffset(refinedProbe, timezoneId, fallbackOffset);
+      }
+
+      // (f) Compute the initial adjustment.
+      let adjustment = Math.round((-spoofedOffset - realOffset) * 60000);
+
+      // (g) Verify at the final adjusted epoch and iterate until stable.
+      for (let i = 0; i < 2; i++) {
+        const finalDate = new OriginalDate(parsedDate.getTime() + adjustment);
+        const finalOffset = getIntlBasedOffset(finalDate, timezoneId, fallbackOffset);
+        if (finalOffset === spoofedOffset) break;
+        spoofedOffset = finalOffset;
+        adjustment = Math.round((-spoofedOffset - realOffset) * 60000);
+      }
+
+      return adjustment;
+    } catch {
+      // Fall back to a simple adjustment using the fallback offset on any error.
+      return Math.round((-fallbackOffset - realOffset) * 60000);
+    }
   }
 
   // ── Date constructor and Date.parse overrides ──────────────────────────
@@ -532,15 +568,33 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
     }
   };
 
-  // Override getTimezoneOffset — uses Intl-based offset (varies by date per IANA rules)
+  // Derive offset from formatToParts — same path as component getters.
+  // Mirrors production deriveOffsetFromParts in timezone-helpers.ts.
+  function deriveOffsetFromParts(date: Date, timezoneId: string): number | undefined {
+    const epoch = date.getTime();
+    if (isNaN(epoch)) return undefined;
+    const parts = resolvePartsForDate(date, timezoneId);
+    if (!parts) return undefined;
+    const localAsUTC = OriginalDate.UTC(
+      parts.year,
+      parts.month - 1,
+      parts.day,
+      parts.hour,
+      parts.minute,
+      parts.second
+    );
+    // Strip sub-second precision — formatToParts only resolves to whole seconds.
+    const epochSeconds = Math.floor(epoch / 1000) * 1000;
+    return (localAsUTC - epochSeconds) / 60000;
+  }
+
+  // Override getTimezoneOffset — derives offset from formatToParts (same path as getters)
   const getTimezoneOffset = function (this: Date): number {
     if (spoofingEnabled && timezoneOverride) {
-      const offsetMinutes = getIntlBasedOffset(
-        this,
-        timezoneOverride.identifier,
-        timezoneOverride.offset
-      );
-      return -offsetMinutes;
+      const offsetMinutes = deriveOffsetFromParts(this, timezoneOverride.identifier);
+      if (offsetMinutes !== undefined) {
+        return -offsetMinutes;
+      }
     }
     return originalGetTimezoneOffset.call(this);
   };
@@ -592,21 +646,41 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
     return opts;
   };
 
+  // ── Date formatting helpers ──────────────────────────────────────────
+
+  const SHORT_MONTHS = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+
+  function pad2(n: number): string {
+    return String(n).padStart(2, "0");
+  }
+
   // Override Date formatting methods
 
   const toDateString = function (this: Date): string {
     if (spoofingEnabled && timezoneOverride) {
       try {
-        const formatter = new OriginalDateTimeFormat("en-US", {
-          timeZone: timezoneOverride.identifier,
-          weekday: "short",
-          year: "numeric",
-          month: "short",
-          day: "2-digit",
-        });
-        const parts = formatter.formatToParts(this);
-        const get = (type: string): string => parts.find((p) => p.type === type)?.value ?? "";
-        return `${get("weekday")} ${get("month")} ${get("day")} ${get("year")}`;
+        const parts = resolvePartsForDate(this, timezoneOverride.identifier);
+        if (parts) {
+          const weekday = parts.weekday;
+          const month = SHORT_MONTHS[parts.month - 1];
+          const day = pad2(parts.day);
+          const year = parts.year;
+          return `${weekday} ${month} ${day} ${year}`;
+        }
+        return originalToDateString.call(this);
       } catch (error) {
         console.error("[GeoSpoof Injected] Error in toDateString override:", error);
         return originalToDateString.call(this);
@@ -618,27 +692,21 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
   const toString = function (this: Date): string {
     if (spoofingEnabled && timezoneOverride) {
       try {
-        const offsetMinutes = getIntlBasedOffset(
-          this,
-          timezoneOverride.identifier,
-          timezoneOverride.offset
-        );
-        const formatter = new OriginalDateTimeFormat("en-US", {
-          timeZone: timezoneOverride.identifier,
-          weekday: "short",
-          year: "numeric",
-          month: "short",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-          hour12: false,
-        });
-        const parts = formatter.formatToParts(this);
-        const get = (type: string): string => parts.find((p) => p.type === type)?.value ?? "";
-        const gmtOffset = formatGMTOffset(offsetMinutes);
-        const longName = getLongTimezoneName(this, timezoneOverride.identifier);
-        return `${get("weekday")} ${get("month")} ${get("day")} ${get("year")} ${get("hour")}:${get("minute")}:${get("second")} ${gmtOffset} (${longName})`;
+        const parts = resolvePartsForDate(this, timezoneOverride.identifier);
+        if (parts) {
+          const offsetMinutes = deriveOffsetFromParts(this, timezoneOverride.identifier);
+          const weekday = parts.weekday;
+          const month = SHORT_MONTHS[parts.month - 1];
+          const day = pad2(parts.day);
+          const year = parts.year;
+          const hours = pad2(parts.hour);
+          const minutes = pad2(parts.minute);
+          const seconds = pad2(parts.second);
+          const gmtOffset = formatGMTOffset(offsetMinutes ?? 0);
+          const longName = getLongTimezoneName(this, timezoneOverride.identifier);
+          return `${weekday} ${month} ${day} ${year} ${hours}:${minutes}:${seconds} ${gmtOffset} (${longName})`;
+        }
+        return originalToString.call(this);
       } catch (error) {
         console.error("[GeoSpoof Injected] Error in toString override:", error);
         return originalToString.call(this);
@@ -650,23 +718,17 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
   const toTimeString = function (this: Date): string {
     if (spoofingEnabled && timezoneOverride) {
       try {
-        const offsetMinutes = getIntlBasedOffset(
-          this,
-          timezoneOverride.identifier,
-          timezoneOverride.offset
-        );
-        const formatter = new OriginalDateTimeFormat("en-US", {
-          timeZone: timezoneOverride.identifier,
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-          hour12: false,
-        });
-        const parts = formatter.formatToParts(this);
-        const get = (type: string): string => parts.find((p) => p.type === type)?.value ?? "";
-        const gmtOffset = formatGMTOffset(offsetMinutes);
-        const longName = getLongTimezoneName(this, timezoneOverride.identifier);
-        return `${get("hour")}:${get("minute")}:${get("second")} ${gmtOffset} (${longName})`;
+        const parts = resolvePartsForDate(this, timezoneOverride.identifier);
+        if (parts) {
+          const offsetMinutes = deriveOffsetFromParts(this, timezoneOverride.identifier);
+          const hours = pad2(parts.hour);
+          const minutes = pad2(parts.minute);
+          const seconds = pad2(parts.second);
+          const gmtOffset = formatGMTOffset(offsetMinutes ?? 0);
+          const longName = getLongTimezoneName(this, timezoneOverride.identifier);
+          return `${hours}:${minutes}:${seconds} ${gmtOffset} (${longName})`;
+        }
+        return originalToTimeString.call(this);
       } catch (error) {
         console.error("[GeoSpoof Injected] Error in toTimeString override:", error);
         return originalToTimeString.call(this);
@@ -735,72 +797,123 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
     return originalToLocaleTimeString.call(this, locales, options);
   };
 
+  // ── resolvePartsForDate (mirrors production timezone-helpers.ts) ────
+
+  /** Resolved date/time components from native formatToParts. */
+  interface ResolvedDateParts {
+    year: number;
+    month: number; // 1-indexed
+    day: number;
+    weekday: string;
+    hour: number;
+    minute: number;
+    second: number;
+  }
+
+  const WEEKDAY_TO_NUMBER: Record<string, number> = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+  };
+
+  let _partsCacheEpoch = NaN;
+  let _partsCacheTz = "";
+  let _partsCacheValue: ResolvedDateParts | undefined;
+
+  function resolvePartsForDate(date: Date, timezoneId: string): ResolvedDateParts | undefined {
+    const epoch = date.getTime();
+    if (isNaN(epoch)) return undefined;
+
+    if (epoch === _partsCacheEpoch && timezoneId === _partsCacheTz) {
+      return _partsCacheValue;
+    }
+
+    const fmt = new OriginalDateTimeFormat("en-US", {
+      timeZone: timezoneId,
+      weekday: "short",
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      second: "numeric",
+      hour12: false,
+    });
+
+    const parts = fmt.formatToParts(date);
+
+    let year = 0,
+      month = 0,
+      day = 0,
+      hour = 0,
+      minute = 0,
+      second = 0;
+    let weekday = "";
+
+    for (const p of parts) {
+      switch (p.type) {
+        case "year":
+          year = parseInt(p.value, 10);
+          break;
+        case "month":
+          month = parseInt(p.value, 10);
+          break;
+        case "day":
+          day = parseInt(p.value, 10);
+          break;
+        case "weekday":
+          weekday = p.value;
+          break;
+        case "hour":
+          hour = parseInt(p.value, 10);
+          break;
+        case "minute":
+          minute = parseInt(p.value, 10);
+          break;
+        case "second":
+          second = parseInt(p.value, 10);
+          break;
+      }
+    }
+
+    // hour12:false with en-US can produce "24" for midnight — normalize to 0
+    if (hour === 24) hour = 0;
+
+    const result: ResolvedDateParts = { year, month, day, weekday, hour, minute, second };
+
+    _partsCacheEpoch = epoch;
+    _partsCacheTz = timezoneId;
+    _partsCacheValue = result;
+
+    return result;
+  }
+
   // ── Date getter helpers & overrides ──────────────────────────────────
 
-  /** Extract a date component for a given date in the specified IANA timezone. */
-  function getDateComponent(
-    date: Date,
-    timezoneId: string,
-    component: "hour" | "minute" | "second" | "day" | "month" | "year" | "weekday"
-  ): number {
-    const options: Intl.DateTimeFormatOptions = { timeZone: timezoneId };
-    switch (component) {
-      case "hour":
-        options.hour = "numeric";
-        options.hour12 = false;
-        break;
-      case "minute":
-        options.minute = "numeric";
-        break;
-      case "second":
-        options.second = "numeric";
-        break;
-      case "day":
-        options.day = "numeric";
-        break;
-      case "month":
-        options.month = "numeric";
-        break;
-      case "year":
-        options.year = "numeric";
-        break;
-      case "weekday":
-        options.weekday = "short";
-        break;
-    }
-    const formatter = new OriginalDateTimeFormat("en-US", options);
-    const parts = formatter.formatToParts(date);
-
-    if (component === "weekday") {
-      const weekdayStr = parts.find((p) => p.type === "weekday")?.value ?? "";
-      const dayMap: Record<string, number> = {
-        Sun: 0,
-        Mon: 1,
-        Tue: 2,
-        Wed: 3,
-        Thu: 4,
-        Fri: 5,
-        Sat: 6,
-      };
-      return dayMap[weekdayStr] ?? 0;
-    }
-
-    const partType =
-      component === "day"
-        ? "day"
-        : component === "month"
-          ? "month"
-          : component === "year"
-            ? "year"
-            : component;
-    const part = parts.find((p) => p.type === partType);
-    return parseInt(part?.value ?? "0", 10);
+  /**
+   * Compute the local time in the spoofed timezone by shifting the UTC epoch
+   * by the Intl-based offset. Returns a Date whose UTC methods give the
+   * wall-clock time in the spoofed timezone.
+   * Retained for use by computeEpochAdjustment if needed.
+   */
+  function getLocalDateViaOffset(date: Date, timezoneId: string, fallbackOffset: number): Date {
+    const offsetMinutes = getIntlBasedOffset(date, timezoneId, fallbackOffset);
+    return new OriginalDate(date.getTime() + offsetMinutes * 60000);
   }
+
+  // Suppress unused-variable lint — getLocalDateViaOffset is retained for
+  // computeEpochAdjustment compatibility but no longer used by getters/formatting.
+  void getLocalDateViaOffset;
 
   const getHours = function (this: Date): number {
     try {
       if (spoofingEnabled && timezoneOverride) {
-        return getDateComponent(this, timezoneOverride.identifier, "hour");
+        const parts = resolvePartsForDate(this, timezoneOverride.identifier);
+        if (parts) return parts.hour;
       }
       return originalGetHours.call(this);
     } catch {
@@ -811,7 +924,8 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
   const getMinutes = function (this: Date): number {
     try {
       if (spoofingEnabled && timezoneOverride) {
-        return getDateComponent(this, timezoneOverride.identifier, "minute");
+        const parts = resolvePartsForDate(this, timezoneOverride.identifier);
+        if (parts) return parts.minute;
       }
       return originalGetMinutes.call(this);
     } catch {
@@ -822,7 +936,8 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
   const getSeconds = function (this: Date): number {
     try {
       if (spoofingEnabled && timezoneOverride) {
-        return getDateComponent(this, timezoneOverride.identifier, "second");
+        const parts = resolvePartsForDate(this, timezoneOverride.identifier);
+        if (parts) return parts.second;
       }
       return originalGetSeconds.call(this);
     } catch {
@@ -845,7 +960,8 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
   const getDate = function (this: Date): number {
     try {
       if (spoofingEnabled && timezoneOverride) {
-        return getDateComponent(this, timezoneOverride.identifier, "day");
+        const parts = resolvePartsForDate(this, timezoneOverride.identifier);
+        if (parts) return parts.day;
       }
       return originalGetDate.call(this);
     } catch {
@@ -856,7 +972,8 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
   const getDay = function (this: Date): number {
     try {
       if (spoofingEnabled && timezoneOverride) {
-        return getDateComponent(this, timezoneOverride.identifier, "weekday");
+        const parts = resolvePartsForDate(this, timezoneOverride.identifier);
+        if (parts) return WEEKDAY_TO_NUMBER[parts.weekday];
       }
       return originalGetDay.call(this);
     } catch {
@@ -867,7 +984,8 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
   const getMonth = function (this: Date): number {
     try {
       if (spoofingEnabled && timezoneOverride) {
-        return getDateComponent(this, timezoneOverride.identifier, "month") - 1;
+        const parts = resolvePartsForDate(this, timezoneOverride.identifier);
+        if (parts) return parts.month - 1;
       }
       return originalGetMonth.call(this);
     } catch {
@@ -878,7 +996,8 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
   const getFullYear = function (this: Date): number {
     try {
       if (spoofingEnabled && timezoneOverride) {
-        return getDateComponent(this, timezoneOverride.identifier, "year");
+        const parts = resolvePartsForDate(this, timezoneOverride.identifier);
+        if (parts) return parts.year;
       }
       return originalGetFullYear.call(this);
     } catch {

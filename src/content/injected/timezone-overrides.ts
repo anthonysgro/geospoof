@@ -13,9 +13,10 @@ import {
   originalGetTimezoneOffset,
   OriginalDateTimeFormat,
   originalResolvedOptions,
+  engineTruncatesOffset,
 } from "./state";
 import { registerOverride, disguiseAsNative, installOverride } from "./function-masking";
-import { getIntlBasedOffset } from "./timezone-helpers";
+import { deriveOffsetFromParts } from "./timezone-helpers";
 
 /**
  * Install timezone-related overrides:
@@ -29,13 +30,17 @@ export function installTimezoneOverrides(): void {
     installOverride(Date.prototype, "getTimezoneOffset", function (this: Date): number {
       try {
         if (spoofingEnabled && timezoneData) {
-          const offsetMinutes = getIntlBasedOffset(
-            this,
-            timezoneData.identifier,
-            timezoneData.offset
-          );
-          // getTimezoneOffset returns the offset TO GET TO UTC (negative of UTC offset)
-          return -offsetMinutes;
+          // Derive offset from formatToParts — the same native path used by
+          // the component getters (getHours, getDate, etc.). This guarantees
+          // getTimezoneOffset and all getters produce consistent fingerprints
+          // on both Chrome (which truncates sub-minute LMT offsets) and
+          // Firefox (which preserves fractional minutes).
+          const offsetMinutes = deriveOffsetFromParts(this, timezoneData.identifier);
+          if (offsetMinutes !== undefined) {
+            // getTimezoneOffset returns the negated offset (positive = west of UTC).
+            // Chrome truncates sub-minute historical offsets to integers; Firefox preserves them.
+            return engineTruncatesOffset ? Math.trunc(-offsetMinutes) : -offsetMinutes;
+          }
         }
         return originalGetTimezoneOffset.call(this);
       } catch (error) {

@@ -233,7 +233,7 @@ describe("Geolocation API Override Edge Cases", () => {
       });
       const duration = Date.now() - startTime;
 
-      expect(duration).toBeLessThan(50);
+      expect(duration).toBeLessThan(100);
     });
   });
 

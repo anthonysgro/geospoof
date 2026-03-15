@@ -7,7 +7,7 @@
  */
 
 import { spoofingEnabled, timezoneData } from "./state";
-import { installOverride } from "./function-masking";
+import { installOverride, registerOverride, disguiseAsNative } from "./function-masking";
 
 /**
  * Install Temporal.Now overrides if the Temporal API is available.
@@ -83,6 +83,63 @@ export function installTemporalOverrides(): void {
         return originalZonedDateTimeISO(tzLike);
       }
     );
+
+    // ── Temporal.ZonedDateTime.prototype getter overrides ──────────────
+    // Previously quantized sub-minute offsets to whole minutes. Now that
+    // getTimezoneOffset returns exact fractional values (matching native),
+    // we pass through the native nanosecond values untouched. The overrides
+    // are kept only for function masking (toString returns [native code]).
+
+    const ZDTProto = (Temporal as unknown as TemporalNamespace).ZonedDateTime.prototype;
+
+    const origOffsetNsDesc = Object.getOwnPropertyDescriptor(ZDTProto, "offsetNanoseconds");
+    const origOffsetDesc = Object.getOwnPropertyDescriptor(ZDTProto, "offset");
+
+    if (origOffsetNsDesc?.get) {
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      const origOffsetNsGetter = origOffsetNsDesc.get;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const offsetNanosecondsGetter = function (this: any): number {
+        try {
+          return origOffsetNsGetter.call(this) as number;
+        } catch {
+          return origOffsetNsGetter.call(this) as number;
+        }
+      };
+
+      registerOverride(offsetNanosecondsGetter, "get offsetNanoseconds");
+      disguiseAsNative(offsetNanosecondsGetter, "get offsetNanoseconds", 0);
+
+      Object.defineProperty(ZDTProto, "offsetNanoseconds", {
+        get: offsetNanosecondsGetter,
+        configurable: origOffsetNsDesc.configurable,
+        enumerable: origOffsetNsDesc.enumerable,
+      });
+    }
+
+    if (origOffsetDesc?.get) {
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      const origOffsetGetter = origOffsetDesc.get;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const offsetGetter = function (this: any): string {
+        try {
+          return origOffsetGetter.call(this) as string;
+        } catch {
+          return origOffsetGetter.call(this) as string;
+        }
+      };
+
+      registerOverride(offsetGetter, "get offset");
+      disguiseAsNative(offsetGetter, "get offset", 0);
+
+      Object.defineProperty(ZDTProto, "offset", {
+        get: offsetGetter,
+        configurable: origOffsetDesc.configurable,
+        enumerable: origOffsetDesc.enumerable,
+      });
+    }
   } catch {
     // Temporal API override failed — originals remain in place
   }

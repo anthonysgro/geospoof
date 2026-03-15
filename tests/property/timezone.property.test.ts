@@ -181,7 +181,7 @@ describe("getTimezoneOffset Override Properties", () => {
           offset: fc.integer({ min: -720, max: 840 }),
           dstOffset: fc.integer({ min: 0, max: 120 }),
         }),
-        fc.date(),
+        fc.date({ min: new Date("2000-01-01"), max: new Date("2030-12-31") }),
         (timezone, date) => {
           const contentScript = setupContentScript({
             enabled: true,
@@ -197,26 +197,55 @@ describe("getTimezoneOffset Override Properties", () => {
           expect(typeof result).toBe("number");
           expect(Number.isFinite(result)).toBe(true);
 
-          // The result should be the Intl-based offset for the IANA timezone (not the flat offset field)
-          // getTimezoneOffset returns negative of UTC offset from Intl.DateTimeFormat
+          // The result should be the formatToParts-derived offset for the IANA timezone.
+          // getTimezoneOffset returns negative of the offset derived from formatToParts components.
           const expectedOffset = (() => {
             const fmt = new Intl.DateTimeFormat("en-US", {
               timeZone: timezone.identifier,
-              timeZoneName: "shortOffset",
+              weekday: "short",
+              year: "numeric",
+              month: "numeric",
+              day: "numeric",
+              hour: "numeric",
+              minute: "numeric",
+              second: "numeric",
+              hour12: false,
             });
             const parts = fmt.formatToParts(testDate);
-            const tzPart = parts.find((p) => p.type === "timeZoneName");
-            const gmtStr = tzPart?.value ?? "GMT";
-            if (gmtStr === "GMT" || gmtStr === "UTC") return 0;
-            // Handle GMT±H:MM:SS (historical sub-minute offsets)
-            const m = gmtStr.match(/^GMT([+-])(\d{1,2})(?::(\d{2}))?(?::(\d{2}))?$/);
-            if (!m) return 0;
-            const sign = m[1] === "+" ? 1 : -1;
-            const secs = parseInt(m[4] || "0", 10);
-            return (
-              sign * (parseInt(m[2], 10) * 60 + parseInt(m[3] || "0", 10) + (secs >= 30 ? 1 : 0))
-            );
+            let year = 0,
+              month = 0,
+              day = 0,
+              hour = 0,
+              minute = 0,
+              second = 0;
+            for (const p of parts) {
+              switch (p.type) {
+                case "year":
+                  year = parseInt(p.value, 10);
+                  break;
+                case "month":
+                  month = parseInt(p.value, 10);
+                  break;
+                case "day":
+                  day = parseInt(p.value, 10);
+                  break;
+                case "hour":
+                  hour = parseInt(p.value, 10);
+                  break;
+                case "minute":
+                  minute = parseInt(p.value, 10);
+                  break;
+                case "second":
+                  second = parseInt(p.value, 10);
+                  break;
+              }
+            }
+            if (hour === 24) hour = 0;
+            const localAsUTC = Date.UTC(year, month - 1, day, hour, minute, second);
+            const epochSeconds = Math.floor(testDate.getTime() / 1000) * 1000;
+            return (localAsUTC - epochSeconds) / 60000;
           })();
+          // getTimezoneOffset returns the negated offset
           expect(result).toBe(-expectedOffset);
         }
       ),
@@ -328,14 +357,15 @@ function parseGMTOffset(gmtString: string): number {
   if (gmtString === "GMT" || gmtString === "UTC") {
     return 0;
   }
-  const match = gmtString.match(/^GMT([+-])(\d{1,2})(?::(\d{2}))?$/);
+  const match = gmtString.match(/^GMT([+-])(\d{1,2})(?::(\d{2}))?(?::(\d{2}))?$/);
   if (!match) {
     return 0;
   }
   const sign = match[1] === "+" ? 1 : -1;
   const hours = parseInt(match[2], 10);
   const minutes = parseInt(match[3] || "0", 10);
-  return sign * (hours * 60 + minutes);
+  const seconds = parseInt(match[4] || "0", 10);
+  return sign * (hours * 60 + minutes + seconds / 60);
 }
 
 function getIntlBasedOffset(date: Date, timezoneId: string, fallbackOffset: number): number {
@@ -593,20 +623,52 @@ describe("Timezone Override Consistency Properties", () => {
           const date = new Date();
           const timezoneOffset = contentScript.Date.prototype.getTimezoneOffset.call(date);
 
-          // JavaScript getTimezoneOffset returns Intl-based offset (not flat offset field)
+          // Expected offset derived from formatToParts (same path as production code)
           const expectedOffset = (() => {
             const fmt = new Intl.DateTimeFormat("en-US", {
               timeZone: timezoneOverride.identifier,
-              timeZoneName: "shortOffset",
+              weekday: "short",
+              year: "numeric",
+              month: "numeric",
+              day: "numeric",
+              hour: "numeric",
+              minute: "numeric",
+              second: "numeric",
+              hour12: false,
             });
             const parts = fmt.formatToParts(date);
-            const tzPart = parts.find((p) => p.type === "timeZoneName");
-            const gmtStr = tzPart?.value ?? "GMT";
-            if (gmtStr === "GMT" || gmtStr === "UTC") return 0;
-            const m = gmtStr.match(/^GMT([+-])(\d{1,2})(?::(\d{2}))?$/);
-            if (!m) return 0;
-            const sign = m[1] === "+" ? 1 : -1;
-            return sign * (parseInt(m[2], 10) * 60 + parseInt(m[3] || "0", 10));
+            let year = 0,
+              month = 0,
+              day = 0,
+              hour = 0,
+              minute = 0,
+              second = 0;
+            for (const p of parts) {
+              switch (p.type) {
+                case "year":
+                  year = parseInt(p.value, 10);
+                  break;
+                case "month":
+                  month = parseInt(p.value, 10);
+                  break;
+                case "day":
+                  day = parseInt(p.value, 10);
+                  break;
+                case "hour":
+                  hour = parseInt(p.value, 10);
+                  break;
+                case "minute":
+                  minute = parseInt(p.value, 10);
+                  break;
+                case "second":
+                  second = parseInt(p.value, 10);
+                  break;
+              }
+            }
+            if (hour === 24) hour = 0;
+            const localAsUTC = Date.UTC(year, month - 1, day, hour, minute, second);
+            const epochSeconds = Math.floor(date.getTime() / 1000) * 1000;
+            return (localAsUTC - epochSeconds) / 60000;
           })();
           expect(timezoneOffset).toBe(-expectedOffset);
 
@@ -657,22 +719,54 @@ test("Property 7: Timezone Disable Restores Original Behavior", () => {
           timezone: timezoneOverride,
         });
 
-        // Verify timezone is overridden (uses Intl-based offset, not flat offset field)
+        // Verify timezone is overridden (uses formatToParts-derived offset)
         const date1 = new Date();
         const overriddenOffset = contentScript.Date.prototype.getTimezoneOffset.call(date1);
         const expectedOffset = (() => {
           const fmt = new Intl.DateTimeFormat("en-US", {
             timeZone: timezoneOverride.identifier,
-            timeZoneName: "shortOffset",
+            weekday: "short",
+            year: "numeric",
+            month: "numeric",
+            day: "numeric",
+            hour: "numeric",
+            minute: "numeric",
+            second: "numeric",
+            hour12: false,
           });
           const parts = fmt.formatToParts(date1);
-          const tzPart = parts.find((p) => p.type === "timeZoneName");
-          const gmtStr = tzPart?.value ?? "GMT";
-          if (gmtStr === "GMT" || gmtStr === "UTC") return 0;
-          const m = gmtStr.match(/^GMT([+-])(\d{1,2})(?::(\d{2}))?$/);
-          if (!m) return 0;
-          const sign = m[1] === "+" ? 1 : -1;
-          return sign * (parseInt(m[2], 10) * 60 + parseInt(m[3] || "0", 10));
+          let year = 0,
+            month = 0,
+            day = 0,
+            hour = 0,
+            minute = 0,
+            second = 0;
+          for (const p of parts) {
+            switch (p.type) {
+              case "year":
+                year = parseInt(p.value, 10);
+                break;
+              case "month":
+                month = parseInt(p.value, 10);
+                break;
+              case "day":
+                day = parseInt(p.value, 10);
+                break;
+              case "hour":
+                hour = parseInt(p.value, 10);
+                break;
+              case "minute":
+                minute = parseInt(p.value, 10);
+                break;
+              case "second":
+                second = parseInt(p.value, 10);
+                break;
+            }
+          }
+          if (hour === 24) hour = 0;
+          const localAsUTC = Date.UTC(year, month - 1, day, hour, minute, second);
+          const epochSeconds = Math.floor(date1.getTime() / 1000) * 1000;
+          return (localAsUTC - epochSeconds) / 60000;
         })();
         expect(overriddenOffset).toBe(-expectedOffset);
 

@@ -20,6 +20,11 @@ export const EVENT_NAME: string = process.env.EVENT_NAME || "__x_evt";
 /** Milliseconds to wait for settings before falling through to real API. */
 export const SETTINGS_WAIT_TIMEOUT = 500;
 
+/** True when the engine truncates sub-minute historical offsets to integers (Chrome/V8). */
+export const engineTruncatesOffset: boolean = Number.isInteger(
+  new Date(1879, 0, 1).getTimezoneOffset()
+);
+
 // ── Override registry ────────────────────────────────────────────────
 
 export const overrideRegistry = new Map<AnyFunction, string>();

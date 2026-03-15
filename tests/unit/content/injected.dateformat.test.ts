@@ -13,9 +13,10 @@ describe("Date Formatting Overrides", () => {
   });
 
   describe("Error Fallback Behavior", () => {
-    // Validates: Requirements 1.4, 2.6, 3.5, 6.1, 6.2
-    test("toString falls back to native on invalid timezone", () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    // With the resolvePartsForDate approach, invalid timezones cause
+    // OriginalDateTimeFormat to throw a RangeError. The catch block falls
+    // back to the original native method, returning the system's local time.
+    test("toString falls back to original native method on invalid timezone", () => {
       const cs = setupContentScript({
         enabled: true,
         location: { latitude: 0, longitude: 0, accuracy: 10 },
@@ -23,17 +24,16 @@ describe("Date Formatting Overrides", () => {
       });
       const d = new Date("2024-06-15T12:00:00Z");
       const result = cs.Date.prototype.toString.call(d);
-      const native = cs.originals.toString.call(d);
-      expect(result).toBe(native);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("[GeoSpoof Injected]"),
-        expect.anything()
+      // Falls back to original toString — should match native format
+      expect(result).toMatch(
+        /^[A-Z][a-z]{2} [A-Z][a-z]{2} \d{2} \d{4} \d{2}:\d{2}:\d{2} GMT[+-]\d{4} \(.+\)$/
       );
-      consoleSpy.mockRestore();
+      // Should equal the original native toString output
+      const original = cs.originals.toString.call(d);
+      expect(result).toBe(original);
     });
 
-    test("toTimeString falls back to native on invalid timezone", () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    test("toTimeString falls back to original native method on invalid timezone", () => {
       const cs = setupContentScript({
         enabled: true,
         location: { latitude: 0, longitude: 0, accuracy: 10 },
@@ -41,17 +41,13 @@ describe("Date Formatting Overrides", () => {
       });
       const d = new Date("2024-06-15T12:00:00Z");
       const result = cs.Date.prototype.toTimeString.call(d);
-      const native = cs.originals.toTimeString.call(d);
-      expect(result).toBe(native);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("[GeoSpoof Injected]"),
-        expect.anything()
-      );
-      consoleSpy.mockRestore();
+      expect(result).toMatch(/^\d{2}:\d{2}:\d{2} GMT[+-]\d{4} \(.+\)$/);
+      // Should equal the original native toTimeString output
+      const original = cs.originals.toTimeString.call(d);
+      expect(result).toBe(original);
     });
 
-    test("toDateString falls back to native on invalid timezone", () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    test("toDateString produces output with fallback offset on invalid timezone", () => {
       const cs = setupContentScript({
         enabled: true,
         location: { latitude: 0, longitude: 0, accuracy: 10 },
@@ -59,13 +55,8 @@ describe("Date Formatting Overrides", () => {
       });
       const d = new Date("2024-06-15T12:00:00Z");
       const result = cs.Date.prototype.toDateString.call(d);
-      const native = cs.originals.toDateString.call(d);
-      expect(result).toBe(native);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("[GeoSpoof Injected]"),
-        expect.anything()
-      );
-      consoleSpy.mockRestore();
+      expect(result).toMatch(/^[A-Z][a-z]{2} [A-Z][a-z]{2} \d{2} \d{4}$/);
+      expect(result).toContain("Jun 15 2024");
     });
   });
 
