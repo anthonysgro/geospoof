@@ -51,6 +51,8 @@ const settingsArb: fc.Arbitrary<Settings> = fc.record({
   version: fc.constant("1.0"),
   lastUpdated: fc.integer({ min: 0 }),
   vpnSyncEnabled: fc.boolean(),
+  debugLogging: fc.boolean(),
+  verbosityLevel: fc.constantFrom("ERROR", "WARN", "INFO", "DEBUG", "TRACE"),
 });
 
 /** The keys that MUST NOT appear in the broadcast payload. */
@@ -64,7 +66,13 @@ const FORBIDDEN_KEYS: (keyof Settings)[] = [
 ];
 
 /** The keys that MUST appear in the broadcast payload. */
-const REQUIRED_KEYS: (keyof UpdateSettingsPayload)[] = ["enabled", "location", "timezone"];
+const REQUIRED_KEYS: (keyof UpdateSettingsPayload)[] = [
+  "enabled",
+  "location",
+  "timezone",
+  "debugLogging",
+  "verbosityLevel",
+];
 
 /**
  * Property 4: Broadcast Payload Contains Only Scoped Fields
@@ -110,13 +118,14 @@ test("Property 4: Broadcast Payload Contains Only Scoped Fields", async () => {
         expect(payload).not.toHaveProperty(key);
       }
 
-      // Payload must have exactly 3 keys
-      expect(Object.keys(payload)).toHaveLength(3);
+      // Payload must have exactly 5 keys
+      expect(Object.keys(payload)).toHaveLength(5);
 
       // Values must match the original settings
       expect(payload.enabled).toBe(settings.enabled);
       expect(payload.location).toEqual(settings.location);
       expect(payload.timezone).toEqual(settings.timezone);
+      expect(payload.debugLogging).toBe(settings.debugLogging);
     }),
     { numRuns: 100 }
   );

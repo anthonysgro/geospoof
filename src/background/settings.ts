@@ -5,6 +5,9 @@
 
 import type { Settings } from "@/shared/types/settings";
 import { DEFAULT_SETTINGS } from "@/shared/types/settings";
+import { createLogger } from "@/shared/utils/debug-logger";
+
+const logger = createLogger("BG");
 
 /**
  * Load settings from storage with validation and corruption handling
@@ -15,13 +18,13 @@ export async function loadSettings(): Promise<Settings> {
     const settings: unknown = result.settings;
 
     if (!settings || typeof settings !== "object") {
-      console.warn("Settings not found or invalid, using defaults");
+      logger.warn("Settings not found or invalid, using defaults");
       return { ...DEFAULT_SETTINGS };
     }
 
     return validateSettings(settings as Partial<Settings>);
   } catch (error) {
-    console.error("Failed to load settings:", error);
+    logger.error("Failed to load settings:", error);
     return { ...DEFAULT_SETTINGS };
   }
 }
@@ -53,7 +56,7 @@ export function validateSettings(settings: Partial<Settings>): Settings {
         accuracy: typeof accuracy === "number" && accuracy > 0 ? accuracy : 10,
       };
     } else {
-      console.warn("Invalid coordinates in settings, resetting location");
+      logger.warn("Invalid coordinates in settings, resetting location");
     }
   }
 
@@ -101,6 +104,18 @@ export function validateSettings(settings: Partial<Settings>): Settings {
     validated.vpnSyncEnabled = settings.vpnSyncEnabled;
   }
 
+  if (typeof settings.debugLogging === "boolean") {
+    validated.debugLogging = settings.debugLogging;
+  }
+
+  const VALID_VERBOSITY_LEVELS = new Set(["ERROR", "WARN", "INFO", "DEBUG", "TRACE"]);
+  if (
+    typeof settings.verbosityLevel === "string" &&
+    VALID_VERBOSITY_LEVELS.has(settings.verbosityLevel)
+  ) {
+    validated.verbosityLevel = settings.verbosityLevel;
+  }
+
   return validated;
 }
 
@@ -114,16 +129,16 @@ export async function saveSettings(settings: Settings): Promise<void> {
     await browser.storage.local.set({ settings });
   } catch (error) {
     if (error instanceof Error && error.message && error.message.includes("QuotaExceededError")) {
-      console.error("Storage quota exceeded, attempting to clear cache");
+      logger.error("Storage quota exceeded, attempting to clear cache");
 
       try {
         await browser.storage.local.set({ settings });
       } catch (retryError) {
-        console.error("Failed to save settings even after clearing cache:", retryError);
+        logger.error("Failed to save settings even after clearing cache:", retryError);
         throw new Error("Storage quota exceeded and unable to save settings");
       }
     } else {
-      console.error("Failed to save settings:", error);
+      logger.error("Failed to save settings:", error);
       throw error;
     }
   }

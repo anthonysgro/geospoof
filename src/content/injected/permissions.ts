@@ -8,6 +8,9 @@
 import { spoofingEnabled, settingsReceived, originalPermissionsQuery } from "./state";
 import { registerOverride, disguiseAsNative } from "./function-masking";
 import { waitForSettings } from "./settings-listener";
+import { createLogger } from "@/shared/utils/debug-logger";
+
+const logger = createLogger("INJ");
 
 /** Create a spoofed PermissionStatus object with state "granted". */
 function createSpoofedPermissionStatus(): PermissionStatus {
@@ -48,6 +51,10 @@ export function installPermissionsOverride(): void {
     ): Promise<PermissionStatus> => {
       try {
         if (descriptor?.name === "geolocation") {
+          logger.debug("permissions.query: intercepted geolocation check", {
+            spoofingEnabled,
+            settingsReceived,
+          });
           if (settingsReceived) {
             if (spoofingEnabled) {
               return Promise.resolve(createSpoofedPermissionStatus());
@@ -64,7 +71,7 @@ export function installPermissionsOverride(): void {
         }
         return originalPermissionsQuery(descriptor);
       } catch (error) {
-        console.error("[GeoSpoof Injected] Error in permissions.query override:", error);
+        logger.error("Error in permissions.query override:", error);
         return originalPermissionsQuery(descriptor);
       }
     };
@@ -72,8 +79,6 @@ export function installPermissionsOverride(): void {
     disguiseAsNative(permissionsQueryOverride, "query", 1);
     navigator.permissions.query = permissionsQueryOverride;
   } else {
-    console.warn(
-      "[GeoSpoof Injected] navigator.permissions.query not available, skipping override"
-    );
+    logger.warn("navigator.permissions.query not available, skipping override");
   }
 }

@@ -926,6 +926,7 @@ describe("Timezone Error Recovery Tests", () => {
 
       // Assert: Warning logged about timezone lookup failure
       expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("[WARN]"),
         expect.stringContaining("Timezone lookup failed"),
         expect.any(Error)
       );

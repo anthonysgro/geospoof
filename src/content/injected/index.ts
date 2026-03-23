@@ -88,4 +88,6 @@ installIframePatching();
 import { installDomInsertionWrapping } from "./dom-insertion";
 installDomInsertionWrapping();
 
-console.log("[GeoSpoof Injected] Geolocation API overrides installed");
+import { createLogger } from "@/shared/utils/debug-logger";
+const logger = createLogger("INJ");
+logger.info("Geolocation API overrides installed");

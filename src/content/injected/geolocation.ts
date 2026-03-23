@@ -16,6 +16,9 @@ import {
 } from "./state";
 import { registerOverride, disguiseAsNative } from "./function-masking";
 import { waitForSettings } from "./settings-listener";
+import { createLogger } from "@/shared/utils/debug-logger";
+
+const logger = createLogger("INJ");
 
 const watchCallbacks = new Map<number, PositionCallback>();
 let watchIdCounter = 1;
@@ -42,8 +45,8 @@ const getCurrentPositionOverride = (
   errorCallback?: PositionErrorCallback | null,
   options?: PositionOptions
 ): void => {
-  console.log(
-    "[GeoSpoof Injected] getCurrentPosition called. Enabled:",
+  logger.debug(
+    "getCurrentPosition called. Enabled:",
     spoofingEnabled,
     "Location:",
     spoofedLocation,
@@ -55,32 +58,38 @@ const getCurrentPositionOverride = (
     // Settings already loaded — respond immediately
     if (spoofingEnabled && spoofedLocation) {
       const position = createGeolocationPosition(spoofedLocation);
-      console.log("[GeoSpoof Injected] Returning spoofed position:", position);
       const delay = 10 + Math.random() * 40;
+      logger.debug("getCurrentPosition: returning spoofed coords", {
+        coords: { lat: position.coords.latitude, lon: position.coords.longitude },
+        delay: `${delay.toFixed(1)}ms`,
+      });
       setTimeout(() => {
         if (successCallback) {
           successCallback(position as GeolocationPosition);
         }
       }, delay);
     } else {
-      console.log("[GeoSpoof Injected] Using original geolocation");
+      logger.debug("getCurrentPosition: spoofing disabled, using original");
       originalGetCurrentPosition(successCallback, errorCallback, options);
     }
   } else {
     // Settings not yet received — wait for them before responding
-    console.log("[GeoSpoof Injected] Deferring getCurrentPosition until settings arrive");
+    logger.debug("getCurrentPosition: deferring until settings arrive");
     void waitForSettings().then(() => {
       if (spoofingEnabled && spoofedLocation) {
         const position = createGeolocationPosition(spoofedLocation);
-        console.log("[GeoSpoof Injected] Deferred: returning spoofed position:", position);
         const delay = 10 + Math.random() * 40;
+        logger.debug("getCurrentPosition (deferred): returning spoofed coords", {
+          coords: { lat: position.coords.latitude, lon: position.coords.longitude },
+          delay: `${delay.toFixed(1)}ms`,
+        });
         setTimeout(() => {
           if (successCallback) {
             successCallback(position as GeolocationPosition);
           }
         }, delay);
       } else {
-        console.log("[GeoSpoof Injected] Deferred: using original geolocation");
+        logger.debug("getCurrentPosition (deferred): spoofing disabled, using original");
         originalGetCurrentPosition(successCallback, errorCallback, options);
       }
     });
@@ -99,6 +108,12 @@ const watchPositionOverride = (
 
     const position = createGeolocationPosition(spoofedLocation);
     const delay = 10 + Math.random() * 40;
+
+    logger.debug("watchPosition: returning spoofed coords", {
+      watchId,
+      coords: { lat: position.coords.latitude, lon: position.coords.longitude },
+      delay: `${delay.toFixed(1)}ms`,
+    });
 
     setTimeout(() => {
       if (successCallback) {

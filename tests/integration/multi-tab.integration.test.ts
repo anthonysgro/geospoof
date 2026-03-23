@@ -235,6 +235,8 @@ describe("Multi-Tab Integration Tests", () => {
         version: "1.0",
         lastUpdated: Date.now(),
         vpnSyncEnabled: false,
+        debugLogging: false,
+        verbosityLevel: "INFO",
       };
 
       storageGet.mockResolvedValue({ settings });

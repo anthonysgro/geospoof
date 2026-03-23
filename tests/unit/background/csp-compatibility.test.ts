@@ -47,6 +47,7 @@ describe("CSP Compatibility Tests", () => {
       await background.checkTabInjection(tabId);
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("[ERROR]"),
         expect.stringContaining(`Content script not responding in tab ${tabId}`),
         expect.any(Error)
       );

@@ -10,6 +10,9 @@ import type { AnyFunction } from "./types";
 import { OriginalDate, OriginalDateParse, spoofingEnabled, timezoneData } from "./state";
 import { isAmbiguousDateString, computeEpochAdjustment } from "./timezone-helpers";
 import { registerOverride, disguiseAsNative } from "./function-masking";
+import { createLogger } from "@/shared/utils/debug-logger";
+
+const logger = createLogger("INJ");
 
 /**
  * Install the Date constructor override and Date.parse override.
@@ -79,6 +82,12 @@ export function installDateConstructor(): void {
               timezoneData.identifier,
               timezoneData.offset
             );
+            logger.trace("Date constructor (string): epoch adjustment", {
+              input: arg,
+              adjustment,
+              original: parsed.getTime(),
+              adjusted: parsed.getTime() + adjustment,
+            });
             return new OriginalDate(parsed.getTime() + adjustment);
           }
           // Explicit timezone string — pass through
@@ -109,6 +118,12 @@ export function installDateConstructor(): void {
         timezoneData.identifier,
         timezoneData.offset
       );
+      logger.trace("Date constructor (multi-arg): epoch adjustment", {
+        input: args,
+        adjustment,
+        original: parsed.getTime(),
+        adjusted: parsed.getTime() + adjustment,
+      });
       return new OriginalDate(parsed.getTime() + adjustment);
     } catch {
       // Fall back to original behavior on error
@@ -150,6 +165,12 @@ export function installDateConstructor(): void {
           timezoneData.identifier,
           timezoneData.offset
         );
+        logger.trace("Date.parse: epoch adjustment", {
+          input: str,
+          adjustment,
+          original: epoch,
+          adjusted: epoch + adjustment,
+        });
         return epoch + adjustment;
       }
       // Explicit timezone string — pass through

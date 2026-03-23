@@ -52,6 +52,7 @@ describe("session-cache edge cases", () => {
 
       await expect(sessionSet("key", "value")).resolves.toBeUndefined();
       expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("[WARN]"),
         "session-cache: write failed for key",
         "key",
         expect.any(Error)

@@ -243,6 +243,37 @@
           <div class="detail-label">Overridden APIs</div>
           <div id="detailAPIs" class="detail-value">None</div>
         </div>
+
+        <!-- Advanced Section -->
+        <div class="advanced-section">
+          <button
+            class="advanced-toggle"
+            id="advancedToggle"
+            aria-expanded="false"
+            aria-controls="advancedContent"
+          >
+            <span class="advanced-chevron">▶</span> Advanced
+          </button>
+          <div class="advanced-content" id="advancedContent" style="display: none">
+            <label class="toggle-label">
+              <span>Debug Logging</span>
+              <div class="toggle-wrapper">
+                <input type="checkbox" id="debugLoggingToggle" />
+                <span class="toggle-slider"></span>
+              </div>
+            </label>
+            <div class="verbosity-selector" id="verbositySelector" style="display: none">
+              <label class="select-label" for="verbosityLevel">
+                <span>Verbosity Level</span>
+                <select id="verbosityLevel">
+                  <option value="INFO">Info</option>
+                  <option value="DEBUG">Debug</option>
+                  <option value="TRACE">Trace</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
       <!-- End Details View -->
     </div>

@@ -16,8 +16,16 @@ import {
   setSpoofedLocation,
   setTimezoneData,
   setSettingsReceived,
+  setDebugEnabled as setStateDebugEnabled,
 } from "./state";
 import { validateTimezoneData } from "./timezone-helpers";
+import {
+  setDebugEnabled as setLoggerDebugEnabled,
+  setVerbosityLevel as setLoggerVerbosityLevel,
+  createLogger,
+} from "@/shared/utils/debug-logger";
+
+const logger = createLogger("INJ");
 
 /**
  * Returns a promise that resolves when settings arrive or timeout expires.
@@ -52,24 +60,30 @@ export function installSettingsListener(): void {
       setSpoofedLocation(event.detail.location);
       setSettingsReceived(true);
 
+      const debugFlag = event.detail.debugLogging ?? false;
+      setStateDebugEnabled(debugFlag);
+      setLoggerDebugEnabled(debugFlag);
+
+      const verbosity = event.detail.verbosityLevel ?? "INFO";
+      setLoggerVerbosityLevel(verbosity);
+
       if (event.detail.timezone) {
         if (validateTimezoneData(event.detail.timezone)) {
           setTimezoneData(event.detail.timezone);
-          console.log("[GeoSpoof Injected] Timezone data updated:", event.detail.timezone);
+          logger.debug("Timezone data updated:", event.detail.timezone);
         } else {
-          console.error(
-            "[GeoSpoof Injected] Invalid timezone data received, timezone spoofing disabled"
-          );
+          logger.error("Invalid timezone data received, timezone spoofing disabled");
           setTimezoneData(null);
         }
       } else {
         setTimezoneData(null);
       }
 
-      console.log("[GeoSpoof Injected] Settings updated via event:", {
+      logger.info("Settings updated via event:", {
         enabled: event.detail.enabled,
         location: event.detail.location,
         timezone: event.detail.timezone,
+        debugLogging: debugFlag,
       });
     }
   }) as EventListener);

@@ -25,6 +25,9 @@ import {
   disguiseAsNative,
   stripConstruct,
 } from "./function-masking";
+import { createLogger } from "@/shared/utils/debug-logger";
+
+const logger = createLogger("INJ");
 
 /**
  * Install DOM insertion method wrappers and MutationObserver fallback.
@@ -41,6 +44,7 @@ export function installDomInsertionWrapping(): void {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
     const result = originalAppendChild.call(this, node) as any;
     if (isFragment) {
+      logger.trace("DOM insertion (appendChild): DocumentFragment, scanning children");
       for (const child of children) scanAndPatchIframes(child);
     } else {
       scanAndPatchIframes(node);
@@ -139,6 +143,7 @@ export function installDomInsertionWrapping(): void {
     "insertAdjacentHTML",
     function (this: Element, position: InsertPosition, text: string): void {
       originalInsertAdjacentHTML.call(this, position, text);
+      logger.trace("DOM insertion (insertAdjacentHTML): scanning for iframes");
       scanAndPatchIframes(this.parentElement ?? this);
     }
   );
@@ -152,6 +157,7 @@ export function installDomInsertionWrapping(): void {
 
     const innerHTMLSetter = stripConstruct(function (this: Element, value: string) {
       originalInnerHTMLSet.call(this, value);
+      logger.trace("DOM insertion (innerHTML): scanning for iframes");
       scanAndPatchIframes(this);
     });
     registerOverride(innerHTMLSetter, "innerHTML");

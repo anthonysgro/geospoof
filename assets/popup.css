@@ -780,6 +780,77 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   margin-bottom: 16px;
 }
 
+/* Advanced Section */
+.advanced-section {
+  margin-top: 12px;
+}
+
+.advanced-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 10px 12px;
+  background: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.advanced-toggle:hover {
+  color: #333;
+}
+
+.advanced-chevron {
+  display: inline-block;
+  font-size: 10px;
+  transition: transform 0.2s;
+}
+
+.advanced-toggle[aria-expanded="true"] .advanced-chevron {
+  transform: rotate(90deg);
+}
+
+.advanced-content {
+  background: white;
+  padding: 12px;
+  border-radius: 0 0 8px 8px;
+  margin-top: -4px;
+}
+
+/* Verbosity Selector */
+.verbosity-selector {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.select-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+
+.select-label select {
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #333;
+  background: #f5f5f5;
+  cursor: pointer;
+}
+
+.select-label select:focus {
+  outline: none;
+  border-color: #4caf50;
+}
+
 /* Firefox for Android renders the popup as a full page in a new tab */
 @media (hover: none) and (pointer: coarse) {
   body {

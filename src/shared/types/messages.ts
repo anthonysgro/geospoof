@@ -15,7 +15,9 @@ export type MessageType =
   | "PING"
   | "SYNC_VPN"
   | "DISABLE_VPN_SYNC"
-  | "CLEAR_LOCATION";
+  | "CLEAR_LOCATION"
+  | "SET_DEBUG_LOGGING"
+  | "SET_VERBOSITY_LEVEL";
 
 /**
  * Generic message structure for runtime messaging.
@@ -72,10 +74,20 @@ export interface InjectionStatus {
 /**
  * Payload sent from background to content scripts when settings change.
  */
+export interface SetDebugLoggingPayload {
+  enabled: boolean;
+}
+
+export interface SetVerbosityLevelPayload {
+  level: string;
+}
+
 export interface UpdateSettingsPayload {
   enabled: boolean;
   location: Location | null;
   timezone: Timezone | null;
+  debugLogging: boolean;
+  verbosityLevel: string;
 }
 
 /**

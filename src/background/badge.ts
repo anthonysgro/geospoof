@@ -4,6 +4,9 @@
  */
 
 import { isRestrictedUrl } from "./tabs";
+import { createLogger } from "@/shared/utils/debug-logger";
+
+const logger = createLogger("BG");
 
 export async function updateBadge(enabled: boolean): Promise<void> {
   try {
@@ -21,7 +24,7 @@ export async function updateBadge(enabled: boolean): Promise<void> {
       }
     }
   } catch (error) {
-    console.error("Failed to update badge:", error);
+    logger.error("Failed to update badge:", error);
     const color = enabled ? "green" : "gray";
     const text = enabled ? "✓" : "";
     void browser.action.setBadgeBackgroundColor({ color });

@@ -92,6 +92,7 @@ export const originalInsertAdjacentHTML = Element.prototype.insertAdjacentHTML;
 
 // ── Mutable spoofing state ───────────────────────────────────────────
 
+export let debugEnabled = false;
 export let spoofingEnabled = false;
 export let spoofedLocation: SpoofedLocation | null = null;
 export let timezoneData: TimezoneData | null = null;
@@ -112,4 +113,8 @@ export function setTimezoneData(v: TimezoneData | null): void {
 
 export function setSettingsReceived(v: boolean): void {
   settingsReceived = v;
+}
+
+export function setDebugEnabled(v: boolean): void {
+  debugEnabled = v;
 }
