@@ -2,7 +2,7 @@
 
 Your VPN changes your IP address. Your browser is still telling websites where you actually are.
 
-Install: [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/geo-spoof/) · Chrome Web Store (coming soon)
+Install: [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/geo-spoof/) · [Chrome Web Store](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje)
 
 Supports Firefox 140+, Firefox Android, Chrome, Brave, and Edge.
 
@@ -115,7 +115,7 @@ Overridden functions are disguised to pass standard detection checks used by mos
 
 **Firefox:** https://addons.mozilla.org/en-US/firefox/addon/geo-spoof
 
-**Chrome / Brave / Edge:** Chrome Web Store listing coming soon. You can sideload from [GitHub Releases](https://github.com/anthonysgro/geospoof/releases) — see below.
+**Chrome / Brave / Edge:** https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje
 
 **From source (Firefox):**
 
