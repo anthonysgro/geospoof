@@ -439,6 +439,8 @@ describe("Error Recovery Integration Tests", () => {
         version: "1.0",
         lastUpdated: Date.now(),
         vpnSyncEnabled: false,
+        debugLogging: false,
+        verbosityLevel: "INFO",
       };
 
       // Act: Broadcast settings (should not throw)

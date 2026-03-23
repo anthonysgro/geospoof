@@ -47,6 +47,8 @@ const settingsArb = fc.record({
   version: fc.constant("1.0"),
   lastUpdated: fc.integer({ min: 0, max: Number.MAX_SAFE_INTEGER }),
   vpnSyncEnabled: fc.constant(false), // Disable VPN sync to avoid fetch timeouts in tests
+  debugLogging: fc.boolean(),
+  verbosityLevel: fc.constantFrom("DEBUG", "INFO", "WARN", "ERROR"),
 });
 
 describe("Property 7: State restoration on re-awakening", () => {
