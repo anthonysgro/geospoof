@@ -3,8 +3,8 @@
     "{a8f7e9c2-4d3b-4a1e-9f8c-7b6d5e4a3c2b}": {
       "updates": [
         {
-          "version": "1.15.0",
-          "update_link": "https://github.com/anthonysgro/geospoof/releases/download/v1.15.0/geospoof-1.15.0-signed.xpi"
+          "version": "1.15.2",
+          "update_link": "https://github.com/anthonysgro/geospoof/releases/download/v1.15.2/geospoof-1.15.2-signed.xpi"
         }
       ]
     }

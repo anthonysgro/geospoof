@@ -146,35 +146,17 @@ Then load `dist/` as an unpacked extension:
 
 Or use `npm run start:chrome` / `npm run start:brave` to build and launch automatically.
 
-**From GitHub Releases (Firefox sideloading):**
-
-For Gecko-based browsers that support unsigned extensions (LibreWolf, Waterfox, Floorp, Pale Moon, unbranded Firefox, or Firefox with `xpinstall.signatures.required` set to `false`):
+**From GitHub Releases (Firefox):**
 
 1. Go to the [Releases](https://github.com/anthonysgro/geospoof/releases) page
-2. Download the `geospoof-<version>.xpi` file from the latest release
-3. In your browser, open `about:addons`
-4. Click the gear icon (⚙) and select **Install Add-on From File…**
-5. Select the downloaded `.xpi` file
-
-> **Note:** Unsigned `.xpi` files cannot be installed on standard Firefox unless you set `xpinstall.signatures.required` to `false` in `about:config`. Most Firefox forks listed above allow unsigned extensions by default.
-
-**Signed XPI for Standard Firefox:**
-
-Standard Firefox requires all extensions to be signed by Mozilla (AMO). Each GitHub Release includes a signed `.xpi` that works on standard Firefox without changing any settings — no need to disable `xpinstall.signatures.required`.
-
-This is different from the version listed on [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/geo-spoof/). The AMO listing goes through Mozilla's full review process and may lag behind. The signed `.xpi` on GitHub Releases is the same code, signed via AMO's self-distribution (unlisted) channel, so you get new versions as soon as they're tagged.
-
-To install:
-
-1. Go to the [Releases](https://github.com/anthonysgro/geospoof/releases) page
-2. Download the `geospoof-<version>-signed.xpi` file from the latest release
+2. Download `geospoof-<version>-signed.xpi` from the latest release
 3. In Firefox, open `about:addons`
 4. Click the gear icon (⚙) and select **Install Add-on From File…**
 5. Select the downloaded `.xpi` file
 
-Once installed, Firefox will automatically check for updates and install new versions through its built-in extension update mechanism. You don't need to manually download each release.
+The signed XPI works on standard Firefox with no extra configuration. Once installed, Firefox automatically checks for and installs new versions — no need to manually download each release.
 
-> **Unsigned vs. Signed:** The `geospoof-<version>.xpi` (unsigned) is for browsers like LibreWolf and Waterfox that allow unsigned extensions. The `geospoof-<version>-signed.xpi` is for standard Firefox. Both are attached to every release.
+> **Note:** An unsigned `geospoof-<version>.xpi` is also included in each release for Firefox forks that don't support AMO signatures (LibreWolf, Waterfox, Floorp, etc.). Most users should use the signed version.
 
 **From GitHub Releases (Chromium sideloading):**
 
