@@ -640,9 +640,9 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
   ) => Intl.ResolvedDateTimeFormatOptions;
   const resolvedOptions = function (this: Intl.DateTimeFormat): Intl.ResolvedDateTimeFormatOptions {
     const opts = originalResolvedOptions.call(this);
-    if (spoofingEnabled && timezoneOverride && !explicitTimezoneInstances.has(this)) {
-      opts.timeZone = timezoneOverride.identifier;
-    }
+    // The constructor already injected the spoofed timezone for non-explicit
+    // instances, so the native resolvedOptions returns the engine-normalized
+    // identifier. No need to overwrite.
     return opts;
   };
 

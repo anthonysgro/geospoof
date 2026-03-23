@@ -131,7 +131,10 @@ async function initialize(): Promise<void> {
     try {
       const result = await syncVpnLocation(false);
       if (!("error" in result)) {
-        await handleSetLocation({ latitude: result.latitude, longitude: result.longitude });
+        await handleSetLocation(
+          { latitude: result.latitude, longitude: result.longitude },
+          { fromVpnSync: true }
+        );
       }
     } catch (error) {
       console.warn("VPN auto-sync on startup failed:", error);

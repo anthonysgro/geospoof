@@ -121,9 +121,10 @@ export function installTimezoneOverrides(): void {
       function (this: Intl.DateTimeFormat): Intl.ResolvedDateTimeFormatOptions {
         try {
           const options = originalResolvedOptions.call(this);
-          if (spoofingEnabled && timezoneData && !explicitTimezoneInstances.has(this)) {
-            options.timeZone = timezoneData.identifier;
-          }
+          // For non-explicit instances the constructor already injected the
+          // spoofed timezone, so the native resolvedOptions already returns
+          // the engine-normalized identifier (e.g. "Asia/Calcutta" for
+          // "Asia/Kolkata"). No need to overwrite — just return as-is.
           return options;
         } catch (error) {
           console.error("[GeoSpoof Injected] Error in resolvedOptions override:", error);

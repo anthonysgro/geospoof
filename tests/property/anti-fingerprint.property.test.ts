@@ -273,7 +273,13 @@ describe("Scoped resolvedOptions & Offset Properties", () => {
           expect(resolved.timeZone).toBe(expectedTz);
         }
       ),
-      { numRuns: 100 }
+      {
+        numRuns: 100,
+        examples: [
+          // Regression: Asia/Kolkata alias (seed: -607857582, path: "97:1:1")
+          [{ identifier: "Asia/Kolkata", offset: 0, dstOffset: 0 }, "Asia/Kolkata"],
+        ],
+      }
     );
   });
 
@@ -307,14 +313,24 @@ describe("Scoped resolvedOptions & Offset Properties", () => {
           // resolvedOptions should return the spoofed timezone
           const resolved = contentScript.Intl.resolvedOptions(formatter);
 
-          // The resolvedOptions override sets timeZone to the raw identifier.
-          // The constructor already injected the spoofed tz, so the native
-          // resolvedOptions would return the normalized form, but the override
-          // re-sets it to the raw identifier. Match that behavior.
-          expect(resolved.timeZone).toBe(spoofedTz.identifier);
+          // The constructor injected the spoofed tz, so the native
+          // resolvedOptions returns the engine-normalized identifier
+          // (e.g. "Asia/Calcutta" for "Asia/Kolkata"). This matches
+          // real browser behavior and avoids fingerprinting via aliases.
+          const expectedTz = new Intl.DateTimeFormat("en-US", {
+            timeZone: spoofedTz.identifier,
+          }).resolvedOptions().timeZone;
+
+          expect(resolved.timeZone).toBe(expectedTz);
         }
       ),
-      { numRuns: 100 }
+      {
+        numRuns: 100,
+        examples: [
+          // Regression: Asia/Kolkata alias normalization
+          [{ identifier: "Asia/Kolkata", offset: 0, dstOffset: 0 }],
+        ],
+      }
     );
   });
 
