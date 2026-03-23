@@ -269,12 +269,22 @@ describe("Property 5: Intl.DateTimeFormat explicit-spoofed-tz equivalence", () =
         expect(fmtExplicit.format(date)).toBe(fmtDefault.format(date));
 
         // resolvedOptions().timeZone must both return the spoofed tz
+        // (engine-normalized form, e.g. "Asia/Calcutta" for "Asia/Kolkata")
         const resolvedDefault = cs.Intl.resolvedOptions(fmtDefault);
         const resolvedExplicit = cs.Intl.resolvedOptions(fmtExplicit);
-        expect(resolvedDefault.timeZone).toBe(tzId);
-        expect(resolvedExplicit.timeZone).toBe(tzId);
+        const normalizedTz = new Intl.DateTimeFormat("en-US", {
+          timeZone: tzId,
+        }).resolvedOptions().timeZone;
+        expect(resolvedDefault.timeZone).toBe(normalizedTz);
+        expect(resolvedExplicit.timeZone).toBe(normalizedTz);
       }),
-      { numRuns: 100 }
+      {
+        numRuns: 100,
+        examples: [
+          // Regression: Asia/Kolkata alias normalization
+          ["Asia/Kolkata", { dateStyle: "short" as const }, new Date(2024, 0, 15).getTime()],
+        ],
+      }
     );
   });
 });

@@ -80,7 +80,10 @@ export async function handleMessage(
           return result;
         }
 
-        await handleSetLocation({ latitude: result.latitude, longitude: result.longitude });
+        await handleSetLocation(
+          { latitude: result.latitude, longitude: result.longitude },
+          { fromVpnSync: true }
+        );
         await updateSettings({ vpnSyncEnabled: true });
 
         return result;
@@ -126,7 +129,10 @@ export async function handleMessage(
   }
 }
 
-export async function handleSetLocation(payload: SetLocationPayload): Promise<void> {
+export async function handleSetLocation(
+  payload: SetLocationPayload,
+  options?: { fromVpnSync?: boolean }
+): Promise<void> {
   const { latitude, longitude } = payload;
 
   const timezone = await getTimezoneForCoordinates(latitude, longitude);
@@ -141,9 +147,10 @@ export async function handleSetLocation(payload: SetLocationPayload): Promise<vo
   const currentSettings = await loadSettings();
 
   // If VPN sync was active and a manual location is being set,
-  // disable VPN sync and clear the IP geolocation cache (Req 9.3)
+  // disable VPN sync and clear the IP geolocation cache (Req 9.3).
+  // Skip this when the call originates from VPN sync itself.
   const vpnUpdates: Record<string, unknown> = {};
-  if (currentSettings.vpnSyncEnabled) {
+  if (currentSettings.vpnSyncEnabled && !options?.fromVpnSync) {
     await clearIpGeoCache();
     vpnUpdates.vpnSyncEnabled = false;
   }
