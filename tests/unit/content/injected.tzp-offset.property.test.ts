@@ -218,10 +218,20 @@ describe("Property 4: Local getter round-trip", () => {
 // Validates: Requirements 3.1, 3.2, 3.3, 3.4
 describe("Property 5: Intl.DateTimeFormat explicit-spoofed-tz equivalence", () => {
   /** Arbitrary for dateStyle values. */
-  const arbDateStyle = fc.constantFrom("full", "long", "medium", "short");
+  const arbDateStyle = fc.constantFrom(
+    "full" as const,
+    "long" as const,
+    "medium" as const,
+    "short" as const
+  );
 
   /** Arbitrary for timeStyle values. */
-  const arbTimeStyle = fc.constantFrom("full", "long", "medium", "short");
+  const arbTimeStyle = fc.constantFrom(
+    "full" as const,
+    "long" as const,
+    "medium" as const,
+    "short" as const
+  );
 
   /** Arbitrary for dateStyle/timeStyle combinations (at least one must be present). */
   const arbStyleOptions = fc.oneof(
@@ -336,7 +346,7 @@ describe("Property 7: Non-ISO ambiguous string detection", () => {
   });
 
   /** Arbitrary for non-ISO format selection. */
-  const arbFormat = fc.constantFrom("long", "short", "dayFirst");
+  const arbFormat = fc.constantFrom("long" as const, "short" as const, "dayFirst" as const);
 
   /** Build a non-ISO date string without timezone indicator. */
   function buildDateString(

@@ -74,6 +74,7 @@ export function generateManifest(target: BrowserTarget, version: string): Record
         gecko: {
           id: "{a8f7e9c2-4d3b-4a1e-9f8c-7b6d5e4a3c2b}",
           strict_min_version: "140.0",
+          update_url: "https://anthonysgro.github.io/geospoof/update.json",
           data_collection_permissions: {
             required: ["none"],
           },

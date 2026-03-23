@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pages: write
+      id-token: write
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -21,6 +23,28 @@ jobs:
       - run: npm run package:xpi
       - run: npm run package:chromium
       - run: npm run package:source
+
+      - name: Sign XPI
+        env:
+          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        run: npm run sign:xpi
+
+      - name: Rename signed XPI
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          SIGNED=$(find web-ext-artifacts -name '*.xpi' ! -name "geospoof-${VERSION}.xpi" | head -1)
+          if [ -n "$SIGNED" ]; then
+            mv "$SIGNED" "web-ext-artifacts/geospoof-${VERSION}-signed.xpi"
+          fi
+
+      - name: Generate update manifest
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          REPO="${{ github.repository }}"
+          DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${GITHUB_REF_NAME}/geospoof-${VERSION}-signed.xpi"
+          bash scripts/generate-update-manifest.sh "$VERSION" "$DOWNLOAD_URL"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -29,3 +53,12 @@ jobs:
             web-ext-artifacts/geospoof-chromium-*.zip
             geospoof-source-*.zip
           generate_release_notes: true
+
+      - name: Deploy update manifest to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .
+          publish_branch: gh-pages
+          keep_files: true
+          include_files: update.json

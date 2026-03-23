@@ -1076,6 +1076,8 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
       minute: dt.minute,
       second: dt.second,
       timeZoneId: tz,
+      offsetNanoseconds: 0,
+      offset: "+00:00",
       toString: () => `${dt.toString()}[${tz}]`,
     };
   };

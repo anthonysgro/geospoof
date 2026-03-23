@@ -158,6 +158,24 @@ For Gecko-based browsers that support unsigned extensions (LibreWolf, Waterfox, 
 
 > **Note:** Unsigned `.xpi` files cannot be installed on standard Firefox unless you set `xpinstall.signatures.required` to `false` in `about:config`. Most Firefox forks listed above allow unsigned extensions by default.
 
+**Signed XPI for Standard Firefox:**
+
+Standard Firefox requires all extensions to be signed by Mozilla (AMO). Each GitHub Release includes a signed `.xpi` that works on standard Firefox without changing any settings — no need to disable `xpinstall.signatures.required`.
+
+This is different from the version listed on [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/geo-spoof/). The AMO listing goes through Mozilla's full review process and may lag behind. The signed `.xpi` on GitHub Releases is the same code, signed via AMO's self-distribution (unlisted) channel, so you get new versions as soon as they're tagged.
+
+To install:
+
+1. Go to the [Releases](https://github.com/anthonysgro/geospoof/releases) page
+2. Download the `geospoof-<version>-signed.xpi` file from the latest release
+3. In Firefox, open `about:addons`
+4. Click the gear icon (⚙) and select **Install Add-on From File…**
+5. Select the downloaded `.xpi` file
+
+Once installed, Firefox will automatically check for updates and install new versions through its built-in extension update mechanism. You don't need to manually download each release.
+
+> **Unsigned vs. Signed:** The `geospoof-<version>.xpi` (unsigned) is for browsers like LibreWolf and Waterfox that allow unsigned extensions. The `geospoof-<version>-signed.xpi` is for standard Firefox. Both are attached to every release.
+
 **From GitHub Releases (Chromium sideloading):**
 
 1. Go to the [Releases](https://github.com/anthonysgro/geospoof/releases) page
@@ -220,25 +238,26 @@ For Chromium development, use `npm run start:chrome` or `npm run start:brave` in
 
 ### Scripts Reference
 
-| Command                    | What it does                                                       |
-| -------------------------- | ------------------------------------------------------------------ |
-| `npm run dev`              | Watch mode — Vite rebuilds `dist/` on every file change            |
-| `npm start`                | Launch Firefox with the extension loaded from `dist/`              |
-| `npm run build:dev`        | One-time dev build (source maps, console logs)                     |
-| `npm run build:prod`       | One-time production build (minified, no logs)                      |
-| `npm run build:firefox`    | Production build targeting Firefox                                 |
-| `npm run build:chromium`   | Production build targeting Chrome/Brave/Edge                       |
-| `npm test`                 | Run all tests                                                      |
-| `npm run lint:ext`         | Lint the extension manifest and files                              |
-| `npm run validate`         | Type-check + lint + format check + tests (run before PRs)          |
-| `npm run package`          | Firefox production build + zip for AMO submission                  |
-| `npm run package:chromium` | Chromium production build + zip for Chrome Web Store               |
-| `npm run package:xpi`      | Production build + package as `.xpi` for sideloading               |
-| `npm run package:source`   | Zip source code for AMO review (excludes node_modules, dist, etc.) |
-| `npm run start:firefox`    | Launch Firefox with the extension loaded                           |
-| `npm run start:chrome`     | Build for Chromium + launch Chrome                                 |
-| `npm run start:brave`      | Build for Chromium + launch Brave                                  |
-| `npm run start:android`    | Launch on Firefox for Android (USB, auto-detects device)           |
+| Command                    | What it does                                                           |
+| -------------------------- | ---------------------------------------------------------------------- |
+| `npm run dev`              | Watch mode — Vite rebuilds `dist/` on every file change                |
+| `npm start`                | Launch Firefox with the extension loaded from `dist/`                  |
+| `npm run build:dev`        | One-time dev build (source maps, console logs)                         |
+| `npm run build:prod`       | One-time production build (minified, no logs)                          |
+| `npm run build:firefox`    | Production build targeting Firefox                                     |
+| `npm run build:chromium`   | Production build targeting Chrome/Brave/Edge                           |
+| `npm test`                 | Run all tests                                                          |
+| `npm run lint:ext`         | Lint the extension manifest and files                                  |
+| `npm run validate`         | Type-check + lint + format check + tests (run before PRs)              |
+| `npm run package`          | Firefox production build + zip for AMO submission                      |
+| `npm run package:chromium` | Chromium production build + zip for Chrome Web Store                   |
+| `npm run package:xpi`      | Production build + package as `.xpi` for sideloading                   |
+| `npm run package:source`   | Zip source code for AMO review (excludes node_modules, dist, etc.)     |
+| `npm run sign:xpi`         | Sign the built `.xpi` via AMO self-distribution (requires credentials) |
+| `npm run start:firefox`    | Launch Firefox with the extension loaded                               |
+| `npm run start:chrome`     | Build for Chromium + launch Chrome                                     |
+| `npm run start:brave`      | Build for Chromium + launch Brave                                      |
+| `npm run start:android`    | Launch on Firefox for Android (USB, auto-detects device)               |
 
 ### Testing on Android
 
@@ -261,6 +280,33 @@ npm run start:android -- <device-id>
 ```
 
 You can find device IDs with `adb devices`.
+
+### Signing Pipeline Setup (Maintainers)
+
+The release workflow signs the `.xpi` via AMO's self-distribution channel and deploys an update manifest to GitHub Pages. This requires two GitHub Actions secrets:
+
+| Secret           | Description              |
+| ---------------- | ------------------------ |
+| `AMO_JWT_ISSUER` | AMO API key (JWT issuer) |
+| `AMO_JWT_SECRET` | AMO API secret           |
+
+To generate credentials:
+
+1. Go to the [AMO API Keys page](https://addons.mozilla.org/en-US/developers/addon/api/key/)
+2. Sign in with the Mozilla account that owns the extension listing
+3. Generate a new key pair — you'll get a JWT issuer and JWT secret
+4. In your GitHub repo, go to Settings → Secrets and variables → Actions
+5. Add `AMO_JWT_ISSUER` and `AMO_JWT_SECRET` with the values from step 3
+
+Once configured, pushing a `v*` tag triggers the full pipeline: build → sign → generate update manifest → create GitHub Release → deploy `update.json` to GitHub Pages. If signing fails, the workflow stops and no release is created.
+
+For local signing (testing), set `AMO_JWT_ISSUER` and `AMO_JWT_SECRET` in your `.env` and run:
+
+```bash
+npm run build:firefox
+npm run package:xpi
+npm run sign:xpi
+```
 
 ### Building for Review
 
