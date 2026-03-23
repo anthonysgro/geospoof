@@ -1,0 +1,79 @@
+{
+  "name": "geospoof-extension",
+  "version": "1.15.0",
+  "type": "module",
+  "description": "Firefox extension for geolocation spoofing and location privacy",
+  "scripts": {
+    "build": "npm run build:prod",
+    "build:dev": "vite build --mode development",
+    "build:prod": "vite build --mode production",
+    "build:firefox": "BROWSER=firefox vite build --mode production",
+    "build:chromium": "BROWSER=chromium vite build --mode production",
+    "clean": "rm -rf dist coverage web-ext-artifacts geospoof-*.zip geospoof-*.xpi",
+    "dev": "vite build --watch",
+    "format": "prettier --write \"**/*.{js,ts,json,md,css,html}\"",
+    "format:check": "prettier --check \"**/*.{js,ts,json,md,css,html}\"",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "lint:ext": "web-ext lint --source-dir dist --self-hosted",
+    "start": "npm run start:firefox",
+    "start:firefox": "web-ext run --source-dir dist",
+    "start:chromium": "web-ext run --source-dir dist --target=chromium --chromium-binary='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'",
+    "start:chrome": "npm run build:chromium && web-ext run --source-dir dist --target=chromium --chromium-binary='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'",
+    "start:brave": "npm run build:chromium && web-ext run --source-dir dist --target=chromium --chromium-binary='/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'",
+    "start:waterfox": "npm run build:firefox && web-ext run --source-dir dist --firefox='/Applications/Waterfox.app/Contents/MacOS/waterfox'",
+    "start:android": "web-ext run --source-dir dist --target=firefox-android --adb-remove-old-artifacts --android-device=$(adb devices | sed -n '2p' | awk '{print $1}')",
+    "package": "npm run package:firefox",
+    "package:firefox": "npm run build:firefox && web-ext build --source-dir dist",
+    "package:chromium": "npm run build:chromium && mkdir -p web-ext-artifacts && cd dist && zip -r ../web-ext-artifacts/geospoof-chromium-v$(node -p \"require('../package.json').version\").zip .",
+    "package:xpi": "npm run build:firefox && bash scripts/package-xpi.sh",
+    "package:source": "zip -r geospoof-source-v$(node -p \"require('./package.json').version\").zip . -x 'node_modules/*' 'dist/*' 'coverage/*' '.git/*' '*.zip' '.DS_Store' '.kiro/*' 'web-ext-artifacts/*'",
+    "prepare": "husky",
+    "sign:xpi": "bash scripts/sign-xpi.sh",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "type-check": "tsc --noEmit",
+    "validate": "npm run type-check && npm run lint && npm run lint:ext && npm run format:check && npm run test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@samrum/vite-plugin-web-extension": "^5.1.1",
+    "@types/firefox-webext-browser": "^120.0.5",
+    "@types/node": "^25.3.3",
+    "@types/webextension-polyfill": "^0.12.5",
+    "@typescript-eslint/eslint-plugin": "^8.56.1",
+    "@typescript-eslint/parser": "^8.56.1",
+    "@vitest/coverage-v8": "^4.0.18",
+    "@vitest/ui": "^4.0.18",
+    "eslint": "^10.0.2",
+    "eslint-config-prettier": "^10.1.8",
+    "fast-check": "^3.22.0",
+    "husky": "^9.1.7",
+    "jsdom": "^28.1.0",
+    "lint-staged": "^16.3.1",
+    "prettier": "^3.3.3",
+    "typescript": "~5.7",
+    "typescript-eslint": "^8.56.1",
+    "vite": "~5.4",
+    "vite-plugin-checker": "^0.12.0",
+    "vitest": "^4.0.18",
+    "web-ext": "^9.4.0"
+  },
+  "lint-staged": {
+    "*.{ts,js}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,css,html}": [
+      "prettier --write"
+    ]
+  },
+  "overrides": {
+    "serialize-javascript": "^7.0.3"
+  },
+  "dependencies": {
+    "browser-geo-tz": "^0.2.1",
+    "webextension-polyfill": "^0.12.0"
+  }
+}
