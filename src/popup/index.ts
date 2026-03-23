@@ -318,6 +318,60 @@ document.getElementById("detailsTab")?.addEventListener("click", () => {
   if (mainView) mainView.style.display = "none";
 });
 
+// Advanced section expand/collapse
+document.getElementById("advancedToggle")?.addEventListener("click", () => {
+  const toggle = document.getElementById("advancedToggle");
+  const content = document.getElementById("advancedContent");
+  if (!toggle || !content) return;
+
+  const expanded = toggle.getAttribute("aria-expanded") === "true";
+  toggle.setAttribute("aria-expanded", String(!expanded));
+  content.style.display = expanded ? "none" : "block";
+});
+
+// Debug logging toggle
+document.getElementById("debugLoggingToggle")?.addEventListener("change", (e: Event) => {
+  const target = e.target as HTMLInputElement;
+  const enabled = target.checked;
+
+  const verbositySelector = document.getElementById("verbositySelector");
+  if (verbositySelector) {
+    verbositySelector.style.display = enabled ? "block" : "none";
+  }
+
+  void (async () => {
+    try {
+      await browser.runtime.sendMessage({
+        type: "SET_DEBUG_LOGGING",
+        payload: { enabled },
+      });
+    } catch (error: unknown) {
+      console.error("Failed to set debug logging:", error);
+      target.checked = !enabled;
+      if (verbositySelector) {
+        verbositySelector.style.display = !enabled ? "block" : "none";
+      }
+    }
+  })();
+});
+
+// Verbosity level dropdown
+document.getElementById("verbosityLevel")?.addEventListener("change", (e: Event) => {
+  const target = e.target as HTMLSelectElement;
+  const level = target.value;
+
+  void (async () => {
+    try {
+      await browser.runtime.sendMessage({
+        type: "SET_VERBOSITY_LEVEL",
+        payload: { level },
+      });
+    } catch (error: unknown) {
+      console.error("Failed to set verbosity level:", error);
+    }
+  })();
+});
+
 // Onboarding close
 document.getElementById("closeOnboarding")?.addEventListener("click", () => {
   void closeOnboarding();

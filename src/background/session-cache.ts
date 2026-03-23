@@ -3,6 +3,10 @@
  * Survives background script suspension; cleared on browser restart.
  */
 
+import { createLogger } from "@/shared/utils/debug-logger";
+
+const logger = createLogger("BG");
+
 /** Storage key prefix to namespace all cache entries */
 const PREFIX = "cache:";
 
@@ -28,7 +32,7 @@ export async function sessionSet<T>(key: string, value: T): Promise<void> {
   try {
     await browser.storage.session.set({ [PREFIX + key]: value });
   } catch (error) {
-    console.warn("session-cache: write failed for key", key, error);
+    logger.warn("session-cache: write failed for key", key, error);
   }
 }
 
@@ -39,7 +43,7 @@ export async function sessionDelete(key: string): Promise<void> {
   try {
     await browser.storage.session.remove(PREFIX + key);
   } catch (error) {
-    console.warn("session-cache: delete failed for key", key, error);
+    logger.warn("session-cache: delete failed for key", key, error);
   }
 }
 
@@ -76,6 +80,6 @@ export async function sessionClearNamespace(namespace: string): Promise<void> {
       await browser.storage.session.remove(keysToRemove);
     }
   } catch (error) {
-    console.warn("session-cache: clearNamespace failed for", namespace, error);
+    logger.warn("session-cache: clearNamespace failed for", namespace, error);
   }
 }

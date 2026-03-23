@@ -58,6 +58,10 @@ export interface Settings {
   lastUpdated: number;
   /** Whether VPN sync mode is the active location method */
   vpnSyncEnabled: boolean;
+  /** Whether debug logging is enabled */
+  debugLogging: boolean;
+  /** Active verbosity level threshold for the debug logger */
+  verbosityLevel: string;
 }
 
 /**
@@ -73,4 +77,6 @@ export const DEFAULT_SETTINGS: Settings = {
   version: "1.0",
   lastUpdated: Date.now(),
   vpnSyncEnabled: false,
+  debugLogging: false,
+  verbosityLevel: "INFO",
 };

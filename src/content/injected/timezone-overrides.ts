@@ -17,6 +17,9 @@ import {
 } from "./state";
 import { registerOverride, disguiseAsNative, installOverride } from "./function-masking";
 import { deriveOffsetFromParts } from "./timezone-helpers";
+import { createLogger } from "@/shared/utils/debug-logger";
+
+const logger = createLogger("INJ");
 
 /**
  * Install timezone-related overrides:
@@ -39,17 +42,19 @@ export function installTimezoneOverrides(): void {
           if (offsetMinutes !== undefined) {
             // getTimezoneOffset returns the negated offset (positive = west of UTC).
             // Chrome truncates sub-minute historical offsets to integers; Firefox preserves them.
-            return engineTruncatesOffset ? Math.trunc(-offsetMinutes) : -offsetMinutes;
+            const result = engineTruncatesOffset ? Math.trunc(-offsetMinutes) : -offsetMinutes;
+            logger.trace("getTimezoneOffset:", { date: this.toISOString(), spoofedOffset: result });
+            return result;
           }
         }
         return originalGetTimezoneOffset.call(this);
       } catch (error) {
-        console.error("[GeoSpoof Injected] Error in getTimezoneOffset override:", error);
+        logger.error("Error in getTimezoneOffset override:", error);
         return originalGetTimezoneOffset.call(this);
       }
     });
   } catch (error) {
-    console.error("[GeoSpoof Injected] Failed to override getTimezoneOffset:", error);
+    logger.error("Failed to override getTimezoneOffset:", error);
   }
 
   // Override Intl.DateTimeFormat constructor to inject timezone
@@ -77,6 +82,10 @@ export function installTimezoneOverrides(): void {
             ...options,
             timeZone: timezoneData.identifier,
           };
+          logger.debug("Intl.DateTimeFormat: injecting timezone", {
+            original: options?.timeZone ?? "(none)",
+            injected: timezoneData.identifier,
+          });
           const instance = new OriginalDateTimeFormat(locales, opts);
           // Do NOT add to explicitTimezoneInstances — treat as default-timezone instance
           return instance;
@@ -88,7 +97,7 @@ export function installTimezoneOverrides(): void {
         }
         return instance;
       } catch (error) {
-        console.error("[GeoSpoof Injected] Error in DateTimeFormat constructor override:", error);
+        logger.error("Error in DateTimeFormat constructor override:", error);
         return new OriginalDateTimeFormat(locales, options);
       }
     } as unknown as typeof Intl.DateTimeFormat;
@@ -106,7 +115,7 @@ export function installTimezoneOverrides(): void {
     // eslint-disable-next-line @typescript-eslint/unbound-method
     Intl.DateTimeFormat.supportedLocalesOf = OriginalDateTimeFormat.supportedLocalesOf;
   } catch (error) {
-    console.error("[GeoSpoof Injected] Failed to override Intl.DateTimeFormat constructor:", error);
+    logger.error("Failed to override Intl.DateTimeFormat constructor:", error);
   }
 
   // Override Intl.DateTimeFormat.prototype.resolvedOptions()
@@ -127,15 +136,12 @@ export function installTimezoneOverrides(): void {
           // "Asia/Kolkata"). No need to overwrite — just return as-is.
           return options;
         } catch (error) {
-          console.error("[GeoSpoof Injected] Error in resolvedOptions override:", error);
+          logger.error("Error in resolvedOptions override:", error);
           return originalResolvedOptions.call(this);
         }
       }
     );
   } catch (error) {
-    console.error(
-      "[GeoSpoof Injected] Failed to override Intl.DateTimeFormat.resolvedOptions:",
-      error
-    );
+    logger.error("Failed to override Intl.DateTimeFormat.resolvedOptions:", error);
   }
 }

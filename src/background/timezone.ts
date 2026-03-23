@@ -5,9 +5,12 @@
 
 import type { Timezone } from "@/shared/types/settings";
 import { isValidIANATimezone } from "@/shared/utils/type-guards";
+import { createLogger } from "@/shared/utils/debug-logger";
 import { getCacheKey } from "./geocoding";
 import { sessionGet, sessionSet, sessionClearNamespace } from "./session-cache";
 import { find } from "browser-geo-tz";
+
+const logger = createLogger("BG");
 
 /**
  * Clear the timezone cache (for testing)
@@ -102,14 +105,18 @@ export async function getTimezoneForCoordinates(
   const cacheKey = getCacheKey(latitude, longitude);
   const cached = await sessionGet<Timezone>("timezone:" + cacheKey);
   if (cached !== undefined) {
+    logger.debug("Timezone cache hit:", { latitude, longitude, result: cached });
     return cached;
   }
+
+  logger.info("Timezone lookup for coordinates:", { latitude, longitude });
 
   try {
     const results = await find(latitude, longitude);
 
     if (results.length === 0) {
       const fallback = buildFallbackTimezone(longitude);
+      logger.debug("Timezone lookup returned no results, using fallback:", fallback);
       await sessionSet("timezone:" + cacheKey, fallback);
       return fallback;
     }
@@ -118,6 +125,7 @@ export async function getTimezoneForCoordinates(
 
     if (!isValidIANATimezone(identifier)) {
       const fallback = buildFallbackTimezone(longitude);
+      logger.warn("Invalid IANA timezone, using fallback:", { identifier, fallback });
       await sessionSet("timezone:" + cacheKey, fallback);
       return fallback;
     }
@@ -125,12 +133,14 @@ export async function getTimezoneForCoordinates(
     const { offset, dstOffset } = computeOffsets(identifier);
 
     const timezone: Timezone = { identifier, offset, dstOffset };
+    logger.debug("Timezone resolved:", { latitude, longitude, result: timezone });
     await sessionSet("timezone:" + cacheKey, timezone);
     return timezone;
   } catch (error) {
-    console.warn("Timezone lookup failed, using fallback:", error);
+    logger.warn("Timezone lookup failed, using fallback:", error);
 
     const fallback = buildFallbackTimezone(longitude);
+    logger.warn("Timezone lookup failed, using fallback:", { error, fallback });
     await sessionSet("timezone:" + cacheKey, fallback);
     return fallback;
   }

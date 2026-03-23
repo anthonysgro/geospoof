@@ -5,7 +5,10 @@
 
 import type { LocationName } from "@/shared/types/settings";
 import type { GeocodeResult } from "@/shared/types/messages";
+import { createLogger } from "@/shared/utils/debug-logger";
 import { sessionGet, sessionSet } from "./session-cache";
+
+const logger = createLogger("BG");
 
 export const NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search";
 export const NOMINATIM_REVERSE_URL = "https://nominatim.openstreetmap.org/reverse";
@@ -70,14 +73,19 @@ export async function geocodeQuery(query: string): Promise<GeocodeResult[]> {
     addressdetails: "1",
   });
 
+  const url = `${NOMINATIM_SEARCH_URL}?${params}`;
+  logger.info("Geocoding request:", { url });
+
   try {
     const result = await fetchWithRetry(
-      `${NOMINATIM_SEARCH_URL}?${params}`,
+      url,
       {
         headers: { "User-Agent": "GeoSpoof-Extension/1.0" },
       },
       MAX_RETRIES
     );
+
+    logger.debug("Geocoding response status:", result.status);
 
     if (!result.ok) {
       throw new Error(`Geocoding failed: ${result.status}`);
@@ -128,10 +136,10 @@ export async function geocodeQuery(query: string): Promise<GeocodeResult[]> {
       }));
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
-      console.error("Geocoding request timed out");
+      logger.error("Geocoding request timed out");
       throw new Error("TIMEOUT");
     }
-    console.error("Geocoding error:", error);
+    logger.error("Geocoding error:", error);
     throw new Error("NETWORK");
   }
 }
@@ -143,6 +151,7 @@ export async function reverseGeocode(latitude: number, longitude: number): Promi
   const cacheKey = getCacheKey(latitude, longitude);
   const cached = await sessionGet<LocationName>("reverseGeo:" + cacheKey);
   if (cached !== undefined) {
+    logger.debug("Reverse geocode cache hit:", { cacheKey, result: cached });
     return cached;
   }
 
@@ -153,15 +162,19 @@ export async function reverseGeocode(latitude: number, longitude: number): Promi
     addressdetails: "1",
   });
 
+  const url = `${NOMINATIM_REVERSE_URL}?${params}`;
+  logger.info("Reverse geocoding request:", { url });
+
   try {
     const result = await fetchWithRetry(
-      `${NOMINATIM_REVERSE_URL}?${params}`,
+      url,
       {
         headers: { "User-Agent": "GeoSpoof-Extension/1.0" },
       },
       MAX_RETRIES
     );
 
+    logger.debug("Reverse geocoding response status:", result.status);
     if (!result.ok) {
       throw new Error(`Reverse geocoding failed: ${result.status}`);
     }
@@ -176,13 +189,14 @@ export async function reverseGeocode(latitude: number, longitude: number): Promi
 
     await sessionSet("reverseGeo:" + cacheKey, locationName);
 
+    logger.debug("Reverse geocode result:", locationName);
     return locationName;
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
-      console.error("Reverse geocoding request timed out");
+      logger.error("Reverse geocoding request timed out");
       throw new Error("TIMEOUT");
     }
-    console.error("Reverse geocoding error:", error);
+    logger.error("Reverse geocoding error:", error);
     throw new Error("NETWORK");
   }
 }

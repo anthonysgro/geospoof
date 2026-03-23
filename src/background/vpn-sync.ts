@@ -4,7 +4,10 @@
  * for the VPN exit region. Includes caching and rate limiting.
  */
 
+import { createLogger } from "@/shared/utils/debug-logger";
 import { sessionGet, sessionSet, sessionDelete, sessionClearNamespace } from "./session-cache";
+
+const logger = createLogger("BG");
 
 // --- Constants ---
 const PUBLIC_IP_URL = "https://api.ipify.org?format=json";
@@ -91,6 +94,7 @@ export async function detectPublicIp(): Promise<string> {
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
   try {
+    logger.debug("Detecting public IP via:", PUBLIC_IP_URL);
     const response = await fetch(PUBLIC_IP_URL, { signal: controller.signal });
     clearTimeout(timeoutId);
 
@@ -105,6 +109,7 @@ export async function detectPublicIp(): Promise<string> {
       throw new Error("Invalid IP address in response");
     }
 
+    logger.debug("Public IP detected:", ip);
     return ip;
   } catch (error) {
     clearTimeout(timeoutId);
@@ -215,11 +220,14 @@ export async function syncVpnLocation(forceRefresh: boolean): Promise<VpnSyncRes
     if (!forceRefresh) {
       const cached = await sessionGet<IpGeolocationResult>("ipGeo:" + ip);
       if (cached !== undefined) {
+        logger.debug("VPN sync cache hit:", { ip, result: cached });
         return cached;
       }
     }
 
+    logger.debug("Geolocating IP:", ip);
     const result = await geolocateWithFreeIpApi(ip);
+    logger.debug("IP geolocation result:", result);
 
     // Cache the result
     await sessionSet("ipGeo:" + ip, result);
@@ -234,6 +242,7 @@ export async function syncVpnLocation(forceRefresh: boolean): Promise<VpnSyncRes
           ? "GEOLOCATION_FAILED"
           : "NETWORK";
 
+    logger.error("VPN sync error:", { errorCode, message: err.message });
     return {
       error: errorCode,
       message: err.message || "A network error occurred. Please try again.",

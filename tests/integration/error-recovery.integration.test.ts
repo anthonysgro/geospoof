@@ -439,6 +439,8 @@ describe("Error Recovery Integration Tests", () => {
         version: "1.0",
         lastUpdated: Date.now(),
         vpnSyncEnabled: false,
+        debugLogging: false,
+        verbosityLevel: "INFO",
       };
 
       // Act: Broadcast settings (should not throw)
@@ -926,6 +928,7 @@ describe("Timezone Error Recovery Tests", () => {
 
       // Assert: Warning logged about timezone lookup failure
       expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("[WARN]"),
         expect.stringContaining("Timezone lookup failed"),
         expect.any(Error)
       );

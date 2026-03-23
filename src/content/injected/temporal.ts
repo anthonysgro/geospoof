@@ -8,6 +8,9 @@
 
 import { spoofingEnabled, timezoneData } from "./state";
 import { installOverride, registerOverride, disguiseAsNative } from "./function-masking";
+import { createLogger } from "@/shared/utils/debug-logger";
+
+const logger = createLogger("INJ");
 
 /**
  * Install Temporal.Now overrides if the Temporal API is available.
@@ -43,6 +46,7 @@ export function installTemporalOverrides(): void {
 
     installOverride(temporalNowObj, "timeZoneId", function (): string {
       if (spoofingEnabled && timezoneData) {
+        logger.debug("Temporal.Now.timeZoneId: returning spoofed", timezoneData.identifier);
         return timezoneData.identifier;
       }
       return originalTimeZoneId();
@@ -53,6 +57,7 @@ export function installTemporalOverrides(): void {
       "plainDateTimeISO",
       function (tzLike?: string): TemporalPlainDateTime {
         if (spoofingEnabled && timezoneData && tzLike === undefined) {
+          logger.debug("Temporal.Now.plainDateTimeISO: using spoofed tz", timezoneData.identifier);
           return originalPlainDateTimeISO(timezoneData.identifier);
         }
         return originalPlainDateTimeISO(tzLike);
@@ -61,6 +66,7 @@ export function installTemporalOverrides(): void {
 
     installOverride(temporalNowObj, "plainDateISO", function (tzLike?: string): TemporalPlainDate {
       if (spoofingEnabled && timezoneData && tzLike === undefined) {
+        logger.debug("Temporal.Now.plainDateISO: using spoofed tz", timezoneData.identifier);
         return originalPlainDateISO(timezoneData.identifier);
       }
       return originalPlainDateISO(tzLike);
@@ -68,6 +74,7 @@ export function installTemporalOverrides(): void {
 
     installOverride(temporalNowObj, "plainTimeISO", function (tzLike?: string): TemporalPlainTime {
       if (spoofingEnabled && timezoneData && tzLike === undefined) {
+        logger.debug("Temporal.Now.plainTimeISO: using spoofed tz", timezoneData.identifier);
         return originalPlainTimeISO(timezoneData.identifier);
       }
       return originalPlainTimeISO(tzLike);
@@ -78,6 +85,7 @@ export function installTemporalOverrides(): void {
       "zonedDateTimeISO",
       function (tzLike?: string): TemporalZonedDateTime {
         if (spoofingEnabled && timezoneData && tzLike === undefined) {
+          logger.debug("Temporal.Now.zonedDateTimeISO: using spoofed tz", timezoneData.identifier);
           return originalZonedDateTimeISO(timezoneData.identifier);
         }
         return originalZonedDateTimeISO(tzLike);

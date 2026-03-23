@@ -46,6 +46,24 @@ export async function loadSettings(): Promise<void> {
 
     updateDetailsView(settings);
 
+    // Restore debug logging toggle state
+    const debugLoggingToggle = document.getElementById(
+      "debugLoggingToggle"
+    ) as HTMLInputElement | null;
+    if (debugLoggingToggle) {
+      debugLoggingToggle.checked = !!settings.debugLogging;
+    }
+
+    // Restore verbosity selector state
+    const verbositySelector = document.getElementById("verbositySelector");
+    const verbosityLevel = document.getElementById("verbosityLevel") as HTMLSelectElement | null;
+    if (verbositySelector) {
+      verbositySelector.style.display = settings.debugLogging ? "block" : "none";
+    }
+    if (verbosityLevel && settings.verbosityLevel) {
+      verbosityLevel.value = settings.verbosityLevel;
+    }
+
     // Restore VPN sync toggle state (Req 4.1–4.4)
     const vpnSyncToggle = document.getElementById("vpnSyncToggle") as HTMLInputElement | null;
     const inputModeTabs = document.getElementById("inputModeTabs");

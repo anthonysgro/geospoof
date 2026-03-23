@@ -16,6 +16,9 @@ import {
   stripConstruct,
   nativeTypeErrorMessage,
 } from "./function-masking";
+import { createLogger } from "@/shared/utils/debug-logger";
+
+const logger = createLogger("INJ");
 
 // Track which iframe windows have already been patched to avoid re-patching
 const patchedIframeWindows = new WeakSet<Window>();
@@ -26,6 +29,7 @@ export function patchIframeWindow(iframeWindow: Window): void {
   patchedIframeWindows.add(iframeWindow);
 
   try {
+    logger.trace("Patching iframe window toString");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
     const iframeFnProto = (iframeWindow as any).Function.prototype as {
       toString: AnyFunction;
@@ -62,6 +66,7 @@ export function scanAndPatchIframes(node: Node): void {
   if (node instanceof HTMLIFrameElement) {
     if (node.contentWindow) {
       try {
+        logger.trace("Iframe patching: scanning iframe", { src: node.src || "(no src)" });
         patchIframeWindow(node.contentWindow);
       } catch {
         /* cross-origin */
@@ -72,6 +77,7 @@ export function scanAndPatchIframes(node: Node): void {
     for (const iframe of Array.from(node.querySelectorAll("iframe"))) {
       if (iframe.contentWindow) {
         try {
+          logger.trace("Iframe patching: scanning iframe", { src: iframe.src || "(no src)" });
           patchIframeWindow(iframe.contentWindow);
         } catch {
           /* cross-origin */

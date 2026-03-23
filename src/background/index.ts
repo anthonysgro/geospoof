@@ -10,11 +10,14 @@
 import type { Runtime, Tabs, Alarms } from "webextension-polyfill";
 import type { Message, UpdateSettingsPayload } from "@/shared/types/messages";
 import { loadSettings } from "./settings";
+import { setDebugEnabled, setVerbosityLevel, createLogger } from "@/shared/utils/debug-logger";
 import { setWebRTCProtection } from "./webrtc";
 import { updateBadge } from "./badge";
 import { broadcastSettingsToTabs, isRestrictedUrl, checkTabInjection } from "./tabs";
 import { handleMessage, handleSetLocation } from "./messages";
 import { syncVpnLocation } from "./vpn-sync";
+
+const logger = createLogger("BG");
 
 // Re-export everything so `import("@/background")` keeps working for tests
 export { DEFAULT_SETTINGS } from "@/shared/types/settings";
@@ -112,11 +115,15 @@ export { clearAlarmsForTab };
 async function initialize(): Promise<void> {
   const settings = await loadSettings();
 
+  // Restore logger state from persisted settings
+  setDebugEnabled(settings.debugLogging);
+  setVerbosityLevel(settings.verbosityLevel);
+
   if (settings.webrtcProtection) {
     try {
       await setWebRTCProtection(true);
     } catch (error) {
-      console.error("Failed to apply WebRTC protection on startup:", error);
+      logger.error("Failed to apply WebRTC protection on startup:", error);
     }
   }
 
@@ -137,7 +144,7 @@ async function initialize(): Promise<void> {
         );
       }
     } catch (error) {
-      console.warn("VPN auto-sync on startup failed:", error);
+      logger.warn("VPN auto-sync on startup failed:", error);
     }
   }
 }
@@ -153,8 +160,14 @@ async function onAlarm(alarm: Alarms.Alarm): Promise<void> {
   const { tabId, attempt } = parsed;
 
   const settings = await loadSettings();
-  const { enabled, location, timezone } = settings;
-  const scopedPayload: UpdateSettingsPayload = { enabled, location, timezone };
+  const { enabled, location, timezone, debugLogging, verbosityLevel } = settings;
+  const scopedPayload: UpdateSettingsPayload = {
+    enabled,
+    location,
+    timezone,
+    debugLogging,
+    verbosityLevel,
+  };
 
   try {
     const result = await checkTabInjection(tabId);
@@ -214,8 +227,14 @@ if (browser.tabs && browser.tabs.onCreated) {
   browser.tabs.onCreated.addListener((tab: Tabs.Tab) => {
     void (async () => {
       const settings = await loadSettings();
-      const { enabled, location, timezone } = settings;
-      const scopedPayload: UpdateSettingsPayload = { enabled, location, timezone };
+      const { enabled, location, timezone, debugLogging, verbosityLevel } = settings;
+      const scopedPayload: UpdateSettingsPayload = {
+        enabled,
+        location,
+        timezone,
+        debugLogging,
+        verbosityLevel,
+      };
 
       setTimeout(() => {
         void (async () => {

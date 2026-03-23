@@ -11,6 +11,9 @@ import {
   originalGetTimezoneOffset,
   engineTruncatesOffset,
 } from "./state";
+import { createLogger } from "@/shared/utils/debug-logger";
+
+const logger = createLogger("INJ");
 
 /** Validate that an unknown value conforms to the TimezoneData interface. */
 export function validateTimezoneData(tz: unknown): tz is TimezoneData {
@@ -21,17 +24,17 @@ export function validateTimezoneData(tz: unknown): tz is TimezoneData {
   const t = tz as Partial<TimezoneData>;
 
   if (typeof t.identifier !== "string" || t.identifier.length === 0) {
-    console.error("[GeoSpoof Injected] Invalid timezone identifier:", t.identifier);
+    logger.error("Invalid timezone identifier:", t.identifier);
     return false;
   }
 
   if (typeof t.offset !== "number" || !Number.isFinite(t.offset)) {
-    console.error("[GeoSpoof Injected] Invalid timezone offset:", t.offset);
+    logger.error("Invalid timezone offset:", t.offset);
     return false;
   }
 
   if (typeof t.dstOffset !== "number" || !Number.isFinite(t.dstOffset)) {
-    console.error("[GeoSpoof Injected] Invalid timezone dstOffset:", t.dstOffset);
+    logger.error("Invalid timezone dstOffset:", t.dstOffset);
     return false;
   }
 

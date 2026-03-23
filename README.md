@@ -2,7 +2,7 @@
 
 Your VPN changes your IP address. Your browser is still telling websites where you actually are.
 
-Install: [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/geo-spoof/) · Chrome Web Store (coming soon)
+Install: [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/geo-spoof/) · [Chrome Web Store](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje)
 
 Supports Firefox 140+, Firefox Android, Chrome, Brave, and Edge.
 
@@ -109,13 +109,13 @@ Overridden functions are disguised to pass standard detection checks used by mos
 | Iframe `contentWindow` patching | Iframes get their `toString` patched synchronously on access, before fingerprinting scripts can grab a clean reference |
 | DOM insertion wrapping          | `appendChild`, `insertBefore`, `innerHTML`, etc. (11 methods) synchronously patch iframes on insertion                 |
 
-> **Privacy caveat:** These overrides pass the checks that real-world fingerprinting scripts typically run. Dedicated forensic tools like [arkenfox](https://github.com/nicolo-ribaudo/nicolo-ribaudo.github.io) and [CreepJS](https://abrahamjuliot.github.io/creepjs/) can still detect content-script-level overrides through engine internals, Web Worker context leaks, and timing side-channels. Full undetectability requires browser-level changes (Tor Browser, Mullvad Browser). GeoSpoof does the best that's possible from an extension.
+> **Privacy caveat:** These overrides pass the checks that real-world fingerprinting scripts typically run. Dedicated forensic tools like [TorZillaPrint](https://arkenfox.github.io/TZP/tzp.html) and [CreepJS](https://abrahamjuliot.github.io/creepjs/) can still detect content-script-level overrides through engine internals, Web Worker context leaks, and timing side-channels. Full undetectability requires browser-level changes (Tor Browser, Mullvad Browser). GeoSpoof does the best that's possible from an extension.
 
 ## Installation
 
 **Firefox:** https://addons.mozilla.org/en-US/firefox/addon/geo-spoof
 
-**Chrome / Brave / Edge:** Chrome Web Store listing coming soon. You can sideload from [GitHub Releases](https://github.com/anthonysgro/geospoof/releases) — see below.
+**Chrome / Brave / Edge:** https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje
 
 **From source (Firefox):**
 

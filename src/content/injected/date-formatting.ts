@@ -18,6 +18,7 @@ import {
   originalToLocaleTimeString,
 } from "./state";
 import { installOverride } from "./function-masking";
+import { createLogger } from "@/shared/utils/debug-logger";
 import {
   resolvePartsForDate,
   formatGMTOffset,
@@ -26,6 +27,8 @@ import {
   getLocalDateViaOffset,
   getIntlBasedOffset,
 } from "./timezone-helpers";
+
+const logger = createLogger("INJ");
 
 const SHORT_MONTHS = [
   "Jan",
@@ -78,12 +81,12 @@ export function installDateFormattingOverrides(): void {
         }
         return originalToDateString.call(this);
       } catch (error) {
-        console.error("[GeoSpoof Injected] Error in toDateString override:", error);
+        logger.error("Error in toDateString override:", error);
         return originalToDateString.call(this);
       }
     });
   } catch (error) {
-    console.error("[GeoSpoof Injected] Failed to override Date.toDateString:", error);
+    logger.error("Failed to override Date.toDateString:", error);
   }
 
   // Override Date.prototype.toString()
@@ -127,12 +130,12 @@ export function installDateFormattingOverrides(): void {
         }
         return originalToString.call(this);
       } catch (error) {
-        console.error("[GeoSpoof Injected] Error in toString override:", error);
+        logger.error("Error in toString override:", error);
         return originalToString.call(this);
       }
     });
   } catch (error) {
-    console.error("[GeoSpoof Injected] Failed to override Date.toString:", error);
+    logger.error("Failed to override Date.toString:", error);
   }
 
   // Override Date.prototype.toTimeString()
@@ -168,12 +171,12 @@ export function installDateFormattingOverrides(): void {
         }
         return originalToTimeString.call(this);
       } catch (error) {
-        console.error("[GeoSpoof Injected] Error in toTimeString override:", error);
+        logger.error("Error in toTimeString override:", error);
         return originalToTimeString.call(this);
       }
     });
   } catch (error) {
-    console.error("[GeoSpoof Injected] Failed to override Date.toTimeString:", error);
+    logger.error("Failed to override Date.toTimeString:", error);
   }
 
   // Override Date.prototype.toLocaleString()
@@ -200,13 +203,13 @@ export function installDateFormattingOverrides(): void {
           }
           return originalToLocaleString.call(this, locales as string, options);
         } catch (error) {
-          console.error("[GeoSpoof Injected] Error in toLocaleString override:", error);
+          logger.error("Error in toLocaleString override:", error);
           return originalToLocaleString.call(this, locales as string, options);
         }
       }
     );
   } catch (error) {
-    console.error("[GeoSpoof Injected] Failed to override Date.toLocaleString:", error);
+    logger.error("Failed to override Date.toLocaleString:", error);
   }
 
   // Override Date.prototype.toLocaleDateString()
@@ -233,13 +236,13 @@ export function installDateFormattingOverrides(): void {
           }
           return originalToLocaleDateString.call(this, locales as string, options);
         } catch (error) {
-          console.error("[GeoSpoof Injected] Error in toLocaleDateString override:", error);
+          logger.error("Error in toLocaleDateString override:", error);
           return originalToLocaleDateString.call(this, locales as string, options);
         }
       }
     );
   } catch (error) {
-    console.error("[GeoSpoof Injected] Failed to override Date.toLocaleDateString:", error);
+    logger.error("Failed to override Date.toLocaleDateString:", error);
   }
 
   // Override Date.prototype.toLocaleTimeString()
@@ -266,12 +269,12 @@ export function installDateFormattingOverrides(): void {
           }
           return originalToLocaleTimeString.call(this, locales as string, options);
         } catch (error) {
-          console.error("[GeoSpoof Injected] Error in toLocaleTimeString override:", error);
+          logger.error("Error in toLocaleTimeString override:", error);
           return originalToLocaleTimeString.call(this, locales as string, options);
         }
       }
     );
   } catch (error) {
-    console.error("[GeoSpoof Injected] Failed to override Date.toLocaleTimeString:", error);
+    logger.error("Failed to override Date.toLocaleTimeString:", error);
   }
 }

@@ -24,6 +24,8 @@ export interface SettingsEventDetail {
   enabled: boolean;
   location: SpoofedLocation | null;
   timezone: TimezoneData | null;
+  debugLogging: boolean;
+  verbosityLevel: string;
 }
 
 export interface SpoofedGeolocationPosition {

@@ -99,22 +99,32 @@ function browserTargetPlugin(target: BrowserTarget): Plugin {
         cpSync(iconsSrc, resolve(__dirname, "dist/icons"), { recursive: true });
       }
 
-      // Wrap the injected script in an IIFE for Firefox builds.
-      // The modular source compiles to top-level statements in ES module
-      // format, but the output runs as a classic <script> in page context.
-      // Without an IIFE wrapper, top-level const/let declarations live in
-      // the global lexical scope and can shadow page variables. The IIFE
-      // also carries "use strict" since esbuild minification strips the
-      // directive (ES modules are implicitly strict) but the classic script
-      // context is NOT automatically strict — without it, .arguments/.caller
-      // access returns undefined instead of throwing TypeError (arkenfox
-      // tests p, q).
-      // For Chromium builds, the esbuild re-bundling handles both concerns.
+      // Firefox: re-bundle content scripts as IIFE.
+      // Content scripts in Firefox MV3 also load as classic scripts — they
+      // cannot use ES module import/export. When shared chunks exist (e.g.
+      // debug-logger), the Vite ES module output contains import statements
+      // that fail at runtime. Re-bundle with esbuild to inline all deps.
+      // The injected script additionally needs "use strict" since esbuild
+      // minification strips the directive (ES modules are implicitly strict)
+      // but the classic script / page context is NOT automatically strict —
+      // without it, .arguments/.caller access returns undefined instead of
+      // throwing TypeError (arkenfox tests p, q).
       if (target !== "chromium") {
-        const injectedPath = resolve(__dirname, "dist/content/injected.js");
-        if (existsSync(injectedPath)) {
-          const content = readFileSync(injectedPath, "utf-8");
-          writeFileSync(injectedPath, `"use strict";(function(){${content}})();\n`);
+        const firefoxContentScripts = ["content/content.js", "content/injected.js"];
+        for (const script of firefoxContentScripts) {
+          const scriptPath = resolve(__dirname, "dist", script);
+          if (existsSync(scriptPath)) {
+            await esbuild({
+              entryPoints: [scriptPath],
+              bundle: true,
+              format: "iife",
+              outfile: scriptPath,
+              allowOverwrite: true,
+              target: "firefox140",
+              ...(script === "content/injected.js" ? { banner: { js: '"use strict";' } } : {}),
+              nodePaths: [resolve(__dirname, "node_modules")],
+            });
+          }
         }
       }
 
@@ -186,11 +196,7 @@ export default defineConfig(({ mode }) => {
           "content/injected": resolve(__dirname, "src/content/injected/index.ts"),
           "popup/popup": resolve(__dirname, "src/popup/index.ts"),
         },
-        treeshake: isDev
-          ? true
-          : {
-              manualPureFunctions: ["console.log", "console.debug", "console.info"],
-            },
+        treeshake: true,
         output: {
           entryFileNames: "[name].js",
           chunkFileNames: "shared/[name]-[hash].js",
@@ -201,30 +207,7 @@ export default defineConfig(({ mode }) => {
       },
     },
 
-    plugins: [
-      browserTargetPlugin(browserTarget),
-      // Strip console.error/console.warn calls containing "GeoSpoof" from
-      // injected.ts in production builds so the extension name is not leaked
-      // into page context. Development builds preserve all console calls.
-      ...(!isDev
-        ? [
-            {
-              name: "strip-geospoof-console",
-              transform(code: string, id: string) {
-                if (!id.includes("injected")) return null;
-                // Replace console.error(...) and console.warn(...) calls that
-                // contain the literal string "GeoSpoof" with `void 0`.
-                const replaced = code.replace(
-                  /console\.(error|warn)\([^)]*["'].*?GeoSpoof.*?["'][^)]*\)/g,
-                  "void 0"
-                );
-                if (replaced === code) return null;
-                return { code: replaced, map: null };
-              },
-            } satisfies Plugin,
-          ]
-        : []),
-    ],
+    plugins: [browserTargetPlugin(browserTarget)],
 
     resolve: {
       alias: {
@@ -246,7 +229,6 @@ export default defineConfig(({ mode }) => {
       ? {}
       : {
           drop: [],
-          pure: ["console.log", "console.debug", "console.info"],
           keepNames: false,
         },
   };

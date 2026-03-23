@@ -5,15 +5,27 @@
 
 import type { Settings } from "@/shared/types/settings";
 import type { UpdateSettingsPayload, InjectionStatus } from "@/shared/types/messages";
+import { createLogger } from "@/shared/utils/debug-logger";
+
+const logger = createLogger("BG");
 
 /**
  * Broadcast settings to all tabs via content scripts.
  */
 export async function broadcastSettingsToTabs(settings: Settings): Promise<void> {
-  const { enabled, location, timezone } = settings;
-  const payload: UpdateSettingsPayload = { enabled, location, timezone };
+  const { enabled, location, timezone, debugLogging, verbosityLevel } = settings;
+  const payload: UpdateSettingsPayload = {
+    enabled,
+    location,
+    timezone,
+    debugLogging,
+    verbosityLevel,
+  };
   const tabs = await browser.tabs.query({});
 
+  logger.info("Broadcasting settings to tabs:", { tabCount: tabs.length, payload });
+
+  let failCount = 0;
   const promises: Promise<void>[] = [];
   for (const tab of tabs) {
     const promise = browser.tabs
@@ -22,6 +34,8 @@ export async function broadcastSettingsToTabs(settings: Settings): Promise<void>
         payload,
       })
       .catch((error: Error) => {
+        failCount++;
+        logger.warn(`Failed to send to tab ${tab.id} (${tab.url}):`, error.message);
         console.debug(`Could not send message to tab ${tab.id} (${tab.url}):`, error.message);
       });
 
@@ -29,6 +43,9 @@ export async function broadcastSettingsToTabs(settings: Settings): Promise<void>
   }
 
   await Promise.all(promises);
+  if (failCount > 0) {
+    logger.debug("Broadcast complete:", { sent: tabs.length - failCount, failed: failCount });
+  }
 }
 
 /**
@@ -37,6 +54,7 @@ export async function broadcastSettingsToTabs(settings: Settings): Promise<void>
 export async function injectContentScriptIntoExistingTabs(): Promise<void> {
   try {
     const tabs = await browser.tabs.query({});
+    logger.info("Injecting content scripts into existing tabs:", { tabCount: tabs.length });
 
     for (const tab of tabs) {
       if (tab.url && (tab.url.startsWith("http://") || tab.url.startsWith("https://"))) {
@@ -52,8 +70,12 @@ export async function injectContentScriptIntoExistingTabs(): Promise<void> {
               target: { tabId: tab.id! },
               files: ["content/content.js"],
             });
-            console.log(`Injected content script into tab ${tab.id}`);
+            logger.debug(`Injected content script into tab ${tab.id}`);
           } catch (error) {
+            logger.warn(
+              `Could not inject into tab ${tab.id}:`,
+              error instanceof Error ? error.message : String(error)
+            );
             console.debug(
               `Could not inject into tab ${tab.id}:`,
               error instanceof Error ? error.message : String(error)
@@ -63,7 +85,7 @@ export async function injectContentScriptIntoExistingTabs(): Promise<void> {
       }
     }
   } catch (error) {
-    console.error("Failed to inject content scripts:", error);
+    logger.error("Failed to inject content scripts:", error);
   }
 }
 
@@ -75,7 +97,7 @@ export async function checkTabInjection(tabId: number): Promise<InjectionStatus>
     await browser.tabs.sendMessage(tabId, { type: "PING" });
     return { injected: true, error: null };
   } catch (error) {
-    console.error(`Content script not responding in tab ${tabId}:`, error);
+    logger.error(`Content script not responding in tab ${tabId}:`, error);
     return { injected: false, error: error instanceof Error ? error.message : String(error) };
   }
 }

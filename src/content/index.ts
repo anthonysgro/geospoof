@@ -8,11 +8,16 @@
 
 import type { Location, Timezone } from "@/shared/types/settings";
 import type { UpdateSettingsPayload } from "@/shared/types/messages";
+import { createLogger, setDebugEnabled, setVerbosityLevel } from "@/shared/utils/debug-logger";
+
+const logger = createLogger("CS");
 
 // Settings received from background script
 let spoofingEnabled = false;
 let spoofedLocation: Location | null = null;
 let timezoneOverride: Timezone | null = null;
+let debugLogging = false;
+let verbosityLevel = "INFO";
 
 // Event name for settings updates (configurable for stealth)
 const EVENT_NAME: string = process.env.EVENT_NAME || "__x_evt";
@@ -22,6 +27,8 @@ interface SettingsEventDetail {
   enabled: boolean;
   location: Location | null;
   timezone: Timezone | null;
+  debugLogging: boolean;
+  verbosityLevel: string;
 }
 
 /**
@@ -45,6 +52,8 @@ function updateInjectedScript(): void {
     enabled: spoofingEnabled,
     location: spoofedLocation,
     timezone: timezoneOverride,
+    debugLogging,
+    verbosityLevel,
   };
 
   // For Firefox, use cloneInto to make the object accessible in page context
@@ -54,20 +63,16 @@ function updateInjectedScript(): void {
 
   try {
     window.dispatchEvent(event);
-    console.log("[GeoSpoof Content] Dispatched settings update event:", {
-      spoofingEnabled,
-      spoofedLocation,
-      timezoneOverride,
-    });
+    logger.info("Dispatched settings to injected script:", settingsData);
   } catch (error) {
-    console.error("[GeoSpoof Content] Failed to dispatch settings update:", error);
+    logger.error("Failed to dispatch settings update:", error);
     // Retry once after 100ms delay
     setTimeout(() => {
       try {
         window.dispatchEvent(event);
-        console.log("[GeoSpoof Content] Retry successful: Dispatched settings update event");
+        logger.info("Retry successful: Dispatched settings to injected script");
       } catch (retryError) {
-        console.error("[GeoSpoof Content] Retry failed to dispatch settings update:", retryError);
+        logger.error("Retry failed to dispatch settings update:", retryError);
       }
     }, 100);
   }
@@ -93,12 +98,15 @@ if (!__CHROMIUM__) {
       script.textContent = xhr.responseText;
       (document.head || document.documentElement).prepend(script);
       script.remove();
+      logger.info("Injected script via sync XHR (Firefox)");
     } else {
-      console.error("[GeoSpoof Content] Failed to load injected script:", xhr.status);
+      logger.error("Failed to load injected script:", xhr.status);
     }
   } catch (e) {
-    console.error("[GeoSpoof Content] Failed to inject script:", e);
+    logger.error("Failed to inject script:", e);
   }
+} else {
+  logger.info("Injected script loaded via manifest world:MAIN (Chromium)");
 }
 
 // Send initial settings after script is injected
@@ -107,18 +115,26 @@ updateInjectedScript();
 // Listen for settings updates from background script
 browser.runtime.onMessage.addListener(
   (message: { type: string; payload?: UpdateSettingsPayload }) => {
-    console.log("[GeoSpoof Content] Received message:", message);
+    logger.debug("Received message from background:", {
+      type: message.type,
+      payload: message.payload,
+    });
 
     if (message.type === "UPDATE_SETTINGS" && message.payload) {
       spoofingEnabled = message.payload.enabled;
       spoofedLocation = message.payload.location;
       timezoneOverride = message.payload.timezone;
-      console.log(
-        "[GeoSpoof Content] Settings updated. Enabled:",
-        spoofingEnabled,
-        "Location:",
-        spoofedLocation
-      );
+      debugLogging = message.payload.debugLogging;
+      verbosityLevel = message.payload.verbosityLevel ?? "INFO";
+      setDebugEnabled(debugLogging);
+      setVerbosityLevel(verbosityLevel);
+      logger.debug("Settings updated:", {
+        enabled: spoofingEnabled,
+        location: spoofedLocation,
+        timezone: timezoneOverride,
+        debugLogging,
+        verbosityLevel,
+      });
       updateInjectedScript();
     } else if (message.type === "PING") {
       // Respond to ping to confirm content script is injected
@@ -128,21 +144,34 @@ browser.runtime.onMessage.addListener(
 );
 
 // Request initial settings on load
-console.log("[GeoSpoof Content] Content script loaded, requesting initial settings");
+logger.info("Content script loaded, requesting initial settings");
 browser.runtime
   .sendMessage({ type: "GET_SETTINGS" })
-  .then((settings: { enabled: boolean; location: Location | null; timezone: Timezone | null }) => {
-    spoofingEnabled = settings.enabled;
-    spoofedLocation = settings.location;
-    timezoneOverride = settings.timezone;
-    console.log(
-      "[GeoSpoof Content] Initial settings loaded. Enabled:",
-      spoofingEnabled,
-      "Location:",
-      spoofedLocation
-    );
-    updateInjectedScript();
-  })
+  .then(
+    (settings: {
+      enabled: boolean;
+      location: Location | null;
+      timezone: Timezone | null;
+      debugLogging: boolean;
+      verbosityLevel: string;
+    }) => {
+      spoofingEnabled = settings.enabled;
+      spoofedLocation = settings.location;
+      timezoneOverride = settings.timezone;
+      debugLogging = settings.debugLogging;
+      verbosityLevel = settings.verbosityLevel ?? "INFO";
+      setDebugEnabled(debugLogging);
+      setVerbosityLevel(verbosityLevel);
+      logger.debug("Initial settings loaded:", {
+        enabled: spoofingEnabled,
+        location: spoofedLocation,
+        timezone: timezoneOverride,
+        debugLogging,
+        verbosityLevel,
+      });
+      updateInjectedScript();
+    }
+  )
   .catch((error: unknown) => {
-    console.error("[GeoSpoof Content] Failed to get initial settings:", error);
+    logger.error("Failed to get initial settings:", error);
   });

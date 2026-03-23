@@ -29,6 +29,8 @@ function makeSettings(partial: Partial<Settings>): Settings {
     version: "1.0",
     lastUpdated: Date.now(),
     vpnSyncEnabled: false,
+    debugLogging: false,
+    verbosityLevel: "INFO",
     ...partial,
   };
 }
@@ -101,12 +103,20 @@ describe("Property 23: Multi-Tab Consistency", () => {
             enabled: settings.enabled,
             location: settings.location,
             timezone: settings.timezone,
+            debugLogging: settings.debugLogging,
+            verbosityLevel: settings.verbosityLevel,
           });
           expect(firstMessage.payload!.enabled).toBe(enabled);
           expect(firstMessage.payload!.location).toEqual(location);
         }
       ),
-      { numRuns: 50 }
+      {
+        numRuns: 50,
+        examples: [
+          // Regression: payload must include debugLogging and verbosityLevel
+          [1, { latitude: 0, longitude: 0, accuracy: 1 }, false],
+        ],
+      }
     );
   });
 
