@@ -1,6 +1,6 @@
 {
   "name": "geospoof-extension",
-  "version": "1.15.1",
+  "version": "1.15.2",
   "type": "module",
   "description": "Firefox extension for geolocation spoofing and location privacy",
   "scripts": {
