@@ -119,10 +119,10 @@ Overridden functions are disguised to pass standard detection checks used by mos
 
 **From GitHub Releases (Firefox self-hosted):**
 
-Nightly self-hosted builds are published to GitHub Releases frequently. These use a 4-segment version (e.g., `1.18.0.42`) to avoid collisions with the AMO listing.
+Each release includes a self-hosted signed XPI alongside the AMO submission. The self-hosted XPI uses a 4-segment version (e.g., `1.18.0.42`) to avoid collisions with the AMO listing.
 
 1. Go to the [Releases](https://github.com/anthonysgro/geospoof/releases) page
-2. Download `geospoof-<version>-signed.xpi` from the latest release (skip any tagged `[AMO]`)
+2. Download `geospoof-<version>-signed.xpi` from the latest release
 3. In Firefox, open `about:addons`
 4. Click the gear icon (⚙) and select **Install Add-on From File…**
 5. Select the downloaded `.xpi` file
@@ -257,9 +257,20 @@ npm run start:android -- <device-id>
 
 You can find device IDs with `adb devices`.
 
-### Signing Pipeline Setup (Maintainers)
+### Release Pipeline (Maintainers)
 
-The release workflow signs the `.xpi` via AMO's self-distribution channel and deploys an update manifest to GitHub Pages. This requires two GitHub Actions secrets:
+A single `v*` tag push (e.g., `v1.18.0`) triggers the full release pipeline:
+
+1. Build Firefox, package unsigned XPI and source zip
+2. Inject build version (`1.18.0.{run}`) → sign unlisted (self-hosted)
+3. Restore clean dist → strip `update_url` → sign listed (AMO) with source
+4. Build Chromium
+5. Create one GitHub Release with all artifacts (signed XPI, unsigned XPI, Chromium zip, source zip)
+6. Deploy `update.json` to GitHub Pages for self-hosted auto-updates
+
+The unlisted XPI uses a 4-segment version (e.g., `1.18.0.42`) while the AMO submission uses the clean 3-segment version (`1.18.0`). This avoids AMO's version uniqueness constraint across channels.
+
+**Required GitHub Actions secrets:**
 
 | Secret           | Description              |
 | ---------------- | ------------------------ |
@@ -271,18 +282,15 @@ To generate credentials:
 1. Go to the [AMO API Keys page](https://addons.mozilla.org/en-US/developers/addon/api/key/)
 2. Sign in with the Mozilla account that owns the extension listing
 
-### Signing Pipeline Setup (Maintainers)
+**Releasing:**
 
-The release workflow supports two channels, routed by tag pattern:
+```bash
+npm run validate
+npm version patch   # or minor/major
+git push origin main --tags
+```
 
-- **`v*` tags** (e.g., `v1.18.0`) → unlisted (self-hosted) flow. Appends the CI run number as a 4th version segment (e.g., `1.18.0.42`), signs via AMO unlisted, deploys the update manifest to GitHub Pages, and creates a GitHub Release with the signed XPI and Chromium zip.
-- **`v*-amo` tags** (e.g., `v1.18.0-amo`) → listed (AMO) submission. Uses the clean version from `package.json`, signs via AMO listed with source code attached, and creates a GitHub Release tagged `[AMO]` with the source archive.
-
-Both flows require two GitHub Actions secrets:
-
-Once configured, pushing a `v*` tag triggers the self-hosted pipeline: build → inject build version → sign (unlisted) → generate update manifest → create GitHub Release → deploy `update.json` to GitHub Pages. Pushing a `v*-amo` tag triggers the AMO pipeline: build → verify version match → sign (listed) with source → create `[AMO]` GitHub Release. If signing fails on either flow, the workflow stops and no release is created.
-
-For local signing (testing), set `AMO_JWT_ISSUER` and `AMO_JWT_SECRET` in your `.env` and run:
+**Local signing (testing):** Set `AMO_JWT_ISSUER` and `AMO_JWT_SECRET` in your `.env`, then:
 
 ```bash
 # Unlisted (self-hosted)
