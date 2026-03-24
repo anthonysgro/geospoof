@@ -85,15 +85,20 @@ jobs:
           DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${GITHUB_REF_NAME}/geospoof-${BASE_VERSION}-signed.xpi"
           bash scripts/generate-update-manifest.sh "$BUILD_VERSION" "$DOWNLOAD_URL"
 
+      # ── Collect release artifacts ──
+      - name: Collect release artifacts
+        run: |
+          mkdir -p release-assets
+          cp "web-ext-artifacts/geospoof-${BASE_VERSION}-signed.xpi" release-assets/
+          cp "web-ext-artifacts/geospoof-${BASE_VERSION}.xpi" release-assets/
+          cp "web-ext-artifacts/geospoof-chromium-v${BASE_VERSION}.zip" release-assets/
+          cp "geospoof-source-v${BASE_VERSION}.zip" release-assets/
+
       # ── Single GitHub Release with all artifacts ──
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            web-ext-artifacts/geospoof-*-signed.xpi
-            web-ext-artifacts/geospoof-[0-9]*.xpi
-            web-ext-artifacts/geospoof-chromium-*.zip
-            geospoof-source-*.zip
+          files: release-assets/*
           generate_release_notes: true
 
       - name: Deploy update manifest to GitHub Pages
