@@ -119,7 +119,7 @@ Overridden functions are disguised to pass standard detection checks used by mos
 
 **From GitHub Releases (Firefox nightly):**
 
-Self-hosted nightly builds are published frequently. These use a nightly version suffix (e.g., `1.18.0-nightly.42`) to avoid collisions with the stable AMO listing.
+Self-hosted nightly builds are published frequently. These use a 4-segment version (e.g., `1.18.0.42`) to avoid collisions with the stable AMO listing.
 
 1. Go to the [Releases](https://github.com/anthonysgro/geospoof/releases) page
 2. Download `geospoof-<version>-signed.xpi` from the latest release (skip any tagged `[AMO]`)
@@ -127,7 +127,7 @@ Self-hosted nightly builds are published frequently. These use a nightly version
 4. Click the gear icon (⚙) and select **Install Add-on From File…**
 5. Select the downloaded `.xpi` file
 
-The signed XPI works on standard Firefox with no extra configuration. Once installed, Firefox automatically checks for and installs new nightly versions via the self-hosted update manifest. If you later install the stable version from AMO, Firefox will auto-upgrade to it since stable versions are always considered newer than nightly.
+The signed XPI works on standard Firefox with no extra configuration. Once installed, Firefox automatically checks for and installs new nightly versions via the self-hosted update manifest. If you later install the stable version from AMO, Firefox will auto-upgrade to it since AMO releases always use a higher base version than nightlies.
 
 > **Note:** An unsigned `geospoof-<version>.xpi` is also included in each release for Firefox forks that don't support AMO signatures. Most users should use the signed version.
 
@@ -275,7 +275,7 @@ To generate credentials:
 
 The release workflow supports two channels, routed by tag pattern:
 
-- **`v*` tags** (e.g., `v1.18.0`) → unlisted (nightly) self-hosted flow. Injects a nightly version suffix, signs via AMO unlisted, deploys the update manifest to GitHub Pages, and creates a GitHub Release with the signed XPI and Chromium zip.
+- **`v*` tags** (e.g., `v1.18.0`) → unlisted (nightly) self-hosted flow. Appends the CI run number as a 4th version segment (e.g., `1.18.0.42`), signs via AMO unlisted, deploys the update manifest to GitHub Pages, and creates a GitHub Release with the signed XPI and Chromium zip.
 - **`v*-amo` tags** (e.g., `v1.18.0-amo`) → listed (stable) AMO submission. Uses the clean version from `package.json`, signs via AMO listed with source code attached, and creates a GitHub Release tagged `[AMO]` with the source archive.
 
 Both flows require two GitHub Actions secrets:

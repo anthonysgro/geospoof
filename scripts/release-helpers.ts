@@ -10,26 +10,24 @@ export function extractBaseVersion(tag: string): string {
   return tag.replace(/^v/, "").replace(/-amo$/, "");
 }
 
-/** Constructs a nightly version string: `{base}-nightly.{runNumber}`. */
+/** Constructs a nightly version string: `{base}.{runNumber}` (4-segment, AMO-compatible). */
 export function buildNightlyVersion(base: string, runNumber: number): string {
-  return `${base}-nightly.${runNumber}`;
+  return `${base}.${runNumber}`;
 }
 
 /**
  * Returns true if the clean version is newer than the nightly version
- * according to Firefox/semver pre-release ordering.
+ * according to Firefox's dot-separated numeric version comparison.
  *
- * In semver, a version without a pre-release tag (e.g. 1.18.0) is always
- * newer than the same version with a pre-release tag (e.g. 1.18.0-nightly.42).
+ * Firefox compares version segments left to right numerically, with missing
+ * segments treated as 0. For example: 1.18.0 > 1.17.3.15 because 18 > 17.
+ *
+ * In the dual-channel model, the AMO listed version should always have a
+ * higher base version than any nightly, ensuring users auto-upgrade.
  */
 export function isNewerVersion(clean: string, nightly: string): boolean {
-  // Split into [version, prerelease?]
-  const [cleanBase] = clean.split("-", 2);
-  const [nightlyBase, nightlyPre] = nightly.split("-", 2);
-
-  // Compare base version segments numerically
-  const cleanParts = cleanBase.split(".").map(Number);
-  const nightlyParts = nightlyBase.split(".").map(Number);
+  const cleanParts = clean.split(".").map(Number);
+  const nightlyParts = nightly.split(".").map(Number);
   const len = Math.max(cleanParts.length, nightlyParts.length);
 
   for (let i = 0; i < len; i++) {
@@ -39,11 +37,6 @@ export function isNewerVersion(clean: string, nightly: string): boolean {
     if (c < n) return false;
   }
 
-  // Same base: version without pre-release is newer than one with pre-release
-  const cleanHasPre = clean.includes("-");
-  const nightlyHasPre = !!nightlyPre;
-
-  if (!cleanHasPre && nightlyHasPre) return true;
   return false;
 }
 

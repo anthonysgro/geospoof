@@ -78,26 +78,26 @@ describe("Feature: dual-channel-release, Property 1: Tag version extraction stri
  * Property 2: Nightly version construction
  *
  * For any valid semver base version V and any positive integer run number N,
- * the computed nightly version should equal `${V}-nightly.${N}`.
+ * the computed nightly version should equal `${V}.${N}` (4-segment, AMO-compatible).
  *
  * Validates: Requirements 4.1
  */
 describe("Feature: dual-channel-release, Property 2: Nightly version construction", () => {
-  test("buildNightlyVersion produces correct format", () => {
+  test("buildNightlyVersion produces correct 4-segment format", () => {
     fc.assert(
       fc.property(semverArb, runNumberArb, (base, runNumber) => {
         const result = buildNightlyVersion(base, runNumber);
-        expect(result).toBe(`${base}-nightly.${runNumber}`);
+        expect(result).toBe(`${base}.${runNumber}`);
       }),
       { numRuns: 100 }
     );
   });
 
-  test("buildNightlyVersion output contains a pre-release separator", () => {
+  test("buildNightlyVersion output is a valid AMO version (dot-separated integers)", () => {
     fc.assert(
       fc.property(semverArb, runNumberArb, (base, runNumber) => {
         const result = buildNightlyVersion(base, runNumber);
-        expect(result).toContain("-");
+        expect(result).toMatch(/^\d+\.\d+\.\d+\.\d+$/);
         expect(result.startsWith(base)).toBe(true);
       }),
       { numRuns: 100 }
@@ -106,38 +106,49 @@ describe("Feature: dual-channel-release, Property 2: Nightly version constructio
 });
 
 /**
- * Property 3: Clean version is newer than any nightly version
+ * Property 3: Higher base version is newer than any nightly of a lower base
  *
  * For any valid semver base version V and any positive integer run number N,
- * Firefox semver comparison should rank V (clean) as strictly newer than
- * V-nightly.N (nightly).
+ * a version with a higher minor (V.minor+1) should be strictly newer than
+ * V.N (the 4-segment nightly). This ensures AMO listed releases (which use
+ * a higher base version) are always newer than self-hosted nightlies.
  *
  * Validates: Requirements 4.5
  */
-describe("Feature: dual-channel-release, Property 3: Clean version is newer than any nightly version", () => {
-  test("clean version is always newer than its nightly counterpart", () => {
+describe("Feature: dual-channel-release, Property 3: AMO version is newer than any nightly of a lower base", () => {
+  /** Arbitrary for a semver where minor can be bumped without overflow. */
+  const bumpableSemverArb = fc
+    .tuple(
+      fc.integer({ min: 0, max: 999 }),
+      fc.integer({ min: 0, max: 998 }),
+      fc.integer({ min: 0, max: 999 })
+    )
+    .map(([major, minor, patch]) => ({
+      base: `${major}.${minor}.${patch}`,
+      bumped: `${major}.${minor + 1}.0`,
+    }));
+
+  test("bumped version is always newer than nightly of the original base", () => {
     fc.assert(
-      fc.property(semverArb, runNumberArb, (base, runNumber) => {
-        const clean = base;
+      fc.property(bumpableSemverArb, runNumberArb, ({ base, bumped }, runNumber) => {
         const nightly = buildNightlyVersion(base, runNumber);
-        expect(isNewerVersion(clean, nightly)).toBe(true);
+        expect(isNewerVersion(bumped, nightly)).toBe(true);
       }),
       { numRuns: 100 }
     );
   });
 
-  test("nightly version is never newer than its clean counterpart", () => {
+  test("nightly is never newer than a bumped version", () => {
     fc.assert(
-      fc.property(semverArb, runNumberArb, (base, runNumber) => {
-        const clean = base;
+      fc.property(bumpableSemverArb, runNumberArb, ({ base, bumped }, runNumber) => {
         const nightly = buildNightlyVersion(base, runNumber);
-        expect(isNewerVersion(nightly, clean)).toBe(false);
+        expect(isNewerVersion(nightly, bumped)).toBe(false);
       }),
       { numRuns: 100 }
     );
   });
 
-  test("identical clean versions are not newer than each other", () => {
+  test("identical versions are not newer than each other", () => {
     fc.assert(
       fc.property(semverArb, (version) => {
         expect(isNewerVersion(version, version)).toBe(false);
