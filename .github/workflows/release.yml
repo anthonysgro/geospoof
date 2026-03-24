@@ -50,6 +50,10 @@ jobs:
         if: env.IS_AMO != 'true'
         run: jq --arg v "$BUILD_VERSION" '.version = $v' dist/manifest.json > dist/manifest.tmp && mv dist/manifest.tmp dist/manifest.json
 
+      - name: Strip update_url for AMO
+        if: env.IS_AMO == 'true'
+        run: jq 'del(.browser_specific_settings.gecko.update_url)' dist/manifest.json > dist/manifest.tmp && mv dist/manifest.tmp dist/manifest.json
+
       - run: npm run package:source
 
       - name: Sign XPI (unlisted)
