@@ -33,7 +33,7 @@ jobs:
             BASE_VERSION="${TAG#v}"
           fi
           echo "BASE_VERSION=${BASE_VERSION}" >> "$GITHUB_ENV"
-          echo "NIGHTLY_VERSION=${BASE_VERSION}.${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+          echo "BUILD_VERSION=${BASE_VERSION}.${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
 
       - name: Verify version match
         if: env.IS_AMO == 'true'
@@ -46,9 +46,9 @@ jobs:
 
       - run: npm run package:xpi
 
-      - name: Inject nightly version
+      - name: Inject build version
         if: env.IS_AMO != 'true'
-        run: jq --arg v "$NIGHTLY_VERSION" '.version = $v' dist/manifest.json > dist/manifest.tmp && mv dist/manifest.tmp dist/manifest.json
+        run: jq --arg v "$BUILD_VERSION" '.version = $v' dist/manifest.json > dist/manifest.tmp && mv dist/manifest.tmp dist/manifest.json
 
       - run: npm run package:source
 
@@ -83,7 +83,7 @@ jobs:
         run: |
           REPO="${{ github.repository }}"
           DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${GITHUB_REF_NAME}/geospoof-${BASE_VERSION}-signed.xpi"
-          bash scripts/generate-update-manifest.sh "$NIGHTLY_VERSION" "$DOWNLOAD_URL"
+          bash scripts/generate-update-manifest.sh "$BUILD_VERSION" "$DOWNLOAD_URL"
 
       - name: Create GitHub Release (unlisted)
         if: env.IS_AMO != 'true'

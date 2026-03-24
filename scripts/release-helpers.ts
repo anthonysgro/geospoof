@@ -10,8 +10,8 @@ export function extractBaseVersion(tag: string): string {
   return tag.replace(/^v/, "").replace(/-amo$/, "");
 }
 
-/** Constructs a nightly version string: `{base}.{runNumber}` (4-segment, AMO-compatible). */
-export function buildNightlyVersion(base: string, runNumber: number): string {
+/** Constructs a build version string: `{base}.{runNumber}` (4-segment, AMO-compatible). */
+export function buildVersion(base: string, runNumber: number): string {
   return `${base}.${runNumber}`;
 }
 
