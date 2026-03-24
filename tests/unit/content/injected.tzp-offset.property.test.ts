@@ -115,15 +115,23 @@ describe("Property 1: Arithmetic offset consistency", () => {
 
         const diff = ambiguousDate.getTime() - utcDate.getTime();
 
-        // The expected offset is the spoofed timezone's UTC offset at the UTC date's epoch,
-        // resolved via Intl (which is what the adjusted epoch should reflect).
-        const spoofedOffsetMinutes = resolveRealOffset(utcDate, tzId);
+        // The expected offset is the spoofed timezone's UTC offset at the *ambiguous*
+        // date's epoch (the adjusted instant), not at the UTC date's epoch. Near DST
+        // boundaries the UTC instant and the wall-clock instant can fall on different
+        // sides of the transition, so we must resolve at the correct one.
+        const spoofedOffsetMinutes = resolveRealOffset(ambiguousDate, tzId);
         const expectedDiff =
           spoofedOffsetMinutes === 0 ? 0 : Math.round(-spoofedOffsetMinutes * 60000);
 
         expect(diff).toBe(expectedDiff);
       }),
-      { numRuns: 100 }
+      {
+        numRuns: 100,
+        examples: [
+          // Regression: America/New_York DST boundary (seed: 12874257, path: "47:0:3:3")
+          ["America/New_York", "April 1, 2001 04:00:00"],
+        ],
+      }
     );
   });
 });

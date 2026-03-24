@@ -38,6 +38,6 @@
     /* Type Definitions */
     "types": ["firefox-webext-browser", "vite/client", "vitest/globals", "node"]
   },
-  "include": ["src/**/*", "tests/**/*"],
+  "include": ["src/**/*", "tests/**/*", "scripts/**/*"],
   "exclude": ["node_modules", "dist"]
 }

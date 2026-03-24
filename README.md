@@ -117,6 +117,20 @@ Overridden functions are disguised to pass standard detection checks used by mos
 
 **Chrome / Brave / Edge:** https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje
 
+**From GitHub Releases (Firefox nightly):**
+
+Self-hosted nightly builds are published frequently. These use a 4-segment version (e.g., `1.18.0.42`) to avoid collisions with the stable AMO listing.
+
+1. Go to the [Releases](https://github.com/anthonysgro/geospoof/releases) page
+2. Download `geospoof-<version>-signed.xpi` from the latest release (skip any tagged `[AMO]`)
+3. In Firefox, open `about:addons`
+4. Click the gear icon (⚙) and select **Install Add-on From File…**
+5. Select the downloaded `.xpi` file
+
+The signed XPI works on standard Firefox with no extra configuration. Once installed, Firefox automatically checks for and installs new nightly versions via the self-hosted update manifest. If you later install the stable version from AMO, Firefox will auto-upgrade to it since AMO releases always use a higher base version than nightlies.
+
+> **Note:** An unsigned `geospoof-<version>.xpi` is also included in each release for Firefox forks that don't support AMO signatures. Most users should use the signed version.
+
 **From source (Firefox):**
 
 ```bash
@@ -145,27 +159,6 @@ Then load `dist/` as an unpacked extension:
 3. Click "Load unpacked" and select the `dist/` folder
 
 Or use `npm run start:chrome` / `npm run start:brave` to build and launch automatically.
-
-**From GitHub Releases (Firefox):**
-
-1. Go to the [Releases](https://github.com/anthonysgro/geospoof/releases) page
-2. Download `geospoof-<version>-signed.xpi` from the latest release
-3. In Firefox, open `about:addons`
-4. Click the gear icon (⚙) and select **Install Add-on From File…**
-5. Select the downloaded `.xpi` file
-
-The signed XPI works on standard Firefox with no extra configuration. Once installed, Firefox automatically checks for and installs new versions — no need to manually download each release.
-
-> **Note:** An unsigned `geospoof-<version>.xpi` is also included in each release for Firefox forks that don't support AMO signatures (LibreWolf, Waterfox, Floorp, etc.). Most users should use the signed version.
-
-**From GitHub Releases (Chromium sideloading):**
-
-1. Go to the [Releases](https://github.com/anthonysgro/geospoof/releases) page
-2. Download the `geospoof-chromium-v<version>.zip` file from the latest release
-3. Unzip it to a folder on your machine
-4. Go to `chrome://extensions` (or `brave://extensions`, `edge://extensions`)
-5. Enable "Developer mode"
-6. Click "Load unpacked" and select the unzipped folder
 
 ## Usage
 
@@ -220,26 +213,27 @@ For Chromium development, use `npm run start:chrome` or `npm run start:brave` in
 
 ### Scripts Reference
 
-| Command                    | What it does                                                           |
-| -------------------------- | ---------------------------------------------------------------------- |
-| `npm run dev`              | Watch mode — Vite rebuilds `dist/` on every file change                |
-| `npm start`                | Launch Firefox with the extension loaded from `dist/`                  |
-| `npm run build:dev`        | One-time dev build (source maps, console logs)                         |
-| `npm run build:prod`       | One-time production build (minified, no logs)                          |
-| `npm run build:firefox`    | Production build targeting Firefox                                     |
-| `npm run build:chromium`   | Production build targeting Chrome/Brave/Edge                           |
-| `npm test`                 | Run all tests                                                          |
-| `npm run lint:ext`         | Lint the extension manifest and files                                  |
-| `npm run validate`         | Type-check + lint + format check + tests (run before PRs)              |
-| `npm run package`          | Firefox production build + zip for AMO submission                      |
-| `npm run package:chromium` | Chromium production build + zip for Chrome Web Store                   |
-| `npm run package:xpi`      | Production build + package as `.xpi` for sideloading                   |
-| `npm run package:source`   | Zip source code for AMO review (excludes node_modules, dist, etc.)     |
-| `npm run sign:xpi`         | Sign the built `.xpi` via AMO self-distribution (requires credentials) |
-| `npm run start:firefox`    | Launch Firefox with the extension loaded                               |
-| `npm run start:chrome`     | Build for Chromium + launch Chrome                                     |
-| `npm run start:brave`      | Build for Chromium + launch Brave                                      |
-| `npm run start:android`    | Launch on Firefox for Android (USB, auto-detects device)               |
+| Command                    | What it does                                                                   |
+| -------------------------- | ------------------------------------------------------------------------------ |
+| `npm run dev`              | Watch mode — Vite rebuilds `dist/` on every file change                        |
+| `npm start`                | Launch Firefox with the extension loaded from `dist/`                          |
+| `npm run build:dev`        | One-time dev build (source maps, console logs)                                 |
+| `npm run build:prod`       | One-time production build (minified, no logs)                                  |
+| `npm run build:firefox`    | Production build targeting Firefox                                             |
+| `npm run build:chromium`   | Production build targeting Chrome/Brave/Edge                                   |
+| `npm test`                 | Run all tests                                                                  |
+| `npm run lint:ext`         | Lint the extension manifest and files                                          |
+| `npm run validate`         | Type-check + lint + format check + tests (run before PRs)                      |
+| `npm run package`          | Firefox production build + zip for AMO submission                              |
+| `npm run package:chromium` | Chromium production build + zip for Chrome Web Store                           |
+| `npm run package:xpi`      | Production build + package as `.xpi` for sideloading                           |
+| `npm run package:source`   | Zip source code for AMO review (excludes node_modules, dist, etc.)             |
+| `npm run sign:xpi`         | Sign the built `.xpi` via AMO unlisted channel (nightly, requires credentials) |
+| `npm run sign:xpi:amo`     | Sign the built `.xpi` via AMO listed channel (stable, requires credentials)    |
+| `npm run start:firefox`    | Launch Firefox with the extension loaded                                       |
+| `npm run start:chrome`     | Build for Chromium + launch Chrome                                             |
+| `npm run start:brave`      | Build for Chromium + launch Brave                                              |
+| `npm run start:android`    | Launch on Firefox for Android (USB, auto-detects device)                       |
 
 ### Testing on Android
 
@@ -276,18 +270,30 @@ To generate credentials:
 
 1. Go to the [AMO API Keys page](https://addons.mozilla.org/en-US/developers/addon/api/key/)
 2. Sign in with the Mozilla account that owns the extension listing
-3. Generate a new key pair — you'll get a JWT issuer and JWT secret
-4. In your GitHub repo, go to Settings → Secrets and variables → Actions
-5. Add `AMO_JWT_ISSUER` and `AMO_JWT_SECRET` with the values from step 3
 
-Once configured, pushing a `v*` tag triggers the full pipeline: build → sign → generate update manifest → create GitHub Release → deploy `update.json` to GitHub Pages. If signing fails, the workflow stops and no release is created.
+### Signing Pipeline Setup (Maintainers)
+
+The release workflow supports two channels, routed by tag pattern:
+
+- **`v*` tags** (e.g., `v1.18.0`) → unlisted (nightly) self-hosted flow. Appends the CI run number as a 4th version segment (e.g., `1.18.0.42`), signs via AMO unlisted, deploys the update manifest to GitHub Pages, and creates a GitHub Release with the signed XPI and Chromium zip.
+- **`v*-amo` tags** (e.g., `v1.18.0-amo`) → listed (stable) AMO submission. Uses the clean version from `package.json`, signs via AMO listed with source code attached, and creates a GitHub Release tagged `[AMO]` with the source archive.
+
+Both flows require two GitHub Actions secrets:
+
+Once configured, pushing a `v*` tag triggers the nightly pipeline: build → inject nightly version → sign (unlisted) → generate update manifest → create GitHub Release → deploy `update.json` to GitHub Pages. Pushing a `v*-amo` tag triggers the stable pipeline: build → verify version match → sign (listed) with source → create `[AMO]` GitHub Release. If signing fails on either flow, the workflow stops and no release is created.
 
 For local signing (testing), set `AMO_JWT_ISSUER` and `AMO_JWT_SECRET` in your `.env` and run:
 
 ```bash
+# Unlisted (nightly)
 npm run build:firefox
 npm run package:xpi
 npm run sign:xpi
+
+# Listed (AMO stable) — requires source archive
+npm run build:firefox
+npm run package:source
+npm run sign:xpi:amo
 ```
 
 ### Building for Review
