@@ -25,7 +25,7 @@ export default [
 
   // TypeScript files configuration
   {
-    files: ["src/**/*.ts", "tests/**/*.ts"],
+    files: ["src/**/*.ts", "tests/**/*.ts", "scripts/**/*.ts"],
     languageOptions: {
       parserOptions: {
         project: "./tsconfig.json",

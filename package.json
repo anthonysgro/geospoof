@@ -1,6 +1,6 @@
 {
   "name": "geospoof-extension",
-  "version": "1.17.1",
+  "version": "1.17.2",
   "type": "module",
   "description": "Firefox extension for geolocation spoofing and location privacy",
   "scripts": {
@@ -30,6 +30,7 @@
     "package:source": "zip -r geospoof-source-v$(node -p \"require('./package.json').version\").zip . -x 'node_modules/*' 'dist/*' 'coverage/*' '.git/*' '*.zip' '.DS_Store' '.kiro/*' 'web-ext-artifacts/*'",
     "prepare": "husky",
     "sign:xpi": "bash scripts/sign-xpi.sh",
+    "sign:xpi:amo": "bash scripts/sign-xpi.sh --channel listed --source geospoof-source-v$(node -p \"require('./package.json').version\").zip",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

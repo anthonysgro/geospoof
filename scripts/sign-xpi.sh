@@ -2,6 +2,44 @@
 set -euo pipefail
 
 DIST_DIR="dist"
+CHANNEL="unlisted"
+SOURCE=""
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --channel)
+      CHANNEL="$2"
+      shift 2
+      ;;
+    --source)
+      SOURCE="$2"
+      shift 2
+      ;;
+    *)
+      echo "Error: Unknown argument '$1'" >&2
+      exit 1
+      ;;
+  esac
+done
+
+# Validate channel value
+if [[ "$CHANNEL" != "unlisted" && "$CHANNEL" != "listed" ]]; then
+  echo "Error: Invalid channel '$CHANNEL'. Must be 'unlisted' or 'listed'." >&2
+  exit 1
+fi
+
+# When listed, require --source and validate the file exists
+if [[ "$CHANNEL" == "listed" ]]; then
+  if [[ -z "$SOURCE" ]]; then
+    echo "Error: --source is required for listed channel. Source code upload is required for listed submissions." >&2
+    exit 1
+  fi
+  if [[ ! -f "$SOURCE" ]]; then
+    echo "Error: Source file '$SOURCE' does not exist." >&2
+    exit 1
+  fi
+fi
 
 # Validate AMO credentials are set and non-empty
 if [ -z "${AMO_JWT_ISSUER:-}" ]; then
@@ -20,9 +58,16 @@ if [ ! -d "$DIST_DIR" ] || [ -z "$(ls -A "$DIST_DIR")" ]; then
   exit 1
 fi
 
-npx web-ext sign \
+# Build web-ext sign command
+SIGN_CMD=(npx web-ext sign \
   --source-dir "$DIST_DIR" \
   --artifacts-dir web-ext-artifacts \
-  --channel unlisted \
+  --channel "$CHANNEL" \
   --api-key "$AMO_JWT_ISSUER" \
-  --api-secret "$AMO_JWT_SECRET"
+  --api-secret "$AMO_JWT_SECRET")
+
+if [[ "$CHANNEL" == "listed" && -n "$SOURCE" ]]; then
+  SIGN_CMD+=(--upload-source-code "$SOURCE")
+fi
+
+"${SIGN_CMD[@]}"

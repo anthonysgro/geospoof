@@ -20,33 +20,73 @@ jobs:
           cache: "npm"
       - run: npm ci
       - run: cp .env.example .env
+
+      - name: Determine release channel
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if [[ "$TAG" == *-amo ]]; then
+            echo "IS_AMO=true" >> "$GITHUB_ENV"
+            BASE_VERSION="${TAG#v}"
+            BASE_VERSION="${BASE_VERSION%-amo}"
+          else
+            echo "IS_AMO=false" >> "$GITHUB_ENV"
+            BASE_VERSION="${TAG#v}"
+          fi
+          echo "BASE_VERSION=${BASE_VERSION}" >> "$GITHUB_ENV"
+          echo "NIGHTLY_VERSION=${BASE_VERSION}-nightly.${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+
+      - name: Verify version match
+        if: env.IS_AMO == 'true'
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ "$BASE_VERSION" != "$PKG_VERSION" ]; then
+            echo "Error: Tag version '$BASE_VERSION' does not match package.json version '$PKG_VERSION'" >&2
+            exit 1
+          fi
+
       - run: npm run package:xpi
 
-      - name: Sign XPI
+      - name: Inject nightly version
+        if: env.IS_AMO != 'true'
+        run: jq --arg v "$NIGHTLY_VERSION" '.version = $v' dist/manifest.json > dist/manifest.tmp && mv dist/manifest.tmp dist/manifest.json
+
+      - run: npm run package:source
+
+      - name: Sign XPI (unlisted)
+        if: env.IS_AMO != 'true'
         env:
           AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
           AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
-        run: npm run sign:xpi
+        run: bash scripts/sign-xpi.sh --channel unlisted
+
+      - name: Sign XPI (listed)
+        if: env.IS_AMO == 'true'
+        env:
+          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        run: bash scripts/sign-xpi.sh --channel listed --source geospoof-source-v${BASE_VERSION}.zip
 
       - name: Rename signed XPI
+        if: env.IS_AMO != 'true'
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          SIGNED=$(find web-ext-artifacts -name '*.xpi' ! -name "geospoof-${VERSION}.xpi" | head -1)
+          SIGNED=$(find web-ext-artifacts -name '*.xpi' ! -name "geospoof-${BASE_VERSION}.xpi" | head -1)
           if [ -n "$SIGNED" ]; then
-            mv "$SIGNED" "web-ext-artifacts/geospoof-${VERSION}-signed.xpi"
+            mv "$SIGNED" "web-ext-artifacts/geospoof-${BASE_VERSION}-signed.xpi"
           fi
 
-      - run: npm run package:chromium
-      - run: npm run package:source
+      - name: Package Chromium
+        if: env.IS_AMO != 'true'
+        run: npm run package:chromium
 
       - name: Generate update manifest
+        if: env.IS_AMO != 'true'
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
           REPO="${{ github.repository }}"
-          DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${GITHUB_REF_NAME}/geospoof-${VERSION}-signed.xpi"
-          bash scripts/generate-update-manifest.sh "$VERSION" "$DOWNLOAD_URL"
+          DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${GITHUB_REF_NAME}/geospoof-${BASE_VERSION}-signed.xpi"
+          bash scripts/generate-update-manifest.sh "$NIGHTLY_VERSION" "$DOWNLOAD_URL"
 
-      - name: Create GitHub Release
+      - name: Create GitHub Release (unlisted)
+        if: env.IS_AMO != 'true'
         uses: softprops/action-gh-release@v2
         with:
           files: |
@@ -55,7 +95,17 @@ jobs:
             geospoof-source-*.zip
           generate_release_notes: true
 
+      - name: Create GitHub Release (AMO)
+        if: env.IS_AMO == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "${{ env.BASE_VERSION }} [AMO]"
+          files: |
+            geospoof-source-*.zip
+          generate_release_notes: true
+
       - name: Deploy update manifest to GitHub Pages
+        if: env.IS_AMO != 'true'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
