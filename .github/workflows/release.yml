@@ -21,22 +21,14 @@ jobs:
       - run: npm ci
       - run: cp .env.example .env
 
-      - name: Determine release channel
+      - name: Extract version
         run: |
           TAG="${GITHUB_REF_NAME}"
-          if [[ "$TAG" == *-amo ]]; then
-            echo "IS_AMO=true" >> "$GITHUB_ENV"
-            BASE_VERSION="${TAG#v}"
-            BASE_VERSION="${BASE_VERSION%-amo}"
-          else
-            echo "IS_AMO=false" >> "$GITHUB_ENV"
-            BASE_VERSION="${TAG#v}"
-          fi
+          BASE_VERSION="${TAG#v}"
           echo "BASE_VERSION=${BASE_VERSION}" >> "$GITHUB_ENV"
           echo "BUILD_VERSION=${BASE_VERSION}.${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
 
       - name: Verify version match
-        if: env.IS_AMO == 'true'
         run: |
           PKG_VERSION=$(node -p "require('./package.json').version")
           if [ "$BASE_VERSION" != "$PKG_VERSION" ]; then
@@ -44,72 +36,67 @@ jobs:
             exit 1
           fi
 
+      # ── Build Firefox & package source ──
       - run: npm run package:xpi
-
-      - name: Inject build version
-        if: env.IS_AMO != 'true'
-        run: jq --arg v "$BUILD_VERSION" '.version = $v' dist/manifest.json > dist/manifest.tmp && mv dist/manifest.tmp dist/manifest.json
-
-      - name: Strip update_url for AMO
-        if: env.IS_AMO == 'true'
-        run: jq 'del(.browser_specific_settings.gecko.update_url)' dist/manifest.json > dist/manifest.tmp && mv dist/manifest.tmp dist/manifest.json
-
       - run: npm run package:source
 
+      # ── Save clean dist for AMO signing later ──
+      - name: Backup dist for AMO
+        run: cp -r dist dist-amo
+
+      # ── Unlisted (self-hosted) signing ──
+      - name: Inject build version for unlisted
+        run: jq --arg v "$BUILD_VERSION" '.version = $v' dist/manifest.json > dist/manifest.tmp && mv dist/manifest.tmp dist/manifest.json
+
       - name: Sign XPI (unlisted)
-        if: env.IS_AMO != 'true'
         env:
           AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
           AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
         run: bash scripts/sign-xpi.sh --channel unlisted
 
-      - name: Sign XPI (listed)
-        if: env.IS_AMO == 'true'
-        env:
-          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
-          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
-        run: bash scripts/sign-xpi.sh --channel listed --source geospoof-source-v${BASE_VERSION}.zip
-
       - name: Rename signed XPI
-        if: env.IS_AMO != 'true'
         run: |
           SIGNED=$(find web-ext-artifacts -name '*.xpi' ! -name "geospoof-${BASE_VERSION}.xpi" | head -1)
           if [ -n "$SIGNED" ]; then
             mv "$SIGNED" "web-ext-artifacts/geospoof-${BASE_VERSION}-signed.xpi"
           fi
 
+      # ── Listed (AMO) signing ──
+      - name: Restore clean dist for AMO
+        run: rm -rf dist && mv dist-amo dist
+
+      - name: Strip update_url for AMO
+        run: jq 'del(.browser_specific_settings.gecko.update_url)' dist/manifest.json > dist/manifest.tmp && mv dist/manifest.tmp dist/manifest.json
+
+      - name: Sign XPI (listed/AMO)
+        env:
+          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        run: bash scripts/sign-xpi.sh --channel listed --source geospoof-source-v${BASE_VERSION}.zip
+
+      # ── Chromium ──
       - name: Package Chromium
-        if: env.IS_AMO != 'true'
         run: npm run package:chromium
 
+      # ── Update manifest for self-hosted Firefox auto-updates ──
       - name: Generate update manifest
-        if: env.IS_AMO != 'true'
         run: |
           REPO="${{ github.repository }}"
           DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${GITHUB_REF_NAME}/geospoof-${BASE_VERSION}-signed.xpi"
           bash scripts/generate-update-manifest.sh "$BUILD_VERSION" "$DOWNLOAD_URL"
 
-      - name: Create GitHub Release (unlisted)
-        if: env.IS_AMO != 'true'
+      # ── Single GitHub Release with all artifacts ──
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            web-ext-artifacts/geospoof-*.xpi
-            web-ext-artifacts/geospoof-chromium-*.zip
-            geospoof-source-*.zip
-          generate_release_notes: true
-
-      - name: Create GitHub Release (AMO)
-        if: env.IS_AMO == 'true'
-        uses: softprops/action-gh-release@v2
-        with:
-          name: "${{ env.BASE_VERSION }} [AMO]"
-          files: |
-            geospoof-source-*.zip
+            web-ext-artifacts/geospoof-${BASE_VERSION}-signed.xpi
+            web-ext-artifacts/geospoof-${BASE_VERSION}.xpi
+            web-ext-artifacts/geospoof-chromium-v${BASE_VERSION}.zip
+            geospoof-source-v${BASE_VERSION}.zip
           generate_release_notes: true
 
       - name: Deploy update manifest to GitHub Pages
-        if: env.IS_AMO != 'true'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
