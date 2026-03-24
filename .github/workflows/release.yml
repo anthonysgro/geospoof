@@ -69,6 +69,7 @@ jobs:
         run: jq 'del(.browser_specific_settings.gecko.update_url)' dist/manifest.json > dist/manifest.tmp && mv dist/manifest.tmp dist/manifest.json
 
       - name: Sign XPI (listed/AMO)
+        continue-on-error: true
         env:
           AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
           AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
