@@ -851,6 +851,16 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   border-color: #4caf50;
 }
 
+/* Version Label */
+.version-label {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+  font-size: 11px;
+  color: #999;
+  text-align: center;
+}
+
 /* Firefox for Android renders the popup as a full page in a new tab */
 @media (hover: none) and (pointer: coarse) {
   body {
