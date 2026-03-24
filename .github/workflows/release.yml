@@ -90,10 +90,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            web-ext-artifacts/geospoof-${BASE_VERSION}-signed.xpi
-            web-ext-artifacts/geospoof-${BASE_VERSION}.xpi
-            web-ext-artifacts/geospoof-chromium-v${BASE_VERSION}.zip
-            geospoof-source-v${BASE_VERSION}.zip
+            web-ext-artifacts/geospoof-*-signed.xpi
+            web-ext-artifacts/geospoof-[0-9]*.xpi
+            web-ext-artifacts/geospoof-chromium-*.zip
+            geospoof-source-*.zip
           generate_release_notes: true
 
       - name: Deploy update manifest to GitHub Pages
