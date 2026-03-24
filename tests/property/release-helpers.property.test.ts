@@ -9,7 +9,7 @@
 import fc from "fast-check";
 import {
   extractBaseVersion,
-  buildNightlyVersion,
+  buildVersion,
   isNewerVersion,
   versionsMatch,
   generateUpdateManifest,
@@ -75,28 +75,28 @@ describe("Feature: dual-channel-release, Property 1: Tag version extraction stri
 });
 
 /**
- * Property 2: Nightly version construction
+ * Property 2: Build version construction
  *
  * For any valid semver base version V and any positive integer run number N,
- * the computed nightly version should equal `${V}.${N}` (4-segment, AMO-compatible).
+ * the computed build version should equal `${V}.${N}` (4-segment, AMO-compatible).
  *
  * Validates: Requirements 4.1
  */
-describe("Feature: dual-channel-release, Property 2: Nightly version construction", () => {
-  test("buildNightlyVersion produces correct 4-segment format", () => {
+describe("Feature: dual-channel-release, Property 2: Build version construction", () => {
+  test("buildVersion produces correct 4-segment format", () => {
     fc.assert(
       fc.property(semverArb, runNumberArb, (base, runNumber) => {
-        const result = buildNightlyVersion(base, runNumber);
+        const result = buildVersion(base, runNumber);
         expect(result).toBe(`${base}.${runNumber}`);
       }),
       { numRuns: 100 }
     );
   });
 
-  test("buildNightlyVersion output is a valid AMO version (dot-separated integers)", () => {
+  test("buildVersion output is a valid AMO version (dot-separated integers)", () => {
     fc.assert(
       fc.property(semverArb, runNumberArb, (base, runNumber) => {
-        const result = buildNightlyVersion(base, runNumber);
+        const result = buildVersion(base, runNumber);
         expect(result).toMatch(/^\d+\.\d+\.\d+\.\d+$/);
         expect(result.startsWith(base)).toBe(true);
       }),
@@ -106,16 +106,16 @@ describe("Feature: dual-channel-release, Property 2: Nightly version constructio
 });
 
 /**
- * Property 3: Higher base version is newer than any nightly of a lower base
+ * Property 3: Higher base version is newer than any build version of a lower base
  *
  * For any valid semver base version V and any positive integer run number N,
  * a version with a higher minor (V.minor+1) should be strictly newer than
- * V.N (the 4-segment nightly). This ensures AMO listed releases (which use
- * a higher base version) are always newer than self-hosted nightlies.
+ * V.N (the 4-segment build version). This ensures AMO listed releases (which use
+ * a higher base version) are always newer than self-hosted builds.
  *
  * Validates: Requirements 4.5
  */
-describe("Feature: dual-channel-release, Property 3: AMO version is newer than any nightly of a lower base", () => {
+describe("Feature: dual-channel-release, Property 3: AMO version is newer than any build version of a lower base", () => {
   /** Arbitrary for a semver where minor can be bumped without overflow. */
   const bumpableSemverArb = fc
     .tuple(
@@ -128,21 +128,21 @@ describe("Feature: dual-channel-release, Property 3: AMO version is newer than a
       bumped: `${major}.${minor + 1}.0`,
     }));
 
-  test("bumped version is always newer than nightly of the original base", () => {
+  test("bumped version is always newer than build version of the original base", () => {
     fc.assert(
       fc.property(bumpableSemverArb, runNumberArb, ({ base, bumped }, runNumber) => {
-        const nightly = buildNightlyVersion(base, runNumber);
-        expect(isNewerVersion(bumped, nightly)).toBe(true);
+        const build = buildVersion(base, runNumber);
+        expect(isNewerVersion(bumped, build)).toBe(true);
       }),
       { numRuns: 100 }
     );
   });
 
-  test("nightly is never newer than a bumped version", () => {
+  test("build version is never newer than a bumped version", () => {
     fc.assert(
       fc.property(bumpableSemverArb, runNumberArb, ({ base, bumped }, runNumber) => {
-        const nightly = buildNightlyVersion(base, runNumber);
-        expect(isNewerVersion(nightly, bumped)).toBe(false);
+        const build = buildVersion(base, runNumber);
+        expect(isNewerVersion(build, bumped)).toBe(false);
       }),
       { numRuns: 100 }
     );
