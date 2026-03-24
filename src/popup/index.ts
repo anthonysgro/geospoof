@@ -397,5 +397,12 @@ document.addEventListener("click", (e: Event) => {
 // Initialize
 document.addEventListener("DOMContentLoaded", () => {
   document.body.classList.add("loaded");
+
+  const versionLabel = document.getElementById("versionLabel");
+  if (versionLabel) {
+    const manifest = browser.runtime.getManifest();
+    versionLabel.textContent = `v${manifest.version}`;
+  }
+
   void loadSettings();
 });
