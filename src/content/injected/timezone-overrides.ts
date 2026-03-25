@@ -38,14 +38,25 @@ export function installTimezoneOverrides(): void {
           // getTimezoneOffset and all getters produce consistent fingerprints
           // on both Chrome (which truncates sub-minute LMT offsets) and
           // Firefox (which preserves fractional minutes).
+          const epoch = this.getTime();
           const offsetMinutes = deriveOffsetFromParts(this, timezoneData.identifier);
           if (offsetMinutes !== undefined) {
             // getTimezoneOffset returns the negated offset (positive = west of UTC).
             // Chrome truncates sub-minute historical offsets to integers; Firefox preserves them.
             const result = engineTruncatesOffset ? Math.trunc(-offsetMinutes) : -offsetMinutes;
-            logger.trace("getTimezoneOffset:", { date: this.toISOString(), spoofedOffset: result });
+            logger.trace(
+              "getTimezoneOffset: epoch",
+              epoch,
+              "rawOffset",
+              offsetMinutes,
+              "truncates",
+              engineTruncatesOffset,
+              "result",
+              result
+            );
             return result;
           }
+          logger.warn("getTimezoneOffset: deriveOffsetFromParts returned undefined, epoch", epoch);
         }
         return originalGetTimezoneOffset.call(this);
       } catch (error) {
@@ -82,10 +93,12 @@ export function installTimezoneOverrides(): void {
             ...options,
             timeZone: timezoneData.identifier,
           };
-          logger.debug("Intl.DateTimeFormat: injecting timezone", {
-            original: options?.timeZone ?? "(none)",
-            injected: timezoneData.identifier,
-          });
+          logger.debug(
+            "Intl.DateTimeFormat: injecting timezone, original",
+            options?.timeZone ?? "(none)",
+            "injected",
+            timezoneData.identifier
+          );
           const instance = new OriginalDateTimeFormat(locales, opts);
           // Do NOT add to explicitTimezoneInstances — treat as default-timezone instance
           return instance;

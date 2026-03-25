@@ -68,7 +68,9 @@ export function installDateFormattingOverrides(): void {
             const month = SHORT_MONTHS[local.getUTCMonth()];
             const day = pad2(local.getUTCDate());
             const year = local.getUTCFullYear();
-            return `${weekday} ${month} ${day} ${year}`;
+            const result = `${weekday} ${month} ${day} ${year}`;
+            logger.trace("toDateString: spoofed", this.getTime(), true, result);
+            return result;
           }
           const parts = resolvePartsForDate(this, timezoneData.identifier);
           if (parts) {
@@ -76,12 +78,16 @@ export function installDateFormattingOverrides(): void {
             const month = SHORT_MONTHS[parts.month - 1];
             const day = pad2(parts.day);
             const year = parts.year;
-            return `${weekday} ${month} ${day} ${year}`;
+            const result = `${weekday} ${month} ${day} ${year}`;
+            logger.trace("toDateString: spoofed", this.getTime(), false, result);
+            return result;
           }
         }
+        logger.debug("toDateString: fallback", "spoofing disabled");
         return originalToDateString.call(this);
       } catch (error) {
         logger.error("Error in toDateString override:", error);
+        logger.debug("toDateString: fallback", "error");
         return originalToDateString.call(this);
       }
     });
@@ -111,7 +117,9 @@ export function installDateFormattingOverrides(): void {
             const seconds = pad2(local.getUTCSeconds());
             const gmtOffset = formatGMTOffset(offsetMinutes);
             const longName = getLongTimezoneName(this, timezoneData.identifier);
-            return `${weekday} ${month} ${day} ${year} ${hours}:${minutes}:${seconds} ${gmtOffset} (${longName})`;
+            const result = `${weekday} ${month} ${day} ${year} ${hours}:${minutes}:${seconds} ${gmtOffset} (${longName})`;
+            logger.trace("toString: spoofed", this.getTime(), true, offsetMinutes, result);
+            return result;
           }
           const parts = resolvePartsForDate(this, timezoneData.identifier);
           if (parts) {
@@ -125,12 +133,16 @@ export function installDateFormattingOverrides(): void {
             const seconds = pad2(parts.second);
             const gmtOffset = formatGMTOffset(offsetMinutes ?? 0);
             const longName = getLongTimezoneName(this, timezoneData.identifier);
-            return `${weekday} ${month} ${day} ${year} ${hours}:${minutes}:${seconds} ${gmtOffset} (${longName})`;
+            const result = `${weekday} ${month} ${day} ${year} ${hours}:${minutes}:${seconds} ${gmtOffset} (${longName})`;
+            logger.trace("toString: spoofed", this.getTime(), false, offsetMinutes ?? 0, result);
+            return result;
           }
         }
+        logger.debug("toString: fallback", "spoofing disabled");
         return originalToString.call(this);
       } catch (error) {
         logger.error("Error in toString override:", error);
+        logger.debug("toString: fallback", "error");
         return originalToString.call(this);
       }
     });
@@ -156,7 +168,9 @@ export function installDateFormattingOverrides(): void {
             const seconds = pad2(local.getUTCSeconds());
             const gmtOffset = formatGMTOffset(offsetMinutes);
             const longName = getLongTimezoneName(this, timezoneData.identifier);
-            return `${hours}:${minutes}:${seconds} ${gmtOffset} (${longName})`;
+            const result = `${hours}:${minutes}:${seconds} ${gmtOffset} (${longName})`;
+            logger.trace("toTimeString: spoofed", this.getTime(), true, offsetMinutes, result);
+            return result;
           }
           const parts = resolvePartsForDate(this, timezoneData.identifier);
           if (parts) {
@@ -166,12 +180,22 @@ export function installDateFormattingOverrides(): void {
             const seconds = pad2(parts.second);
             const gmtOffset = formatGMTOffset(offsetMinutes ?? 0);
             const longName = getLongTimezoneName(this, timezoneData.identifier);
-            return `${hours}:${minutes}:${seconds} ${gmtOffset} (${longName})`;
+            const result = `${hours}:${minutes}:${seconds} ${gmtOffset} (${longName})`;
+            logger.trace(
+              "toTimeString: spoofed",
+              this.getTime(),
+              false,
+              offsetMinutes ?? 0,
+              result
+            );
+            return result;
           }
         }
+        logger.debug("toTimeString: fallback", "spoofing disabled");
         return originalToTimeString.call(this);
       } catch (error) {
         logger.error("Error in toTimeString override:", error);
+        logger.debug("toTimeString: fallback", "error");
         return originalToTimeString.call(this);
       }
     });
@@ -193,6 +217,7 @@ export function installDateFormattingOverrides(): void {
           if (spoofingEnabled && timezoneData) {
             const hasExplicitTimezone = options?.timeZone != null;
             if (!hasExplicitTimezone) {
+              logger.debug("toLocaleString: timezone injected", timezoneData.identifier);
               const opts: Intl.DateTimeFormatOptions = {
                 ...options,
                 timeZone: timezoneData.identifier,
@@ -201,9 +226,11 @@ export function installDateFormattingOverrides(): void {
             }
             return originalToLocaleString.call(this, locales, options);
           }
+          logger.debug("toLocaleString: fallback", "spoofing disabled");
           return originalToLocaleString.call(this, locales as string, options);
         } catch (error) {
           logger.error("Error in toLocaleString override:", error);
+          logger.debug("toLocaleString: fallback", "error");
           return originalToLocaleString.call(this, locales as string, options);
         }
       }
@@ -226,6 +253,7 @@ export function installDateFormattingOverrides(): void {
           if (spoofingEnabled && timezoneData) {
             const hasExplicitTimezone = options?.timeZone != null;
             if (!hasExplicitTimezone) {
+              logger.debug("toLocaleDateString: timezone injected", timezoneData.identifier);
               const opts: Intl.DateTimeFormatOptions = {
                 ...options,
                 timeZone: timezoneData.identifier,
@@ -234,9 +262,11 @@ export function installDateFormattingOverrides(): void {
             }
             return originalToLocaleDateString.call(this, locales, options);
           }
+          logger.debug("toLocaleDateString: fallback", "spoofing disabled");
           return originalToLocaleDateString.call(this, locales as string, options);
         } catch (error) {
           logger.error("Error in toLocaleDateString override:", error);
+          logger.debug("toLocaleDateString: fallback", "error");
           return originalToLocaleDateString.call(this, locales as string, options);
         }
       }
@@ -259,6 +289,7 @@ export function installDateFormattingOverrides(): void {
           if (spoofingEnabled && timezoneData) {
             const hasExplicitTimezone = options?.timeZone != null;
             if (!hasExplicitTimezone) {
+              logger.debug("toLocaleTimeString: timezone injected", timezoneData.identifier);
               const opts: Intl.DateTimeFormatOptions = {
                 ...options,
                 timeZone: timezoneData.identifier,
@@ -267,9 +298,11 @@ export function installDateFormattingOverrides(): void {
             }
             return originalToLocaleTimeString.call(this, locales, options);
           }
+          logger.debug("toLocaleTimeString: fallback", "spoofing disabled");
           return originalToLocaleTimeString.call(this, locales as string, options);
         } catch (error) {
           logger.error("Error in toLocaleTimeString override:", error);
+          logger.debug("toLocaleTimeString: fallback", "error");
           return originalToLocaleTimeString.call(this, locales as string, options);
         }
       }
