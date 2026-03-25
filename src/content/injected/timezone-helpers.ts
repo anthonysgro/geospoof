@@ -81,6 +81,7 @@ export function resolvePartsForDate(date: Date, timezoneId: string): ResolvedDat
   if (isNaN(epoch)) return undefined;
 
   if (epoch === _partsCacheEpoch && timezoneId === _partsCacheTz) {
+    logger.trace("resolvePartsForDate: cache hit", timezoneId);
     return _partsCacheValue;
   }
 
@@ -137,6 +138,8 @@ export function resolvePartsForDate(date: Date, timezoneId: string): ResolvedDat
 
   const result: ResolvedDateParts = { year, month, day, weekday, hour, minute, second };
 
+  logger.trace("resolvePartsForDate:", epoch, timezoneId, year, month, day, hour, minute, second);
+
   _partsCacheEpoch = epoch;
   _partsCacheTz = timezoneId;
   _partsCacheValue = result;
@@ -183,7 +186,20 @@ export function deriveOffsetFromParts(date: Date, timezoneId: string): number | 
 
   // The difference between the local-as-UTC epoch and the real UTC epoch
   // gives us the offset in milliseconds. Convert to minutes.
-  return (localAsUTC - epochSeconds) / 60000;
+  const offsetMinutes = (localAsUTC - epochSeconds) / 60000;
+  logger.trace(
+    "deriveOffsetFromParts:",
+    parts.year,
+    parts.month,
+    parts.day,
+    parts.hour,
+    parts.minute,
+    parts.second,
+    localAsUTC,
+    epochSeconds,
+    offsetMinutes
+  );
+  return offsetMinutes;
 }
 
 /** Parse a GMT offset string like "GMT+5:30" or "GMT-8" into fractional minutes from UTC.
@@ -229,6 +245,7 @@ let _offsetCacheValue = 0;
 export function getIntlBasedOffset(date: Date, timezoneId: string, fallbackOffset: number): number {
   const epoch = date.getTime();
   if (epoch === _offsetCacheEpoch && timezoneId === _offsetCacheTz) {
+    logger.trace("getIntlBasedOffset: cache hit", _offsetCacheValue);
     return _offsetCacheValue;
   }
   try {
@@ -239,12 +256,14 @@ export function getIntlBasedOffset(date: Date, timezoneId: string, fallbackOffse
     const parts = formatter.formatToParts(date);
     const tzPart = parts.find((p) => p.type === "timeZoneName");
     const result = parseGMTOffset(tzPart?.value ?? "GMT");
+    logger.trace("getIntlBasedOffset:", epoch, timezoneId, tzPart?.value ?? "GMT", result);
     _offsetCacheEpoch = epoch;
     _offsetCacheTz = timezoneId;
     _offsetCacheValue = result;
     return result;
   } catch {
     // Invalid IANA identifier or unsupported environment — use fallback
+    logger.warn("getIntlBasedOffset: fallback", timezoneId, fallbackOffset);
     return fallbackOffset;
   }
 }
@@ -358,6 +377,14 @@ export function computeEpochAdjustment(
     //     wall-clock to UTC in the spoofed timezone.
     const probeDate = new OriginalDate(utcEpoch - fallbackOffset * 60000);
 
+    logger.trace(
+      "computeEpochAdjustment: inputs",
+      realOffset,
+      utcEpoch,
+      probeDate.getTime(),
+      fallbackOffset
+    );
+
     // (d) Resolve the actual spoofed offset at the probe instant (positive = east).
     let spoofedOffset = getIntlBasedOffset(probeDate, timezoneId, fallbackOffset);
 
@@ -366,7 +393,9 @@ export function computeEpochAdjustment(
     //     with the corrected offset.
     if (spoofedOffset !== fallbackOffset) {
       const refinedProbe = new OriginalDate(utcEpoch - spoofedOffset * 60000);
+      const originalOffset = spoofedOffset;
       spoofedOffset = getIntlBasedOffset(refinedProbe, timezoneId, fallbackOffset);
+      logger.debug("computeEpochAdjustment: DST refinement", originalOffset, spoofedOffset);
     }
 
     // (f) On Chrome/V8, the native Date constructor uses the truncated integer
@@ -376,9 +405,15 @@ export function computeEpochAdjustment(
     //     only truncate when the engine truncates.
     const effectiveOffset = engineTruncatesOffset ? Math.trunc(spoofedOffset) : spoofedOffset;
 
+    if (engineTruncatesOffset) {
+      logger.trace("computeEpochAdjustment: truncation", spoofedOffset, effectiveOffset);
+    }
+
     return Math.round((-effectiveOffset - realOffset) * 60000);
   } catch {
     // Fall back to a simple adjustment using the fallback offset on any error.
-    return Math.round((-fallbackOffset - realOffset) * 60000);
+    const adjustment = Math.round((-fallbackOffset - realOffset) * 60000);
+    logger.warn("computeEpochAdjustment: fallback", fallbackOffset, adjustment);
+    return adjustment;
   }
 }

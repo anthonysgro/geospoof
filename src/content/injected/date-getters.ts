@@ -28,6 +28,9 @@ import {
 } from "./state";
 import { installOverride } from "./function-masking";
 import { resolvePartsForDate, getLocalDateViaOffset, WEEKDAY_TO_NUMBER } from "./timezone-helpers";
+import { createLogger } from "@/shared/utils/debug-logger";
+
+const logger = createLogger("INJ");
 
 /**
  * Install Date getter overrides on `Date.prototype`.
@@ -40,13 +43,20 @@ export function installDateGetterOverrides(): void {
         if (spoofingEnabled && timezoneData) {
           if (engineTruncatesOffset) {
             const local = getLocalDateViaOffset(this, timezoneData.identifier, timezoneData.offset);
-            return local.getUTCHours();
+            const val = local.getUTCHours();
+            logger.trace("getHours: spoofed", this.getTime(), true, val);
+            return val;
           }
           const parts = resolvePartsForDate(this, timezoneData.identifier);
-          if (parts) return parts.hour;
+          if (parts) {
+            logger.trace("getHours: spoofed", this.getTime(), false, parts.hour);
+            return parts.hour;
+          }
         }
+        logger.debug("getHours: fallback", "spoofing disabled");
         return originalGetHours.call(this);
       } catch {
+        logger.debug("getHours: fallback", "error");
         return originalGetHours.call(this);
       }
     });
@@ -61,13 +71,20 @@ export function installDateGetterOverrides(): void {
         if (spoofingEnabled && timezoneData) {
           if (engineTruncatesOffset) {
             const local = getLocalDateViaOffset(this, timezoneData.identifier, timezoneData.offset);
-            return local.getUTCMinutes();
+            const val = local.getUTCMinutes();
+            logger.trace("getMinutes: spoofed", this.getTime(), true, val);
+            return val;
           }
           const parts = resolvePartsForDate(this, timezoneData.identifier);
-          if (parts) return parts.minute;
+          if (parts) {
+            logger.trace("getMinutes: spoofed", this.getTime(), false, parts.minute);
+            return parts.minute;
+          }
         }
+        logger.debug("getMinutes: fallback", "spoofing disabled");
         return originalGetMinutes.call(this);
       } catch {
+        logger.debug("getMinutes: fallback", "error");
         return originalGetMinutes.call(this);
       }
     });
@@ -82,13 +99,20 @@ export function installDateGetterOverrides(): void {
         if (spoofingEnabled && timezoneData) {
           if (engineTruncatesOffset) {
             const local = getLocalDateViaOffset(this, timezoneData.identifier, timezoneData.offset);
-            return local.getUTCSeconds();
+            const val = local.getUTCSeconds();
+            logger.trace("getSeconds: spoofed", this.getTime(), true, val);
+            return val;
           }
           const parts = resolvePartsForDate(this, timezoneData.identifier);
-          if (parts) return parts.second;
+          if (parts) {
+            logger.trace("getSeconds: spoofed", this.getTime(), false, parts.second);
+            return parts.second;
+          }
         }
+        logger.debug("getSeconds: fallback", "spoofing disabled");
         return originalGetSeconds.call(this);
       } catch {
+        logger.debug("getSeconds: fallback", "error");
         return originalGetSeconds.call(this);
       }
     });
@@ -120,13 +144,20 @@ export function installDateGetterOverrides(): void {
         if (spoofingEnabled && timezoneData) {
           if (engineTruncatesOffset) {
             const local = getLocalDateViaOffset(this, timezoneData.identifier, timezoneData.offset);
-            return local.getUTCDate();
+            const val = local.getUTCDate();
+            logger.trace("getDate: spoofed", this.getTime(), true, val);
+            return val;
           }
           const parts = resolvePartsForDate(this, timezoneData.identifier);
-          if (parts) return parts.day;
+          if (parts) {
+            logger.trace("getDate: spoofed", this.getTime(), false, parts.day);
+            return parts.day;
+          }
         }
+        logger.debug("getDate: fallback", "spoofing disabled");
         return originalGetDate.call(this);
       } catch {
+        logger.debug("getDate: fallback", "error");
         return originalGetDate.call(this);
       }
     });
@@ -141,13 +172,21 @@ export function installDateGetterOverrides(): void {
         if (spoofingEnabled && timezoneData) {
           if (engineTruncatesOffset) {
             const local = getLocalDateViaOffset(this, timezoneData.identifier, timezoneData.offset);
-            return local.getUTCDay();
+            const val = local.getUTCDay();
+            logger.trace("getDay: spoofed", this.getTime(), true, val);
+            return val;
           }
           const parts = resolvePartsForDate(this, timezoneData.identifier);
-          if (parts) return WEEKDAY_TO_NUMBER[parts.weekday];
+          if (parts) {
+            const val = WEEKDAY_TO_NUMBER[parts.weekday];
+            logger.trace("getDay: spoofed", this.getTime(), false, val);
+            return val;
+          }
         }
+        logger.debug("getDay: fallback", "spoofing disabled");
         return originalGetDay.call(this);
       } catch {
+        logger.debug("getDay: fallback", "error");
         return originalGetDay.call(this);
       }
     });
@@ -162,13 +201,21 @@ export function installDateGetterOverrides(): void {
         if (spoofingEnabled && timezoneData) {
           if (engineTruncatesOffset) {
             const local = getLocalDateViaOffset(this, timezoneData.identifier, timezoneData.offset);
-            return local.getUTCMonth();
+            const val = local.getUTCMonth();
+            logger.trace("getMonth: spoofed", this.getTime(), true, val);
+            return val;
           }
           const parts = resolvePartsForDate(this, timezoneData.identifier);
-          if (parts) return parts.month - 1;
+          if (parts) {
+            const val = parts.month - 1;
+            logger.trace("getMonth: spoofed", this.getTime(), false, val);
+            return val;
+          }
         }
+        logger.debug("getMonth: fallback", "spoofing disabled");
         return originalGetMonth.call(this);
       } catch {
+        logger.debug("getMonth: fallback", "error");
         return originalGetMonth.call(this);
       }
     });
@@ -183,13 +230,20 @@ export function installDateGetterOverrides(): void {
         if (spoofingEnabled && timezoneData) {
           if (engineTruncatesOffset) {
             const local = getLocalDateViaOffset(this, timezoneData.identifier, timezoneData.offset);
-            return local.getUTCFullYear();
+            const val = local.getUTCFullYear();
+            logger.trace("getFullYear: spoofed", this.getTime(), true, val);
+            return val;
           }
           const parts = resolvePartsForDate(this, timezoneData.identifier);
-          if (parts) return parts.year;
+          if (parts) {
+            logger.trace("getFullYear: spoofed", this.getTime(), false, parts.year);
+            return parts.year;
+          }
         }
+        logger.debug("getFullYear: fallback", "spoofing disabled");
         return originalGetFullYear.call(this);
       } catch {
+        logger.debug("getFullYear: fallback", "error");
         return originalGetFullYear.call(this);
       }
     });
