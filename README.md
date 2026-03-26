@@ -23,7 +23,7 @@
 
 ### The Problem
 
-Your browser leaks your location through multiple channels: the Geolocation API, timezone offsets, `Intl.DateTimeFormat`, and WebRTC. You get almost no control over it. A VPN changes your IP, but these signals still point right back to where you're sitting. Sites cross-reference them against your IP, and when they don't match, you're flagged.
+A VPN changes your IP, but your browser still leaks your location through multiple channels: the Geolocation API, timezone offsets, `Intl.DateTimeFormat`, WebRTC, and much more. Sites cross-reference them against your IP, and when they don't match, you're flagged. Many extensions claim to spoof your location but fall far short.
 
 Blocking geolocation requests is your right, but some sites treat it as evasion and restrict access or flag your account. And if you allow it, your real coordinates go straight to the site. You're stuck choosing between access and privacy.
 
