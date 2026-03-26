@@ -1,16 +1,23 @@
+<div align="center">
+  <img src="assets/icon.png" alt="GeoSpoof" width="100" height="100">
+
 # GeoSpoof
 
-Your VPN changes your IP address. Your browser is still telling websites where you actually are.
+**Your VPN changes your IP address. Your browser is still telling websites where you actually are.**
 
-Install: [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/geo-spoof/) · [Chrome Web Store](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Firefox](https://img.shields.io/badge/Firefox-140%2B-FF7139.svg?logo=firefox-browser)](https://addons.mozilla.org/en-US/firefox/addon/geo-spoof/)
+[![Chrome Web Store](https://img.shields.io/badge/Chrome_Web_Store-available-4285F4.svg?logo=googlechrome)](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje)
+[![Version](https://img.shields.io/badge/version-1.17.11-green.svg)](https://github.com/anthonysgro/geospoof/releases)
 
-Supports Firefox 140+, Firefox Android, Chrome, Brave, and Edge.
+[Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/geo-spoof/) &nbsp;|&nbsp; [Chrome Web Store](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje) &nbsp;|&nbsp; [Report Issues](https://github.com/anthonysgro/geospoof/issues) &nbsp;|&nbsp; [User Guide](USER_GUIDE.md)
 
-<p>
-  <img src="assets/screenshot1.png" alt="GeoSpoof main view" width="250"  />
-    <img src="assets/screenshot2.png" alt="GeoSpoof details view" width="250"  />
-  <img src="assets/screenshot3.png" alt="GeoSpoof details view" width="250"  />
-</p>
+  <p>
+    <img src="assets/screenshot1.png" alt="GeoSpoof main view" width="250" />
+    <img src="assets/screenshot2.png" alt="GeoSpoof search view" width="250" />
+    <img src="assets/screenshot3.png" alt="GeoSpoof settings view" width="250" />
+  </p>
+</div>
 
 ## Why GeoSpoof?
 
