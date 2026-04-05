@@ -875,3 +875,121 @@ input[type="checkbox"]:checked + .toggle-slider:before {
     padding-bottom: 40vh; /* extra breathing room so the keyboard doesn't cover the input */
   }
 }
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #2b2a33;
+    color: #fbfbfe;
+  }
+  .onboarding-content {
+    background: #2b2a33;
+  }
+  .onboarding-content h2,
+  .step-text strong,
+  .header h1,
+  #detailsView h3 {
+    color: #fbfbfe;
+  }
+  .status-badge {
+    background: #23222b;
+    color: #fbfbfe;
+  }
+  .nav-tab {
+    color: #fbfbfe;
+  }
+  .nav-tab:hover {
+    color: #b1b1b1;
+    background: #3b3a41;
+  }
+  .tab-navigation {
+    border-bottom: 2px solid #393941;
+  }
+  .toggle-section,
+  .webrtc-section,
+  .current-location,
+  .vpn-sync-toggle {
+    background: #23222b;
+    color: #fbfbfe;
+  }
+  .section-divider {
+    border-top: 1px solid #393941;
+  }
+  .tab-button {
+    background: #23222b;
+    color: #fbfbfe;
+    border: 2px solid #393941;
+  }
+  #locationSearch {
+    border: 1px solid #393941;
+  }
+  input {
+    background-color: #2b2a33;
+    color: #fbfbfe;
+  }
+  .warning {
+    background: #856404;
+    color: #fff3cd;
+  }
+  .vpn-sync-panel, .vpn-sync-status {
+    background: #23222b;
+  }
+  .vpn-sync-ip {
+    color: #fbfbfe;
+  }
+  .vpn-sync-error {
+    background: #b71c1c;
+    color: #fdecea;
+}
+  .info-notice {
+    background: #0b3b5f;
+    color: #7fa5cf;
+  }
+  .search-results {
+    background: #23222b;
+    color: #fbfbfe;
+    border: 1px solid #393941;
+  }
+  .result-coords {
+    color: #fbfbfe;
+  }
+  .search-result {
+    border-bottom: 1px solid #393941;
+  }
+  .search-result:hover {
+    background: #3b3a41;
+  }
+  .manual-coords {
+    background: #23222b;
+  }
+  .manual-coords input {
+    background-color: #2b2a33;
+    color: #fbfbfe;
+    border: 1px solid #393941;
+  }
+  .detail-section {
+    background: #23222b;
+  }
+  .detail-label, .detail-value {
+    color: #fbfbfe;
+  }
+  .advanced-toggle, .advanced-content {
+    background: #23222b;
+    color: #fbfbfe;
+  }
+  .advanced-toggle:hover {
+    color: #b1b1b1;
+  }
+  .verbosity-selector {
+    border-top: 1px solid #393941;
+  }
+  .select-label select {
+    border: 1px solid #393941;
+    color: #fbfbfe;
+    background: #23222b;
+  }
+  .version-label {
+    border-top: 1px solid #393941;
+    color: #fbfbfe;
+  }
+}
