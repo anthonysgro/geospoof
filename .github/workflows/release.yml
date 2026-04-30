@@ -1,4 +1,4 @@
-name: Release ${{ github.ref_name }}
+name: Release
 
 on:
   push:

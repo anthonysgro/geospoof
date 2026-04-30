@@ -1,6 +1,6 @@
 {
   "name": "geospoof-extension",
-  "version": "1.17.14",
+  "version": "1.17.15",
   "type": "module",
   "description": "Firefox extension for geolocation spoofing and location privacy",
   "scripts": {
@@ -35,7 +35,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "type-check": "tsc --noEmit",
-    "validate": "npm run type-check && npm run lint && npm run lint:ext && npm run format:check && npm run test"
+    "validate": "npm run type-check && npm run lint && npm run lint:ext && npm run format:check && npm run test",
+    "validate:quiet": "npm run type-check && npm run lint && npm run lint:ext && npm run format:check && npm run test -- --reporter=dot 2>/dev/null"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
