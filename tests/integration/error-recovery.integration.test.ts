@@ -441,6 +441,7 @@ describe("Error Recovery Integration Tests", () => {
         vpnSyncEnabled: false,
         debugLogging: false,
         verbosityLevel: "INFO",
+        theme: "system" as const,
       };
 
       // Act: Broadcast settings (should not throw)

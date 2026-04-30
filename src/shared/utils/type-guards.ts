@@ -96,6 +96,6 @@ function isValidLocationName(value: unknown): boolean {
     typeof value === "object" &&
     value !== null &&
     "displayName" in value &&
-    typeof (value as { displayName: unknown }).displayName === "string"
+    typeof value.displayName === "string"
   );
 }

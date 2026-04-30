@@ -7,6 +7,16 @@ import type { Settings } from "@/shared/types/settings";
 import { updateDetailsView, updateStatusBadge, displayLocation } from "./ui";
 import { showOnboarding } from "./onboarding";
 
+/**
+ * Apply a theme class to the document body.
+ * "system" removes explicit classes and falls back to the OS media query.
+ */
+export function applyTheme(theme: "system" | "light" | "dark"): void {
+  document.body.classList.remove("theme-light", "theme-dark");
+  if (theme === "light") document.body.classList.add("theme-light");
+  if (theme === "dark") document.body.classList.add("theme-dark");
+}
+
 /** Load current settings on popup open */
 export async function loadSettings(): Promise<void> {
   try {
@@ -63,6 +73,13 @@ export async function loadSettings(): Promise<void> {
     if (verbosityLevel && settings.verbosityLevel) {
       verbosityLevel.value = settings.verbosityLevel;
     }
+
+    // Restore theme selector state
+    const themeSelect = document.getElementById("themeSelect") as HTMLSelectElement | null;
+    if (themeSelect) {
+      themeSelect.value = settings.theme ?? "system";
+    }
+    applyTheme(settings.theme ?? "system");
 
     // Restore VPN sync toggle state (Req 4.1–4.4)
     const vpnSyncToggle = document.getElementById("vpnSyncToggle") as HTMLInputElement | null;

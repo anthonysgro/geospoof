@@ -77,7 +77,7 @@ describe("Feature: vpn-region-sync, Property 6: VPN settings validation round-tr
         async (invalidValue) => {
           const { validateSettings } = await importBackground();
           const settings = { ...DEFAULT_SETTINGS, vpnSyncEnabled: invalidValue as boolean };
-          const validated = validateSettings(settings as Partial<Settings>);
+          const validated = validateSettings(settings);
           expect(validated.vpnSyncEnabled).toBe(false);
         }
       ),

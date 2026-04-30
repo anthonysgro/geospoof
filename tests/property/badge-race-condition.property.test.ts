@@ -26,6 +26,7 @@ function makeSettings(overrides?: Partial<Settings>): Settings {
     vpnSyncEnabled: false,
     debugLogging: false,
     verbosityLevel: "INFO",
+    theme: "system",
     ...overrides,
   };
 }
@@ -119,11 +120,7 @@ describe("Property 1: Bug Condition", () => {
         });
 
         // Trigger navigation — schedules alarms
-        handlers.onUpdated(
-          tabId,
-          { status: "loading" } as browser.tabs._OnUpdatedChangeInfo,
-          { id: tabId, url } as browser.tabs.Tab
-        );
+        handlers.onUpdated(tabId, { status: "loading" }, { id: tabId, url } as browser.tabs.Tab);
         await flushMicrotasks();
 
         // Simulate alarm 0 firing (first check fails, second succeeds via sendMessage mock)
@@ -153,11 +150,7 @@ describe("Property 1: Bug Condition", () => {
         browser.storage.local.get = vi.fn().mockResolvedValue({ settings: s });
         browser.tabs.sendMessage = vi.fn().mockRejectedValue(new Error("no connection"));
 
-        handlers.onUpdated(
-          tabId,
-          { status: "loading" } as browser.tabs._OnUpdatedChangeInfo,
-          { id: tabId, url } as browser.tabs.Tab
-        );
+        handlers.onUpdated(tabId, { status: "loading" }, { id: tabId, url } as browser.tabs.Tab);
         await flushMicrotasks();
 
         (browser.action.setBadgeText as ReturnType<typeof vi.fn>).mockClear();
@@ -229,11 +222,7 @@ describe("Property 2: Preservation", () => {
         (browser.action.setBadgeBackgroundColor as ReturnType<typeof vi.fn>).mockClear();
         browser.storage.local.get = vi.fn().mockResolvedValue({ settings: disabled });
 
-        handlers.onUpdated(
-          tabId,
-          { status: "loading" } as browser.tabs._OnUpdatedChangeInfo,
-          { id: tabId, url } as browser.tabs.Tab
-        );
+        handlers.onUpdated(tabId, { status: "loading" }, { id: tabId, url } as browser.tabs.Tab);
         await flushMicrotasks();
 
         const textCalls = (browser.action.setBadgeText as ReturnType<typeof vi.fn>).mock
@@ -264,11 +253,7 @@ describe("Property 2: Preservation", () => {
         const s = makeSettings({ enabled: prot });
         browser.storage.local.get = vi.fn().mockResolvedValue({ settings: s });
 
-        handlers.onUpdated(
-          tabId,
-          { status: "loading" } as browser.tabs._OnUpdatedChangeInfo,
-          { id: tabId, url } as browser.tabs.Tab
-        );
+        handlers.onUpdated(tabId, { status: "loading" }, { id: tabId, url } as browser.tabs.Tab);
         await flushMicrotasks();
 
         const textCalls = (browser.action.setBadgeText as ReturnType<typeof vi.fn>).mock
@@ -300,11 +285,7 @@ describe("Property 2: Preservation", () => {
         browser.tabs.sendMessage = vi.fn().mockRejectedValue(new Error("no connection"));
 
         // Trigger navigation
-        handlers.onUpdated(
-          tabId,
-          { status: "loading" } as browser.tabs._OnUpdatedChangeInfo,
-          { id: tabId, url } as browser.tabs.Tab
-        );
+        handlers.onUpdated(tabId, { status: "loading" }, { id: tabId, url } as browser.tabs.Tab);
         await flushMicrotasks();
 
         // Simulate all 3 alarm attempts firing and failing
@@ -342,11 +323,7 @@ describe("Property 2: Preservation", () => {
         browser.tabs.sendMessage = vi.fn().mockResolvedValue(undefined);
 
         // Trigger navigation
-        handlers.onUpdated(
-          tabId,
-          { status: "loading" } as browser.tabs._OnUpdatedChangeInfo,
-          { id: tabId, url } as browser.tabs.Tab
-        );
+        handlers.onUpdated(tabId, { status: "loading" }, { id: tabId, url } as browser.tabs.Tab);
         await flushMicrotasks();
 
         // Simulate first alarm firing — injection succeeds

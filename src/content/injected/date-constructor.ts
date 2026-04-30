@@ -213,8 +213,8 @@ export function installDateConstructor(): void {
   }
 
   // Disguise dateParseOverride BEFORE installing it on DateOverride
-  registerOverride(dateParseOverride as unknown as AnyFunction, "parse");
-  disguiseAsNative(dateParseOverride as unknown as AnyFunction, "parse", 1);
+  registerOverride(dateParseOverride, "parse");
+  disguiseAsNative(dateParseOverride, "parse", 1);
 
   // Install Date.parse override
   Object.defineProperty(DateOverride, "parse", {
@@ -228,8 +228,7 @@ export function installDateConstructor(): void {
   Object.setPrototypeOf(DateOverride, Function.prototype);
 
   // Replace global Date constructor
-  (globalThis as unknown as Record<string, unknown>).Date =
-    DateOverride as unknown as DateConstructor;
+  (globalThis as unknown as Record<string, unknown>).Date = DateOverride as unknown;
 
   // Fix constructor reference: Date.prototype.constructor === Date
   Object.defineProperty(OriginalDate.prototype, "constructor", {
@@ -242,12 +241,6 @@ export function installDateConstructor(): void {
   // Register overrides for toString masking
   registerOverride(DateOverride as AnyFunction, "Date");
   // Register static methods — fingerprinters check Date.now.toString() after the constructor swap
-  registerOverride(
-    (DateOverride as unknown as DateConstructor).now as unknown as AnyFunction,
-    "now"
-  );
-  registerOverride(
-    (DateOverride as unknown as DateConstructor).UTC as unknown as AnyFunction,
-    "UTC"
-  );
+  registerOverride((DateOverride as unknown as DateConstructor).now, "now");
+  registerOverride((DateOverride as unknown as DateConstructor).UTC, "UTC");
 }

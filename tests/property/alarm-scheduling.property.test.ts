@@ -25,6 +25,7 @@ function makeSettings(overrides?: Partial<Settings>): Settings {
     vpnSyncEnabled: false,
     debugLogging: false,
     verbosityLevel: "INFO",
+    theme: "system",
     ...overrides,
   };
 }
@@ -72,11 +73,7 @@ describe("Property 4: Alarm scheduling on navigation", () => {
         (browser.alarms.create as ReturnType<typeof vi.fn>).mockClear();
         browser.storage.local.get = vi.fn().mockResolvedValue({ settings });
 
-        listener(
-          tabId,
-          { status: "loading" } as browser.tabs._OnUpdatedChangeInfo,
-          { id: tabId, url } as browser.tabs.Tab
-        );
+        listener(tabId, { status: "loading" }, { id: tabId, url } as browser.tabs.Tab);
         await flushMicrotasks();
 
         const createCalls = (browser.alarms.create as ReturnType<typeof vi.fn>).mock.calls as Array<
@@ -112,11 +109,7 @@ describe("Property 4: Alarm scheduling on navigation", () => {
         (browser.alarms.create as ReturnType<typeof vi.fn>).mockClear();
         browser.storage.local.get = vi.fn().mockResolvedValue({ settings });
 
-        listener(
-          tabId,
-          { status: "loading" } as browser.tabs._OnUpdatedChangeInfo,
-          { id: tabId, url } as browser.tabs.Tab
-        );
+        listener(tabId, { status: "loading" }, { id: tabId, url } as browser.tabs.Tab);
         await flushMicrotasks();
 
         const createCalls = (browser.alarms.create as ReturnType<typeof vi.fn>).mock.calls;
@@ -142,11 +135,7 @@ describe("Property 4: Alarm scheduling on navigation", () => {
         (browser.alarms.create as ReturnType<typeof vi.fn>).mockClear();
         browser.storage.local.get = vi.fn().mockResolvedValue({ settings });
 
-        listener(
-          tabId,
-          { status: "loading" } as browser.tabs._OnUpdatedChangeInfo,
-          { id: tabId, url } as browser.tabs.Tab
-        );
+        listener(tabId, { status: "loading" }, { id: tabId, url } as browser.tabs.Tab);
         await flushMicrotasks();
 
         const createCalls = (browser.alarms.create as ReturnType<typeof vi.fn>).mock.calls;

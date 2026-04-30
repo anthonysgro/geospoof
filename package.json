@@ -1,6 +1,6 @@
 {
   "name": "geospoof-extension",
-  "version": "1.17.13",
+  "version": "1.17.15",
   "type": "module",
   "description": "Firefox extension for geolocation spoofing and location privacy",
   "scripts": {
@@ -35,31 +35,29 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "type-check": "tsc --noEmit",
-    "validate": "npm run type-check && npm run lint && npm run lint:ext && npm run format:check && npm run test"
+    "validate": "npm run type-check && npm run lint && npm run lint:ext && npm run format:check && npm run test",
+    "validate:quiet": "npm run type-check && npm run lint && npm run lint:ext && npm run format:check && npm run test -- --reporter=dot 2>/dev/null"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@samrum/vite-plugin-web-extension": "^5.1.1",
-    "@types/firefox-webext-browser": "^120.0.5",
-    "@types/node": "^25.3.3",
+    "@types/firefox-webext-browser": "^143.0.0",
+    "@types/node": "^25.6.0",
     "@types/webextension-polyfill": "^0.12.5",
-    "@typescript-eslint/eslint-plugin": "^8.56.1",
-    "@typescript-eslint/parser": "^8.56.1",
-    "@vitest/coverage-v8": "^4.0.18",
-    "@vitest/ui": "^4.0.18",
-    "eslint": "^10.0.2",
+    "@vitest/coverage-v8": "4.0.18",
+    "@vitest/ui": "4.0.18",
+    "eslint": "^10.2.1",
     "eslint-config-prettier": "^10.1.8",
     "fast-check": "^3.22.0",
     "husky": "^9.1.7",
-    "jsdom": "^28.1.0",
-    "lint-staged": "^16.3.1",
-    "prettier": "^3.3.3",
+    "jsdom": "^29.1.1",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.8.3",
     "typescript": "~5.7",
-    "typescript-eslint": "^8.56.1",
+    "typescript-eslint": "^8.59.1",
     "vite": "~5.4",
-    "vite-plugin-checker": "^0.12.0",
-    "vitest": "^4.0.18",
-    "web-ext": "^9.4.0"
+    "vite-plugin-checker": "^0.13.0",
+    "vitest": "4.0.18",
+    "web-ext": "^10.1.0"
   },
   "lint-staged": {
     "*.{ts,js}": [

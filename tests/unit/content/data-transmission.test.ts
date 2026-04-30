@@ -8,7 +8,6 @@
 
 import type { Mock } from "vitest";
 import { getDispatchedEvent } from "../../helpers/mock-types";
-import type { MockLike } from "../../helpers/mock-types";
 
 interface MockWindow {
   dispatchEvent: Mock;
@@ -42,7 +41,7 @@ describe("Content Script Data Transmission", () => {
       mockWindow.dispatchEvent(event);
 
       expect(mockWindow.dispatchEvent).toHaveBeenCalledTimes(1);
-      const dispatchedEvent = getDispatchedEvent(mockWindow.dispatchEvent as unknown as MockLike);
+      const dispatchedEvent = getDispatchedEvent(mockWindow.dispatchEvent);
       expect(dispatchedEvent.type).toBe("__geospoof_settings_update");
     });
 

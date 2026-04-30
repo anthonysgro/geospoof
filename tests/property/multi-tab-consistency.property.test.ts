@@ -31,6 +31,7 @@ function makeSettings(partial: Partial<Settings>): Settings {
     vpnSyncEnabled: false,
     debugLogging: false,
     verbosityLevel: "INFO",
+    theme: "system" as const,
     ...partial,
   };
 }

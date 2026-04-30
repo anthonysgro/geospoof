@@ -188,14 +188,8 @@ describe("Fingerprint Regression Fix Properties", () => {
     });
 
     overrideRegistry.set(DateOverride as AnyFunction, "Date");
-    overrideRegistry.set(
-      (DateOverride as unknown as DateConstructor).now as unknown as AnyFunction,
-      "now"
-    );
-    overrideRegistry.set(
-      (DateOverride as unknown as DateConstructor).UTC as unknown as AnyFunction,
-      "UTC"
-    );
+    overrideRegistry.set((DateOverride as unknown as DateConstructor).now, "now");
+    overrideRegistry.set((DateOverride as unknown as DateConstructor).UTC, "UTC");
 
     return OriginalDate;
   }

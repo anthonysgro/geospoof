@@ -26,6 +26,7 @@ function makeSettings(overrides?: Partial<Settings>): Settings {
     vpnSyncEnabled: false,
     debugLogging: false,
     verbosityLevel: "INFO",
+    theme: "system",
     ...overrides,
   };
 }
@@ -73,11 +74,7 @@ describe("Property 6: Alarm cleanup on re-navigation", () => {
         browser.storage.local.get = vi.fn().mockResolvedValue({ settings });
 
         // First navigation — schedules alarms
-        listener(
-          tabId,
-          { status: "loading" } as browser.tabs._OnUpdatedChangeInfo,
-          { id: tabId, url: url1 } as browser.tabs.Tab
-        );
+        listener(tabId, { status: "loading" }, { id: tabId, url: url1 } as browser.tabs.Tab);
         await flushMicrotasks();
 
         const firstCreateCalls = (browser.alarms.create as ReturnType<typeof vi.fn>).mock.calls
@@ -89,11 +86,7 @@ describe("Property 6: Alarm cleanup on re-navigation", () => {
           .length;
 
         // Second navigation (re-navigation) — should clear old alarms first
-        listener(
-          tabId,
-          { status: "loading" } as browser.tabs._OnUpdatedChangeInfo,
-          { id: tabId, url: url2 } as browser.tabs.Tab
-        );
+        listener(tabId, { status: "loading" }, { id: tabId, url: url2 } as browser.tabs.Tab);
         await flushMicrotasks();
 
         const clearCalls = (browser.alarms.clear as ReturnType<typeof vi.fn>).mock.calls as Array<
@@ -138,30 +131,18 @@ describe("Property 6: Alarm cleanup on re-navigation", () => {
           browser.storage.local.get = vi.fn().mockResolvedValue({ settings });
 
           // Navigate tab 1
-          listener(
-            tabId1,
-            { status: "loading" } as browser.tabs._OnUpdatedChangeInfo,
-            { id: tabId1, url } as browser.tabs.Tab
-          );
+          listener(tabId1, { status: "loading" }, { id: tabId1, url } as browser.tabs.Tab);
           await flushMicrotasks();
 
           // Navigate tab 2
-          listener(
-            tabId2,
-            { status: "loading" } as browser.tabs._OnUpdatedChangeInfo,
-            { id: tabId2, url } as browser.tabs.Tab
-          );
+          listener(tabId2, { status: "loading" }, { id: tabId2, url } as browser.tabs.Tab);
           await flushMicrotasks();
 
           // Re-navigate tab 1 — should only clear tab 1's alarms
           const clearCallsBefore = (browser.alarms.clear as ReturnType<typeof vi.fn>).mock.calls
             .length;
 
-          listener(
-            tabId1,
-            { status: "loading" } as browser.tabs._OnUpdatedChangeInfo,
-            { id: tabId1, url } as browser.tabs.Tab
-          );
+          listener(tabId1, { status: "loading" }, { id: tabId1, url } as browser.tabs.Tab);
           await flushMicrotasks();
 
           const clearCalls = (browser.alarms.clear as ReturnType<typeof vi.fn>).mock.calls as Array<
