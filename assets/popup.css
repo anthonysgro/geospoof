@@ -829,6 +829,13 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   border-top: 1px solid #f0f0f0;
 }
 
+/* Theme Selector */
+.theme-selector {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+}
+
 .select-label {
   display: flex;
   justify-content: space-between;
@@ -931,7 +938,8 @@ input[type="checkbox"]:checked + .toggle-slider:before {
     background: #856404;
     color: #fff3cd;
   }
-  .vpn-sync-panel, .vpn-sync-status {
+  .vpn-sync-panel,
+  .vpn-sync-status {
     background: #23222b;
   }
   .vpn-sync-ip {
@@ -940,7 +948,7 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   .vpn-sync-error {
     background: #b71c1c;
     color: #fdecea;
-}
+  }
   .info-notice {
     background: #0b3b5f;
     color: #7fa5cf;
@@ -970,10 +978,12 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   .detail-section {
     background: #23222b;
   }
-  .detail-label, .detail-value {
+  .detail-label,
+  .detail-value {
     color: #fbfbfe;
   }
-  .advanced-toggle, .advanced-content {
+  .advanced-toggle,
+  .advanced-content {
     background: #23222b;
     color: #fbfbfe;
   }
@@ -992,4 +1002,248 @@ input[type="checkbox"]:checked + .toggle-slider:before {
     border-top: 1px solid #393941;
     color: #fbfbfe;
   }
+}
+
+/* Explicit dark theme (overrides system preference) */
+body.theme-dark {
+  background-color: #2b2a33;
+  color: #fbfbfe;
+}
+body.theme-dark .onboarding-content {
+  background: #2b2a33;
+}
+body.theme-dark .onboarding-content h2,
+body.theme-dark .step-text strong,
+body.theme-dark .header h1,
+body.theme-dark #detailsView h3 {
+  color: #fbfbfe;
+}
+body.theme-dark .status-badge {
+  background: #23222b;
+  color: #fbfbfe;
+}
+body.theme-dark .nav-tab {
+  color: #fbfbfe;
+}
+body.theme-dark .nav-tab:hover {
+  color: #b1b1b1;
+  background: #3b3a41;
+}
+body.theme-dark .tab-navigation {
+  border-bottom: 2px solid #393941;
+}
+body.theme-dark .toggle-section,
+body.theme-dark .webrtc-section,
+body.theme-dark .current-location,
+body.theme-dark .vpn-sync-toggle {
+  background: #23222b;
+  color: #fbfbfe;
+}
+body.theme-dark .section-divider {
+  border-top: 1px solid #393941;
+}
+body.theme-dark .tab-button {
+  background: #23222b;
+  color: #fbfbfe;
+  border: 2px solid #393941;
+}
+body.theme-dark #locationSearch {
+  border: 1px solid #393941;
+}
+body.theme-dark input {
+  background-color: #2b2a33;
+  color: #fbfbfe;
+}
+body.theme-dark .warning {
+  background: #856404;
+  color: #fff3cd;
+}
+body.theme-dark .vpn-sync-panel,
+body.theme-dark .vpn-sync-status {
+  background: #23222b;
+}
+body.theme-dark .vpn-sync-ip {
+  color: #fbfbfe;
+}
+body.theme-dark .vpn-sync-error {
+  background: #b71c1c;
+  color: #fdecea;
+}
+body.theme-dark .info-notice {
+  background: #0b3b5f;
+  color: #7fa5cf;
+}
+body.theme-dark .search-results {
+  background: #23222b;
+  color: #fbfbfe;
+  border: 1px solid #393941;
+}
+body.theme-dark .result-coords {
+  color: #fbfbfe;
+}
+body.theme-dark .search-result {
+  border-bottom: 1px solid #393941;
+}
+body.theme-dark .search-result:hover {
+  background: #3b3a41;
+}
+body.theme-dark .manual-coords {
+  background: #23222b;
+}
+body.theme-dark .manual-coords input {
+  background-color: #2b2a33;
+  color: #fbfbfe;
+  border: 1px solid #393941;
+}
+body.theme-dark .detail-section {
+  background: #23222b;
+}
+body.theme-dark .detail-label,
+body.theme-dark .detail-value {
+  color: #fbfbfe;
+}
+body.theme-dark .advanced-toggle,
+body.theme-dark .advanced-content {
+  background: #23222b;
+  color: #fbfbfe;
+}
+body.theme-dark .advanced-toggle:hover {
+  color: #b1b1b1;
+}
+body.theme-dark .verbosity-selector {
+  border-top: 1px solid #393941;
+}
+body.theme-dark .theme-selector {
+  border-top: 1px solid #393941;
+}
+body.theme-dark .select-label select {
+  border: 1px solid #393941;
+  color: #fbfbfe;
+  background: #23222b;
+}
+body.theme-dark .version-label {
+  border-top: 1px solid #393941;
+  color: #fbfbfe;
+}
+
+/* Explicit light theme (overrides system dark preference) */
+body.theme-light {
+  background-color: #f5f5f5;
+  color: #333;
+}
+body.theme-light .onboarding-content {
+  background: white;
+}
+body.theme-light .onboarding-content h2,
+body.theme-light .step-text strong,
+body.theme-light .header h1,
+body.theme-light #detailsView h3 {
+  color: inherit;
+}
+body.theme-light .status-badge {
+  background: #e0e0e0;
+  color: #666;
+}
+body.theme-light .nav-tab {
+  color: #555;
+}
+body.theme-light .nav-tab:hover {
+  color: #333;
+  background: #f5f5f5;
+}
+body.theme-light .tab-navigation {
+  border-bottom: 2px solid #e0e0e0;
+}
+body.theme-light .toggle-section,
+body.theme-light .webrtc-section,
+body.theme-light .current-location,
+body.theme-light .vpn-sync-toggle {
+  background: white;
+  color: #333;
+}
+body.theme-light .section-divider {
+  border-top: 1px solid #e0e0e0;
+}
+body.theme-light .tab-button {
+  background: white;
+  color: #333;
+  border: 2px solid #e0e0e0;
+}
+body.theme-light #locationSearch {
+  border: 1px solid #ddd;
+}
+body.theme-light input {
+  background-color: white;
+  color: #333;
+}
+body.theme-light .warning {
+  background: #fff3cd;
+  color: #856404;
+}
+body.theme-light .vpn-sync-panel,
+body.theme-light .vpn-sync-status {
+  background: white;
+}
+body.theme-light .vpn-sync-ip {
+  color: #333;
+}
+body.theme-light .vpn-sync-error {
+  background: #fdecea;
+  color: #b71c1c;
+}
+body.theme-light .info-notice {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+body.theme-light .search-results {
+  background: white;
+  color: #333;
+  border: 1px solid #ddd;
+}
+body.theme-light .result-coords {
+  color: #666;
+}
+body.theme-light .search-result {
+  border-bottom: 1px solid #eee;
+}
+body.theme-light .search-result:hover {
+  background: #f5f5f5;
+}
+body.theme-light .manual-coords {
+  background: white;
+}
+body.theme-light .manual-coords input {
+  background-color: white;
+  color: #333;
+  border: 1px solid #ddd;
+}
+body.theme-light .detail-section {
+  background: white;
+}
+body.theme-light .detail-label,
+body.theme-light .detail-value {
+  color: #333;
+}
+body.theme-light .advanced-toggle,
+body.theme-light .advanced-content {
+  background: white;
+  color: #333;
+}
+body.theme-light .advanced-toggle:hover {
+  color: #555;
+}
+body.theme-light .verbosity-selector {
+  border-top: 1px solid #e0e0e0;
+}
+body.theme-light .theme-selector {
+  border-top: 1px solid #e0e0e0;
+}
+body.theme-light .select-label select {
+  border: 1px solid #ddd;
+  color: #333;
+  background: white;
+}
+body.theme-light .version-label {
+  border-top: 1px solid #e0e0e0;
+  color: #666;
 }

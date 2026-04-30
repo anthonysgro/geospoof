@@ -30,7 +30,7 @@ const timezoneArb = fc.record({
   dstOffset: fc.integer({ min: 0, max: 60 }),
 });
 
-const settingsArb = fc.record({
+const settingsArb: fc.Arbitrary<Settings> = fc.record({
   enabled: fc.boolean(),
   location: fc.option(locationArb, { nil: null }),
   timezone: fc.option(timezoneArb, { nil: null }),
@@ -49,6 +49,7 @@ const settingsArb = fc.record({
   vpnSyncEnabled: fc.constant(false), // Disable VPN sync to avoid fetch timeouts in tests
   debugLogging: fc.boolean(),
   verbosityLevel: fc.constantFrom("DEBUG", "INFO", "WARN", "ERROR"),
+  theme: fc.constantFrom("system", "light", "dark"),
 });
 
 describe("Property 7: State restoration on re-awakening", () => {

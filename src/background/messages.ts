@@ -14,6 +14,7 @@ import type {
   SyncVpnPayload,
   SetDebugLoggingPayload,
   SetVerbosityLevelPayload,
+  SetThemePayload,
 } from "@/shared/types/messages";
 import { setDebugEnabled, setVerbosityLevel, createLogger } from "@/shared/utils/debug-logger";
 import { loadSettings, updateSettings } from "./settings";
@@ -154,6 +155,12 @@ export async function handleMessage(
         setVerbosityLevel(level);
         const settings = await updateSettings({ verbosityLevel: level });
         await broadcastSettingsToTabs(settings);
+        return { success: true };
+      }
+
+      case "SET_THEME": {
+        const { theme } = message.payload as SetThemePayload;
+        await updateSettings({ theme });
         return { success: true };
       }
 

@@ -278,7 +278,7 @@ if (browser.tabs && browser.tabs.onUpdated) {
           // Schedule injection checks via browser.alarms
           for (let i = 0; i < ALARM_DELAYS.length; i++) {
             try {
-              browser.alarms.create(buildAlarmName(tabId, i), {
+              void browser.alarms.create(buildAlarmName(tabId, i), {
                 delayInMinutes: ALARM_DELAYS[i] / 60000,
               });
             } catch (error) {

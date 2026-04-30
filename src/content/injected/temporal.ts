@@ -26,21 +26,13 @@ export function installTemporalOverrides(): void {
     // strict type-checking since the eslint TS parser cannot resolve the ambient
     // Temporal declarations inside this IIFE.
 
-    const TemporalNow: TemporalNow = (Temporal as unknown as TemporalNamespace).Now;
+    const TemporalNow: TemporalNow = Temporal.Now;
 
-    const originalTimeZoneId = TemporalNow.timeZoneId.bind(TemporalNow) as () => string;
-    const originalPlainDateTimeISO = TemporalNow.plainDateTimeISO.bind(TemporalNow) as (
-      tzLike?: string
-    ) => TemporalPlainDateTime;
-    const originalPlainDateISO = TemporalNow.plainDateISO.bind(TemporalNow) as (
-      tzLike?: string
-    ) => TemporalPlainDate;
-    const originalPlainTimeISO = TemporalNow.plainTimeISO.bind(TemporalNow) as (
-      tzLike?: string
-    ) => TemporalPlainTime;
-    const originalZonedDateTimeISO = TemporalNow.zonedDateTimeISO.bind(TemporalNow) as (
-      tzLike?: string
-    ) => TemporalZonedDateTime;
+    const originalTimeZoneId = TemporalNow.timeZoneId.bind(TemporalNow);
+    const originalPlainDateTimeISO = TemporalNow.plainDateTimeISO.bind(TemporalNow);
+    const originalPlainDateISO = TemporalNow.plainDateISO.bind(TemporalNow);
+    const originalPlainTimeISO = TemporalNow.plainTimeISO.bind(TemporalNow);
+    const originalZonedDateTimeISO = TemporalNow.zonedDateTimeISO.bind(TemporalNow);
 
     const temporalNowObj = TemporalNow as unknown as object;
 
@@ -98,7 +90,7 @@ export function installTemporalOverrides(): void {
     // we pass through the native nanosecond values untouched. The overrides
     // are kept only for function masking (toString returns [native code]).
 
-    const ZDTProto = (Temporal as unknown as TemporalNamespace).ZonedDateTime.prototype;
+    const ZDTProto = Temporal.ZonedDateTime.prototype;
 
     const origOffsetNsDesc = Object.getOwnPropertyDescriptor(ZDTProto, "offsetNanoseconds");
     const origOffsetDesc = Object.getOwnPropertyDescriptor(ZDTProto, "offset");

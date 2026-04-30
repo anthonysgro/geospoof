@@ -53,6 +53,7 @@ const settingsArb: fc.Arbitrary<Settings> = fc.record({
   vpnSyncEnabled: fc.boolean(),
   debugLogging: fc.boolean(),
   verbosityLevel: fc.constantFrom("ERROR", "WARN", "INFO", "DEBUG", "TRACE"),
+  theme: fc.constantFrom("system", "light", "dark"),
 });
 
 /** The keys that MUST NOT appear in the broadcast payload. */

@@ -76,7 +76,7 @@ describe("VPN Sync Integration Tests", () => {
       // User clicks "Sync with VPN" tab → popup sends SYNC_VPN
       const result = await handleMessage(
         { type: "SYNC_VPN", payload: { forceRefresh: false } },
-        {} as browser.runtime.MessageSender
+        {}
       );
 
       // Verify success response contains all required fields
@@ -109,10 +109,7 @@ describe("VPN Sync Integration Tests", () => {
       await setupTimezoneMock("Europe/Paris");
       mockVpnSyncFetch("198.51.100.1", 48.8566, 2.3522, "Paris", "France");
 
-      await handleMessage(
-        { type: "SYNC_VPN", payload: { forceRefresh: false } },
-        {} as browser.runtime.MessageSender
-      );
+      await handleMessage({ type: "SYNC_VPN", payload: { forceRefresh: false } }, {});
 
       const settings = await loadSettings();
       expect(settings.locationName).not.toBeNull();
@@ -137,10 +134,7 @@ describe("VPN Sync Integration Tests", () => {
       await setupTimezoneMock("America/New_York");
       mockVpnSyncFetch("203.0.113.42", 40.7128, -74.006, "New York", "United States");
 
-      await handleMessage(
-        { type: "SYNC_VPN", payload: { forceRefresh: false } },
-        {} as browser.runtime.MessageSender
-      );
+      await handleMessage({ type: "SYNC_VPN", payload: { forceRefresh: false } }, {});
 
       let settings = await loadSettings();
       expect(settings.vpnSyncEnabled).toBe(true);
@@ -148,7 +142,7 @@ describe("VPN Sync Integration Tests", () => {
       expect(cacheKeys.length).toBeGreaterThan(0);
 
       // Step 2: User switches to "Search City" tab → popup sends DISABLE_VPN_SYNC
-      await handleMessage({ type: "DISABLE_VPN_SYNC" }, {} as browser.runtime.MessageSender);
+      await handleMessage({ type: "DISABLE_VPN_SYNC" }, {});
 
       settings = await loadSettings();
       expect(settings.vpnSyncEnabled).toBe(false);
@@ -173,13 +167,10 @@ describe("VPN Sync Integration Tests", () => {
       await setupTimezoneMock("America/New_York");
       mockVpnSyncFetch("203.0.113.42", 40.7128, -74.006, "New York", "United States");
 
-      await handleMessage(
-        { type: "SYNC_VPN", payload: { forceRefresh: false } },
-        {} as browser.runtime.MessageSender
-      );
+      await handleMessage({ type: "SYNC_VPN", payload: { forceRefresh: false } }, {});
 
       // Step 2: Disable VPN sync
-      await handleMessage({ type: "DISABLE_VPN_SYNC" }, {} as browser.runtime.MessageSender);
+      await handleMessage({ type: "DISABLE_VPN_SYNC" }, {});
 
       // Step 3: Set manual location (Tokyo)
       await clearTimezoneCache();
@@ -195,7 +186,7 @@ describe("VPN Sync Integration Tests", () => {
 
       await handleMessage(
         { type: "SET_LOCATION", payload: { latitude: 35.6762, longitude: 139.6503 } },
-        {} as browser.runtime.MessageSender
+        {}
       );
 
       const settings = await loadSettings();
@@ -221,10 +212,7 @@ describe("VPN Sync Integration Tests", () => {
       await setupTimezoneMock("America/New_York");
       mockVpnSyncFetch("203.0.113.42", 40.7128, -74.006, "New York", "United States");
 
-      await handleMessage(
-        { type: "SYNC_VPN", payload: { forceRefresh: false } },
-        {} as browser.runtime.MessageSender
-      );
+      await handleMessage({ type: "SYNC_VPN", payload: { forceRefresh: false } }, {});
 
       let settings = await loadSettings();
       expect(settings.location!.latitude).toBe(40.7128);
@@ -235,10 +223,7 @@ describe("VPN Sync Integration Tests", () => {
       await setupTimezoneMock("Europe/London");
       mockVpnSyncFetch("198.51.100.99", 51.5074, -0.1278, "London", "United Kingdom");
 
-      const result = await handleMessage(
-        { type: "SYNC_VPN", payload: { forceRefresh: true } },
-        {} as browser.runtime.MessageSender
-      );
+      const result = await handleMessage({ type: "SYNC_VPN", payload: { forceRefresh: true } }, {});
 
       // Verify new location returned
       const response = result as Record<string, unknown>;
@@ -268,10 +253,7 @@ describe("VPN Sync Integration Tests", () => {
       await setupTimezoneMock("America/New_York");
       mockVpnSyncFetch("203.0.113.42", 40.7128, -74.006, "New York", "United States");
 
-      await handleMessage(
-        { type: "SYNC_VPN", payload: { forceRefresh: false } },
-        {} as browser.runtime.MessageSender
-      );
+      await handleMessage({ type: "SYNC_VPN", payload: { forceRefresh: false } }, {});
 
       // Second sync with same IP — only IP detection fetch needed, geolocation from cache
       await resetRateLimiter();
@@ -295,7 +277,7 @@ describe("VPN Sync Integration Tests", () => {
 
       const result = await handleMessage(
         { type: "SYNC_VPN", payload: { forceRefresh: false } },
-        {} as browser.runtime.MessageSender
+        {}
       );
 
       const response = result as Record<string, unknown>;
@@ -322,7 +304,7 @@ describe("VPN Sync Integration Tests", () => {
 
       const failResult = await handleMessage(
         { type: "SYNC_VPN", payload: { forceRefresh: false } },
-        {} as browser.runtime.MessageSender
+        {}
       );
 
       // Verify error response
@@ -342,7 +324,7 @@ describe("VPN Sync Integration Tests", () => {
 
       const successResult = await handleMessage(
         { type: "SYNC_VPN", payload: { forceRefresh: true } },
-        {} as browser.runtime.MessageSender
+        {}
       );
 
       const successResponse = successResult as Record<string, unknown>;
@@ -380,7 +362,7 @@ describe("VPN Sync Integration Tests", () => {
 
       const failResult = await handleMessage(
         { type: "SYNC_VPN", payload: { forceRefresh: false } },
-        {} as browser.runtime.MessageSender
+        {}
       );
 
       const errorResponse = failResult as Record<string, unknown>;
@@ -394,7 +376,7 @@ describe("VPN Sync Integration Tests", () => {
 
       const successResult = await handleMessage(
         { type: "SYNC_VPN", payload: { forceRefresh: true } },
-        {} as browser.runtime.MessageSender
+        {}
       );
 
       const successResponse = successResult as Record<string, unknown>;
@@ -443,7 +425,7 @@ describe("VPN Sync Integration Tests", () => {
 
       const result = await handleMessage(
         { type: "SYNC_VPN", payload: { forceRefresh: false } },
-        {} as browser.runtime.MessageSender
+        {}
       );
 
       // VPN sync itself should succeed
@@ -474,10 +456,7 @@ describe("VPN Sync Integration Tests", () => {
       await setupTimezoneMock("America/New_York");
       mockVpnSyncFetch("203.0.113.42", 40.7128, -74.006, "New York", "United States");
 
-      await handleMessage(
-        { type: "SYNC_VPN", payload: { forceRefresh: false } },
-        {} as browser.runtime.MessageSender
-      );
+      await handleMessage({ type: "SYNC_VPN", payload: { forceRefresh: false } }, {});
 
       let settings = await loadSettings();
       expect(settings.vpnSyncEnabled).toBe(true);
@@ -496,7 +475,7 @@ describe("VPN Sync Integration Tests", () => {
 
       await handleMessage(
         { type: "SET_LOCATION", payload: { latitude: 52.52, longitude: 13.405 } },
-        {} as browser.runtime.MessageSender
+        {}
       );
 
       // VPN sync should be disabled, cache cleared

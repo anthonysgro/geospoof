@@ -4,7 +4,7 @@
  */
 
 import type { GeocodeResponse } from "@/shared/types/messages";
-import { loadSettings } from "./settings";
+import { loadSettings, applyTheme } from "./settings";
 import { closeOnboarding } from "./onboarding";
 import { displaySearchResults } from "./search";
 import { updateStatusBadge, formatWebRTCDetails, clearChildren } from "./ui";
@@ -368,6 +368,25 @@ document.getElementById("verbosityLevel")?.addEventListener("change", (e: Event)
       });
     } catch (error: unknown) {
       console.error("Failed to set verbosity level:", error);
+    }
+  })();
+});
+
+// Theme selector
+document.getElementById("themeSelect")?.addEventListener("change", (e: Event) => {
+  const target = e.target as HTMLSelectElement;
+  const theme = target.value as "system" | "light" | "dark";
+
+  applyTheme(theme);
+
+  void (async () => {
+    try {
+      await browser.runtime.sendMessage({
+        type: "SET_THEME",
+        payload: { theme },
+      });
+    } catch (error: unknown) {
+      console.error("Failed to save theme:", error);
     }
   })();
 });

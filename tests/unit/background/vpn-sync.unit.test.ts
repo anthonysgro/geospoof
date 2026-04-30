@@ -58,10 +58,7 @@ describe("SYNC_VPN message handler", () => {
 
     mockFetchForVpnSync("203.0.113.42", 40.7128, -74.006, "New York", "United States");
 
-    const result = await handleMessage(
-      { type: "SYNC_VPN", payload: { forceRefresh: false } },
-      {} as browser.runtime.MessageSender
-    );
+    const result = await handleMessage({ type: "SYNC_VPN", payload: { forceRefresh: false } }, {});
 
     const response = result as Record<string, unknown>;
     expect(response.latitude).toBe(40.7128);
@@ -83,10 +80,7 @@ describe("SYNC_VPN message handler", () => {
 
     mockFetchForVpnSync("198.51.100.1", 51.5074, -0.1278, "London", "United Kingdom");
 
-    await handleMessage(
-      { type: "SYNC_VPN", payload: { forceRefresh: true } },
-      {} as browser.runtime.MessageSender
-    );
+    await handleMessage({ type: "SYNC_VPN", payload: { forceRefresh: true } }, {});
 
     const settings = await loadSettings();
     expect(settings.vpnSyncEnabled).toBe(true);
@@ -104,10 +98,7 @@ describe("SYNC_VPN message handler", () => {
 
     mockFetchForVpnSync("203.0.113.42", 35.6762, 139.6503, "Tokyo", "Japan");
 
-    await handleMessage(
-      { type: "SYNC_VPN", payload: { forceRefresh: false } },
-      {} as browser.runtime.MessageSender
-    );
+    await handleMessage({ type: "SYNC_VPN", payload: { forceRefresh: false } }, {});
 
     const settings = await loadSettings();
     expect(settings.location).not.toBeNull();
@@ -126,10 +117,7 @@ describe("SYNC_VPN message handler", () => {
 
     vi.mocked(fetch).mockRejectedValueOnce(new Error("Network error"));
 
-    const result = await handleMessage(
-      { type: "SYNC_VPN", payload: { forceRefresh: false } },
-      {} as browser.runtime.MessageSender
-    );
+    const result = await handleMessage({ type: "SYNC_VPN", payload: { forceRefresh: false } }, {});
 
     const response = result as Record<string, unknown>;
     expect(response.error).toBe("IP_DETECTION_FAILED");
@@ -157,10 +145,7 @@ describe("SYNC_VPN message handler", () => {
         json: () => Promise.resolve({}),
       } as Response);
 
-    const result = await handleMessage(
-      { type: "SYNC_VPN", payload: { forceRefresh: false } },
-      {} as browser.runtime.MessageSender
-    );
+    const result = await handleMessage({ type: "SYNC_VPN", payload: { forceRefresh: false } }, {});
 
     const response = result as Record<string, unknown>;
     expect(response.error).toBe("GEOLOCATION_FAILED");
@@ -179,10 +164,7 @@ describe("SYNC_VPN message handler", () => {
 
     vi.mocked(fetch).mockRejectedValueOnce(new Error("Network error"));
 
-    await handleMessage(
-      { type: "SYNC_VPN", payload: { forceRefresh: false } },
-      {} as browser.runtime.MessageSender
-    );
+    await handleMessage({ type: "SYNC_VPN", payload: { forceRefresh: false } }, {});
 
     const settings = await loadSettings();
     expect(settings.vpnSyncEnabled).toBe(false);
@@ -199,7 +181,7 @@ describe("SYNC_VPN message handler", () => {
 
     mockFetchForVpnSync("203.0.113.42", 48.8566, 2.3522, "Paris", "France");
 
-    const result = await handleMessage({ type: "SYNC_VPN" }, {} as browser.runtime.MessageSender);
+    const result = await handleMessage({ type: "SYNC_VPN" }, {});
 
     const response = result as Record<string, unknown>;
     expect(response.latitude).toBe(48.8566);
@@ -224,10 +206,7 @@ describe("DISABLE_VPN_SYNC message handler", () => {
     expect(settings.vpnSyncEnabled).toBe(true);
 
     // Send DISABLE_VPN_SYNC
-    const result = await handleMessage(
-      { type: "DISABLE_VPN_SYNC" },
-      {} as browser.runtime.MessageSender
-    );
+    const result = await handleMessage({ type: "DISABLE_VPN_SYNC" }, {});
 
     expect(result).toEqual({ success: true });
 
@@ -256,7 +235,7 @@ describe("DISABLE_VPN_SYNC message handler", () => {
     ).toHaveLength(1);
 
     // Send DISABLE_VPN_SYNC
-    await handleMessage({ type: "DISABLE_VPN_SYNC" }, {} as browser.runtime.MessageSender);
+    await handleMessage({ type: "DISABLE_VPN_SYNC" }, {});
 
     expect(
       Object.keys(sessionStorageData).filter((k) => k.startsWith("cache:ipGeo:"))
@@ -275,7 +254,7 @@ describe("DISABLE_VPN_SYNC message handler", () => {
 
     // Enable VPN sync, then disable it
     await updateSettings({ vpnSyncEnabled: true });
-    await handleMessage({ type: "DISABLE_VPN_SYNC" }, {} as browser.runtime.MessageSender);
+    await handleMessage({ type: "DISABLE_VPN_SYNC" }, {});
 
     // Simulate a fresh startup by re-importing
     vi.mocked(fetch).mockClear();

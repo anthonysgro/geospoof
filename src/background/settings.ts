@@ -22,7 +22,7 @@ export async function loadSettings(): Promise<Settings> {
       return { ...DEFAULT_SETTINGS };
     }
 
-    return validateSettings(settings as Partial<Settings>);
+    return validateSettings(settings);
   } catch (error) {
     logger.error("Failed to load settings:", error);
     return { ...DEFAULT_SETTINGS };
@@ -114,6 +114,11 @@ export function validateSettings(settings: Partial<Settings>): Settings {
     VALID_VERBOSITY_LEVELS.has(settings.verbosityLevel)
   ) {
     validated.verbosityLevel = settings.verbosityLevel;
+  }
+
+  const VALID_THEMES = new Set(["system", "light", "dark"]);
+  if (typeof settings.theme === "string" && VALID_THEMES.has(settings.theme)) {
+    validated.theme = settings.theme;
   }
 
   return validated;

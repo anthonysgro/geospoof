@@ -62,6 +62,8 @@ export interface Settings {
   debugLogging: boolean;
   /** Active verbosity level threshold for the debug logger */
   verbosityLevel: string;
+  /** UI theme preference */
+  theme: "system" | "light" | "dark";
 }
 
 /**
@@ -79,4 +81,5 @@ export const DEFAULT_SETTINGS: Settings = {
   vpnSyncEnabled: false,
   debugLogging: false,
   verbosityLevel: "INFO",
+  theme: "system",
 };

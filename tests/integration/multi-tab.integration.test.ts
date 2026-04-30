@@ -102,6 +102,7 @@ describe("Multi-Tab Integration Tests", () => {
         vpnSyncEnabled: false,
         debugLogging: false,
         verbosityLevel: "INFO",
+        theme: "system" as const,
       };
 
       // Act: Should not throw even if some tabs fail
@@ -139,6 +140,7 @@ describe("Multi-Tab Integration Tests", () => {
         vpnSyncEnabled: false,
         debugLogging: false,
         verbosityLevel: "INFO",
+        theme: "system" as const,
       };
 
       storageGet.mockResolvedValue({ settings });
@@ -190,6 +192,7 @@ describe("Multi-Tab Integration Tests", () => {
         vpnSyncEnabled: false,
         debugLogging: false,
         verbosityLevel: "INFO",
+        theme: "system" as const,
       };
 
       storageGet.mockResolvedValue({ settings });
@@ -243,6 +246,7 @@ describe("Multi-Tab Integration Tests", () => {
         vpnSyncEnabled: false,
         debugLogging: false,
         verbosityLevel: "INFO",
+        theme: "system" as const,
       };
 
       storageGet.mockResolvedValue({ settings });
@@ -295,6 +299,7 @@ describe("Multi-Tab Integration Tests", () => {
         vpnSyncEnabled: false,
         debugLogging: false,
         verbosityLevel: "INFO",
+        theme: "system" as const,
       };
 
       storageGet.mockResolvedValue({ settings });
@@ -352,6 +357,7 @@ describe("Multi-Tab Integration Tests", () => {
         vpnSyncEnabled: false,
         debugLogging: false,
         verbosityLevel: "INFO",
+        theme: "system" as const,
       };
 
       storageGet.mockResolvedValue({ settings });

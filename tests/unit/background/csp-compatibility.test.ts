@@ -75,10 +75,7 @@ describe("CSP Compatibility Tests", () => {
 
       browser.tabs.sendMessage.mockRejectedValue(new Error("Content script not available"));
 
-      await background.handleMessage(
-        { type: "CHECK_TAB_INJECTION", payload: { tabId } },
-        {} as browser.runtime.MessageSender
-      );
+      await background.handleMessage({ type: "CHECK_TAB_INJECTION", payload: { tabId } }, {});
 
       expectTabsSendMessage().toHaveBeenCalledWith(tabId, { type: "PING" });
     });

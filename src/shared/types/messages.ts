@@ -17,7 +17,8 @@ export type MessageType =
   | "DISABLE_VPN_SYNC"
   | "CLEAR_LOCATION"
   | "SET_DEBUG_LOGGING"
-  | "SET_VERBOSITY_LEVEL";
+  | "SET_VERBOSITY_LEVEL"
+  | "SET_THEME";
 
 /**
  * Generic message structure for runtime messaging.
@@ -80,6 +81,10 @@ export interface SetDebugLoggingPayload {
 
 export interface SetVerbosityLevelPayload {
   level: string;
+}
+
+export interface SetThemePayload {
+  theme: "system" | "light" | "dark";
 }
 
 export interface UpdateSettingsPayload {

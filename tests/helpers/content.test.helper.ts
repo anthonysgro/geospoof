@@ -1243,7 +1243,7 @@ function setupContentScript(settings: ContentScriptSettings): ContentScriptTestI
       temporalPlainDateISO: originalTemporalPlainDateISO,
       temporalPlainTimeISO: originalTemporalPlainTimeISO,
       temporalZonedDateTimeISO: originalTemporalZonedDateTimeISO,
-      DateConstructor: OriginalDate as unknown as DateConstructor,
+      DateConstructor: OriginalDate,
       DateParse: OriginalDateParse,
     },
   };
