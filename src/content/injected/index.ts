@@ -16,6 +16,11 @@
 //    timestamps, revealing discrepancies that content-script overrides
 //    cannot prevent.
 //
+//    NOTE: Same-origin iframe geolocation IS patched — patchIframeWindow()
+//    overrides navigator.geolocation in every same-origin iframe window
+//    synchronously on insertion. Cross-origin iframes throw SecurityError
+//    and are silently skipped (unavoidable without browser-level changes).
+//
 // 2. Web Worker timezone leaks — Content scripts cannot inject into
 //    Web Worker or SharedWorker contexts. Code running inside a Worker
 //    will see the real system timezone via Date and Intl APIs.

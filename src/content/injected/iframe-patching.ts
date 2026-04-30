@@ -1,21 +1,32 @@
 /**
- * Iframe toString patching.
+ * Iframe geolocation + toString patching.
  *
- * Fingerprinting scripts create iframes to get a "clean" Function.prototype.toString
- * reference and cross-check our overrides. We intercept contentWindow access
- * so the iframe's toString is patched synchronously before the caller can use it.
- * This defeats the arkenfox test which grabs iframeWindow immediately after
- * appending the iframe to the DOM.
+ * Fingerprinting scripts use two techniques to bypass geolocation spoofing:
+ *
+ * 1. toString bypass — create an iframe, grab iframeWindow.Function.prototype.toString
+ *    to get a "clean" reference and cross-check our overrides.
+ *
+ * 2. Geolocation bypass — call navigator.geolocation.getCurrentPosition from
+ *    inside the iframe's window context (via iframe.contentWindow, window[n],
+ *    or frames[n]). The iframe gets its own fresh navigator.geolocation that
+ *    has never been patched by our injected script.
+ *
+ * We fix both by patching the iframe window synchronously on every access path:
+ * - contentWindow getter override (catches direct property access)
+ * - DOM insertion wrappers (catches appendChild/innerHTML patterns)
+ * - window[n] / frames[n] numeric indexing (caught via the same DOM insertion
+ *   hooks — the iframe is in the DOM before the index is valid)
  */
 
-import type { AnyFunction } from "./types";
-import { overrideRegistry } from "./state";
+import type { AnyFunction, SpoofedLocation } from "./types";
+import { overrideRegistry, spoofingEnabled, spoofedLocation, settingsReceived } from "./state";
 import {
   registerOverride,
   disguiseAsNative,
   stripConstruct,
   nativeTypeErrorMessage,
 } from "./function-masking";
+import { waitForSettings } from "./settings-listener";
 import { createLogger } from "@/shared/utils/debug-logger";
 
 const logger = createLogger("INJ");
@@ -23,11 +34,37 @@ const logger = createLogger("INJ");
 // Track which iframe windows have already been patched to avoid re-patching
 const patchedIframeWindows = new WeakSet<Window>();
 
-/** Patch an iframe window's Function.prototype.toString to use the shared override registry. */
+/**
+ * Build a spoofed GeolocationPosition from the current shared state.
+ * Mirrors the logic in geolocation.ts but is inlined here to avoid a
+ * circular import (geolocation.ts → state.ts ← iframe-patching.ts).
+ */
+function buildSpoofedPosition(location: SpoofedLocation): GeolocationPosition {
+  return {
+    coords: {
+      latitude: location.latitude,
+      longitude: location.longitude,
+      accuracy: location.accuracy ?? 10,
+      altitude: null,
+      altitudeAccuracy: null,
+      heading: null,
+      speed: null,
+    },
+    timestamp: Date.now(),
+  } as unknown as GeolocationPosition;
+}
+
+/**
+ * Patch an iframe window's geolocation API and Function.prototype.toString
+ * to use the shared spoofing state and override registry.
+ *
+ * Safe to call multiple times — subsequent calls for the same window are no-ops.
+ */
 export function patchIframeWindow(iframeWindow: Window): void {
   if (patchedIframeWindows.has(iframeWindow)) return;
   patchedIframeWindows.add(iframeWindow);
 
+  // ── 1. toString masking ──────────────────────────────────────────────
   try {
     logger.trace("Patching iframe window toString");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
@@ -58,6 +95,136 @@ export function patchIframeWindow(iframeWindow: Window): void {
     }.toString;
   } catch {
     // Cross-origin iframes throw SecurityError — silently ignore
+  }
+
+  // ── 2. Geolocation override ──────────────────────────────────────────
+  // The iframe has its own navigator.geolocation instance that was never
+  // patched by our injected script. We override it here so that calls like
+  //   iframe.contentWindow.navigator.geolocation.getCurrentPosition(cb)
+  // return the spoofed location instead of the real one.
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+    const iframeNav = (iframeWindow as any).navigator as Navigator;
+    if (!iframeNav?.geolocation) return;
+
+    const iframeGeo = iframeNav.geolocation;
+
+    // Capture the iframe's own originals before we overwrite them
+
+    const iframeOrigGetCurrentPosition = iframeGeo.getCurrentPosition.bind(iframeGeo);
+
+    const iframeOrigWatchPosition = iframeGeo.watchPosition.bind(iframeGeo);
+
+    const iframeOrigClearWatch = iframeGeo.clearWatch.bind(iframeGeo);
+
+    // Shared watch-id tracking for this iframe instance
+    const iframeWatchCallbacks = new Map<number, PositionCallback>();
+    let iframeWatchIdCounter = 1;
+
+    const iframeGetCurrentPosition = (
+      successCallback: PositionCallback,
+      errorCallback?: PositionErrorCallback | null,
+      options?: PositionOptions
+    ): void => {
+      const respond = (): void => {
+        if (spoofingEnabled && spoofedLocation) {
+          const pos = buildSpoofedPosition(spoofedLocation);
+          const delay = 10 + Math.random() * 40;
+          logger.debug("iframe getCurrentPosition: returning spoofed coords", {
+            lat: pos.coords.latitude,
+            lon: pos.coords.longitude,
+          });
+          setTimeout(() => successCallback(pos), delay);
+        } else {
+          iframeOrigGetCurrentPosition(successCallback, errorCallback, options);
+        }
+      };
+
+      if (settingsReceived) {
+        respond();
+      } else {
+        void waitForSettings().then(respond);
+      }
+    };
+
+    const iframeWatchPosition = (
+      successCallback: PositionCallback,
+      errorCallback?: PositionErrorCallback | null,
+      options?: PositionOptions
+    ): number => {
+      if (spoofingEnabled && spoofedLocation) {
+        const watchId = iframeWatchIdCounter++;
+        iframeWatchCallbacks.set(watchId, successCallback);
+        const pos = buildSpoofedPosition(spoofedLocation);
+        const delay = 10 + Math.random() * 40;
+        setTimeout(() => successCallback(pos), delay);
+        return watchId;
+      }
+      return iframeOrigWatchPosition(successCallback, errorCallback, options);
+    };
+
+    const iframeClearWatch = (watchId: number): void => {
+      if (spoofingEnabled) {
+        iframeWatchCallbacks.delete(watchId);
+      } else {
+        iframeOrigClearWatch(watchId);
+      }
+    };
+
+    // Register for toString masking so the iframe's toString check also passes
+    registerOverride(iframeGetCurrentPosition, "getCurrentPosition");
+    disguiseAsNative(iframeGetCurrentPosition, "getCurrentPosition", 1);
+    registerOverride(iframeWatchPosition, "watchPosition");
+    disguiseAsNative(iframeWatchPosition, "watchPosition", 1);
+    registerOverride(iframeClearWatch, "clearWatch");
+    disguiseAsNative(iframeClearWatch, "clearWatch", 1);
+
+    iframeGeo.getCurrentPosition = iframeGetCurrentPosition;
+    iframeGeo.watchPosition = iframeWatchPosition;
+    iframeGeo.clearWatch = iframeClearWatch;
+
+    logger.trace("Patched iframe geolocation API");
+  } catch {
+    // Cross-origin or sandboxed iframes may throw — silently ignore
+  }
+
+  // ── 3. Permissions override ──────────────────────────────────────────
+  // Also patch navigator.permissions.query in the iframe so that
+  // permission checks from within the iframe also return "granted".
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+    const iframePerms = (iframeWindow as any).navigator?.permissions as Permissions | undefined;
+    if (iframePerms?.query) {
+      const iframeOrigQuery = iframePerms.query.bind(iframePerms);
+
+      const iframePermissionsQuery = (
+        descriptor: PermissionDescriptor
+      ): Promise<PermissionStatus> => {
+        if (descriptor?.name === "geolocation" && spoofingEnabled) {
+          // Return a minimal PermissionStatus-like object with state "granted"
+          const target = new EventTarget();
+          Object.defineProperty(target, "state", {
+            get: () => "granted" as PermissionState,
+            enumerable: true,
+            configurable: false,
+          });
+          Object.defineProperty(target, "onchange", {
+            value: null,
+            writable: true,
+            enumerable: true,
+            configurable: true,
+          });
+          return Promise.resolve(target as unknown as PermissionStatus);
+        }
+        return iframeOrigQuery(descriptor);
+      };
+
+      registerOverride(iframePermissionsQuery, "query");
+      disguiseAsNative(iframePermissionsQuery, "query", 1);
+      iframePerms.query = iframePermissionsQuery;
+    }
+  } catch {
+    // Silently ignore
   }
 }
 
