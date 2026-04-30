@@ -9,6 +9,7 @@ export interface ManifestContentScript {
   run_at: string;
   all_frames: boolean;
   js: string[];
+  world?: string;
 }
 
 export interface ManifestBackground {

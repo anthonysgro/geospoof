@@ -68,32 +68,43 @@ export function generateManifest(target: BrowserTarget, version: string): Record
   };
 
   if (target === "firefox") {
-    return {
-      ...shared,
-      browser_specific_settings: {
-        gecko: {
-          id: "{a8f7e9c2-4d3b-4a1e-9f8c-7b6d5e4a3c2b}",
-          strict_min_version: "140.0",
-          update_url: "https://anthonysgro.github.io/geospoof/update.json",
-          data_collection_permissions: {
-            required: ["none"],
-          },
-        },
-        gecko_android: {
-          strict_min_version: "140.0",
+  // Firefox: service_worker-less background, injected.js as world: "MAIN" content script
+  return {
+    ...shared,
+    browser_specific_settings: {
+      gecko: {
+        id: "{a8f7e9c2-4d3b-4a1e-9f8c-7b6d5e4a3c2b}",
+        strict_min_version: "140.0",
+        update_url: "https://anthonysgro.github.io/geospoof/update.json",
+        data_collection_permissions: {
+          required: ["none"],
         },
       },
-      background: {
-        scripts: ["background/background.js"],
-        type: "module",
+      gecko_android: {
+        strict_min_version: "140.0",
       },
-      web_accessible_resources: [
-        {
-          resources: ["content/injected.js"],
-          matches: ["<all_urls>"],
-        },
-      ],
-    };
+    },
+    background: {
+      scripts: ["background/background.js"],
+      type: "module",
+    },
+    content_scripts: [
+      ...(shared.content_scripts as Array<Record<string, unknown>>),
+      {
+        matches: ["<all_urls>"],
+        js: ["content/injected.js"],
+        run_at: "document_start",
+        all_frames: true,
+        world: "MAIN",
+      },
+    ],
+    web_accessible_resources: [
+      {
+        resources: ["content/injected.js"],
+        matches: ["<all_urls>"],
+      },
+    ],
+  };
   }
 
   // Chromium: service_worker background, injected.js as world: "MAIN" content script

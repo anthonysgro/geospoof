@@ -126,7 +126,20 @@ export function patchIframeWindow(iframeWindow: Window): void {
       errorCallback?: PositionErrorCallback | null,
       options?: PositionOptions
     ): void => {
-      const respond = (): void => {
+      const respond = ({ timedOut }: { timedOut: boolean }): void => {
+        if (timedOut) {
+          logger.warn("iframe getCurrentPosition: settings timed out, returning TIMEOUT error");
+          if (errorCallback) {
+            errorCallback({
+              code: GeolocationPositionError.TIMEOUT,
+              message: "Settings not received in time",
+              PERMISSION_DENIED: GeolocationPositionError.PERMISSION_DENIED,
+              POSITION_UNAVAILABLE: GeolocationPositionError.POSITION_UNAVAILABLE,
+              TIMEOUT: GeolocationPositionError.TIMEOUT,
+            });
+          }
+          return;
+        }
         if (spoofingEnabled && spoofedLocation) {
           const pos = buildSpoofedPosition(spoofedLocation);
           const delay = 10 + Math.random() * 40;
@@ -141,7 +154,7 @@ export function patchIframeWindow(iframeWindow: Window): void {
       };
 
       if (settingsReceived) {
-        respond();
+        respond({ timedOut: false });
       } else {
         void waitForSettings().then(respond);
       }
