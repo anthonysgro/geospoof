@@ -6,7 +6,7 @@
 **Your VPN changes your IP address. Your browser is still telling websites where you actually are.**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Firefox](https://img.shields.io/badge/Firefox-140%2B-FF7139.svg?logo=firefox-browser)](https://addons.mozilla.org/en-US/firefox/addon/geo-spoof/)
+[![Firefox](https://img.shields.io/badge/Firefox-140%2B-FF7139.svg?logo=firefox-browser)](https://addons.mozilla.org/firefox/addon/geo-spoof/)
 [![Chrome Web Store](https://img.shields.io/badge/Chrome_Web_Store-available-4285F4.svg?logo=googlechrome)](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje)
 [![Version](https://img.shields.io/github/package-json/v/anthonysgro/geospoof?color=green)](https://github.com/anthonysgro/geospoof/releases)
 
@@ -119,7 +119,7 @@ Overridden functions are disguised to pass standard detection checks used by mos
 
 ## Installation
 
-**Firefox:** https://addons.mozilla.org/en-US/firefox/addon/geo-spoof
+**Firefox:** https://addons.mozilla.org/firefox/addon/geo-spoof/
 
 **Chrome / Brave / Edge:** https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje
 
