@@ -14,7 +14,6 @@
 
   <p>
     <img src="assets/screenshot1.png" alt="GeoSpoof main view" width="250" />
-    <img src="assets/screenshot2.png" alt="GeoSpoof search view" width="250" />
     <img src="assets/screenshot3.png" alt="GeoSpoof settings view" width="250" />
   </p>
 </div>
