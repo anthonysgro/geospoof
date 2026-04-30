@@ -28,21 +28,34 @@ import {
 const logger = createLogger("INJ");
 
 /**
- * Returns a promise that resolves when settings arrive or timeout expires.
- * Used by geolocation/permissions overrides to defer rather than leaking
- * the user's real location before settings are received.
+ * Returns a promise that resolves when settings arrive, or rejects if the
+ * timeout expires before settings are received.
+ *
+ * Callers that need to fall through to the real API when spoofing is
+ * disabled should check `spoofingEnabled` after the promise resolves.
+ * Callers must NOT fall through to the real API on rejection (timeout) —
+ * that would leak the user's real location to pages that call the
+ * geolocation API early (e.g. in a <head> script) before the content
+ * script has had a chance to dispatch settings.
  */
-export function waitForSettings(): Promise<void> {
-  if (settingsReceived) return Promise.resolve();
-  return new Promise<void>((resolve) => {
+export function waitForSettings(): Promise<{ timedOut: boolean }> {
+  if (settingsReceived) return Promise.resolve({ timedOut: false });
+  return new Promise<{ timedOut: boolean }>((resolve) => {
+    const waitStart = performance.now();
     const onSettings = (): void => {
       window.removeEventListener(EVENT_NAME, onSettings);
-      resolve();
+      logger.debug(
+        `waitForSettings resolved via event after ${(performance.now() - waitStart).toFixed(1)}ms`
+      );
+      resolve({ timedOut: false });
     };
     window.addEventListener(EVENT_NAME, onSettings);
     setTimeout(() => {
       window.removeEventListener(EVENT_NAME, onSettings);
-      resolve();
+      logger.warn(
+        `waitForSettings timed out after ${(performance.now() - waitStart).toFixed(1)}ms — settings never arrived`
+      );
+      resolve({ timedOut: true });
     }, SETTINGS_WAIT_TIMEOUT);
   });
 }
@@ -56,6 +69,9 @@ export function waitForSettings(): Promise<void> {
 export function installSettingsListener(): void {
   window.addEventListener(EVENT_NAME, ((event: CustomEvent<SettingsEventDetail>) => {
     if (event.detail) {
+      logger.debug(
+        `Settings event received at ${performance.now().toFixed(1)}ms — enabled:${String(event.detail.enabled)} hasLocation:${String(!!event.detail.location)}`
+      );
       setSpoofingEnabled(event.detail.enabled);
       setSpoofedLocation(event.detail.location);
       setSettingsReceived(true);

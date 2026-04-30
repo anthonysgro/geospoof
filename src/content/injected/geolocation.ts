@@ -46,12 +46,12 @@ const getCurrentPositionOverride = (
   options?: PositionOptions
 ): void => {
   logger.debug(
-    "getCurrentPosition called. Enabled:",
+    "getCurrentPosition called — settingsReceived:",
+    settingsReceived,
+    "spoofingEnabled:",
     spoofingEnabled,
-    "Location:",
-    spoofedLocation,
-    "Settings received:",
-    settingsReceived
+    "hasLocation:",
+    !!spoofedLocation
   );
 
   if (settingsReceived) {
@@ -75,7 +75,24 @@ const getCurrentPositionOverride = (
   } else {
     // Settings not yet received — wait for them before responding
     logger.debug("getCurrentPosition: deferring until settings arrive");
-    void waitForSettings().then(() => {
+    void waitForSettings().then(({ timedOut }) => {
+      if (timedOut) {
+        // Settings never arrived within the timeout window. We don't know
+        // whether spoofing should be on or off, so we cannot safely fall
+        // through to the real API (that would leak the user's real location
+        // if spoofing was meant to be active). Fire the error callback instead.
+        logger.warn("getCurrentPosition: settings timed out, returning TIMEOUT error");
+        if (errorCallback) {
+          errorCallback({
+            code: GeolocationPositionError.TIMEOUT,
+            message: "Settings not received in time",
+            PERMISSION_DENIED: GeolocationPositionError.PERMISSION_DENIED,
+            POSITION_UNAVAILABLE: GeolocationPositionError.POSITION_UNAVAILABLE,
+            TIMEOUT: GeolocationPositionError.TIMEOUT,
+          });
+        }
+        return;
+      }
       if (spoofingEnabled && spoofedLocation) {
         const position = createGeolocationPosition(spoofedLocation);
         const delay = 10 + Math.random() * 40;
@@ -140,17 +157,35 @@ const clearWatchOverride = (watchId: number): void => {
  * Install geolocation API overrides on `navigator.geolocation`.
  *
  * Overrides `getCurrentPosition`, `watchPosition`, and `clearWatch`.
+ * Uses Object.defineProperty with writable:false/configurable:false so that
+ * page scripts cannot restore the originals via simple assignment or
+ * setInterval loops (the "aggressive window" bypass technique).
  */
 export function installGeolocationOverrides(): void {
   registerOverride(getCurrentPositionOverride, "getCurrentPosition");
   disguiseAsNative(getCurrentPositionOverride, "getCurrentPosition", 1);
-  navigator.geolocation.getCurrentPosition = getCurrentPositionOverride;
+  Object.defineProperty(navigator.geolocation, "getCurrentPosition", {
+    value: getCurrentPositionOverride,
+    writable: false,
+    configurable: false,
+    enumerable: true,
+  });
 
   registerOverride(watchPositionOverride, "watchPosition");
   disguiseAsNative(watchPositionOverride, "watchPosition", 1);
-  navigator.geolocation.watchPosition = watchPositionOverride;
+  Object.defineProperty(navigator.geolocation, "watchPosition", {
+    value: watchPositionOverride,
+    writable: false,
+    configurable: false,
+    enumerable: true,
+  });
 
   registerOverride(clearWatchOverride, "clearWatch");
   disguiseAsNative(clearWatchOverride, "clearWatch", 1);
-  navigator.geolocation.clearWatch = clearWatchOverride;
+  Object.defineProperty(navigator.geolocation, "clearWatch", {
+    value: clearWatchOverride,
+    writable: false,
+    configurable: false,
+    enumerable: true,
+  });
 }

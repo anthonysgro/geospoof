@@ -89,3 +89,48 @@ test("Manifest is valid JSON with required fields", () => {
   expect(Array.isArray(manifest.permissions)).toBe(true);
   expect(Array.isArray(manifest.content_scripts)).toBe(true);
 });
+
+/**
+ * Firefox injected script uses world: "MAIN" at document_start
+ *
+ * Verifies that the Firefox manifest declares injected.js as a world: "MAIN"
+ * content script so it runs in page context before any inline page scripts,
+ * without requiring a sync XHR injection workaround.
+ *
+ * Firefox 128+ supports world: "MAIN"; our minimum is Firefox 140.
+ */
+test("Firefox manifest: injected.js declared as world:MAIN content script", () => {
+  const manifest = firefoxManifest();
+
+  const injectedEntry = manifest.content_scripts.find(
+    (cs) => cs.js?.includes("content/injected.js") && cs.world === "MAIN"
+  );
+
+  expect(injectedEntry).toBeDefined();
+  expect(injectedEntry!.run_at).toBe("document_start");
+  expect(injectedEntry!.all_frames).toBe(true);
+  expect(injectedEntry!.matches).toContain("<all_urls>");
+});
+
+test("Chromium manifest: injected.js declared as world:MAIN content script", () => {
+  const manifest = generateManifest("chromium", "0.0.1") as unknown as Manifest;
+
+  const injectedEntry = manifest.content_scripts.find(
+    (cs) => cs.js?.includes("content/injected.js") && cs.world === "MAIN"
+  );
+
+  expect(injectedEntry).toBeDefined();
+  expect(injectedEntry!.run_at).toBe("document_start");
+  expect(injectedEntry!.all_frames).toBe(true);
+});
+
+test("Both Firefox and Chromium use world:MAIN for injected.js", () => {
+  for (const target of ["firefox", "chromium"] as const) {
+    const manifest = generateManifest(target, "0.0.1") as unknown as Manifest;
+    const injectedEntry = manifest.content_scripts.find(
+      (cs) => cs.js?.includes("content/injected.js") && cs.world === "MAIN"
+    );
+    expect(injectedEntry).toBeDefined();
+    expect(injectedEntry!.world).toBe("MAIN");
+  }
+});

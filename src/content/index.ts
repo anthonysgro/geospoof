@@ -32,12 +32,6 @@ interface SettingsEventDetail {
 }
 
 /**
- * Build-time constant set by the browser target Vite plugin.
- * `true` when building for Chromium-based browsers, `false` for Firefox.
- */
-declare const __CHROMIUM__: boolean;
-
-/**
  * Declare Firefox-specific `cloneInto` helper that makes objects accessible
  * across content-script / page-context boundaries.
  */
@@ -78,36 +72,11 @@ function updateInjectedScript(): void {
   }
 }
 
-// Inject the override script into the page context IMMEDIATELY.
-// On Chromium, the injected script is loaded by the manifest as a content script
-// with world: "MAIN", so no XHR injection is needed.
-// On Firefox, synchronous XHR is intentional: content scripts run at document_start
-// and must install API overrides before any page JavaScript executes. Async
-// alternatives (fetch, <script src>) create a race window where pages can
-// observe the real geolocation API. Sync XHR from a content script does not
-// block the browser UI thread — it only blocks this content script's execution,
-// which is the desired behavior.
-if (!__CHROMIUM__) {
-  try {
-    const xhr = new XMLHttpRequest();
-    xhr.open("GET", browser.runtime.getURL("content/injected.js"), false); // synchronous
-    xhr.send();
-
-    if (xhr.status === 200) {
-      const script = document.createElement("script");
-      script.textContent = xhr.responseText;
-      (document.head || document.documentElement).prepend(script);
-      script.remove();
-      logger.info("Injected script via sync XHR (Firefox)");
-    } else {
-      logger.error("Failed to load injected script:", xhr.status);
-    }
-  } catch (e) {
-    logger.error("Failed to inject script:", e);
-  }
-} else {
-  logger.info("Injected script loaded via manifest world:MAIN (Chromium)");
-}
+// On both Firefox and Chromium, the injected script is loaded by the manifest
+// as a content script with world: "MAIN" and run_at: "document_start", so it
+// runs synchronously before any page scripts — no XHR injection needed.
+// Firefox 128+ supports world: "MAIN"; our minimum is Firefox 140.
+logger.info("Injected script loaded via manifest world:MAIN");
 
 // Send initial settings after script is injected
 updateInjectedScript();

@@ -17,8 +17,14 @@ declare var process: { env: Record<string, string | undefined> };
 /** Event name for settings updates (must match content script). */
 export const EVENT_NAME: string = process.env.EVENT_NAME || "__x_evt";
 
-/** Milliseconds to wait for settings before falling through to real API. */
-export const SETTINGS_WAIT_TIMEOUT = 500;
+/**
+ * Milliseconds to wait for settings before giving up.
+ * This must be long enough to cover the background script round-trip on a
+ * cold page load (GET_SETTINGS → background → content script → CustomEvent).
+ * Falling through to the real API on timeout would leak the user's real
+ * location to pages that call getCurrentPosition early (e.g. in <head>).
+ */
+export const SETTINGS_WAIT_TIMEOUT = 3000;
 
 /** True when the engine truncates sub-minute historical offsets to integers (Chrome/V8). */
 export const engineTruncatesOffset: boolean = Number.isInteger(

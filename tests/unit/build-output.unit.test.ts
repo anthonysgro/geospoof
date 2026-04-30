@@ -56,12 +56,18 @@ describe("Firefox manifest structure", () => {
     expect(bg.service_worker).toBeUndefined();
   });
 
-  test('does NOT have any content_scripts entry with world: "MAIN"', () => {
+  test('has a content_scripts entry with world: "MAIN" for injected.js', () => {
     const m = firefoxManifest();
     const cs = m.content_scripts as Array<Record<string, unknown>>;
-    for (const entry of cs) {
-      expect(entry.world).toBeUndefined();
-    }
+    const mainWorldEntry = cs.find(
+      (entry) =>
+        entry.world === "MAIN" &&
+        Array.isArray(entry.js) &&
+        (entry.js as string[]).includes("content/injected.js")
+    );
+    expect(mainWorldEntry).toBeDefined();
+    expect(mainWorldEntry!.run_at).toBe("document_start");
+    expect(mainWorldEntry!.all_frames).toBe(true);
   });
 
   test("preserves all shared fields", () => {
