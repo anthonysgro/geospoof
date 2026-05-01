@@ -47,7 +47,7 @@ describe("Date Formatting Overrides", () => {
       expect(result).toBe(original);
     });
 
-    test("toDateString produces output with fallback offset on invalid timezone", () => {
+    test("toDateString falls back to original native method on invalid timezone", () => {
       const cs = setupContentScript({
         enabled: true,
         location: { latitude: 0, longitude: 0, accuracy: 10 },
@@ -55,8 +55,11 @@ describe("Date Formatting Overrides", () => {
       });
       const d = new Date("2024-06-15T12:00:00Z");
       const result = cs.Date.prototype.toDateString.call(d);
+      // Falls back to original toDateString — should match native format
       expect(result).toMatch(/^[A-Z][a-z]{2} [A-Z][a-z]{2} \d{2} \d{4}$/);
-      expect(result).toContain("Jun 15 2024");
+      // Should equal the original native toDateString output (system timezone dependent)
+      const original = cs.originals.toDateString.call(d);
+      expect(result).toBe(original);
     });
   });
 
