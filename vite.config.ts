@@ -99,19 +99,10 @@ function browserTargetPlugin(target: BrowserTarget): Plugin {
         cpSync(iconsSrc, resolve(__dirname, "dist/icons"), { recursive: true });
       }
 
-      // Firefox: re-bundle content scripts as IIFE.
-      // Content scripts in Firefox MV3 also load as classic scripts — they
-      // cannot use ES module import/export. When shared chunks exist (e.g.
-      // debug-logger), the Vite ES module output contains import statements
-      // that fail at runtime. Re-bundle with esbuild to inline all deps.
-      // The injected script additionally needs "use strict" since esbuild
-      // minification strips the directive (ES modules are implicitly strict)
-      // but the classic script / page context is NOT automatically strict —
-      // without it, .arguments/.caller access returns undefined instead of
-      // throwing TypeError (arkenfox tests p, q).
-      if (target !== "chromium") {
-        const firefoxContentScripts = ["content/content.js", "content/injected.js"];
-        for (const script of firefoxContentScripts) {
+      // Firefox and Safari: re-bundle content scripts as IIFE.
+      if (target === "firefox" || target === "safari") {
+        const contentScripts = ["content/content.js", "content/injected.js"];
+        for (const script of contentScripts) {
           const scriptPath = resolve(__dirname, "dist", script);
           if (existsSync(scriptPath)) {
             await esbuild({
@@ -120,7 +111,7 @@ function browserTargetPlugin(target: BrowserTarget): Plugin {
               format: "iife",
               outfile: scriptPath,
               allowOverwrite: true,
-              target: "firefox140",
+              target: target === "safari" ? "safari17" : "firefox140",
               ...(script === "content/injected.js" ? { banner: { js: '"use strict";' } } : {}),
               nodePaths: [resolve(__dirname, "node_modules")],
             });

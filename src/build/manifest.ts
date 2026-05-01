@@ -6,7 +6,7 @@
  */
 
 /** Valid browser targets for the build system. */
-export type BrowserTarget = "firefox" | "chromium";
+export type BrowserTarget = "firefox" | "chromium" | "safari";
 
 /**
  * Validate and return the browser target from the BROWSER env var.
@@ -14,10 +14,11 @@ export type BrowserTarget = "firefox" | "chromium";
  */
 export function resolveBrowserTarget(envBrowser: string | undefined): BrowserTarget {
   if (!envBrowser) return "firefox";
-  if (envBrowser === "firefox" || envBrowser === "chromium") return envBrowser;
+  if (envBrowser === "firefox" || envBrowser === "chromium" || envBrowser === "safari")
+    return envBrowser;
   throw new Error(
     `Invalid BROWSER environment variable: "${envBrowser}". ` +
-      `Valid values are "firefox" or "chromium".`
+      `Valid values are "firefox", "chromium", or "safari".`
   );
 }
 
@@ -68,7 +69,7 @@ export function generateManifest(target: BrowserTarget, version: string): Record
   };
 
   if (target === "firefox") {
-  // Firefox: service_worker-less background, injected.js as world: "MAIN" content script
+  // Firefox: scripts-based background, injected.js as world: "MAIN" content script
   return {
     ...shared,
     browser_specific_settings: {
@@ -105,6 +106,30 @@ export function generateManifest(target: BrowserTarget, version: string): Record
       },
     ],
   };
+  }
+
+  if (target === "safari") {
+    // Safari: scripts-based background (avoids service worker suspension bug),
+    // no privacy permission (unsupported), no browser_specific_settings.
+    const safariPermissions = (shared.permissions as string[]).filter((p) => p !== "privacy");
+    return {
+      ...shared,
+      permissions: safariPermissions,
+      background: {
+        scripts: ["background/background.js"],
+        type: "module",
+      },
+      content_scripts: [
+        ...(shared.content_scripts as Array<Record<string, unknown>>),
+        {
+          matches: ["<all_urls>"],
+          js: ["content/injected.js"],
+          run_at: "document_start",
+          all_frames: true,
+          world: "MAIN",
+        },
+      ],
+    };
   }
 
   // Chromium: service_worker background, injected.js as world: "MAIN" content script

@@ -125,7 +125,14 @@ export function validateSettings(settings: Partial<Settings>): Settings {
 }
 
 /**
- * Save settings to storage with quota exceeded handling
+ * Save settings to storage with quota exceeded handling.
+ *
+ * Safari (with unsigned/development extensions) has a bug where it rejects
+ * browser.storage.local.set() with a spurious "Exceeded storage quota" error
+ * when the new serialized value is smaller than the currently stored value.
+ * The workaround is to remove the key first, then write the new value.
+ * This is safe because loadSettings() falls back to DEFAULT_SETTINGS on any
+ * read failure, so a crash between remove and set is recoverable.
  */
 export async function saveSettings(settings: Settings): Promise<void> {
   settings.lastUpdated = Date.now();
@@ -133,14 +140,22 @@ export async function saveSettings(settings: Settings): Promise<void> {
   try {
     await browser.storage.local.set({ settings });
   } catch (error) {
-    if (error instanceof Error && error.message && error.message.includes("QuotaExceededError")) {
-      logger.error("Storage quota exceeded, attempting to clear cache");
+    const msg = error instanceof Error ? error.message : String(error);
+    const isQuotaError =
+      msg.includes("QuotaExceededError") ||
+      msg.includes("Exceeded storage quota") ||
+      msg.includes("quota");
 
+    if (isQuotaError) {
+      // Safari bug: rejects writes that shrink the stored value.
+      // Delete first, then write fresh.
+      logger.warn("Storage write failed (Safari quota bug), retrying via remove+set");
       try {
+        await browser.storage.local.remove("settings");
         await browser.storage.local.set({ settings });
       } catch (retryError) {
-        logger.error("Failed to save settings even after clearing cache:", retryError);
-        throw new Error("Storage quota exceeded and unable to save settings");
+        logger.error("Failed to save settings even after remove+set:", retryError);
+        throw retryError;
       }
     } else {
       logger.error("Failed to save settings:", error);

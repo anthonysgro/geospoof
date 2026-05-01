@@ -9,6 +9,7 @@
     "build:prod": "vite build --mode production",
     "build:firefox": "BROWSER=firefox vite build --mode production",
     "build:chromium": "BROWSER=chromium vite build --mode production",
+    "build:safari": "BROWSER=safari vite build --mode production",
     "clean": "rm -rf dist coverage web-ext-artifacts geospoof-*.zip geospoof-*.xpi",
     "dev": "vite build --watch",
     "format": "prettier --write \"**/*.{js,ts,json,md,css,html}\"",
