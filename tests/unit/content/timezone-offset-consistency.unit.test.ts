@@ -375,3 +375,124 @@ describe("Cross-method offset consistency", () => {
     }
   });
 });
+
+/**
+ * Fractional offset precision: getTimezoneOffset agrees with shortOffset string
+ *
+ * Regression test for the "mixed" TZP result caused by getTimezoneOffset using
+ * deriveOffsetFromParts (formatToParts, whole-second precision → loses sub-second
+ * LMT detail) while TZP's offsetNanoseconds and timeZoneName methods use the
+ * shortOffset string path (e.g. "GMT-9:59:36") which preserves full fractional
+ * precision. On Firefox (engineTruncatesOffset = false), this caused a split:
+ * 8 methods returning 599 and 2 returning 599.6 for America/Anchorage in 1879.
+ *
+ * Fix: on Firefox, getTimezoneOffset uses getIntlBasedOffset (shortOffset string)
+ * instead of deriveOffsetFromParts, matching the precision of offsetNanoseconds
+ * and timeZoneName.
+ */
+describe("Fractional offset precision: getTimezoneOffset matches shortOffset string", () => {
+  /**
+   * Resolve the UTC offset via the shortOffset string path — the same method
+   * TZP's offsetNanoseconds and timeZoneName use. Returns fractional minutes.
+   */
+  function resolveShortOffsetMinutes(date: Date, timezoneId: string): number {
+    const fmt = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezoneId,
+      timeZoneName: "shortOffset",
+    });
+    const parts = fmt.formatToParts(date);
+    const tzVal = parts.find((p) => p.type === "timeZoneName")?.value ?? "GMT";
+    if (tzVal === "GMT" || tzVal === "UTC") return 0;
+    const m = tzVal.match(/^GMT([+-])(\d{1,2})(?::(\d{2}))?(?::(\d{2}))?$/);
+    if (!m) return 0;
+    const sign = m[1] === "+" ? 1 : -1;
+    const seconds = parseInt(m[4] || "0", 10);
+    return sign * (parseInt(m[2], 10) * 60 + parseInt(m[3] || "0", 10) + seconds / 60);
+  }
+
+  /**
+   * Timezones with known sub-minute historical LMT offsets.
+   * These are the cases that triggered the "mixed" TZP result.
+   */
+  const FRACTIONAL_OFFSET_CASES = [
+    {
+      label: "America/Anchorage 1879 (Sitka Mean Time: -9:59:36 = 599.6 min)",
+      timezone: { identifier: "America/Anchorage", offset: -480, dstOffset: -480 },
+      epoch: Date.UTC(1879, 0, 15, 13, 0, 0),
+    },
+    {
+      label: "Asia/Kolkata 1879 (Madras Mean Time: +5:21:10 = 321.166... min)",
+      timezone: { identifier: "Asia/Kolkata", offset: 330, dstOffset: 330 },
+      epoch: Date.UTC(1879, 0, 15, 13, 0, 0),
+    },
+    {
+      label: "Asia/Dhaka 1879 (Dacca Mean Time: +6:01:40 = 361.666... min)",
+      timezone: { identifier: "Asia/Dhaka", offset: 360, dstOffset: 360 },
+      epoch: Date.UTC(1879, 0, 15, 13, 0, 0),
+    },
+    {
+      label: "Europe/Paris 1879 (Paris Mean Time: +0:09:21 = 9.35 min)",
+      timezone: { identifier: "Europe/Paris", offset: 60, dstOffset: 120 },
+      epoch: Date.UTC(1879, 0, 15, 13, 0, 0),
+    },
+  ];
+
+  for (const { label, timezone, epoch } of FRACTIONAL_OFFSET_CASES) {
+    test(label, () => {
+      const cs = setupContentScript({
+        enabled: true,
+        location: { latitude: 0, longitude: 0, accuracy: 10 },
+        timezone,
+      });
+
+      const date = new Date(epoch);
+
+      // Ground truth: shortOffset string (same path as TZP's offsetNanoseconds + timeZoneName)
+      const shortOffsetMinutes = resolveShortOffsetMinutes(date, timezone.identifier);
+
+      // getTimezoneOffset must agree with the shortOffset string to the same
+      // precision the engine provides. On Chrome (integer truncation) both will
+      // be integers; on Firefox both will be fractional.
+      const gtzOffset = cs.Date.prototype.getTimezoneOffset.call(date);
+      const utcOffsetFromGTZ = -gtzOffset;
+
+      // They must agree to at least 4 decimal places (sub-second precision).
+      // This catches the 599 vs 599.6 split that caused the TZP "mixed" result.
+      expect(utcOffsetFromGTZ).toBeCloseTo(shortOffsetMinutes, 4);
+    });
+  }
+
+  test("modern dates: getTimezoneOffset still agrees with shortOffset (no regression)", () => {
+    const MODERN_CASES = [
+      {
+        timezone: { identifier: "America/Anchorage", offset: -480, dstOffset: -480 },
+        epoch: Date.UTC(2024, 6, 15, 12, 0, 0),
+      },
+      {
+        timezone: { identifier: "Asia/Kolkata", offset: 330, dstOffset: 330 },
+        epoch: Date.UTC(2024, 0, 15, 12, 0, 0),
+      },
+      {
+        timezone: { identifier: "Europe/Paris", offset: 60, dstOffset: 120 },
+        epoch: Date.UTC(2024, 6, 15, 12, 0, 0),
+      },
+      {
+        timezone: { identifier: "America/New_York", offset: -300, dstOffset: -240 },
+        epoch: Date.UTC(2024, 0, 15, 12, 0, 0),
+      },
+    ];
+
+    for (const { timezone, epoch } of MODERN_CASES) {
+      const cs = setupContentScript({
+        enabled: true,
+        location: { latitude: 0, longitude: 0, accuracy: 10 },
+        timezone,
+      });
+
+      const date = new Date(epoch);
+      const shortOffsetMinutes = resolveShortOffsetMinutes(date, timezone.identifier);
+      const gtzOffset = cs.Date.prototype.getTimezoneOffset.call(date);
+      expect(-gtzOffset).toBeCloseTo(shortOffsetMinutes, 4);
+    }
+  });
+});

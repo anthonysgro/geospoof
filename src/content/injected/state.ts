@@ -26,10 +26,41 @@ export const EVENT_NAME: string = process.env.EVENT_NAME || "__x_evt";
  */
 export const SETTINGS_WAIT_TIMEOUT = 3000;
 
-/** True when the engine truncates sub-minute historical offsets to integers (Chrome/V8). */
-export const engineTruncatesOffset: boolean = Number.isInteger(
-  new Date(1879, 0, 1).getTimezoneOffset()
-);
+/**
+ * True when the engine truncates sub-minute historical offsets to integers (Chrome/V8).
+ *
+ * Detection strategy: use a known timezone with a well-documented sub-minute LMT
+ * offset that is stable across all IANA database versions, probed at a UTC instant
+ * where that offset applies. This avoids dependence on the real system timezone
+ * (which may itself have an integer 1879 offset, giving a false positive on Firefox).
+ *
+ * Asia/Kolkata (Madras Mean Time) had offset +5:21:10 = 321.1666... minutes until
+ * 1906-01-01. We probe at 1879-01-15T13:00:00Z — well within the LMT era.
+ * Chrome returns -321 (truncated); Firefox returns -321.1666... (fractional).
+ *
+ * Using Intl.DateTimeFormat shortOffset is more reliable than getTimezoneOffset
+ * because it doesn't depend on the system timezone at all.
+ */
+function detectEngineTruncatesOffset(): boolean {
+  try {
+    const probe = new Date(Date.UTC(1879, 0, 15, 13, 0, 0));
+    const fmt = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Kolkata",
+      timeZoneName: "shortOffset",
+    });
+    const parts = fmt.formatToParts(probe);
+    const tzVal = parts.find((p) => p.type === "timeZoneName")?.value ?? "GMT";
+    // Firefox returns "GMT+5:21:10" (sub-second precision preserved)
+    // Chrome returns "GMT+5:21" (truncated to minutes)
+    // If the string contains seconds (:10), the engine preserves sub-minute offsets
+    return !/:(\d{2})$/.test(tzVal);
+  } catch {
+    // Fallback: assume truncation (Chrome-like behavior) on any error
+    return true;
+  }
+}
+
+export const engineTruncatesOffset: boolean = detectEngineTruncatesOffset();
 
 // ── Override registry ────────────────────────────────────────────────
 
