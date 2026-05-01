@@ -8,13 +8,12 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Firefox](https://img.shields.io/badge/Firefox-140%2B-FF7139.svg?logo=firefox-browser)](https://addons.mozilla.org/en-US/firefox/addon/geo-spoof/)
 [![Chrome Web Store](https://img.shields.io/badge/Chrome_Web_Store-available-4285F4.svg?logo=googlechrome)](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje)
-[![Version](https://img.shields.io/badge/version-1.17.11-green.svg)](https://github.com/anthonysgro/geospoof/releases)
+[![Version](https://img.shields.io/github/package-json/v/anthonysgro/geospoof?color=green)](https://github.com/anthonysgro/geospoof/releases)
 
 [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/geo-spoof/) &nbsp;|&nbsp; [Chrome Web Store](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje) &nbsp;|&nbsp; [Report Issues](https://github.com/anthonysgro/geospoof/issues) &nbsp;|&nbsp; [User Guide](USER_GUIDE.md)
 
   <p>
     <img src="assets/screenshot1.png" alt="GeoSpoof main view" width="250" />
-    <img src="assets/screenshot2.png" alt="GeoSpoof search view" width="250" />
     <img src="assets/screenshot3.png" alt="GeoSpoof settings view" width="250" />
   </p>
 </div>

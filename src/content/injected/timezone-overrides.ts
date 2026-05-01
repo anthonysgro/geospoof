@@ -16,7 +16,7 @@ import {
   engineTruncatesOffset,
 } from "./state";
 import { registerOverride, disguiseAsNative, installOverride } from "./function-masking";
-import { deriveOffsetFromParts } from "./timezone-helpers";
+import { deriveOffsetFromParts, getIntlBasedOffset } from "./timezone-helpers";
 import { createLogger } from "@/shared/utils/debug-logger";
 
 const logger = createLogger("INJ");
@@ -33,30 +33,58 @@ export function installTimezoneOverrides(): void {
     installOverride(Date.prototype, "getTimezoneOffset", function (this: Date): number {
       try {
         if (spoofingEnabled && timezoneData) {
-          // Derive offset from formatToParts — the same native path used by
-          // the component getters (getHours, getDate, etc.). This guarantees
-          // getTimezoneOffset and all getters produce consistent fingerprints
-          // on both Chrome (which truncates sub-minute LMT offsets) and
-          // Firefox (which preserves fractional minutes).
           const epoch = this.getTime();
-          const offsetMinutes = deriveOffsetFromParts(this, timezoneData.identifier);
-          if (offsetMinutes !== undefined) {
-            // getTimezoneOffset returns the negated offset (positive = west of UTC).
-            // Chrome truncates sub-minute historical offsets to integers; Firefox preserves them.
-            const result = engineTruncatesOffset ? Math.trunc(-offsetMinutes) : -offsetMinutes;
+          if (isNaN(epoch)) return originalGetTimezoneOffset.call(this);
+
+          if (engineTruncatesOffset) {
+            // Chrome/V8: truncates sub-minute LMT offsets to integers natively.
+            // deriveOffsetFromParts uses formatToParts (whole-second precision) which
+            // already loses sub-minute detail, so it agrees with Chrome's truncated
+            // native value. Use it here for consistency with the component getters.
+            const offsetMinutes = deriveOffsetFromParts(this, timezoneData.identifier);
+            if (offsetMinutes !== undefined) {
+              const result = Math.trunc(-offsetMinutes);
+              logger.trace(
+                "getTimezoneOffset (chrome): epoch",
+                epoch,
+                "rawOffset",
+                offsetMinutes,
+                "result",
+                result
+              );
+              return result;
+            }
+          } else {
+            // Firefox: preserves fractional sub-minute LMT offsets natively.
+            // deriveOffsetFromParts reconstructs the offset from formatToParts
+            // wall-clock components, which only have second precision — this loses
+            // the sub-second part of historical LMT offsets (e.g. Anchorage 1879
+            // is -9:59:36 = 599.6 min, but formatToParts gives components that
+            // reconstruct to exactly 599 min). TZP's offsetNanoseconds and
+            // timeZoneName methods both use the shortOffset string path which
+            // preserves the full 599.6 value. Using deriveOffsetFromParts here
+            // would cause a "mixed" result across TZP's 10 measurement methods.
+            // getIntlBasedOffset reads the shortOffset string directly (e.g.
+            // "GMT-9:59:36") and parses it to the full fractional value, matching
+            // what offsetNanoseconds and timeZoneName see.
+            const offsetMinutes = getIntlBasedOffset(
+              this,
+              timezoneData.identifier,
+              timezoneData.offset
+            );
+            const result = -offsetMinutes;
             logger.trace(
-              "getTimezoneOffset: epoch",
+              "getTimezoneOffset (firefox): epoch",
               epoch,
               "rawOffset",
               offsetMinutes,
-              "truncates",
-              engineTruncatesOffset,
               "result",
               result
             );
             return result;
           }
-          logger.warn("getTimezoneOffset: deriveOffsetFromParts returned undefined, epoch", epoch);
+
+          logger.warn("getTimezoneOffset: offset resolution failed, epoch", epoch);
         }
         return originalGetTimezoneOffset.call(this);
       } catch (error) {
