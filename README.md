@@ -8,37 +8,29 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Firefox](https://img.shields.io/badge/Firefox-140%2B-FF7139.svg?logo=firefox-browser)](https://addons.mozilla.org/firefox/addon/geo-spoof/)
 [![Chrome Web Store](https://img.shields.io/badge/Chrome_Web_Store-available-4285F4.svg?logo=googlechrome)](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje)
+[![Safari](https://img.shields.io/badge/Safari_macOS_%26_iOS-coming_soon-006CFF.svg?logo=safari)](https://github.com/anthonysgro/geospoof)
 [![Version](https://img.shields.io/github/package-json/v/anthonysgro/geospoof?color=green)](https://github.com/anthonysgro/geospoof/releases)
 
 [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/geo-spoof/) &nbsp;|&nbsp; [Chrome Web Store](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje) &nbsp;|&nbsp; [Report Issues](https://github.com/anthonysgro/geospoof/issues) &nbsp;|&nbsp; [User Guide](USER_GUIDE.md)
 
   <p>
-    <img src="assets/screenshot1.png" alt="GeoSpoof main view" width="250" />
-    <img src="assets/screenshot3.png" alt="GeoSpoof settings view" width="250" />
+    <img src="assets/chrome-store/screenshot1.png" alt="GeoSpoof main view" width="600" />
   </p>
 </div>
 
 ## Why GeoSpoof?
 
-### The Problem
+A VPN changes your IP, but your browser still leaks your real location through the Geolocation API, timezone offsets, `Intl.DateTimeFormat`, WebRTC, and more. Sites cross-reference these signals against your IP — when they don't match, you're flagged.
 
-A VPN changes your IP, but your browser still leaks your location through multiple channels: the Geolocation API, timezone offsets, `Intl.DateTimeFormat`, WebRTC, and much more. Sites cross-reference them against your IP, and when they don't match, you're flagged. Many extensions claim to spoof your location but fall far short.
+GeoSpoof overrides every one of those channels so your browser reports a consistent, chosen location instead of your real one. Set it to match your VPN, mismatch it on purpose, or pick anywhere in the world.
 
-Blocking geolocation requests is your right, but some sites treat it as evasion and restrict access or flag your account. And if you allow it, your real coordinates go straight to the site. You're stuck choosing between access and privacy.
+- **VPN Region Sync** — detects your VPN exit IP and sets your location to match. One click.
+- **Manual control** — search for a city or enter coordinates directly.
+- **Full signal alignment** — geolocation, timezone, Date APIs, Intl, Temporal, and WebRTC all report the same place.
+- **Anti-fingerprinting** — overrides are disguised to pass native code checks.
+- **Cross-browser** — Firefox, Chrome, Brave, Edge, and Safari. Single codebase, MV3.
 
-### The Fix
-
-GeoSpoof gives you full control over what your browser reports. Set your location to match your VPN, mismatch it on purpose for extra obfuscation, or pick somewhere entirely different. GPS coordinates, timezone, `Intl` locale data, Date APIs, the Temporal API, and WebRTC all stay in sync with whatever you choose.
-
-- **VPN Region Sync**: Detects your VPN exit IP and sets your spoofed location to match. One click, no manual coordinates.
-- **Manual Coordinates**: Search for a city or enter any latitude/longitude directly. Your location doesn't have to match your VPN.
-- **Full Signal Alignment**: All location signals — geolocation, timezone offset, `Intl.DateTimeFormat`, Date getters, Date constructor, `Temporal.Now`, and WebRTC — report the same place. Sites see one consistent identity instead of mismatched data.
-- **Real-World Timezone Offsets**: Offsets are derived from the browser's own IANA timezone database via `Intl.DateTimeFormat`, so historical and DST-aware offsets match what a real user in that timezone would produce. No hardcoded offset tables that go stale.
-- **Cross-Browser**: Works on Firefox, Chrome, Brave, and Edge. Single codebase, MV3 on both platforms.
-- **Bypass Hard Gates**: Sites that refuse to load without geolocation permission get a clean, consistent response.
-- **Dev & QA**: Test geofenced apps, localized content, or location-aware UIs without leaving your desk.
-
-> **Note:** Use of this tool may violate the Terms of Service of certain websites. This is purely in the interest of legitimate privacy use and development purposes. Use responsibly.
+> **Note:** Use of this tool may violate the Terms of Service of certain websites. Use responsibly.
 
 ### What This Does NOT Do
 
@@ -51,71 +43,16 @@ GeoSpoof is designed to work alongside a VPN, not replace one.
 
 ## Overridden APIs
 
-When protection is enabled, GeoSpoof overrides the following browser APIs on every page. All overrides are injected synchronously at `document_start` before any page JavaScript runs.
+When protection is enabled, GeoSpoof overrides browser APIs synchronously at `document_start` before any page JavaScript runs. Covered APIs include:
 
-### Geolocation
+- **Geolocation** — `navigator.geolocation.getCurrentPosition/watchPosition`, `navigator.permissions.query`
+- **Date & Timezone** — `Date` constructor, `Date.parse`, all `Date.prototype` getters and formatters, `getTimezoneOffset`
+- **Intl** — `Intl.DateTimeFormat` constructor and `resolvedOptions`
+- **Temporal** — `Temporal.Now.*` (feature-detected)
+- **WebRTC** — via browser privacy API, no script injection needed
+- **Anti-fingerprinting** — `Function.prototype.toString` returns `[native code]` for all overrides; iframes patched on insertion
 
-| API                                                    | Behavior                          |
-| ------------------------------------------------------ | --------------------------------- |
-| `navigator.geolocation.getCurrentPosition()`           | Returns your spoofed coordinates  |
-| `navigator.geolocation.watchPosition()`                | Returns your spoofed coordinates  |
-| `navigator.geolocation.clearWatch()`                   | Clears spoofed watch callbacks    |
-| `navigator.permissions.query({ name: "geolocation" })` | Reports permission as `"granted"` |
-
-### Timezone & Date
-
-| API                                               | Behavior                                                                                                         |
-| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `Date.prototype.getTimezoneOffset()`              | Returns the correct offset for the spoofed timezone, including DST transitions                                   |
-| `Intl.DateTimeFormat()` constructor               | Injects the spoofed IANA timezone into all format options                                                        |
-| `Intl.DateTimeFormat.prototype.resolvedOptions()` | Returns the spoofed timezone identifier                                                                          |
-| `Date.prototype.toString()`                       | Outputs `{weekday} {month} {day} {year} {HH:mm:ss} GMT{±HHMM} ({timezone long name})` using the spoofed timezone |
-| `Date.prototype.toDateString()`                   | Outputs `{weekday} {month} {day} {year}` formatted in the spoofed timezone                                       |
-| `Date.prototype.toTimeString()`                   | Outputs `{HH:mm:ss} GMT{±HHMM} ({timezone long name})` using the spoofed timezone                                |
-| `Date.prototype.toLocaleString()`                 | Delegates to `Intl.DateTimeFormat` with the spoofed timezone injected                                            |
-| `Date.prototype.toLocaleDateString()`             | Delegates to `Intl.DateTimeFormat` with the spoofed timezone injected                                            |
-| `Date.prototype.toLocaleTimeString()`             | Delegates to `Intl.DateTimeFormat` with the spoofed timezone injected                                            |
-| `Date.prototype.getHours()`                       | Returns hours in the spoofed timezone                                                                            |
-| `Date.prototype.getMinutes()`                     | Returns minutes in the spoofed timezone                                                                          |
-| `Date.prototype.getSeconds()`                     | Returns seconds in the spoofed timezone                                                                          |
-| `Date.prototype.getDate()`                        | Returns day of month in the spoofed timezone                                                                     |
-| `Date.prototype.getDay()`                         | Returns day of week in the spoofed timezone                                                                      |
-| `Date.prototype.getMonth()`                       | Returns month in the spoofed timezone                                                                            |
-| `Date.prototype.getFullYear()`                    | Returns year in the spoofed timezone                                                                             |
-| `new Date(string)` (ambiguous strings)            | Adjusts epoch so the date is interpreted in the spoofed timezone instead of the real one                         |
-| `new Date(year, month, ...)` (multi-arg)          | Adjusts epoch so the date is interpreted in the spoofed timezone instead of the real one                         |
-| `Date.parse(string)` (ambiguous strings)          | Same epoch adjustment as the constructor                                                                         |
-
-### Temporal API
-
-Feature-detected at runtime. If the browser supports `Temporal`, these are overridden:
-
-| API                               | Behavior                                                  |
-| --------------------------------- | --------------------------------------------------------- |
-| `Temporal.Now.timeZoneId()`       | Returns the spoofed IANA timezone identifier              |
-| `Temporal.Now.plainDateTimeISO()` | Uses the spoofed timezone when no explicit timezone given |
-| `Temporal.Now.plainDateISO()`     | Uses the spoofed timezone when no explicit timezone given |
-| `Temporal.Now.plainTimeISO()`     | Uses the spoofed timezone when no explicit timezone given |
-| `Temporal.Now.zonedDateTimeISO()` | Uses the spoofed timezone when no explicit timezone given |
-
-### WebRTC
-
-| API                                      | Behavior                                                                                           |
-| ---------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `privacy.network.webRTCIPHandlingPolicy` | Configured via the browser's built-in privacy API to prevent IP leaks — no script injection needed |
-
-### Anti-Fingerprinting
-
-Overridden functions are disguised to pass standard detection checks used by most fingerprinting scripts:
-
-| Technique                       | What it does                                                                                                           |
-| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `Function.prototype.toString`   | All overrides return `function name() { [native code] }` — indistinguishable from real builtins                        |
-| Method shorthand wrapping       | Overrides have no `prototype` property and no `[[Construct]]`, matching native method behavior                         |
-| Iframe `contentWindow` patching | Iframes get their `toString` patched synchronously on access, before fingerprinting scripts can grab a clean reference |
-| DOM insertion wrapping          | `appendChild`, `insertBefore`, `innerHTML`, etc. (11 methods) synchronously patch iframes on insertion                 |
-
-> **Privacy caveat:** These overrides pass the checks that real-world fingerprinting scripts typically run. Dedicated forensic tools like [TorZillaPrint](https://arkenfox.github.io/TZP/tzp.html) and [CreepJS](https://abrahamjuliot.github.io/creepjs/) can still detect content-script-level overrides through engine internals, Web Worker context leaks, and timing side-channels. Full undetectability requires browser-level changes (Tor Browser, Mullvad Browser). GeoSpoof does the best that's possible from an extension.
+For the full API reference, see [API.md](API.md).
 
 ## Installation
 
@@ -137,34 +74,7 @@ The signed XPI works on standard Firefox with no extra configuration. Once insta
 
 > **Note:** An unsigned `geospoof-<version>.xpi` is also included in each release for Firefox forks that don't support AMO signatures. Most users should use the signed version.
 
-**From source (Firefox):**
-
-```bash
-git clone https://github.com/anthonysgro/geospoof.git
-cd geospoof
-npm install
-cp .env.example .env
-npm run build:firefox
-npm run start:firefox   # Launches Firefox with the extension loaded
-```
-
-**From source (Chrome / Brave / Edge):**
-
-```bash
-git clone https://github.com/anthonysgro/geospoof.git
-cd geospoof
-npm install
-cp .env.example .env
-npm run build:chromium
-```
-
-Then load `dist/` as an unpacked extension:
-
-1. Go to `chrome://extensions` (or `brave://extensions`, `edge://extensions`)
-2. Enable "Developer mode"
-3. Click "Load unpacked" and select the `dist/` folder
-
-Or use `npm run start:chrome` / `npm run start:brave` to build and launch automatically.
+**From source:** See [CONTRIBUTING.md](CONTRIBUTING.md) for build instructions.
 
 ## Usage
 
@@ -185,173 +95,15 @@ See [USER_GUIDE.md](USER_GUIDE.md) for details.
 | [GeoJS](https://www.geojs.io/)                                     | VPN sync enabled               | Your public IP (to geolocate VPN exit region)                          | [GitHub](https://github.com/jloh/geojs)                                |
 | [FreeIPAPI](https://freeipapi.com/)                                | VPN sync fallback              | Your public IP (fallback geolocation service)                          | Closed source ([Privacy Policy](https://freeipapi.com/privacy-policy)) |
 | [ReallyFreeGeoIP](https://reallyfreegeoip.org/)                    | VPN sync fallback              | Your public IP (fallback geolocation service)                          | [GitHub](https://github.com/reallyfreegeoip/reallyfreegeoip)           |
+| [ipinfo.io](https://ipinfo.io/)                                    | VPN sync fallback              | Your public IP (fallback geolocation service)                          | Closed source ([Privacy Policy](https://ipinfo.io/privacy-policy))     |
 
-> **VPN Sync privacy note:** When you enable "Sync with VPN," your public IP is sent to `api.ipify.org` and up to three geolocation services (`get.geojs.io`, `free.freeipapi.com`, `reallyfreegeoip.org`) in parallel over HTTPS to determine your VPN exit region. Your IP is never saved to disk — it's held only in memory and cleared when you disable VPN sync. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for full details.
-
-No data is sent to the extension developer. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
+> **VPN Sync privacy note:** When you enable "Sync with VPN," your public IP is sent to `api.ipify.org` and up to four geolocation services (`get.geojs.io`, `free.freeipapi.com`, `reallyfreegeoip.org`, `ipinfo.io`) in parallel over HTTPS to determine your VPN exit region. Your IP is never saved to disk — it's held only in memory and cleared when you disable VPN sync. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for full details.
 
 No data is sent to the extension developer. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
 
 ## Development
 
-**Requirements:** Node.js 18+, npm 9+, Firefox 140+ or any Chromium-based browser
-
-### Quick Start
-
-```bash
-git clone https://github.com/anthonysgro/geospoof.git
-cd geospoof
-npm install
-cp .env.example .env
-```
-
-### Day-to-Day Development
-
-Open two terminals:
-
-```bash
-# Terminal 1 — watches your source files and rebuilds on every save
-npm run dev
-
-# Terminal 2 — launches Firefox with the extension loaded, auto-reloads on rebuild
-npm start
-```
-
-That's it. Edit code, save, Firefox reloads. If something looks wrong, check the browser console (`about:debugging` → Inspect for background, F12 for content scripts).
-
-For Chromium development, use `npm run start:chrome` or `npm run start:brave` instead.
-
-### Scripts Reference
-
-| Command                    | What it does                                                          |
-| -------------------------- | --------------------------------------------------------------------- |
-| `npm run dev`              | Watch mode — Vite rebuilds `dist/` on every file change               |
-| `npm start`                | Launch Firefox with the extension loaded from `dist/`                 |
-| `npm run build:dev`        | One-time dev build (source maps, console logs)                        |
-| `npm run build:prod`       | One-time production build (minified, no logs)                         |
-| `npm run build:firefox`    | Production build targeting Firefox                                    |
-| `npm run build:chromium`   | Production build targeting Chrome/Brave/Edge                          |
-| `npm test`                 | Run all tests                                                         |
-| `npm run lint:ext`         | Lint the extension manifest and files                                 |
-| `npm run validate`         | Type-check + lint + format check + tests (run before PRs)             |
-| `npm run package`          | Firefox production build + zip for AMO submission                     |
-| `npm run package:chromium` | Chromium production build + zip for Chrome Web Store                  |
-| `npm run package:xpi`      | Production build + package as `.xpi` for sideloading                  |
-| `npm run package:source`   | Zip source code for AMO review (excludes node_modules, dist, etc.)    |
-| `npm run sign:xpi`         | Sign the built `.xpi` via AMO unlisted channel (requires credentials) |
-| `npm run sign:xpi:amo`     | Sign the built `.xpi` via AMO listed channel (requires credentials)   |
-| `npm run start:firefox`    | Launch Firefox with the extension loaded                              |
-| `npm run start:chrome`     | Build for Chromium + launch Chrome                                    |
-| `npm run start:brave`      | Build for Chromium + launch Brave                                     |
-| `npm run start:android`    | Launch on Firefox for Android (USB, auto-detects device)              |
-
-### Testing on Android
-
-Requires `adb` (`brew install android-platform-tools`) and a USB-connected Android device with Firefox installed.
-
-1. Enable Developer Options on your device (Settings → About Phone → tap Build Number 7 times)
-2. Enable USB Debugging (Settings → Developer Options → USB Debugging)
-3. In Firefox for Android: Settings → Remote debugging via USB → On
-4. Connect via USB and run:
-
-```bash
-npm run build:dev
-npm run start:android
-```
-
-The script auto-detects the first connected device via `adb`. To target a specific device, pass its ID manually:
-
-```bash
-npm run start:android -- <device-id>
-```
-
-You can find device IDs with `adb devices`.
-
-### Release Pipeline (Maintainers)
-
-A single `v*` tag push (e.g., `v1.18.0`) triggers the full release pipeline:
-
-1. Build Firefox, package unsigned XPI and source zip
-2. Inject build version (`1.18.0.{run}`) → sign unlisted (self-hosted)
-3. Restore clean dist → strip `update_url` → sign listed (AMO) with source
-4. Build Chromium
-5. Create one GitHub Release with all artifacts (signed XPI, unsigned XPI, Chromium zip, source zip)
-6. Deploy `update.json` to GitHub Pages for self-hosted auto-updates
-
-The unlisted XPI uses a 4-segment version (e.g., `1.18.0.42`) while the AMO submission uses the clean 3-segment version (`1.18.0`). This avoids AMO's version uniqueness constraint across channels.
-
-**Required GitHub Actions secrets:**
-
-| Secret           | Description              |
-| ---------------- | ------------------------ |
-| `AMO_JWT_ISSUER` | AMO API key (JWT issuer) |
-| `AMO_JWT_SECRET` | AMO API secret           |
-
-To generate credentials:
-
-1. Go to the [AMO API Keys page](https://addons.mozilla.org/en-US/developers/addon/api/key/)
-2. Sign in with the Mozilla account that owns the extension listing
-
-**Releasing:**
-
-```bash
-npm run validate
-npm version patch   # or minor/major
-git push origin main --tags
-```
-
-**Local signing (testing):** Set `AMO_JWT_ISSUER` and `AMO_JWT_SECRET` in your `.env`, then:
-
-```bash
-# Unlisted (self-hosted)
-npm run build:firefox
-npm run package:xpi
-npm run sign:xpi
-
-# Listed (AMO)
-npm run build:firefox
-npm run package:source
-npm run sign:xpi:amo
-```
-
-### Building for Review
-
-**Firefox (AMO):**
-
-```bash
-npm install
-cp .env.example .env
-npm run package
-```
-
-This runs a production build and packages the extension into `web-ext-artifacts/geospoof-<version>.zip` for AMO submission. TypeScript source in `src/` is compiled via Vite + esbuild. No hand-minification or obfuscation.
-
-**Chromium (Chrome Web Store):**
-
-```bash
-npm install
-cp .env.example .env
-npm run package:chromium
-```
-
-This produces `web-ext-artifacts/geospoof-chromium-v<version>.zip`.
-
-### Project Structure
-
-```
-src/
-├── background/          # Settings, geocoding, timezone resolution, VPN sync
-├── build/               # Manifest generator (Firefox/Chromium targets)
-├── content/
-│   ├── index.ts         # Content script (bridge between background and injected)
-│   └── injected/        # Page-context API overrides (12 modules)
-├── popup/               # Extension popup UI
-└── shared/              # Shared types and utilities
-tests/
-├── unit/                # Unit tests
-├── integration/         # Integration tests
-└── property/            # Property-based tests (fast-check)
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, scripts, testing, and the release pipeline.
 
 ## Legal
 
@@ -364,7 +116,9 @@ MIT — see [LICENSE](LICENSE).
 ## Links
 
 - [User Guide](USER_GUIDE.md)
+- [API Documentation](API.md)
 - [Privacy Policy](PRIVACY_POLICY.md)
+- [Contributing](CONTRIBUTING.md)
 - [Report Issues](https://github.com/anthonysgro/geospoof/issues)
 - [Buy me a coffee](https://buymeacoffee.com/sgro)
 

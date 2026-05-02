@@ -5,7 +5,7 @@ Quick guide to using GeoSpoof to spoof your browser's geolocation and protect ag
 ## Quick Start
 
 1. **Set Your Location**
-   - Search for a city OR enter coordinates manually
+   - Search for a city, enter coordinates manually, or use "Sync with VPN" to auto-detect your VPN exit region
    - Click a search result to set location
 
 2. **Enable Protection**
@@ -21,6 +21,12 @@ Quick guide to using GeoSpoof to spoof your browser's geolocation and protect ag
 ### Location Spoofing
 
 Overrides your browser's geolocation to show a fake location. Works on any website that requests your location.
+
+### VPN Sync
+
+Detects your current public IP and automatically sets your spoofed location to match your VPN exit region. Enable the "Sync with VPN" toggle, then tap "Sync Now".
+
+> Note: VPN sync uses third-party IP geolocation services. If your VPN's threat protection blocks IP lookup domains, sync may fail — disable it temporarily if needed.
 
 ### WebRTC Protection
 
@@ -45,6 +51,12 @@ Automatically adjusts your browser's timezone to match your spoofed location for
 1. Click "Enter Coordinates" tab
 2. Enter latitude (-90 to 90) and longitude (-180 to 180)
 3. Click "Set Location"
+
+**Option 3: Sync with VPN**
+
+1. Enable the "Sync with VPN" toggle
+2. Click "Sync Now"
+3. Your location will be set to match your VPN exit region
 
 ### Enabling Protection
 
@@ -97,8 +109,10 @@ Use the built-in test links at the bottom of the extension:
 
 **Extension not loading?**
 
+- Refresh the page after enabling protection
 - Close and reopen the extension popup
-- Restart Firefox if issues persist
+- Restart the browser if issues persist
+- **Safari**: Make sure the extension is enabled in Settings → Safari → Extensions → GeoSpoof → Allow
 
 ## Privacy
 
