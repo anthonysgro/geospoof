@@ -14,7 +14,7 @@
 [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/geo-spoof/) &nbsp;|&nbsp; [Chrome Web Store](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje) &nbsp;|&nbsp; [Report Issues](https://github.com/anthonysgro/geospoof/issues) &nbsp;|&nbsp; [User Guide](USER_GUIDE.md)
 
   <p>
-    <img src="assets/chrome-store/screenshot1.png" alt="GeoSpoof main view" width="600" />
+    <img src="assets/chrome-store/screenshot1.png" alt="GeoSpoof main view" width="960" />
   </p>
 </div>
 
