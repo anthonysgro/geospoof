@@ -15,10 +15,13 @@ export async function handleVpnSync(forceRefresh: boolean): Promise<void> {
   hideVpnSyncError();
 
   try {
+    console.log("[POPUP-VPN] Sending SYNC_VPN message, forceRefresh:", forceRefresh);
+    const sendStart = Date.now();
     const response = (await browser.runtime.sendMessage({
       type: "SYNC_VPN",
       payload: { forceRefresh },
     })) as SyncVpnSuccessResponse | SyncVpnErrorResponse;
+    console.log("[POPUP-VPN] Response received in", Date.now() - sendStart, "ms:", response);
 
     if ("error" in response) {
       displayVpnSyncError(response);
@@ -27,7 +30,7 @@ export async function handleVpnSync(forceRefresh: boolean): Promise<void> {
       await loadSettings();
     }
   } catch (error: unknown) {
-    console.error("VPN sync failed:", error);
+    console.error("[POPUP-VPN] sendMessage threw:", error);
     displayVpnSyncError({
       error: "NETWORK",
       message: "A network error occurred. Please try again.",

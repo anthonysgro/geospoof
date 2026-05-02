@@ -6,7 +6,7 @@
 **Your VPN changes your IP address. Your browser is still telling websites where you actually are.**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Firefox](https://img.shields.io/badge/Firefox-140%2B-FF7139.svg?logo=firefox-browser)](https://addons.mozilla.org/en-US/firefox/addon/geo-spoof/)
+[![Firefox](https://img.shields.io/badge/Firefox-140%2B-FF7139.svg?logo=firefox-browser)](https://addons.mozilla.org/firefox/addon/geo-spoof/)
 [![Chrome Web Store](https://img.shields.io/badge/Chrome_Web_Store-available-4285F4.svg?logo=googlechrome)](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje)
 [![Version](https://img.shields.io/github/package-json/v/anthonysgro/geospoof?color=green)](https://github.com/anthonysgro/geospoof/releases)
 
@@ -119,7 +119,7 @@ Overridden functions are disguised to pass standard detection checks used by mos
 
 ## Installation
 
-**Firefox:** https://addons.mozilla.org/en-US/firefox/addon/geo-spoof
+**Firefox:** https://addons.mozilla.org/firefox/addon/geo-spoof/
 
 **Chrome / Brave / Edge:** https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje
 
@@ -182,9 +182,13 @@ See [USER_GUIDE.md](USER_GUIDE.md) for details.
 | [Nominatim](https://nominatim.org/) (OpenStreetMap)                | City search, reverse geocoding | Search query or coordinates                                            | [GitHub](https://github.com/osm-search/Nominatim)                      |
 | [browser-geo-tz](https://www.npmjs.com/package/browser-geo-tz) CDN | Timezone resolution            | HTTPS range requests for boundary data chunks (coordinates stay local) | [GitHub](https://github.com/kevmo314/browser-geo-tz)                   |
 | [ipify](https://www.ipify.org/)                                    | VPN sync enabled               | HTTPS request to detect your public IP                                 | [GitHub](https://github.com/rdegges/ipify-api)                         |
-| [FreeIPAPI](https://freeipapi.com/)                                | VPN sync enabled               | Your public IP (to geolocate VPN exit region)                          | Closed source ([Privacy Policy](https://freeipapi.com/privacy-policy)) |
+| [GeoJS](https://www.geojs.io/)                                     | VPN sync enabled               | Your public IP (to geolocate VPN exit region)                          | [GitHub](https://github.com/jloh/geojs)                                |
+| [FreeIPAPI](https://freeipapi.com/)                                | VPN sync fallback              | Your public IP (fallback geolocation service)                          | Closed source ([Privacy Policy](https://freeipapi.com/privacy-policy)) |
+| [ReallyFreeGeoIP](https://reallyfreegeoip.org/)                    | VPN sync fallback              | Your public IP (fallback geolocation service)                          | [GitHub](https://github.com/reallyfreegeoip/reallyfreegeoip)           |
 
-> **VPN Sync privacy note:** When you enable "Sync with VPN," your public IP is sent to `api.ipify.org` and `freeipapi.com` over HTTPS to determine your VPN exit region. Your IP is never saved to disk — it's held only in memory and cleared when you disable VPN sync. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for full details.
+> **VPN Sync privacy note:** When you enable "Sync with VPN," your public IP is sent to `api.ipify.org` and up to three geolocation services (`get.geojs.io`, `free.freeipapi.com`, `reallyfreegeoip.org`) in parallel over HTTPS to determine your VPN exit region. Your IP is never saved to disk — it's held only in memory and cleared when you disable VPN sync. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for full details.
+
+No data is sent to the extension developer. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
 
 No data is sent to the extension developer. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
 

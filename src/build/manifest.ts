@@ -6,7 +6,7 @@
  */
 
 /** Valid browser targets for the build system. */
-export type BrowserTarget = "firefox" | "chromium";
+export type BrowserTarget = "firefox" | "chromium" | "safari";
 
 /**
  * Validate and return the browser target from the BROWSER env var.
@@ -14,10 +14,11 @@ export type BrowserTarget = "firefox" | "chromium";
  */
 export function resolveBrowserTarget(envBrowser: string | undefined): BrowserTarget {
   if (!envBrowser) return "firefox";
-  if (envBrowser === "firefox" || envBrowser === "chromium") return envBrowser;
+  if (envBrowser === "firefox" || envBrowser === "chromium" || envBrowser === "safari")
+    return envBrowser;
   throw new Error(
     `Invalid BROWSER environment variable: "${envBrowser}". ` +
-      `Valid values are "firefox" or "chromium".`
+      `Valid values are "firefox", "chromium", or "safari".`
   );
 }
 
@@ -64,11 +65,12 @@ export function generateManifest(target: BrowserTarget, version: string): Record
       "32": "icons/icon-32.png",
       "48": "icons/icon-48.png",
       "128": "icons/icon-128.png",
+      "1024": "icons/icon-1024.png",
     },
   };
 
   if (target === "firefox") {
-  // Firefox: service_worker-less background, injected.js as world: "MAIN" content script
+  // Firefox: scripts-based background, injected.js as world: "MAIN" content script
   return {
     ...shared,
     browser_specific_settings: {
@@ -105,6 +107,43 @@ export function generateManifest(target: BrowserTarget, version: string): Record
       },
     ],
   };
+  }
+
+  if (target === "safari") {
+    // Safari: scripts-based background (avoids service worker suspension bug),
+    // no privacy permission (unsupported), no browser_specific_settings.
+    // Safari may not honor <all_urls> wildcard for CORS exemption in background pages,
+    // so we explicitly list the geo/IP service domains to ensure CORS is bypassed.
+    const safariPermissions = (shared.permissions as string[]).filter((p) => p !== "privacy");
+    const safariHostPermissions = [
+      ...(shared.host_permissions as string[]),
+      "https://api.ipify.org/*",
+      "https://get.geojs.io/*",
+      "https://free.freeipapi.com/*",
+      "https://ipapi.co/*",
+      "https://reallyfreegeoip.org/*",
+      "https://ipinfo.io/*",
+      "https://nominatim.openstreetmap.org/*",
+    ];
+    return {
+      ...shared,
+      permissions: safariPermissions,
+      host_permissions: safariHostPermissions,
+      background: {
+        scripts: ["background/background.js"],
+        type: "module",
+      },
+      content_scripts: [
+        ...(shared.content_scripts as Array<Record<string, unknown>>),
+        {
+          matches: ["<all_urls>"],
+          js: ["content/injected.js"],
+          run_at: "document_start",
+          all_frames: true,
+          world: "MAIN",
+        },
+      ],
+    };
   }
 
   // Chromium: service_worker background, injected.js as world: "MAIN" content script

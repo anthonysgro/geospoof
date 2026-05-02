@@ -1,6 +1,6 @@
 {
   "name": "geospoof-extension",
-  "version": "1.17.16",
+  "version": "1.18.0",
   "type": "module",
   "description": "Firefox extension for geolocation spoofing and location privacy",
   "scripts": {
@@ -9,6 +9,7 @@
     "build:prod": "vite build --mode production",
     "build:firefox": "BROWSER=firefox vite build --mode production",
     "build:chromium": "BROWSER=chromium vite build --mode production",
+    "build:safari": "BROWSER=safari vite build --mode production",
     "clean": "rm -rf dist coverage web-ext-artifacts geospoof-*.zip geospoof-*.xpi",
     "dev": "vite build --watch",
     "format": "prettier --write \"**/*.{js,ts,json,md,css,html}\"",

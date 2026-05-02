@@ -8,40 +8,61 @@ import { storageData, sessionStorageData } from "../../setup";
 import { importBackground } from "../../helpers/import-background";
 import { DEFAULT_SETTINGS } from "@/shared/types/settings";
 
+// Mock browser-geo-tz so timezone lookups don't make real CDN requests
+vi.mock("browser-geo-tz", () => ({
+  init: vi.fn(() => ({
+    find: vi.fn().mockResolvedValue(["America/New_York"]),
+  })),
+}));
+
+/**
+ * Mock fetch for VPN sync flow:
+ * 1. IP detection via ipify
+ * 2. Geolocation via geojs.io (primary) — returns lat/lng as strings
+ * 3. Geolocation via freeipapi (fallback #1)
+ * 4. Geolocation via reallyfreegeoip (fallback #2)
+ * All three geo services run in parallel; first success wins.
+ */
 function mockFetchForVpnSync(ip: string, lat: number, lon: number, city: string, country: string) {
   vi.mocked(fetch)
     .mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({ ip }),
     } as Response)
+    // geojs.io — lat/lng are strings
+    .mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          ip,
+          city,
+          country,
+          latitude: String(lat),
+          longitude: String(lon),
+        }),
+    } as Response)
+    // freeipapi
     .mockResolvedValueOnce({
       ok: true,
       json: () =>
         Promise.resolve({
           ipAddress: ip,
-          latitude: lat,
-          longitude: lon,
           cityName: city,
           countryName: country,
+          latitude: lat,
+          longitude: lon,
         }),
     } as Response)
-    // reverse geocode call from handleSetLocation
+    // reallyfreegeoip
     .mockResolvedValueOnce({
       ok: true,
       json: () =>
         Promise.resolve({
-          display_name: `${city}, ${country}`,
-          address: { city, country },
-        }),
-    } as Response)
-    // timezone lookup call from handleSetLocation
-    .mockResolvedValueOnce({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          timezoneId: "America/New_York",
-          rawOffset: -5,
-          dstOffset: -4,
+          ip,
+          city,
+          country_name: country,
+          latitude: lat,
+          longitude: lon,
         }),
     } as Response);
 }
@@ -134,10 +155,26 @@ describe("SYNC_VPN message handler", () => {
     await clearIpGeoCache();
     await resetRateLimiter();
 
+    // Mock: IP detection succeeds, then all four geo services fail (geojs, freeipapi, reallyfreegeoip, ipinfo)
     vi.mocked(fetch)
       .mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ ip: "203.0.113.42" }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: () => Promise.resolve({}),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: () => Promise.resolve({}),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: () => Promise.resolve({}),
       } as Response)
       .mockResolvedValueOnce({
         ok: false,
@@ -289,7 +326,7 @@ describe("Startup auto-sync", () => {
       enabled: true,
     };
 
-    // Mock fetch for the auto-sync flow: IP detection + geolocation + reverse geocode + timezone
+    // Mock fetch for the auto-sync flow: IP detection + 3 parallel geo services
     vi.mocked(fetch)
       .mockResolvedValueOnce({
         ok: true,
@@ -299,28 +336,33 @@ describe("Startup auto-sync", () => {
         ok: true,
         json: () =>
           Promise.resolve({
+            ip: "203.0.113.42",
+            city: "San Francisco",
+            country: "United States",
+            latitude: "37.7749",
+            longitude: "-122.4194",
+          }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
             ipAddress: "203.0.113.42",
-            latitude: 37.7749,
-            longitude: -122.4194,
             cityName: "San Francisco",
             countryName: "United States",
+            latitude: 37.7749,
+            longitude: -122.4194,
           }),
       } as Response)
       .mockResolvedValueOnce({
         ok: true,
         json: () =>
           Promise.resolve({
-            display_name: "San Francisco, United States",
-            address: { city: "San Francisco", country: "United States" },
-          }),
-      } as Response)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            timezoneId: "America/Los_Angeles",
-            rawOffset: -8,
-            dstOffset: -7,
+            ip: "203.0.113.42",
+            city: "San Francisco",
+            country_name: "United States",
+            latitude: 37.7749,
+            longitude: -122.4194,
           }),
       } as Response);
 
@@ -392,7 +434,7 @@ describe("Startup auto-sync", () => {
       vpnSyncEnabled: true,
     };
 
-    // Mock fetch for IP detection + geolocation + reverse geocode + timezone
+    // Mock fetch for IP detection + 3 parallel geo services
     vi.mocked(fetch)
       .mockResolvedValueOnce({
         ok: true,
@@ -402,28 +444,33 @@ describe("Startup auto-sync", () => {
         ok: true,
         json: () =>
           Promise.resolve({
+            ip: "10.0.0.1",
+            city: "Berlin",
+            country: "Germany",
+            latitude: "52.52",
+            longitude: "13.405",
+          }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
             ipAddress: "10.0.0.1",
-            latitude: 52.52,
-            longitude: 13.405,
             cityName: "Berlin",
             countryName: "Germany",
+            latitude: 52.52,
+            longitude: 13.405,
           }),
       } as Response)
       .mockResolvedValueOnce({
         ok: true,
         json: () =>
           Promise.resolve({
-            display_name: "Berlin, Germany",
-            address: { city: "Berlin", country: "Germany" },
-          }),
-      } as Response)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            timezoneId: "Europe/Berlin",
-            rawOffset: 1,
-            dstOffset: 2,
+            ip: "10.0.0.1",
+            city: "Berlin",
+            country_name: "Germany",
+            latitude: 52.52,
+            longitude: 13.405,
           }),
       } as Response);
 

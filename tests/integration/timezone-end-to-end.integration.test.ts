@@ -20,7 +20,9 @@ import { vi } from "vitest";
 
 // Mock browser-geo-tz at the module level — timezone resolution is now offline
 vi.mock("browser-geo-tz", () => ({
-  find: vi.fn(),
+  init: vi.fn(() => ({
+    find: vi.fn().mockResolvedValue([]),
+  })),
 }));
 
 // Mock DOM for content script testing
@@ -46,9 +48,20 @@ vi.mock("browser-geo-tz", () => ({
 const background = await import("@/background");
 const fetchMock = vi.mocked(fetch);
 
-// Import the mocked find function
-const { find: findMock } = await import("browser-geo-tz");
-const mockedFind = vi.mocked(findMock);
+// Get the find mock from the object returned by init()
+const { init: _geoTzInitMock } = await import("browser-geo-tz");
+const _initMocked = vi.mocked(_geoTzInitMock);
+function getMockedFind() {
+  const results = _initMocked.mock.results;
+  const lastResult = results[results.length - 1];
+  if (lastResult && lastResult.type === "return") {
+    return vi.mocked((lastResult.value as { find: ReturnType<typeof vi.fn> }).find);
+  }
+  const findFn = vi.fn().mockResolvedValue([]);
+  _initMocked.mockReturnValue({ find: findFn });
+  return findFn;
+}
+const mockedFind = getMockedFind();
 
 describe("Timezone Spoofing End-to-End Integration Tests", () => {
   beforeEach(() => {

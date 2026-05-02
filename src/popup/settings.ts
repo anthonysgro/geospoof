@@ -37,6 +37,15 @@ export async function loadSettings(): Promise<void> {
       webrtcToggle.checked = settings.webrtcProtection;
     }
 
+    // Hide WebRTC controls on browsers that don't support the privacy API (e.g. Safari)
+    const webrtcSupported = !!browser.privacy?.network?.webRTCIPHandlingPolicy;
+    const webrtcSection = document.querySelector<HTMLElement>(".webrtc-section");
+    const webrtcDetailSection = document
+      .getElementById("detailWebRTC")
+      ?.closest<HTMLElement>(".detail-section");
+    if (webrtcSection) webrtcSection.style.display = webrtcSupported ? "" : "none";
+    if (webrtcDetailSection) webrtcDetailSection.style.display = webrtcSupported ? "" : "none";
+
     updateStatusBadge(settings.enabled);
 
     if (settings.location) {

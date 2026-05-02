@@ -19,6 +19,8 @@ import { syncVpnLocation } from "./vpn-sync";
 
 const logger = createLogger("BG");
 
+console.log("[BG] Background script loading...");
+
 // Re-export everything so `import("@/background")` keeps working for tests
 export { DEFAULT_SETTINGS } from "@/shared/types/settings";
 export { isValidIANATimezone } from "@/shared/utils/type-guards";
@@ -56,6 +58,7 @@ export {
   resetRateLimiter,
   MIN_REQUEST_INTERVAL,
   REQUEST_TIMEOUT,
+  GEO_TIMEOUT,
 } from "./vpn-sync";
 export type { IpGeolocationResult, VpnSyncError, VpnSyncResponse } from "./vpn-sync";
 
