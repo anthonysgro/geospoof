@@ -19,6 +19,8 @@ import { syncVpnLocation } from "./vpn-sync";
 
 const logger = createLogger("BG");
 
+console.log("[BG] Background script loading...");
+
 // Re-export everything so `import("@/background")` keeps working for tests
 export { DEFAULT_SETTINGS } from "@/shared/types/settings";
 export { isValidIANATimezone } from "@/shared/utils/type-guards";

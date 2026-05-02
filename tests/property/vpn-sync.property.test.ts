@@ -1,9 +1,10 @@
 /**
- * Property-Based Tests for VPN Sync — FreeIPAPI Migration
- * Feature: freeipapi-migration
+ * Property-Based Tests for VPN Sync — ipwho.is + FreeIPAPI Fallback
+ * Feature: ipwhois-migration
  *
- * Tests use the two-step architecture: ipify.org (IP detection) + FreeIPAPI (geolocation).
- * All mocks use FreeIPAPI response shape: { ipAddress, latitude, longitude, cityName, countryName }.
+ * Tests use the two-step architecture: ipify.org (IP detection) + ipwho.is (primary geolocation)
+ * with freeipapi as fallback.
+ * All mocks use ipwho.is response shape: { ip, success, city, country, latitude, longitude }.
  */
 
 import fc from "fast-check";
@@ -26,7 +27,7 @@ function ipv4Arb(): fc.Arbitrary<string> {
     .map(([a, b, c, d]) => `${a}.${b}.${c}.${d}`);
 }
 
-/** Mock a successful two-step fetch: ipify → FreeIPAPI */
+/** Mock a successful two-step fetch: ipify → ipwho.is */
 function mockTwoStepFetch(
   ip: string,
   geo: { latitude: number; longitude: number; cityName?: string; countryName?: string }
@@ -40,11 +41,13 @@ function mockTwoStepFetch(
       ok: true,
       json: () =>
         Promise.resolve({
-          ipAddress: ip,
+          ip,
+          success: true,
+          type: "IPv4",
+          city: geo.cityName ?? "TestCity",
+          country: geo.countryName ?? "TestCountry",
           latitude: geo.latitude,
           longitude: geo.longitude,
-          cityName: geo.cityName ?? "TestCity",
-          countryName: geo.countryName ?? "TestCountry",
         }),
     } as Response);
 }
@@ -144,7 +147,7 @@ describe("Feature: vpn-region-sync, Property 1: Invalid IP rejection", () => {
 
 /**
  * Feature: vpn-region-sync, Property 2: Out-of-range coordinate rejection
- * Updated for FreeIPAPI: uses syncVpnLocation with two-step mocks instead of geolocateIp.
+ * Updated for ipwho.is: uses syncVpnLocation with two-step mocks.
  * Validates: Requirements 2.4
  */
 describe("Feature: vpn-region-sync, Property 2: Out-of-range coordinate rejection", () => {
@@ -159,10 +162,23 @@ describe("Feature: vpn-region-sync, Property 2: Out-of-range coordinate rejectio
           await resetRateLimiter();
 
           const testIp = "1.2.3.4";
+          // ipwho.is (primary) returns bad coords, freeipapi (fallback) also returns bad coords
           vi.mocked(fetch)
             .mockResolvedValueOnce({
               ok: true,
               json: () => Promise.resolve({ ip: testIp }),
+            } as Response)
+            .mockResolvedValueOnce({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  ip: testIp,
+                  success: true,
+                  city: "Test",
+                  country: "Test",
+                  latitude: lat,
+                  longitude: lon,
+                }),
             } as Response)
             .mockResolvedValueOnce({
               ok: true,
@@ -198,10 +214,23 @@ describe("Feature: vpn-region-sync, Property 2: Out-of-range coordinate rejectio
           await resetRateLimiter();
 
           const testIp = "1.2.3.4";
+          // Both services return bad coords
           vi.mocked(fetch)
             .mockResolvedValueOnce({
               ok: true,
               json: () => Promise.resolve({ ip: testIp }),
+            } as Response)
+            .mockResolvedValueOnce({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  ip: testIp,
+                  success: true,
+                  city: "Test",
+                  country: "Test",
+                  latitude: lat,
+                  longitude: lon,
+                }),
             } as Response)
             .mockResolvedValueOnce({
               ok: true,
@@ -237,10 +266,23 @@ describe("Feature: vpn-region-sync, Property 2: Out-of-range coordinate rejectio
           await resetRateLimiter();
 
           const testIp = "1.2.3.4";
+          // Both services return bad coords
           vi.mocked(fetch)
             .mockResolvedValueOnce({
               ok: true,
               json: () => Promise.resolve({ ip: testIp }),
+            } as Response)
+            .mockResolvedValueOnce({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  ip: testIp,
+                  success: true,
+                  city: "Test",
+                  country: "Test",
+                  latitude: lat,
+                  longitude: lon,
+                }),
             } as Response)
             .mockResolvedValueOnce({
               ok: true,
@@ -268,7 +310,7 @@ describe("Feature: vpn-region-sync, Property 2: Out-of-range coordinate rejectio
 
 /**
  * Feature: vpn-region-sync, Property 3: Sync coordinates flow-through
- * Updated for FreeIPAPI response shape.
+ * Updated for ipwho.is response shape.
  * Validates: Requirements 2.2
  */
 describe("Feature: vpn-region-sync, Property 3: Sync coordinates flow-through", () => {
@@ -294,11 +336,12 @@ describe("Feature: vpn-region-sync, Property 3: Sync coordinates flow-through", 
               ok: true,
               json: () =>
                 Promise.resolve({
-                  ipAddress: testIp,
+                  ip: testIp,
+                  success: true,
+                  city,
+                  country,
                   latitude: lat,
                   longitude: lon,
-                  cityName: city,
-                  countryName: country,
                 }),
             } as Response);
 
@@ -320,7 +363,7 @@ describe("Feature: vpn-region-sync, Property 3: Sync coordinates flow-through", 
 
 /**
  * Feature: vpn-region-sync, Property 4: Success response completeness
- * Updated for FreeIPAPI response shape.
+ * Updated for ipwho.is response shape.
  * Validates: Requirements 6.2
  */
 describe("Feature: vpn-region-sync, Property 4: Success response completeness", () => {
@@ -346,11 +389,12 @@ describe("Feature: vpn-region-sync, Property 4: Success response completeness", 
               ok: true,
               json: () =>
                 Promise.resolve({
-                  ipAddress: testIp,
+                  ip: testIp,
+                  success: true,
+                  city,
+                  country,
                   latitude: lat,
                   longitude: lon,
-                  cityName: city,
-                  countryName: country,
                 }),
             } as Response);
 
@@ -376,7 +420,7 @@ describe("Feature: vpn-region-sync, Property 4: Success response completeness", 
 
 /**
  * Feature: vpn-region-sync, Property 5: Error response structure
- * Updated for FreeIPAPI: geo_fail mock uses invalid FreeIPAPI response instead of { status: "fail" }.
+ * Updated for ipwho.is + freeipapi fallback: geo_fail mock uses invalid response for both services.
  * Validates: Requirements 6.3
  */
 describe("Feature: vpn-region-sync, Property 5: Error response structure", () => {
@@ -409,11 +453,13 @@ describe("Feature: vpn-region-sync, Property 5: Error response structure", () =>
         await resetRateLimiter();
 
         const testIp = "203.0.113.42";
+        // Mock: IP detection succeeds, ipwho.is (primary) fails, freeipapi (fallback) fails
         vi.mocked(fetch)
           .mockResolvedValueOnce({
             ok: true,
             json: () => Promise.resolve({ ip: testIp }),
           } as Response)
+          .mockRejectedValueOnce(new Error(errorMsg))
           .mockRejectedValueOnce(new Error(errorMsg));
 
         const result = await syncVpnLocation(true);
@@ -440,11 +486,23 @@ describe("Feature: vpn-region-sync, Property 5: Error response structure", () =>
         if (failureType === "ip_fail") {
           vi.mocked(fetch).mockRejectedValueOnce(new Error("timeout"));
         } else if (failureType === "geo_fail") {
-          // Invalid FreeIPAPI response (missing ipAddress, invalid shape)
+          // Invalid ipwho.is response (success: false), then invalid freeipapi response
           vi.mocked(fetch)
             .mockResolvedValueOnce({
               ok: true,
               json: () => Promise.resolve({ ip: "1.2.3.4" }),
+            } as Response)
+            .mockResolvedValueOnce({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  ip: "not-a-valid-ip",
+                  success: false,
+                  city: "",
+                  country: "",
+                  latitude: 0,
+                  longitude: 0,
+                }),
             } as Response)
             .mockResolvedValueOnce({
               ok: true,
@@ -458,11 +516,13 @@ describe("Feature: vpn-region-sync, Property 5: Error response structure", () =>
                 }),
             } as Response);
         } else {
+          // Network error on both geolocation services
           vi.mocked(fetch)
             .mockResolvedValueOnce({
               ok: true,
               json: () => Promise.resolve({ ip: "1.2.3.4" }),
             } as Response)
+            .mockRejectedValueOnce(new Error("network error"))
             .mockRejectedValueOnce(new Error("network error"));
         }
 
@@ -481,7 +541,7 @@ describe("Feature: vpn-region-sync, Property 5: Error response structure", () =>
 
 /**
  * Feature: vpn-region-sync, Property 7: Cache hit returns cached result
- * Updated for FreeIPAPI response shape.
+ * Updated for ipwho.is response shape.
  * Validates: Requirements 8.2
  */
 describe("Feature: vpn-region-sync, Property 7: Cache hit returns cached result", () => {
@@ -497,7 +557,7 @@ describe("Feature: vpn-region-sync, Property 7: Cache hit returns cached result"
 
           const testIp = "203.0.113.42";
 
-          // First call: populate cache with FreeIPAPI shape
+          // First call: populate cache with ipwho.is shape
           vi.mocked(fetch)
             .mockResolvedValueOnce({
               ok: true,
@@ -507,11 +567,12 @@ describe("Feature: vpn-region-sync, Property 7: Cache hit returns cached result"
               ok: true,
               json: () =>
                 Promise.resolve({
-                  ipAddress: testIp,
+                  ip: testIp,
+                  success: true,
+                  city: "Cached",
+                  country: "Test",
                   latitude: lat,
                   longitude: lon,
-                  cityName: "Cached",
-                  countryName: "Test",
                 }),
             } as Response);
 
@@ -521,7 +582,7 @@ describe("Feature: vpn-region-sync, Property 7: Cache hit returns cached result"
           vi.mocked(fetch).mockReset();
           await resetRateLimiter();
 
-          // Second call: cache hit — only ipify fetch, no FreeIPAPI
+          // Second call: cache hit — only ipify fetch, no ipwho.is
           vi.mocked(fetch).mockResolvedValueOnce({
             ok: true,
             json: () => Promise.resolve({ ip: testIp }),
@@ -544,7 +605,7 @@ describe("Feature: vpn-region-sync, Property 7: Cache hit returns cached result"
 
 /**
  * Feature: vpn-region-sync, Property 8: Force refresh bypasses cache
- * Updated for FreeIPAPI response shape.
+ * Updated for ipwho.is response shape.
  * Validates: Requirements 5.2, 8.3
  */
 describe("Feature: vpn-region-sync, Property 8: Force refresh bypasses cache", () => {
@@ -572,11 +633,12 @@ describe("Feature: vpn-region-sync, Property 8: Force refresh bypasses cache", (
               ok: true,
               json: () =>
                 Promise.resolve({
-                  ipAddress: testIp,
+                  ip: testIp,
+                  success: true,
+                  city: "First",
+                  country: "Test",
                   latitude: lat1,
                   longitude: lon1,
-                  cityName: "First",
-                  countryName: "Test",
                 }),
             } as Response);
 
@@ -593,11 +655,12 @@ describe("Feature: vpn-region-sync, Property 8: Force refresh bypasses cache", (
               ok: true,
               json: () =>
                 Promise.resolve({
-                  ipAddress: testIp,
+                  ip: testIp,
+                  success: true,
+                  city: "Second",
+                  country: "Test",
                   latitude: lat2,
                   longitude: lon2,
-                  cityName: "Second",
-                  countryName: "Test",
                 }),
             } as Response);
 
@@ -617,7 +680,7 @@ describe("Feature: vpn-region-sync, Property 8: Force refresh bypasses cache", (
 
 /**
  * Feature: vpn-region-sync, Property 9: Rate limiting enforces minimum interval
- * Updated for FreeIPAPI: two fetches per sync (ipify + FreeIPAPI).
+ * Updated for ipwho.is: two fetches per sync (ipify + ipwho.is).
  * Validates: Requirements 8.4
  */
 describe("Feature: vpn-region-sync, Property 9: Rate limiting enforces minimum interval", () => {
@@ -637,7 +700,7 @@ describe("Feature: vpn-region-sync, Property 9: Rate limiting enforces minimum i
         vi.mocked(fetch).mockImplementation(() => {
           fetchTimestamps.push(Date.now());
           fetchCallIndex++;
-          // Odd calls = ipify IP detection, even calls = FreeIPAPI geolocation
+          // Odd calls = ipify IP detection, even calls = ipwho.is geolocation
           if (fetchCallIndex % 2 === 1) {
             return Promise.resolve({
               ok: true,
@@ -649,11 +712,12 @@ describe("Feature: vpn-region-sync, Property 9: Rate limiting enforces minimum i
             ok: true,
             json: () =>
               Promise.resolve({
-                ipAddress: ip,
+                ip,
+                success: true,
+                city: "Test",
+                country: "Test",
                 latitude: 40,
                 longitude: -74,
-                cityName: "Test",
-                countryName: "Test",
               }),
           } as Response);
         });
@@ -679,19 +743,19 @@ describe("Feature: vpn-region-sync, Property 9: Rate limiting enforces minimum i
 });
 
 // ============================================================
-// New: freeipapi-migration properties
+// New: ipwhois-migration properties
 // ============================================================
 
 /**
- * Feature: freeipapi-migration, Property 1: Two HTTPS requests per sync
+ * Feature: ipwhois-migration, Property 1: Two HTTPS requests per sync
  *
  * For any successful syncVpnLocation(true), exactly two fetch calls are made:
  * first to https://api.ipify.org?format=json, second to a URL starting with
- * https://freeipapi.com/api/json/. Both URLs use HTTPS.
+ * https://ipwho.is/. Both URLs use HTTPS.
  *
  * Validates: Requirements 1.1, 1.2, 1.3
  */
-describe("Feature: freeipapi-migration, Property 1: Two HTTPS requests per sync", () => {
+describe("Feature: ipwhois-migration, Property 1: Two HTTPS requests per sync", () => {
   test("successful sync makes exactly two HTTPS fetch calls to correct endpoints", async () => {
     await fc.assert(
       fc.asyncProperty(ipv4Arb(), async (ip) => {
@@ -711,7 +775,7 @@ describe("Feature: freeipapi-migration, Property 1: Two HTTPS requests per sync"
         const secondUrl = vi.mocked(fetch).mock.calls[1][0] as string;
 
         expect(firstUrl).toBe("https://api.ipify.org?format=json");
-        expect(secondUrl).toMatch(/^https:\/\/free\.freeipapi\.com\/api\/json\//);
+        expect(secondUrl).toMatch(/^https:\/\/ipwho\.is\//);
         expect(firstUrl.startsWith("https://")).toBe(true);
         expect(secondUrl.startsWith("https://")).toBe(true);
       }),
@@ -721,17 +785,17 @@ describe("Feature: freeipapi-migration, Property 1: Two HTTPS requests per sync"
 });
 
 /**
- * Feature: freeipapi-migration, Property 2: Field mapping correctness
+ * Feature: ipwhois-migration, Property 2: Field mapping correctness
  *
- * For any valid FreeIPAPI response with valid IP, latitude in [-90, 90],
- * longitude in [-180, 180], and string cityName/countryName, the returned
+ * For any valid ipwho.is response with valid IP, latitude in [-90, 90],
+ * longitude in [-180, 180], and string city/country, the returned
  * IpGeolocationResult fields match the response fields and the ipGeoCache
  * contains the result keyed by IP.
  *
  * Validates: Requirements 2.1, 2.2, 2.3, 2.4, 2.5, 5.4
  */
-describe("Feature: freeipapi-migration, Property 2: Field mapping correctness", () => {
-  test("FreeIPAPI fields are correctly mapped to IpGeolocationResult", async () => {
+describe("Feature: ipwhois-migration, Property 2: Field mapping correctness", () => {
+  test("ipwho.is fields are correctly mapped to IpGeolocationResult", async () => {
     await fc.assert(
       fc.asyncProperty(
         ipv4Arb(),
@@ -739,12 +803,17 @@ describe("Feature: freeipapi-migration, Property 2: Field mapping correctness", 
         fc.double({ min: -180, max: 180, noNaN: true, noDefaultInfinity: true }),
         fc.string({ minLength: 0, maxLength: 50 }),
         fc.string({ minLength: 0, maxLength: 50 }),
-        async (ip, lat, lon, cityName, countryName) => {
+        async (ip, lat, lon, city, country) => {
           const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
           await clearIpGeoCache();
           await resetRateLimiter();
 
-          mockTwoStepFetch(ip, { latitude: lat, longitude: lon, cityName, countryName });
+          mockTwoStepFetch(ip, {
+            latitude: lat,
+            longitude: lon,
+            cityName: city,
+            countryName: country,
+          });
 
           const result = await syncVpnLocation(true);
           expect("error" in result).toBe(false);
@@ -752,8 +821,8 @@ describe("Feature: freeipapi-migration, Property 2: Field mapping correctness", 
             expect(result.ip).toBe(ip);
             expect(result.latitude).toBe(lat);
             expect(result.longitude).toBe(lon);
-            expect(result.city).toBe(cityName);
-            expect(result.country).toBe(countryName);
+            expect(result.city).toBe(city);
+            expect(result.country).toBe(country);
 
             // Cache should contain the result keyed by IP in session storage
             const cacheKey = `cache:ipGeo:${ip}`;
@@ -775,14 +844,14 @@ describe("Feature: freeipapi-migration, Property 2: Field mapping correctness", 
 });
 
 /**
- * Feature: freeipapi-migration, Property 3: Invalid coordinate rejection
+ * Feature: ipwhois-migration, Property 3: Invalid coordinate rejection
  *
- * For any FreeIPAPI response with out-of-range or non-numeric latitude/longitude,
+ * For any ipwho.is response with out-of-range or non-numeric latitude/longitude,
  * syncVpnLocation returns a VpnSyncError with error equal to "GEOLOCATION_FAILED".
  *
  * Validates: Requirements 2.6, 2.7
  */
-describe("Feature: freeipapi-migration, Property 3: Invalid coordinate rejection", () => {
+describe("Feature: ipwhois-migration, Property 3: Invalid coordinate rejection", () => {
   test("out-of-range coordinates return GEOLOCATION_FAILED", async () => {
     // Generate at least one coordinate that's out of range
     const outOfRangeLatArb = fc.oneof(
@@ -810,10 +879,23 @@ describe("Feature: freeipapi-migration, Property 3: Invalid coordinate rejection
           await resetRateLimiter();
 
           const testIp = "203.0.113.42";
+          // Both ipwho.is (primary) and freeipapi (fallback) return bad coords
           vi.mocked(fetch)
             .mockResolvedValueOnce({
               ok: true,
               json: () => Promise.resolve({ ip: testIp }),
+            } as Response)
+            .mockResolvedValueOnce({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  ip: testIp,
+                  success: true,
+                  city: "Test",
+                  country: "Test",
+                  latitude: lat,
+                  longitude: lon,
+                }),
             } as Response)
             .mockResolvedValueOnce({
               ok: true,
@@ -853,10 +935,79 @@ describe("Feature: freeipapi-migration, Property 3: Invalid coordinate rejection
           await resetRateLimiter();
 
           const testIp = "203.0.113.42";
+          // Both services return bad coords
           vi.mocked(fetch)
             .mockResolvedValueOnce({
               ok: true,
               json: () => Promise.resolve({ ip: testIp }),
+            } as Response)
+            .mockResolvedValueOnce({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  ip: testIp,
+                  success: true,
+                  city: "Test",
+                  country: "Test",
+                  latitude: lat,
+                  longitude: lon,
+                }),
+            } as Response)
+            .mockResolvedValueOnce({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  ipAddress: testIp,
+                  latitude: lat,
+                  longitude: lon,
+                  cityName: "Test",
+                  countryName: "Test",
+                }),
+            } as Response);
+
+          const result = await syncVpnLocation(true);
+          expect("error" in result).toBe(true);
+          if ("error" in result) {
+            expect(result.error).toBe("GEOLOCATION_FAILED");
+          }
+        }
+      ),
+      { numRuns: 100 }
+    );
+  }, 30000);
+
+  test("non-numeric coordinates return GEOLOCATION_FAILED", async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.oneof(
+          fc.tuple(fc.string({ minLength: 1, maxLength: 10 }), fc.constant(0)),
+          fc.tuple(fc.constant(0), fc.string({ minLength: 1, maxLength: 10 })),
+          fc.tuple(fc.constant(undefined), fc.constant(0)),
+          fc.tuple(fc.constant(0), fc.constant(null))
+        ),
+        async ([lat, lon]) => {
+          const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
+          await clearIpGeoCache();
+          await resetRateLimiter();
+
+          const testIp = "203.0.113.42";
+          // Both ipwho.is (primary) and freeipapi (fallback) return non-numeric coords
+          vi.mocked(fetch)
+            .mockResolvedValueOnce({
+              ok: true,
+              json: () => Promise.resolve({ ip: testIp }),
+            } as Response)
+            .mockResolvedValueOnce({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  ip: testIp,
+                  success: true,
+                  city: "Test",
+                  country: "Test",
+                  latitude: lat,
+                  longitude: lon,
+                }),
             } as Response)
             .mockResolvedValueOnce({
               ok: true,
@@ -883,15 +1034,15 @@ describe("Feature: freeipapi-migration, Property 3: Invalid coordinate rejection
 });
 
 /**
- * Feature: freeipapi-migration, Property 4: Missing city/country defaults to empty string
+ * Feature: ipwhois-migration, Property 4: Missing city/country defaults to empty string
  *
- * For any FreeIPAPI response with valid IP and coordinates but missing/non-string
- * cityName or countryName, the corresponding field defaults to "".
+ * For any ipwho.is response with valid IP and coordinates but missing/non-string
+ * city or country, the corresponding field defaults to "".
  *
  * Validates: Requirements 2.8
  */
-describe("Feature: freeipapi-migration, Property 4: Missing city/country defaults to empty string", () => {
-  test("missing or non-string cityName/countryName defaults to empty string", async () => {
+describe("Feature: ipwhois-migration, Property 4: Missing city/country defaults to empty string", () => {
+  test("missing or non-string city/country defaults to empty string", async () => {
     const nonStringArb = fc.oneof(
       fc.constant(undefined),
       fc.constant(null),
@@ -904,14 +1055,14 @@ describe("Feature: freeipapi-migration, Property 4: Missing city/country default
     await fc.assert(
       fc.asyncProperty(
         fc.oneof(
-          // Missing cityName
+          // Missing city
           fc.tuple(nonStringArb, fc.string({ minLength: 1, maxLength: 20 })),
-          // Missing countryName
+          // Missing country
           fc.tuple(fc.string({ minLength: 1, maxLength: 20 }), nonStringArb),
           // Both missing
           fc.tuple(nonStringArb, nonStringArb)
         ),
-        async ([cityName, countryName]) => {
+        async ([city, country]) => {
           const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
           await clearIpGeoCache();
           await resetRateLimiter();
@@ -926,21 +1077,22 @@ describe("Feature: freeipapi-migration, Property 4: Missing city/country default
               ok: true,
               json: () =>
                 Promise.resolve({
-                  ipAddress: testIp,
+                  ip: testIp,
+                  success: true,
+                  city,
+                  country,
                   latitude: 40.7128,
                   longitude: -74.006,
-                  cityName,
-                  countryName,
                 }),
             } as Response);
 
           const result = await syncVpnLocation(true);
           expect("error" in result).toBe(false);
           if (!("error" in result)) {
-            if (typeof cityName !== "string") {
+            if (typeof city !== "string") {
               expect(result.city).toBe("");
             }
-            if (typeof countryName !== "string") {
+            if (typeof country !== "string") {
               expect(result.country).toBe("");
             }
           }
@@ -952,15 +1104,15 @@ describe("Feature: freeipapi-migration, Property 4: Missing city/country default
 });
 
 /**
- * Feature: freeipapi-migration, Property 5: Invalid IP rejection
+ * Feature: ipwhois-migration, Property 5: Invalid IP rejection
  *
- * For any FreeIPAPI response where ipAddress is missing or not a valid IP address,
+ * For any ipwho.is response where ip is missing or not a valid IP address,
  * syncVpnLocation returns a VpnSyncError with error equal to "GEOLOCATION_FAILED".
  *
  * Validates: Requirements 2.9
  */
-describe("Feature: freeipapi-migration, Property 5: Invalid IP rejection", () => {
-  test("invalid ipAddress in FreeIPAPI response returns GEOLOCATION_FAILED", async () => {
+describe("Feature: ipwhois-migration, Property 5: Invalid IP rejection", () => {
+  test("invalid ip in ipwho.is response returns GEOLOCATION_FAILED", async () => {
     const invalidIpArb = fc.oneof(
       fc.constant(""),
       fc.constant("not-an-ip"),
@@ -985,10 +1137,23 @@ describe("Feature: freeipapi-migration, Property 5: Invalid IP rejection", () =>
         await resetRateLimiter();
 
         const detectedIp = "203.0.113.42";
+        // Both ipwho.is (primary) and freeipapi (fallback) return bad IP
         vi.mocked(fetch)
           .mockResolvedValueOnce({
             ok: true,
             json: () => Promise.resolve({ ip: detectedIp }),
+          } as Response)
+          .mockResolvedValueOnce({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                ip: badIp,
+                success: true,
+                city: "Test",
+                country: "Test",
+                latitude: 40,
+                longitude: -74,
+              }),
           } as Response)
           .mockResolvedValueOnce({
             ok: true,
@@ -1012,7 +1177,7 @@ describe("Feature: freeipapi-migration, Property 5: Invalid IP rejection", () =>
     );
   }, 30000);
 
-  test("missing ipAddress in FreeIPAPI response returns GEOLOCATION_FAILED", async () => {
+  test("missing ip in ipwho.is response returns GEOLOCATION_FAILED", async () => {
     await fc.assert(
       fc.asyncProperty(
         fc.oneof(fc.constant(undefined), fc.constant(null), fc.constant("")),
@@ -1022,10 +1187,23 @@ describe("Feature: freeipapi-migration, Property 5: Invalid IP rejection", () =>
           await resetRateLimiter();
 
           const detectedIp = "203.0.113.42";
+          // Both services return missing IP
           vi.mocked(fetch)
             .mockResolvedValueOnce({
               ok: true,
               json: () => Promise.resolve({ ip: detectedIp }),
+            } as Response)
+            .mockResolvedValueOnce({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  ip: missingIp,
+                  success: true,
+                  city: "Test",
+                  country: "Test",
+                  latitude: 40,
+                  longitude: -74,
+                }),
             } as Response)
             .mockResolvedValueOnce({
               ok: true,
@@ -1052,15 +1230,15 @@ describe("Feature: freeipapi-migration, Property 5: Invalid IP rejection", () =>
 });
 
 /**
- * Feature: freeipapi-migration, Property 6: Non-2xx HTTP status returns error with status code
+ * Feature: ipwhois-migration, Property 6: Non-2xx HTTP status returns error with status code
  *
  * For any non-2xx status from ipify, syncVpnLocation returns IP_DETECTION_FAILED with status
- * in message. For any non-2xx status from FreeIPAPI, returns GEOLOCATION_FAILED with status
+ * in message. For any non-2xx status from ipwho.is + freeipapi, returns GEOLOCATION_FAILED with status
  * in message.
  *
  * Validates: Requirements 3.2, 3.5
  */
-describe("Feature: freeipapi-migration, Property 6: Non-2xx HTTP status returns error", () => {
+describe("Feature: ipwhois-migration, Property 6: Non-2xx HTTP status returns error", () => {
   const non2xxStatusArb = fc.oneof(
     fc.integer({ min: 400, max: 599 }),
     fc.integer({ min: 300, max: 399 }),
@@ -1092,17 +1270,23 @@ describe("Feature: freeipapi-migration, Property 6: Non-2xx HTTP status returns 
     );
   }, 30000);
 
-  test("non-2xx from FreeIPAPI returns GEOLOCATION_FAILED with status in message", async () => {
+  test("non-2xx from both geolocation services returns GEOLOCATION_FAILED with status in message", async () => {
     await fc.assert(
       fc.asyncProperty(non2xxStatusArb, async (status) => {
         const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
         await clearIpGeoCache();
         await resetRateLimiter();
 
+        // Mock: IP detection succeeds, ipwho.is (primary) fails, freeipapi (fallback) fails
         vi.mocked(fetch)
           .mockResolvedValueOnce({
             ok: true,
             json: () => Promise.resolve({ ip: "203.0.113.42" }),
+          } as Response)
+          .mockResolvedValueOnce({
+            ok: false,
+            status,
+            json: () => Promise.resolve({}),
           } as Response)
           .mockResolvedValueOnce({
             ok: false,
@@ -1123,15 +1307,15 @@ describe("Feature: freeipapi-migration, Property 6: Non-2xx HTTP status returns 
 });
 
 /**
- * Feature: freeipapi-migration, Property 7: Network error returns appropriate error code
+ * Feature: ipwhois-migration, Property 7: Network error returns appropriate error code
  *
  * For any fetch rejection during ipify, syncVpnLocation returns NETWORK error.
- * For any fetch rejection during FreeIPAPI, returns NETWORK error.
+ * For any fetch rejection during both geolocation services, returns NETWORK error.
  * Both have non-empty message.
  *
  * Validates: Requirements 3.6, 3.8
  */
-describe("Feature: freeipapi-migration, Property 7: Network error returns appropriate error code", () => {
+describe("Feature: ipwhois-migration, Property 7: Network error returns appropriate error code", () => {
   test("network error during ipify returns NETWORK error", async () => {
     await fc.assert(
       fc.asyncProperty(fc.string({ minLength: 1, maxLength: 50 }), async (errorMsg) => {
@@ -1155,18 +1339,20 @@ describe("Feature: freeipapi-migration, Property 7: Network error returns approp
     );
   }, 30000);
 
-  test("network error during FreeIPAPI returns NETWORK error", async () => {
+  test("network error during both geolocation services returns NETWORK error", async () => {
     await fc.assert(
       fc.asyncProperty(fc.string({ minLength: 1, maxLength: 50 }), async (errorMsg) => {
         const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
         await clearIpGeoCache();
         await resetRateLimiter();
 
+        // Mock: IP detection succeeds, ipwho.is (primary) fails, freeipapi (fallback) fails
         vi.mocked(fetch)
           .mockResolvedValueOnce({
             ok: true,
             json: () => Promise.resolve({ ip: "203.0.113.42" }),
           } as Response)
+          .mockRejectedValueOnce(new Error(errorMsg))
           .mockRejectedValueOnce(new Error(errorMsg));
 
         const result = await syncVpnLocation(true);
@@ -1183,15 +1369,15 @@ describe("Feature: freeipapi-migration, Property 7: Network error returns approp
 });
 
 /**
- * Feature: freeipapi-migration, Property 8: Cache hit avoids FreeIPAPI call
+ * Feature: ipwhois-migration, Property 8: Cache hit avoids geolocation call
  *
  * After a successful sync, syncVpnLocation(false) with the same IP returns
  * the cached result with only one fetch (ipify for IP detection) and no
- * FreeIPAPI call.
+ * geolocation call.
  *
  * Validates: Requirements 5.1, 5.2
  */
-describe("Feature: freeipapi-migration, Property 8: Cache hit avoids FreeIPAPI call", () => {
+describe("Feature: ipwhois-migration, Property 8: Cache hit avoids geolocation call", () => {
   test("cache hit returns cached result with only one fetch call", async () => {
     await fc.assert(
       fc.asyncProperty(
@@ -1211,7 +1397,7 @@ describe("Feature: freeipapi-migration, Property 8: Cache hit avoids FreeIPAPI c
           vi.mocked(fetch).mockReset();
           await resetRateLimiter();
 
-          // Second call: cache hit — only ipify, no FreeIPAPI
+          // Second call: cache hit — only ipify, no geolocation
           vi.mocked(fetch).mockResolvedValueOnce({
             ok: true,
             json: () => Promise.resolve({ ip }),
@@ -1224,7 +1410,7 @@ describe("Feature: freeipapi-migration, Property 8: Cache hit avoids FreeIPAPI c
             expect(cachedResult.longitude).toBe(firstResult.longitude);
             expect(cachedResult.ip).toBe(firstResult.ip);
           }
-          // Only one fetch (ipify), no FreeIPAPI call
+          // Only one fetch (ipify), no geolocation call
           expect(fetch).toHaveBeenCalledTimes(1);
         }
       ),
@@ -1234,14 +1420,14 @@ describe("Feature: freeipapi-migration, Property 8: Cache hit avoids FreeIPAPI c
 });
 
 /**
- * Feature: freeipapi-migration, Property 9: Force refresh bypasses cache
+ * Feature: ipwhois-migration, Property 9: Force refresh bypasses cache
  *
  * After a successful sync, syncVpnLocation(true) makes two fetch calls
- * (ipify + FreeIPAPI) and returns the fresh result.
+ * (ipify + ipwho.is) and returns the fresh result.
  *
  * Validates: Requirements 5.3
  */
-describe("Feature: freeipapi-migration, Property 9: Force refresh bypasses cache", () => {
+describe("Feature: ipwhois-migration, Property 9: Force refresh bypasses cache", () => {
   test("force refresh makes two fetch calls and returns fresh result", async () => {
     await fc.assert(
       fc.asyncProperty(
@@ -1272,7 +1458,7 @@ describe("Feature: freeipapi-migration, Property 9: Force refresh bypasses cache
             expect(result.longitude).toBe(lon2);
             expect(result.city).toBe("Second");
           }
-          // Two fetches: ipify + FreeIPAPI
+          // Two fetches: ipify + ipwho.is
           expect(fetch).toHaveBeenCalledTimes(2);
         }
       ),
@@ -1282,14 +1468,14 @@ describe("Feature: freeipapi-migration, Property 9: Force refresh bypasses cache
 });
 
 /**
- * Feature: freeipapi-migration, Property 10: Rate limiting enforces minimum interval
+ * Feature: ipwhois-migration, Property 10: Rate limiting enforces minimum interval
  *
  * Consecutive syncVpnLocation calls have at least MIN_REQUEST_INTERVAL (2000ms)
  * between fetch invocations.
  *
  * Validates: Requirements 6.1, 6.2
  */
-describe("Feature: freeipapi-migration, Property 10: Rate limiting enforces minimum interval", () => {
+describe("Feature: ipwhois-migration, Property 10: Rate limiting enforces minimum interval", () => {
   test("consecutive syncs are spaced at least MIN_REQUEST_INTERVAL apart", async () => {
     await fc.assert(
       fc.asyncProperty(fc.integer({ min: 2, max: 4 }), async (callCount) => {
@@ -1317,11 +1503,12 @@ describe("Feature: freeipapi-migration, Property 10: Rate limiting enforces mini
             ok: true,
             json: () =>
               Promise.resolve({
-                ipAddress: ip,
+                ip,
+                success: true,
+                city: "Test",
+                country: "Test",
                 latitude: 40,
                 longitude: -74,
-                cityName: "Test",
-                countryName: "Test",
               }),
           } as Response);
         });

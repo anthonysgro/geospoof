@@ -65,6 +65,7 @@ export function generateManifest(target: BrowserTarget, version: string): Record
       "32": "icons/icon-32.png",
       "48": "icons/icon-48.png",
       "128": "icons/icon-128.png",
+      "1024": "icons/icon-1024.png",
     },
   };
 

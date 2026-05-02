@@ -20,7 +20,7 @@ vi.mock("browser-geo-tz", () => ({
 
 /**
  * Helper: mock fetch calls for a complete VPN sync flow.
- * Order: IP detection → geolocation → reverse geocode (from handleSetLocation)
+ * Order: IP detection → ipwho.is geolocation (primary service)
  */
 function mockVpnSyncFetch(ip: string, lat: number, lon: number, city: string, country: string) {
   vi.mocked(fetch)
@@ -32,19 +32,13 @@ function mockVpnSyncFetch(ip: string, lat: number, lon: number, city: string, co
       ok: true,
       json: () =>
         Promise.resolve({
-          ipAddress: ip,
+          ip,
+          success: true,
+          type: "IPv4",
+          city,
+          country,
           latitude: lat,
           longitude: lon,
-          cityName: city,
-          countryName: country,
-        }),
-    } as Response)
-    .mockResolvedValueOnce({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          display_name: `${city}, ${country}`,
-          address: { city, country },
         }),
     } as Response);
 }
@@ -96,10 +90,10 @@ describe("VPN Sync Integration Tests", () => {
     });
 
     /**
-     * VPN sync sets locationName from reverse geocoding.
+     * VPN sync sets locationName from ipwho.is response directly.
      * Validates: Requirements 2.2, 3.2
      */
-    test("should populate locationName from reverse geocoding", async () => {
+    test("should populate locationName from ipwho.is response", async () => {
       const { handleMessage, clearIpGeoCache, resetRateLimiter, clearTimezoneCache, loadSettings } =
         await importBackground();
       await clearIpGeoCache();
@@ -260,20 +254,11 @@ describe("VPN Sync Integration Tests", () => {
       await clearTimezoneCache();
       await setupTimezoneMock("America/New_York");
 
-      // Only mock IP detection (cache will serve geolocation) + reverse geocode from handleSetLocation
-      vi.mocked(fetch)
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve({ ip: "203.0.113.42" }),
-        } as Response)
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              display_name: "New York, United States",
-              address: { city: "New York", country: "United States" },
-            }),
-        } as Response);
+      // Only mock IP detection (cache will serve geolocation)
+      vi.mocked(fetch).mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ ip: "203.0.113.42" }),
+      } as Response);
 
       const result = await handleMessage(
         { type: "SYNC_VPN", payload: { forceRefresh: false } },
@@ -348,11 +333,16 @@ describe("VPN Sync Integration Tests", () => {
       await resetRateLimiter();
       await clearTimezoneCache();
 
-      // First attempt: IP detection succeeds but geolocation returns non-2xx
+      // First attempt: IP detection succeeds but both ipwho.is (primary) and freeipapi (fallback) fail
       vi.mocked(fetch)
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve({ ip: "203.0.113.42" }),
+        } as Response)
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: () => Promise.resolve({}),
         } as Response)
         .mockResolvedValueOnce({
           ok: false,
@@ -389,10 +379,10 @@ describe("VPN Sync Integration Tests", () => {
     });
 
     /**
-     * Reverse geocoding fails during VPN sync but location still saved.
+     * VPN sync uses city/country from ipwho.is directly, no Nominatim needed.
      * Validates: Requirements 2.2
      */
-    test("should save location even when reverse geocoding fails during sync", async () => {
+    test("should use city/country from ipwho.is directly", async () => {
       vi.mocked(fetch).mockReset();
       const { handleMessage, clearIpGeoCache, resetRateLimiter, clearTimezoneCache, loadSettings } =
         await importBackground();
@@ -402,6 +392,7 @@ describe("VPN Sync Integration Tests", () => {
 
       await setupTimezoneMock("Asia/Tokyo");
 
+      // Only IP detection and ipwho.is geolocation — no Nominatim call
       vi.mocked(fetch)
         .mockResolvedValueOnce({
           ok: true,
@@ -411,31 +402,31 @@ describe("VPN Sync Integration Tests", () => {
           ok: true,
           json: () =>
             Promise.resolve({
-              ipAddress: "203.0.113.42",
+              ip: "203.0.113.42",
+              success: true,
+              type: "IPv4",
+              city: "Tokyo",
+              country: "Japan",
               latitude: 35.6762,
               longitude: 139.6503,
-              cityName: "Tokyo",
-              countryName: "Japan",
             }),
-        } as Response)
-        // Reverse geocode fails (3 attempts: initial + 2 retries from fetchWithRetry)
-        .mockRejectedValueOnce(new Error("Nominatim unavailable"))
-        .mockRejectedValueOnce(new Error("Nominatim unavailable"))
-        .mockRejectedValueOnce(new Error("Nominatim unavailable"));
+        } as Response);
 
       const result = await handleMessage(
         { type: "SYNC_VPN", payload: { forceRefresh: false } },
         {}
       );
 
-      // VPN sync itself should succeed
+      // VPN sync should succeed
       const response = result as Record<string, unknown>;
       expect(response.latitude).toBe(35.6762);
 
-      // Location should still be persisted
+      // Location and locationName should be persisted from ipwho.is data
       const settings = await loadSettings();
       expect(settings.location!.latitude).toBe(35.6762);
       expect(settings.location!.longitude).toBe(139.6503);
+      expect(settings.locationName!.city).toBe("Tokyo");
+      expect(settings.locationName!.country).toBe("Japan");
       expect(settings.vpnSyncEnabled).toBe(true);
     });
   });

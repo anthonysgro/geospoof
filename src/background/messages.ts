@@ -3,7 +3,6 @@
  * Central message router for inter-component communication.
  */
 
-import type { LocationName } from "@/shared/types/settings";
 import type {
   Message,
   SetLocationPayload,
@@ -16,10 +15,12 @@ import type {
   SetVerbosityLevelPayload,
   SetThemePayload,
 } from "@/shared/types/messages";
+import type { LocationName } from "@/shared/types/settings";
 import { setDebugEnabled, setVerbosityLevel, createLogger } from "@/shared/utils/debug-logger";
 import { loadSettings, updateSettings } from "./settings";
 
 const logger = createLogger("BG");
+
 import { geocodeQuery, reverseGeocode } from "./geocoding";
 import { getTimezoneForCoordinates } from "./timezone";
 import { setWebRTCProtection } from "./webrtc";
@@ -36,6 +37,7 @@ export async function handleMessage(
   message: Message,
   _sender: browser.runtime.MessageSender
 ): Promise<unknown> {
+  console.log("[MSG-HANDLER] Received message:", message.type);
   try {
     logger.info("Received message:", message.type, message.payload);
 
@@ -87,21 +89,38 @@ export async function handleMessage(
 
       case "SYNC_VPN": {
         const payload = message.payload as SyncVpnPayload | undefined;
-        logger.info("VPN sync requested, forceRefresh:", payload?.forceRefresh ?? false);
+        const syncMsgStart = Date.now();
+        logger.info("[MSG] SYNC_VPN received, forceRefresh:", payload?.forceRefresh ?? false);
         const result = await syncVpnLocation(payload?.forceRefresh ?? false);
 
         if ("error" in result) {
-          logger.warn("VPN sync failed:", result);
+          logger.warn("[MSG] SYNC_VPN failed after", Date.now() - syncMsgStart, "ms:", result);
           return result;
         }
 
-        logger.debug("VPN sync result:", result);
+        logger.debug("[MSG] SYNC_VPN result:", result);
+        const setLocStart = Date.now();
+        // Pass city/country from freeipapi directly — no need for separate Nominatim call
         await handleSetLocation(
           { latitude: result.latitude, longitude: result.longitude },
-          { fromVpnSync: true }
+          {
+            fromVpnSync: true,
+            locationName: {
+              city: result.city,
+              country: result.country,
+              displayName:
+                result.city && result.country
+                  ? `${result.city}, ${result.country}`
+                  : result.city ||
+                    result.country ||
+                    `${result.latitude.toFixed(4)}, ${result.longitude.toFixed(4)}`,
+            },
+          }
         );
+        logger.debug("[MSG] handleSetLocation completed in", Date.now() - setLocStart, "ms");
         await updateSettings({ vpnSyncEnabled: true });
 
+        logger.info("[MSG] SYNC_VPN total time:", Date.now() - syncMsgStart, "ms");
         return result;
       }
 
@@ -176,21 +195,13 @@ export async function handleMessage(
 
 export async function handleSetLocation(
   payload: SetLocationPayload,
-  options?: { fromVpnSync?: boolean }
+  options?: { fromVpnSync?: boolean; locationName?: LocationName }
 ): Promise<void> {
   const { latitude, longitude } = payload;
 
   logger.debug("Resolving timezone for coordinates:", { latitude, longitude });
   const timezone = await getTimezoneForCoordinates(latitude, longitude);
   logger.debug("Timezone resolved:", timezone);
-
-  let locationName: LocationName | null = null;
-  try {
-    locationName = await reverseGeocode(latitude, longitude);
-    logger.debug("Reverse geocode result:", locationName);
-  } catch (error) {
-    logger.warn("Reverse geocoding failed:", error);
-  }
 
   const currentSettings = await loadSettings();
 
@@ -201,6 +212,28 @@ export async function handleSetLocation(
   if (currentSettings.vpnSyncEnabled && !options?.fromVpnSync) {
     await clearIpGeoCache();
     vpnUpdates.vpnSyncEnabled = false;
+  }
+
+  // If locationName was provided (e.g., from VPN sync), use it directly
+  if (options?.locationName) {
+    const settings = await updateSettings({
+      location: { latitude, longitude, accuracy: 10 },
+      timezone,
+      locationName: options.locationName,
+      ...vpnUpdates,
+    });
+    logger.debug("Settings updated with provided locationName:", settings);
+    await broadcastSettingsToTabs(settings);
+    return;
+  }
+
+  // Reverse geocode to get the location name (blocking so popup shows it immediately)
+  let locationName = null;
+  try {
+    locationName = await reverseGeocode(latitude, longitude);
+    logger.debug("Reverse geocode result:", locationName);
+  } catch (error) {
+    logger.warn("Reverse geocoding failed:", error);
   }
 
   const settings = await updateSettings({
