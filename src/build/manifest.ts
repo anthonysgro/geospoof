@@ -122,6 +122,7 @@ export function generateManifest(target: BrowserTarget, version: string): Record
       "https://free.freeipapi.com/*",
       "https://ipapi.co/*",
       "https://reallyfreegeoip.org/*",
+      "https://ipinfo.io/*",
       "https://nominatim.openstreetmap.org/*",
     ];
     return {

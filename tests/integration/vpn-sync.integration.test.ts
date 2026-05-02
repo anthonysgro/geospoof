@@ -20,7 +20,8 @@ vi.mock("browser-geo-tz", () => ({
 
 /**
  * Helper: mock fetch calls for a complete VPN sync flow.
- * Order: IP detection → ipwho.is geolocation (primary service)
+ * Order: IP detection (ipify) → 3 parallel geo services (geojs, freeipapi, reallyfreegeoip).
+ * All three geo services run in parallel; first success wins.
  */
 function mockVpnSyncFetch(ip: string, lat: number, lon: number, city: string, country: string) {
   vi.mocked(fetch)
@@ -28,15 +29,38 @@ function mockVpnSyncFetch(ip: string, lat: number, lon: number, city: string, co
       ok: true,
       json: () => Promise.resolve({ ip }),
     } as Response)
+    // geojs.io — lat/lng are strings
     .mockResolvedValueOnce({
       ok: true,
       json: () =>
         Promise.resolve({
           ip,
-          success: true,
-          type: "IPv4",
           city,
           country,
+          latitude: String(lat),
+          longitude: String(lon),
+        }),
+    } as Response)
+    // freeipapi
+    .mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          ipAddress: ip,
+          cityName: city,
+          countryName: country,
+          latitude: lat,
+          longitude: lon,
+        }),
+    } as Response)
+    // reallyfreegeoip
+    .mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          ip,
+          city,
+          country_name: country,
           latitude: lat,
           longitude: lon,
         }),
@@ -333,11 +357,16 @@ describe("VPN Sync Integration Tests", () => {
       await resetRateLimiter();
       await clearTimezoneCache();
 
-      // First attempt: IP detection succeeds but both ipwho.is (primary) and freeipapi (fallback) fail
+      // First attempt: IP detection succeeds but all three geo services fail
       vi.mocked(fetch)
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve({ ip: "203.0.113.42" }),
+        } as Response)
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: () => Promise.resolve({}),
         } as Response)
         .mockResolvedValueOnce({
           ok: false,
@@ -356,7 +385,7 @@ describe("VPN Sync Integration Tests", () => {
       );
 
       const errorResponse = failResult as Record<string, unknown>;
-      expect(errorResponse.error).toBe("GEOLOCATION_FAILED");
+      expect(errorResponse.error).toBe("IP_BLOCKED");
 
       // User clicks Re-sync → succeeds
       await resetRateLimiter();
@@ -392,7 +421,7 @@ describe("VPN Sync Integration Tests", () => {
 
       await setupTimezoneMock("Asia/Tokyo");
 
-      // Only IP detection and ipwho.is geolocation — no Nominatim call
+      // Only IP detection and 3 parallel geo services — no Nominatim call
       vi.mocked(fetch)
         .mockResolvedValueOnce({
           ok: true,
@@ -403,10 +432,30 @@ describe("VPN Sync Integration Tests", () => {
           json: () =>
             Promise.resolve({
               ip: "203.0.113.42",
-              success: true,
-              type: "IPv4",
               city: "Tokyo",
               country: "Japan",
+              latitude: "35.6762",
+              longitude: "139.6503",
+            }),
+        } as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              ipAddress: "203.0.113.42",
+              cityName: "Tokyo",
+              countryName: "Japan",
+              latitude: 35.6762,
+              longitude: 139.6503,
+            }),
+        } as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              ip: "203.0.113.42",
+              city: "Tokyo",
+              country_name: "Japan",
               latitude: 35.6762,
               longitude: 139.6503,
             }),

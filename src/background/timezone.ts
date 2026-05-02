@@ -8,9 +8,20 @@ import { isValidIANATimezone } from "@/shared/utils/type-guards";
 import { createLogger } from "@/shared/utils/debug-logger";
 import { getCacheKey } from "./geocoding";
 import { sessionGet, sessionSet, sessionClearNamespace } from "./session-cache";
-import { find } from "browser-geo-tz";
+import { init as geoTzInit } from "browser-geo-tz";
 
 const logger = createLogger("BG");
+
+// Initialize browser-geo-tz once at module load so the data fetch promises
+// are reused across all calls — avoids re-fetching the CDN files on every lookup.
+// Pin to a specific geo-tz version so the index and .dat file are always in sync
+// (using @latest risks a version mismatch between the two files if a new release
+// is published between when each CDN cache entry was populated).
+const GEO_TZ_VERSION = "8.1.5";
+const _geoTz = geoTzInit(
+  `https://cdn.jsdelivr.net/npm/geo-tz@${GEO_TZ_VERSION}/data/timezones-1970.geojson.geo.dat`,
+  `https://cdn.jsdelivr.net/npm/geo-tz@${GEO_TZ_VERSION}/data/timezones-1970.geojson.index.json`
+);
 
 /**
  * Clear the timezone cache (for testing)
@@ -112,7 +123,7 @@ export async function getTimezoneForCoordinates(
   logger.info("Timezone lookup for coordinates:", { latitude, longitude });
 
   try {
-    const results = await find(latitude, longitude);
+    const results = await _geoTz.find(latitude, longitude);
 
     if (results.length === 0) {
       const fallback = buildFallbackTimezone(longitude);

@@ -180,8 +180,12 @@ describe("resolveBrowserTarget", () => {
     expect(resolveBrowserTarget("chromium")).toBe("chromium");
   });
 
-  test.each(["safari", "edge", "Chrome"])("throws for invalid value %j", (value) => {
+  test.each(["edge", "Chrome"])("throws for invalid value %j", (value) => {
     expect(() => resolveBrowserTarget(value)).toThrow();
+  });
+
+  test('returns "safari" when env is "safari"', () => {
+    expect(resolveBrowserTarget("safari")).toBe("safari");
   });
 
   test('returns "firefox" for empty string (falsy, treated as unset)', () => {

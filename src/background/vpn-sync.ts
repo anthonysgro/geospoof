@@ -14,10 +14,10 @@ const PUBLIC_IP_URL = "https://api.ipify.org?format=json";
 const GEOJS_URL = "https://get.geojs.io/v1/ip/geo/"; // Primary — CORS-friendly, no key, no rate limits
 const FREEIPAPI_URL = "https://free.freeipapi.com/api/json/"; // Fallback #1
 const REALLYFREEGEOIP_URL = "https://reallyfreegeoip.org/json/"; // Fallback #2
+const IPINFO_URL = "https://ipinfo.io/"; // Fallback #3 — Google Cloud, different network from Cloudflare
 const REQUEST_TIMEOUT = 10000; // 10 seconds (IP detection)
 const GEO_TIMEOUT = 5000; // 5 seconds per geo service (all run in parallel, worst case = 5s)
 const GEO_MAX_RETRIES = 2; // retry on network failure (e.g. VPN transition)
-const GEO_USER_AGENT = "GeoSpoof-Extension/1.0"; // custom UA forces fresh TCP connections
 const MIN_REQUEST_INTERVAL = 2000; // 2 seconds between API calls
 
 // --- Persistent IP Geo Cache ---
@@ -123,6 +123,14 @@ interface ReallyFreeGeoIpResponse {
   longitude: number;
 }
 
+// --- ipinfo.io Response Shape (internal) ---
+// loc is "lat,lng" string e.g. "37.3861,-122.0839"
+interface IpInfoResponse {
+  ip: string;
+  city: string;
+  country: string;
+  loc: string;
+}
 // --- Rate Limiting ---
 
 async function throttle(): Promise<void> {
@@ -183,6 +191,8 @@ export async function detectPublicIp(): Promise<string> {
     const response = await fetch(PUBLIC_IP_URL, {
       signal: controller.signal,
       cache: "no-store",
+      mode: "cors",
+      credentials: "omit",
       headers: { Connection: "close" },
     });
     logger.debug(
@@ -225,25 +235,46 @@ export async function detectPublicIp(): Promise<string> {
 /**
  * Fetch a geo service URL with custom User-Agent, timeout, and exponential backoff retry.
  * Custom User-Agent forces a fresh TCP connection (bypasses stale connection pool after VPN switch).
+/**
+ * Fetch a geo service URL with custom User-Agent, timeout, and exponential backoff retry.
+ * Custom User-Agent forces a fresh TCP connection (bypasses stale connection pool after VPN switch).
+ * externalSignal is the sync-level AbortSignal — if it fires, the entire sync was cancelled.
  */
-async function fetchGeoWithRetry(url: string, timeoutMs: number): Promise<Response> {
+async function fetchGeoWithRetry(
+  url: string,
+  timeoutMs: number,
+  externalSignal: AbortSignal
+): Promise<Response> {
   let lastError: Error | undefined;
   for (let attempt = 0; attempt <= GEO_MAX_RETRIES; attempt++) {
+    // Bail immediately if the sync was cancelled before we even start this attempt
+    if (externalSignal.aborted) {
+      throw Object.assign(new Error("Sync cancelled"), { code: "GEOLOCATION_FAILED" });
+    }
     const controller = new AbortController();
+    // Abort this attempt if either our per-attempt timeout fires OR the sync is cancelled
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    const onExternalAbort = () => controller.abort();
+    externalSignal.addEventListener("abort", onExternalAbort, { once: true });
     try {
       const response = await fetch(url, {
         signal: controller.signal,
         cache: "no-store",
-        headers: { "User-Agent": GEO_USER_AGENT },
+        mode: "cors",
+        credentials: "omit",
       });
       clearTimeout(timeoutId);
+      externalSignal.removeEventListener("abort", onExternalAbort);
       return response;
     } catch (error) {
       clearTimeout(timeoutId);
+      externalSignal.removeEventListener("abort", onExternalAbort);
       lastError = error instanceof Error ? error : new Error(String(error));
-      // Don't retry on abort (our own timeout) — only on network errors
-      if (lastError.name === "AbortError" || attempt === GEO_MAX_RETRIES) {
+      // Don't retry on the last attempt, or if the sync was externally cancelled.
+      // DO retry on AbortError from our own per-attempt timeout — a 0-bytes-sent abort
+      // means the browser never dispatched the request (fetch queue stall). Retrying after
+      // a short delay gives the browser a chance to clear the stall.
+      if (attempt === GEO_MAX_RETRIES || externalSignal.aborted) {
         throw lastError;
       }
       const delay = 1000 * (attempt + 1);
@@ -266,13 +297,16 @@ async function fetchGeoWithRetry(url: string, timeoutMs: number): Promise<Respon
  * @param ip - IPv4 or IPv6 address
  * @throws Error with code GEOLOCATION_FAILED or NETWORK
  */
-async function geolocateWithFreeIpApi(ip: string): Promise<IpGeolocationResult> {
+async function geolocateWithFreeIpApi(
+  ip: string,
+  externalSignal: AbortSignal
+): Promise<IpGeolocationResult> {
   const url = `${FREEIPAPI_URL}${ip}`;
   logger.debug("[IP-GEO] Fetching from:", url);
 
   try {
     const fetchStart = Date.now();
-    const response = await fetchGeoWithRetry(url, GEO_TIMEOUT);
+    const response = await fetchGeoWithRetry(url, GEO_TIMEOUT, externalSignal);
     logger.debug(
       "[IP-GEO] Fetch response received in",
       Date.now() - fetchStart,
@@ -359,13 +393,16 @@ async function geolocateWithFreeIpApi(ip: string): Promise<IpGeolocationResult> 
  * @param ip - IPv4 or IPv6 address
  * @throws Error with code GEOLOCATION_FAILED or NETWORK
  */
-async function geolocateWithGeoJs(ip: string): Promise<IpGeolocationResult> {
+async function geolocateWithGeoJs(
+  ip: string,
+  externalSignal: AbortSignal
+): Promise<IpGeolocationResult> {
   const url = `${GEOJS_URL}${ip}.json`;
   logger.debug("[IP-GEO-GEOJS] Fetching from:", url);
 
   try {
     const fetchStart = Date.now();
-    const response = await fetchGeoWithRetry(url, GEO_TIMEOUT);
+    const response = await fetchGeoWithRetry(url, GEO_TIMEOUT, externalSignal);
     logger.debug(
       "[IP-GEO-GEOJS] Fetch response received in",
       Date.now() - fetchStart,
@@ -443,13 +480,16 @@ async function geolocateWithGeoJs(ip: string): Promise<IpGeolocationResult> {
  * Geolocate an IP address via reallyfreegeoip.org (Fallback #2).
  * No API key, no rate limits, HTTPS.
  */
-async function geolocateWithReallyFreeGeoIp(ip: string): Promise<IpGeolocationResult> {
+async function geolocateWithReallyFreeGeoIp(
+  ip: string,
+  externalSignal: AbortSignal
+): Promise<IpGeolocationResult> {
   const url = `${REALLYFREEGEOIP_URL}${ip}`;
   logger.debug("[IP-GEO-RFGI] Fetching from:", url);
 
   try {
     const fetchStart = Date.now();
-    const response = await fetchGeoWithRetry(url, GEO_TIMEOUT);
+    const response = await fetchGeoWithRetry(url, GEO_TIMEOUT, externalSignal);
     logger.debug(
       "[IP-GEO-RFGI] Fetch response received in",
       Date.now() - fetchStart,
@@ -523,14 +563,141 @@ async function geolocateWithReallyFreeGeoIp(ip: string): Promise<IpGeolocationRe
   }
 }
 
+/**
+ * Geolocate an IP address via ipinfo.io (Fallback #3).
+ * Google Cloud network — different IP range from the Cloudflare-hosted primary/fallback #1.
+ * Free tier: 50k requests/month. No API key required for basic fields.
+ * Response: { ip, city, country, loc: "lat,lng" }
+ */
+async function geolocateWithIpInfo(
+  ip: string,
+  externalSignal: AbortSignal
+): Promise<IpGeolocationResult> {
+  const url = `${IPINFO_URL}${ip}/json`;
+  logger.debug("[IP-GEO-IPINFO] Fetching from:", url);
+
+  try {
+    const fetchStart = Date.now();
+    const response = await fetchGeoWithRetry(url, GEO_TIMEOUT, externalSignal);
+    logger.debug(
+      "[IP-GEO-IPINFO] Fetch response received in",
+      Date.now() - fetchStart,
+      "ms, status:",
+      response.status
+    );
+
+    if (!response.ok) {
+      throw Object.assign(new Error(`HTTP ${response.status}`), {
+        code: "GEOLOCATION_FAILED",
+        blocked: response.status === 403 || response.status === 429,
+      });
+    }
+
+    let data: IpInfoResponse;
+    try {
+      data = (await response.json()) as IpInfoResponse;
+    } catch {
+      throw Object.assign(new Error("Failed to parse geolocation response"), {
+        code: "GEOLOCATION_FAILED",
+      });
+    }
+
+    if (!data.ip || !isValidIpAddress(data.ip)) {
+      throw Object.assign(new Error("Invalid IP address in geolocation response"), {
+        code: "GEOLOCATION_FAILED",
+      });
+    }
+
+    // loc is "lat,lng"
+    const parts = typeof data.loc === "string" ? data.loc.split(",") : [];
+    const latitude = parseFloat(parts[0] ?? "");
+    const longitude = parseFloat(parts[1] ?? "");
+    if (
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      latitude < -90 ||
+      latitude > 90 ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
+      throw Object.assign(new Error("Invalid coordinates from geolocation service"), {
+        code: "GEOLOCATION_FAILED",
+      });
+    }
+
+    return {
+      latitude,
+      longitude,
+      city: typeof data.city === "string" ? data.city : "",
+      country: typeof data.country === "string" ? data.country : "",
+      ip: data.ip,
+    };
+  } catch (error) {
+    const err = error as Error & { code?: string; blocked?: boolean };
+    logger.error("[IP-GEO-IPINFO] Error:", {
+      name: err.name,
+      message: err.message,
+      code: err.code,
+      blocked: err.blocked,
+    });
+
+    if (err.code === "GEOLOCATION_FAILED") throw err;
+    if (err.name === "AbortError") {
+      throw Object.assign(new Error("Geolocation request timed out"), {
+        code: "GEOLOCATION_FAILED",
+      });
+    }
+    throw Object.assign(new Error(err.message || "Network error during geolocation"), {
+      code: "NETWORK",
+    });
+  }
+}
+
 // --- Orchestrator ---
+
+// In-flight sync promise — deduplicates concurrent calls so multiple rapid button presses
+// don't saturate the browser's per-host connection pool with redundant parallel fetches.
+let _syncInFlight: Promise<VpnSyncResponse> | null = null;
+// AbortController for the current in-flight geo fetch batch — cancelled when a new sync starts.
+let _geoAbortController: AbortController | null = null;
 
 /**
  * Perform a full VPN sync: detect public IP, geolocate it, return result.
  * Runs geojs.io, freeipapi, and reallyfreegeoip in parallel — first success wins.
- * @param forceRefresh - bypass cache (used by Re-sync button)
+ * Concurrent calls are deduplicated — if a sync is already in flight, the same
+ * promise is returned rather than starting a new one (forceRefresh overrides this).
+ * @param forceRefresh - bypass cache and any in-flight deduplication (used by Re-sync button)
  */
 export async function syncVpnLocation(forceRefresh: boolean): Promise<VpnSyncResponse> {
+  // If a sync is already running and this isn't a forced refresh, piggyback on it
+  if (!forceRefresh && _syncInFlight !== null) {
+    logger.debug("[VPN-SYNC] Deduplicating concurrent sync call — returning in-flight promise");
+    return _syncInFlight;
+  }
+
+  // Cancel any stuck in-flight geo fetches from a previous sync before starting fresh.
+  // This unblocks the browser's fetch queue so new requests aren't queued behind stale ones.
+  if (_geoAbortController !== null) {
+    logger.debug("[VPN-SYNC] Aborting previous in-flight geo fetches before starting new sync");
+    _geoAbortController.abort();
+    _geoAbortController = null;
+  }
+
+  const geoAbort = new AbortController();
+  _geoAbortController = geoAbort;
+
+  _syncInFlight = _doSyncVpnLocation(forceRefresh, geoAbort).finally(() => {
+    _syncInFlight = null;
+    if (_geoAbortController === geoAbort) _geoAbortController = null;
+  });
+  return _syncInFlight;
+}
+
+async function _doSyncVpnLocation(
+  forceRefresh: boolean,
+  geoAbort: AbortController
+): Promise<VpnSyncResponse> {
+  const geoAbortSignal = geoAbort.signal;
   const syncStart = Date.now();
   logger.info("[VPN-SYNC] Starting sync, forceRefresh:", forceRefresh);
 
@@ -582,10 +749,13 @@ export async function syncVpnLocation(forceRefresh: boolean): Promise<VpnSyncRes
     let result: IpGeolocationResult;
     try {
       result = await Promise.any([
-        geolocateWithGeoJs(ip),
-        geolocateWithFreeIpApi(ip),
-        geolocateWithReallyFreeGeoIp(ip),
+        geolocateWithGeoJs(ip, geoAbortSignal),
+        geolocateWithFreeIpApi(ip, geoAbortSignal),
+        geolocateWithReallyFreeGeoIp(ip, geoAbortSignal),
+        geolocateWithIpInfo(ip, geoAbortSignal),
       ]);
+      // One service succeeded — abort the other two so they don't keep retrying in the background
+      geoAbort.abort();
     } catch (aggregateErr) {
       // All three failed — AggregateError contains each individual error
       const errors: Array<Error & { blocked?: boolean }> =
@@ -599,9 +769,14 @@ export async function syncVpnLocation(forceRefresh: boolean): Promise<VpnSyncRes
       );
 
       // If any service got a real HTTP response (even a 403), the network is fine
-      // but this IP is being rejected — tell the user to switch VPN location
+      // but this IP is being rejected — tell the user to switch VPN location.
+      // Note: timed-out requests are re-thrown as plain Error("Geolocation request timed out")
+      // with name "Error" (not "AbortError"), so we must also exclude them here.
+      const TIMEOUT_MSG = "Geolocation request timed out";
       const anyServiceResponded = errors.some(
-        (e) => e.blocked === true || (e.name !== "AbortError" && e.message !== "Failed to fetch")
+        (e) =>
+          e.blocked === true ||
+          (e.name !== "AbortError" && e.message !== "Failed to fetch" && e.message !== TIMEOUT_MSG)
       );
 
       if (anyServiceResponded) {

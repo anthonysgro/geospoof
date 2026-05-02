@@ -1,14 +1,10 @@
 /**
- * Property-Based Tests for VPN Sync
- * Feature: vpn-region-sync
+ * Property-Based Tests for VPN Sync — ipwho.is + FreeIPAPI Fallback
+ * Feature: ipwhois-migration
  *
- * Tests use the three-service parallel architecture:
- *   ipify.org (IP detection) → geojs.io + freeipapi + reallyfreegeoip (parallel, first wins)
- *
- * Mock shapes:
- *   geojs:          { ip, city, country, latitude: string, longitude: string }
- *   freeipapi:      { ipAddress, cityName, countryName, latitude: number, longitude: number }
- *   reallyfreegeoip:{ ip, city, country_name, latitude: number, longitude: number }
+ * Tests use the two-step architecture: ipify.org (IP detection) + ipwho.is (primary geolocation)
+ * with freeipapi as fallback.
+ * All mocks use ipwho.is response shape: { ip, success, city, country, latitude, longitude }.
  */
 
 import fc from "fast-check";
@@ -31,54 +27,25 @@ function ipv4Arb(): fc.Arbitrary<string> {
     .map(([a, b, c, d]) => `${a}.${b}.${c}.${d}`);
 }
 
-/**
- * Mock a successful 4-fetch sync: ipify → geojs + freeipapi + reallyfreegeoip (parallel).
- * geojs returns lat/lng as strings; the others as numbers.
- */
-function mockFourFetchSync(
+/** Mock a successful two-step fetch: ipify → ipwho.is */
+function mockTwoStepFetch(
   ip: string,
-  geo: { latitude: number; longitude: number; city?: string; country?: string }
+  geo: { latitude: number; longitude: number; cityName?: string; countryName?: string }
 ) {
-  const city = geo.city ?? "TestCity";
-  const country = geo.country ?? "TestCountry";
   vi.mocked(fetch)
-    // ipify
     .mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({ ip }),
     } as Response)
-    // geojs — lat/lng as strings
     .mockResolvedValueOnce({
       ok: true,
       json: () =>
         Promise.resolve({
           ip,
-          city,
-          country,
-          latitude: String(geo.latitude),
-          longitude: String(geo.longitude),
-        }),
-    } as Response)
-    // freeipapi
-    .mockResolvedValueOnce({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          ipAddress: ip,
-          cityName: city,
-          countryName: country,
-          latitude: geo.latitude,
-          longitude: geo.longitude,
-        }),
-    } as Response)
-    // reallyfreegeoip
-    .mockResolvedValueOnce({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          ip,
-          city,
-          country_name: country,
+          success: true,
+          type: "IPv4",
+          city: geo.cityName ?? "TestCity",
+          country: geo.countryName ?? "TestCountry",
           latitude: geo.latitude,
           longitude: geo.longitude,
         }),

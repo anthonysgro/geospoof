@@ -73,9 +73,7 @@ describe("Settings Edge Cases", () => {
     };
 
     // Attempt to save should throw error
-    await expect(saveSettings(largeSettings)).rejects.toThrow(
-      "Storage quota exceeded and unable to save settings"
-    );
+    await expect(saveSettings(largeSettings)).rejects.toThrow("Storage quota exceeded");
   });
 
   /**

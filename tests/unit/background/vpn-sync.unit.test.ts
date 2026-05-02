@@ -11,7 +11,10 @@ import { DEFAULT_SETTINGS } from "@/shared/types/settings";
 /**
  * Mock fetch for VPN sync flow:
  * 1. IP detection via ipify
- * 2. Geolocation via ipwho.is (primary)
+ * 2. Geolocation via geojs.io (primary) — returns lat/lng as strings
+ * 3. Geolocation via freeipapi (fallback #1)
+ * 4. Geolocation via reallyfreegeoip (fallback #2)
+ * All three geo services run in parallel; first success wins.
  */
 function mockFetchForVpnSync(ip: string, lat: number, lon: number, city: string, country: string) {
   vi.mocked(fetch)
@@ -19,15 +22,38 @@ function mockFetchForVpnSync(ip: string, lat: number, lon: number, city: string,
       ok: true,
       json: () => Promise.resolve({ ip }),
     } as Response)
+    // geojs.io — lat/lng are strings
     .mockResolvedValueOnce({
       ok: true,
       json: () =>
         Promise.resolve({
           ip,
-          success: true,
-          type: "IPv4",
           city,
           country,
+          latitude: String(lat),
+          longitude: String(lon),
+        }),
+    } as Response)
+    // freeipapi
+    .mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          ipAddress: ip,
+          cityName: city,
+          countryName: country,
+          latitude: lat,
+          longitude: lon,
+        }),
+    } as Response)
+    // reallyfreegeoip
+    .mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          ip,
+          city,
+          country_name: country,
           latitude: lat,
           longitude: lon,
         }),
@@ -122,11 +148,16 @@ describe("SYNC_VPN message handler", () => {
     await clearIpGeoCache();
     await resetRateLimiter();
 
-    // Mock: IP detection succeeds, then ipwho.is (primary) fails, then freeipapi (fallback) fails
+    // Mock: IP detection succeeds, then all three geo services fail (geojs, freeipapi, reallyfreegeoip)
     vi.mocked(fetch)
       .mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ ip: "203.0.113.42" }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: () => Promise.resolve({}),
       } as Response)
       .mockResolvedValueOnce({
         ok: false,
@@ -283,7 +314,7 @@ describe("Startup auto-sync", () => {
       enabled: true,
     };
 
-    // Mock fetch for the auto-sync flow: IP detection + ipwho.is geolocation
+    // Mock fetch for the auto-sync flow: IP detection + 3 parallel geo services
     vi.mocked(fetch)
       .mockResolvedValueOnce({
         ok: true,
@@ -294,10 +325,30 @@ describe("Startup auto-sync", () => {
         json: () =>
           Promise.resolve({
             ip: "203.0.113.42",
-            success: true,
-            type: "IPv4",
             city: "San Francisco",
             country: "United States",
+            latitude: "37.7749",
+            longitude: "-122.4194",
+          }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            ipAddress: "203.0.113.42",
+            cityName: "San Francisco",
+            countryName: "United States",
+            latitude: 37.7749,
+            longitude: -122.4194,
+          }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            ip: "203.0.113.42",
+            city: "San Francisco",
+            country_name: "United States",
             latitude: 37.7749,
             longitude: -122.4194,
           }),
@@ -371,7 +422,7 @@ describe("Startup auto-sync", () => {
       vpnSyncEnabled: true,
     };
 
-    // Mock fetch for IP detection + ipwho.is geolocation
+    // Mock fetch for IP detection + 3 parallel geo services
     vi.mocked(fetch)
       .mockResolvedValueOnce({
         ok: true,
@@ -382,10 +433,30 @@ describe("Startup auto-sync", () => {
         json: () =>
           Promise.resolve({
             ip: "10.0.0.1",
-            success: true,
-            type: "IPv4",
             city: "Berlin",
             country: "Germany",
+            latitude: "52.52",
+            longitude: "13.405",
+          }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            ipAddress: "10.0.0.1",
+            cityName: "Berlin",
+            countryName: "Germany",
+            latitude: 52.52,
+            longitude: 13.405,
+          }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            ip: "10.0.0.1",
+            city: "Berlin",
+            country_name: "Germany",
             latitude: 52.52,
             longitude: 13.405,
           }),
