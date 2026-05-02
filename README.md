@@ -11,7 +11,7 @@
 [![Safari](https://img.shields.io/badge/Safari_macOS_%26_iOS-coming_soon-006CFF.svg?logo=safari)](https://github.com/anthonysgro/geospoof)
 [![Version](https://img.shields.io/github/package-json/v/anthonysgro/geospoof?color=green)](https://github.com/anthonysgro/geospoof/releases)
 
-[Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/geo-spoof/) &nbsp;|&nbsp; [Chrome Web Store](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje) &nbsp;|&nbsp; [Report Issues](https://github.com/anthonysgro/geospoof/issues) &nbsp;|&nbsp; [User Guide](USER_GUIDE.md)
+[Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/geo-spoof/) &nbsp;|&nbsp; [Chrome Web Store](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje) &nbsp;|&nbsp; [Report Issues](https://github.com/anthonysgro/geospoof/issues) &nbsp;|&nbsp; [User Guide](docs/USER_GUIDE.md)
 
   <p>
     <img src="assets/chrome-store/screenshot1.png" alt="GeoSpoof main view" width="960" />
@@ -52,7 +52,7 @@ When protection is enabled, GeoSpoof overrides browser APIs synchronously at `do
 - **WebRTC** — via browser privacy API, no script injection needed
 - **Anti-fingerprinting** — `Function.prototype.toString` returns `[native code]` for all overrides; iframes patched on insertion
 
-For the full API reference, see [API.md](API.md).
+For the full API reference, see [docs/API.md](docs/API.md).
 
 ## Installation
 
@@ -83,7 +83,7 @@ The signed XPI works on standard Firefox with no extra configuration. Once insta
 3. Enable "Location Protection" and "WebRTC Protection"
 4. Refresh open tabs to apply
 
-See [USER_GUIDE.md](USER_GUIDE.md) for details.
+See [docs/USER_GUIDE.md](docs/USER_GUIDE.md) for details.
 
 ## External Services
 
@@ -115,8 +115,9 @@ MIT — see [LICENSE](LICENSE).
 
 ## Links
 
-- [User Guide](USER_GUIDE.md)
-- [API Documentation](API.md)
+- [User Guide](docs/USER_GUIDE.md)
+- [API Documentation](docs/API.md)
+- [How Browsers Track Location](docs/BACKGROUND.md)
 - [Privacy Policy](PRIVACY_POLICY.md)
 - [Contributing](CONTRIBUTING.md)
 - [Report Issues](https://github.com/anthonysgro/geospoof/issues)
