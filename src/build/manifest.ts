@@ -132,6 +132,7 @@ export function generateManifest(target: BrowserTarget, version: string): Record
       background: {
         scripts: ["background/background.js"],
         type: "module",
+        persistent: false,
       },
       content_scripts: [
         ...(shared.content_scripts as Array<Record<string, unknown>>),
