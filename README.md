@@ -27,7 +27,7 @@ GeoSpoof overrides every one of those channels so your browser reports a consist
 - **VPN Region Sync** — detects your VPN exit IP and sets your location to match. One click.
 - **Manual control** — search for a city or enter coordinates directly.
 - **Full signal alignment** — geolocation, timezone, Date APIs, Intl, Temporal, and WebRTC all report the same place.
-- **Anti-fingerprinting** — overrides are disguised to pass native code checks.
+- **Anti-fingerprinting** — overrides are disguised to pass native code checks used by real-world fingerprinting scripts.
 - **Cross-browser** — Firefox, Chrome, Brave, Edge, and Safari. Single codebase, MV3.
 
 > **Note:** Use of this tool may violate the Terms of Service of certain websites. Use responsibly.
@@ -40,6 +40,7 @@ GeoSpoof is designed to work alongside a VPN, not replace one.
 - Does NOT change browser language or locale
 - Does NOT bypass server-side detection (IP, payment info, account history)
 - Does NOT track your browsing activity, collect telemetry, or store data on external servers. Some features (city search, VPN sync) call third-party APIs to function. See [External Services](#external-services) for exactly what's sent and to whom.
+- Does NOT provide forensic-level anti-fingerprinting. Web Workers run in an isolated thread that extensions cannot inject into, meaning timezone can leak through that channel. Engine-level API tampering is also detectable by dedicated tools. For extreme threat models, use [Tor Browser](https://www.torproject.org/) or [Mullvad Browser](https://mullvad.net/browser) instead. GeoSpoof's goal is to present a plausible, consistent location identity — not to defeat forensic fingerprinting.
 
 ## Overridden APIs
 
