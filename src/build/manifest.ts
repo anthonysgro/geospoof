@@ -112,10 +112,22 @@ export function generateManifest(target: BrowserTarget, version: string): Record
   if (target === "safari") {
     // Safari: scripts-based background (avoids service worker suspension bug),
     // no privacy permission (unsupported), no browser_specific_settings.
+    // Safari may not honor <all_urls> wildcard for CORS exemption in background pages,
+    // so we explicitly list the geo/IP service domains to ensure CORS is bypassed.
     const safariPermissions = (shared.permissions as string[]).filter((p) => p !== "privacy");
+    const safariHostPermissions = [
+      ...(shared.host_permissions as string[]),
+      "https://api.ipify.org/*",
+      "https://get.geojs.io/*",
+      "https://free.freeipapi.com/*",
+      "https://ipapi.co/*",
+      "https://reallyfreegeoip.org/*",
+      "https://nominatim.openstreetmap.org/*",
+    ];
     return {
       ...shared,
       permissions: safariPermissions,
+      host_permissions: safariHostPermissions,
       background: {
         scripts: ["background/background.js"],
         type: "module",

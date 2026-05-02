@@ -58,6 +58,8 @@ export {
   resetRateLimiter,
   MIN_REQUEST_INTERVAL,
   REQUEST_TIMEOUT,
+  GEO_REQUEST_TIMEOUT,
+  GEO_FALLBACK_TIMEOUT,
 } from "./vpn-sync";
 export type { IpGeolocationResult, VpnSyncError, VpnSyncResponse } from "./vpn-sync";
 

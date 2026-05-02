@@ -102,7 +102,11 @@ export type GetSettingsResponse = Settings;
 
 // --- VPN Sync types ---
 
-export type VpnSyncErrorCode = "IP_DETECTION_FAILED" | "GEOLOCATION_FAILED" | "NETWORK";
+export type VpnSyncErrorCode =
+  | "IP_DETECTION_FAILED"
+  | "GEOLOCATION_FAILED"
+  | "IP_BLOCKED"
+  | "NETWORK";
 
 export interface SyncVpnPayload {
   forceRefresh?: boolean;

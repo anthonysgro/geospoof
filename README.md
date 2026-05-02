@@ -182,10 +182,13 @@ See [USER_GUIDE.md](USER_GUIDE.md) for details.
 | [Nominatim](https://nominatim.org/) (OpenStreetMap)                | City search, reverse geocoding | Search query or coordinates                                            | [GitHub](https://github.com/osm-search/Nominatim)                      |
 | [browser-geo-tz](https://www.npmjs.com/package/browser-geo-tz) CDN | Timezone resolution            | HTTPS range requests for boundary data chunks (coordinates stay local) | [GitHub](https://github.com/kevmo314/browser-geo-tz)                   |
 | [ipify](https://www.ipify.org/)                                    | VPN sync enabled               | HTTPS request to detect your public IP                                 | [GitHub](https://github.com/rdegges/ipify-api)                         |
-| [ipwho.is](https://ipwhois.io/)                                    | VPN sync enabled               | Your public IP (to geolocate VPN exit region)                          | [Documentation](https://ipwhois.io/documentation)                      |
-| [FreeIPAPI](https://freeipapi.com/)                                | VPN sync fallback              | Your public IP (fallback if ipwho.is fails)                            | Closed source ([Privacy Policy](https://freeipapi.com/privacy-policy)) |
+| [GeoJS](https://www.geojs.io/)                                     | VPN sync enabled               | Your public IP (to geolocate VPN exit region)                          | [GitHub](https://github.com/jloh/geojs)                                |
+| [FreeIPAPI](https://freeipapi.com/)                                | VPN sync fallback              | Your public IP (fallback geolocation service)                          | Closed source ([Privacy Policy](https://freeipapi.com/privacy-policy)) |
+| [ReallyFreeGeoIP](https://reallyfreegeoip.org/)                    | VPN sync fallback              | Your public IP (fallback geolocation service)                          | [GitHub](https://github.com/reallyfreegeoip/reallyfreegeoip)           |
 
-> **VPN Sync privacy note:** When you enable "Sync with VPN," your public IP is sent to `api.ipify.org` and `ipwho.is` (or `freeipapi.com` as fallback) over HTTPS to determine your VPN exit region. Your IP is never saved to disk — it's held only in memory and cleared when you disable VPN sync. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for full details.
+> **VPN Sync privacy note:** When you enable "Sync with VPN," your public IP is sent to `api.ipify.org` and up to three geolocation services (`get.geojs.io`, `free.freeipapi.com`, `reallyfreegeoip.org`) in parallel over HTTPS to determine your VPN exit region. Your IP is never saved to disk — it's held only in memory and cleared when you disable VPN sync. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for full details.
+
+No data is sent to the extension developer. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
 
 No data is sent to the extension developer. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
 
