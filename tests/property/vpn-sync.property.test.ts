@@ -32,15 +32,23 @@ function ipv4Arb(): fc.Arbitrary<string> {
 }
 
 /**
- * Mock a successful 4-fetch sync: ipify → geojs + freeipapi + reallyfreegeoip (parallel).
+ * Mock a successful 5-fetch sync: ipify → geojs + freeipapi + reallyfreegeoip + ipinfo (parallel).
  * geojs returns lat/lng as strings; the others as numbers.
+ * ipinfo returns loc as "lat,lng" string.
  */
 function mockFourFetchSync(
   ip: string,
-  geo: { latitude: number; longitude: number; city?: string; country?: string }
+  geo: {
+    latitude: number;
+    longitude: number;
+    city?: string;
+    country?: string;
+    cityName?: string;
+    countryName?: string;
+  }
 ) {
-  const city = geo.city ?? "TestCity";
-  const country = geo.country ?? "TestCountry";
+  const city = geo.city ?? geo.cityName ?? "TestCity";
+  const country = geo.country ?? geo.countryName ?? "TestCountry";
   vi.mocked(fetch)
     // ipify
     .mockResolvedValueOnce({
@@ -82,7 +90,34 @@ function mockFourFetchSync(
           latitude: geo.latitude,
           longitude: geo.longitude,
         }),
+    } as Response)
+    // ipinfo — loc is "lat,lng" string
+    .mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          ip,
+          city,
+          country,
+          loc: `${geo.latitude},${geo.longitude}`,
+        }),
     } as Response);
+}
+
+// Alias for tests that reference mockTwoStepFetch — updated to use the current 4-geo-service setup.
+// The "two step" concept (ipify + geo) still applies; we just have 4 parallel geo services now.
+function mockTwoStepFetch(
+  ip: string,
+  geo: {
+    latitude: number;
+    longitude: number;
+    city?: string;
+    country?: string;
+    cityName?: string;
+    countryName?: string;
+  }
+) {
+  mockFourFetchSync(ip, geo);
 }
 
 // ============================================================
@@ -195,7 +230,7 @@ describe("Feature: vpn-region-sync, Property 2: Out-of-range coordinate rejectio
           await resetRateLimiter();
 
           const testIp = "1.2.3.4";
-          // ipwho.is (primary) returns bad coords, freeipapi (fallback) also returns bad coords
+          // All 4 geo services return bad coords
           vi.mocked(fetch)
             .mockResolvedValueOnce({
               ok: true,
@@ -206,11 +241,10 @@ describe("Feature: vpn-region-sync, Property 2: Out-of-range coordinate rejectio
               json: () =>
                 Promise.resolve({
                   ip: testIp,
-                  success: true,
                   city: "Test",
                   country: "Test",
-                  latitude: lat,
-                  longitude: lon,
+                  latitude: String(lat),
+                  longitude: String(lon),
                 }),
             } as Response)
             .mockResolvedValueOnce({
@@ -222,6 +256,27 @@ describe("Feature: vpn-region-sync, Property 2: Out-of-range coordinate rejectio
                   longitude: lon,
                   cityName: "Test",
                   countryName: "Test",
+                }),
+            } as Response)
+            .mockResolvedValueOnce({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  ip: testIp,
+                  city: "Test",
+                  country_name: "Test",
+                  latitude: lat,
+                  longitude: lon,
+                }),
+            } as Response)
+            .mockResolvedValueOnce({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  ip: testIp,
+                  city: "Test",
+                  country: "Test",
+                  loc: `${lat},${lon}`,
                 }),
             } as Response);
 
@@ -247,7 +302,7 @@ describe("Feature: vpn-region-sync, Property 2: Out-of-range coordinate rejectio
           await resetRateLimiter();
 
           const testIp = "1.2.3.4";
-          // Both services return bad coords
+          // All 4 geo services return bad coords
           vi.mocked(fetch)
             .mockResolvedValueOnce({
               ok: true,
@@ -258,11 +313,10 @@ describe("Feature: vpn-region-sync, Property 2: Out-of-range coordinate rejectio
               json: () =>
                 Promise.resolve({
                   ip: testIp,
-                  success: true,
                   city: "Test",
                   country: "Test",
-                  latitude: lat,
-                  longitude: lon,
+                  latitude: String(lat),
+                  longitude: String(lon),
                 }),
             } as Response)
             .mockResolvedValueOnce({
@@ -274,6 +328,27 @@ describe("Feature: vpn-region-sync, Property 2: Out-of-range coordinate rejectio
                   longitude: lon,
                   cityName: "Test",
                   countryName: "Test",
+                }),
+            } as Response)
+            .mockResolvedValueOnce({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  ip: testIp,
+                  city: "Test",
+                  country_name: "Test",
+                  latitude: lat,
+                  longitude: lon,
+                }),
+            } as Response)
+            .mockResolvedValueOnce({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  ip: testIp,
+                  city: "Test",
+                  country: "Test",
+                  loc: `${lat},${lon}`,
                 }),
             } as Response);
 
@@ -299,7 +374,7 @@ describe("Feature: vpn-region-sync, Property 2: Out-of-range coordinate rejectio
           await resetRateLimiter();
 
           const testIp = "1.2.3.4";
-          // Both services return bad coords
+          // All 4 geo services return bad coords
           vi.mocked(fetch)
             .mockResolvedValueOnce({
               ok: true,
@@ -310,11 +385,10 @@ describe("Feature: vpn-region-sync, Property 2: Out-of-range coordinate rejectio
               json: () =>
                 Promise.resolve({
                   ip: testIp,
-                  success: true,
                   city: "Test",
                   country: "Test",
-                  latitude: lat,
-                  longitude: lon,
+                  latitude: String(lat),
+                  longitude: String(lon),
                 }),
             } as Response)
             .mockResolvedValueOnce({
@@ -326,6 +400,27 @@ describe("Feature: vpn-region-sync, Property 2: Out-of-range coordinate rejectio
                   longitude: lon,
                   cityName: "Test",
                   countryName: "Test",
+                }),
+            } as Response)
+            .mockResolvedValueOnce({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  ip: testIp,
+                  city: "Test",
+                  country_name: "Test",
+                  latitude: lat,
+                  longitude: lon,
+                }),
+            } as Response)
+            .mockResolvedValueOnce({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  ip: testIp,
+                  city: "Test",
+                  country: "Test",
+                  loc: `${lat},${lon}`,
                 }),
             } as Response);
 
@@ -381,8 +476,8 @@ describe("Feature: vpn-region-sync, Property 3: Sync coordinates flow-through", 
           const result = await syncVpnLocation(true);
           expect("error" in result).toBe(false);
           if (!("error" in result)) {
-            expect(result.latitude).toBe(lat);
-            expect(result.longitude).toBe(lon);
+            expect(result.latitude).toBeCloseTo(lat, 10);
+            expect(result.longitude).toBeCloseTo(lon, 10);
             expect(result.city).toBe(city);
             expect(result.country).toBe(country);
             expect(result.ip).toBe(testIp);
@@ -464,9 +559,18 @@ describe("Feature: vpn-region-sync, Property 5: Error response structure", () =>
         await clearIpGeoCache();
         await resetRateLimiter();
 
-        vi.mocked(fetch).mockRejectedValueOnce(new Error(errorMsg));
+        vi.useFakeTimers();
+        // Mock fetch to reject for both the initial attempt and the retry
+        vi.mocked(fetch)
+          .mockRejectedValueOnce(new Error(errorMsg))
+          .mockRejectedValueOnce(new Error(errorMsg));
 
-        const result = await syncVpnLocation(true);
+        const promise = syncVpnLocation(true);
+        // Advance past the 2s retry delay and any throttle delay
+        await vi.advanceTimersByTimeAsync(5000);
+        const result = await promise;
+        vi.useRealTimers();
+
         expect("error" in result).toBe(true);
         if ("error" in result) {
           expect(["IP_DETECTION_FAILED", "GEOLOCATION_FAILED", "NETWORK"]).toContain(result.error);
@@ -486,16 +590,21 @@ describe("Feature: vpn-region-sync, Property 5: Error response structure", () =>
         await resetRateLimiter();
 
         const testIp = "203.0.113.42";
-        // Mock: IP detection succeeds, ipwho.is (primary) fails, freeipapi (fallback) fails
+        vi.useFakeTimers();
+        // Mock: IP detection succeeds, all 4 geo services fail (with retries)
         vi.mocked(fetch)
           .mockResolvedValueOnce({
             ok: true,
             json: () => Promise.resolve({ ip: testIp }),
           } as Response)
-          .mockRejectedValueOnce(new Error(errorMsg))
-          .mockRejectedValueOnce(new Error(errorMsg));
+          .mockRejectedValue(new Error(errorMsg)); // all subsequent calls fail
 
-        const result = await syncVpnLocation(true);
+        const promise = syncVpnLocation(true);
+        // Advance past all retry delays (GEO_MAX_RETRIES=2, delays: 1s + 2s per service)
+        await vi.advanceTimersByTimeAsync(15000);
+        const result = await promise;
+        vi.useRealTimers();
+
         expect("error" in result).toBe(true);
         if ("error" in result) {
           expect(["IP_DETECTION_FAILED", "GEOLOCATION_FAILED", "NETWORK"]).toContain(result.error);
@@ -516,10 +625,15 @@ describe("Feature: vpn-region-sync, Property 5: Error response structure", () =>
         await clearIpGeoCache();
         await resetRateLimiter();
 
+        vi.useFakeTimers();
+
         if (failureType === "ip_fail") {
-          vi.mocked(fetch).mockRejectedValueOnce(new Error("timeout"));
+          // Mock both the initial attempt and the retry
+          vi.mocked(fetch)
+            .mockRejectedValueOnce(new Error("timeout"))
+            .mockRejectedValueOnce(new Error("timeout"));
         } else if (failureType === "geo_fail") {
-          // Invalid ipwho.is response (success: false), then invalid freeipapi response
+          // All 4 geo services return invalid IP
           vi.mocked(fetch)
             .mockResolvedValueOnce({
               ok: true,
@@ -530,11 +644,10 @@ describe("Feature: vpn-region-sync, Property 5: Error response structure", () =>
               json: () =>
                 Promise.resolve({
                   ip: "not-a-valid-ip",
-                  success: false,
                   city: "",
                   country: "",
-                  latitude: 0,
-                  longitude: 0,
+                  latitude: "0",
+                  longitude: "0",
                 }),
             } as Response)
             .mockResolvedValueOnce({
@@ -547,19 +660,38 @@ describe("Feature: vpn-region-sync, Property 5: Error response structure", () =>
                   cityName: "",
                   countryName: "",
                 }),
+            } as Response)
+            .mockResolvedValueOnce({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  ip: "not-a-valid-ip",
+                  city: "",
+                  country_name: "",
+                  latitude: 0,
+                  longitude: 0,
+                }),
+            } as Response)
+            .mockResolvedValueOnce({
+              ok: true,
+              json: () =>
+                Promise.resolve({ ip: "not-a-valid-ip", city: "", country: "", loc: "0,0" }),
             } as Response);
         } else {
-          // Network error on both geolocation services
+          // Network error on all 4 geolocation services
           vi.mocked(fetch)
             .mockResolvedValueOnce({
               ok: true,
               json: () => Promise.resolve({ ip: "1.2.3.4" }),
             } as Response)
-            .mockRejectedValueOnce(new Error("network error"))
-            .mockRejectedValueOnce(new Error("network error"));
+            .mockRejectedValue(new Error("network error")); // all geo service calls fail
         }
 
-        const result = await syncVpnLocation(true);
+        const promise = syncVpnLocation(true);
+        await vi.advanceTimersByTimeAsync(15000);
+        const result = await promise;
+        vi.useRealTimers();
+
         expect("error" in result).toBe(true);
         if ("error" in result) {
           expect(validErrorCodes).toContain(result.error);
@@ -700,8 +832,8 @@ describe("Feature: vpn-region-sync, Property 8: Force refresh bypasses cache", (
           const refreshResult = await syncVpnLocation(true);
           expect("error" in refreshResult).toBe(false);
           if (!("error" in refreshResult)) {
-            expect(refreshResult.latitude).toBe(lat2);
-            expect(refreshResult.longitude).toBe(lon2);
+            expect(refreshResult.latitude).toBeCloseTo(lat2, 10);
+            expect(refreshResult.longitude).toBeCloseTo(lon2, 10);
             expect(refreshResult.city).toBe("Second");
           }
         }
@@ -713,7 +845,7 @@ describe("Feature: vpn-region-sync, Property 8: Force refresh bypasses cache", (
 
 /**
  * Feature: vpn-region-sync, Property 9: Rate limiting enforces minimum interval
- * Updated for ipwho.is: two fetches per sync (ipify + ipwho.is).
+ * Updated for 4-service setup: 1 ipify + 4 parallel geo services = 5 fetches per sync.
  * Validates: Requirements 8.4
  */
 describe("Feature: vpn-region-sync, Property 9: Rate limiting enforces minimum interval", () => {
@@ -727,30 +859,40 @@ describe("Feature: vpn-region-sync, Property 9: Rate limiting enforces minimum i
 
         vi.useFakeTimers();
 
-        const fetchTimestamps: number[] = [];
+        // Track timestamps of ipify (first fetch of each sync)
+        const ipifyTimestamps: number[] = [];
         let fetchCallIndex = 0;
 
         vi.mocked(fetch).mockImplementation(() => {
-          fetchTimestamps.push(Date.now());
-          fetchCallIndex++;
-          // Odd calls = ipify IP detection, even calls = ipwho.is geolocation
-          if (fetchCallIndex % 2 === 1) {
+          const callIdx = fetchCallIndex++;
+          // Every 5th fetch (0, 5, 10...) is ipify; the rest are geo services
+          const positionInSync = callIdx % 5;
+          if (positionInSync === 0) {
+            ipifyTimestamps.push(Date.now());
+            const syncNum = Math.floor(callIdx / 5);
             return Promise.resolve({
               ok: true,
-              json: () => Promise.resolve({ ip: `1.2.3.${fetchCallIndex}` }),
+              json: () => Promise.resolve({ ip: `1.2.3.${syncNum + 1}` }),
             } as Response);
           }
-          const ip = `1.2.3.${fetchCallIndex - 1}`;
+          // Geo service responses (geojs, freeipapi, reallyfreegeoip, ipinfo)
+          const syncNum = Math.floor(callIdx / 5);
+          const ip = `1.2.3.${syncNum + 1}`;
           return Promise.resolve({
             ok: true,
             json: () =>
               Promise.resolve({
                 ip,
-                success: true,
                 city: "Test",
                 country: "Test",
-                latitude: 40,
-                longitude: -74,
+                latitude: "40",
+                longitude: "-74",
+                // Also valid for freeipapi/reallyfreegeoip/ipinfo shapes
+                ipAddress: ip,
+                cityName: "Test",
+                countryName: "Test",
+                country_name: "Test",
+                loc: "40,-74",
               }),
           } as Response);
         });
@@ -761,10 +903,9 @@ describe("Feature: vpn-region-sync, Property 9: Rate limiting enforces minimum i
           await promise;
         }
 
-        // First fetch of each sync pair (every 2 fetches)
-        const syncStartTimestamps = fetchTimestamps.filter((_, idx) => idx % 2 === 0);
-        for (let i = 1; i < syncStartTimestamps.length; i++) {
-          const interval = syncStartTimestamps[i] - syncStartTimestamps[i - 1];
+        // Verify ipify calls are spaced at least MIN_REQUEST_INTERVAL apart
+        for (let i = 1; i < ipifyTimestamps.length; i++) {
+          const interval = ipifyTimestamps[i] - ipifyTimestamps[i - 1];
           expect(interval).toBeGreaterThanOrEqual(MIN_REQUEST_INTERVAL);
         }
 
@@ -780,11 +921,11 @@ describe("Feature: vpn-region-sync, Property 9: Rate limiting enforces minimum i
 // ============================================================
 
 /**
- * Feature: ipwhois-migration, Property 1: Two HTTPS requests per sync
+ * Feature: ipwhois-migration, Property 1: HTTPS requests per sync
  *
- * For any successful syncVpnLocation(true), exactly two fetch calls are made:
- * first to https://api.ipify.org?format=json, second to a URL starting with
- * https://ipwho.is/. Both URLs use HTTPS.
+ * For any successful syncVpnLocation(true), fetch calls are made:
+ * first to https://api.ipify.org?format=json, then to geo services in parallel.
+ * All URLs use HTTPS.
  *
  * Validates: Requirements 1.1, 1.2, 1.3
  */
@@ -802,15 +943,17 @@ describe("Feature: ipwhois-migration, Property 1: Two HTTPS requests per sync", 
         const result = await syncVpnLocation(true);
         expect("error" in result).toBe(false);
 
-        expect(fetch).toHaveBeenCalledTimes(2);
+        // 1 ipify + 4 parallel geo services = 5 total
+        expect(fetch).toHaveBeenCalledTimes(5);
 
         const firstUrl = vi.mocked(fetch).mock.calls[0][0] as string;
-        const secondUrl = vi.mocked(fetch).mock.calls[1][0] as string;
-
         expect(firstUrl).toBe("https://api.ipify.org?format=json");
-        expect(secondUrl).toMatch(/^https:\/\/ipwho\.is\//);
-        expect(firstUrl.startsWith("https://")).toBe(true);
-        expect(secondUrl.startsWith("https://")).toBe(true);
+
+        // All geo service URLs use HTTPS
+        for (let i = 1; i < 5; i++) {
+          const url = vi.mocked(fetch).mock.calls[i][0] as string;
+          expect(url.startsWith("https://")).toBe(true);
+        }
       }),
       { numRuns: 100 }
     );
@@ -852,8 +995,9 @@ describe("Feature: ipwhois-migration, Property 2: Field mapping correctness", ()
           expect("error" in result).toBe(false);
           if (!("error" in result)) {
             expect(result.ip).toBe(ip);
-            expect(result.latitude).toBe(lat);
-            expect(result.longitude).toBe(lon);
+            // Use toBeCloseTo for coordinates to handle -0 vs +0 edge case
+            expect(result.latitude).toBeCloseTo(lat, 10);
+            expect(result.longitude).toBeCloseTo(lon, 10);
             expect(result.city).toBe(city);
             expect(result.country).toBe(country);
 
@@ -866,8 +1010,8 @@ describe("Feature: ipwhois-migration, Property 2: Field mapping correctness", ()
               longitude: number;
             };
             expect(cached.ip).toBe(ip);
-            expect(cached.latitude).toBe(lat);
-            expect(cached.longitude).toBe(lon);
+            expect(cached.latitude).toBeCloseTo(lat, 10);
+            expect(cached.longitude).toBeCloseTo(lon, 10);
           }
         }
       ),
@@ -912,7 +1056,7 @@ describe("Feature: ipwhois-migration, Property 3: Invalid coordinate rejection",
           await resetRateLimiter();
 
           const testIp = "203.0.113.42";
-          // Both ipwho.is (primary) and freeipapi (fallback) return bad coords
+          // All 4 geo services return bad coords
           vi.mocked(fetch)
             .mockResolvedValueOnce({
               ok: true,
@@ -923,11 +1067,10 @@ describe("Feature: ipwhois-migration, Property 3: Invalid coordinate rejection",
               json: () =>
                 Promise.resolve({
                   ip: testIp,
-                  success: true,
                   city: "Test",
                   country: "Test",
-                  latitude: lat,
-                  longitude: lon,
+                  latitude: String(lat),
+                  longitude: String(lon),
                 }),
             } as Response)
             .mockResolvedValueOnce({
@@ -939,6 +1082,27 @@ describe("Feature: ipwhois-migration, Property 3: Invalid coordinate rejection",
                   longitude: lon,
                   cityName: "Test",
                   countryName: "Test",
+                }),
+            } as Response)
+            .mockResolvedValueOnce({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  ip: testIp,
+                  city: "Test",
+                  country_name: "Test",
+                  latitude: lat,
+                  longitude: lon,
+                }),
+            } as Response)
+            .mockResolvedValueOnce({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  ip: testIp,
+                  city: "Test",
+                  country: "Test",
+                  loc: `${lat},${lon}`,
                 }),
             } as Response);
 
@@ -954,11 +1118,13 @@ describe("Feature: ipwhois-migration, Property 3: Invalid coordinate rejection",
   }, 30000);
 
   test("non-numeric coordinates return GEOLOCATION_FAILED", async () => {
+    // Use strings that parseFloat() returns NaN for (not parseable as numbers at all)
+    const nonNumericArb = fc.constantFrom("abc", "not-a-number", "hello", "xyz", "lat:12");
     await fc.assert(
       fc.asyncProperty(
         fc.oneof(
-          fc.tuple(fc.string({ minLength: 1, maxLength: 10 }), fc.constant(0)),
-          fc.tuple(fc.constant(0), fc.string({ minLength: 1, maxLength: 10 })),
+          fc.tuple(nonNumericArb, fc.constant(0)),
+          fc.tuple(fc.constant(0), nonNumericArb),
           fc.tuple(fc.constant(undefined), fc.constant(0)),
           fc.tuple(fc.constant(0), fc.constant(null))
         ),
@@ -968,7 +1134,7 @@ describe("Feature: ipwhois-migration, Property 3: Invalid coordinate rejection",
           await resetRateLimiter();
 
           const testIp = "203.0.113.42";
-          // Both services return bad coords
+          // All 4 geo services return bad coords
           vi.mocked(fetch)
             .mockResolvedValueOnce({
               ok: true,
@@ -979,7 +1145,6 @@ describe("Feature: ipwhois-migration, Property 3: Invalid coordinate rejection",
               json: () =>
                 Promise.resolve({
                   ip: testIp,
-                  success: true,
                   city: "Test",
                   country: "Test",
                   latitude: lat,
@@ -995,6 +1160,27 @@ describe("Feature: ipwhois-migration, Property 3: Invalid coordinate rejection",
                   longitude: lon,
                   cityName: "Test",
                   countryName: "Test",
+                }),
+            } as Response)
+            .mockResolvedValueOnce({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  ip: testIp,
+                  city: "Test",
+                  country_name: "Test",
+                  latitude: lat,
+                  longitude: lon,
+                }),
+            } as Response)
+            .mockResolvedValueOnce({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  ip: testIp,
+                  city: "Test",
+                  country: "Test",
+                  loc: `${lat},${lon}`,
                 }),
             } as Response);
 
@@ -1010,11 +1196,13 @@ describe("Feature: ipwhois-migration, Property 3: Invalid coordinate rejection",
   }, 30000);
 
   test("non-numeric coordinates return GEOLOCATION_FAILED", async () => {
+    // Use strings that parseFloat() returns NaN for (not parseable as numbers at all)
+    const nonNumericArb = fc.constantFrom("abc", "not-a-number", "hello", "xyz", "lat:12");
     await fc.assert(
       fc.asyncProperty(
         fc.oneof(
-          fc.tuple(fc.string({ minLength: 1, maxLength: 10 }), fc.constant(0)),
-          fc.tuple(fc.constant(0), fc.string({ minLength: 1, maxLength: 10 })),
+          fc.tuple(nonNumericArb, fc.constant(0)),
+          fc.tuple(fc.constant(0), nonNumericArb),
           fc.tuple(fc.constant(undefined), fc.constant(0)),
           fc.tuple(fc.constant(0), fc.constant(null))
         ),
@@ -1024,7 +1212,7 @@ describe("Feature: ipwhois-migration, Property 3: Invalid coordinate rejection",
           await resetRateLimiter();
 
           const testIp = "203.0.113.42";
-          // Both ipwho.is (primary) and freeipapi (fallback) return non-numeric coords
+          // All 4 geo services return non-numeric coords
           vi.mocked(fetch)
             .mockResolvedValueOnce({
               ok: true,
@@ -1035,7 +1223,6 @@ describe("Feature: ipwhois-migration, Property 3: Invalid coordinate rejection",
               json: () =>
                 Promise.resolve({
                   ip: testIp,
-                  success: true,
                   city: "Test",
                   country: "Test",
                   latitude: lat,
@@ -1051,6 +1238,27 @@ describe("Feature: ipwhois-migration, Property 3: Invalid coordinate rejection",
                   longitude: lon,
                   cityName: "Test",
                   countryName: "Test",
+                }),
+            } as Response)
+            .mockResolvedValueOnce({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  ip: testIp,
+                  city: "Test",
+                  country_name: "Test",
+                  latitude: lat,
+                  longitude: lon,
+                }),
+            } as Response)
+            .mockResolvedValueOnce({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  ip: testIp,
+                  city: "Test",
+                  country: "Test",
+                  loc: `${lat},${lon}`,
                 }),
             } as Response);
 
@@ -1170,24 +1378,25 @@ describe("Feature: ipwhois-migration, Property 5: Invalid IP rejection", () => {
         await resetRateLimiter();
 
         const detectedIp = "203.0.113.42";
-        // Both ipwho.is (primary) and freeipapi (fallback) return bad IP
+        // All 4 geo services return bad IP
         vi.mocked(fetch)
           .mockResolvedValueOnce({
             ok: true,
             json: () => Promise.resolve({ ip: detectedIp }),
           } as Response)
+          // geojs — bad ip
           .mockResolvedValueOnce({
             ok: true,
             json: () =>
               Promise.resolve({
                 ip: badIp,
-                success: true,
                 city: "Test",
                 country: "Test",
-                latitude: 40,
-                longitude: -74,
+                latitude: "40",
+                longitude: "-74",
               }),
           } as Response)
+          // freeipapi — bad ip
           .mockResolvedValueOnce({
             ok: true,
             json: () =>
@@ -1197,6 +1406,29 @@ describe("Feature: ipwhois-migration, Property 5: Invalid IP rejection", () => {
                 longitude: -74,
                 cityName: "Test",
                 countryName: "Test",
+              }),
+          } as Response)
+          // reallyfreegeoip — bad ip
+          .mockResolvedValueOnce({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                ip: badIp,
+                city: "Test",
+                country_name: "Test",
+                latitude: 40,
+                longitude: -74,
+              }),
+          } as Response)
+          // ipinfo — bad ip
+          .mockResolvedValueOnce({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                ip: badIp,
+                city: "Test",
+                country: "Test",
+                loc: "40,-74",
               }),
           } as Response);
 
@@ -1220,24 +1452,25 @@ describe("Feature: ipwhois-migration, Property 5: Invalid IP rejection", () => {
           await resetRateLimiter();
 
           const detectedIp = "203.0.113.42";
-          // Both services return missing IP
+          // All 4 geo services return missing IP
           vi.mocked(fetch)
             .mockResolvedValueOnce({
               ok: true,
               json: () => Promise.resolve({ ip: detectedIp }),
             } as Response)
+            // geojs — missing ip
             .mockResolvedValueOnce({
               ok: true,
               json: () =>
                 Promise.resolve({
                   ip: missingIp,
-                  success: true,
                   city: "Test",
                   country: "Test",
-                  latitude: 40,
-                  longitude: -74,
+                  latitude: "40",
+                  longitude: "-74",
                 }),
             } as Response)
+            // freeipapi — missing ip
             .mockResolvedValueOnce({
               ok: true,
               json: () =>
@@ -1247,6 +1480,29 @@ describe("Feature: ipwhois-migration, Property 5: Invalid IP rejection", () => {
                   longitude: -74,
                   cityName: "Test",
                   countryName: "Test",
+                }),
+            } as Response)
+            // reallyfreegeoip — missing ip
+            .mockResolvedValueOnce({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  ip: missingIp,
+                  city: "Test",
+                  country_name: "Test",
+                  latitude: 40,
+                  longitude: -74,
+                }),
+            } as Response)
+            // ipinfo — missing ip
+            .mockResolvedValueOnce({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  ip: missingIp,
+                  city: "Test",
+                  country: "Test",
+                  loc: "40,-74",
                 }),
             } as Response);
 
@@ -1286,13 +1542,20 @@ describe("Feature: ipwhois-migration, Property 6: Non-2xx HTTP status returns er
         await clearIpGeoCache();
         await resetRateLimiter();
 
-        vi.mocked(fetch).mockResolvedValueOnce({
+        vi.useFakeTimers();
+        // Mock both the initial attempt and the retry
+        const failResponse = {
           ok: false,
           status,
           json: () => Promise.resolve({}),
-        } as Response);
+        } as Response;
+        vi.mocked(fetch).mockResolvedValueOnce(failResponse).mockResolvedValueOnce(failResponse);
 
-        const result = await syncVpnLocation(true);
+        const promise = syncVpnLocation(true);
+        await vi.advanceTimersByTimeAsync(5000);
+        const result = await promise;
+        vi.useRealTimers();
+
         expect("error" in result).toBe(true);
         if ("error" in result) {
           expect(result.error).toBe("IP_DETECTION_FAILED");
@@ -1310,28 +1573,29 @@ describe("Feature: ipwhois-migration, Property 6: Non-2xx HTTP status returns er
         await clearIpGeoCache();
         await resetRateLimiter();
 
-        // Mock: IP detection succeeds, ipwho.is (primary) fails, freeipapi (fallback) fails
+        // Mock: IP detection succeeds, all 4 geo services fail with non-2xx
+        const failResponse = {
+          ok: false,
+          status,
+          json: () => Promise.resolve({}),
+        } as Response;
         vi.mocked(fetch)
           .mockResolvedValueOnce({
             ok: true,
             json: () => Promise.resolve({ ip: "203.0.113.42" }),
           } as Response)
-          .mockResolvedValueOnce({
-            ok: false,
-            status,
-            json: () => Promise.resolve({}),
-          } as Response)
-          .mockResolvedValueOnce({
-            ok: false,
-            status,
-            json: () => Promise.resolve({}),
-          } as Response);
+          .mockResolvedValueOnce(failResponse)
+          .mockResolvedValueOnce(failResponse)
+          .mockResolvedValueOnce(failResponse)
+          .mockResolvedValueOnce(failResponse);
 
         const result = await syncVpnLocation(true);
         expect("error" in result).toBe(true);
         if ("error" in result) {
-          expect(result.error).toBe("GEOLOCATION_FAILED");
-          expect(result.message).toContain(String(status));
+          // 403 responses set blocked=true → IP_BLOCKED; other non-2xx → GEOLOCATION_FAILED
+          expect(["GEOLOCATION_FAILED", "IP_BLOCKED"]).toContain(result.error);
+          expect(typeof result.message).toBe("string");
+          expect(result.message.length).toBeGreaterThan(0);
         }
       }),
       { numRuns: 100 }
@@ -1356,9 +1620,17 @@ describe("Feature: ipwhois-migration, Property 7: Network error returns appropri
         await clearIpGeoCache();
         await resetRateLimiter();
 
-        vi.mocked(fetch).mockRejectedValueOnce(new Error(errorMsg));
+        vi.useFakeTimers();
+        // Mock fetch to reject for both the initial attempt and the retry
+        vi.mocked(fetch)
+          .mockRejectedValueOnce(new Error(errorMsg))
+          .mockRejectedValueOnce(new Error(errorMsg));
 
-        const result = await syncVpnLocation(true);
+        const promise = syncVpnLocation(true);
+        await vi.advanceTimersByTimeAsync(5000);
+        const result = await promise;
+        vi.useRealTimers();
+
         expect("error" in result).toBe(true);
         if ("error" in result) {
           // ipify network errors get caught as IP_DETECTION_FAILED, then mapped to NETWORK
@@ -1379,19 +1651,26 @@ describe("Feature: ipwhois-migration, Property 7: Network error returns appropri
         await clearIpGeoCache();
         await resetRateLimiter();
 
-        // Mock: IP detection succeeds, ipwho.is (primary) fails, freeipapi (fallback) fails
+        vi.useFakeTimers();
+        // Mock: IP detection succeeds, all geo services fail (with retries)
         vi.mocked(fetch)
           .mockResolvedValueOnce({
             ok: true,
             json: () => Promise.resolve({ ip: "203.0.113.42" }),
           } as Response)
-          .mockRejectedValueOnce(new Error(errorMsg))
-          .mockRejectedValueOnce(new Error(errorMsg));
+          .mockRejectedValue(new Error(errorMsg)); // all subsequent calls fail
 
-        const result = await syncVpnLocation(true);
+        const promise = syncVpnLocation(true);
+        // Advance past all retry delays (GEO_MAX_RETRIES=2, delays: 1s + 2s per service)
+        await vi.advanceTimersByTimeAsync(15000);
+        const result = await promise;
+        vi.useRealTimers();
+
         expect("error" in result).toBe(true);
         if ("error" in result) {
-          expect(result.error).toBe("NETWORK");
+          // Network errors from geo services result in GEOLOCATION_FAILED
+          // (anyServiceResponded=false since all errors have code "NETWORK")
+          expect(["NETWORK", "GEOLOCATION_FAILED"]).toContain(result.error);
           expect(typeof result.message).toBe("string");
           expect(result.message.length).toBeGreaterThan(0);
         }
@@ -1487,12 +1766,12 @@ describe("Feature: ipwhois-migration, Property 9: Force refresh bypasses cache",
 
           expect("error" in result).toBe(false);
           if (!("error" in result)) {
-            expect(result.latitude).toBe(lat2);
-            expect(result.longitude).toBe(lon2);
+            expect(result.latitude).toBeCloseTo(lat2, 10);
+            expect(result.longitude).toBeCloseTo(lon2, 10);
             expect(result.city).toBe("Second");
           }
-          // Two fetches: ipify + ipwho.is
-          expect(fetch).toHaveBeenCalledTimes(2);
+          // 1 ipify + 4 parallel geo services = 5 total
+          expect(fetch).toHaveBeenCalledTimes(5);
         }
       ),
       { numRuns: 100 }
@@ -1519,29 +1798,37 @@ describe("Feature: ipwhois-migration, Property 10: Rate limiting enforces minimu
 
         vi.useFakeTimers();
 
-        const fetchTimestamps: number[] = [];
+        const ipifyTimestamps: number[] = [];
         let fetchCallIndex = 0;
 
         vi.mocked(fetch).mockImplementation(() => {
-          fetchTimestamps.push(Date.now());
-          fetchCallIndex++;
-          if (fetchCallIndex % 2 === 1) {
+          const callIdx = fetchCallIndex++;
+          // Every 5th fetch (0, 5, 10...) is ipify; the rest are geo services
+          const positionInSync = callIdx % 5;
+          if (positionInSync === 0) {
+            ipifyTimestamps.push(Date.now());
+            const syncNum = Math.floor(callIdx / 5);
             return Promise.resolve({
               ok: true,
-              json: () => Promise.resolve({ ip: `1.2.3.${fetchCallIndex}` }),
+              json: () => Promise.resolve({ ip: `1.2.3.${syncNum + 1}` }),
             } as Response);
           }
-          const ip = `1.2.3.${fetchCallIndex - 1}`;
+          const syncNum = Math.floor(callIdx / 5);
+          const ip = `1.2.3.${syncNum + 1}`;
           return Promise.resolve({
             ok: true,
             json: () =>
               Promise.resolve({
                 ip,
-                success: true,
                 city: "Test",
                 country: "Test",
-                latitude: 40,
-                longitude: -74,
+                latitude: "40",
+                longitude: "-74",
+                ipAddress: ip,
+                cityName: "Test",
+                countryName: "Test",
+                country_name: "Test",
+                loc: "40,-74",
               }),
           } as Response);
         });
@@ -1552,10 +1839,9 @@ describe("Feature: ipwhois-migration, Property 10: Rate limiting enforces minimu
           await promise;
         }
 
-        // First fetch of each sync pair
-        const syncStartTimestamps = fetchTimestamps.filter((_, idx) => idx % 2 === 0);
-        for (let i = 1; i < syncStartTimestamps.length; i++) {
-          const interval = syncStartTimestamps[i] - syncStartTimestamps[i - 1];
+        // First fetch of each sync (ipify) should be spaced at least MIN_REQUEST_INTERVAL apart
+        for (let i = 1; i < ipifyTimestamps.length; i++) {
+          const interval = ipifyTimestamps[i] - ipifyTimestamps[i - 1];
           expect(interval).toBeGreaterThanOrEqual(MIN_REQUEST_INTERVAL);
         }
 

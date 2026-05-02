@@ -15,7 +15,9 @@ import { sessionStorageData } from "../setup";
 
 // Hoist the browser-geo-tz mock so it survives vi.resetModules()
 vi.mock("browser-geo-tz", () => ({
-  find: vi.fn(),
+  init: vi.fn(() => ({
+    find: vi.fn().mockResolvedValue([]),
+  })),
 }));
 
 /**
@@ -71,8 +73,18 @@ function mockVpnSyncFetch(ip: string, lat: number, lon: number, city: string, co
  * Helper: set up browser-geo-tz mock for a given timezone after module reset.
  */
 async function setupTimezoneMock(timezone: string) {
-  const { find: findFn } = await import("browser-geo-tz");
-  vi.mocked(findFn).mockResolvedValue([timezone]);
+  const { init: initFn } = await import("browser-geo-tz");
+  const initMocked = vi.mocked(initFn);
+  const results = initMocked.mock.results;
+  const lastResult = results[results.length - 1];
+  if (lastResult && lastResult.type === "return") {
+    vi.mocked((lastResult.value as { find: ReturnType<typeof vi.fn> }).find).mockResolvedValue([
+      timezone,
+    ]);
+  } else {
+    const findFn = vi.fn().mockResolvedValue([timezone]);
+    initMocked.mockReturnValue({ find: findFn });
+  }
 }
 
 describe("VPN Sync Integration Tests", () => {
@@ -357,11 +369,16 @@ describe("VPN Sync Integration Tests", () => {
       await resetRateLimiter();
       await clearTimezoneCache();
 
-      // First attempt: IP detection succeeds but all three geo services fail
+      // First attempt: IP detection succeeds but all four geo services fail
       vi.mocked(fetch)
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve({ ip: "203.0.113.42" }),
+        } as Response)
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: () => Promise.resolve({}),
         } as Response)
         .mockResolvedValueOnce({
           ok: false,
@@ -385,7 +402,7 @@ describe("VPN Sync Integration Tests", () => {
       );
 
       const errorResponse = failResult as Record<string, unknown>;
-      expect(errorResponse.error).toBe("IP_BLOCKED");
+      expect(errorResponse.error).toBe("GEOLOCATION_FAILED");
 
       // User clicks Re-sync → succeeds
       await resetRateLimiter();

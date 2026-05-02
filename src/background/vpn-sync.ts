@@ -776,7 +776,11 @@ async function _doSyncVpnLocation(
       const anyServiceResponded = errors.some(
         (e) =>
           e.blocked === true ||
-          (e.name !== "AbortError" && e.message !== "Failed to fetch" && e.message !== TIMEOUT_MSG)
+          (e.name !== "AbortError" &&
+            e.message !== "Failed to fetch" &&
+            e.message !== TIMEOUT_MSG &&
+            (e as Error & { code?: string }).code !== "GEOLOCATION_FAILED" &&
+            (e as Error & { code?: string }).code !== "NETWORK")
       );
 
       if (anyServiceResponded) {

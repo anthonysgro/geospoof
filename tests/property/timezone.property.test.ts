@@ -9,15 +9,26 @@ import { setupContentScript } from "../helpers/content.test.helper";
 
 // Mock browser-geo-tz at the module level (no longer uses GeoNames fetch)
 vi.mock("browser-geo-tz", () => ({
-  find: vi.fn(),
+  init: vi.fn(() => ({
+    find: vi.fn().mockResolvedValue([]),
+  })),
 }));
 
 /**
- * Helper: get the mocked `find` function from browser-geo-tz.
+ * Helper: get the mocked `find` function from the object returned by `init`.
  */
 async function getMockedFind() {
   const mod = await import("browser-geo-tz");
-  return vi.mocked(mod.find);
+  const initMock = vi.mocked(mod.init);
+  // Get the most recent init() call result (importBackground resets modules, so init is called fresh each time)
+  const results = initMock.mock.results;
+  const lastResult = results[results.length - 1];
+  if (lastResult && lastResult.type === "return") {
+    return vi.mocked((lastResult.value as { find: ReturnType<typeof vi.fn> }).find);
+  }
+  const findFn = vi.fn().mockResolvedValue([]);
+  initMock.mockReturnValue({ find: findFn });
+  return findFn;
 }
 
 /**

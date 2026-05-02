@@ -13,7 +13,9 @@ import { resolve } from "path";
 
 // Mock browser-geo-tz at the module level
 vi.mock("browser-geo-tz", () => ({
-  find: vi.fn(),
+  init: vi.fn(() => ({
+    find: vi.fn().mockResolvedValue([]),
+  })),
 }));
 
 // Mock DOM for background module
@@ -29,8 +31,20 @@ vi.mock("browser-geo-tz", () => ({
 
 const background = await import("@/background");
 const { computeOffsets } = background;
-const { find: findMock } = await import("browser-geo-tz");
-const mockedFind = vi.mocked(findMock);
+const { init: initMock } = await import("browser-geo-tz");
+const _initMocked = vi.mocked(initMock);
+// Get the find mock from the object returned by init()
+function getMockedFind() {
+  const results = _initMocked.mock.results;
+  const lastResult = results[results.length - 1];
+  if (lastResult && lastResult.type === "return") {
+    return vi.mocked((lastResult.value as { find: ReturnType<typeof vi.fn> }).find);
+  }
+  const findFn = vi.fn().mockResolvedValue([]);
+  _initMocked.mockReturnValue({ find: findFn });
+  return findFn;
+}
+const mockedFind = getMockedFind();
 
 describe("computeOffsets", () => {
   test("returns correct offset for America/New_York", () => {

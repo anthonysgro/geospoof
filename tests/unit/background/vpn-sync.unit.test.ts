@@ -8,6 +8,13 @@ import { storageData, sessionStorageData } from "../../setup";
 import { importBackground } from "../../helpers/import-background";
 import { DEFAULT_SETTINGS } from "@/shared/types/settings";
 
+// Mock browser-geo-tz so timezone lookups don't make real CDN requests
+vi.mock("browser-geo-tz", () => ({
+  init: vi.fn(() => ({
+    find: vi.fn().mockResolvedValue(["America/New_York"]),
+  })),
+}));
+
 /**
  * Mock fetch for VPN sync flow:
  * 1. IP detection via ipify
@@ -148,11 +155,16 @@ describe("SYNC_VPN message handler", () => {
     await clearIpGeoCache();
     await resetRateLimiter();
 
-    // Mock: IP detection succeeds, then all three geo services fail (geojs, freeipapi, reallyfreegeoip)
+    // Mock: IP detection succeeds, then all four geo services fail (geojs, freeipapi, reallyfreegeoip, ipinfo)
     vi.mocked(fetch)
       .mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ ip: "203.0.113.42" }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: () => Promise.resolve({}),
       } as Response)
       .mockResolvedValueOnce({
         ok: false,

@@ -20,11 +20,24 @@ import {
 
 // Mock browser-geo-tz — timezone resolution is now offline
 vi.mock("browser-geo-tz", () => ({
-  find: vi.fn(),
+  init: vi.fn(() => ({
+    find: vi.fn().mockResolvedValue([]),
+  })),
 }));
 
-const { find: findMock } = await import("browser-geo-tz");
-const mockedFind = vi.mocked(findMock);
+const { init: _geoTzInitMock } = await import("browser-geo-tz");
+const _initMocked = vi.mocked(_geoTzInitMock);
+function getMockedFind() {
+  const results = _initMocked.mock.results;
+  const lastResult = results[results.length - 1];
+  if (lastResult && lastResult.type === "return") {
+    return vi.mocked((lastResult.value as { find: ReturnType<typeof vi.fn> }).find);
+  }
+  const findFn = vi.fn().mockResolvedValue([]);
+  _initMocked.mockReturnValue({ find: findFn });
+  return findFn;
+}
+const mockedFind = getMockedFind();
 
 describe("Error Recovery Integration Tests", () => {
   beforeEach(async () => {
