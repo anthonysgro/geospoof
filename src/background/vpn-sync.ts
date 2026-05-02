@@ -15,8 +15,9 @@ const GEOJS_URL = "https://get.geojs.io/v1/ip/geo/"; // Primary — CORS-friendl
 const FREEIPAPI_URL = "https://free.freeipapi.com/api/json/"; // Fallback #1
 const REALLYFREEGEOIP_URL = "https://reallyfreegeoip.org/json/"; // Fallback #2
 const REQUEST_TIMEOUT = 10000; // 10 seconds (IP detection)
-const GEO_REQUEST_TIMEOUT = 5000; // 5 seconds per service — all run in parallel so worst case is 5s total
-const GEO_FALLBACK_TIMEOUT = 5000; // same as primary since all services run concurrently
+const GEO_TIMEOUT = 5000; // 5 seconds per geo service (all run in parallel, worst case = 5s)
+const GEO_MAX_RETRIES = 2; // retry on network failure (e.g. VPN transition)
+const GEO_USER_AGENT = "GeoSpoof-Extension/1.0"; // custom UA forces fresh TCP connections
 const MIN_REQUEST_INTERVAL = 2000; // 2 seconds between API calls
 
 // --- Persistent IP Geo Cache ---
@@ -165,48 +166,6 @@ export function isValidIpAddress(ip: string): boolean {
 
 // --- Public IP Detection ---
 
-const GEO_USER_AGENT = "GeoSpoof-Extension/1.0";
-const GEO_MAX_RETRIES = 2; // retry on network failure (e.g. VPN transition)
-
-/**
- * Fetch a geo service URL with custom User-Agent, timeout, and exponential backoff retry.
- * Custom User-Agent forces a fresh TCP connection (bypasses stale connection pool).
- */
-async function fetchGeoWithRetry(url: string, timeoutMs: number): Promise<Response> {
-  let lastError: Error | undefined;
-  for (let attempt = 0; attempt <= GEO_MAX_RETRIES; attempt++) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    try {
-      const response = await fetch(url, {
-        signal: controller.signal,
-        cache: "no-store",
-        headers: { "User-Agent": GEO_USER_AGENT },
-      });
-      clearTimeout(timeoutId);
-      return response;
-    } catch (error) {
-      clearTimeout(timeoutId);
-      lastError = error instanceof Error ? error : new Error(String(error));
-      // Don't retry on abort (our own timeout) — only on network errors
-      if (lastError.name === "AbortError" || attempt === GEO_MAX_RETRIES) {
-        throw lastError;
-      }
-      const delay = 1000 * (attempt + 1);
-      logger.debug(
-        "[GEO-FETCH] Attempt",
-        attempt + 1,
-        "failed, retrying in",
-        delay,
-        "ms:",
-        lastError.message
-      );
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
-  }
-  throw lastError ?? new Error("Fetch failed");
-}
-
 /**
  * Detect the user's public IP address via external API.
  * @throws Error with code IP_DETECTION_FAILED
@@ -264,6 +223,45 @@ export async function detectPublicIp(): Promise<string> {
 // --- IP Geolocation ---
 
 /**
+ * Fetch a geo service URL with custom User-Agent, timeout, and exponential backoff retry.
+ * Custom User-Agent forces a fresh TCP connection (bypasses stale connection pool after VPN switch).
+ */
+async function fetchGeoWithRetry(url: string, timeoutMs: number): Promise<Response> {
+  let lastError: Error | undefined;
+  for (let attempt = 0; attempt <= GEO_MAX_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(url, {
+        signal: controller.signal,
+        cache: "no-store",
+        headers: { "User-Agent": GEO_USER_AGENT },
+      });
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      lastError = error instanceof Error ? error : new Error(String(error));
+      // Don't retry on abort (our own timeout) — only on network errors
+      if (lastError.name === "AbortError" || attempt === GEO_MAX_RETRIES) {
+        throw lastError;
+      }
+      const delay = 1000 * (attempt + 1);
+      logger.debug(
+        "[GEO-FETCH] Attempt",
+        attempt + 1,
+        "failed, retrying in",
+        delay,
+        "ms:",
+        lastError.message
+      );
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+  throw lastError ?? new Error("Fetch failed");
+}
+
+/**
  * Geolocate an IP address to coordinates via FreeIPAPI (HTTPS).
  * @param ip - IPv4 or IPv6 address
  * @throws Error with code GEOLOCATION_FAILED or NETWORK
@@ -274,7 +272,7 @@ async function geolocateWithFreeIpApi(ip: string): Promise<IpGeolocationResult> 
 
   try {
     const fetchStart = Date.now();
-    const response = await fetchGeoWithRetry(url, GEO_FALLBACK_TIMEOUT);
+    const response = await fetchGeoWithRetry(url, GEO_TIMEOUT);
     logger.debug(
       "[IP-GEO] Fetch response received in",
       Date.now() - fetchStart,
@@ -367,7 +365,7 @@ async function geolocateWithGeoJs(ip: string): Promise<IpGeolocationResult> {
 
   try {
     const fetchStart = Date.now();
-    const response = await fetchGeoWithRetry(url, GEO_REQUEST_TIMEOUT);
+    const response = await fetchGeoWithRetry(url, GEO_TIMEOUT);
     logger.debug(
       "[IP-GEO-GEOJS] Fetch response received in",
       Date.now() - fetchStart,
@@ -451,7 +449,7 @@ async function geolocateWithReallyFreeGeoIp(ip: string): Promise<IpGeolocationRe
 
   try {
     const fetchStart = Date.now();
-    const response = await fetchGeoWithRetry(url, GEO_FALLBACK_TIMEOUT);
+    const response = await fetchGeoWithRetry(url, GEO_TIMEOUT);
     logger.debug(
       "[IP-GEO-RFGI] Fetch response received in",
       Date.now() - fetchStart,
@@ -529,7 +527,7 @@ async function geolocateWithReallyFreeGeoIp(ip: string): Promise<IpGeolocationRe
 
 /**
  * Perform a full VPN sync: detect public IP, geolocate it, return result.
- * Uses ipwho.is as primary geolocation service, freeipapi as fallback.
+ * Runs geojs.io, freeipapi, and reallyfreegeoip in parallel — first success wins.
  * @param forceRefresh - bypass cache (used by Re-sync button)
  */
 export async function syncVpnLocation(forceRefresh: boolean): Promise<VpnSyncResponse> {
@@ -665,7 +663,7 @@ export async function clearIpGeoCache(): Promise<void> {
 }
 
 // Exported for testing
-export { MIN_REQUEST_INTERVAL, REQUEST_TIMEOUT, GEO_REQUEST_TIMEOUT, GEO_FALLBACK_TIMEOUT };
+export { MIN_REQUEST_INTERVAL, REQUEST_TIMEOUT, GEO_TIMEOUT };
 
 /**
  * Reset the rate limiter timestamp (for testing).
