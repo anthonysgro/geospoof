@@ -30,6 +30,7 @@ function browserTargetPlugin(target: BrowserTarget): Plugin {
       return {
         define: {
           __CHROMIUM__: JSON.stringify(target === "chromium"),
+          __SAFARI__: JSON.stringify(target === "safari"),
         },
       };
     },

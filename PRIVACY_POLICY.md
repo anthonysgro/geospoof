@@ -1,6 +1,6 @@
 # Privacy Policy for GeoSpoof
 
-**Last Updated:** March 1, 2026
+**Last Updated:** May 3, 2026
 
 ## Overview
 
@@ -17,7 +17,7 @@ GeoSpoof is committed to protecting your privacy. This extension is designed to 
 
 ## Local Data Storage
 
-All extension settings are stored locally on your device using Firefox's local storage API:
+All extension settings are stored locally on your device using the browser's local storage API (`browser.storage.local`):
 
 - Your spoofed location coordinates
 - Your timezone preferences
@@ -37,13 +37,18 @@ When you use certain features, the extension communicates with external services
 **Purpose:** To find location coordinates or city names
 **Privacy Policy:** [OpenStreetMap Privacy Policy](https://wiki.osmfoundation.org/wiki/Privacy_Policy)
 
-### 2. VPN Sync Services (ipify and FreeIPAPI)
+### 2. VPN Sync Services
 
 **When:** Only when you explicitly enable the "Sync with VPN" feature or click the "Re-sync" button in the extension popup. This never happens automatically unless you have previously enabled VPN sync mode.
-**Data Sent:** Your public IP address is sent to two external services:
+**Data Sent:** Your public IP address is sent to the following external services:
 
-- **[ipify](https://www.ipify.org/)** (`api.ipify.org`): Detects your current public IP address. No data is sent to this service other than the HTTPS request itself; it returns your public-facing IP.
-- **[FreeIPAPI](https://freeipapi.com/)** (`freeipapi.com`): Receives your public IP address and returns approximate geographic coordinates (latitude, longitude), city, and country for that IP.
+- **[ipify](https://www.ipify.org/)** (`api.ipify.org`): Detects your current public IP address. No data is sent other than the HTTPS request itself; it returns your public-facing IP.
+- **[GeoJS](https://www.geojs.io/)** (`get.geojs.io`): Primary geolocation service. Receives your public IP and returns approximate geographic coordinates, city, and country.
+- **[FreeIPAPI](https://freeipapi.com/)** (`free.freeipapi.com`): Fallback geolocation service. Receives your public IP and returns approximate geographic coordinates, city, and country. ([Privacy Policy](https://freeipapi.com/privacy-policy))
+- **[ReallyFreeGeoIP](https://reallyfreegeoip.org/)** (`reallyfreegeoip.org`): Fallback geolocation service. Receives your public IP and returns approximate geographic coordinates, city, and country.
+- **[ipinfo.io](https://ipinfo.io/)** (`ipinfo.io`): Fallback geolocation service. Receives your public IP and returns approximate geographic coordinates, city, and country. ([Privacy Policy](https://ipinfo.io/privacy-policy))
+
+All four geolocation services are queried in parallel — the first successful response is used and the rest are cancelled.
 
 **Purpose:** To determine the geographic location of your VPN exit server so the extension can set your spoofed location to match your VPN region.
 **Privacy Safeguards:**
@@ -74,7 +79,7 @@ These permissions are used solely for the extension's functionality and not for 
 
 ## Data Security
 
-- All settings are stored locally using Firefox's secure storage API
+- All settings are stored locally using the browser's secure storage API
 - No data is transmitted to the extension developer
 - API calls to third-party services use HTTPS encryption
 
@@ -83,7 +88,7 @@ These permissions are used solely for the extension's functionality and not for 
 You have complete control over your data:
 
 - All settings can be cleared by disabling or removing the extension
-- You can view all stored data in Firefox's extension storage inspector
+- You can view all stored data in your browser's extension storage inspector
 - No account or registration is required
 
 ## Changes to This Policy
@@ -95,7 +100,7 @@ If this privacy policy changes, the updated version will be posted in the extens
 For questions or concerns about this privacy policy:
 
 - GitHub: [https://github.com/anthonysgro/geospoof](https://github.com/anthonysgro/geospoof)
-- Email: [anthony.m.sgro@gmail.com]
+- Email: [anthony.m.sgro@gmail.com](anthony.m.sgro@gmail.com)
 
 ## Open Source
 

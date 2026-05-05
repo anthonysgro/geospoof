@@ -1,0 +1,145 @@
+# How Browsers Know Where You Are
+
+A technical overview of browser location detection — the signals involved, how they work, and why a VPN alone is insufficient for location privacy.
+
+## The Location Signal Stack
+
+Modern browsers can determine a user's physical location through several independent channels. These signals vary in accuracy, availability, and ease of interception. A [VPN](https://en.wikipedia.org/wiki/Virtual_private_network) addresses exactly one of them.
+
+### 1. IP Geolocation
+
+Every internet connection is associated with a public [IP address](https://en.wikipedia.org/wiki/IP_address). Commercial databases such as [MaxMind GeoIP](https://www.maxmind.com/en/geoip-databases) and [IP2Location](https://www.ip2location.com/) map IP address ranges to approximate geographic locations by correlating [WHOIS](https://en.wikipedia.org/wiki/WHOIS) registration data, [BGP](https://en.wikipedia.org/wiki/Border_Gateway_Protocol) routing information, and active probing.
+
+Accuracy is typically city-level for residential broadband, though mobile carrier IPs are often less precise. A VPN replaces the user's real IP with the VPN server's IP, causing IP geolocation to report the server's location instead. This is the only signal a VPN directly addresses.
+
+### 2. Wi-Fi Positioning System (WPS)
+
+Wi-Fi positioning is how browsers achieve GPS-level accuracy on devices without GPS hardware — and the mechanism most users are unaware of.
+
+When a page calls [`navigator.geolocation.getCurrentPosition()`](https://developer.mozilla.org/en-US/docs/Web/API/Geolocation/getCurrentPosition), the browser requests a list of nearby [Wi-Fi access points](https://en.wikipedia.org/wiki/Wireless_access_point) from the operating system, including their [SSIDs](<https://en.wikipedia.org/wiki/Service_set_(802.11_network)#SSID>) and [MAC addresses](https://en.wikipedia.org/wiki/MAC_address) (BSSIDs). This list is transmitted over HTTPS to a location service — [Google Location Services](https://developers.google.com/maps/documentation/geolocation/overview), [Apple Location Services](https://support.apple.com/en-us/102515), or [Mozilla Location Services](https://location.services.mozilla.com/) depending on the platform.
+
+These services maintain databases built through [wardriving](https://en.wikipedia.org/wiki/Wardriving) — systematic collection of access point locations by vehicles equipped with GPS and Wi-Fi receivers — as well as crowdsourced data from mobile devices. When a browser submits a set of observed access points with signal strengths, the service cross-references them against the database and returns coordinates typically accurate to 10–20 meters.
+
+The practical implication: a laptop with no GPS chip, sitting in a basement, can report its location to within a city block. It only needs to observe its neighbors' routers.
+
+### 3. GPS
+
+On devices equipped with [GPS](https://en.wikipedia.org/wiki/Global_Positioning_System) receivers — smartphones, tablets, and some laptops — the operating system can provide coordinates derived directly from satellite signals. Accuracy outdoors is typically 3–5 meters under clear sky conditions, degrading indoors.
+
+Browsers access GPS through the same `navigator.geolocation` API. The OS selects the best available positioning source (GPS, Wi-Fi, cell towers) and returns a result; the browser does not directly control which source is used.
+
+### 4. Cell Tower Triangulation
+
+Mobile devices can estimate position by measuring signal strength from multiple [cell towers](https://en.wikipedia.org/wiki/Cell_site) and applying [trilateration](https://en.wikipedia.org/wiki/Trilateration). Accuracy ranges from approximately 100 meters in dense urban areas to several kilometers in rural regions, depending on tower density.
+
+This method is less precise than Wi-Fi positioning but functions anywhere with cellular coverage, including areas where Wi-Fi access points are sparse.
+
+### 5. Timezone Offset
+
+```javascript
+new Date().getTimezoneOffset(); // e.g., -480 for UTC−8 (PST)
+```
+
+[`Date.prototype.getTimezoneOffset()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/getTimezoneOffset) returns the difference between [UTC](https://en.wikipedia.org/wiki/Coordinated_Universal_Time) and the system's local time in minutes. While this does not identify a specific city, it constrains the user's location to a UTC offset band. Combined with other signals, it is a reliable fingerprinting vector — particularly when it contradicts the IP geolocation result.
+
+### 6. IANA Timezone Identifier
+
+```javascript
+Intl.DateTimeFormat().resolvedOptions().timeZone; // e.g., "America/Los_Angeles"
+```
+
+The [IANA Time Zone Database](https://www.iana.org/time-zones) assigns named identifiers to geographic timezone regions. [`Intl.DateTimeFormat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat) exposes the system's current identifier through `resolvedOptions()`.
+
+This is more informative than the raw offset. `"America/Los_Angeles"` places the user on the US West Coast. `"Asia/Kolkata"` identifies India specifically — it is the only country using UTC+5:30, a fact that is not lost on fingerprinting scripts.
+
+### 7. WebRTC IP Leak
+
+[WebRTC](https://en.wikipedia.org/wiki/WebRTC) (Web Real-Time Communication) is a browser API for peer-to-peer audio, video, and data transfer. To establish peer connections, WebRTC uses [ICE](https://en.wikipedia.org/wiki/Interactive_Connectivity_Establishment) (Interactive Connectivity Establishment), which enumerates the device's network interfaces to discover candidate connection paths.
+
+This enumeration can expose the device's local network IP addresses and, critically, its public IP address — even when the device is behind a VPN. The VPN creates a virtual network interface, but ICE may also enumerate the physical interface and include its associated public IP as a candidate. A page can trigger ICE candidate gathering with a small JavaScript snippet and read the results without establishing any actual connection.
+
+This behavior is known as a [WebRTC leak](https://browserleaks.com/webrtc). It is not a bug in WebRTC — it is working as specified. Mitigation requires either disabling WebRTC entirely or configuring the browser's IP handling policy to restrict which interfaces are enumerated.
+
+### 8. Date and Time Formatting
+
+```javascript
+new Date().toString();
+// "Sat May 03 2026 14:23:45 GMT-0800 (Pacific Standard Time)"
+```
+
+[`Date.prototype.toString()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toString) includes the timezone name and UTC offset in its output. [`toLocaleString()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toLocaleString) formats dates using the system timezone. These are consistent, low-effort signals that fingerprinting scripts routinely collect alongside the more obvious geolocation API.
+
+### 9. The Temporal API
+
+The [Temporal API](https://tc39.es/proposal-temporal/) is a TC39 stage 3 proposal providing a modern replacement for the `Date` object. It exposes timezone information more explicitly than its predecessor:
+
+```javascript
+Temporal.Now.timeZoneId(); // "America/Los_Angeles"
+Temporal.Now.zonedDateTimeISO(); // includes timezone in the structured result
+```
+
+As Temporal ships in more browsers, it constitutes an additional channel requiring interception. GeoSpoof overrides `Temporal.Now.*` methods with feature detection — if the API is absent, the overrides are no-ops.
+
+---
+
+## Why Signal Consistency Matters
+
+Location fingerprinting systems do not rely on a single signal. They cross-reference multiple signals and flag inconsistencies. A VPN that changes the IP geolocation to Tokyo while the system timezone remains `America/New_York` produces a detectable contradiction. Common mismatches that trigger flags:
+
+- IP geolocation country ≠ timezone region
+- `getTimezoneOffset()` value inconsistent with `Intl` timezone identifier
+- `navigator.geolocation` coordinates in a different country than the IP
+- WebRTC candidates revealing a non-VPN public IP
+
+This is why overriding a single signal is insufficient. GeoSpoof overrides all of them — geolocation, timezone offset, IANA identifier, `Date` formatting, `Temporal`, and WebRTC — so they present a consistent identity regardless of which signals a site chooses to inspect.
+
+---
+
+## Limits of Extension-Level Spoofing
+
+Browser extensions operate in a privileged but sandboxed context. Several attack surfaces remain outside their reach.
+
+### Web Workers
+
+[Content scripts](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Content_scripts) cannot inject into [`Worker`](https://developer.mozilla.org/en-US/docs/Web/API/Worker) or [`SharedWorker`](https://developer.mozilla.org/en-US/docs/Web/API/SharedWorker) contexts. A page that performs timezone detection inside a worker will receive the real system timezone. This is a known limitation with no extension-level solution.
+
+### Engine Internals
+
+JavaScript engines maintain [internal slots](https://tc39.es/ecma262/#sec-object-internal-methods-and-internal-slots) and perform brand checks that can distinguish native built-in functions from JavaScript replacements. Dedicated fingerprinting tools such as [CreepJS](https://abrahamjuliot.github.io/creepjs/) and [TorZillaPrint](https://arkenfox.github.io/TZP/tzp.html) use these mechanisms to detect content-script-level overrides.
+
+GeoSpoof's anti-fingerprinting layer — disguising overrides as `[native code]`, removing `prototype`, stripping `[[Construct]]` — defeats the checks used by real-world fingerprinting scripts. Forensic-level tools operating through engine internals and timing side-channels can still detect the overrides.
+
+### Timing Side-Channels
+
+High-resolution timing via [`SharedArrayBuffer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer) or [`performance.now()`](https://developer.mozilla.org/en-US/docs/Web/API/Performance/now) can measure the execution overhead of override functions. A native `getTimezoneOffset()` call completes in nanoseconds; a JavaScript override takes microseconds. Sufficiently motivated scripts can detect this discrepancy.
+
+### Full Undetectability
+
+True undetectability requires modifications at the browser engine level — patching the JavaScript runtime itself rather than its exposed APIs. This is the approach taken by [Tor Browser](https://www.torproject.org/) and [Mullvad Browser](https://mullvad.net/browser), both of which ship with hardened `about:config` profiles and engine-level patches. Extensions cannot achieve this level of protection.
+
+GeoSpoof provides the strongest location spoofing available from an extension context. For adversarial threat models, a privacy-hardened browser is the appropriate tool.
+
+---
+
+## The W3C Geolocation API
+
+The browser geolocation API is standardized by the [W3C Geolocation Working Group](https://www.w3.org/groups/wg/geolocation). The current specification is at [w3.org/TR/geolocation](https://www.w3.org/TR/geolocation/).
+
+Relevant design decisions:
+
+- **Permission model**: Sites must request user permission before accessing location data. GeoSpoof overrides [`navigator.permissions.query`](https://developer.mozilla.org/en-US/docs/Web/API/Permissions/query) to report `"granted"` when spoofing is active, preventing permission prompts from appearing.
+- **Asynchronous design**: `getCurrentPosition` is callback-based. GeoSpoof introduces a 10–50ms delay in spoofed responses to match the timing profile of native geolocation calls.
+- **Accuracy field**: The [`GeolocationCoordinates`](https://developer.mozilla.org/en-US/docs/Web/API/GeolocationCoordinates) object includes an `accuracy` field in meters. GeoSpoof returns a realistic value rather than zero, which would be an obvious tell.
+
+---
+
+## Further Reading
+
+- [W3C Geolocation API Specification](https://www.w3.org/TR/geolocation/)
+- [MDN: Using the Geolocation API](https://developer.mozilla.org/en-US/docs/Web/API/Geolocation_API/Using_the_Geolocation_API)
+- [Temporal API Proposal (TC39)](https://tc39.es/proposal-temporal/)
+- [WebRTC IP Leak — BrowserLeaks](https://browserleaks.com/webrtc)
+- [IANA Time Zone Database](https://www.iana.org/time-zones)
+- [Arkenfox user.js — Firefox privacy hardening](https://github.com/arkenfox/user.js)
+- [CreepJS — advanced fingerprinting detection](https://abrahamjuliot.github.io/creepjs/)
+- [Tor Browser](https://www.torproject.org/) / [Mullvad Browser](https://mullvad.net/browser) — engine-level privacy hardening

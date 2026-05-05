@@ -13,7 +13,7 @@ body {
   min-width: 350px;
   min-height: 400px;
   max-height: 600px;
-  overflow-y: auto;
+  overflow: hidden;
   background: #f5f5f5;
   opacity: 0;
   transition: opacity 0.1s;
@@ -25,6 +25,10 @@ body.loaded {
 
 .popup-container {
   padding: 16px;
+  height: 100%;
+  max-height: 600px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Header */
@@ -603,9 +607,28 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   font-size: 11px;
 }
 
+.help-link {
+  color: #999;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.help-link:hover {
+  color: #4caf50;
+}
+
+/* Coffee row inside Advanced section */
+.coffee-row {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e0e0e0;
+  text-align: center;
+}
+
 .coffee-link {
   color: #999;
   text-decoration: none;
+  font-size: 12px;
   transition: color 0.2s;
 }
 
@@ -877,10 +900,12 @@ input[type="checkbox"]:checked + .toggle-slider:before {
     max-width: 100%;
     min-width: 350px;
     max-height: none;
+    overflow: visible;
   }
 
   .popup-container {
     max-width: 500px;
+    max-height: none;
     margin: 0 auto;
     padding-bottom: 40vh; /* extra breathing room so the keyboard doesn't cover the input */
   }
@@ -1005,6 +1030,9 @@ input[type="checkbox"]:checked + .toggle-slider:before {
     border-top: 1px solid #393941;
     color: #fbfbfe;
   }
+  .coffee-row {
+    border-top: 1px solid #393941;
+  }
 }
 
 /* Explicit dark theme (overrides system preference) */
@@ -1128,6 +1156,9 @@ body.theme-dark .version-label {
   border-top: 1px solid #393941;
   color: #fbfbfe;
 }
+body.theme-dark .coffee-row {
+  border-top: 1px solid #393941;
+}
 
 /* Explicit light theme (overrides system dark preference) */
 body.theme-light {
@@ -1249,4 +1280,7 @@ body.theme-light .select-label select {
 body.theme-light .version-label {
   border-top: 1px solid #e0e0e0;
   color: #666;
+}
+body.theme-light .coffee-row {
+  border-top: 1px solid #e0e0e0;
 }
