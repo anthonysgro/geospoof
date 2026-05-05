@@ -423,5 +423,12 @@ document.addEventListener("DOMContentLoaded", () => {
     versionLabel.textContent = `v${manifest.version}`;
   }
 
+  // Hide the coffee link on Safari (App Store guidelines prohibit external
+  // payment/donation links in distributed apps).
+  if (__SAFARI__) {
+    const coffeeRow = document.getElementById("coffeeRow");
+    if (coffeeRow) coffeeRow.style.display = "none";
+  }
+
   void loadSettings();
 });

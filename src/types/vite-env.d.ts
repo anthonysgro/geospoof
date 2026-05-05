@@ -13,3 +13,6 @@ interface ImportMeta {
 
 declare module "geobuf";
 declare module "pbf";
+
+/** Build-time flag: true when building for Safari. Injected by Vite's define. */
+declare const __SAFARI__: boolean;

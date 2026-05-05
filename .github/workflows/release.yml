@@ -103,11 +103,11 @@ jobs:
           files: release-assets/*
           generate_release_notes: true
 
-      - name: Deploy update manifest to GitHub Pages
+      - name: Deploy site and update manifest to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: .
           publish_branch: gh-pages
           keep_files: true
-          include_files: update.json
+          include_files: update.json,site/support.html
