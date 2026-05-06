@@ -8,7 +8,7 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Firefox](https://img.shields.io/badge/Firefox-140%2B-FF7139.svg?logo=firefox-browser)](https://addons.mozilla.org/firefox/addon/geo-spoof/)
 [![Chrome Web Store](https://img.shields.io/badge/Chrome_Web_Store-available-4285F4.svg?logo=googlechrome)](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje)
-[![Safari](https://img.shields.io/badge/Safari_macOS_%26_iOS-coming_soon-006CFF.svg?logo=safari)](https://github.com/anthonysgro/geospoof)
+[![Safari](https://img.shields.io/badge/Safari_macOS_%26_iOS-available-006CFF.svg?logo=safari)](https://apps.apple.com/app/geospoof/id6765719745)
 [![Version](https://img.shields.io/github/package-json/v/anthonysgro/geospoof?color=green)](https://github.com/anthonysgro/geospoof/releases)
 
 [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/geo-spoof/) &nbsp;|&nbsp; [Chrome Web Store](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje) &nbsp;|&nbsp; [Report Issues](https://github.com/anthonysgro/geospoof/issues) &nbsp;|&nbsp; [User Guide](docs/USER_GUIDE.md)
@@ -60,6 +60,10 @@ For the full API reference, see [docs/API.md](docs/API.md).
 **Firefox:** https://addons.mozilla.org/firefox/addon/geo-spoof/
 
 **Chrome / Brave / Edge:** https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje
+
+**Safari (iOS, iPadOS & macOS):** https://apps.apple.com/app/geospoof/id6765719745
+
+After installing on Safari, tap the puzzle piece icon (or go to Safari Settings → Extensions) and enable GeoSpoof for the sites you want to protect. On iOS/iPadOS, you can also enable it per-site from the **AA** menu in the address bar.
 
 **From GitHub Releases (Firefox self-hosted):**
 
