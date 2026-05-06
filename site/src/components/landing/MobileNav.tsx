@@ -1,5 +1,5 @@
 import * as React from "react"
-import { MenuIcon, GithubIcon, CoffeeIcon } from "lucide-react"
+import { CoffeeIcon, GithubIcon, MenuIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   Sheet,

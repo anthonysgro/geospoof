@@ -1,23 +1,23 @@
 import * as React from "react"
 import { motion } from "motion/react"
 import {
-  MapPinIcon,
-  ClockIcon,
-  ShieldIcon,
-  RefreshCwIcon,
-  GlobeIcon,
-  WifiOffIcon,
   BarChart2Icon,
+  ClockIcon,
+  GlobeIcon,
+  MapPinIcon,
   MegaphoneOffIcon,
+  RefreshCwIcon,
+  ShieldIcon,
+  WifiOffIcon,
 } from "lucide-react"
 import { Section } from "./Section"
 import { BentoGrid, BentoGridItem } from "@/components/ui/bento-grid"
 import {
   Card,
+  CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
-  CardDescription,
-  CardContent,
 } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { useReducedMotion } from "@/hooks/use-reduced-motion"
@@ -94,7 +94,7 @@ function CityRow({
   duration,
   isPaused,
 }: {
-  cities: string[]
+  cities: Array<string>
   direction: "left" | "right"
   duration: number
   isPaused: boolean

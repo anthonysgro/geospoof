@@ -1,6 +1,7 @@
-import { GithubIcon, CoffeeIcon } from "lucide-react"
+import { CoffeeIcon, GithubIcon } from "lucide-react"
 import { NavLink } from "./NavLink"
-import { MobileNav, type NavItem } from "./MobileNav"
+import { MobileNav } from "./MobileNav"
+import type { NavItem } from "./MobileNav"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { cn } from "@/lib/utils"
 

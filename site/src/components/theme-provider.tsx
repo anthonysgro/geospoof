@@ -100,7 +100,7 @@ export function ThemeProvider({
   // Sync on mount
   React.useEffect(() => {
     applyTheme(resolveTheme(theme))
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, []) // intentionally empty — only run on mount
 
   const value = React.useMemo(
     () => ({ theme, resolvedTheme, setTheme }),

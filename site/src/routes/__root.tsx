@@ -4,8 +4,8 @@ import {
   Scripts,
   createRootRoute,
 } from "@tanstack/react-router"
-import { ThemeProvider } from "@/components/theme-provider"
 import appCss from "../styles.css?url"
+import { ThemeProvider } from "@/components/theme-provider"
 
 export const Route = createRootRoute({
   head: () => ({
