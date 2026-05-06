@@ -97,6 +97,7 @@ const intlBatteries: Array<TestDefinition> = [
     propertyName: "DateTimeFormat",
     // The DateTimeFormat constructor's length is 0 per the spec.
     expectedLength: 0,
+    isConstructor: true,
   }),
   ...buildStandardBattery({
     idPrefix: "timezone-stealth.intl-datetimeformat-resolvedoptions",
@@ -137,6 +138,22 @@ const temporalBatteries: Array<TestDefinition> = (() => {
 })()
 
 /**
+ * The global `Date` constructor, replaced wholesale by the extension.
+ * It must retain constructor semantics — own prototype, constructable,
+ * standard descriptor shape — to stay indistinguishable.
+ */
+const dateGlobalBattery: ReadonlyArray<TestDefinition> = buildStandardBattery({
+  idPrefix: "timezone-stealth.date-global",
+  group: "timezone-stealth",
+  apiLabel: "Date",
+  target: globalThis,
+  propertyName: "Date",
+  // Native Date constructor arity is 7 per ECMA-262 §21.4.2.
+  expectedLength: 7,
+  isConstructor: true,
+})
+
+/**
  * Function.prototype.toString itself is overridden. A fingerprinter will
  * apply Function.prototype.toString to Function.prototype.toString to see
  * whether the override masks itself.
@@ -153,6 +170,7 @@ const functionToStringBattery: ReadonlyArray<TestDefinition> = buildStandardBatt
 export const timezoneStealthTests: ReadonlyArray<TestDefinition> = [
   ...dateProtoBatteries,
   ...dateStaticBatteries,
+  ...dateGlobalBattery,
   ...intlBatteries,
   ...temporalBatteries,
   ...functionToStringBattery,
