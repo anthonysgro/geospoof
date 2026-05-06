@@ -7,6 +7,8 @@ import {
 import appCss from "../styles.css?url"
 import { ThemeProvider } from "@/components/theme-provider"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { Analytics } from "@vercel/analytics/react"
+import { SpeedInsights } from "@vercel/speed-insights/react"
 
 export const Route = createRootRoute({
   head: () => ({
@@ -109,6 +111,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             {children}
           </TooltipProvider>
         </ThemeProvider>
+        <Analytics />
+        <SpeedInsights />
         <Scripts />
       </body>
     </html>
