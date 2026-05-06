@@ -161,6 +161,27 @@ export function HeroSection({ className }: { className?: string }) {
               See how it works
             </a>
           </div>
+
+          {/* Social proof */}
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 xl:justify-start">
+            <span className="text-sm text-(--color-canvas-muted)">
+              <span className="font-semibold text-(--color-canvas-foreground)">1,000+</span> users
+            </span>
+            <span className="hidden h-3.5 w-px bg-(--color-canvas-border) sm:block" aria-hidden="true" />
+            <span className="flex items-center gap-1 text-sm text-(--color-canvas-muted)">
+              <span className="text-amber-500" aria-hidden="true">★★★★★</span>
+              <span>
+                <span className="font-semibold text-(--color-canvas-foreground)">5.0</span> Chrome
+              </span>
+            </span>
+            <span className="hidden h-3.5 w-px bg-(--color-canvas-border) sm:block" aria-hidden="true" />
+            <span className="flex items-center gap-1 text-sm text-(--color-canvas-muted)">
+              <span className="text-amber-500" aria-hidden="true">★★★★</span><span className="text-(--color-canvas-border)" aria-hidden="true">★</span>
+              <span>
+                <span className="font-semibold text-(--color-canvas-foreground)">4.0</span> Firefox
+              </span>
+            </span>
+          </div>
         </MotionDiv>
       </div>
     </Section>
