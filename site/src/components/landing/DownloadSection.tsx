@@ -1,5 +1,6 @@
 import { Section } from "./Section"
 import { cn } from "@/lib/utils"
+import { Badge } from "@/components/ui/badge"
 
 interface DownloadOption {
   name: string
@@ -80,9 +81,9 @@ export function DownloadSection({ className }: { className?: string }) {
               {d.description}
             </span>
             {d.badge ? (
-              <span className="mt-auto inline-block rounded-full bg-(--color-canvas-border) px-3 py-1 text-xs font-medium text-(--color-canvas-muted)">
+              <Badge variant="secondary" className="mt-auto">
                 {d.badge}
-              </span>
+              </Badge>
             ) : (
               <span className="mt-auto inline-block rounded-full bg-(--color-brand)/10 px-3 py-1 text-xs font-semibold text-(--color-brand)">
                 Install free →

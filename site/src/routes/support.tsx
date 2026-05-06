@@ -4,6 +4,13 @@ import { Navigation } from "@/components/landing/Navigation"
 import { Footer } from "@/components/landing/Footer"
 import { SkipLink } from "@/components/landing/SkipLink"
 import { Section } from "@/components/landing/Section"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
+import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 
 export const Route = createFileRoute("/support")({
@@ -70,7 +77,7 @@ function CopyEmailButton() {
         copied
           ? "bg-(--color-brand)/10 text-(--color-brand)"
           : "bg-(--color-canvas-border) text-(--color-canvas-muted) hover:text-(--color-canvas-foreground)",
-        "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)",
       )}
       aria-label="Copy email address"
     >
@@ -80,8 +87,6 @@ function CopyEmailButton() {
 }
 
 function SupportPage() {
-  const [open, setOpen] = React.useState<number | null>(null)
-
   return (
     <div className="min-h-screen bg-(--color-canvas)">
       <SkipLink />
@@ -98,48 +103,36 @@ function SupportPage() {
             </p>
           </div>
 
-          {/* FAQ */}
-          <div className="mb-16 space-y-3">
+          {/* FAQ — shadcn Accordion */}
+          <div className="mb-16">
             <h2 className="mb-6 text-xl font-semibold text-(--color-canvas-foreground)">
               Common Issues
             </h2>
-            {faqs.map((faq, i) => (
-              <div
-                key={i}
-                className="overflow-hidden rounded-xl border border-(--color-canvas-border)"
-              >
-                <button
-                  type="button"
-                  onClick={() => setOpen(open === i ? null : i)}
-                  className={cn(
-                    "flex w-full items-center justify-between gap-4",
-                    "px-5 py-4 text-left",
-                    "font-semibold text-(--color-canvas-foreground)",
-                    "transition-colors hover:bg-(--color-canvas-border)/50",
-                    "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
-                  )}
-                  aria-expanded={open === i}
+            <Accordion
+              type="single"
+              collapsible
+              className="rounded-xl border border-(--color-canvas-border) overflow-hidden divide-y divide-(--color-canvas-border)"
+            >
+              {faqs.map((faq, i) => (
+                <AccordionItem
+                  key={i}
+                  value={`faq-${i}`}
+                  className="border-none px-5"
                 >
-                  <span>{faq.q}</span>
-                  <span
-                    className={cn(
-                      "flex-shrink-0 text-xs text-(--color-canvas-muted) transition-transform duration-200",
-                      open === i && "rotate-90"
-                    )}
-                  >
-                    ▶
-                  </span>
-                </button>
-                {open === i && (
-                  <div className="text-body-base border-t border-(--color-canvas-border) px-5 pb-5 leading-relaxed text-(--color-canvas-muted)">
-                    <p className="pt-4">{faq.a}</p>
-                  </div>
-                )}
-              </div>
-            ))}
+                  <AccordionTrigger className="text-base font-semibold text-(--color-canvas-foreground) hover:no-underline py-4">
+                    {faq.q}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-(--color-canvas-muted) leading-relaxed pb-5">
+                    {faq.a}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
           </div>
 
-          {/* Contact — hows-today style */}
+          <Separator className="mb-16 bg-(--color-canvas-border)" />
+
+          {/* Contact */}
           <div className="text-center">
             <h2 className="mb-4 text-2xl font-bold text-(--color-canvas-foreground)">
               Still need help?
@@ -148,7 +141,6 @@ function SupportPage() {
               Send us an email and we'll get back to you within a day or two.
             </p>
 
-            {/* Email + copy */}
             <div className="mb-4 inline-flex items-center gap-3">
               <a
                 href="mailto:support@geospoof.com"

@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-router"
 import appCss from "../styles.css?url"
 import { ThemeProvider } from "@/components/theme-provider"
+import { TooltipProvider } from "@/components/ui/tooltip"
 
 export const Route = createRootRoute({
   head: () => ({
@@ -104,7 +105,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body suppressHydrationWarning>
         <ThemeProvider defaultTheme="system" storageKey="geospoof-theme">
-          {children}
+          <TooltipProvider>
+            {children}
+          </TooltipProvider>
         </ThemeProvider>
         <Scripts />
       </body>

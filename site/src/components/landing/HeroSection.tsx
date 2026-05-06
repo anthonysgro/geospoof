@@ -3,6 +3,7 @@ import { Section } from "./Section"
 import { cn } from "@/lib/utils"
 import { useReducedMotion } from "@/hooks/use-reduced-motion"
 import { useTheme } from "@/hooks/use-theme"
+import { Badge } from "@/components/ui/badge"
 
 const heroTextVariants = {
   hidden: { opacity: 0, y: 24 },
@@ -59,12 +60,12 @@ export function HeroSection({ className }: { className?: string }) {
             <img
               src={ios1}
               alt="GeoSpoof app — secondary view"
-              className="absolute top-8 left-0 w-[264px] -rotate-6 drop-shadow-2xl xl:w-[330px]"
+              className="absolute top-8 left-0 w-56 -rotate-6 drop-shadow-2xl xl:w-80"
             />
             <img
               src={ios2}
               alt="GeoSpoof app — main view"
-              className="relative z-10 ml-28 w-[264px] rotate-3 drop-shadow-2xl xl:ml-32 xl:w-[330px]"
+              className="relative z-10 ml-24 w-56 rotate-3 drop-shadow-2xl xl:ml-32 xl:w-80"
             />
           </div>
         </MotionDiv>
@@ -78,9 +79,12 @@ export function HeroSection({ className }: { className?: string }) {
             variants: heroTextVariants,
           })}
         >
-          <span className="mb-4 inline-block rounded-full bg-(--color-brand)/10 px-3 py-1 text-sm font-semibold tracking-wide text-(--color-brand) uppercase">
+          <Badge
+            variant="outline"
+            className="mb-4 border-(--color-brand)/30 bg-(--color-brand)/10 text-(--color-brand) uppercase tracking-wide"
+          >
             Browser Extension
-          </span>
+          </Badge>
 
           <h1 className="mb-6 text-4xl leading-tight font-bold text-(--color-canvas-foreground) md:text-5xl xl:text-[4.5rem]">
             Your location,{" "}
