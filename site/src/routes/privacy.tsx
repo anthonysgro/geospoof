@@ -307,6 +307,123 @@ function PrivacyPage() {
               </p>
             </PolicySection>
 
+            <PolicySection title="For Users in the European Economic Area, United Kingdom, and Switzerland">
+              <p>
+                If you are located in the EEA, UK, or Switzerland, the
+                following applies to you in addition to the rest of this
+                policy.
+              </p>
+              <p>
+                <strong>Controller:</strong> Anthony Sgro, an individual
+                developer based in the United States, acts as the data
+                controller for any personal data processed by this extension.
+                You can contact the controller at{" "}
+                <a href="mailto:support@geospoof.com">support@geospoof.com</a>.
+              </p>
+              <p>
+                <strong>Legal basis for processing:</strong> The only personal
+                data processed is your public IP address, and only when you
+                explicitly enable the "Sync with VPN" feature. We rely on your
+                consent (GDPR Art. 6(1)(a)), which you give by enabling the
+                feature, and which you can withdraw at any time by disabling
+                "Sync with VPN" in the extension popup. Withdrawing consent
+                does not affect the lawfulness of processing based on consent
+                before its withdrawal.
+              </p>
+              <p>
+                <strong>International transfers:</strong> The third-party
+                services listed above (ipify, GeoJS, FreeIPAPI,
+                ReallyFreeGeoIP, ipinfo.io, Nominatim) are operated outside
+                the EEA, including in the United States. When you use features
+                that contact these services, your public IP is transferred to
+                their infrastructure. Each service is an independent
+                controller and determines its own transfer mechanisms. The
+                extension developer operates no server and performs no
+                cross-border transfer on its own.
+              </p>
+              <p>
+                <strong>Your rights under GDPR / UK GDPR:</strong> you have
+                the right to access, rectify, erase, restrict, object to, and
+                port your personal data, and to withdraw consent at any time.
+                Because the extension stores no personal data on any server
+                controlled by the developer, most of these rights are
+                exercised directly by you within the extension: uninstalling
+                the extension or disabling "Sync with VPN" fully erases
+                everything the developer could ever access. You also have the
+                right to lodge a complaint with your local data protection
+                authority.
+              </p>
+              <p>
+                <strong>Retention:</strong> Your public IP is held only in
+                volatile memory for the current browser session and cleared
+                when you disable the feature or close your browser. No
+                retention period applies because no storage occurs.
+              </p>
+            </PolicySection>
+
+            <PolicySection title="For California Residents">
+              <p>
+                If you are a California resident, the California Consumer
+                Privacy Act (CCPA), as amended by the California Privacy
+                Rights Act (CPRA), gives you specific rights regarding your
+                personal information.
+              </p>
+              <p>
+                <strong>
+                  We do not sell or share your personal information
+                </strong>{" "}
+                as those terms are defined under the CCPA/CPRA. We do not
+                disclose personal information for cross-context behavioral
+                advertising. We do not knowingly handle the personal
+                information of consumers under 16.
+              </p>
+              <p>
+                <strong>Categories collected:</strong> The only category of
+                personal information touched by the extension is an internet
+                identifier (your public IP address), and only when you
+                explicitly enable "Sync with VPN." It is used for the single
+                purpose described above and is not retained.
+              </p>
+              <p>
+                <strong>Your rights:</strong> You have the right to know what
+                personal information is collected, the right to delete
+                personal information, the right to correct inaccurate personal
+                information, the right to opt out of sale or sharing (there is
+                nothing to opt out of here), and the right not to receive
+                discriminatory treatment for exercising these rights. Because
+                no personal information is retained by the developer, these
+                rights are effectively exercised by uninstalling the extension
+                or disabling the feature. For any inquiry, contact{" "}
+                <a href="mailto:support@geospoof.com">support@geospoof.com</a>.
+              </p>
+            </PolicySection>
+
+            <PolicySection title="Children's Privacy">
+              <p>
+                GeoSpoof is not directed to children under 13, and we do not
+                knowingly collect personal information from children under 13.
+                If you believe a child under 13 has used the extension in a
+                way that caused personal information to reach a third-party
+                service referenced above, please contact us at{" "}
+                <a href="mailto:support@geospoof.com">support@geospoof.com</a>{" "}
+                and we will take reasonable steps to assist.
+              </p>
+            </PolicySection>
+
+            <PolicySection title="Security Incidents">
+              <p>
+                Because the extension stores no personal data on any
+                developer-operated server, there is no developer-side database
+                that can be breached. In the unlikely event of a security
+                issue affecting the extension itself (for example, a
+                vulnerability in the extension code), we will publish an
+                advisory on the project's GitHub page and release a patched
+                version through the relevant browser stores. Where required
+                by applicable law, we will notify affected users and the
+                relevant data protection authority.
+              </p>
+            </PolicySection>
+
             <PolicySection title="Changes to This Policy">
               <p>
                 If this privacy policy changes, the updated version will be
