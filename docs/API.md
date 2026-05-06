@@ -18,38 +18,105 @@ Technical documentation for the GeoSpoof browser extension (Firefox + Chromium +
 
 All overrides are injected synchronously at `document_start` before any page JavaScript runs.
 
-| API                                          | Override Behavior                                   |
-| -------------------------------------------- | --------------------------------------------------- |
-| `navigator.geolocation.getCurrentPosition`   | Returns spoofed coords with 10-50ms realistic delay |
-| `navigator.geolocation.watchPosition`        | Returns spoofed coords on each callback             |
-| `navigator.geolocation.clearWatch`           | Clears spoofed watch                                |
-| `navigator.permissions.query("geolocation")` | Returns "granted" when spoofing enabled             |
-| `Date()` constructor (no-arg)                | Passthrough (current time)                          |
-| `Date(string)` — ambiguous                   | Epoch adjusted by offset difference                 |
-| `Date(string)` — explicit tz                 | Passthrough                                         |
-| `Date(y, m, d, ...)` — multi-arg             | Epoch adjusted by offset difference                 |
-| `Date.parse(string)`                         | Same adjustment as constructor                      |
-| `Date.prototype.getTimezoneOffset`           | Negated Intl-based offset for spoofed tz            |
-| `Date.prototype.toString`                    | Formatted with spoofed tz name and offset           |
-| `Date.prototype.toDateString`                | Formatted in spoofed timezone                       |
-| `Date.prototype.toTimeString`                | Formatted with spoofed offset and tz name           |
-| `Date.prototype.toLocaleString`              | Timezone injected into options                      |
-| `Date.prototype.toLocaleDateString`          | Timezone injected into options                      |
-| `Date.prototype.toLocaleTimeString`          | Timezone injected into options                      |
-| `Date.prototype.getHours/Minutes/Seconds`    | Computed via `formatToParts` in spoofed tz          |
-| `Date.prototype.getDate/Day/Month/FullYear`  | Computed via `formatToParts` in spoofed tz          |
-| `Date.prototype.getMilliseconds`             | Passthrough (timezone-independent)                  |
-| `Intl.DateTimeFormat` constructor            | Injects spoofed timezone when no explicit tz        |
-| `Intl.DateTimeFormat.resolvedOptions`        | Returns spoofed tz for non-explicit instances       |
-| `Temporal.Now.timeZoneId`                    | Returns spoofed identifier                          |
-| `Temporal.Now.plainDateTimeISO`              | Passes spoofed tz when no arg                       |
-| `Temporal.Now.plainDateISO`                  | Passes spoofed tz when no arg                       |
-| `Temporal.Now.plainTimeISO`                  | Passes spoofed tz when no arg                       |
-| `Temporal.Now.zonedDateTimeISO`              | Passes spoofed tz when no arg                       |
-| `Function.prototype.toString`                | Returns `[native code]` for all overrides           |
-| `HTMLIFrameElement.contentWindow`            | Patches iframe toString on access                   |
-| `HTMLIFrameElement.contentDocument`          | Triggers contentWindow patching first               |
-| DOM insertion methods (11 total)             | Synchronously scan for iframes and patch            |
+### Geolocation (`navigator.geolocation`)
+
+Installed with `writable: false, configurable: false` to resist page-side restoration. This descriptor lockdown is stricter than native and is itself detectable via property descriptor inspection.
+
+| API                                        | Override Behavior                                   |
+| ------------------------------------------ | --------------------------------------------------- |
+| `navigator.geolocation.getCurrentPosition` | Returns spoofed coords with 10-50ms realistic delay |
+| `navigator.geolocation.watchPosition`      | Returns spoofed coords on each callback             |
+| `navigator.geolocation.clearWatch`         | Clears spoofed watch                                |
+
+### Permissions
+
+| API                                          | Override Behavior                       |
+| -------------------------------------------- | --------------------------------------- |
+| `navigator.permissions.query("geolocation")` | Returns "granted" when spoofing enabled |
+
+### Date constructor and statics
+
+| API                              | Override Behavior                                       |
+| -------------------------------- | ------------------------------------------------------- |
+| `Date` (global)                  | Replaced entirely — spoofing-aware constructor          |
+| `Date()` constructor (no-arg)    | Passthrough (current time)                              |
+| `Date(string)` — ambiguous       | Epoch adjusted by offset difference                     |
+| `Date(string)` — explicit tz     | Passthrough                                             |
+| `Date(y, m, d, ...)` — multi-arg | Epoch adjusted by offset difference                     |
+| `Date.parse(string)`             | Same adjustment as constructor                          |
+| `Date.now`                       | Behavior passthrough; registered for `toString` masking |
+| `Date.UTC`                       | Behavior passthrough; registered for `toString` masking |
+| `Date.prototype.constructor`     | Re-pointed to the replacement constructor               |
+
+### Date.prototype methods
+
+| API                                 | Override Behavior                               |
+| ----------------------------------- | ----------------------------------------------- |
+| `Date.prototype.getTimezoneOffset`  | Negated Intl-based offset for spoofed tz        |
+| `Date.prototype.toString`           | Formatted with spoofed tz name and offset       |
+| `Date.prototype.toDateString`       | Formatted in spoofed timezone                   |
+| `Date.prototype.toTimeString`       | Formatted with spoofed offset and tz name       |
+| `Date.prototype.toLocaleString`     | Timezone injected into options                  |
+| `Date.prototype.toLocaleDateString` | Timezone injected into options                  |
+| `Date.prototype.toLocaleTimeString` | Timezone injected into options                  |
+| `Date.prototype.getHours`           | Computed via engine-specific path in spoofed tz |
+| `Date.prototype.getMinutes`         | Computed via engine-specific path in spoofed tz |
+| `Date.prototype.getSeconds`         | Computed via engine-specific path in spoofed tz |
+| `Date.prototype.getMilliseconds`    | Behavior passthrough (timezone-independent)     |
+| `Date.prototype.getDate`            | Computed via engine-specific path in spoofed tz |
+| `Date.prototype.getDay`             | Computed via engine-specific path in spoofed tz |
+| `Date.prototype.getMonth`           | Computed via engine-specific path in spoofed tz |
+| `Date.prototype.getFullYear`        | Computed via engine-specific path in spoofed tz |
+
+### Intl
+
+| API                                             | Override Behavior                             |
+| ----------------------------------------------- | --------------------------------------------- |
+| `Intl.DateTimeFormat` constructor               | Injects spoofed timezone when no explicit tz  |
+| `Intl.DateTimeFormat.prototype.resolvedOptions` | Returns spoofed tz for non-explicit instances |
+
+### Temporal (feature-detected)
+
+| API                                                  | Override Behavior                               |
+| ---------------------------------------------------- | ----------------------------------------------- |
+| `Temporal.Now.timeZoneId`                            | Returns spoofed identifier                      |
+| `Temporal.Now.plainDateTimeISO`                      | Passes spoofed tz when no arg                   |
+| `Temporal.Now.plainDateISO`                          | Passes spoofed tz when no arg                   |
+| `Temporal.Now.plainTimeISO`                          | Passes spoofed tz when no arg                   |
+| `Temporal.Now.zonedDateTimeISO`                      | Passes spoofed tz when no arg                   |
+| `Temporal.ZonedDateTime.prototype.offsetNanoseconds` | Passthrough getter; kept for `toString` masking |
+| `Temporal.ZonedDateTime.prototype.offset`            | Passthrough getter; kept for `toString` masking |
+
+### Function masking and stealth infrastructure
+
+| API                           | Override Behavior                                |
+| ----------------------------- | ------------------------------------------------ |
+| `Function.prototype.toString` | Returns `[native code]` for registered overrides |
+
+### Iframe patching
+
+Two accessor properties on `HTMLIFrameElement.prototype` are wrapped. When a same-origin iframe window is first accessed, its own `Function.prototype.toString`, `navigator.geolocation.{getCurrentPosition,watchPosition,clearWatch}`, and `navigator.permissions.query` are patched in place. Cross-origin iframes throw `SecurityError` and are skipped.
+
+| API                                                    | Override Behavior                       |
+| ------------------------------------------------------ | --------------------------------------- |
+| `HTMLIFrameElement.prototype.contentWindow` (getter)   | Patches iframe on access                |
+| `HTMLIFrameElement.prototype.contentDocument` (getter) | Triggers `contentWindow` patching first |
+
+### DOM insertion wrapping
+
+Wrapped to synchronously scan inserted subtrees for iframes and patch them before the next line of JavaScript executes. A `MutationObserver` on `document.documentElement` catches anything missed by the wrappers.
+
+| API                                       | Override Behavior                                |
+| ----------------------------------------- | ------------------------------------------------ |
+| `Node.prototype.appendChild`              | Calls original, then scans inserted node         |
+| `Node.prototype.insertBefore`             | Calls original, then scans inserted node         |
+| `Node.prototype.replaceChild`             | Calls original, then scans inserted node         |
+| `Element.prototype.append`                | Calls original, then scans inserted nodes        |
+| `Element.prototype.prepend`               | Calls original, then scans inserted nodes        |
+| `Element.prototype.replaceWith`           | Calls original, then scans inserted nodes        |
+| `Element.prototype.insertAdjacentElement` | Calls original, then scans inserted element      |
+| `Element.prototype.insertAdjacentHTML`    | Calls original, then scans parent subtree        |
+| `Element.prototype.innerHTML` (setter)    | Calls original setter, then scans target subtree |
 
 ## Injected Script Architecture
 
