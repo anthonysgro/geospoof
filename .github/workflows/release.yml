@@ -110,4 +110,4 @@ jobs:
           publish_dir: .
           publish_branch: gh-pages
           keep_files: true
-          include_files: update.json,site/support.html
+          include_files: update.json
