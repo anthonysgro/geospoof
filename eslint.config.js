@@ -14,6 +14,7 @@ export default [
       "background/**",
       "content/**",
       "popup/**",
+      "site/**", // site/ has its own eslint config
     ],
   },
 
