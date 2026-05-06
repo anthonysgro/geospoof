@@ -64,7 +64,7 @@ function PrivacyPage() {
               Privacy Policy
             </h1>
             <p className="text-body-base text-(--color-canvas-muted)">
-              Last Updated: May 3, 2026
+              Last Updated: May 6, 2026
             </p>
           </div>
 
@@ -75,6 +75,17 @@ function PrivacyPage() {
                 is designed to enhance your location privacy and does not
                 collect, store, or transmit any personal data to the extension
                 developer.
+              </p>
+              <p>
+                <strong>
+                  GeoSpoof does not implement VPN functionality.
+                </strong>{" "}
+                It does not use NetworkExtension or any VPN framework, and it
+                does not route, tunnel, or inspect network traffic. The word
+                "VPN" appears only in reference to the optional "Sync with VPN"
+                feature, which helps align your browser's reported location
+                with the exit region of a third-party VPN you are already
+                running.
               </p>
             </PolicySection>
 
@@ -106,7 +117,9 @@ function PrivacyPage() {
               <ul>
                 <li>Your spoofed location coordinates</li>
                 <li>Your timezone preferences</li>
+                <li>Resolved location name (city, country)</li>
                 <li>WebRTC protection settings</li>
+                <li>VPN sync preference</li>
                 <li>Onboarding completion status</li>
               </ul>
               <p>
@@ -118,12 +131,13 @@ function PrivacyPage() {
             <PolicySection title="Third-Party API Usage">
               <p>
                 When you use certain features, the extension communicates with
-                external services:
+                external services. The developer operates no server and
+                receives none of this data.
               </p>
               <p>
                 <strong>Nominatim (OpenStreetMap)</strong> — Used when you
                 search for a city or the extension performs reverse geocoding.
-                Sends your search query or coordinates.{" "}
+                Sends your search query or coordinates over HTTPS.{" "}
                 <a
                   href="https://wiki.osmfoundation.org/wiki/Privacy_Policy"
                   target="_blank"
@@ -133,17 +147,117 @@ function PrivacyPage() {
                 </a>
               </p>
               <p>
-                <strong>VPN Sync Services</strong> — Only when you explicitly
-                enable "Sync with VPN". Your public IP is sent to ipify, GeoJS,
-                FreeIPAPI, ReallyFreeGeoIP, and ipinfo.io to determine your VPN
-                exit region. Your IP is never persisted to disk and is cleared
-                when you disable VPN sync.
+                <strong>VPN Sync Services</strong> — Used only when you
+                explicitly enable "Sync with VPN" or tap the "Re-sync" button.
+                Your public IP address is first detected via{" "}
+                <a
+                  href="https://www.ipify.org/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  ipify
+                </a>{" "}
+                (<code className="rounded bg-(--color-canvas-border) px-1 text-sm">
+                  api.ipify.org
+                </code>
+                ), then sent in parallel over HTTPS to up to four public IP
+                geolocation services to resolve its approximate region. The
+                first successful response is used; the rest are cancelled. Only
+                your public IP is transmitted — no identifiers, account data,
+                or browsing history:
+              </p>
+              <ul>
+                <li>
+                  <a
+                    href="https://www.geojs.io/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    GeoJS
+                  </a>{" "}
+                  (<code className="rounded bg-(--color-canvas-border) px-1 text-sm">
+                    get.geojs.io
+                  </code>
+                  ) — primary service
+                </li>
+                <li>
+                  <a
+                    href="https://freeipapi.com/privacy-policy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    FreeIPAPI
+                  </a>{" "}
+                  (<code className="rounded bg-(--color-canvas-border) px-1 text-sm">
+                    free.freeipapi.com
+                  </code>
+                  ) — fallback
+                </li>
+                <li>
+                  <a
+                    href="https://reallyfreegeoip.org/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    ReallyFreeGeoIP
+                  </a>{" "}
+                  (<code className="rounded bg-(--color-canvas-border) px-1 text-sm">
+                    reallyfreegeoip.org
+                  </code>
+                  ) — fallback
+                </li>
+                <li>
+                  <a
+                    href="https://ipinfo.io/privacy-policy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    ipinfo.io
+                  </a>{" "}
+                  (<code className="rounded bg-(--color-canvas-border) px-1 text-sm">
+                    ipinfo.io
+                  </code>
+                  ) — fallback
+                </li>
+              </ul>
+              <p>
+                <strong>Privacy safeguards for VPN Sync:</strong> all requests
+                use HTTPS. Your IP address is held only in an in-memory cache
+                for the current browser session — it is never written to disk.
+                The in-memory cache is cleared the moment you disable "Sync
+                with VPN" or switch to a different location input method.
               </p>
               <p>
                 <strong>browser-geo-tz</strong> — Makes HTTPS range requests to
-                a CDN to fetch timezone boundary data chunks. Your coordinates
-                are never sent to a third-party API.
+                a CDN to fetch small chunks of timezone boundary data. Your
+                coordinates are never sent as a query or stored by a
+                third-party API; the extension resolves your timezone locally
+                using the downloaded boundary data.{" "}
+                <a
+                  href="https://github.com/kevmo314/browser-geo-tz"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Project page
+                </a>
               </p>
+            </PolicySection>
+
+            <PolicySection title="Data Security">
+              <ul>
+                <li>
+                  All settings are stored locally using the browser's secure
+                  storage API
+                </li>
+                <li>No data is transmitted to the extension developer</li>
+                <li>
+                  All third-party API calls use HTTPS encryption
+                </li>
+                <li>
+                  The developer operates no backend server and maintains no
+                  user accounts
+                </li>
+              </ul>
             </PolicySection>
 
             <PolicySection title="Permissions Explained">
@@ -190,6 +304,16 @@ function PrivacyPage() {
               <p>
                 GeoSpoof does NOT change browser language, spoof your IP
                 address, or bypass server-side detection.
+              </p>
+            </PolicySection>
+
+            <PolicySection title="Changes to This Policy">
+              <p>
+                If this privacy policy changes, the updated version will be
+                posted on this page and in the extension's repository. The
+                "Last Updated" date at the top of this page will be revised
+                accordingly. Continued use of the extension after changes are
+                posted constitutes your acceptance of the updated policy.
               </p>
             </PolicySection>
 

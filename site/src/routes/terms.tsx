@@ -64,7 +64,7 @@ function TermsPage() {
               Terms of Service
             </h1>
             <p className="text-body-base text-(--color-canvas-muted)">
-              Last Updated: May 3, 2026
+              Last Updated: May 6, 2026
             </p>
           </div>
 
@@ -128,11 +128,16 @@ function TermsPage() {
 
             <TermsSection title="4. Third-Party Services">
               <p>
-                The Extension communicates with third-party services (Nominatim,
-                ipify, GeoJS, and others) to provide certain features. Your use
-                of those services is subject to their respective terms and
-                privacy policies. We are not responsible for the availability,
-                accuracy, or conduct of any third-party service.
+                The Extension communicates with third-party services to provide
+                certain features. These services include Nominatim
+                (OpenStreetMap), ipify, GeoJS, FreeIPAPI, ReallyFreeGeoIP,
+                ipinfo.io, and the browser-geo-tz CDN. Your use of those
+                services is subject to their respective terms and privacy
+                policies. We are not responsible for the availability,
+                accuracy, or conduct of any third-party service. The specific
+                data sent to each service and the conditions under which it is
+                sent are described in our{" "}
+                <a href="/privacy">Privacy Policy</a>.
               </p>
             </TermsSection>
 
@@ -147,8 +152,16 @@ function TermsPage() {
                 >
                   github.com/anthonysgro/geospoof
                 </a>
-                . The MIT License governs your rights to use, copy, modify, and
-                distribute the source code.
+                . The{" "}
+                <a
+                  href="https://github.com/anthonysgro/geospoof/blob/main/LICENSE"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  MIT License
+                </a>{" "}
+                governs your rights to use, copy, modify, and distribute the
+                source code.
               </p>
             </TermsSection>
 
@@ -230,7 +243,17 @@ function TermsPage() {
               </p>
             </TermsSection>
 
-            <TermsSection title="11. Changes to Terms">
+            <TermsSection title="11. Severability">
+              <p>
+                If any provision of these Terms is found to be unenforceable or
+                invalid under applicable law, that provision shall be modified
+                to the minimum extent necessary to make it enforceable, or
+                severed if modification is not possible. The remaining
+                provisions shall remain in full force and effect.
+              </p>
+            </TermsSection>
+
+            <TermsSection title="12. Changes to Terms">
               <p>
                 We reserve the right to modify these Terms at any time. Changes
                 will be posted on this page with an updated date. Continued use
@@ -239,7 +262,7 @@ function TermsPage() {
               </p>
             </TermsSection>
 
-            <TermsSection title="12. Contact">
+            <TermsSection title="13. Contact">
               <p>
                 For questions about these Terms, contact us at{" "}
                 <a href="mailto:support@geospoof.com">support@geospoof.com</a>.
