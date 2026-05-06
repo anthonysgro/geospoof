@@ -1,0 +1,252 @@
+/* Nunito Font - matches extension brand typography */
+@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800&display=swap");
+
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  /* Typography */
+  --font-sans:
+    "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-heading: var(--font-sans);
+
+  /* Shadcn token mappings */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Radius scale */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* GeoSpoof brand radius */
+  --radius-brand: 16px;
+  --radius-sm-brand: 8px;
+  --radius-md-brand: 12px;
+
+  /* GeoSpoof brand colors exposed as Tailwind utilities */
+  --color-brand: var(--color-gs-brand);
+  --color-brand-dark: var(--color-gs-brand-dark);
+  --color-canvas: var(--gs-canvas);
+  --color-canvas-foreground: var(--gs-canvas-foreground);
+  --color-canvas-muted: var(--gs-canvas-muted);
+  --color-canvas-border: var(--gs-canvas-border);
+}
+
+/* ============================================================
+   Light mode
+   ============================================================ */
+:root {
+  --radius: 0.625rem;
+
+  /* Shadcn base tokens — light */
+  --background: #f5f5f5;
+  --foreground: #1a1a1a;
+  --card: #ffffff;
+  --card-foreground: #1a1a1a;
+  --popover: #ffffff;
+  --popover-foreground: #1a1a1a;
+  --primary: #4caf50;
+  --primary-foreground: #ffffff;
+  --secondary: #f0f0f0;
+  --secondary-foreground: #333333;
+  --muted: #f0f0f0;
+  --muted-foreground: #666666;
+  --accent: #f0f0f0;
+  --accent-foreground: #333333;
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: #e0e0e0;
+  --input: #e0e0e0;
+  --ring: #4caf50;
+  --sidebar: #f5f5f5;
+  --sidebar-foreground: #333333;
+  --sidebar-primary: #4caf50;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f0f0f0;
+  --sidebar-accent-foreground: #333333;
+  --sidebar-border: #e0e0e0;
+  --sidebar-ring: #4caf50;
+
+  /* GeoSpoof brand — light */
+  --color-gs-brand: #4caf50;
+  --color-gs-brand-dark: #45a049;
+  --gs-canvas: #f5f5f5;
+  --gs-canvas-foreground: #1a1a19;
+  --gs-canvas-muted: #666666;
+  --gs-canvas-border: #e0e0e0;
+}
+
+/* ============================================================
+   Dark mode
+   ============================================================ */
+.dark {
+  /* Shadcn base tokens — dark (matches hows-today dark palette) */
+  --background: #0a0a0a;
+  --foreground: #fafafa;
+  --card: #111111;
+  --card-foreground: #fafafa;
+  --popover: #111111;
+  --popover-foreground: #fafafa;
+  --primary: #4caf50;
+  --primary-foreground: #ffffff;
+  --secondary: #1a1a1a;
+  --secondary-foreground: #fafafa;
+  --muted: #1a1a1a;
+  --muted-foreground: #a6a6a6;
+  --accent: #1a1a1a;
+  --accent-foreground: #fafafa;
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: #2e2e2e;
+  --input: oklch(1 0 0 / 15%);
+  --ring: #4caf50;
+  --sidebar: #111111;
+  --sidebar-foreground: #fafafa;
+  --sidebar-primary: #4caf50;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1a1a1a;
+  --sidebar-accent-foreground: #fafafa;
+  --sidebar-border: #2e2e2e;
+  --sidebar-ring: #4caf50;
+
+  /* GeoSpoof brand — dark */
+  --color-gs-brand: #4caf50;
+  --color-gs-brand-dark: #45a049;
+  --gs-canvas: #0a0a0a;
+  --gs-canvas-foreground: #fafafa;
+  --gs-canvas-muted: #a6a6a6;
+  --gs-canvas-border: #2e2e2e;
+}
+
+/* ============================================================
+   Base layer
+   ============================================================ */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* ============================================================
+   Typography utilities
+   ============================================================ */
+.text-hero {
+  font-size: 3rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.text-section {
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.text-subheading {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.text-body-lg {
+  font-size: 1.25rem;
+  font-weight: 400;
+  line-height: 1.7;
+}
+.text-body {
+  font-size: 1.125rem;
+  font-weight: 400;
+  line-height: 1.7;
+}
+.text-body-base {
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.7;
+}
+.text-small {
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+/* ============================================================
+   Reduced motion
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================
+   Marquee / scrolling row animations
+   ============================================================ */
+
+@keyframes scroll-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes scroll-right {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-scroll-left {
+  animation: scroll-left linear infinite;
+}
+
+.animate-scroll-right {
+  animation: scroll-right linear infinite;
+}
