@@ -33,8 +33,12 @@ export function HeroSection({ className }: { className?: string }) {
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === "dark"
 
-  const ios1 = isDark ? "/images/hero-ios-1-dark.png" : "/images/hero-ios-1.png"
-  const ios2 = isDark ? "/images/hero-ios-2-dark.png" : "/images/hero-ios-2.png"
+  const ios1Webp = isDark ? "/images/hero-ios-1-dark.webp" : "/images/hero-ios-1.webp"
+  const ios1Webp640 = isDark ? "/images/hero-ios-1-dark-640.webp" : "/images/hero-ios-1-640.webp"
+  const ios1Png = isDark ? "/images/hero-ios-1-dark.png" : "/images/hero-ios-1.png"
+  const ios2Webp = isDark ? "/images/hero-ios-2-dark.webp" : "/images/hero-ios-2.webp"
+  const ios2Webp640 = isDark ? "/images/hero-ios-2-dark-640.webp" : "/images/hero-ios-2-640.webp"
+  const ios2Png = isDark ? "/images/hero-ios-2-dark.png" : "/images/hero-ios-2.png"
 
   return (
     <Section
@@ -57,16 +61,34 @@ export function HeroSection({ className }: { className?: string }) {
           })}
         >
           <div className="relative">
-            <img
-              src={ios1}
-              alt="GeoSpoof app — secondary view"
-              className="absolute top-8 left-0 w-56 -rotate-6 drop-shadow-2xl xl:w-80"
-            />
-            <img
-              src={ios2}
-              alt="GeoSpoof app — main view"
-              className="relative z-10 ml-24 w-56 rotate-3 drop-shadow-2xl xl:ml-32 xl:w-80"
-            />
+            <picture className="absolute top-8 left-0 w-56 -rotate-6 drop-shadow-2xl xl:w-80">
+              <source
+                srcSet={`${ios1Webp640} 640w, ${ios1Webp} 1008w`}
+                sizes="(max-width: 1280px) 224px, 320px"
+                type="image/webp"
+              />
+              <img
+                src={ios1Png}
+                alt="GeoSpoof app — secondary view"
+                width={1008}
+                height={2050}
+                className="w-full"
+              />
+            </picture>
+            <picture className="relative z-10 ml-24 block w-56 rotate-3 drop-shadow-2xl xl:ml-32 xl:w-80">
+              <source
+                srcSet={`${ios2Webp640} 640w, ${ios2Webp} 1010w`}
+                sizes="(max-width: 1280px) 224px, 320px"
+                type="image/webp"
+              />
+              <img
+                src={ios2Png}
+                alt="GeoSpoof app — main view"
+                width={1010}
+                height={2050}
+                className="w-full"
+              />
+            </picture>
           </div>
         </MotionDiv>
 

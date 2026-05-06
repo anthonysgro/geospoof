@@ -7,7 +7,11 @@ export function ScreenshotsSection({ className }: { className?: string }) {
   const prefersReducedMotion = useReducedMotion()
   const MotionDiv = prefersReducedMotion ? "div" : motion.div
   const { resolvedTheme } = useTheme()
-  const desktop =
+  const desktopWebp =
+    resolvedTheme === "dark"
+      ? "/images/hero-desktop-1-dark.webp"
+      : "/images/hero-desktop-1.webp"
+  const desktopPng =
     resolvedTheme === "dark"
       ? "/images/hero-desktop-1-dark.png"
       : "/images/hero-desktop-1.png"
@@ -35,11 +39,17 @@ export function ScreenshotsSection({ className }: { className?: string }) {
         })}
       >
         <div className="rounded-2xl p-[2px]">
-          <img
-            src={desktop}
-            alt="GeoSpoof browser extension running on desktop — showing location spoofing in action"
-            className="w-full rounded-2xl"
-          />
+          <picture>
+            <source srcSet={desktopWebp} type="image/webp" />
+            <img
+              src={desktopPng}
+              alt="GeoSpoof browser extension running on desktop — showing location spoofing in action"
+              width={3012}
+              height={2130}
+              loading="lazy"
+              className="w-full rounded-2xl"
+            />
+          </picture>
         </div>
       </MotionDiv>
     </section>

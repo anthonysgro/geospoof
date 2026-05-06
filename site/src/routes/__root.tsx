@@ -59,12 +59,12 @@ export const Route = createRootRoute({
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "icon", href: "/favicon.ico" },
-      { rel: "preload", href: "/images/hero-ios-1.png", as: "image" },
-      { rel: "preload", href: "/images/hero-ios-2.png", as: "image" },
-      { rel: "preload", href: "/images/hero-desktop-1.png", as: "image" },
-      { rel: "preload", href: "/images/hero-ios-1-dark.png", as: "image" },
-      { rel: "preload", href: "/images/hero-ios-2-dark.png", as: "image" },
-      { rel: "preload", href: "/images/hero-desktop-1-dark.png", as: "image" },
+      // Only preload the above-the-fold hero images (light + dark variants)
+      // Use 640w versions — matches the displayed size on most viewports
+      { rel: "preload", href: "/images/hero-ios-1-640.webp", as: "image", type: "image/webp" },
+      { rel: "preload", href: "/images/hero-ios-2-640.webp", as: "image", type: "image/webp" },
+      { rel: "preload", href: "/images/hero-ios-1-dark-640.webp", as: "image", type: "image/webp" },
+      { rel: "preload", href: "/images/hero-ios-2-dark-640.webp", as: "image", type: "image/webp" },
     ],
   }),
   notFoundComponent: () => (
