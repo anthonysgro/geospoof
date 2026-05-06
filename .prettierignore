@@ -27,3 +27,6 @@ coverage
 
 # Generated files
 package-lock.json
+
+# Site subfolder (has its own prettier config with tailwind plugin)
+site/
