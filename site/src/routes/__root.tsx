@@ -4,11 +4,11 @@ import {
   Scripts,
   createRootRoute,
 } from "@tanstack/react-router"
+import { Analytics } from "@vercel/analytics/react"
+import { SpeedInsights } from "@vercel/speed-insights/react"
 import appCss from "../styles.css?url"
 import { ThemeProvider } from "@/components/theme-provider"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { Analytics } from "@vercel/analytics/react"
-import { SpeedInsights } from "@vercel/speed-insights/react"
 
 export const Route = createRootRoute({
   head: () => ({
@@ -61,10 +61,30 @@ export const Route = createRootRoute({
       { rel: "icon", href: "/favicon.ico" },
       // Only preload the above-the-fold hero images (light + dark variants)
       // Use 640w versions — matches the displayed size on most viewports
-      { rel: "preload", href: "/images/hero-ios-1-640.webp", as: "image", type: "image/webp" },
-      { rel: "preload", href: "/images/hero-ios-2-640.webp", as: "image", type: "image/webp" },
-      { rel: "preload", href: "/images/hero-ios-1-dark-640.webp", as: "image", type: "image/webp" },
-      { rel: "preload", href: "/images/hero-ios-2-dark-640.webp", as: "image", type: "image/webp" },
+      {
+        rel: "preload",
+        href: "/images/hero-ios-1-640.webp",
+        as: "image",
+        type: "image/webp",
+      },
+      {
+        rel: "preload",
+        href: "/images/hero-ios-2-640.webp",
+        as: "image",
+        type: "image/webp",
+      },
+      {
+        rel: "preload",
+        href: "/images/hero-ios-1-dark-640.webp",
+        as: "image",
+        type: "image/webp",
+      },
+      {
+        rel: "preload",
+        href: "/images/hero-ios-2-dark-640.webp",
+        as: "image",
+        type: "image/webp",
+      },
     ],
   }),
   notFoundComponent: () => (
@@ -107,9 +127,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body suppressHydrationWarning>
         <ThemeProvider defaultTheme="system" storageKey="geospoof-theme">
-          <TooltipProvider>
-            {children}
-          </TooltipProvider>
+          <TooltipProvider>{children}</TooltipProvider>
         </ThemeProvider>
         <Analytics />
         <SpeedInsights />

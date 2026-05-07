@@ -77,15 +77,12 @@ function PrivacyPage() {
                 developer.
               </p>
               <p>
-                <strong>
-                  GeoSpoof does not implement VPN functionality.
-                </strong>{" "}
+                <strong>GeoSpoof does not implement VPN functionality.</strong>{" "}
                 It does not use NetworkExtension or any VPN framework, and it
                 does not route, tunnel, or inspect network traffic. The word
                 "VPN" appears only in reference to the optional "Sync with VPN"
-                feature, which helps align your browser's reported location
-                with the exit region of a third-party VPN you are already
-                running.
+                feature, which helps align your browser's reported location with
+                the exit region of a third-party VPN you are already running.
               </p>
             </PolicySection>
 
@@ -131,8 +128,8 @@ function PrivacyPage() {
             <PolicySection title="Third-Party API Usage">
               <p>
                 When you use certain features, the extension communicates with
-                external services. The developer operates no server and
-                receives none of this data.
+                external services. The developer operates no server and receives
+                none of this data.
               </p>
               <p>
                 <strong>Nominatim (OpenStreetMap)</strong> — Used when you
@@ -157,14 +154,15 @@ function PrivacyPage() {
                 >
                   ipify
                 </a>{" "}
-                (<code className="rounded bg-(--color-canvas-border) px-1 text-sm">
+                (
+                <code className="rounded bg-(--color-canvas-border) px-1 text-sm">
                   api.ipify.org
                 </code>
                 ), then sent in parallel over HTTPS to up to four public IP
                 geolocation services to resolve its approximate region. The
                 first successful response is used; the rest are cancelled. Only
-                your public IP is transmitted — no identifiers, account data,
-                or browsing history:
+                your public IP is transmitted — no identifiers, account data, or
+                browsing history:
               </p>
               <ul>
                 <li>
@@ -175,7 +173,8 @@ function PrivacyPage() {
                   >
                     GeoJS
                   </a>{" "}
-                  (<code className="rounded bg-(--color-canvas-border) px-1 text-sm">
+                  (
+                  <code className="rounded bg-(--color-canvas-border) px-1 text-sm">
                     get.geojs.io
                   </code>
                   ) — primary service
@@ -188,7 +187,8 @@ function PrivacyPage() {
                   >
                     FreeIPAPI
                   </a>{" "}
-                  (<code className="rounded bg-(--color-canvas-border) px-1 text-sm">
+                  (
+                  <code className="rounded bg-(--color-canvas-border) px-1 text-sm">
                     free.freeipapi.com
                   </code>
                   ) — fallback
@@ -201,7 +201,8 @@ function PrivacyPage() {
                   >
                     ReallyFreeGeoIP
                   </a>{" "}
-                  (<code className="rounded bg-(--color-canvas-border) px-1 text-sm">
+                  (
+                  <code className="rounded bg-(--color-canvas-border) px-1 text-sm">
                     reallyfreegeoip.org
                   </code>
                   ) — fallback
@@ -214,7 +215,8 @@ function PrivacyPage() {
                   >
                     ipinfo.io
                   </a>{" "}
-                  (<code className="rounded bg-(--color-canvas-border) px-1 text-sm">
+                  (
+                  <code className="rounded bg-(--color-canvas-border) px-1 text-sm">
                     ipinfo.io
                   </code>
                   ) — fallback
@@ -224,15 +226,15 @@ function PrivacyPage() {
                 <strong>Privacy safeguards for VPN Sync:</strong> all requests
                 use HTTPS. Your IP address is held only in an in-memory cache
                 for the current browser session — it is never written to disk.
-                The in-memory cache is cleared the moment you disable "Sync
-                with VPN" or switch to a different location input method.
+                The in-memory cache is cleared the moment you disable "Sync with
+                VPN" or switch to a different location input method.
               </p>
               <p>
                 <strong>browser-geo-tz</strong> — Makes HTTPS range requests to
                 a CDN to fetch small chunks of timezone boundary data. Your
-                coordinates are never sent as a query or stored by a
-                third-party API; the extension resolves your timezone locally
-                using the downloaded boundary data.{" "}
+                coordinates are never sent as a query or stored by a third-party
+                API; the extension resolves your timezone locally using the
+                downloaded boundary data.{" "}
                 <a
                   href="https://github.com/kevmo314/browser-geo-tz"
                   target="_blank"
@@ -250,12 +252,10 @@ function PrivacyPage() {
                   storage API
                 </li>
                 <li>No data is transmitted to the extension developer</li>
+                <li>All third-party API calls use HTTPS encryption</li>
                 <li>
-                  All third-party API calls use HTTPS encryption
-                </li>
-                <li>
-                  The developer operates no backend server and maintains no
-                  user accounts
+                  The developer operates no backend server and maintains no user
+                  accounts
                 </li>
               </ul>
             </PolicySection>
@@ -309,9 +309,8 @@ function PrivacyPage() {
 
             <PolicySection title="For Users in the European Economic Area, United Kingdom, and Switzerland">
               <p>
-                If you are located in the EEA, UK, or Switzerland, the
-                following applies to you in addition to the rest of this
-                policy.
+                If you are located in the EEA, UK, or Switzerland, the following
+                applies to you in addition to the rest of this policy.
               </p>
               <p>
                 <strong>Controller:</strong> Anthony Sgro, an individual
@@ -326,47 +325,45 @@ function PrivacyPage() {
                 explicitly enable the "Sync with VPN" feature. We rely on your
                 consent (GDPR Art. 6(1)(a)), which you give by enabling the
                 feature, and which you can withdraw at any time by disabling
-                "Sync with VPN" in the extension popup. Withdrawing consent
-                does not affect the lawfulness of processing based on consent
-                before its withdrawal.
+                "Sync with VPN" in the extension popup. Withdrawing consent does
+                not affect the lawfulness of processing based on consent before
+                its withdrawal.
               </p>
               <p>
                 <strong>International transfers:</strong> The third-party
-                services listed above (ipify, GeoJS, FreeIPAPI,
-                ReallyFreeGeoIP, ipinfo.io, Nominatim) are operated outside
-                the EEA, including in the United States. When you use features
-                that contact these services, your public IP is transferred to
-                their infrastructure. Each service is an independent
-                controller and determines its own transfer mechanisms. The
-                extension developer operates no server and performs no
-                cross-border transfer on its own.
+                services listed above (ipify, GeoJS, FreeIPAPI, ReallyFreeGeoIP,
+                ipinfo.io, Nominatim) are operated outside the EEA, including in
+                the United States. When you use features that contact these
+                services, your public IP is transferred to their infrastructure.
+                Each service is an independent controller and determines its own
+                transfer mechanisms. The extension developer operates no server
+                and performs no cross-border transfer on its own.
               </p>
               <p>
-                <strong>Your rights under GDPR / UK GDPR:</strong> you have
-                the right to access, rectify, erase, restrict, object to, and
-                port your personal data, and to withdraw consent at any time.
-                Because the extension stores no personal data on any server
-                controlled by the developer, most of these rights are
-                exercised directly by you within the extension: uninstalling
-                the extension or disabling "Sync with VPN" fully erases
-                everything the developer could ever access. You also have the
-                right to lodge a complaint with your local data protection
-                authority.
+                <strong>Your rights under GDPR / UK GDPR:</strong> you have the
+                right to access, rectify, erase, restrict, object to, and port
+                your personal data, and to withdraw consent at any time. Because
+                the extension stores no personal data on any server controlled
+                by the developer, most of these rights are exercised directly by
+                you within the extension: uninstalling the extension or
+                disabling "Sync with VPN" fully erases everything the developer
+                could ever access. You also have the right to lodge a complaint
+                with your local data protection authority.
               </p>
               <p>
                 <strong>Retention:</strong> Your public IP is held only in
-                volatile memory for the current browser session and cleared
-                when you disable the feature or close your browser. No
-                retention period applies because no storage occurs.
+                volatile memory for the current browser session and cleared when
+                you disable the feature or close your browser. No retention
+                period applies because no storage occurs.
               </p>
             </PolicySection>
 
             <PolicySection title="For California Residents">
               <p>
                 If you are a California resident, the California Consumer
-                Privacy Act (CCPA), as amended by the California Privacy
-                Rights Act (CPRA), gives you specific rights regarding your
-                personal information.
+                Privacy Act (CCPA), as amended by the California Privacy Rights
+                Act (CPRA), gives you specific rights regarding your personal
+                information.
               </p>
               <p>
                 <strong>
@@ -374,8 +371,8 @@ function PrivacyPage() {
                 </strong>{" "}
                 as those terms are defined under the CCPA/CPRA. We do not
                 disclose personal information for cross-context behavioral
-                advertising. We do not knowingly handle the personal
-                information of consumers under 16.
+                advertising. We do not knowingly handle the personal information
+                of consumers under 16.
               </p>
               <p>
                 <strong>Categories collected:</strong> The only category of
@@ -386,14 +383,14 @@ function PrivacyPage() {
               </p>
               <p>
                 <strong>Your rights:</strong> You have the right to know what
-                personal information is collected, the right to delete
-                personal information, the right to correct inaccurate personal
+                personal information is collected, the right to delete personal
+                information, the right to correct inaccurate personal
                 information, the right to opt out of sale or sharing (there is
                 nothing to opt out of here), and the right not to receive
-                discriminatory treatment for exercising these rights. Because
-                no personal information is retained by the developer, these
-                rights are effectively exercised by uninstalling the extension
-                or disabling the feature. For any inquiry, contact{" "}
+                discriminatory treatment for exercising these rights. Because no
+                personal information is retained by the developer, these rights
+                are effectively exercised by uninstalling the extension or
+                disabling the feature. For any inquiry, contact{" "}
                 <a href="mailto:support@geospoof.com">support@geospoof.com</a>.
               </p>
             </PolicySection>
@@ -402,9 +399,9 @@ function PrivacyPage() {
               <p>
                 GeoSpoof is not directed to children under 13, and we do not
                 knowingly collect personal information from children under 13.
-                If you believe a child under 13 has used the extension in a
-                way that caused personal information to reach a third-party
-                service referenced above, please contact us at{" "}
+                If you believe a child under 13 has used the extension in a way
+                that caused personal information to reach a third-party service
+                referenced above, please contact us at{" "}
                 <a href="mailto:support@geospoof.com">support@geospoof.com</a>{" "}
                 and we will take reasonable steps to assist.
               </p>
@@ -414,21 +411,21 @@ function PrivacyPage() {
               <p>
                 Because the extension stores no personal data on any
                 developer-operated server, there is no developer-side database
-                that can be breached. In the unlikely event of a security
-                issue affecting the extension itself (for example, a
-                vulnerability in the extension code), we will publish an
-                advisory on the project's GitHub page and release a patched
-                version through the relevant browser stores. Where required
-                by applicable law, we will notify affected users and the
-                relevant data protection authority.
+                that can be breached. In the unlikely event of a security issue
+                affecting the extension itself (for example, a vulnerability in
+                the extension code), we will publish an advisory on the
+                project's GitHub page and release a patched version through the
+                relevant browser stores. Where required by applicable law, we
+                will notify affected users and the relevant data protection
+                authority.
               </p>
             </PolicySection>
 
             <PolicySection title="Changes to This Policy">
               <p>
                 If this privacy policy changes, the updated version will be
-                posted on this page and in the extension's repository. The
-                "Last Updated" date at the top of this page will be revised
+                posted on this page and in the extension's repository. The "Last
+                Updated" date at the top of this page will be revised
                 accordingly. Continued use of the extension after changes are
                 posted constitutes your acceptance of the updated policy.
               </p>

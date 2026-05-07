@@ -1,10 +1,7 @@
-import { cn } from "@/lib/utils"
 import type { TestStatus } from "@/lib/test-suite/types"
+import { cn } from "@/lib/utils"
 
-const STATUS_META: Record<
-  TestStatus,
-  { label: string; className: string }
-> = {
+const STATUS_META: Record<TestStatus, { label: string; className: string }> = {
   pass: {
     label: "Pass",
     className:
@@ -12,8 +9,7 @@ const STATUS_META: Record<
   },
   fail: {
     label: "Fail",
-    className:
-      "bg-destructive/10 text-destructive border-destructive/20",
+    className: "bg-destructive/10 text-destructive border-destructive/20",
   },
   "known-limitation": {
     label: "Known limitation",
@@ -22,8 +18,7 @@ const STATUS_META: Record<
   },
   error: {
     label: "Error",
-    className:
-      "bg-destructive/10 text-destructive border-destructive/20",
+    className: "bg-destructive/10 text-destructive border-destructive/20",
   },
   pending: {
     label: "Running…",

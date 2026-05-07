@@ -33,12 +33,24 @@ export function HeroSection({ className }: { className?: string }) {
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === "dark"
 
-  const ios1Webp = isDark ? "/images/hero-ios-1-dark.webp" : "/images/hero-ios-1.webp"
-  const ios1Webp640 = isDark ? "/images/hero-ios-1-dark-640.webp" : "/images/hero-ios-1-640.webp"
-  const ios1Png = isDark ? "/images/hero-ios-1-dark.png" : "/images/hero-ios-1.png"
-  const ios2Webp = isDark ? "/images/hero-ios-2-dark.webp" : "/images/hero-ios-2.webp"
-  const ios2Webp640 = isDark ? "/images/hero-ios-2-dark-640.webp" : "/images/hero-ios-2-640.webp"
-  const ios2Png = isDark ? "/images/hero-ios-2-dark.png" : "/images/hero-ios-2.png"
+  const ios1Webp = isDark
+    ? "/images/hero-ios-1-dark.webp"
+    : "/images/hero-ios-1.webp"
+  const ios1Webp640 = isDark
+    ? "/images/hero-ios-1-dark-640.webp"
+    : "/images/hero-ios-1-640.webp"
+  const ios1Png = isDark
+    ? "/images/hero-ios-1-dark.png"
+    : "/images/hero-ios-1.png"
+  const ios2Webp = isDark
+    ? "/images/hero-ios-2-dark.webp"
+    : "/images/hero-ios-2.webp"
+  const ios2Webp640 = isDark
+    ? "/images/hero-ios-2-dark-640.webp"
+    : "/images/hero-ios-2-640.webp"
+  const ios2Png = isDark
+    ? "/images/hero-ios-2-dark.png"
+    : "/images/hero-ios-2.png"
 
   return (
     <Section
@@ -103,7 +115,7 @@ export function HeroSection({ className }: { className?: string }) {
         >
           <Badge
             variant="outline"
-            className="mb-4 border-(--color-brand)/30 bg-(--color-brand)/10 text-(--color-brand) uppercase tracking-wide"
+            className="mb-4 border-(--color-brand)/30 bg-(--color-brand)/10 tracking-wide text-(--color-brand) uppercase"
           >
             Browser Extension
           </Badge>
@@ -165,20 +177,42 @@ export function HeroSection({ className }: { className?: string }) {
           {/* Social proof */}
           <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 xl:justify-start">
             <span className="text-sm text-(--color-canvas-muted)">
-              <span className="font-semibold text-(--color-canvas-foreground)">1,000+</span> users
+              <span className="font-semibold text-(--color-canvas-foreground)">
+                1,000+
+              </span>{" "}
+              users
             </span>
-            <span className="hidden h-3.5 w-px bg-(--color-canvas-border) sm:block" aria-hidden="true" />
+            <span
+              className="hidden h-3.5 w-px bg-(--color-canvas-border) sm:block"
+              aria-hidden="true"
+            />
             <span className="flex items-center gap-1 text-sm text-(--color-canvas-muted)">
-              <span className="text-amber-500" aria-hidden="true">★★★★★</span>
+              <span className="text-amber-500" aria-hidden="true">
+                ★★★★★
+              </span>
               <span>
-                <span className="font-semibold text-(--color-canvas-foreground)">5.0</span> Chrome
+                <span className="font-semibold text-(--color-canvas-foreground)">
+                  5.0
+                </span>{" "}
+                Chrome
               </span>
             </span>
-            <span className="hidden h-3.5 w-px bg-(--color-canvas-border) sm:block" aria-hidden="true" />
+            <span
+              className="hidden h-3.5 w-px bg-(--color-canvas-border) sm:block"
+              aria-hidden="true"
+            />
             <span className="flex items-center gap-1 text-sm text-(--color-canvas-muted)">
-              <span className="text-amber-500" aria-hidden="true">★★★★</span><span className="text-(--color-canvas-border)" aria-hidden="true">★</span>
+              <span className="text-amber-500" aria-hidden="true">
+                ★★★★
+              </span>
+              <span className="text-(--color-canvas-border)" aria-hidden="true">
+                ★
+              </span>
               <span>
-                <span className="font-semibold text-(--color-canvas-foreground)">4.0</span> Firefox
+                <span className="font-semibold text-(--color-canvas-foreground)">
+                  4.0
+                </span>{" "}
+                Firefox
               </span>
             </span>
           </div>

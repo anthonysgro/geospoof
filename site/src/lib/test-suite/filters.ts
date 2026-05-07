@@ -46,13 +46,7 @@ export function matchesFilter(
   if (query.length === 0) return true
 
   const def = state.definition
-  const haystack = [
-    def.id,
-    def.name,
-    def.description,
-    def.technique,
-    def.group,
-  ]
+  const haystack = [def.id, def.name, def.description, def.technique, def.group]
     .join(" \u0000 ")
     .toLowerCase()
 

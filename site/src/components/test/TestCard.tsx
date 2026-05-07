@@ -1,8 +1,8 @@
 import * as React from "react"
 import { ChevronDown } from "lucide-react"
-import { cn } from "@/lib/utils"
 import { StatusBadge } from "./StatusBadge"
 import type { TestState } from "@/lib/test-suite/types"
+import { cn } from "@/lib/utils"
 
 interface TestCardProps {
   state: TestState
@@ -27,28 +27,28 @@ export function TestCard({ state }: TestCardProps) {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         className={cn(
-          "flex w-full items-center gap-3 px-4 py-3 text-left",
-          "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) rounded-lg"
+          "flex w-full items-start gap-3 px-4 py-3 text-left",
+          "rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
         )}
       >
         <ChevronDown
           className={cn(
-            "h-4 w-4 shrink-0 text-(--color-canvas-muted) transition-transform",
+            "mt-0.5 h-4 w-4 shrink-0 text-(--color-canvas-muted) transition-transform",
             open && "rotate-180"
           )}
           aria-hidden="true"
         />
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="truncate text-sm font-medium text-(--color-canvas-foreground)">
-              {definition.name}
-            </span>
+          <div className="text-sm font-medium wrap-break-word text-(--color-canvas-foreground)">
+            {definition.name}
           </div>
-          <p className="truncate text-xs text-(--color-canvas-muted)">
+          <p className="text-xs wrap-break-word text-(--color-canvas-muted)">
             {definition.description}
           </p>
         </div>
-        <StatusBadge status={result.status} />
+        <div className="mt-0.5 shrink-0">
+          <StatusBadge status={result.status} />
+        </div>
       </button>
 
       {open ? (

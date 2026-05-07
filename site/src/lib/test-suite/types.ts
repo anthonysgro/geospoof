@@ -6,6 +6,8 @@
  * observed, and whether it passed.
  */
 
+import type { IdentitySnapshot } from "../verification/identity-snapshot"
+
 /**
  * Status of an individual test.
  *
@@ -17,7 +19,12 @@
  * - `pending`: The test has not yet completed.
  * - `error`: The test threw an unexpected exception.
  */
-export type TestStatus = "pass" | "fail" | "known-limitation" | "pending" | "error"
+export type TestStatus =
+  | "pass"
+  | "fail"
+  | "known-limitation"
+  | "pending"
+  | "error"
 
 /**
  * Logical grouping of related tests.
@@ -27,6 +34,7 @@ export type TestGroupId =
   | "geolocation-stealth"
   | "timezone-correctness"
   | "timezone-stealth"
+  | "internal-consistency"
   | "extension-presence"
   | "known-limitations"
 
@@ -45,6 +53,41 @@ export interface TestResult {
   error?: string
   /** Millisecond duration of the test run. */
   durationMs?: number
+}
+
+/**
+ * Runtime context passed to each test's `run` method.
+ *
+ * The context is optional so existing zero-arity `run` functions continue
+ * to compile and execute without modification. Behavioral tests that need
+ * to read from the shared identity snapshot accept the context and read
+ * their expected values from `getIdentity()` / `awaitIdentity(...)` rather
+ * than independently calling the underlying browser API — this is the
+ * "single source of truth" requirement from the Verification Dashboard
+ * spec.
+ */
+export interface TestRunContext {
+  /**
+   * Returns the current identity snapshot synchronously. Safe to call at
+   * any point during `run`; the identity provider guarantees the snapshot
+   * object reference is stable for the duration of a single run.
+   */
+  getIdentity: () => IdentitySnapshot
+  /**
+   * Waits for a specific asynchronously-resolved identity field to
+   * transition out of `pending`. Resolves with the current `AsyncField<T>`
+   * once it is `ready` or `error`, or after `timeoutMs` elapses — whichever
+   * comes first.
+   */
+  awaitIdentity: <TField extends "location" | "platform">(
+    field: TField,
+    timeoutMs: number
+  ) => Promise<IdentitySnapshot[TField]>
+  /**
+   * Abort signal tied to the current run. Aborted when "Run again" is hit
+   * mid-run so tests can short-circuit long-running work.
+   */
+  signal: AbortSignal
 }
 
 /**
@@ -74,8 +117,13 @@ export interface TestDefinition {
   codeSnippet?: string
   /**
    * Executes the test. Should not throw; encode failures in TestResult.
+   *
+   * The context argument is optional so existing tests that don't need
+   * identity continue to compile untouched; the runner always passes a
+   * context when one is configured, and JavaScript's loose arity simply
+   * ignores it in legacy test definitions.
    */
-  run: () => Promise<TestResult>
+  run: (ctx?: TestRunContext) => Promise<TestResult>
 }
 
 /**
@@ -131,6 +179,12 @@ export const TEST_GROUPS: ReadonlyArray<TestGroupMeta> = [
     title: "Timezone stealth",
     description:
       "Checks whether the timezone and date overrides are distinguishable from native browser APIs.",
+  },
+  {
+    id: "internal-consistency",
+    title: "Internal consistency",
+    description:
+      "Checks that independent browser APIs agree with each other when describing the same moment or value.",
   },
   {
     id: "extension-presence",

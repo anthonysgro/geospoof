@@ -81,8 +81,8 @@ const DOM_INSERTION_METHODS: ReadonlyArray<{
   { target: Element.prototype, prop: "insertAdjacentHTML", length: 2 },
 ]
 
-const domInsertionBatteries: Array<TestDefinition> = DOM_INSERTION_METHODS.flatMap(
-  ({ target, prop, length }) =>
+const domInsertionBatteries: Array<TestDefinition> =
+  DOM_INSERTION_METHODS.flatMap(({ target, prop, length }) =>
     buildStandardBattery({
       idPrefix: `extension-presence.dom-${prop}`,
       group: "extension-presence",
@@ -92,7 +92,7 @@ const domInsertionBatteries: Array<TestDefinition> = DOM_INSERTION_METHODS.flatM
       expectedLength: length,
       expectedDescriptor: NATIVE_DOM_DESCRIPTOR,
     })
-)
+  )
 
 export const extensionPresenceTests: ReadonlyArray<TestDefinition> = [
   ...iframeAccessorBatteries,

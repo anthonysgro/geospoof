@@ -36,8 +36,8 @@ const DATE_PROTOTYPE_METHODS: ReadonlyArray<{
   { prop: "getFullYear", length: 0 },
 ]
 
-const dateProtoBatteries: Array<TestDefinition> = DATE_PROTOTYPE_METHODS.flatMap(
-  ({ prop, length }) => [
+const dateProtoBatteries: Array<TestDefinition> =
+  DATE_PROTOTYPE_METHODS.flatMap(({ prop, length }) => [
     ...buildStandardBattery({
       idPrefix: `timezone-stealth.date-proto-${prop}`,
       group: "timezone-stealth",
@@ -46,8 +46,7 @@ const dateProtoBatteries: Array<TestDefinition> = DATE_PROTOTYPE_METHODS.flatMap
       propertyName: prop,
       expectedLength: length,
     }),
-  ]
-)
+  ])
 
 /**
  * Date constructor statics that are installed (or re-registered for
@@ -107,6 +106,48 @@ const intlBatteries: Array<TestDefinition> = [
     propertyName: "resolvedOptions",
     expectedLength: 0,
   }),
+  // Additional prototype methods. `formatToParts` is widely supported
+  // and is the primary structured-output surface pages use to read
+  // timezone info. `formatRange` / `formatRangeToParts` are feature-
+  // gated — they landed in Chrome 76 / Firefox 91 but may still be
+  // absent in some runtimes — so we only register the battery when
+  // the method exists on the prototype.
+  ...buildStandardBattery({
+    idPrefix: "timezone-stealth.intl-datetimeformat-formattoparts",
+    group: "timezone-stealth",
+    apiLabel: "Intl.DateTimeFormat.prototype.formatToParts",
+    target: Intl.DateTimeFormat.prototype,
+    propertyName: "formatToParts",
+    expectedLength: 1,
+  }),
+  ...(typeof (
+    Intl.DateTimeFormat.prototype as unknown as {
+      formatRange?: unknown
+    }
+  ).formatRange === "function"
+    ? buildStandardBattery({
+        idPrefix: "timezone-stealth.intl-datetimeformat-formatrange",
+        group: "timezone-stealth",
+        apiLabel: "Intl.DateTimeFormat.prototype.formatRange",
+        target: Intl.DateTimeFormat.prototype,
+        propertyName: "formatRange",
+        expectedLength: 2,
+      })
+    : []),
+  ...(typeof (
+    Intl.DateTimeFormat.prototype as unknown as {
+      formatRangeToParts?: unknown
+    }
+  ).formatRangeToParts === "function"
+    ? buildStandardBattery({
+        idPrefix: "timezone-stealth.intl-datetimeformat-formatrangetoparts",
+        group: "timezone-stealth",
+        apiLabel: "Intl.DateTimeFormat.prototype.formatRangeToParts",
+        target: Intl.DateTimeFormat.prototype,
+        propertyName: "formatRangeToParts",
+        expectedLength: 2,
+      })
+    : []),
 ]
 
 /**
@@ -116,7 +157,8 @@ const intlBatteries: Array<TestDefinition> = [
  * know about the global.
  */
 const temporalBatteries: Array<TestDefinition> = (() => {
-  const temporalNow = (globalThis as unknown as { Temporal?: { Now: object } }).Temporal?.Now
+  const temporalNow = (globalThis as unknown as { Temporal?: { Now: object } })
+    .Temporal?.Now
   if (!temporalNow) return []
   const methods: Array<{ prop: string; length: number }> = [
     { prop: "timeZoneId", length: 0 },
@@ -158,14 +200,15 @@ const dateGlobalBattery: ReadonlyArray<TestDefinition> = buildStandardBattery({
  * apply Function.prototype.toString to Function.prototype.toString to see
  * whether the override masks itself.
  */
-const functionToStringBattery: ReadonlyArray<TestDefinition> = buildStandardBattery({
-  idPrefix: "timezone-stealth.function-prototype-tostring",
-  group: "timezone-stealth",
-  apiLabel: "Function.prototype.toString",
-  target: Function.prototype,
-  propertyName: "toString",
-  expectedLength: 0,
-})
+const functionToStringBattery: ReadonlyArray<TestDefinition> =
+  buildStandardBattery({
+    idPrefix: "timezone-stealth.function-prototype-tostring",
+    group: "timezone-stealth",
+    apiLabel: "Function.prototype.toString",
+    target: Function.prototype,
+    propertyName: "toString",
+    expectedLength: 0,
+  })
 
 export const timezoneStealthTests: ReadonlyArray<TestDefinition> = [
   ...dateProtoBatteries,

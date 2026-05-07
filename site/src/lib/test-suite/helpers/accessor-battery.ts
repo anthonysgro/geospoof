@@ -140,8 +140,7 @@ Function.prototype.toString.call(get)`,
         id: `${idPrefix}.getter-no-prototype`,
         group,
         name: `${apiLabel}: getter has no own prototype`,
-        description:
-          "Native accessor getters have no own prototype property.",
+        description: "Native accessor getters have no own prototype property.",
         technique:
           "Check Object.prototype.hasOwnProperty.call(getter, 'prototype').",
         codeSnippet: `!Object.prototype.hasOwnProperty.call(get, "prototype")`,
@@ -164,8 +163,7 @@ Function.prototype.toString.call(get)`,
         name: `${apiLabel}: getter is not constructable`,
         description:
           "Native accessor getters throw TypeError when invoked with `new`.",
-        technique:
-          "Call Reflect.construct on the getter function.",
+        technique: "Call Reflect.construct on the getter function.",
         codeSnippet: `try { Reflect.construct(get, []); /* fail */ } catch { /* pass */ }`,
         // eslint-disable-next-line @typescript-eslint/require-await
         run: async (): Promise<TestResult> => {
@@ -213,8 +211,7 @@ Function.prototype.toString.call(set)`,
         id: `${idPrefix}.setter-no-prototype`,
         group,
         name: `${apiLabel}: setter has no own prototype`,
-        description:
-          "Native accessor setters have no own prototype property.",
+        description: "Native accessor setters have no own prototype property.",
         technique:
           "Check Object.prototype.hasOwnProperty.call(setter, 'prototype').",
         codeSnippet: `!Object.prototype.hasOwnProperty.call(set, "prototype")`,

@@ -15,20 +15,48 @@ import type { TestDefinition } from "../types"
 export async function loadAllTests(): Promise<ReadonlyArray<TestDefinition>> {
   const [
     { geolocationTests },
+    { valuesCorrectnessTests, geolocationStealthBehavioralTests },
+    { internalConsistencyTests },
+    { iframeBehavioralTests },
+    { webbrowsertoolsTechniquesTests },
+    { geolocationAdvancedTests },
     { geolocationStealthTests },
     { timezoneStealthTests },
     { extensionPresenceTests },
+    { iframeRealmTests },
+    { workerLeakTests },
+    { lastModifiedTests },
+    { crossMethodOffsetTests },
   ] = await Promise.all([
     import("./geolocation"),
+    import("./values-correctness"),
+    import("./internal-consistency"),
+    import("./iframe-behavioral"),
+    import("./webbrowsertools-techniques"),
+    import("./geolocation-advanced"),
     import("./geolocation-stealth"),
     import("./timezone-stealth"),
     import("./extension-presence"),
+    import("./iframe-realm"),
+    import("./worker-leaks"),
+    import("./last-modified"),
+    import("./cross-method-offsets"),
   ])
 
   return [
     ...geolocationTests,
+    ...valuesCorrectnessTests,
+    ...internalConsistencyTests,
+    ...iframeBehavioralTests,
     ...geolocationStealthTests,
+    ...geolocationStealthBehavioralTests,
+    ...webbrowsertoolsTechniquesTests,
+    ...geolocationAdvancedTests,
     ...timezoneStealthTests,
     ...extensionPresenceTests,
+    ...iframeRealmTests,
+    ...workerLeakTests,
+    ...lastModifiedTests,
+    ...crossMethodOffsetTests,
   ]
 }

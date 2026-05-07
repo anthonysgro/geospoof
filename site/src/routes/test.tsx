@@ -3,19 +3,19 @@ import { Navigation } from "@/components/landing/Navigation"
 import { Footer } from "@/components/landing/Footer"
 import { SkipLink } from "@/components/landing/SkipLink"
 import { Section } from "@/components/landing/Section"
-import { TestSuite } from "@/components/test/TestSuite"
+import { VerificationDashboard } from "@/components/verification/VerificationDashboard"
 
 export const Route = createFileRoute("/test")({
   component: TestPage,
   head: () => ({
     meta: [
-      { title: "Test Your Protection | GeoSpoof" },
+      { title: "Verify your protection | GeoSpoof" },
       {
         name: "description",
         content:
-          "Verify that GeoSpoof is correctly spoofing your browser geolocation and timezone. All tests run locally in your browser — nothing leaves your device.",
+          "See what your browser is reporting as your identity and check whether any site could detect that GeoSpoof is active. Everything is computed locally — nothing leaves your device.",
       },
-      // No-index while the suite is in internal review
+      // No-index while the suite is in internal review (Req 22.7)
       { name: "robots", content: "noindex,nofollow" },
     ],
   }),
@@ -27,18 +27,25 @@ function TestPage() {
       <SkipLink />
       <Navigation />
       <main id="main-content">
-        <Section narrow className="py-12! md:py-16!">
-          <div className="mb-10 space-y-3 text-center">
+        {/*
+          Default Section width (max 1200px) so the dashboard has room to
+          breathe. The heading block is narrowed back in to keep the
+          hero copy from sprawling, but the dashboard itself uses the
+          full container (Req 21.3 — outer page layout preserved).
+        */}
+        <Section className="py-12! md:py-16!">
+          <header className="mx-auto mb-10 max-w-2xl space-y-3 text-center">
             <h1 className="text-4xl font-bold text-(--color-canvas-foreground)">
-              Test your protection
+              Verify your protection, privately
             </h1>
             <p className="text-body-lg text-(--color-canvas-muted)">
-              Verify that GeoSpoof is behaving the way you expect. Every test
-              runs locally in your browser — nothing leaves your device.
+              See what your browser is reporting as your identity and whether
+              any site could tell that GeoSpoof is active. Every check runs
+              locally in your browser — nothing leaves your device.
             </p>
-          </div>
+          </header>
 
-          <TestSuite />
+          <VerificationDashboard />
         </Section>
       </main>
       <Footer />

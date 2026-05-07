@@ -1,4 +1,5 @@
 import { Filter, Search, X } from "lucide-react"
+import type { FilterCriteria } from "@/lib/test-suite/filters"
 import { Button } from "@/components/ui/button"
 import {
   InputGroup,
@@ -6,7 +7,6 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group"
-import type { FilterCriteria } from "@/lib/test-suite/filters"
 import { EMPTY_FILTER } from "@/lib/test-suite/filters"
 
 /**

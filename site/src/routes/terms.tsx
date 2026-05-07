@@ -108,37 +108,37 @@ function TermsPage() {
                 <li>Violate the terms of service of any website or platform</li>
                 <li>
                   Commit fraud, including misrepresenting your location for
-                  financial gain, evading fraud-prevention systems, or
-                  obtaining services you are not entitled to receive
+                  financial gain, evading fraud-prevention systems, or obtaining
+                  services you are not entitled to receive
                 </li>
                 <li>
                   Circumvent geo-restrictions on copyrighted content in
-                  violation of applicable law, including but not limited to
-                  the U.S. Digital Millennium Copyright Act (DMCA) and the
-                  EU Copyright Directive
+                  violation of applicable law, including but not limited to the
+                  U.S. Digital Millennium Copyright Act (DMCA) and the EU
+                  Copyright Directive
                 </li>
                 <li>
-                  Access, use, or interact with any computer system in a
-                  manner that violates the U.S. Computer Fraud and Abuse Act
-                  (CFAA) or equivalent laws in your jurisdiction
+                  Access, use, or interact with any computer system in a manner
+                  that violates the U.S. Computer Fraud and Abuse Act (CFAA) or
+                  equivalent laws in your jurisdiction
                 </li>
                 <li>
                   Evade bans, sanctions, age restrictions, legal compliance
                   checks, or law-enforcement investigations
                 </li>
                 <li>
-                  Engage in harassment, stalking, impersonation, or any
-                  activity that harms another person
+                  Engage in harassment, stalking, impersonation, or any activity
+                  that harms another person
                 </li>
                 <li>
-                  Engage in any activity that is illegal under applicable
-                  local, national, or international law
+                  Engage in any activity that is illegal under applicable local,
+                  national, or international law
                 </li>
               </ul>
               <p>
                 <strong>
-                  Use of this Extension to violate third-party terms of
-                  service or applicable law is entirely at your own risk and
+                  Use of this Extension to violate third-party terms of service
+                  or applicable law is entirely at your own risk and
                   responsibility.
                 </strong>{" "}
                 The developer does not endorse or encourage any such use. The
@@ -154,11 +154,10 @@ function TermsPage() {
                 (OpenStreetMap), ipify, GeoJS, FreeIPAPI, ReallyFreeGeoIP,
                 ipinfo.io, and the browser-geo-tz CDN. Your use of those
                 services is subject to their respective terms and privacy
-                policies. We are not responsible for the availability,
-                accuracy, or conduct of any third-party service. The specific
-                data sent to each service and the conditions under which it is
-                sent are described in our{" "}
-                <a href="/privacy">Privacy Policy</a>.
+                policies. We are not responsible for the availability, accuracy,
+                or conduct of any third-party service. The specific data sent to
+                each service and the conditions under which it is sent are
+                described in our <a href="/privacy">Privacy Policy</a>.
               </p>
             </TermsSection>
 
@@ -299,9 +298,9 @@ function TermsPage() {
                 contact us at{" "}
                 <a href="mailto:support@geospoof.com">support@geospoof.com</a>.
                 Electronic notice to this address satisfies any requirement of
-                written notice under these Terms. We will send notices to you
-                at the email address you provide (if any) or by posting on
-                this page.
+                written notice under these Terms. We will send notices to you at
+                the email address you provide (if any) or by posting on this
+                page.
               </p>
             </TermsSection>
           </div>

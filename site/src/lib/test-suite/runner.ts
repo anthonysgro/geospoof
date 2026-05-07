@@ -8,6 +8,7 @@
 import type {
   TestDefinition,
   TestResult,
+  TestRunContext,
   TestState,
   TestSummary,
 } from "./types"
@@ -35,11 +36,26 @@ function errorResult(err: unknown, durationMs: number): TestResult {
 }
 
 /**
+ * Build the `error` TestResult returned when the run is aborted before a
+ * given test starts.
+ */
+function abortedResult(): TestResult {
+  return {
+    status: "error",
+    expected: "Test to run to completion",
+    actual: "Run was aborted before this test started",
+    error: "RUN_ABORTED",
+    durationMs: 0,
+  }
+}
+
+/**
  * Run a single test with a timeout and safety net.
  */
 async function runOne(
   definition: TestDefinition,
-  timeoutMs: number
+  timeoutMs: number,
+  context: TestRunContext | undefined
 ): Promise<TestResult> {
   const start = performance.now()
 
@@ -56,7 +72,7 @@ async function runOne(
       }, timeoutMs)
     })
 
-    const result = await Promise.race([definition.run(), timeout])
+    const result = await Promise.race([definition.run(context), timeout])
     const durationMs = performance.now() - start
     return { ...result, durationMs: result.durationMs ?? durationMs }
   } catch (err) {
@@ -108,6 +124,12 @@ export interface RunOptions {
    * list of current states so the UI can render in-progress.
    */
   onProgress?: (states: ReadonlyArray<TestState>) => void
+  /**
+   * Shared run context passed to every test. Optional so call sites that
+   * don't need identity (e.g. the legacy `TestSuite` component) can keep
+   * calling `runSuite(defs)` with no second argument.
+   */
+  context?: TestRunContext
 }
 
 /**
@@ -131,12 +153,24 @@ export async function runSuite(
   options: RunOptions = {}
 ): Promise<Array<TestState>> {
   const timeoutMs = options.timeoutMs ?? 10_000
+  const context = options.context
   const states = initialStates(definitions)
 
   options.onProgress?.(states)
 
   for (let i = 0; i < definitions.length; i += 1) {
-    const result = await runOne(definitions[i], timeoutMs)
+    // Check for abort before issuing the next test's call so a mid-run
+    // "Run again" stops issuing new work. In-flight tests still get to
+    // finish (or be timed out) so we never leak resolved promises.
+    if (context?.signal.aborted) {
+      for (let j = i; j < definitions.length; j += 1) {
+        states[j] = { ...states[j], result: abortedResult() }
+      }
+      options.onProgress?.(states)
+      return states
+    }
+
+    const result = await runOne(definitions[i], timeoutMs, context)
     states[i] = { ...states[i], result }
     options.onProgress?.(states)
   }

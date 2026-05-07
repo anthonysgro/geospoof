@@ -93,6 +93,11 @@ installIframePatching();
 import { installDomInsertionWrapping } from "./dom-insertion";
 installDomInsertionWrapping();
 
+// 13. Document-level overrides (lastModified — ground-truth timezone
+//     surface used by TZP and similar fingerprinters)
+import { installDocumentOverrides } from "./document-overrides";
+installDocumentOverrides();
+
 import { createLogger } from "@/shared/utils/debug-logger";
 const logger = createLogger("INJ");
 logger.info("Geolocation API overrides installed");

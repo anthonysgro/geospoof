@@ -73,7 +73,9 @@ export interface StandardBatteryOptions {
    * When the iframe is unavailable or the property doesn't exist there,
    * the hardcoded fallbacks are used.
    */
-  cleanReferenceTarget?: (win: Window & typeof globalThis) => object | null | undefined
+  cleanReferenceTarget?: (
+    win: Window & typeof globalThis
+  ) => object | null | undefined
 }
 
 const DEFAULT_DESCRIPTOR = {
@@ -88,9 +90,7 @@ const DEFAULT_DESCRIPTOR = {
  * values plus a label explaining where they came from — so the test
  * report can cite its source.
  */
-function resolveExpectations(
-  options: StandardBatteryOptions
-): {
+function resolveExpectations(options: StandardBatteryOptions): {
   length: number
   descriptor: NonNullable<StandardBatteryOptions["expectedDescriptor"]>
   source: "clean-iframe" | "spec-fallback"
@@ -106,10 +106,7 @@ function resolveExpectations(
   const cleanTarget = getCleanReference(options.cleanReferenceTarget)
   if (!cleanTarget || typeof cleanTarget !== "object") return fallback
 
-  const cleanProfile = describeProperty(
-    cleanTarget,
-    options.propertyName
-  )
+  const cleanProfile = describeProperty(cleanTarget, options.propertyName)
   if (!cleanProfile.exists || cleanProfile.length === null) return fallback
 
   const d = cleanProfile.descriptor
@@ -178,8 +175,7 @@ export function buildStandardBattery(
       id: `${idPrefix}.length-matches`,
       group,
       name: `${apiLabel}: length matches native arity`,
-      description:
-        "A method's own `length` should match the native arity.",
+      description: "A method's own `length` should match the native arity.",
       technique:
         "Read fn.length and compare to the value reported by the same method in a clean reference iframe (or a hardcoded spec value when the reference is unavailable).",
       codeSnippet: `${apiLabel}.length`,
@@ -208,8 +204,7 @@ export function buildStandardBattery(
       description: isConstructor
         ? "Native constructors have an own `prototype` property. An override that lacks one has been restructured."
         : "Native methods do not have an own `prototype` property. Function expressions do.",
-      technique:
-        "Check Object.prototype.hasOwnProperty.call(fn, 'prototype').",
+      technique: "Check Object.prototype.hasOwnProperty.call(fn, 'prototype').",
       codeSnippet: isConstructor
         ? `Object.prototype.hasOwnProperty.call(
   ${apiLabel},
@@ -243,7 +238,8 @@ export function buildStandardBattery(
       description: isConstructor
         ? "Native constructors can be invoked with `new`. A constructor that throws has been stripped."
         : "Native methods throw TypeError when invoked with `new`. Function expressions do not.",
-      technique: "Call Reflect.construct on the method and check for TypeError.",
+      technique:
+        "Call Reflect.construct on the method and check for TypeError.",
       codeSnippet: isConstructor
         ? `Reflect.construct(${apiLabel}, [])  // should succeed`
         : `try {

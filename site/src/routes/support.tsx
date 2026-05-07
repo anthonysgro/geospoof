@@ -77,7 +77,7 @@ function CopyEmailButton() {
         copied
           ? "bg-(--color-brand)/10 text-(--color-brand)"
           : "bg-(--color-canvas-border) text-(--color-canvas-muted) hover:text-(--color-canvas-foreground)",
-        "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
       )}
       aria-label="Copy email address"
     >
@@ -111,7 +111,7 @@ function SupportPage() {
             <Accordion
               type="single"
               collapsible
-              className="rounded-xl border border-(--color-canvas-border) overflow-hidden divide-y divide-(--color-canvas-border)"
+              className="divide-y divide-(--color-canvas-border) overflow-hidden rounded-xl border border-(--color-canvas-border)"
             >
               {faqs.map((faq, i) => (
                 <AccordionItem
@@ -119,10 +119,10 @@ function SupportPage() {
                   value={`faq-${i}`}
                   className="border-none px-5"
                 >
-                  <AccordionTrigger className="text-base font-semibold text-(--color-canvas-foreground) hover:no-underline py-4">
+                  <AccordionTrigger className="py-4 text-base font-semibold text-(--color-canvas-foreground) hover:no-underline">
                     {faq.q}
                   </AccordionTrigger>
-                  <AccordionContent className="text-(--color-canvas-muted) leading-relaxed pb-5">
+                  <AccordionContent className="pb-5 leading-relaxed text-(--color-canvas-muted)">
                     {faq.a}
                   </AccordionContent>
                 </AccordionItem>

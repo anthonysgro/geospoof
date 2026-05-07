@@ -1,6 +1,6 @@
+import { TestCard } from "./TestCard"
 import type { TestGroupMeta, TestState } from "@/lib/test-suite/types"
 import { summarize } from "@/lib/test-suite/runner"
-import { TestCard } from "./TestCard"
 
 interface TestGroupProps {
   meta: TestGroupMeta
