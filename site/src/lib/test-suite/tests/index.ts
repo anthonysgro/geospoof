@@ -28,6 +28,7 @@ export async function loadAllTests(): Promise<ReadonlyArray<TestDefinition>> {
     { lastModifiedTests },
     { crossMethodOffsetTests },
     { raceConditionTests },
+    { xsltDatetimeLeakTests },
   ] = await Promise.all([
     import("./geolocation"),
     import("./values-correctness"),
@@ -43,6 +44,7 @@ export async function loadAllTests(): Promise<ReadonlyArray<TestDefinition>> {
     import("./last-modified"),
     import("./cross-method-offsets"),
     import("./race-condition"),
+    import("./xslt-datetime-leak"),
   ])
 
   return [
@@ -61,5 +63,6 @@ export async function loadAllTests(): Promise<ReadonlyArray<TestDefinition>> {
     ...lastModifiedTests,
     ...crossMethodOffsetTests,
     ...raceConditionTests,
+    ...xsltDatetimeLeakTests,
   ]
 }

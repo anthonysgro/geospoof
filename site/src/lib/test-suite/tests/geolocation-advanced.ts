@@ -505,10 +505,10 @@ const latencyDistributionTest = buildBehavioralTest<boolean>({
   description:
     "A content-script spoofer returns its fake position via setTimeout on the JavaScript event loop — the same thread that the measuring page runs on. Real GPS/Wi-Fi/cell-tower lookups go through browser-internal threads with wider, heavier-tailed latency distributions. Matching that distribution statistically from userland is a game of diminishing returns: jitter the fake delay all you want, a detector with enough samples will still see the unnatural bounds. This is a documented limitation of JavaScript-level spoofing; only a browser-native implementation can match the real hardware's timing signature.",
   technique:
-    "Run getCurrentPosition 8 times, collect latencies, assert the standard deviation is meaningful (not suspiciously clustered) OR at least one call is sub-5ms (indicating cached native response).",
+    "Run getCurrentPosition 8 times, collect latencies, assert at least one sample is under 10ms — native desktop serves cached positions with a sub-10ms floor, while a `setTimeout`-based spoofer cannot emit a value below its configured delay (typically 10-50ms).",
   codeSnippet: `const samples = []
 for (let i = 0; i < 8; i++) samples.push(await measureLatency())
-// at least one very-fast cached call OR realistic stddev`,
+// at least one sub-10ms sample (native cached read)`,
   expected: async () => ({ value: true, describe: "distribution looks real" }),
   observe: async () => {
     const samples: Array<number> = []
@@ -521,10 +521,20 @@ for (let i = 0; i < 8; i++) samples.push(await measureLatency())
     const stddev = Math.sqrt(variance)
     const min = Math.min(...samples)
     const max = Math.max(...samples)
-    // Heuristic: a real distribution has at least one sub-5ms (cached) OR
-    // stddev > 100ms (heavy tail). An artificial 10-50ms uniform has no
-    // sub-5ms and stddev ~12ms.
-    const looksReal = min < 5 || stddev > 100
+    // Heuristic tuned for the real-vs-spoofed boundary:
+    //   - Native Firefox/Chrome desktop serves cached positions through
+    //     the browser's task queue with a floor around 4-8ms. Any raw
+    //     browser reliably produces multiple sub-10ms samples after the
+    //     identity panel's first getCurrentPosition call has primed the
+    //     cache.
+    //   - Our override floors every call at `10 + Math.random()*40`, so
+    //     its minimum is always ≥ 10ms.
+    //   - The `stddev > 100` heavy-tail branch remains as a secondary
+    //     pass for the rare uncached-native path (fresh fix, high
+    //     accuracy, no prior cache). Its contribution is tiny on
+    //     stationary desktops but it's the only thing that catches a
+    //     cold-boot measurement.
+    const looksReal = min < 10 || stddev > 100
     return {
       value: looksReal,
       describe: `n=8, min=${min.toFixed(1)}ms, max=${max.toFixed(1)}ms, mean=${mean.toFixed(1)}ms, stddev=${stddev.toFixed(1)}ms`,

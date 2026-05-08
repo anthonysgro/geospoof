@@ -5,6 +5,7 @@ import { BrowserCapabilitiesSection } from "./BrowserCapabilitiesSection"
 import { DetectableIssuesSection } from "./DetectableIssuesSection"
 import IdentityPanel from "./IdentityPanel"
 import { PrivacyNotice } from "./PrivacyNotice"
+import { StickyVerdict } from "./StickyVerdict"
 import { VerificationSummary } from "./VerificationSummary"
 import type {
   TestDefinition,
@@ -174,6 +175,9 @@ function DashboardInner() {
     setRunAttempt((n) => n + 1)
   }, [manifestError, refresh])
 
+  /** Ref used by the sticky verdict bar to know when to dock. */
+  const summaryAnchorRef = React.useRef<HTMLDivElement | null>(null)
+
   /**
    * Manifest-load failure card. Rendered above the panel/summary so the
    * failure is immediately visible, but the Identity Panel below still
@@ -209,7 +213,14 @@ function DashboardInner() {
 
       <IdentityPanel />
 
-      <div className="flex flex-col gap-4 rounded-xl border border-(--color-canvas-border) bg-(--color-canvas) p-6 shadow-sm sm:flex-row sm:items-start sm:justify-between">
+      <div className="mx-auto w-full max-w-4xl">
+        <BrowserCapabilitiesSection />
+      </div>
+
+      <div
+        ref={summaryAnchorRef}
+        className="mx-auto flex w-full max-w-4xl flex-col gap-4 rounded-xl border border-(--color-canvas-border) bg-(--color-canvas) p-6 shadow-sm sm:flex-row sm:items-start sm:justify-between"
+      >
         <div className="min-w-0 flex-1">
           <VerificationSummary states={states} isRunning={isRunning} />
         </div>
@@ -225,17 +236,21 @@ function DashboardInner() {
         </div>
       </div>
 
-      {tests ? (
-        <DetectableIssuesSection states={states} />
-      ) : manifestError ? null : (
-        <div className="rounded-xl border border-(--color-canvas-border) bg-(--color-canvas) p-5 text-sm text-(--color-canvas-muted)">
-          Loading tests…
-        </div>
-      )}
+      <StickyVerdict
+        anchorRef={summaryAnchorRef}
+        states={states}
+        isRunning={isRunning}
+      />
 
-      {/* Diagnostic footer — collapsed by default so it doesn't compete
-          with the Identity Panel or the verification verdict (Req 6). */}
-      <BrowserCapabilitiesSection />
+      <div className="mx-auto w-full max-w-4xl">
+        {tests ? (
+          <DetectableIssuesSection states={states} />
+        ) : manifestError ? null : (
+          <div className="rounded-xl border border-(--color-canvas-border) bg-(--color-canvas) p-5 text-sm text-(--color-canvas-muted)">
+            Loading tests…
+          </div>
+        )}
+      </div>
     </div>
   )
 }

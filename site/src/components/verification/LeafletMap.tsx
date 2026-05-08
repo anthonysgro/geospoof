@@ -80,7 +80,12 @@ export function LeafletMap({ lat, lon }: LeafletMapProps) {
       ref={containerRef}
       role="img"
       aria-label={`Map of coordinates ${lat.toFixed(4)}, ${lon.toFixed(4)}`}
-      className="h-[340px] w-full overflow-hidden rounded-lg border border-(--color-canvas-border) sm:h-[400px] lg:h-[460px]"
+      // `isolation: isolate` creates a new stacking context so Leaflet's
+      // internal pane + control z-indexes (some as high as 1000) stay
+      // constrained to the map container. Without this the tile pane
+      // punches through the sticky Navigation (z-50) and the sticky
+      // verdict bar (z-40) when the user scrolls.
+      className="isolate h-[340px] w-full overflow-hidden rounded-lg border border-(--color-canvas-border) sm:h-[400px] lg:h-[460px]"
     />
   )
 }

@@ -33,14 +33,12 @@ interface CategoryBlockProps {
  * One user-facing Test_Category block.
  *
  * Renders the category title and headline, then one `TestGroup` per
- * entry in `CategoryMeta.subGroups` — reusing the existing
- * `TestGroup`/`TestCard`/`StatusBadge` components unchanged so the
- * ~327 preserved stealth/presence tests keep their current card layout
- * (Req 8.7, Req 12.3).
- *
- * When no test in this category survives the current filter, the block
- * still renders its header plus the category's `emptyMessage` rather
- * than hiding the category entirely (Req 8.4).
+ * entry in `CategoryMeta.subGroups`. The previous implementation
+ * wrapped each category in a bordered card; that stacked three
+ * concentric boxes (category card → group section → per-test card)
+ * and made the page feel cluttered. This version lets the individual
+ * test rows carry the border, so the category is a flat header +
+ * group list.
  */
 export function CategoryBlock({ meta, states, headingId }: CategoryBlockProps) {
   const statesByGroup = React.useMemo(() => {
@@ -56,14 +54,11 @@ export function CategoryBlock({ meta, states, headingId }: CategoryBlockProps) {
   const isEmpty = states.length === 0
 
   return (
-    <section
-      aria-labelledby={headingId}
-      className="space-y-6 rounded-xl border border-(--color-canvas-border) bg-(--color-canvas) p-5 shadow-sm md:p-6"
-    >
+    <section aria-labelledby={headingId} className="space-y-4">
       <header className="space-y-1">
         <h2
           id={headingId}
-          className="text-xl font-semibold text-(--color-canvas-foreground)"
+          className="text-lg font-semibold text-(--color-canvas-foreground)"
         >
           {meta.title}
         </h2>
@@ -75,13 +70,10 @@ export function CategoryBlock({ meta, states, headingId }: CategoryBlockProps) {
           {meta.emptyMessage}
         </p>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-5">
           {meta.subGroups.map((groupId) => {
             const groupMeta = GROUP_META_BY_ID.get(groupId)
             const groupStates = statesByGroup.get(groupId) ?? []
-            // `TestGroup` returns null for empty groups on its own; we
-            // skip them here too so the spacing between sub-groups stays
-            // tight when a filter hides everything in one sub-group.
             if (!groupMeta || groupStates.length === 0) return null
             return (
               <TestGroup key={groupId} meta={groupMeta} states={groupStates} />
