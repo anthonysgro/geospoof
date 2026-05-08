@@ -149,7 +149,17 @@ export function summarize(states: ReadonlyArray<TestState>): TestSummary {
 }
 
 export interface RunOptions {
-  /** Per-test timeout in milliseconds. Default: 10s. */
+  /**
+   * Per-test timeout in milliseconds. Default: 20s.
+   *
+   * Bumped from the earlier 10s to accommodate tests that have to
+   * issue fresh `getCurrentPosition` calls — Chrome can take up to
+   * ~10s to resolve a fresh fix on a cold cache, and the
+   * sandbox-iframe / timestamp-recent tests legitimately need their
+   * own live call rather than the run-shared cached position. 20s
+   * leaves headroom for that without penalising the dashboard's
+   * "time to first green" for well-behaved tests.
+   */
   timeoutMs?: number
   /**
    * Optional callback fired after each test completes. Receives the full
@@ -184,7 +194,7 @@ export async function runSuite(
   definitions: ReadonlyArray<TestDefinition>,
   options: RunOptions = {}
 ): Promise<Array<TestState>> {
-  const timeoutMs = options.timeoutMs ?? 10_000
+  const timeoutMs = options.timeoutMs ?? 20_000
   const context = options.context
   const states = initialStates(definitions)
 

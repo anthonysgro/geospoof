@@ -26,8 +26,23 @@ import type {
   TimezoneValue,
 } from "./identity-snapshot"
 
-/** Max time to wait on `navigator.geolocation.getCurrentPosition`. */
-const GEOLOCATION_TIMEOUT_MS = 5_000
+/**
+ * Max time to wait on `navigator.geolocation.getCurrentPosition`.
+ *
+ * Generous so a first-time user has space to read the permission
+ * prompt, click Allow, and let the browser acquire a fix afterwards
+ * without the timer firing beneath them. A tighter bound (e.g. 5s)
+ * caused spurious "Geolocation request timed out" errors when the
+ * user took 3-4s to click Allow and Chrome took another 2-3s to
+ * produce a fix — both well inside "normal" ranges.
+ *
+ * If the user genuinely can't or won't interact with the prompt
+ * the dashboard auto-run waits up to 45s (see the
+ * `waitFor("location", 45_000)` call in VerificationDashboard.tsx)
+ * before starting tests, so the budget here just needs to cover
+ * typical prompt-reaction + acquisition time.
+ */
+const GEOLOCATION_TIMEOUT_MS = 30_000
 /** Max time to wait on `navigator.userAgentData.getHighEntropyValues`. */
 const UA_HIGH_ENTROPY_TIMEOUT_MS = 2_000
 
@@ -273,8 +288,25 @@ function resolvePlatformLabel(): {
  * "user hasn't responded yet" from "browser is slow."
  */
 function getLocation(signal: AbortSignal): Promise<AsyncField<LocationValue>> {
+  // Diagnostic logging. Prefixed so it's easy to filter in the
+  // console; every line includes a ms-since-start stamp so we can
+  // see exactly how long each phase takes. Noisy on purpose — if
+  // this stays in for long we'll gate it behind a flag, but while
+  // we're debugging the "Chrome hangs on getCurrentPosition after
+  // Allow" issue the noise is useful.
+  const t0 = performance.now()
+  const tlog = (...args: Array<unknown>): void => {
+     
+    console.log(
+      `[geo-debug +${Math.round(performance.now() - t0)}ms]`,
+      ...args,
+    )
+  }
+  tlog("getLocation called")
+
   return new Promise((resolve) => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
+      tlog("navigator.geolocation unavailable, resolving error")
       resolve({
         status: "error",
         value: null,
@@ -288,10 +320,16 @@ function getLocation(signal: AbortSignal): Promise<AsyncField<LocationValue>> {
     const resolveOnce = (field: AsyncField<LocationValue>): void => {
       if (settled) return
       settled = true
+      tlog(
+        "resolveOnce",
+        field.status,
+        field.error ?? (field.value ? "got coords" : ""),
+      )
       resolve(field)
     }
 
     const onAbort = (): void => {
+      tlog("abort signal fired")
       resolveOnce({
         status: "error",
         value: null,
@@ -301,8 +339,17 @@ function getLocation(signal: AbortSignal): Promise<AsyncField<LocationValue>> {
     signal.addEventListener("abort", onAbort, { once: true })
 
     const callGetCurrentPosition = (): void => {
+      tlog(
+        "callGetCurrentPosition: invoking navigator.geolocation.getCurrentPosition with timeout",
+        GEOLOCATION_TIMEOUT_MS,
+      )
       let timeoutId: ReturnType<typeof setTimeout> | null = null
       timeoutId = setTimeout(() => {
+        tlog(
+          "JS-level timeout fired after",
+          GEOLOCATION_TIMEOUT_MS,
+          "ms — getCurrentPosition never called back",
+        )
         resolveOnce({
           status: "error",
           value: null,
@@ -313,6 +360,11 @@ function getLocation(signal: AbortSignal): Promise<AsyncField<LocationValue>> {
       try {
         navigator.geolocation.getCurrentPosition(
           (pos) => {
+            tlog("success callback fired", {
+              lat: pos.coords.latitude,
+              lon: pos.coords.longitude,
+              accuracy: pos.coords.accuracy,
+            })
             if (timeoutId !== null) clearTimeout(timeoutId)
             // Seed the shared-position cache so downstream tests read
             // from the exact same `GeolocationPosition` object the
@@ -335,6 +387,7 @@ function getLocation(signal: AbortSignal): Promise<AsyncField<LocationValue>> {
             })
           },
           (err) => {
+            tlog("error callback fired", { code: err.code, message: err.message })
             if (timeoutId !== null) clearTimeout(timeoutId)
             // Map W3C error codes to human-readable reasons.
             // code 1 = PERMISSION_DENIED, 2 = POSITION_UNAVAILABLE, 3 = TIMEOUT
@@ -352,9 +405,28 @@ function getLocation(signal: AbortSignal): Promise<AsyncField<LocationValue>> {
               error: reason,
             })
           },
-          { timeout: GEOLOCATION_TIMEOUT_MS },
+          {
+            // Match browserleaks' geolocation probe (which works
+            // reliably on every engine including the problem cases
+            // where ours was hanging): force a fresh fix with a
+            // short explicit maximumAge and the high-accuracy path.
+            //
+            // Chrome has an observed hang when calling
+            // `getCurrentPosition` with default options
+            // (`enableHighAccuracy: false`, default `maximumAge`)
+            // on certain network configurations — the callback
+            // never fires until our own JS timer kicks in at 30s.
+            // Adding these two options is the single change that
+            // makes the call resolve in 1-3s on Chrome. Firefox
+            // and Safari don't care — same timing either way.
+            enableHighAccuracy: true,
+            timeout: GEOLOCATION_TIMEOUT_MS,
+            maximumAge: 0,
+          },
         )
+        tlog("getCurrentPosition returned (callbacks pending)")
       } catch (err) {
+        tlog("getCurrentPosition threw synchronously", err)
         if (timeoutId !== null) clearTimeout(timeoutId)
         const message = err instanceof Error ? err.message : String(err)
         resolveOnce({
@@ -373,6 +445,8 @@ function getLocation(signal: AbortSignal): Promise<AsyncField<LocationValue>> {
         ? navigator.permissions
         : null
 
+    tlog("permissions API available:", !!permissions)
+
     if (!permissions) {
       callGetCurrentPosition()
       return
@@ -381,38 +455,39 @@ function getLocation(signal: AbortSignal): Promise<AsyncField<LocationValue>> {
     void permissions
       .query({ name: "geolocation" })
       .then((status) => {
+        tlog("permissions.query resolved, initial state:", status.state)
         if (settled) return
 
-        const proceedOnState = (state: PermissionState): void => {
-          if (state === "granted") {
-            callGetCurrentPosition()
-          } else if (state === "denied") {
-            resolveOnce({
-              status: "error",
-              value: null,
-              error: "User denied location permission",
-            })
-          }
-          // "prompt" means the user is still deciding — wait for change.
-        }
-
-        if (status.state === "granted" || status.state === "denied") {
-          proceedOnState(status.state)
+        // Short-circuit the denied case: `getCurrentPosition` would
+        // eventually reject with PERMISSION_DENIED anyway but some
+        // engines (older Firefox) hold the call open for a while
+        // before doing so. Resolve immediately with a clear reason.
+        if (status.state === "denied") {
+          resolveOnce({
+            status: "error",
+            value: null,
+            error: "User denied location permission",
+          })
           return
         }
 
-        // "prompt" — wait for the user to decide. Listen on `change`,
-        // AND call getCurrentPosition in parallel so the prompt appears
-        // (the Permissions API doesn't surface the prompt; only a
-        // geolocation call does). When the user decides, either
-        // getCurrentPosition's callback fires OR the PermissionStatus
-        // onchange fires. Whichever wins, `resolveOnce` handles it.
+        // Also log PermissionStatus state transitions while the call
+        // is in flight — useful for seeing whether Chrome actually
+        // fires `change` on grant-from-prompt or just delivers the
+        // success callback directly.
         status.addEventListener("change", () => {
-          proceedOnState(status.state)
+          tlog("permissions.state change ->", status.state)
         })
+
+        // `granted` or `prompt`: issue the single timed
+        // `getCurrentPosition` call. The 30s timeout comfortably
+        // covers prompt-reaction time PLUS acquisition. If the user
+        // clicks Block during the prompt, the W3C error callback
+        // fires with PERMISSION_DENIED and we resolve cleanly.
         callGetCurrentPosition()
       })
-      .catch(() => {
+      .catch((err) => {
+        tlog("permissions.query rejected, falling back:", err)
         // If permissions.query itself rejects, just fall back.
         if (!settled) callGetCurrentPosition()
       })

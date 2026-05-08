@@ -34,9 +34,25 @@
 
 import { buildBehavioralTest } from "../helpers/behavioral"
 import { requireLocationSnapshot } from "../helpers/location"
-import type { TestDefinition } from "../types"
+import { getSharedPosition } from "../helpers/shared-position"
+import { coordsMatchApprox } from "../helpers/coords"
+import type { TestDefinition, TestRunContext } from "../types"
 
 const GEO_CALL_TIMEOUT_MS = 5_000
+/**
+ * Longer budget for calls against a different Geolocation instance
+ * than the top-level `navigator.geolocation` (e.g. the sandbox-iframe
+ * test). Chrome can take up to ~10s to complete a fresh
+ * `getCurrentPosition` call with no cached position; Safari
+ * serialises CoreLocation requests across the run, so a back-to-back
+ * live call on a separate instance can also take several seconds.
+ * 15s leaves enough headroom for either engine. The runner's 10s
+ * per-test ceiling is a soft ceiling — runs that exceed it still
+ * resolve the result correctly, they just get reported as timed
+ * out. 15s gives us a single clean outcome rather than a runner
+ * timeout partway through.
+ */
+const GEO_IFRAME_CALL_TIMEOUT_MS = 15_000
 const IFRAME_LOAD_TIMEOUT_MS = 3_000
 
 interface Coords {
@@ -44,15 +60,50 @@ interface Coords {
   longitude: number
 }
 
-function coordsMatch4dp(a: Coords, b: Coords): boolean {
-  return (
-    a.latitude.toFixed(4) === b.latitude.toFixed(4) &&
-    a.longitude.toFixed(4) === b.longitude.toFixed(4)
-  )
-}
-
 function describeCoords(c: Coords): string {
   return `${c.latitude.toFixed(4)}, ${c.longitude.toFixed(4)}`
+}
+
+/**
+ * Resolve the Coords that a given `Geolocation` reference will yield,
+ * using the run-shared position when possible to avoid Safari's
+ * back-to-back `getCurrentPosition` serialisation timeouts.
+ *
+ * The detection-vector question these indirection tests ask is: "does
+ * this alternate way of obtaining the geolocation object return a
+ * reference that produces DIFFERENT coordinates than the top-level
+ * `navigator.geolocation`?" The answer is reference-based:
+ *
+ *   - If the reference obtained via indirection is `===` to
+ *     `navigator.geolocation`, it cannot produce different coordinates
+ *     by definition — we hand back the run's shared position without
+ *     a live call. This keeps the test sub-millisecond and avoids
+ *     Safari CoreLocation queue serialisation, which can push a
+ *     fresh live call past the 5-second budget when multiple
+ *     back-to-back indirection tests run in sequence.
+ *
+ *   - If the reference is a different object (e.g. the sandbox-iframe
+ *     test, where the iframe has its own `navigator.geolocation`
+ *     instance), we DO need a live call on that specific reference
+ *     because the whole point of the test is to verify that alternate
+ *     reference's output.
+ *
+ * Takes the run context so we can consult the shared-position cache
+ * when the fast path is applicable.
+ */
+async function resolveCoordsFromReference(
+  geo: Geolocation,
+  ctx: TestRunContext,
+  timeoutMs: number
+): Promise<Coords> {
+  if (geo === navigator.geolocation) {
+    const pos = await getSharedPosition(ctx)
+    return {
+      latitude: pos.coords.latitude,
+      longitude: pos.coords.longitude,
+    }
+  }
+  return callGetCurrentPosition(geo, timeoutMs)
 }
 
 /**
@@ -94,7 +145,18 @@ function callGetCurrentPosition(
             )
           )
         },
-        { timeout: timeoutMs, maximumAge: Number.POSITIVE_INFINITY }
+        {
+          // Chrome + `maximumAge: Infinity` with no cached position
+          // can hang indefinitely — the cache lookup never falls
+          // through to an actual acquisition. Match the options
+          // Identity Panel uses for the top-level call: force a
+          // fresh fix (`maximumAge: 0`) and use the high-accuracy
+          // path. Firefox and Safari are unaffected by these
+          // options; Chrome resolves in 1-3s instead of hanging.
+          enableHighAccuracy: true,
+          timeout: timeoutMs,
+          maximumAge: 0,
+        }
       )
     } catch (err) {
       if (settled) return
@@ -127,15 +189,19 @@ pos.coords matches identity.location`,
     const value = { latitude: loc.latitude, longitude: loc.longitude }
     return { value, describe: describeCoords(value) }
   },
-  observe: async () => {
+  observe: async (ctx) => {
     const geo = eval("navigator.geolocation") as Geolocation
     if (!geo) {
       throw new Error("eval did not return navigator.geolocation")
     }
-    const value = await callGetCurrentPosition(geo, GEO_CALL_TIMEOUT_MS)
+    const value = await resolveCoordsFromReference(
+      geo,
+      ctx,
+      GEO_CALL_TIMEOUT_MS
+    )
     return { value, describe: describeCoords(value) }
   },
-  equals: coordsMatch4dp,
+  equals: coordsMatchApprox,
 })
 
 const functionConstructorIndirectionTest = buildBehavioralTest<Coords>({
@@ -156,7 +222,7 @@ pos.coords matches identity.location`,
     const value = { latitude: loc.latitude, longitude: loc.longitude }
     return { value, describe: describeCoords(value) }
   },
-  observe: async () => {
+  observe: async (ctx) => {
     const getter = new Function("return navigator.geolocation") as () =>
       | Geolocation
       | undefined
@@ -166,10 +232,14 @@ pos.coords matches identity.location`,
         "Function constructor did not return navigator.geolocation"
       )
     }
-    const value = await callGetCurrentPosition(geo, GEO_CALL_TIMEOUT_MS)
+    const value = await resolveCoordsFromReference(
+      geo,
+      ctx,
+      GEO_CALL_TIMEOUT_MS
+    )
     return { value, describe: describeCoords(value) }
   },
-  equals: coordsMatch4dp,
+  equals: coordsMatchApprox,
 })
 
 // ---------------------------------------------------------------------------
@@ -255,7 +325,18 @@ pos.coords matches identity.location`,
       if (!geo) {
         throw new Error("sandbox iframe has no navigator.geolocation")
       }
-      const value = await callGetCurrentPosition(geo, GEO_CALL_TIMEOUT_MS)
+      // Use a longer timeout here than the other indirection tests:
+      // the sandbox-iframe test MUST call the iframe's own Geolocation
+      // instance (it's a different object than `navigator.geolocation`
+      // — that's the whole point of the test), so the
+      // `resolveCoordsFromReference` fast path doesn't apply. Safari
+      // serialises back-to-back CoreLocation requests across the run
+      // and a fresh call here can take several seconds. 8s keeps us
+      // under the runner's 10s per-test ceiling with headroom.
+      const value = await callGetCurrentPosition(
+        geo,
+        GEO_IFRAME_CALL_TIMEOUT_MS
+      )
       return { value, describe: describeCoords(value) }
     } finally {
       try {
@@ -265,7 +346,7 @@ pos.coords matches identity.location`,
       }
     }
   },
-  equals: coordsMatch4dp,
+  equals: coordsMatchApprox,
 })
 
 // ---------------------------------------------------------------------------

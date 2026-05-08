@@ -33,6 +33,7 @@
 
 import { SkipTestError, buildBehavioralTest } from "../helpers/behavioral"
 import { requireLocationSnapshot } from "../helpers/location"
+import { coordsMatchApprox } from "../helpers/coords"
 import type { TestDefinition } from "../types"
 
 /** Max time to wait for the iframe to finish loading. */
@@ -43,13 +44,6 @@ const IFRAME_GEO_TIMEOUT_MS = 5_000
 interface Coords {
   latitude: number
   longitude: number
-}
-
-function coordsMatch4dp(a: Coords, b: Coords): boolean {
-  return (
-    a.latitude.toFixed(4) === b.latitude.toFixed(4) &&
-    a.longitude.toFixed(4) === b.longitude.toFixed(4)
-  )
 }
 
 function describeCoords(c: Coords): string {
@@ -269,7 +263,7 @@ pos.coords matches identity.location`,
       })
       return { value, describe: describeCoords(value) }
     },
-    equals: coordsMatch4dp,
+    equals: coordsMatchApprox,
   })
 
 const iframeAppendChildPatchesGeolocationTest = buildBehavioralTest<Coords>({
@@ -301,7 +295,7 @@ await new Promise((r) => iframe.addEventListener("load", r, { once: true }))
     })
     return { value, describe: describeCoords(value) }
   },
-  equals: coordsMatch4dp,
+  equals: coordsMatchApprox,
 })
 
 const iframeInnerHTMLPatchesGeolocationTest = buildBehavioralTest<Coords>({
@@ -355,7 +349,7 @@ const iframe = container.querySelector("iframe")
       }
     }
   },
-  equals: coordsMatch4dp,
+  equals: coordsMatchApprox,
 })
 
 const iframeSrcdocPatchesGeolocationTest = buildBehavioralTest<Coords>({
@@ -413,7 +407,7 @@ await new Promise((r) => iframe.addEventListener("load", r, { once: true }))
       }
     }
   },
-  equals: coordsMatch4dp,
+  equals: coordsMatchApprox,
 })
 
 const iframeDocumentWritePatchesGeolocationTest = buildBehavioralTest<Coords>({
@@ -511,7 +505,7 @@ const nested = outer.contentDocument.querySelector("iframe")
       }
     }
   },
-  equals: coordsMatch4dp,
+  equals: coordsMatchApprox,
 })
 
 // ---------------------------------------------------------------------------

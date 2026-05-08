@@ -35,19 +35,25 @@ import type { TestRunContext } from "../types"
  * on the permission prompt rather than timing out prematurely — so in
  * the common case where permission has already been granted, the
  * snapshot is `ready` by the time tests run and `awaitIdentity`
- * returns immediately. This bound is a last-resort cap for the rare
- * case where a test started while the prompt is still waiting on the
- * user. Kept short (8s) because:
- *   - The runner's per-test ceiling is 10s. A 60s bound would always
- *     be clipped to 10s and surface as a misleading TEST_TIMEOUT
- *     error rather than a clean skip.
- *   - The dashboard is not a productivity tool — if a user can't
- *     decide in 8s, they're probably not going to.
- *   - `SkipTestError` is the right outcome here; the test then
- *     reports as `skipped` with "location snapshot status was
- *     pending" which is honest about what happened.
+ * returns immediately. This bound matters on a first-run where the
+ * user has to read and click the prompt, then the browser has to
+ * acquire a fix. We pick 20s to cover:
+ *   - A typical prompt reaction (up to ~10s)
+ *   - Plus a cold CoreLocation / WiFi-geolocation fix (up to ~10s on
+ *     Safari, ~3s on Firefox/Chromium)
+ *
+ * That's larger than the runner's default 10s per-test timeout —
+ * which is fine because the runner multiplies tests in series, and
+ * tests that `requireLocationSnapshot` are all waiting on the SAME
+ * pending snapshot. Once the first test has waited for and resolved
+ * the snapshot, every subsequent test's await returns immediately.
+ * So in practice only the first location-dependent test ever sees
+ * this bound kick in, and its effective ceiling is still the
+ * runner's per-test timeout — we just want our cap to be strictly
+ * higher so the skip reason says "location snapshot status was
+ * pending" rather than our own premature timeout.
  */
-const IDENTITY_LOCATION_WAIT_MS = 8_000
+const IDENTITY_LOCATION_WAIT_MS = 20_000
 
 /**
  * Await the shared location snapshot. Resolves with the ready

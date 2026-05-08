@@ -1,52 +1,44 @@
 /**
- * Placeholder geolocation tests.
+ * Baseline geolocation test: the browser must report a valid
+ * `GeolocationPosition` from `navigator.geolocation.getCurrentPosition`.
  *
- * Initial scaffolding to validate the runner and UI end-to-end.
- * Real test coverage will be expanded in follow-up work.
+ * This test reads from the run-shared position cache seeded by the
+ * Identity Panel — NOT by making its own live `getCurrentPosition`
+ * call. That matters on two specific fronts:
+ *
+ *   1. **Permission-prompt timing.** On a first-run (no cached
+ *      permission) the identity panel is the component that
+ *      triggers the browser's Allow/Block prompt; it waits
+ *      untimed for the user's decision, then acquires a fix with
+ *      its own long timeout. A second live call here would race
+ *      the permission lifecycle and either prompt twice or time
+ *      out while the user is still reading the first prompt.
+ *
+ *   2. **Safari CoreLocation serialisation.** Safari queues
+ *      back-to-back `getCurrentPosition` calls through its
+ *      CoreLocation service layer, so an independent live call
+ *      behind the identity panel's call can take several seconds
+ *      on its own — enough to trip test timeouts even when the
+ *      panel already has a fresh fix.
+ *
+ * The shared-position cache (`getSharedPosition`) resolves
+ * synchronously once the panel has obtained a position, so the
+ * test verifies the browser DID produce coords without ever
+ * paying for a second live call.
  */
 
-import type { TestDefinition, TestResult } from "../types"
+import { SkipTestError, buildBehavioralTest } from "../helpers/behavioral"
+import { getSharedPosition } from "../helpers/shared-position"
+import type { TestDefinition } from "../types"
 
-const GEOLOCATION_TIMEOUT_MS = 5000
-
-interface Coords {
-  latitude: number
-  longitude: number
-  accuracy: number
-}
-
-/**
- * Promisified wrapper around navigator.geolocation.getCurrentPosition.
- * Rejects on both error callback and timeout.
- */
-async function getCurrentCoords(): Promise<Coords> {
-  return new Promise<Coords>((resolve, reject) => {
-    if (!("geolocation" in navigator)) {
-      reject(new Error("navigator.geolocation is not available"))
-      return
-    }
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        resolve({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy,
-        })
-      },
-      (err) => reject(new Error(err.message || `code ${err.code}`)),
-      { timeout: GEOLOCATION_TIMEOUT_MS }
-    )
-  })
-}
-
-const getCurrentPositionReturnsCoords: TestDefinition = {
+const getCurrentPositionReturnsCoords = buildBehavioralTest<boolean>({
   id: "geolocation.get-current-position-returns-coords",
   group: "geolocation-correctness",
   name: "navigator.geolocation.getCurrentPosition returns coordinates",
   description:
     "Calls the geolocation API and verifies that it returns a valid latitude/longitude pair.",
   technique:
-    "Invoke navigator.geolocation.getCurrentPosition and inspect the PositionCoords object it yields.",
+    "Read the position the Identity Panel already obtained via navigator.geolocation.getCurrentPosition and assert its coords are finite numbers within the WGS84 ranges.",
   codeSnippet: `navigator.geolocation.getCurrentPosition(
   (pos) => {
     // expect pos.coords.latitude and pos.coords.longitude
@@ -54,38 +46,34 @@ const getCurrentPositionReturnsCoords: TestDefinition = {
   },
   (err) => { /* error path */ }
 )`,
-  run: async (): Promise<TestResult> => {
+  expected: async () => ({
+    value: true,
+    describe: "latitude in [-90, 90] and longitude in [-180, 180]",
+  }),
+  observe: async (ctx) => {
+    let pos
     try {
-      const coords = await getCurrentCoords()
-      const valid =
-        Number.isFinite(coords.latitude) &&
-        Number.isFinite(coords.longitude) &&
-        coords.latitude >= -90 &&
-        coords.latitude <= 90 &&
-        coords.longitude >= -180 &&
-        coords.longitude <= 180
-
-      return {
-        status: valid ? "pass" : "fail",
-        expected: "Valid latitude (-90 to 90) and longitude (-180 to 180)",
-        actual: `latitude=${coords.latitude}, longitude=${coords.longitude}`,
-        details: {
-          latitude: coords.latitude,
-          longitude: coords.longitude,
-          accuracy: coords.accuracy,
-        },
-      }
+      pos = await getSharedPosition(ctx)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
-      return {
-        status: "fail",
-        expected: "getCurrentPosition to resolve with valid coords",
-        actual: `getCurrentPosition rejected: ${message}`,
-        error: message,
-      }
+      throw new SkipTestError(
+        `getCurrentPosition could not be resolved: ${message}`,
+      )
+    }
+    const { latitude, longitude } = pos.coords
+    const valid =
+      Number.isFinite(latitude) &&
+      Number.isFinite(longitude) &&
+      latitude >= -90 &&
+      latitude <= 90 &&
+      longitude >= -180 &&
+      longitude <= 180
+    return {
+      value: valid,
+      describe: `latitude=${latitude}, longitude=${longitude}`,
     }
   },
-}
+})
 
 export const geolocationTests: ReadonlyArray<TestDefinition> = [
   getCurrentPositionReturnsCoords,

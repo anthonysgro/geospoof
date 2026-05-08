@@ -41,7 +41,16 @@
 
 import type { TestRunContext } from "../types"
 
-const POSITION_TIMEOUT_MS = 5_000
+/**
+ * Timeout for the fallback path when the Identity Panel hasn't yet
+ * seeded a shared position. Matches the panel's own
+ * `GEOLOCATION_TIMEOUT_MS` so a user who triggers a test run while
+ * the initial permission prompt is still open doesn't hit a shorter
+ * ceiling here. In practice this path is rare — the dashboard waits
+ * for the panel before starting the run — but when it does fire we
+ * want the same generous window.
+ */
+const POSITION_TIMEOUT_MS = 30_000
 
 /**
  * Per-run cache. The key is the AbortSignal of the current run — fresh
@@ -136,10 +145,24 @@ export function getSharedPosition(
           reject(new Error(`getCurrentPosition error: ${err.message}`))
         },
         {
-          // Always accept a cached fix — the Identity Panel already
-          // primed the browser's cache, and every subsequent test in
-          // the run wants the same cached position.
-          maximumAge: Number.POSITIVE_INFINITY,
+          // This fallback path only fires when the Identity Panel
+          // hasn't yet seeded a shared position — which the
+          // VerificationDashboard's `waitFor("location")` step is
+          // designed to prevent, but we keep this as defense-in-
+          // depth for edge cases.
+          //
+          // Explicitly use `maximumAge: 0` (force a fresh fix) +
+          // `enableHighAccuracy: true` — NOT `maximumAge: Infinity`
+          // as an earlier version did. Chrome has an observed hang
+          // when `getCurrentPosition` is called with `maximumAge:
+          // Infinity` and no cached position exists: the cache
+          // lookup never falls through to an actual acquisition,
+          // and our JS timer has to fire at POSITION_TIMEOUT_MS
+          // to unstick the call. Matching browserleaks' probe
+          // options (the reference implementation that works on
+          // every engine) resolves the issue.
+          enableHighAccuracy: true,
+          maximumAge: 0,
           timeout: POSITION_TIMEOUT_MS,
         }
       )

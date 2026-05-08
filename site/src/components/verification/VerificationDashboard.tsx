@@ -149,16 +149,45 @@ function DashboardInner() {
    * bumps. `startRun` is stable (its closure depends only on the
    * provider's stable callbacks), so the only drivers are `tests` and
    * `runAttempt`.
+   *
+   * Waits for the identity-panel's location snapshot to reach a terminal
+   * state (`ready` or `error`) BEFORE issuing the first test. Rationale:
+   *
+   *   - On a first run the browser shows a permission prompt. The user
+   *     takes however long they take to read and click it, and the
+   *     browser takes a few seconds to acquire a fix afterwards. During
+   *     that whole window the snapshot is `pending`.
+   *   - The runner's per-test timeout is 10s. If a location-dependent
+   *     test starts while the snapshot is still pending, it hits that
+   *     cap before the snapshot settles — the user sees "Timeout
+   *     expired" on a test that would otherwise have passed.
+   *   - Waiting here means all the permission-prompt reading time and
+   *     the browser's acquisition time happen BEFORE any test's clock
+   *     starts ticking. The panel then has a seeded position that
+   *     every test's `getSharedPosition` call returns synchronously.
+   *
+   * Fire a timeout fallback (45s) so a user who never responds to the
+   * prompt doesn't leave the dashboard stuck forever. At that point
+   * the snapshot's `error` field carries "Geolocation request timed
+   * out" and downstream tests correctly skip via
+   * `requireLocationSnapshot`.
    */
   React.useEffect(() => {
     if (!tests) return
-    startRun(tests)
+    let cancelled = false
+
+    void waitFor("location", 45_000).finally(() => {
+      if (cancelled) return
+      startRun(tests)
+    })
+
     // Cleanup aborts the in-flight run if the component unmounts or a
     // newer run supersedes this one.
     return () => {
+      cancelled = true
       controllerRef.current?.abort()
     }
-  }, [tests, runAttempt, startRun])
+  }, [tests, runAttempt, startRun, waitFor])
 
   const handleRunAgain = React.useCallback(() => {
     if (manifestError) {

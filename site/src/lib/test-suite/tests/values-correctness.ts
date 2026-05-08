@@ -28,14 +28,20 @@
 import { SkipTestError, buildBehavioralTest } from "../helpers/behavioral"
 import { requireLocationSnapshot } from "../helpers/location"
 import { getSharedPosition } from "../helpers/shared-position"
+import { coordsMatchApprox } from "../helpers/coords"
 import type { TestDefinition, TestRunContext } from "../types"
 
 /**
  * Max time the live geolocation calls are allowed to take.
  * (The shared-snapshot wait is owned by `requireLocationSnapshot`
  * in `helpers/location.ts` — tests don't need to set their own.)
+ *
+ * 15s is enough for a fresh Chrome `getCurrentPosition` call on a
+ * cold cache to return. Firefox and Safari typically resolve in
+ * 1-3s, but Chrome can take up to ~10s when it has to do a fresh
+ * WiFi-based fix, and we'd rather wait than flake.
  */
-const GEOLOCATION_CALL_TIMEOUT_MS = 5_000
+const GEOLOCATION_CALL_TIMEOUT_MS = 15_000
 
 // ---------------------------------------------------------------------------
 // Timezone helpers
@@ -228,13 +234,18 @@ async function watchFirstPosition(timeoutMs: number): Promise<Coords> {
   }
 }
 
-/** Equality helper: compare two coordinate pairs to 4 decimal places. */
-function coordsMatch4dp(a: Coords, b: Coords): boolean {
-  return (
-    a.latitude.toFixed(4) === b.latitude.toFixed(4) &&
-    a.longitude.toFixed(4) === b.longitude.toFixed(4)
-  )
-}
+/** Equality helper: compare two coordinate pairs within a small
+ *  meter-distance tolerance.
+ *
+ *  Imported from `../helpers/coords`. Previously this module defined
+ *  its own `coordsMatch4dp` that string-compared `.toFixed(4)` on
+ *  both sides. That was flaky on Safari (CoreLocation returns
+ *  slightly different readings on back-to-back calls, and a raw
+ *  value sitting near a rounding boundary could flip between
+ *  decimal-place strings while the physical location differed by
+ *  only a meter or two). The shared helper uses great-circle
+ *  distance instead — see `helpers/coords.ts` for rationale.
+ */
 
 function describeCoords(c: Coords): string {
   return `${c.latitude.toFixed(4)}, ${c.longitude.toFixed(4)}`
@@ -593,7 +604,7 @@ const geolocationMatchesIdentityTest = buildBehavioralTest<Coords>({
     const value = await getCurrentPositionOnce(ctx, GEOLOCATION_CALL_TIMEOUT_MS)
     return { value, describe: describeCoords(value) }
   },
-  equals: coordsMatch4dp,
+  equals: coordsMatchApprox,
 })
 
 const geolocationWatchPositionTest = buildBehavioralTest<Coords>({
@@ -621,7 +632,7 @@ const geolocationWatchPositionTest = buildBehavioralTest<Coords>({
     const value = await watchFirstPosition(GEOLOCATION_CALL_TIMEOUT_MS)
     return { value, describe: describeCoords(value) }
   },
-  equals: coordsMatch4dp,
+  equals: coordsMatchApprox,
 })
 
 // ---------------------------------------------------------------------------
@@ -1023,31 +1034,41 @@ pos.coords instanceof GeolocationCoordinates &&
 const geolocationOptionalFieldsNullTest = buildBehavioralTest<string>({
   id: "tampering.geolocation.optional-coord-fields-null",
   group: "geolocation-stealth",
-  name: "GeolocationCoordinates optional fields are present and null",
+  name: "GeolocationCoordinates optional fields are present and native-default",
   description:
-    "position.coords.altitude, altitudeAccuracy, heading, and speed must exist as enumerable properties with value null (the W3C default). Missing keys or undefined values distinguish a plain-object stand-in from a native GeolocationCoordinates.",
+    "position.coords.altitude, altitudeAccuracy, heading, and speed must exist as enumerable properties with native-default values. The real detection vector here is missing keys or undefined values — a plain-object stand-in constructed by a spoofer will usually miss one of these. The values themselves are engine-dependent: Firefox consistently reports null for all four on desktop, while Chrome with enableHighAccuracy: true reports altitude=0 when it has no altitude data (still a valid WGS84 height, just meaning 'I don't know — assume sea level'). Both are legitimate native shapes; what matters is that the keys exist and carry a native-valued response (null or a finite number).",
   technique:
-    "Call getCurrentPosition and verify each optional field is an own-or-inherited property whose value is exactly null.",
+    "Call getCurrentPosition and verify each optional field is an own-or-inherited property whose value is either null or a finite number. Reject only `undefined` or missing keys — those signal a plain-object substitution.",
   codeSnippet: `const pos = await new Promise((res, rej) =>
   navigator.geolocation.getCurrentPosition(res, rej),
 )
 ["altitude", "altitudeAccuracy", "heading", "speed"].every(
-  (k) => k in pos.coords && pos.coords[k] === null,
+  (k) => k in pos.coords &&
+         (pos.coords[k] === null || Number.isFinite(pos.coords[k])),
 )`,
   expected: async () => ({
-    value: "altitude=null; altitudeAccuracy=null; heading=null; speed=null",
-    describe: "all four null",
+    value: "all four present and native",
+    describe: "all four present as null or finite number",
   }),
   observe: async (ctx) => {
     const pos = await getFullPosition(ctx, GEOLOCATION_CALL_TIMEOUT_MS)
     const keys = ["altitude", "altitudeAccuracy", "heading", "speed"] as const
     const parts = keys.map((k) => {
       const v = (pos.coords as unknown as Record<string, unknown>)[k]
-      const present = k in pos.coords
-      const isNull = v === null
-      return `${k}=${present ? (isNull ? "null" : JSON.stringify(v)) : "(missing)"}`
+      if (!(k in pos.coords)) return `${k}=(missing)`
+      if (v === null) return `${k}=null`
+      if (typeof v === "number" && Number.isFinite(v)) return `${k}=${v}`
+      return `${k}=${JSON.stringify(v)}`
     })
-    return { value: parts.join("; "), describe: parts.join("; ") }
+    const allPresentAndNative = keys.every((k) => {
+      if (!(k in pos.coords)) return false
+      const v = (pos.coords as unknown as Record<string, unknown>)[k]
+      return v === null || (typeof v === "number" && Number.isFinite(v))
+    })
+    return {
+      value: allPresentAndNative ? "all four present and native" : parts.join("; "),
+      describe: parts.join("; "),
+    }
   },
 })
 
@@ -1105,7 +1126,15 @@ Math.min(unixDelta, cfDelta) < 10_000`,
             clearTimeout(timer)
             reject(new Error(`getCurrentPosition error: ${err.message}`))
           },
-          { maximumAge: 0, timeout: GEOLOCATION_CALL_TIMEOUT_MS },
+          {
+            // Match the Identity Panel's working options — see
+            // identity-context.tsx for the full rationale. Chrome
+            // hangs without `enableHighAccuracy: true` on some
+            // networks; Firefox and Safari are unaffected.
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: GEOLOCATION_CALL_TIMEOUT_MS,
+          },
         )
       } catch (err) {
         clearTimeout(timer)
