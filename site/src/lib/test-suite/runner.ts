@@ -74,7 +74,24 @@ async function runOne(
 
     const result = await Promise.race([definition.run(context), timeout])
     const durationMs = performance.now() - start
-    return { ...result, durationMs: result.durationMs ?? durationMs }
+    const withDuration = {
+      ...result,
+      durationMs: result.durationMs ?? durationMs,
+    }
+    // Tests in the `known-limitations` group document gaps that
+    // content-script extensions cannot fully close. A "fail" result
+    // from one of them is the educational outcome we want to surface,
+    // not a regression. Remap fail → known-limitation so the
+    // dashboard's "detectable issues" count excludes them.
+    // (Tests can still return `known-limitation` directly — e.g. via
+    // `skipReason` on `buildBehavioralTest` — and those pass through.)
+    if (
+      definition.group === "known-limitations" &&
+      withDuration.status === "fail"
+    ) {
+      return { ...withDuration, status: "known-limitation" }
+    }
+    return withDuration
   } catch (err) {
     return errorResult(err, performance.now() - start)
   }
@@ -89,6 +106,7 @@ export function summarize(states: ReadonlyArray<TestState>): TestSummary {
     passed: 0,
     failed: 0,
     knownLimitation: 0,
+    skipped: 0,
     errored: 0,
     pending: 0,
   }
@@ -103,6 +121,9 @@ export function summarize(states: ReadonlyArray<TestState>): TestSummary {
         break
       case "known-limitation":
         summary.knownLimitation += 1
+        break
+      case "skipped":
+        summary.skipped += 1
         break
       case "error":
         summary.errored += 1

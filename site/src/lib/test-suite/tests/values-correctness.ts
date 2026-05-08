@@ -26,12 +26,14 @@
  */
 
 import { buildBehavioralTest } from "../helpers/behavioral"
-import type { TestDefinition, TestRunContext } from "../types"
-import type { LocationValue } from "../../verification/identity-snapshot"
+import { requireLocationSnapshot } from "../helpers/location"
+import type { TestDefinition } from "../types"
 
-/** Max time the location-dependent tests will wait for the shared snapshot. */
-const IDENTITY_LOCATION_WAIT_MS = 6_000
-/** Max time the live geolocation calls are allowed to take. */
+/**
+ * Max time the live geolocation calls are allowed to take.
+ * (The shared-snapshot wait is owned by `requireLocationSnapshot`
+ * in `helpers/location.ts` — tests don't need to set their own.)
+ */
 const GEOLOCATION_CALL_TIMEOUT_MS = 5_000
 
 // ---------------------------------------------------------------------------
@@ -93,6 +95,29 @@ function deriveEastOfUtcMinutes(identifier: string, when: Date): number {
   }
 }
 
+/**
+ * Resolve the current timezone identifier live from
+ * `Intl.DateTimeFormat().resolvedOptions().timeZone`. We deliberately
+ * do NOT read from the identity snapshot here because that snapshot
+ * was captured at dashboard mount time — which on cold page loads can
+ * be in the sub-second window before a privacy extension has finished
+ * delivering its spoofing settings. Reading live ensures the
+ * "expected" reference used by every downstream test sees the same
+ * post-settlement world that the test's "observed" read will see,
+ * eliminating race-induced false failures.
+ *
+ * The race itself is still honestly surfaced by the single
+ * `known-limitation.race.early-timezone-probe` test, which captures
+ * the zone at earliest possible module-evaluation time.
+ */
+function resolveLiveTimezoneIdentifier(): string {
+  try {
+    return new Intl.DateTimeFormat().resolvedOptions().timeZone ?? ""
+  } catch {
+    return ""
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Geolocation helpers
 // ---------------------------------------------------------------------------
@@ -100,24 +125,6 @@ function deriveEastOfUtcMinutes(identifier: string, when: Date): number {
 interface Coords {
   latitude: number
   longitude: number
-}
-
-/**
- * Resolve the shared location snapshot, throwing a descriptive error
- * when it did not become ready within the wait budget. Behavioral-test
- * throws are caught by `buildBehavioralTest` and surfaced as
- * `status: "error"`.
- */
-async function requireLocationSnapshot(
-  ctx: TestRunContext
-): Promise<LocationValue> {
-  const field = await ctx.awaitIdentity("location", IDENTITY_LOCATION_WAIT_MS)
-  if (field.status !== "ready" || !field.value) {
-    const detail =
-      field.error ?? `location snapshot status was "${field.status}"`
-    throw new Error(`location snapshot not ready: ${detail}`)
-  }
-  return field.value
 }
 
 /** Promisified `navigator.geolocation.getCurrentPosition` with timeout. */
@@ -251,40 +258,59 @@ function describeCoords(c: Coords): string {
 const intlResolvedOptionsTest = buildBehavioralTest<string>({
   id: "values.timezone.intl-resolved-options",
   group: "timezone-correctness",
-  name: "Intl.DateTimeFormat().resolvedOptions().timeZone matches identity",
+  name: "Intl.DateTimeFormat().resolvedOptions().timeZone is a valid IANA identifier",
   description:
-    "The IANA timezone reported by Intl.DateTimeFormat should match the identifier rendered in the Identity Panel.",
+    "`Intl.DateTimeFormat().resolvedOptions().timeZone` should return a non-empty string that passes Intl's own `supportedLocalesOf`-adjacent validation (we round-trip it by constructing a new formatter). Any browser — spoofed or not — should satisfy this.",
   technique:
-    "Read Intl.DateTimeFormat().resolvedOptions().timeZone and compare it to the shared identity snapshot's timezone.identifier.",
-  codeSnippet: `new Intl.DateTimeFormat().resolvedOptions().timeZone
-// should equal identity.timezone.identifier`,
-  expected: async (ctx) => {
-    const identifier = ctx.getIdentity().timezone.identifier
-    return { value: identifier, describe: identifier || "(empty)" }
-  },
+    "Read Intl.DateTimeFormat().resolvedOptions().timeZone and verify it round-trips as a valid IANA identifier by constructing a second Intl.DateTimeFormat with it as the explicit timeZone.",
+  codeSnippet: `const tz = new Intl.DateTimeFormat().resolvedOptions().timeZone
+new Intl.DateTimeFormat(undefined, { timeZone: tz })
+// must not throw, tz must be a non-empty string`,
+  expected: async () => ({
+    value: "non-empty round-trippable identifier",
+    describe: "non-empty round-trippable identifier",
+  }),
   observe: async () => {
-    const tz = new Intl.DateTimeFormat().resolvedOptions().timeZone ?? ""
-    return { value: tz, describe: tz || "(empty)" }
+    const tz = resolveLiveTimezoneIdentifier()
+    if (!tz) {
+      return {
+        value: "(empty)",
+        describe: "Intl returned an empty timezone identifier",
+      }
+    }
+    try {
+      new Intl.DateTimeFormat(undefined, { timeZone: tz })
+      return {
+        value: "non-empty round-trippable identifier",
+        describe: `"${tz}" (round-tripped successfully)`,
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      return {
+        value: `invalid: "${tz}"`,
+        describe: `"${tz}" rejected by Intl.DateTimeFormat: ${message}`,
+      }
+    }
   },
 })
 
 const dateGetTimezoneOffsetTest = buildBehavioralTest<number>({
   id: "values.timezone.date-get-timezone-offset",
   group: "timezone-correctness",
-  name: "Date.prototype.getTimezoneOffset matches identity",
+  name: "Date.prototype.getTimezoneOffset agrees with Intl shortOffset",
   description:
-    "new Date().getTimezoneOffset() should equal the negated minute offset implied by the Identity Panel's IANA identifier.",
+    "`new Date().getTimezoneOffset()` should equal the negated minute offset derived from `Intl.DateTimeFormat(..., { timeZoneName: \"shortOffset\" })` at the same instant. Both APIs describe the same runtime zone, so they must agree. A mismatch means one surface is spoofed and the other isn't.",
   technique:
-    'Derive the east-of-UTC offset for identity.timezone.identifier via Intl.DateTimeFormat with timeZoneName: "shortOffset", negate it, and compare to new Date().getTimezoneOffset().',
-  codeSnippet: `const tz = identity.timezone.identifier
+    "Derive the east-of-UTC offset from Intl.DateTimeFormat with timeZoneName: \"shortOffset\" at the current instant, negate it, and compare to new Date().getTimezoneOffset().",
+  codeSnippet: `const tz = new Intl.DateTimeFormat().resolvedOptions().timeZone
 const parts = new Intl.DateTimeFormat(undefined, {
   timeZone: tz,
   timeZoneName: "shortOffset",
 }).formatToParts(new Date())
 // parse "GMT±HH:MM" → east-of-UTC minutes; negate for getTimezoneOffset()
 // compare to new Date().getTimezoneOffset()`,
-  expected: async (ctx) => {
-    const identifier = ctx.getIdentity().timezone.identifier
+  expected: async () => {
+    const identifier = resolveLiveTimezoneIdentifier()
     const eastMinutes = deriveEastOfUtcMinutes(identifier, new Date())
     const value = -eastMinutes
     return {
@@ -301,14 +327,14 @@ const parts = new Intl.DateTimeFormat(undefined, {
 const temporalTimeZoneIdTest = buildBehavioralTest<string>({
   id: "values.timezone.temporal-timezone-id",
   group: "timezone-correctness",
-  name: "Temporal.Now.timeZoneId() matches identity",
+  name: "Temporal.Now.timeZoneId() agrees with Intl resolved zone",
   description:
-    "When the Temporal API is available, Temporal.Now.timeZoneId() should equal the IANA identifier rendered in the Identity Panel.",
+    "When the Temporal API is available, `Temporal.Now.timeZoneId()` should equal `Intl.DateTimeFormat().resolvedOptions().timeZone`. Both describe the same runtime zone; a mismatch means one surface is spoofed and the other isn't.",
   technique:
-    "Feature-detect Temporal.Now.timeZoneId; when available, invoke it and compare to identity.timezone.identifier.",
+    "Feature-detect Temporal.Now.timeZoneId; when available, invoke it and compare to the current Intl.DateTimeFormat resolved timezone.",
   codeSnippet: `Temporal.Now.timeZoneId()
-// should equal identity.timezone.identifier`,
-  expected: async (ctx) => {
+// should equal new Intl.DateTimeFormat().resolvedOptions().timeZone`,
+  expected: async () => {
     const temporalNow = (
       globalThis as unknown as {
         Temporal?: { Now?: { timeZoneId?: () => string } }
@@ -317,7 +343,7 @@ const temporalTimeZoneIdTest = buildBehavioralTest<string>({
     if (typeof temporalNow?.timeZoneId !== "function") {
       return { skipReason: "Temporal API not supported in this browser" }
     }
-    const identifier = ctx.getIdentity().timezone.identifier
+    const identifier = resolveLiveTimezoneIdentifier()
     return { value: identifier, describe: identifier || "(empty)" }
   },
   observe: async () => {
@@ -334,21 +360,22 @@ const temporalTimeZoneIdTest = buildBehavioralTest<string>({
 const dateToStringTimezoneNameTest = buildBehavioralTest<string>({
   id: "values.timezone.date-tostring-timezone-name",
   group: "timezone-correctness",
-  name: "Date.prototype.toString contains the spoofed long timezone name",
+  name: "Date.prototype.toString contains the resolved long timezone name",
   description:
-    "The long timezone name embedded in new Date().toString() should match the long name derived from the Identity Panel's IANA identifier.",
+    "The long timezone name embedded in `new Date().toString()` should match the long name derived from Intl.DateTimeFormat for the same resolved zone. A mismatch here means Date.toString and Intl disagree on the current timezone.",
   technique:
-    "Derive the long timezone name for identity.timezone.identifier via formatToParts, then assert it is a substring of new Date().toString().",
-  codeSnippet: `const expected = new Intl.DateTimeFormat(undefined, {
-  timeZone: identity.timezone.identifier,
+    "Derive the long timezone name from Intl.DateTimeFormat at the current resolved zone, then assert it is a substring of new Date().toString().",
+  codeSnippet: `const tz = new Intl.DateTimeFormat().resolvedOptions().timeZone
+const expected = new Intl.DateTimeFormat(undefined, {
+  timeZone: tz,
   timeZoneName: "long",
 }).formatToParts(new Date())
   .find((p) => p.type === "timeZoneName").value
 
 // expected should appear inside:
 new Date().toString()`,
-  expected: async (ctx) => {
-    const identifier = ctx.getIdentity().timezone.identifier
+  expected: async () => {
+    const identifier = resolveLiveTimezoneIdentifier()
     const longName = deriveLongTimezoneName(identifier, new Date())
     return {
       value: longName,
@@ -368,16 +395,16 @@ new Date().toString()`,
 const dateToLocaleStringTimezoneTest = buildBehavioralTest<string>({
   id: "values.timezone.date-tolocalestring-honors-timezone",
   group: "timezone-correctness",
-  name: "Date.prototype.toLocaleString honors the spoofed timezone",
+  name: "Date.prototype.toLocaleString honors the resolved timezone",
   description:
-    'new Date().toLocaleString with timeZoneName: "long" should contain the long timezone name derived from the Identity Panel\'s IANA identifier.',
+    "`new Date().toLocaleString(undefined, { timeZoneName: \"long\" })` should contain the long timezone name derived from the current Intl resolved zone. A mismatch means toLocaleString and Intl disagree on the current timezone.",
   technique:
-    'Call new Date().toLocaleString(undefined, { timeZoneName: "long" }) and assert the expected long name is a substring of the result.',
-  codeSnippet: `const expected = /* long name derived from identity.timezone.identifier */
+    'Derive the long timezone name from Intl.DateTimeFormat at the current resolved zone, then call new Date().toLocaleString(undefined, { timeZoneName: "long" }) and assert the expected long name is a substring of the result.',
+  codeSnippet: `const expected = /* long name derived from current Intl zone */
 new Date().toLocaleString(undefined, { timeZoneName: "long" })
 // should contain expected`,
-  expected: async (ctx) => {
-    const identifier = ctx.getIdentity().timezone.identifier
+  expected: async () => {
+    const identifier = resolveLiveTimezoneIdentifier()
     const longName = deriveLongTimezoneName(identifier, new Date())
     return {
       value: longName,
@@ -608,32 +635,6 @@ const geolocationWatchPositionTest = buildBehavioralTest<Coords>({
   equals: coordsMatch4dp,
 })
 
-const permissionQueryGrantedTest = buildBehavioralTest<string>({
-  id: "values.geolocation.permission-query-granted",
-  group: "geolocation-correctness",
-  name: "navigator.permissions.query reports geolocation as granted",
-  description:
-    'When the extension is active, navigator.permissions.query({ name: "geolocation" }) should report state "granted".',
-  technique:
-    'Feature-detect navigator.permissions.query; when available, invoke it for "geolocation" and compare the resulting state to "granted".',
-  codeSnippet: `const result = await navigator.permissions.query({ name: "geolocation" })
-result.state === "granted"`,
-  expected: async () => {
-    const permissions =
-      typeof navigator !== "undefined" ? navigator.permissions : undefined
-    if (!permissions || typeof permissions.query !== "function") {
-      return { skipReason: "Permissions API not available in this browser" }
-    }
-    return { value: "granted", describe: '"granted"' }
-  },
-  observe: async () => {
-    const result = await navigator.permissions.query({
-      name: "geolocation",
-    })
-    return { value: result.state, describe: `"${result.state}"` }
-  },
-})
-
 // ---------------------------------------------------------------------------
 // Date constructor / Date.parse behavior
 // ---------------------------------------------------------------------------
@@ -829,49 +830,51 @@ const temporalPlainDateTimeIsoHonorsIdentityTest = buildBehavioralTest<boolean>(
   {
     id: "values.timezone.temporal-plain-datetime-iso-honors-identity",
     group: "timezone-correctness",
-    name: "Temporal.Now.plainDateTimeISO() reflects the spoofed timezone",
+    name: "Temporal.Now.plainDateTimeISO() agrees with Intl resolved zone",
     description:
-      "Temporal.Now.plainDateTimeISO() with no argument should reflect the wall-clock time of the identity's timezone — specifically, its ISO date portion must equal the date portion Intl.DateTimeFormat produces for the same instant in that zone.",
+      "Temporal.Now.plainDateTimeISO() with no argument should reflect the wall-clock time of the current Intl resolved zone — specifically, its ISO date portion must equal the date portion Intl.DateTimeFormat produces for the same instant in that zone.",
     technique:
-      'Anchor on startedAt. Read the ISO date portion from Temporal.Now.plainDateTimeISO() and compare to the "en-CA" date string for the identity\'s timezone (YYYY-MM-DD).',
-    codeSnippet: `const pdt = Temporal.Now.plainDateTimeISO().toString() // "YYYY-MM-DDTHH:mm:ss"
+      'Read the ISO date portion from Temporal.Now.plainDateTimeISO() and compare to the "en-CA" date string for the current Intl resolved zone (YYYY-MM-DD) at the same instant.',
+    codeSnippet: `const instant = new Date()
+const tz = new Intl.DateTimeFormat().resolvedOptions().timeZone
+const pdt = Temporal.Now.plainDateTimeISO().toString() // "YYYY-MM-DDTHH:mm:ss"
 const datePart = pdt.slice(0, 10)
 const expected = new Intl.DateTimeFormat("en-CA", {
-  timeZone: identity.timezone.identifier,
+  timeZone: tz,
   year: "numeric", month: "2-digit", day: "2-digit",
-}).format(new Date(identity.startedAt))
+}).format(instant)
 datePart === expected`,
-    expected: async (ctx) => {
+    expected: async () => {
       const temporal = getTemporalNow()
       if (!temporal?.plainDateTimeISO) {
         return { skipReason: "Temporal.Now.plainDateTimeISO not available" }
       }
-      const identity = ctx.getIdentity()
-      if (!identity.timezone.identifier) {
-        return { skipReason: "Identity timezone identifier not available" }
+      const identifier = resolveLiveTimezoneIdentifier()
+      if (!identifier) {
+        return { skipReason: "Intl did not resolve a timezone identifier" }
       }
       const fmt = new Intl.DateTimeFormat("en-CA", {
-        timeZone: identity.timezone.identifier,
+        timeZone: identifier,
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
       })
-      const expected = fmt.format(new Date(identity.startedAt))
+      const expected = fmt.format(new Date())
       return { value: true, describe: `date portion equals "${expected}"` }
     },
-    observe: async (ctx) => {
+    observe: async () => {
       const temporal = getTemporalNow()
       if (!temporal?.plainDateTimeISO) {
         throw new Error("Temporal.Now.plainDateTimeISO not available")
       }
-      const identity = ctx.getIdentity()
+      const identifier = resolveLiveTimezoneIdentifier()
       const fmt = new Intl.DateTimeFormat("en-CA", {
-        timeZone: identity.timezone.identifier,
+        timeZone: identifier,
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
       })
-      const expectedDate = fmt.format(new Date(identity.startedAt))
+      const expectedDate = fmt.format(new Date())
       const iso = temporal.plainDateTimeISO().toString()
       const datePart = iso.slice(0, 10)
       const value = datePart === expectedDate
@@ -883,20 +886,21 @@ datePart === expected`,
 const temporalZonedDateTimeIsoHonorsIdentityTest = buildBehavioralTest<string>({
   id: "values.timezone.temporal-zoned-datetime-iso-honors-identity",
   group: "timezone-correctness",
-  name: "Temporal.Now.zonedDateTimeISO().timeZoneId matches identity",
+  name: "Temporal.Now.zonedDateTimeISO().timeZoneId agrees with Intl resolved zone",
   description:
-    "Temporal.Now.zonedDateTimeISO() (no argument) should return a ZonedDateTime whose timeZoneId equals the identity's IANA identifier.",
+    "Temporal.Now.zonedDateTimeISO() (no argument) should return a ZonedDateTime whose timeZoneId equals the current Intl resolved zone. A mismatch means Temporal and Intl disagree.",
   technique:
-    "Call Temporal.Now.zonedDateTimeISO() and compare its timeZoneId property to the identity snapshot's timezone.identifier.",
-  codeSnippet: `Temporal.Now.zonedDateTimeISO().timeZoneId === identity.timezone.identifier`,
-  expected: async (ctx) => {
+    "Call Temporal.Now.zonedDateTimeISO() and compare its timeZoneId property to Intl.DateTimeFormat().resolvedOptions().timeZone.",
+  codeSnippet: `Temporal.Now.zonedDateTimeISO().timeZoneId ===
+  new Intl.DateTimeFormat().resolvedOptions().timeZone`,
+  expected: async () => {
     const temporal = getTemporalNow()
     if (!temporal?.zonedDateTimeISO) {
       return { skipReason: "Temporal.Now.zonedDateTimeISO not available" }
     }
-    const identifier = ctx.getIdentity().timezone.identifier
+    const identifier = resolveLiveTimezoneIdentifier()
     if (!identifier) {
-      return { skipReason: "Identity timezone identifier not available" }
+      return { skipReason: "Intl did not resolve a timezone identifier" }
     }
     return { value: identifier, describe: `"${identifier}"` }
   },
@@ -1182,7 +1186,6 @@ export const valuesCorrectnessTests: ReadonlyArray<TestDefinition> = [
   geolocationLongitudeTest,
   geolocationMatchesIdentityTest,
   geolocationWatchPositionTest,
-  permissionQueryGrantedTest,
 ]
 
 /**

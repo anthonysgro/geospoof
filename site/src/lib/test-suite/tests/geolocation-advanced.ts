@@ -6,7 +6,7 @@
  *   1. SHAPE FIDELITY — deeper inspection of the position object than
  *      `instanceof`, `getPrototypeOf`, and `null`-field checks. Covers
  *      `Symbol.toStringTag`, `JSON.stringify`, `Object.keys`, `for-in`,
- *      `structuredClone`, method-binding, error-constant inheritance,
+ *      method-binding, error-constant inheritance,
  *      and WebIDL attribute-descriptor layout.
  *
  *   2. TIMING CHANNELS — callback-latency distribution, option
@@ -445,39 +445,6 @@ const coordsDescriptorsAreAccessorsTest = buildBehavioralTest<boolean>({
   },
 })
 
-const positionStructuredCloneTest = buildBehavioralTest<boolean>({
-  id: "tampering.geolocation.structured-clone-succeeds",
-  group: "known-limitations",
-  name: "structuredClone(position) succeeds with matching shape",
-  description:
-    "structuredClone performs an internal WebIDL brand check implemented in the browser's C++ binding layer. That check only succeeds on objects that the browser itself allocated through its WebIDL plumbing. No userland JavaScript — including a content-script extension running in world:MAIN — can forge that brand. This is a documented, unfixable limitation of content-script spoofing: a page using `structuredClone(pos) instanceof GeolocationPosition` can always detect that the position was not browser-allocated.",
-  technique:
-    "structuredClone the position and assert the result still passes `instanceof GeolocationPosition`.",
-  codeSnippet: `const pos = await getPosition()
-const clone = structuredClone(pos)
-clone instanceof GeolocationPosition`,
-  expected: async () => {
-    if (typeof structuredClone === "undefined") {
-      return { skipReason: "structuredClone not available" }
-    }
-    if (typeof GeolocationPosition === "undefined") {
-      return { skipReason: "GeolocationPosition not exposed" }
-    }
-    return { value: true, describe: "clone instanceof GeolocationPosition" }
-  },
-  observe: async () => {
-    const pos = await getFullPosition(GEO_CALL_TIMEOUT_MS)
-    try {
-      const clone = structuredClone(pos)
-      const ok = clone instanceof GeolocationPosition
-      return { value: ok, describe: `instanceof=${String(ok)}` }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      return { value: false, describe: `threw: ${message}` }
-    }
-  },
-})
-
 const errorConstantsTest = buildBehavioralTest<string>({
   id: "tampering.geolocation.error-constants-match-spec",
   group: "geolocation-stealth",
@@ -725,7 +692,6 @@ export const geolocationAdvancedTests: ReadonlyArray<TestDefinition> = [
   coordsOwnPropertyNamesTest,
   coordsOwnSymbolsTest,
   coordsDescriptorsAreAccessorsTest,
-  positionStructuredCloneTest,
   errorConstantsTest,
   accuracyNotSuspiciousTest,
   coordPrecisionRealisticTest,

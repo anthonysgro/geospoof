@@ -151,13 +151,18 @@ const workerTimezoneIdentifierLeakTest = buildBehavioralTest<string>({
 ], { type: "application/javascript" })))
 worker.postMessage(null)
 // worker.onmessage.data should equal identity.timezone.identifier`,
-  expected: async (ctx) => {
+  expected: async () => {
     if (typeof Worker === "undefined") {
       return { skipReason: "Worker API not available in this browser" }
     }
-    const identifier = ctx.getIdentity().timezone.identifier
+    let identifier: string
+    try {
+      identifier = new Intl.DateTimeFormat().resolvedOptions().timeZone ?? ""
+    } catch {
+      identifier = ""
+    }
     if (!identifier) {
-      return { skipReason: "Identity timezone identifier not available" }
+      return { skipReason: "Intl did not resolve a timezone identifier" }
     }
     return { value: identifier, describe: `"${identifier}"` }
   },
@@ -185,14 +190,13 @@ const workerGetTimezoneOffsetLeakTest = buildBehavioralTest<number>({
 ], { type: "application/javascript" })))
 worker.postMessage(null)
 // worker.onmessage.data should equal new Date().getTimezoneOffset()`,
-  expected: async (ctx) => {
+  expected: async () => {
     if (typeof Worker === "undefined") {
       return { skipReason: "Worker API not available in this browser" }
     }
-    // Anchor on the identity snapshot's startedAt so the expected value
-    // is derived from the same instant the tests use elsewhere.
-    const instant = new Date(ctx.getIdentity().startedAt)
-    const value = instant.getTimezoneOffset()
+    // Read the top-level offset at test-run time so it reflects the
+    // post-settlement world the Worker's value will be compared against.
+    const value = new Date().getTimezoneOffset()
     return {
       value,
       describe: `${value} minutes (from top-level Date.getTimezoneOffset)`,

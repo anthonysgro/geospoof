@@ -14,8 +14,14 @@ import type { IdentitySnapshot } from "../verification/identity-snapshot"
  * - `pass`: The observation matched the expectation.
  * - `fail`: The observation diverged from the expectation.
  * - `known-limitation`: The test intentionally demonstrates a documented
- *   limitation of content-script-based extensions (e.g., Web Worker
- *   timezone leaks). Educational, not a regression.
+ *   architectural limitation of content-script-based extensions — e.g.,
+ *   Web Worker timezone leaks or the MV3
+ *   initialization race. These represent unfixable vectors at the
+ *   extension layer; surfaced as educational rather than regressive.
+ * - `skipped`: A prerequisite wasn't met so the test couldn't run —
+ *   e.g., user denied geolocation permission, Temporal API unavailable,
+ *   DOMParser missing. Distinct from `known-limitation` because nothing
+ *   was measured; we can't say whether a leak exists.
  * - `pending`: The test has not yet completed.
  * - `error`: The test threw an unexpected exception.
  */
@@ -23,6 +29,7 @@ export type TestStatus =
   | "pass"
   | "fail"
   | "known-limitation"
+  | "skipped"
   | "pending"
   | "error"
 
@@ -142,6 +149,7 @@ export interface TestSummary {
   passed: number
   failed: number
   knownLimitation: number
+  skipped: number
   errored: number
   pending: number
 }

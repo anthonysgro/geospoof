@@ -16,6 +16,11 @@ const STATUS_META: Record<TestStatus, { label: string; className: string }> = {
     className:
       "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
   },
+  skipped: {
+    label: "Skipped",
+    className:
+      "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20",
+  },
   error: {
     label: "Error",
     className: "bg-destructive/10 text-destructive border-destructive/20",

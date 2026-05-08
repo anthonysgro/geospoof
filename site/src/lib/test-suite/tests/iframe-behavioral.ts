@@ -32,11 +32,9 @@
  */
 
 import { buildBehavioralTest } from "../helpers/behavioral"
-import type { TestDefinition, TestRunContext } from "../types"
-import type { LocationValue } from "../../verification/identity-snapshot"
+import { requireLocationSnapshot } from "../helpers/location"
+import type { TestDefinition } from "../types"
 
-/** Max time to wait for the shared location snapshot. */
-const IDENTITY_LOCATION_WAIT_MS = 6_000
 /** Max time to wait for the iframe to finish loading. */
 const IFRAME_LOAD_TIMEOUT_MS = 3_000
 /** Max time the getCurrentPosition call inside the iframe is allowed to take. */
@@ -56,18 +54,6 @@ function coordsMatch4dp(a: Coords, b: Coords): boolean {
 
 function describeCoords(c: Coords): string {
   return `${c.latitude.toFixed(4)}, ${c.longitude.toFixed(4)}`
-}
-
-async function requireLocationSnapshot(
-  ctx: TestRunContext
-): Promise<LocationValue> {
-  const field = await ctx.awaitIdentity("location", IDENTITY_LOCATION_WAIT_MS)
-  if (field.status !== "ready" || !field.value) {
-    const detail =
-      field.error ?? `location snapshot status was "${field.status}"`
-    throw new Error(`location snapshot not ready: ${detail}`)
-  }
-  return field.value
 }
 
 /**

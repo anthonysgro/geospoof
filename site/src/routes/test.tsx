@@ -4,6 +4,13 @@ import { Footer } from "@/components/landing/Footer"
 import { SkipLink } from "@/components/landing/SkipLink"
 import { Section } from "@/components/landing/Section"
 import { VerificationDashboard } from "@/components/verification/VerificationDashboard"
+// Import the early-timezone-probe at the top of the route module so
+// its IIFE runs at module-evaluation time — the earliest point any
+// dashboard-related JavaScript can read the timezone. The race-probe
+// test later compares the captured value against the settled snapshot
+// to determine whether the extension won or lost the initialization
+// race against page-side code.
+import "@/lib/verification/early-timezone-probe"
 
 export const Route = createFileRoute("/test")({
   component: TestPage,

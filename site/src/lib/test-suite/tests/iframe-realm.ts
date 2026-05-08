@@ -39,6 +39,19 @@ import type { TestDefinition } from "../types"
 const IFRAME_LOAD_TIMEOUT_MS = 3_000
 
 /**
+ * Resolve the current top-level timezone identifier live. See the
+ * identical helper in values-correctness.ts — we duplicate here rather
+ * than export+import to keep each test module self-contained.
+ */
+function resolveLiveTimezoneIdentifier(): string {
+  try {
+    return new Intl.DateTimeFormat().resolvedOptions().timeZone ?? ""
+  } catch {
+    return ""
+  }
+}
+
+/**
  * Create a hidden `about:blank` iframe, mount it, wait for load, and
  * return it. Callers are responsible for calling `.remove()` in a
  * `finally` block to avoid leaking the iframe into the DOM.
@@ -87,24 +100,24 @@ async function mountAboutBlankIframe(): Promise<HTMLIFrameElement> {
 const iframeIntlTimezoneTest = buildBehavioralTest<string>({
   id: "tampering.iframe-realm.intl-timezone-spoofed",
   group: "timezone-stealth",
-  name: "iframe.contentWindow.Intl.DateTimeFormat resolves the spoofed timezone",
+  name: "iframe.contentWindow.Intl.DateTimeFormat agrees with top-level Intl",
   description:
-    "A same-origin iframe's Intl.DateTimeFormat().resolvedOptions().timeZone should return the spoofed IANA identifier. If the iframe-patching infrastructure doesn't install the Intl override into the iframe's realm, a one-line read through iframe.contentWindow.Intl leaks the real system zone.",
+    "A same-origin iframe's Intl.DateTimeFormat().resolvedOptions().timeZone should return the same IANA identifier as the top-level window. If the iframe-patching infrastructure doesn't install the Intl override into the iframe's realm, a one-line read through iframe.contentWindow.Intl leaks the real system zone while the top-level shows the spoofed zone — trivial to detect.",
   technique:
-    "Mount an about:blank iframe, read iframe.contentWindow.Intl.DateTimeFormat().resolvedOptions().timeZone, and compare to the Identity Panel's timezone.identifier.",
+    "Mount an about:blank iframe, read iframe.contentWindow.Intl.DateTimeFormat().resolvedOptions().timeZone, and compare to the top-level Intl.DateTimeFormat().resolvedOptions().timeZone.",
   codeSnippet: `const iframe = document.createElement("iframe")
 iframe.src = "about:blank"
 document.body.appendChild(iframe)
 await new Promise((r) => iframe.addEventListener("load", r, { once: true }))
 iframe.contentWindow.Intl.DateTimeFormat().resolvedOptions().timeZone
-// should equal identity.timezone.identifier`,
-  expected: async (ctx) => {
+// should equal new Intl.DateTimeFormat().resolvedOptions().timeZone`,
+  expected: async () => {
     if (typeof HTMLIFrameElement === "undefined") {
       return { skipReason: "HTMLIFrameElement not available (likely SSR)" }
     }
-    const identifier = ctx.getIdentity().timezone.identifier
+    const identifier = resolveLiveTimezoneIdentifier()
     if (!identifier) {
-      return { skipReason: "Identity timezone identifier not available" }
+      return { skipReason: "Intl did not resolve a timezone identifier" }
     }
     return { value: identifier, describe: `"${identifier}"` }
   },
@@ -176,14 +189,14 @@ new iframe.contentWindow.Date(AMBIGUOUS).getTime()
 const iframeTemporalTimezoneTest = buildBehavioralTest<string>({
   id: "tampering.iframe-realm.temporal-timezone-spoofed",
   group: "timezone-stealth",
-  name: "iframe.contentWindow.Temporal.Now.timeZoneId matches the spoofed timezone",
+  name: "iframe.contentWindow.Temporal.Now.timeZoneId agrees with top-level",
   description:
-    "When the Temporal API is available, `iframe.contentWindow.Temporal.Now.timeZoneId()` must return the spoofed IANA identifier — same guarantee we enforce on the top-level Temporal. Gated on Temporal availability (skips as known-limitation when the engine doesn't expose it).",
+    "When the Temporal API is available, `iframe.contentWindow.Temporal.Now.timeZoneId()` must return the same IANA identifier as the top-level Intl resolved zone. A mismatch means the iframe realm's Temporal still sees the real zone while the top-level has been spoofed. Gated on Temporal availability (skips as known-limitation when the engine doesn't expose it).",
   technique:
-    "Mount an about:blank iframe, feature-detect iframe.contentWindow.Temporal.Now.timeZoneId, invoke it, and compare to the Identity Panel's timezone.identifier.",
+    "Mount an about:blank iframe, feature-detect iframe.contentWindow.Temporal.Now.timeZoneId, invoke it, and compare to Intl.DateTimeFormat().resolvedOptions().timeZone at the top level.",
   codeSnippet: `iframe.contentWindow.Temporal.Now.timeZoneId()
-// should equal identity.timezone.identifier`,
-  expected: async (ctx) => {
+// should equal new Intl.DateTimeFormat().resolvedOptions().timeZone`,
+  expected: async () => {
     if (typeof HTMLIFrameElement === "undefined") {
       return { skipReason: "HTMLIFrameElement not available (likely SSR)" }
     }
@@ -197,9 +210,9 @@ const iframeTemporalTimezoneTest = buildBehavioralTest<string>({
     if (typeof topTemporal?.Now?.timeZoneId !== "function") {
       return { skipReason: "Temporal API not supported in this browser" }
     }
-    const identifier = ctx.getIdentity().timezone.identifier
+    const identifier = resolveLiveTimezoneIdentifier()
     if (!identifier) {
-      return { skipReason: "Identity timezone identifier not available" }
+      return { skipReason: "Intl did not resolve a timezone identifier" }
     }
     return { value: identifier, describe: `"${identifier}"` }
   },

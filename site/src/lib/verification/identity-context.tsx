@@ -248,10 +248,28 @@ function resolvePlatformLabel(): {
 }
 
 /**
- * Wrap `navigator.geolocation.getCurrentPosition` in a promise with an
- * enforced timeout. Resolves with an `AsyncField<LocationValue>` rather
- * than rejecting so callers can render the field error without an
- * unhandled rejection.
+ * Wrap `navigator.geolocation.getCurrentPosition` in a promise that
+ * cooperates with the browser's permission model. Flow:
+ *
+ *   1. Query `navigator.permissions.query({ name: "geolocation" })` to
+ *      see the current state without triggering any UI.
+ *   2. If `denied`, resolve immediately as `status: "error"` with a
+ *      clear reason. No prompt will appear — we can't get a position.
+ *   3. If `granted`, call `getCurrentPosition` with a short timeout.
+ *   4. If `prompt`, listen on the PermissionStatus's `change` event
+ *      and wait for the user's decision. Once they grant, proceed to
+ *      step 3. If they deny, resolve with the deny reason. We don't
+ *      time out the user decision itself (the browser's own prompt
+ *      UX owns that interaction), but the abort signal cuts us loose
+ *      if the dashboard unmounts.
+ *
+ * This means location-dependent tests wait for the user's decision —
+ * they don't falsely time out while the prompt is still showing.
+ *
+ * When `navigator.permissions` isn't available (older engines), we
+ * fall back to calling `getCurrentPosition` directly with a timeout.
+ * The success/error callbacks still work; we just can't distinguish
+ * "user hasn't responded yet" from "browser is slow."
  */
 function getLocation(signal: AbortSignal): Promise<AsyncField<LocationValue>> {
   return new Promise((resolve) => {
@@ -265,21 +283,15 @@ function getLocation(signal: AbortSignal): Promise<AsyncField<LocationValue>> {
     }
 
     let settled = false
-    const timeoutId = setTimeout(() => {
-      if (settled) return
-      settled = true
-      resolve({
-        status: "error",
-        value: null,
-        error: "Geolocation request timed out",
-      })
-    }, GEOLOCATION_TIMEOUT_MS)
 
-    const onAbort = () => {
+    const resolveOnce = (field: AsyncField<LocationValue>): void => {
       if (settled) return
       settled = true
-      clearTimeout(timeoutId)
-      resolve({
+      resolve(field)
+    }
+
+    const onAbort = (): void => {
+      resolveOnce({
         status: "error",
         value: null,
         error: "Geolocation request aborted",
@@ -287,47 +299,115 @@ function getLocation(signal: AbortSignal): Promise<AsyncField<LocationValue>> {
     }
     signal.addEventListener("abort", onAbort, { once: true })
 
-    try {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          if (settled) return
-          settled = true
-          clearTimeout(timeoutId)
-          signal.removeEventListener("abort", onAbort)
-          resolve({
-            status: "ready",
-            value: {
-              latitude: pos.coords.latitude,
-              longitude: pos.coords.longitude,
-              accuracy:
-                typeof pos.coords.accuracy === "number"
-                  ? pos.coords.accuracy
-                  : null,
-            },
-            error: null,
-          })
-        },
-        (err) => {
-          if (settled) return
-          settled = true
-          clearTimeout(timeoutId)
-          signal.removeEventListener("abort", onAbort)
-          resolve({
-            status: "error",
-            value: null,
-            error: `${err.code}: ${err.message || "Geolocation error"}`,
-          })
-        },
-        { timeout: GEOLOCATION_TIMEOUT_MS }
-      )
-    } catch (err) {
-      if (settled) return
-      settled = true
-      clearTimeout(timeoutId)
-      signal.removeEventListener("abort", onAbort)
-      const message = err instanceof Error ? err.message : String(err)
-      resolve({ status: "error", value: null, error: message })
+    const callGetCurrentPosition = (): void => {
+      let timeoutId: ReturnType<typeof setTimeout> | null = null
+      timeoutId = setTimeout(() => {
+        resolveOnce({
+          status: "error",
+          value: null,
+          error: "Geolocation request timed out",
+        })
+      }, GEOLOCATION_TIMEOUT_MS)
+
+      try {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            if (timeoutId !== null) clearTimeout(timeoutId)
+            resolveOnce({
+              status: "ready",
+              value: {
+                latitude: pos.coords.latitude,
+                longitude: pos.coords.longitude,
+                accuracy:
+                  typeof pos.coords.accuracy === "number"
+                    ? pos.coords.accuracy
+                    : null,
+              },
+              error: null,
+            })
+          },
+          (err) => {
+            if (timeoutId !== null) clearTimeout(timeoutId)
+            // Map W3C error codes to human-readable reasons.
+            // code 1 = PERMISSION_DENIED, 2 = POSITION_UNAVAILABLE, 3 = TIMEOUT
+            const reason =
+              err.code === 1
+                ? "User denied location permission"
+                : err.code === 2
+                  ? "Position unavailable"
+                  : err.code === 3
+                    ? "Geolocation request timed out"
+                    : err.message || `Geolocation error (code ${err.code})`
+            resolveOnce({
+              status: "error",
+              value: null,
+              error: reason,
+            })
+          },
+          { timeout: GEOLOCATION_TIMEOUT_MS },
+        )
+      } catch (err) {
+        if (timeoutId !== null) clearTimeout(timeoutId)
+        const message = err instanceof Error ? err.message : String(err)
+        resolveOnce({
+          status: "error",
+          value: null,
+          error: message,
+        })
+      }
     }
+
+    // Prefer the permission-aware path. When it isn't supported, fall
+    // through to a direct getCurrentPosition call (will still work —
+    // just can't distinguish "user thinking" from "slow browser").
+    const permissions =
+      typeof navigator.permissions?.query === "function"
+        ? navigator.permissions
+        : null
+
+    if (!permissions) {
+      callGetCurrentPosition()
+      return
+    }
+
+    void permissions
+      .query({ name: "geolocation" })
+      .then((status) => {
+        if (settled) return
+
+        const proceedOnState = (state: PermissionState): void => {
+          if (state === "granted") {
+            callGetCurrentPosition()
+          } else if (state === "denied") {
+            resolveOnce({
+              status: "error",
+              value: null,
+              error: "User denied location permission",
+            })
+          }
+          // "prompt" means the user is still deciding — wait for change.
+        }
+
+        if (status.state === "granted" || status.state === "denied") {
+          proceedOnState(status.state)
+          return
+        }
+
+        // "prompt" — wait for the user to decide. Listen on `change`,
+        // AND call getCurrentPosition in parallel so the prompt appears
+        // (the Permissions API doesn't surface the prompt; only a
+        // geolocation call does). When the user decides, either
+        // getCurrentPosition's callback fires OR the PermissionStatus
+        // onchange fires. Whichever wins, `resolveOnce` handles it.
+        status.addEventListener("change", () => {
+          proceedOnState(status.state)
+        })
+        callGetCurrentPosition()
+      })
+      .catch(() => {
+        // If permissions.query itself rejects, just fall back.
+        if (!settled) callGetCurrentPosition()
+      })
   })
 }
 
@@ -514,28 +594,6 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
    * Kick off resolution for the given run. All browser-global access
    * happens inside here, which itself only runs inside the `useEffect`
    * that depends on `runId`.
-   *
-   * Timezone-settlement race: the GeoSpoof extension delivers its
-   * spoofing settings via an asynchronous round-trip (content script →
-   * background → content script → CustomEvent → injected script), which
-   * can take a hundred milliseconds or more on a cold page load. Before
-   * those settings arrive, the injected script's Date/Intl/Temporal
-   * overrides pass through to the real system values. If we capture
-   * the identity snapshot during that window, "expected" reflects the
-   * real system zone while "observed" (measured later, after settings
-   * land) reflects the spoofed zone, and every values-correctness test
-   * falsely fails.
-   *
-   * We defend against this by:
-   *   1. Capturing the synchronous fields immediately (including the
-   *      pre-settlement timezone).
-   *   2. After a short delay, re-resolving the timezone and republishing
-   *      the snapshot if it changed. Tests that read `getIdentity()` at
-   *      that point get the settled value. Tests that call
-   *      `awaitIdentity` queue against the async fields, which only
-   *      start resolving after settlement.
-   *   3. Giving up after a modest timeout so pages without GeoSpoof
-   *      installed don't hang forever.
    */
   const resolveRun = React.useCallback(
     (nextRunId: number) => {

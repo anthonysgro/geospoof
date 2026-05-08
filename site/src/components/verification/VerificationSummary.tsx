@@ -42,6 +42,21 @@ export function knownLimitationCount(states: ReadonlyArray<TestState>): number {
 }
 
 /**
+ * Count test states with status `skipped` — tests whose prerequisites
+ * weren't met (e.g. user denied geolocation permission, Temporal API
+ * unavailable) so no measurement was possible. Distinct from
+ * `known-limitation` (unfixable architectural gap) and from `fail`
+ * (actual regression).
+ */
+export function skippedCount(states: ReadonlyArray<TestState>): number {
+  let count = 0
+  for (const s of states) {
+    if (s.result.status === "skipped") count += 1
+  }
+  return count
+}
+
+/**
  * Count test states that have finished running (i.e. are not `pending`).
  * Used for the in-progress headline.
  */
@@ -82,6 +97,7 @@ export function VerificationSummary({
   const completed = completedCount(states)
   const issues = detectableIssueCount(states)
   const knownLimitations = knownLimitationCount(states)
+  const skipped = skippedCount(states)
 
   let headline: React.ReactNode
   let pill: React.ReactNode
@@ -140,6 +156,14 @@ export function VerificationSummary({
             {knownLimitations === 1 ? "" : "s"}
           </a>{" "}
           — surfaced separately below.
+        </p>
+      ) : null}
+
+      {skipped > 0 ? (
+        <p className="text-sm text-(--color-canvas-muted)">
+          {skipped} test{skipped === 1 ? "" : "s"} skipped — prerequisites
+          unavailable in this environment (e.g. location permission denied,
+          Temporal API unsupported).
         </p>
       ) : null}
     </section>

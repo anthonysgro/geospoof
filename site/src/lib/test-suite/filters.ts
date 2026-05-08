@@ -6,18 +6,26 @@
  * rendering.
  */
 
-import type { TestState } from "./types"
+import type { TestState, TestStatus } from "./types"
 
 export interface FilterCriteria {
   /** Free-text search. Matches name, description, id, technique, group. */
   query: string
-  /** When true, only `fail` and `error` results survive the filter. */
-  failuresOnly: boolean
+  /**
+   * Statuses the user has HIDDEN via the dropdown. A test whose status
+   * appears in this set is excluded from the filtered list. Empty set =
+   * "show all statuses" (the default). Storing "hidden" rather than
+   * "visible" means the default FilterCriteria is `{ query: "",
+   * hiddenStatuses: new Set() }` which is naturally "no filter
+   * applied" and doesn't require keeping the set in sync with every
+   * TestStatus value as the type evolves.
+   */
+  hiddenStatuses: ReadonlySet<TestStatus>
 }
 
 export const EMPTY_FILTER: FilterCriteria = {
   query: "",
-  failuresOnly: false,
+  hiddenStatuses: new Set(),
 }
 
 /**
@@ -25,7 +33,9 @@ export const EMPTY_FILTER: FilterCriteria = {
  * pass through unchanged. Callers can use this to skip unnecessary copies.
  */
 export function isFilterEmpty(filter: FilterCriteria): boolean {
-  return filter.query.trim().length === 0 && !filter.failuresOnly
+  return (
+    filter.query.trim().length === 0 && filter.hiddenStatuses.size === 0
+  )
 }
 
 /**
@@ -35,11 +45,10 @@ export function isFilterEmpty(filter: FilterCriteria): boolean {
  */
 export function matchesFilter(
   state: TestState,
-  filter: FilterCriteria
+  filter: FilterCriteria,
 ): boolean {
-  if (filter.failuresOnly) {
-    const s = state.result.status
-    if (s !== "fail" && s !== "error") return false
+  if (filter.hiddenStatuses.has(state.result.status)) {
+    return false
   }
 
   const query = filter.query.trim().toLowerCase()
@@ -55,7 +64,7 @@ export function matchesFilter(
 
 export function applyFilter(
   states: ReadonlyArray<TestState>,
-  filter: FilterCriteria
+  filter: FilterCriteria,
 ): ReadonlyArray<TestState> {
   if (isFilterEmpty(filter)) return states
   return states.filter((s) => matchesFilter(s, filter))

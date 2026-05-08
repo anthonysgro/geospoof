@@ -14,13 +14,15 @@
  * observed value to one expected value under a caller-supplied equality
  * function.
  *
- * The generated `run` method owes the runner four well-defined outcomes:
+ * The generated `run` method owes the runner five well-defined outcomes:
  *
  *   - `error` when no `TestRunContext` is passed (behavioral tests
  *     require one; the runner always provides one, so this only fires in
  *     misuse cases).
- *   - `known-limitation` when `expected` returns `{ skipReason }` —
- *     documented gaps (e.g. `Temporal` unavailable) short-circuit here.
+ *   - `skipped` when `expected` returns `{ skipReason }` or when any
+ *     callback throws `SkipTestError` — the test's prerequisites
+ *     weren't met (Temporal missing, location permission denied, etc.)
+ *     so no measurement is possible.
  *   - `pass` / `fail` when `equals(expected, observed)` decides the
  *     comparison.
  *   - `error` when either `expected` or `observe` throws; the runner's
@@ -46,12 +48,47 @@ export interface BehavioralValue<T> {
 }
 
 /**
- * Signal that a behavioral test should short-circuit to
- * `known-limitation`. Returned from `expected` when a required capability
- * is unavailable in the current runtime (e.g. `Temporal.Now.timeZoneId`).
+ * Signal that a behavioral test should short-circuit to `skipped`.
+ * Returned from `expected` when a required capability is unavailable
+ * in the current runtime (e.g. `Temporal.Now.timeZoneId`, DOMParser).
+ * Distinct from `known-limitation`, which is reserved for tests that
+ * document unfixable architectural gaps.
  */
 export interface BehavioralSkip {
   skipReason: string
+}
+
+/**
+ * Typed error that any helper called from inside `expected` or `observe`
+ * can throw to short-circuit the test to `skipped` with the supplied
+ * reason. Useful for shared helpers that can't return a skip union
+ * type — e.g. `requireLocationSnapshot` needs to interrupt control
+ * flow rather than propagate `{ ok, skipReason }` through every
+ * callsite.
+ *
+ * The `buildBehavioralTest` wrapper detects this error by name +
+ * `skipReason` field (not `instanceof` alone, since cross-realm
+ * instances from iframes would fail instanceof) and converts it to
+ * `status: "skipped"`. Any other thrown error becomes `status: "error"`
+ * as usual.
+ */
+export class SkipTestError extends Error {
+  readonly skipReason: string
+  constructor(skipReason: string) {
+    super(skipReason)
+    this.name = "SkipTestError"
+    this.skipReason = skipReason
+  }
+}
+
+function isSkipError(err: unknown): err is SkipTestError {
+  return (
+    err instanceof SkipTestError ||
+    (typeof err === "object" &&
+      err !== null &&
+      (err as { name?: unknown }).name === "SkipTestError" &&
+      typeof (err as { skipReason?: unknown }).skipReason === "string")
+  )
 }
 
 export type BehavioralExpectedResult<T> = BehavioralValue<T> | BehavioralSkip
@@ -133,6 +170,13 @@ export function buildBehavioralTest<T>(
       try {
         expectedResult = await options.expected(ctx)
       } catch (err) {
+        if (isSkipError(err)) {
+          return {
+            status: "skipped",
+            expected: "(skipped)",
+            actual: err.skipReason,
+          }
+        }
         const message = err instanceof Error ? err.message : String(err)
         return {
           status: "error",
@@ -144,7 +188,7 @@ export function buildBehavioralTest<T>(
 
       if (isSkip(expectedResult)) {
         return {
-          status: "known-limitation",
+          status: "skipped",
           expected: "(skipped)",
           actual: expectedResult.skipReason,
         }
@@ -154,6 +198,13 @@ export function buildBehavioralTest<T>(
       try {
         observedResult = await options.observe(ctx)
       } catch (err) {
+        if (isSkipError(err)) {
+          return {
+            status: "skipped",
+            expected: expectedResult.describe,
+            actual: err.skipReason,
+          }
+        }
         const message = err instanceof Error ? err.message : String(err)
         return {
           status: "error",

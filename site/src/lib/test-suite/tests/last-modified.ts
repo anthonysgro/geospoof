@@ -141,22 +141,36 @@ function waitForIframeLoad(
 // Tests
 // ---------------------------------------------------------------------------
 
+/**
+ * Resolve the current timezone identifier live. See the identical
+ * helper in values-correctness.ts — we duplicate here rather than
+ * export+import to keep each test module self-contained and avoid
+ * dynamic-import ordering concerns.
+ */
+function resolveLiveTimezoneIdentifier(): string {
+  try {
+    return new Intl.DateTimeFormat().resolvedOptions().timeZone ?? ""
+  } catch {
+    return ""
+  }
+}
+
 const topLevelLastModifiedTest = buildBehavioralTest<number>({
   id: "tampering.lastmodified.document-top-level",
   group: "geolocation-stealth",
-  name: "document.lastModified reports the spoofed timezone offset",
+  name: "document.lastModified reports the resolved timezone offset",
   description:
     "`document.lastModified` is a getter on Document.prototype that returns a wall-clock string in the document's local timezone. It bypasses every Date/Intl/Temporal override because it reads directly from the browser's document-metadata layer — making it a favorite ground-truth source for tools like TZP. This test rounds the offset to the nearest 15 minutes so clock skew between the test's reference `now` and the browser's internal timestamp doesn't cause a false negative.",
   technique:
-    "Read document.lastModified, parse the wall-clock components, compute the offset against a fresh UTC anchor, and compare to the offset implied by the Identity Panel's IANA identifier (rounded to 15 minutes).",
+    "Read document.lastModified, parse the wall-clock components, compute the offset against a fresh UTC anchor, and compare to the offset implied by the current Intl resolved zone (rounded to 15 minutes).",
   codeSnippet: `const str = document.lastModified  // "MM/DD/YYYY HH:MM:SS"
 const wallClockAsUtc = Date.UTC(year, month-1, day, hour, minute, second)
 const offsetMinutes = (wallClockAsUtc - Date.now()) / 60000
-// should equal the offset implied by identity.timezone.identifier`,
-  expected: async (ctx) => {
-    const identifier = ctx.getIdentity().timezone.identifier
+// should equal the offset implied by the current Intl resolved zone`,
+  expected: async () => {
+    const identifier = resolveLiveTimezoneIdentifier()
     if (!identifier) {
-      return { skipReason: "Identity timezone identifier not available" }
+      return { skipReason: "Intl did not resolve a timezone identifier" }
     }
     const offset = getOffsetMinutes(identifier, new Date())
     if (offset === null) {
@@ -185,18 +199,18 @@ const offsetMinutes = (wallClockAsUtc - Date.now()) / 60000
 const domParserLastModifiedTest = buildBehavioralTest<number>({
   id: "tampering.lastmodified.domparser",
   group: "geolocation-stealth",
-  name: "DOMParser document.lastModified reports the spoofed timezone offset",
+  name: "DOMParser document.lastModified reports the resolved timezone offset",
   description:
     "A `Document` parsed via DOMParser gets its own `lastModified` — it's not the same document instance as the top-level page, but it goes through the same Document.prototype.lastModified getter. A fingerprinter reading DOMParser-generated documents would bypass any override that was installed only on the top-level document instance rather than on the prototype.",
   technique:
-    "Call new DOMParser().parseFromString('', 'text/html') to get a Document, read its lastModified, compute the offset, compare to the Identity Panel's IANA identifier.",
+    "Call new DOMParser().parseFromString('', 'text/html') to get a Document, read its lastModified, compute the offset, compare to the current Intl resolved zone (rounded to 15 minutes).",
   codeSnippet: `const doc = new DOMParser().parseFromString("", "text/html")
 const str = doc.lastModified
-// offset should equal the spoofed zone's offset`,
-  expected: async (ctx) => {
-    const identifier = ctx.getIdentity().timezone.identifier
+// offset should equal the current Intl resolved zone's offset`,
+  expected: async () => {
+    const identifier = resolveLiveTimezoneIdentifier()
     if (!identifier) {
-      return { skipReason: "Identity timezone identifier not available" }
+      return { skipReason: "Intl did not resolve a timezone identifier" }
     }
     if (typeof DOMParser === "undefined") {
       return { skipReason: "DOMParser not available" }
@@ -229,24 +243,24 @@ const str = doc.lastModified
 const iframeLastModifiedTest = buildBehavioralTest<number>({
   id: "tampering.lastmodified.iframe-contentdocument",
   group: "geolocation-stealth",
-  name: "iframe.contentDocument.lastModified reports the spoofed timezone offset",
+  name: "iframe.contentDocument.lastModified reports the resolved timezone offset",
   description:
     "Each same-origin iframe has its own `Document.prototype`, so `iframe.contentDocument.lastModified` goes through the iframe realm's accessor. An override that's installed only on the top-level Document.prototype — and not replicated into the iframe realm — would leak the real system timezone through this path. TZP uses this surface as one of its three cross-frame truth sources.",
   technique:
-    "Mount an about:blank iframe, read iframe.contentDocument.lastModified, parse the wall-clock components, compute the offset, and compare to the Identity Panel's IANA identifier.",
+    "Mount an about:blank iframe, read iframe.contentDocument.lastModified, parse the wall-clock components, compute the offset, and compare to the current Intl resolved zone (rounded to 15 minutes).",
   codeSnippet: `const iframe = document.createElement("iframe")
 iframe.src = "about:blank"
 document.body.appendChild(iframe)
 await new Promise((r) => iframe.addEventListener("load", r, { once: true }))
 const str = iframe.contentDocument.lastModified
-// offset should equal the spoofed zone's offset`,
-  expected: async (ctx) => {
+// offset should equal the current Intl resolved zone's offset`,
+  expected: async () => {
     if (typeof HTMLIFrameElement === "undefined") {
       return { skipReason: "HTMLIFrameElement not available (likely SSR)" }
     }
-    const identifier = ctx.getIdentity().timezone.identifier
+    const identifier = resolveLiveTimezoneIdentifier()
     if (!identifier) {
-      return { skipReason: "Identity timezone identifier not available" }
+      return { skipReason: "Intl did not resolve a timezone identifier" }
     }
     const offset = getOffsetMinutes(identifier, new Date())
     if (offset === null) {

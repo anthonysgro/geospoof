@@ -1,6 +1,15 @@
 import { Filter, Search, X } from "lucide-react"
 import type { FilterCriteria } from "@/lib/test-suite/filters"
+import type { TestStatus } from "@/lib/test-suite/types"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   InputGroup,
   InputGroupAddon,
@@ -12,10 +21,16 @@ import { EMPTY_FILTER } from "@/lib/test-suite/filters"
 /**
  * Controls for narrowing the rendered test list.
  *
- * - Search filter matches against test name, description, id, technique,
+ * - Search input matches against test name, description, id, technique,
  *   and group id so users can find tests by any visible label.
- * - Failures-only toggle hides passing / known-limitation / pending tests
- *   so the remaining failures and errors are easy to inspect.
+ * - Status-visibility dropdown lets users hide any combination of the
+ *   five outcome statuses (pass / fail / skipped / known-limitation /
+ *   error). Hiding `pass` + `known-limitation` is a common pattern for
+ *   "just show me the stuff that went wrong"; hiding `pass` alone
+ *   surfaces everything interesting including skipped tests and
+ *   documented gaps. The `pending` status is deliberately not offered
+ *   — tests transition out of it quickly and users don't benefit from
+ *   hiding in-flight work.
  */
 export const DEFAULT_FILTER_STATE: FilterCriteria = EMPTY_FILTER
 
@@ -28,6 +43,23 @@ interface TestSuiteFiltersProps {
   totalCount: number
 }
 
+/**
+ * Status rows in the visibility dropdown. The order mirrors how users
+ * mentally rank outcomes: most relevant first (fail, error, skipped,
+ * known-limitation, pass at the bottom). `pending` is omitted — see
+ * the file-level doc comment.
+ */
+const STATUS_FILTER_ROWS: ReadonlyArray<{
+  status: Exclude<TestStatus, "pending">
+  label: string
+}> = [
+  { status: "fail", label: "Fail" },
+  { status: "error", label: "Error" },
+  { status: "skipped", label: "Skipped" },
+  { status: "known-limitation", label: "Known limitation" },
+  { status: "pass", label: "Pass" },
+]
+
 export function TestSuiteFilters({
   filters,
   onChange,
@@ -35,10 +67,25 @@ export function TestSuiteFilters({
   totalCount,
 }: TestSuiteFiltersProps) {
   const setQuery = (query: string): void => onChange({ ...filters, query })
-  const toggleFailuresOnly = (): void =>
-    onChange({ ...filters, failuresOnly: !filters.failuresOnly })
 
-  const isFiltering = filters.query.length > 0 || filters.failuresOnly
+  const setStatusVisible = (status: TestStatus, visible: boolean): void => {
+    const next = new Set(filters.hiddenStatuses)
+    if (visible) {
+      next.delete(status)
+    } else {
+      next.add(status)
+    }
+    onChange({ ...filters, hiddenStatuses: next })
+  }
+
+  const hiddenCount = filters.hiddenStatuses.size
+  const isFiltering = filters.query.length > 0 || hiddenCount > 0
+
+  // Trigger label: communicate state at a glance.
+  const triggerLabel =
+    hiddenCount === 0
+      ? "All statuses"
+      : `Showing ${STATUS_FILTER_ROWS.length - hiddenCount} of ${STATUS_FILTER_ROWS.length}`
 
   return (
     <div className="space-y-2">
@@ -67,16 +114,39 @@ export function TestSuiteFilters({
           ) : null}
         </InputGroup>
 
-        <Button
-          type="button"
-          variant={filters.failuresOnly ? "default" : "outline"}
-          aria-pressed={filters.failuresOnly}
-          onClick={toggleFailuresOnly}
-          className="sm:w-auto"
-        >
-          <Filter aria-hidden="true" />
-          {filters.failuresOnly ? "Showing failures" : "Failures only"}
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant={hiddenCount > 0 ? "default" : "outline"}
+              className="sm:w-auto"
+            >
+              <Filter aria-hidden="true" />
+              {triggerLabel}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>Show statuses</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {STATUS_FILTER_ROWS.map(({ status, label }) => {
+              const visible = !filters.hiddenStatuses.has(status)
+              return (
+                <DropdownMenuCheckboxItem
+                  key={status}
+                  checked={visible}
+                  onCheckedChange={(next) => setStatusVisible(status, next)}
+                  onSelect={(e) => {
+                    // Keep the menu open when toggling individual rows
+                    // so users can tick multiple without reopening.
+                    e.preventDefault()
+                  }}
+                >
+                  {label}
+                </DropdownMenuCheckboxItem>
+              )
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {isFiltering ? (
