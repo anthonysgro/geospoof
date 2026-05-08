@@ -13,13 +13,14 @@ const logger = createLogger("BG");
  * Broadcast settings to all tabs via content scripts.
  */
 export async function broadcastSettingsToTabs(settings: Settings): Promise<void> {
-  const { enabled, location, timezone, debugLogging, verbosityLevel } = settings;
+  const { enabled, location, timezone, debugLogging, verbosityLevel, webrtcProtection } = settings;
   const payload: UpdateSettingsPayload = {
     enabled,
     location,
     timezone,
     debugLogging,
     verbosityLevel,
+    webrtcProtection,
   };
   const tabs = await browser.tabs.query({});
 

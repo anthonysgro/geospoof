@@ -56,6 +56,7 @@ import {
 import { isAmbiguousDateString, computeEpochAdjustment } from "./timezone-helpers";
 import { getPaddedCoords } from "./geolocation";
 import { installLastModifiedOverride } from "./document-overrides";
+import { buildRTCPeerConnectionWrapper, installRTCGetStatsOverride } from "./webrtc";
 import { waitForSettings } from "./settings-listener";
 import { createLogger } from "@/shared/utils/debug-logger";
 
@@ -1209,6 +1210,68 @@ export function patchIframeWindow(iframeWindow: Window): void {
       "[lastModified-patch] outer try caught error (cross-origin or missing Document):",
       err instanceof Error ? err.message : String(err)
     );
+  }
+
+  // ── 9. RTCPeerConnection override ────────────────────────────────────
+  // Each iframe realm has its own `RTCPeerConnection` global. A page
+  // can bypass the top-level wrapper by calling
+  // `iframe.contentWindow.RTCPeerConnection(...)` from the parent;
+  // without an override here the iframe realm still leaks the public
+  // IP via srflx candidates / getStats local-candidate addresses.
+  //
+  // We install the same wrapper pattern as the top-level webrtc.ts:
+  // subclass the iframe realm's native constructor, sanitize the
+  // config (`iceServers: []`, `iceTransportPolicy: "relay"`) when
+  // protection is active, and scrub `local-candidate` addresses
+  // from the iframe realm's `RTCPeerConnection.prototype.getStats`.
+  //
+  // Labeled block so a missing RTCPeerConnection in this iframe
+  // realm (unlikely but possible in sandboxed / minimal contexts)
+  // doesn't prevent any later sections from running. This is the
+  // last section today, but the pattern matches the rest of the
+  // function for future-proofing.
+  webrtcSection: try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+    const iframeRTC = (iframeWindow as any).RTCPeerConnection as
+      | typeof RTCPeerConnection
+      | undefined;
+    if (!iframeRTC || typeof iframeRTC !== "function") break webrtcSection;
+
+    // Install getStats scrubber on the iframe realm's prototype
+    // first. Instances created before or after the constructor swap
+    // inherit this via the prototype chain.
+    try {
+      installRTCGetStatsOverride(iframeRTC.prototype as RTCPeerConnection);
+    } catch (err) {
+      logger.debug(
+        "[patchIframeWindow] section 9 (webrtc) failed to install getStats override:",
+        err instanceof Error ? err.message : String(err)
+      );
+    }
+
+    const Wrapped = buildRTCPeerConnectionWrapper(iframeRTC);
+
+    try {
+      Object.defineProperty(iframeWindow, "RTCPeerConnection", {
+        value: Wrapped,
+        configurable: true,
+        enumerable: false,
+        writable: true,
+      });
+    } catch (err) {
+      logger.debug(
+        "[patchIframeWindow] section 9 (webrtc) failed to swap iframe RTCPeerConnection:",
+        err instanceof Error ? err.message : String(err)
+      );
+    }
+
+    logger.debug("[patchIframeWindow] section 9 (webrtc) complete");
+  } catch (err) {
+    logger.debug(
+      "[patchIframeWindow] section 9 (webrtc) threw:",
+      err instanceof Error ? err.message : String(err)
+    );
+    // Cross-origin or missing RTCPeerConnection — silently ignore.
   }
 }
 

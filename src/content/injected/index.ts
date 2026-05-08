@@ -108,6 +108,16 @@ installDomInsertionWrapping();
 import { installDocumentOverrides } from "./document-overrides";
 installDocumentOverrides();
 
+// 14. WebRTC IP-leak protection. Wraps RTCPeerConnection so no ICE
+//     candidates ever gather when the user enables WebRTC Protection
+//     in the popup. Closes the srflx/host/relay leaks that Firefox's
+//     `disable_non_proxied_udp` policy misses without a proxy and
+//     that Safari can't enforce at all. Flag is read lazily on each
+//     constructor/getStats call so toggling the protection in the
+//     popup takes effect for new peer connections without a reload.
+import { installWebRTCOverride } from "./webrtc";
+installWebRTCOverride();
+
 import { createLogger } from "@/shared/utils/debug-logger";
 const logger = createLogger("INJ");
 logger.info("Geolocation API overrides installed");

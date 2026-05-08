@@ -43,7 +43,13 @@ export function formatTimezoneDetails(timezone: Timezone | null): string {
 
 export function formatWebRTCDetails(enabled: boolean): string {
   if (!enabled) return "✗ Inactive\n\nWebRTC can leak your real IP address even when using a VPN.";
-  return "✓ Active\n\nPolicy: disable_non_proxied_udp\nThis prevents WebRTC from leaking your real IP address.";
+  // Wording is engine-agnostic because the protection mechanism
+  // differs by engine: Chromium/Firefox use the browser-level
+  // webRTCIPHandlingPolicy pref (strict on Chromium, proxy-gated on
+  // Firefox), Safari relies on the content-script RTCPeerConnection
+  // wrapper. Both paths block candidate gathering end-to-end; the
+  // user doesn't need to know which one fired.
+  return "✓ Active\n\nRTCPeerConnection is wrapped to suppress ICE candidate gathering.\nThis prevents WebRTC from leaking your real IP address.";
 }
 
 export function formatAPIsDetails(
@@ -78,7 +84,9 @@ export function formatAPIsDetails(
 
   if (hasWebRTC) {
     sections.push("WebRTC");
-    sections.push("    • privacy.network.webRTCIPHandlingPolicy");
+    sections.push("    • RTCPeerConnection (content-script wrapper)");
+    sections.push("    • RTCPeerConnection.prototype.getStats");
+    sections.push("    • privacy.network.webRTCIPHandlingPolicy (where available)");
   }
 
   return sections.length > 0 ? sections.join("\n") : "None";

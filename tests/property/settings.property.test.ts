@@ -59,7 +59,6 @@ const settingsArb: fc.Arbitrary<Settings> = fc.record({
 /** The keys that MUST NOT appear in the broadcast payload. */
 const FORBIDDEN_KEYS: (keyof Settings)[] = [
   "onboardingCompleted",
-  "webrtcProtection",
   "locationName",
   "version",
   "lastUpdated",
@@ -73,6 +72,12 @@ const REQUIRED_KEYS: (keyof UpdateSettingsPayload)[] = [
   "timezone",
   "debugLogging",
   "verbosityLevel",
+  // webrtcProtection is forwarded to the injected script via the
+  // CustomEvent so its RTCPeerConnection wrapper can flip without a
+  // reload. Added as part of moving WebRTC IP-leak protection into
+  // the content-script layer (closes the gap where Firefox's
+  // `disable_non_proxied_udp` policy only works behind a proxy).
+  "webrtcProtection",
 ];
 
 /**
@@ -119,14 +124,15 @@ test("Property 4: Broadcast Payload Contains Only Scoped Fields", async () => {
         expect(payload).not.toHaveProperty(key);
       }
 
-      // Payload must have exactly 5 keys
-      expect(Object.keys(payload)).toHaveLength(5);
+      // Payload must have exactly 6 keys (5 scoped + webrtcProtection).
+      expect(Object.keys(payload)).toHaveLength(6);
 
       // Values must match the original settings
       expect(payload.enabled).toBe(settings.enabled);
       expect(payload.location).toEqual(settings.location);
       expect(payload.timezone).toEqual(settings.timezone);
       expect(payload.debugLogging).toBe(settings.debugLogging);
+      expect(payload.webrtcProtection).toBe(settings.webrtcProtection);
     }),
     { numRuns: 100 }
   );

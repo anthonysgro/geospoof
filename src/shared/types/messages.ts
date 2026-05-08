@@ -93,6 +93,18 @@ export interface UpdateSettingsPayload {
   timezone: Timezone | null;
   debugLogging: boolean;
   verbosityLevel: string;
+  /**
+   * When true the injected script wraps RTCPeerConnection (both the
+   * constructor and getStats) so no ICE candidates are ever gathered
+   * or surfaced, regardless of what `browser.privacy.network.
+   * webRTCIPHandlingPolicy` does at the browser layer.
+   *
+   * This closes two gaps left by the browser-level policy:
+   *   - Firefox only honours `disable_non_proxied_udp` when a proxy
+   *     is configured; without one, srflx still leaks.
+   *   - Safari doesn't expose `browser.privacy` at all.
+   */
+  webrtcProtection: boolean;
 }
 
 /**

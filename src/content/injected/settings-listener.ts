@@ -17,6 +17,7 @@ import {
   setTimezoneData,
   setSettingsReceived,
   setDebugEnabled as setStateDebugEnabled,
+  setWebRTCProtectionEnabled,
 } from "./state";
 import { validateTimezoneData } from "./timezone-helpers";
 import {
@@ -75,6 +76,7 @@ export function installSettingsListener(): void {
       );
       setSpoofingEnabled(event.detail.enabled);
       setSpoofedLocation(event.detail.location);
+      setWebRTCProtectionEnabled(event.detail.webrtcProtection === true);
       setSettingsReceived(true);
 
       const debugFlag = event.detail.debugLogging ?? false;
@@ -101,6 +103,7 @@ export function installSettingsListener(): void {
         location: event.detail.location,
         timezone: event.detail.timezone,
         debugLogging: debugFlag,
+        webrtcProtection: event.detail.webrtcProtection === true,
       });
     }
   }) as EventListener);

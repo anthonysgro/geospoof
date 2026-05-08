@@ -171,13 +171,14 @@ async function onAlarm(alarm: Alarms.Alarm): Promise<void> {
   const { tabId, attempt } = parsed;
 
   const settings = await loadSettings();
-  const { enabled, location, timezone, debugLogging, verbosityLevel } = settings;
+  const { enabled, location, timezone, debugLogging, verbosityLevel, webrtcProtection } = settings;
   const scopedPayload: UpdateSettingsPayload = {
     enabled,
     location,
     timezone,
     debugLogging,
     verbosityLevel,
+    webrtcProtection,
   };
 
   try {
@@ -262,13 +263,15 @@ if (browser.tabs && browser.tabs.onCreated) {
   browser.tabs.onCreated.addListener((tab: Tabs.Tab) => {
     void (async () => {
       const settings = await loadSettings();
-      const { enabled, location, timezone, debugLogging, verbosityLevel } = settings;
+      const { enabled, location, timezone, debugLogging, verbosityLevel, webrtcProtection } =
+        settings;
       const scopedPayload: UpdateSettingsPayload = {
         enabled,
         location,
         timezone,
         debugLogging,
         verbosityLevel,
+        webrtcProtection,
       };
 
       setTimeout(() => {

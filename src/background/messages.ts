@@ -275,8 +275,12 @@ export async function handleSetWebRTCProtection(
   const { enabled } = payload;
 
   await setWebRTCProtection(enabled);
-  await updateSettings({ webrtcProtection: enabled });
+  const settings = await updateSettings({ webrtcProtection: enabled });
   logger.info("WebRTC protection updated:", { enabled });
+
+  // Push the new flag to every live content script so the injected
+  // RTCPeerConnection wrapper flips state without needing a reload.
+  await broadcastSettingsToTabs(settings);
 }
 
 export async function handleCompleteOnboarding(): Promise<void> {

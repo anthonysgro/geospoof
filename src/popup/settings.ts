@@ -37,14 +37,12 @@ export async function loadSettings(): Promise<void> {
       webrtcToggle.checked = settings.webrtcProtection;
     }
 
-    // Hide WebRTC controls on browsers that don't support the privacy API (e.g. Safari)
-    const webrtcSupported = !!browser.privacy?.network?.webRTCIPHandlingPolicy;
-    const webrtcSection = document.querySelector<HTMLElement>(".webrtc-section");
-    const webrtcDetailSection = document
-      .getElementById("detailWebRTC")
-      ?.closest<HTMLElement>(".detail-section");
-    if (webrtcSection) webrtcSection.style.display = webrtcSupported ? "" : "none";
-    if (webrtcDetailSection) webrtcDetailSection.style.display = webrtcSupported ? "" : "none";
+    // WebRTC Protection is now implemented at the content-script layer
+    // (see src/content/injected/webrtc.ts), so it works on every engine
+    // including Safari — unlike the previous `browser.privacy`-only
+    // implementation. The toggle stays visible everywhere; the
+    // background-level privacy API call gracefully degrades to a
+    // no-op on engines that don't expose it.
 
     updateStatusBadge(settings.enabled);
 

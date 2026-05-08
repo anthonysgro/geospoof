@@ -26,6 +26,14 @@ export interface SettingsEventDetail {
   timezone: TimezoneData | null;
   debugLogging: boolean;
   verbosityLevel: string;
+  /**
+   * Content-script-level WebRTC IP-leak protection. When true, the
+   * injected script wraps `RTCPeerConnection` so ICE gathering never
+   * produces any candidates — closes the srflx leak that Firefox's
+   * `disable_non_proxied_udp` pref misses without a proxy, and covers
+   * Safari (which doesn't expose browser.privacy at all).
+   */
+  webrtcProtection: boolean;
 }
 
 export interface SpoofedGeolocationPosition {

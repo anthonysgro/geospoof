@@ -18,6 +18,15 @@ let spoofedLocation: Location | null = null;
 let timezoneOverride: Timezone | null = null;
 let debugLogging = false;
 let verbosityLevel = "INFO";
+/**
+ * Mirrors `Settings.webrtcProtection`. Forwarded into the injected
+ * script via the CustomEvent so its RTCPeerConnection wrapper knows
+ * whether to block ICE gathering. Defaults to false (no protection)
+ * until settings arrive from the background — the injected script's
+ * `waitForSettings()` path ensures no RTC call is intercepted before
+ * the first settings event lands.
+ */
+let webrtcProtection = false;
 
 // Event name for settings updates (configurable for stealth)
 const EVENT_NAME: string = process.env.EVENT_NAME || "__x_evt";
@@ -29,6 +38,7 @@ interface SettingsEventDetail {
   timezone: Timezone | null;
   debugLogging: boolean;
   verbosityLevel: string;
+  webrtcProtection: boolean;
 }
 
 /**
@@ -67,6 +77,7 @@ function buildSettingsEventDetail(): SettingsEventDetail {
     timezone: timezoneOverride,
     debugLogging,
     verbosityLevel,
+    webrtcProtection,
   };
 }
 
@@ -152,6 +163,7 @@ browser.runtime.onMessage.addListener(
       timezoneOverride = message.payload.timezone;
       debugLogging = message.payload.debugLogging;
       verbosityLevel = message.payload.verbosityLevel ?? "INFO";
+      webrtcProtection = message.payload.webrtcProtection ?? false;
       setDebugEnabled(debugLogging);
       setVerbosityLevel(verbosityLevel);
       logger.debug("Settings updated:", {
@@ -160,6 +172,7 @@ browser.runtime.onMessage.addListener(
         timezone: timezoneOverride,
         debugLogging,
         verbosityLevel,
+        webrtcProtection,
       });
       updateInjectedScript();
     } else if (message.type === "PING") {
@@ -184,6 +197,7 @@ browser.runtime
       timezone: Timezone | null;
       debugLogging: boolean;
       verbosityLevel: string;
+      webrtcProtection?: boolean;
     }) => {
       const roundTrip = performance.now() - CS_SEND_AT;
       logger.debug(
@@ -194,6 +208,7 @@ browser.runtime
       timezoneOverride = settings.timezone;
       debugLogging = settings.debugLogging;
       verbosityLevel = settings.verbosityLevel ?? "INFO";
+      webrtcProtection = settings.webrtcProtection ?? false;
       setDebugEnabled(debugLogging);
       setVerbosityLevel(verbosityLevel);
       logger.debug("Initial settings loaded:", {
@@ -202,6 +217,7 @@ browser.runtime
         timezone: timezoneOverride,
         debugLogging,
         verbosityLevel,
+        webrtcProtection,
       });
       updateInjectedScript();
     }
