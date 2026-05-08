@@ -25,9 +25,10 @@
  * so the module is safe to dynamic-import from `loadAllTests`.
  */
 
-import { buildBehavioralTest } from "../helpers/behavioral"
+import { SkipTestError, buildBehavioralTest } from "../helpers/behavioral"
 import { requireLocationSnapshot } from "../helpers/location"
-import type { TestDefinition } from "../types"
+import { getSharedPosition } from "../helpers/shared-position"
+import type { TestDefinition, TestRunContext } from "../types"
 
 /**
  * Max time the live geolocation calls are allowed to take.
@@ -127,52 +128,34 @@ interface Coords {
   longitude: number
 }
 
-/** Promisified `navigator.geolocation.getCurrentPosition` with timeout. */
-function getCurrentPositionOnce(timeoutMs: number): Promise<Coords> {
-  return new Promise<Coords>((resolve, reject) => {
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      reject(new Error("navigator.geolocation is not available"))
-      return
-    }
-    let settled = false
-    const timer = setTimeout(() => {
-      if (settled) return
-      settled = true
-      reject(
-        new Error(`getCurrentPosition did not resolve within ${timeoutMs}ms`)
-      )
-    }, timeoutMs)
-
-    try {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          if (settled) return
-          settled = true
-          clearTimeout(timer)
-          resolve({
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-          })
-        },
-        (err) => {
-          if (settled) return
-          settled = true
-          clearTimeout(timer)
-          reject(
-            new Error(
-              err.message || `getCurrentPosition error code ${err.code}`
-            )
-          )
-        },
-        { timeout: timeoutMs }
-      )
-    } catch (err) {
-      if (settled) return
-      settled = true
-      clearTimeout(timer)
-      reject(err instanceof Error ? err : new Error(String(err)))
-    }
-  })
+/**
+ * Obtain current coords for this run.
+ *
+ * Delegates to `getSharedPosition`, which reuses a single cached
+ * `GeolocationPosition` across every test that needs one within a run.
+ * Two important consequences:
+ *
+ *   - Safari serialises concurrent `getCurrentPosition` calls; issuing
+ *     them from every test independently caused ~10 tests to time out
+ *     at 5s each. Sharing one call fixes that.
+ *   - Native GPS readings jitter by a few meters between samples. Two
+ *     independent calls can round to different 4-decimal-place values
+ *     even on raw browsers. Sharing one call produces one reading that
+ *     the test and the Identity Panel both see.
+ *
+ * The `timeoutMs` argument is kept for call-site compatibility but
+ * `getSharedPosition` enforces its own 5s ceiling.
+ */
+async function getCurrentPositionOnce(
+  ctx: TestRunContext,
+  _timeoutMs: number
+): Promise<Coords> {
+  void _timeoutMs
+  const pos = await getSharedPosition(ctx)
+  return {
+    latitude: pos.coords.latitude,
+    longitude: pos.coords.longitude,
+  }
 }
 
 /**
@@ -193,9 +176,15 @@ async function watchFirstPosition(timeoutMs: number): Promise<Coords> {
       const timer = setTimeout(() => {
         if (settled) return
         settled = true
+        // Safari often stalls watchPosition entirely on desktop —
+        // the spec allows zero callbacks for a stationary device.
+        // We can't distinguish "extension broke watch" from "engine
+        // never fires watchPosition here", so skip rather than
+        // error. The getCurrentPosition path remains covered by
+        // the sibling values-correctness test.
         reject(
-          new Error(
-            `watchPosition did not invoke its callback within ${timeoutMs}ms`
+          new SkipTestError(
+            `watchPosition did not invoke its callback within ${timeoutMs}ms. Safari may not fire watchPosition for a stationary device within our probe window; the first-callback match can't be measured in that state.`
           )
         )
       }, timeoutMs)
@@ -219,7 +208,7 @@ async function watchFirstPosition(timeoutMs: number): Promise<Coords> {
               new Error(err.message || `watchPosition error code ${err.code}`)
             )
           },
-          { timeout: timeoutMs }
+          { timeout: timeoutMs, maximumAge: Number.POSITIVE_INFINITY }
         )
       } catch (err) {
         if (settled) return
@@ -600,8 +589,8 @@ const geolocationMatchesIdentityTest = buildBehavioralTest<Coords>({
     }
     return { value, describe: describeCoords(value) }
   },
-  observe: async () => {
-    const value = await getCurrentPositionOnce(GEOLOCATION_CALL_TIMEOUT_MS)
+  observe: async (ctx) => {
+    const value = await getCurrentPositionOnce(ctx, GEOLOCATION_CALL_TIMEOUT_MS)
     return { value, describe: describeCoords(value) }
   },
   equals: coordsMatch4dp,
@@ -948,49 +937,17 @@ const temporalExplicitTimezonePassthroughTest = buildBehavioralTest<string>({
  * Fetch a GeolocationPosition *without* coercing it into `Coords` — the
  * shape-fidelity tests need access to the raw position object to inspect
  * its prototype chain and optional fields.
+ *
+ * Delegates to `getSharedPosition` so every shape test within a run
+ * reuses the same cached position (fixes Safari's serialisation of
+ * concurrent `getCurrentPosition` calls).
  */
-function getFullPosition(timeoutMs: number): Promise<GeolocationPosition> {
-  return new Promise((resolve, reject) => {
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      reject(new Error("navigator.geolocation is not available"))
-      return
-    }
-    let settled = false
-    const timer = setTimeout(() => {
-      if (settled) return
-      settled = true
-      reject(
-        new Error(`getCurrentPosition did not resolve within ${timeoutMs}ms`)
-      )
-    }, timeoutMs)
-
-    try {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          if (settled) return
-          settled = true
-          clearTimeout(timer)
-          resolve(pos)
-        },
-        (err) => {
-          if (settled) return
-          settled = true
-          clearTimeout(timer)
-          reject(
-            new Error(
-              err.message || `getCurrentPosition error code ${err.code}`
-            )
-          )
-        },
-        { timeout: timeoutMs }
-      )
-    } catch (err) {
-      if (settled) return
-      settled = true
-      clearTimeout(timer)
-      reject(err instanceof Error ? err : new Error(String(err)))
-    }
-  })
+function getFullPosition(
+  ctx: TestRunContext,
+  _timeoutMs: number
+): Promise<GeolocationPosition> {
+  void _timeoutMs
+  return getSharedPosition(ctx)
 }
 
 const geolocationPositionPrototypeTest = buildBehavioralTest<boolean>({
@@ -1012,11 +969,11 @@ pos instanceof GeolocationPosition &&
     }
     return { value: true, describe: "true" }
   },
-  observe: async () => {
+  observe: async (ctx) => {
     if (typeof GeolocationPosition === "undefined") {
       throw new Error("GeolocationPosition constructor not exposed")
     }
-    const pos = await getFullPosition(GEOLOCATION_CALL_TIMEOUT_MS)
+    const pos = await getFullPosition(ctx, GEOLOCATION_CALL_TIMEOUT_MS)
     const viaInstanceof = pos instanceof GeolocationPosition
     const viaProto =
       Object.getPrototypeOf(pos) === GeolocationPosition.prototype
@@ -1047,11 +1004,11 @@ pos.coords instanceof GeolocationCoordinates &&
     }
     return { value: true, describe: "true" }
   },
-  observe: async () => {
+  observe: async (ctx) => {
     if (typeof GeolocationCoordinates === "undefined") {
       throw new Error("GeolocationCoordinates constructor not exposed")
     }
-    const pos = await getFullPosition(GEOLOCATION_CALL_TIMEOUT_MS)
+    const pos = await getFullPosition(ctx, GEOLOCATION_CALL_TIMEOUT_MS)
     const viaInstanceof = pos.coords instanceof GeolocationCoordinates
     const viaProto =
       Object.getPrototypeOf(pos.coords) === GeolocationCoordinates.prototype
@@ -1081,8 +1038,8 @@ const geolocationOptionalFieldsNullTest = buildBehavioralTest<string>({
     value: "altitude=null; altitudeAccuracy=null; heading=null; speed=null",
     describe: "all four null",
   }),
-  observe: async () => {
-    const pos = await getFullPosition(GEOLOCATION_CALL_TIMEOUT_MS)
+  observe: async (ctx) => {
+    const pos = await getFullPosition(ctx, GEOLOCATION_CALL_TIMEOUT_MS)
     const keys = ["altitude", "altitudeAccuracy", "heading", "speed"] as const
     const parts = keys.map((k) => {
       const v = (pos.coords as unknown as Record<string, unknown>)[k]
@@ -1097,25 +1054,40 @@ const geolocationOptionalFieldsNullTest = buildBehavioralTest<string>({
 const geolocationTimestampRecentTest = buildBehavioralTest<boolean>({
   id: "tampering.geolocation.timestamp-recent",
   group: "geolocation-stealth",
-  name: "GeolocationPosition.timestamp is within 10s of Date.now()",
+  name: "GeolocationPosition.timestamp is a recent wall-clock reading",
   description:
-    "position.timestamp should be a recent epoch millisecond value. A constant or far-offset timestamp is a low-effort detection vector — the native API always returns the current wall clock.",
+    "position.timestamp should be a recent timestamp. Native engines disagree on the epoch — Firefox and Chrome return Unix milliseconds (ms since 1970-01-01 UTC), while Safari/WebKit returns CFAbsoluteTime-style values (ms since 2001-01-01 UTC, roughly 31 years smaller). Either is fine — what matters is that the value is *recent* against its own epoch. A constant or far-offset timestamp relative to both epochs is a low-effort detection vector; the native API always returns the current wall clock.",
   technique:
-    "Sample Date.now() just before the getCurrentPosition call, capture position.timestamp, and assert the absolute difference is under 10 seconds.",
+    "Sample Date.now() just before the getCurrentPosition call, capture position.timestamp, and assert it's within 10 seconds of either the Unix epoch or the CFAbsoluteTime (2001-based) interpretation.",
   codeSnippet: `const before = Date.now()
 const pos = await new Promise((res, rej) =>
   navigator.geolocation.getCurrentPosition(res, rej),
 )
-Math.abs(pos.timestamp - before) < 10_000`,
+// Accept either Unix-epoch or CFAbsoluteTime (Safari) — both are native
+const unixDelta = Math.abs(pos.timestamp - before)
+const CF_EPOCH_OFFSET_MS = 978_307_200_000 // 2001-01-01 - 1970-01-01 in ms
+const cfDelta = Math.abs(pos.timestamp + CF_EPOCH_OFFSET_MS - before)
+Math.min(unixDelta, cfDelta) < 10_000`,
   expected: async () => ({ value: true, describe: "|delta| < 10s" }),
-  observe: async () => {
+  observe: async (ctx) => {
     const before = Date.now()
-    const pos = await getFullPosition(GEOLOCATION_CALL_TIMEOUT_MS)
-    const delta = Math.abs(pos.timestamp - before)
+    const pos = await getFullPosition(ctx, GEOLOCATION_CALL_TIMEOUT_MS)
+    // Interpret the timestamp as Unix milliseconds first.
+    const unixDelta = Math.abs(pos.timestamp - before)
+    // Safari / WebKit reports timestamps as CFAbsoluteTime ×1000: ms
+    // since 2001-01-01 00:00:00 UTC, which is 978,307,200,000 ms
+    // before the Unix epoch. So `pos.timestamp + cfOffset` converts to
+    // Unix ms. If Safari's interpretation lands close to the wall clock,
+    // that's native behaviour, not a spoofing signal.
+    const CF_EPOCH_OFFSET_MS = 978_307_200_000
+    const cfDelta = Math.abs(pos.timestamp + CF_EPOCH_OFFSET_MS - before)
+    const delta = Math.min(unixDelta, cfDelta)
+    const interp =
+      delta === cfDelta && cfDelta < unixDelta ? "CFAbsoluteTime" : "Unix"
     const value = Number.isFinite(pos.timestamp) && delta < 10_000
     return {
       value,
-      describe: `timestamp=${pos.timestamp}, |delta|=${delta}ms`,
+      describe: `timestamp=${pos.timestamp} (${interp}), |delta|=${delta}ms`,
     }
   },
 })

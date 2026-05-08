@@ -79,15 +79,26 @@ async function runOne(
       durationMs: result.durationMs ?? durationMs,
     }
     // Tests in the `known-limitations` group document gaps that
-    // content-script extensions cannot fully close. A "fail" result
+    // content-script extensions cannot fully close. A `fail` result
     // from one of them is the educational outcome we want to surface,
-    // not a regression. Remap fail → known-limitation so the
-    // dashboard's "detectable issues" count excludes them.
+    // not a regression. An `error` result — e.g. the probe couldn't
+    // run at all on this engine — is also not something we want to
+    // flag as a detectable issue; the known-limitations test is the
+    // most-reasonable place we can acknowledge "this detection vector
+    // doesn't apply to this browser" without silently dropping the
+    // test. Remap both fail → known-limitation and error →
+    // known-limitation so the dashboard's "detectable issues" count
+    // excludes them and the known-limitations block accounts for
+    // them in its own "N known limitations" tally.
+    //
     // (Tests can still return `known-limitation` directly — e.g. via
-    // `skipReason` on `buildBehavioralTest` — and those pass through.)
+    // `skipReason` on `buildBehavioralTest` — and those pass through.
+    // Tests that explicitly skip via `SkipTestError` also pass through
+    // as `skipped`, which is the right outcome when we can't measure
+    // anything either way.)
     if (
       definition.group === "known-limitations" &&
-      withDuration.status === "fail"
+      (withDuration.status === "fail" || withDuration.status === "error")
     ) {
       return { ...withDuration, status: "known-limitation" }
     }

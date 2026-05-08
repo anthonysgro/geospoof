@@ -42,24 +42,34 @@
 //
 // ────────────────────────────────────────────────────────────────────
 
-// 1. Function masking infrastructure — toString masking must be installed
-//    first so all subsequent overrides are indistinguishable from native code.
+// 1. Settings listener — MUST be installed first so the window is ready
+//    to receive the CustomEvent from the content script as early as
+//    possible. Content script and injected script both run at
+//    document_start with no ordering guarantee; if the content script
+//    dispatches its initial settings event before this listener is
+//    installed, the event is lost forever (CustomEvents have no
+//    subscription backlog). The content script pairs this with a
+//    retry loop that redispatches a few times at short intervals,
+//    but moving the listener install to the very top of the injected
+//    script's module init gives us the widest possible window to
+//    catch the first dispatch on the first try.
+import { installSettingsListener } from "./settings-listener";
+installSettingsListener();
+
+// 2. Function masking infrastructure — toString masking must be installed
+//    before any of the behaviour-modifying overrides so that every
+//    subsequent override is indistinguishable from native code.
 import { initFunctionMasking } from "./function-masking";
 initFunctionMasking();
 
-// 2. State module loads eagerly — original API references are captured at
+// 3. State module loads eagerly — original API references are captured at
 //    import time, before any overrides replace them.
 import "./state";
 
-// 3. Date constructor override — must precede other Date-related overrides
+// 4. Date constructor override — must precede other Date-related overrides
 //    so the global Date is replaced before anything else uses it.
 import { installDateConstructor } from "./date-constructor";
 installDateConstructor();
-
-// 4. Settings listener — registers the CustomEvent listener for settings
-//    updates from the content script.
-import { installSettingsListener } from "./settings-listener";
-installSettingsListener();
 
 // 5. Geolocation overrides
 import { installGeolocationOverrides } from "./geolocation";

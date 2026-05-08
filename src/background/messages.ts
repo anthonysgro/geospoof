@@ -37,7 +37,6 @@ export async function handleMessage(
   message: Message,
   _sender: browser.runtime.MessageSender
 ): Promise<unknown> {
-  console.log("[MSG-HANDLER] Received message:", message.type);
   try {
     logger.info("Received message:", message.type, message.payload);
 

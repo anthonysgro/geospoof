@@ -14,6 +14,7 @@
 
 import * as React from "react"
 
+import { primeSharedPosition } from "../test-suite/helpers/shared-position"
 import { parseUserAgentSummary } from "./format"
 import type {
   AsyncField,
@@ -313,6 +314,13 @@ function getLocation(signal: AbortSignal): Promise<AsyncField<LocationValue>> {
         navigator.geolocation.getCurrentPosition(
           (pos) => {
             if (timeoutId !== null) clearTimeout(timeoutId)
+            // Seed the shared-position cache so downstream tests read
+            // from the exact same `GeolocationPosition` object the
+            // Identity Panel rendered. Without this, a fresh
+            // getCurrentPosition in a test can produce a coord that
+            // straddles a 4dp rounding boundary differently from the
+            // panel's reading and cause false precision mismatches.
+            primeSharedPosition(pos)
             resolveOnce({
               status: "ready",
               value: {
@@ -601,6 +609,11 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
       controllerRef.current?.abort()
       const controller = new AbortController()
       controllerRef.current = controller
+
+      // Clear any previously-seeded shared position — a new run must
+      // re-seed from its own fresh getCurrentPosition to stay honest
+      // about the current state of the environment.
+      primeSharedPosition(null)
 
       const startedAt = Date.now()
       const timezone = resolveTimezone()

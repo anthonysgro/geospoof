@@ -37,38 +37,84 @@ interface SettingsEventDetail {
  */
 declare function cloneInto<T>(obj: T, targetScope: typeof globalThis): T;
 
+let firstDispatchDone = false;
+
 /**
- * Dispatch current spoofing settings to the injected page-context script
- * using a CustomEvent (CSP-safe communication channel).
+ * Retry offsets (ms) for the first real-settings dispatch.
+ *
+ * Both scripts run at document_start with no ordering guarantee, and
+ * CustomEvents have no subscription backlog — if the content script
+ * dispatches before the injected script has installed its listener
+ * the event is lost. `dispatchEvent` into a window with no listener
+ * succeeds silently (no exception), so the only way to cover the
+ * race is to redispatch a few times.
+ *
+ * These retries are safe because they only start after the content
+ * script has real settings from the background — every dispatch
+ * sends the same values, so even if multiple retries all land on
+ * a live listener, the injected script just re-applies the same
+ * state each time.
  */
-function updateInjectedScript(): void {
-  const settingsData: SettingsEventDetail = {
+const INITIAL_DISPATCH_RETRIES_MS: ReadonlyArray<number> = [16, 50, 120];
+
+/**
+ * Build the fresh event detail from current module-scope settings.
+ */
+function buildSettingsEventDetail(): SettingsEventDetail {
+  return {
     enabled: spoofingEnabled,
     location: spoofedLocation,
     timezone: timezoneOverride,
     debugLogging,
     verbosityLevel,
   };
+}
 
+/**
+ * Dispatch a single CustomEvent with the latest settings from module scope.
+ */
+function dispatchSettingsEvent(): void {
+  const settingsData = buildSettingsEventDetail();
   // For Firefox, use cloneInto to make the object accessible in page context
   const detail = typeof cloneInto !== "undefined" ? cloneInto(settingsData, window) : settingsData;
-
   const event = new CustomEvent(EVENT_NAME, { detail });
-
   try {
     window.dispatchEvent(event);
-    logger.info("Dispatched settings to injected script:", settingsData);
   } catch (error) {
     logger.error("Failed to dispatch settings update:", error);
-    // Retry once after 100ms delay
-    setTimeout(() => {
-      try {
-        window.dispatchEvent(event);
-        logger.info("Retry successful: Dispatched settings to injected script");
-      } catch (retryError) {
-        logger.error("Retry failed to dispatch settings update:", retryError);
-      }
-    }, 100);
+  }
+}
+
+/**
+ * Dispatch current spoofing settings to the injected page-context script.
+ *
+ * On the first call (after GET_SETTINGS resolves), schedules a few
+ * retries to cover the document_start race against the injected
+ * script's listener installation. Subsequent calls (settings-change
+ * events from the background) dispatch once because by then the
+ * listener is definitely live.
+ */
+function updateInjectedScript(): void {
+  const dispatchAt = performance.now();
+  dispatchSettingsEvent();
+  if (!firstDispatchDone) {
+    logger.debug(
+      `First settings dispatched to injected script (t=${dispatchAt.toFixed(1)}ms, enabled=${String(spoofingEnabled)}, hasLocation=${String(!!spoofedLocation)})`
+    );
+    firstDispatchDone = true;
+    // Retries for the document_start race. These send the same
+    // values as the first call (module-scope state is only
+    // mutated inside the GET_SETTINGS .then and the UPDATE_SETTINGS
+    // handler — never between the first dispatch and its retries in
+    // normal flow), so even if every retry lands on a live listener
+    // the injected script just re-applies identical state.
+    for (const delay of INITIAL_DISPATCH_RETRIES_MS) {
+      setTimeout(() => {
+        dispatchSettingsEvent();
+      }, delay);
+    }
+  } else {
+    logger.info("Dispatched settings to injected script:", buildSettingsEventDetail());
   }
 }
 
@@ -78,8 +124,19 @@ function updateInjectedScript(): void {
 // Firefox 128+ supports world: "MAIN"; our minimum is Firefox 140.
 logger.info("Injected script loaded via manifest world:MAIN");
 
-// Send initial settings after script is injected
-updateInjectedScript();
+// NOTE: we deliberately do NOT call updateInjectedScript() here at
+// module load. At this point our module-scope settings variables are
+// still defaults (enabled=false, location=null, …) because we haven't
+// yet asked the background for the real values. Dispatching those
+// defaults would force the injected script to adopt an "off" state,
+// and then moments later when the GET_SETTINGS response returns with
+// real settings we'd dispatch a second time to correct it — producing
+// a visible flicker of unspoofed behavior in between.
+//
+// Instead, we only dispatch once GET_SETTINGS resolves (below). The
+// injected script's `waitForSettings()` path handles calls that
+// arrive during this short window by deferring them until settings
+// land, so nothing leaks.
 
 // Listen for settings updates from background script
 browser.runtime.onMessage.addListener(
@@ -114,6 +171,10 @@ browser.runtime.onMessage.addListener(
 
 // Request initial settings on load
 logger.info("Content script loaded, requesting initial settings");
+// Timing probes for cold-start diagnosis. Routed through logger.debug
+// so they're silent by default and surface when debug logging is on.
+const CS_SEND_AT = performance.now();
+logger.debug(`Sending GET_SETTINGS to background (page-start=${CS_SEND_AT.toFixed(1)}ms)`);
 browser.runtime
   .sendMessage({ type: "GET_SETTINGS" })
   .then(
@@ -124,6 +185,10 @@ browser.runtime
       debugLogging: boolean;
       verbosityLevel: string;
     }) => {
+      const roundTrip = performance.now() - CS_SEND_AT;
+      logger.debug(
+        `GET_SETTINGS resolved (round-trip=${roundTrip.toFixed(1)}ms, enabled=${String(settings.enabled)}, hasLocation=${String(!!settings.location)})`
+      );
       spoofingEnabled = settings.enabled;
       spoofedLocation = settings.location;
       timezoneOverride = settings.timezone;
@@ -142,5 +207,8 @@ browser.runtime
     }
   )
   .catch((error: unknown) => {
-    logger.error("Failed to get initial settings:", error);
+    logger.error(
+      `GET_SETTINGS rejected after ${(performance.now() - CS_SEND_AT).toFixed(1)}ms:`,
+      error
+    );
   });

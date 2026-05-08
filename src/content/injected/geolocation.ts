@@ -382,13 +382,17 @@ function getCurrentPositionOverride(
   } else {
     // Settings not yet received — wait for them before responding
     logger.debug("getCurrentPosition: deferring until settings arrive");
+    const deferStart = performance.now();
     void waitForSettings().then(({ timedOut }) => {
+      const waited = performance.now() - deferStart;
       if (timedOut) {
         // Settings never arrived within the timeout window. We don't know
         // whether spoofing should be on or off, so we cannot safely fall
         // through to the real API (that would leak the user's real location
         // if spoofing was meant to be active). Fire the error callback instead.
-        logger.warn("getCurrentPosition: settings timed out, returning TIMEOUT error");
+        logger.warn(
+          `getCurrentPosition: settings timed out after ${waited.toFixed(1)}ms, returning TIMEOUT error`
+        );
         if (errorCallback) {
           errorCallback({
             code: GeolocationPositionError.TIMEOUT,
@@ -400,6 +404,7 @@ function getCurrentPositionOverride(
         }
         return;
       }
+      logger.debug(`getCurrentPosition: waitForSettings resolved after ${waited.toFixed(1)}ms`);
       if (spoofingEnabled && spoofedLocation) {
         const position = createGeolocationPosition(spoofedLocation);
         rememberPosition(position);

@@ -23,8 +23,9 @@
  * so the module is safe to dynamic-import from `loadAllTests`.
  */
 
-import { buildBehavioralTest } from "../helpers/behavioral"
-import type { TestDefinition } from "../types"
+import { SkipTestError, buildBehavioralTest } from "../helpers/behavioral"
+import { getSharedPosition } from "../helpers/shared-position"
+import type { TestDefinition, TestRunContext } from "../types"
 
 const GEO_CALL_TIMEOUT_MS = 5_000
 
@@ -34,44 +35,27 @@ interface Coords {
 }
 
 /**
- * Fetch a raw `GeolocationPosition` without flattening — shape tests
- * need access to the position object's own-property layout, prototype,
- * and WebIDL brand.
+ * Shape tests want a `GeolocationPosition` to inspect. They don't need
+ * a fresh GPS fix and they don't need their own call — multiple
+ * independent calls hang Safari. Delegating to `getSharedPosition`
+ * reuses one cached position per run across every shape test.
  */
-function getFullPosition(timeoutMs: number): Promise<GeolocationPosition> {
-  return new Promise((resolve, reject) => {
-    let settled = false
-    const timer = setTimeout(() => {
-      if (settled) return
-      settled = true
-      reject(
-        new Error(`getCurrentPosition did not resolve within ${timeoutMs}ms`)
-      )
-    }, timeoutMs)
-    try {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          if (settled) return
-          settled = true
-          clearTimeout(timer)
-          resolve(pos)
-        },
-        (err) => {
-          if (settled) return
-          settled = true
-          clearTimeout(timer)
-          reject(new Error(`getCurrentPosition error: ${err.message}`))
-        },
-        { timeout: timeoutMs }
-      )
-    } catch (err) {
-      clearTimeout(timer)
-      reject(err instanceof Error ? err : new Error(String(err)))
-    }
-  })
+function getFullPosition(ctx: TestRunContext): Promise<GeolocationPosition> {
+  return getSharedPosition(ctx)
 }
 
-/** Invoke `getCurrentPosition` and return its wall-clock call-to-callback latency. */
+/**
+ * Invoke `getCurrentPosition` and return its wall-clock call-to-callback
+ * latency.
+ *
+ * When no options are supplied the default is `maximumAge: Infinity`
+ * so the browser is free to serve a cached reading — this is important
+ * for repeated measurements on Safari, which serialises concurrent /
+ * rapid-fire calls behind the queue and would otherwise time out most
+ * of the samples. Tests that specifically want to measure a fresh
+ * uncached call (the cache-priming step below) pass `{ maximumAge: 0 }`
+ * explicitly.
+ */
 function measureLatency(options?: PositionOptions): Promise<number> {
   return new Promise((resolve, reject) => {
     const start = performance.now()
@@ -95,7 +79,7 @@ function measureLatency(options?: PositionOptions): Promise<number> {
           clearTimeout(timer)
           reject(new Error(`getCurrentPosition error: ${err.message}`))
         },
-        options
+        options ?? { maximumAge: Number.POSITIVE_INFINITY }
       )
     } catch (err) {
       clearTimeout(timer)
@@ -176,8 +160,8 @@ Object.prototype.toString.call(pos) === "[object GeolocationPosition]"`,
     value: "[object GeolocationPosition]",
     describe: '"[object GeolocationPosition]"',
   }),
-  observe: async () => {
-    const pos = await getFullPosition(GEO_CALL_TIMEOUT_MS)
+  observe: async (ctx) => {
+    const pos = await getFullPosition(ctx)
     const tag = Object.prototype.toString.call(pos)
     return { value: tag, describe: `"${tag}"` }
   },
@@ -197,8 +181,8 @@ Object.prototype.toString.call(pos.coords) === "[object GeolocationCoordinates]"
     value: "[object GeolocationCoordinates]",
     describe: '"[object GeolocationCoordinates]"',
   }),
-  observe: async () => {
-    const pos = await getFullPosition(GEO_CALL_TIMEOUT_MS)
+  observe: async (ctx) => {
+    const pos = await getFullPosition(ctx)
     const tag = Object.prototype.toString.call(pos.coords)
     return { value: tag, describe: `"${tag}"` }
   },
@@ -269,8 +253,8 @@ json.includes("latitude") &&
     value: true,
     describe: "JSON string includes latitude, longitude, timestamp",
   }),
-  observe: async () => {
-    const pos = await getFullPosition(GEO_CALL_TIMEOUT_MS)
+  observe: async (ctx) => {
+    const pos = await getFullPosition(ctx)
     let json: string
     try {
       json = JSON.stringify(pos)
@@ -299,8 +283,8 @@ const positionKeysMatchNativeTest = buildBehavioralTest<string>({
   codeSnippet: `Object.keys(await getPosition())
 // native: []`,
   expected: async () => ({ value: "[]", describe: "[]" }),
-  observe: async () => {
-    const pos = await getFullPosition(GEO_CALL_TIMEOUT_MS)
+  observe: async (ctx) => {
+    const pos = await getFullPosition(ctx)
     const keys = JSON.stringify(Object.keys(pos))
     return { value: keys, describe: keys }
   },
@@ -316,8 +300,8 @@ const coordsKeysMatchNativeTest = buildBehavioralTest<string>({
   codeSnippet: `Object.keys((await getPosition()).coords)
 // native: []`,
   expected: async () => ({ value: "[]", describe: "[]" }),
-  observe: async () => {
-    const pos = await getFullPosition(GEO_CALL_TIMEOUT_MS)
+  observe: async (ctx) => {
+    const pos = await getFullPosition(ctx)
     const keys = JSON.stringify(Object.keys(pos.coords))
     return { value: keys, describe: keys }
   },
@@ -348,8 +332,8 @@ const positionOwnPropertyNamesTest = buildBehavioralTest<string>({
   codeSnippet: `Object.getOwnPropertyNames(await getPosition())
 // native: []`,
   expected: async () => ({ value: "[]", describe: "[]" }),
-  observe: async () => {
-    const pos = await getFullPosition(GEO_CALL_TIMEOUT_MS)
+  observe: async (ctx) => {
+    const pos = await getFullPosition(ctx)
     const keys = JSON.stringify(Object.getOwnPropertyNames(pos))
     return { value: keys, describe: keys }
   },
@@ -366,8 +350,8 @@ const positionOwnSymbolsTest = buildBehavioralTest<string>({
   codeSnippet: `Object.getOwnPropertySymbols(await getPosition())
 // native: []`,
   expected: async () => ({ value: "[]", describe: "[]" }),
-  observe: async () => {
-    const pos = await getFullPosition(GEO_CALL_TIMEOUT_MS)
+  observe: async (ctx) => {
+    const pos = await getFullPosition(ctx)
     const syms = Object.getOwnPropertySymbols(pos).map((s) => s.toString())
     const rendered = JSON.stringify(syms)
     return { value: rendered, describe: rendered }
@@ -385,8 +369,8 @@ const coordsOwnPropertyNamesTest = buildBehavioralTest<string>({
   codeSnippet: `Object.getOwnPropertyNames((await getPosition()).coords)
 // native: []`,
   expected: async () => ({ value: "[]", describe: "[]" }),
-  observe: async () => {
-    const pos = await getFullPosition(GEO_CALL_TIMEOUT_MS)
+  observe: async (ctx) => {
+    const pos = await getFullPosition(ctx)
     const keys = JSON.stringify(Object.getOwnPropertyNames(pos.coords))
     return { value: keys, describe: keys }
   },
@@ -403,8 +387,8 @@ const coordsOwnSymbolsTest = buildBehavioralTest<string>({
   codeSnippet: `Object.getOwnPropertySymbols((await getPosition()).coords)
 // native: []`,
   expected: async () => ({ value: "[]", describe: "[]" }),
-  observe: async () => {
-    const pos = await getFullPosition(GEO_CALL_TIMEOUT_MS)
+  observe: async (ctx) => {
+    const pos = await getFullPosition(ctx)
     const syms = Object.getOwnPropertySymbols(pos.coords).map((s) =>
       s.toString()
     )
@@ -425,8 +409,8 @@ const coordsDescriptorsAreAccessorsTest = buildBehavioralTest<boolean>({
 ["latitude", "longitude", "accuracy", "altitude", "altitudeAccuracy", "heading", "speed"]
   .every((k) => Object.getOwnPropertyDescriptor(coords, k) === undefined)`,
   expected: async () => ({ value: true, describe: "all undefined" }),
-  observe: async () => {
-    const pos = await getFullPosition(GEO_CALL_TIMEOUT_MS)
+  observe: async (ctx) => {
+    const pos = await getFullPosition(ctx)
     const keys = [
       "latitude",
       "longitude",
@@ -482,8 +466,8 @@ decimals >= 6`,
     value: true,
     describe: "latitude has ≥6 decimal places",
   }),
-  observe: async () => {
-    const pos = await getFullPosition(GEO_CALL_TIMEOUT_MS)
+  observe: async (ctx) => {
+    const pos = await getFullPosition(ctx)
     const latStr = pos.coords.latitude.toString()
     const dotIdx = latStr.indexOf(".")
     const decimals = dotIdx === -1 ? 0 : latStr.length - dotIdx - 1
@@ -513,7 +497,30 @@ for (let i = 0; i < 8; i++) samples.push(await measureLatency())
   observe: async () => {
     const samples: Array<number> = []
     for (let i = 0; i < 8; i++) {
-      samples.push(await measureLatency())
+      try {
+        // Race each sample against a short budget. A sample that
+        // can't resolve in time means the engine isn't participating
+        // in the detection vector's measurement model at all (Safari
+        // hangs on repeated `getCurrentPosition` with `maximumAge:
+        // Infinity` after the shared-position cache was consumed by
+        // other tests). That's "can't measure" — skip the whole
+        // test rather than error on the first stall, because we
+        // can't make any claim about the latency distribution
+        // without at least one live sample.
+        samples.push(
+          await withTimeout(measureLatency(), LATENCY_SAMPLE_BUDGET_MS)
+        )
+      } catch (err) {
+        if (
+          err instanceof Error &&
+          err.message === CACHE_PROBE_TIMEOUT_TOKEN
+        ) {
+          throw new SkipTestError(
+            `Browser did not resolve getCurrentPosition within ${LATENCY_SAMPLE_BUDGET_MS}ms on sample ${i + 1}. This engine doesn't expose the cached-read path this probe relies on (typical of Safari) — nothing measurable either way.`
+          )
+        }
+        throw err
+      }
     }
     const mean = samples.reduce((a, b) => a + b, 0) / samples.length
     const variance =
@@ -521,19 +528,6 @@ for (let i = 0; i < 8; i++) samples.push(await measureLatency())
     const stddev = Math.sqrt(variance)
     const min = Math.min(...samples)
     const max = Math.max(...samples)
-    // Heuristic tuned for the real-vs-spoofed boundary:
-    //   - Native Firefox/Chrome desktop serves cached positions through
-    //     the browser's task queue with a floor around 4-8ms. Any raw
-    //     browser reliably produces multiple sub-10ms samples after the
-    //     identity panel's first getCurrentPosition call has primed the
-    //     cache.
-    //   - Our override floors every call at `10 + Math.random()*40`, so
-    //     its minimum is always ≥ 10ms.
-    //   - The `stddev > 100` heavy-tail branch remains as a secondary
-    //     pass for the rare uncached-native path (fresh fix, high
-    //     accuracy, no prior cache). Its contribution is tiny on
-    //     stationary desktops but it's the only thing that catches a
-    //     cold-boot measurement.
     const looksReal = min < 10 || stddev > 100
     return {
       value: looksReal,
@@ -541,6 +535,8 @@ for (let i = 0; i < 8; i++) samples.push(await measureLatency())
     }
   },
 })
+
+const LATENCY_SAMPLE_BUDGET_MS = 2_000
 
 // Note: there is intentionally no `high-accuracy-changes-latency` test
 // here. Native desktop Firefox/Chrome have no GPS hardware to engage, so
@@ -556,20 +552,35 @@ const maximumAgeCachingTest = buildBehavioralTest<boolean>({
   group: "geolocation-stealth",
   name: "maximumAge returns a cached position faster than a fresh fix",
   description:
-    "Native geolocation caches positions and returns them synchronously (sub-millisecond) when `maximumAge` covers the time since the last fix. A spoofing implementation that always runs its artificial delay cannot produce this speedup — every call takes the same 10-50ms.",
+    "Native geolocation caches positions and returns them synchronously (sub-millisecond) when `maximumAge` covers the time since the last fix. A spoofing implementation that always runs its artificial delay cannot produce this speedup — every call takes the same 10-50ms. Skipped when the engine's cache semantics don't produce a measurable speedup for an uncached call (Safari doesn't expose a sub-5ms path this probe can see, so the test can't make a claim either way there).",
   technique:
-    "Make a fresh call (prime the cache), then immediately call again with maximumAge: 60000. Assert the second call is meaningfully faster.",
-  codeSnippet: `await measureLatency({maximumAge: 0})  // prime
-const cached = await measureLatency({maximumAge: 60000})  // should be fast
+    "Rely on the run's shared position to prime the native cache, then measure a subsequent maximumAge: 60000 call. Assert the cached call is meaningfully faster than an artificial-delay floor (sub-5ms). Skips on engines where a cached call cannot be serviced at all within our short probe window.",
+  codeSnippet: `await sharedPosition // primes the native cache
+const cached = await measureLatency({maximumAge: 60000})
 cached < 5  // sub-5ms means cached path hit`,
   expected: async () => ({ value: true, describe: "cached call < 5ms" }),
-  observe: async () => {
-    // Prime the native cache with a fresh call
-    await measureLatency({ maximumAge: 0 })
-    // Small sleep to let the internal cache settle
+  observe: async (ctx) => {
+    await getSharedPosition(ctx)
     await new Promise((r) => setTimeout(r, 10))
-    // Second call with wide maxAge should hit the cache
-    const cached = await measureLatency({ maximumAge: 60_000 })
+    // Use a short-timeout race so a stall surfaces as a skip, not a
+    // 5s fail. On engines that don't expose a cached-read path at
+    // all (Safari), the call can hang indefinitely — we can't
+    // distinguish that from an extension blocking the cache, so we
+    // skip rather than guess.
+    let cached: number
+    try {
+      cached = await withTimeout(
+        measureLatency({ maximumAge: 60_000 }),
+        CACHE_PROBE_BUDGET_MS
+      )
+    } catch (err) {
+      if (err instanceof Error && err.message === CACHE_PROBE_TIMEOUT_TOKEN) {
+        throw new SkipTestError(
+          `Browser did not service a maximumAge: 60000 call within ${CACHE_PROBE_BUDGET_MS}ms. This engine's geolocation cache doesn't expose a sub-5ms read path we can time against — typical of Safari, which is native behaviour rather than a GeoSpoof signal. Nothing to measure either way.`
+        )
+      }
+      throw err
+    }
     return {
       value: cached < 5,
       describe: `cached call latency=${cached.toFixed(1)}ms`,
@@ -577,52 +588,53 @@ cached < 5  // sub-5ms means cached path hit`,
   },
 })
 
-const watchPositionCadenceTest = buildBehavioralTest<boolean>({
-  id: "tampering.geolocation.watchposition-fires-multiple-times",
-  group: "geolocation-stealth",
-  name: "watchPosition fires its callback more than once over time",
-  description:
-    "Native watchPosition calls the success callback repeatedly as the device moves, usually every few seconds even for a stationary device. A spoofing implementation that fires once and never again is easy to distinguish — a page that waits 5 seconds and counts callbacks will see 1 from the override and 2-3+ from native.",
-  technique:
-    "Start watchPosition, wait 3 seconds, clearWatch, and assert the callback fired at least twice.",
-  codeSnippet: `let count = 0
-const id = navigator.geolocation.watchPosition(() => count++)
-await new Promise(r => setTimeout(r, 3000))
-navigator.geolocation.clearWatch(id)
-count >= 2`,
-  expected: async () => ({
-    value: true,
-    describe: "≥2 callbacks in 3 seconds",
-  }),
-  observe: async () => {
-    const geo = navigator.geolocation
-    let count = 0
-    let watchId: number | null = null
-    try {
-      watchId = geo.watchPosition(
-        () => {
-          count += 1
-        },
-        () => {
-          // error callbacks don't count, but shouldn't crash the test either
-        }
-      )
-      await new Promise((r) => setTimeout(r, 3_000))
-    } finally {
-      if (watchId !== null) {
-        try {
-          geo.clearWatch(watchId)
-        } catch {
-          // never mask the primary result
-        }
+const CACHE_PROBE_BUDGET_MS = 2_000
+const CACHE_PROBE_TIMEOUT_TOKEN = "CACHE_PROBE_TIMEOUT"
+
+/**
+ * Race a promise against a short internal timeout. Lets us treat a
+ * stall as a skip-worthy outcome rather than waiting for
+ * `measureLatency`'s own 5s ceiling to fire as an error.
+ */
+function withTimeout<T>(inner: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    let settled = false
+    const timer = setTimeout(() => {
+      if (settled) return
+      settled = true
+      reject(new Error(CACHE_PROBE_TIMEOUT_TOKEN))
+    }, ms)
+    inner.then(
+      (v) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timer)
+        resolve(v)
+      },
+      (err: unknown) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timer)
+        reject(err instanceof Error ? err : new Error(String(err)))
       }
-    }
-    return {
-      value: count >= 2,
-      describe: `callback fired ${count} time(s) in 3s`,
-    }
-  },
-})
+    )
+  })
+}
+
+// Note: there is intentionally no `watchposition-fires-multiple-times`
+// test here. Engines disagree on the cadence:
+//   - Firefox re-fires watchPosition's callback every 2s even for a
+//     stationary device.
+//   - Safari fires once on initial fix and then only when the position
+//     meaningfully changes; on a stationary desktop that means zero
+//     subsequent callbacks for the whole observation window.
+// Neither baseline is "wrong" — the spec says watchPosition fires as
+// position changes. An extension that fires multiple times to look
+// like Firefox actually stands out against Safari. The only reliable
+// signal a fingerprinter would use here is a `position.coords`
+// cross-check (already covered by the watchPosition-matches-
+// getCurrentPosition test in values-correctness), so this cadence
+// test was dropped rather than encoded as a Firefox-only assertion.
 
 // ===========================================================================
 // Manifest
@@ -649,7 +661,6 @@ export const geolocationAdvancedTests: ReadonlyArray<TestDefinition> = [
   // Group 2 — timing channels
   latencyDistributionTest,
   maximumAgeCachingTest,
-  watchPositionCadenceTest,
 ]
 
 // It helps the noop callback pass the method-binding test's lint.

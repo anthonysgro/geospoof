@@ -94,7 +94,7 @@ function callGetCurrentPosition(
             )
           )
         },
-        { timeout: timeoutMs }
+        { timeout: timeoutMs, maximumAge: Number.POSITIVE_INFINITY }
       )
     } catch (err) {
       if (settled) return
@@ -274,78 +274,194 @@ pos.coords matches identity.location`,
 // ---------------------------------------------------------------------------
 
 /**
- * Build a descriptor-absence test for a prototype-inherited method. If
- * `navigator.geolocation.getCurrentPosition` is the native method, it
- * lives on `Geolocation.prototype` and an own-property lookup on the
- * instance returns `undefined`. Anything else means the override was
- * installed by shadowing the prototype on the instance — a
- * one-line-detectable tampering signal.
+ * Build a descriptor-shape test for a prototype-inherited method.
+ *
+ * The real detection vector isn't "is there an own descriptor" — it's
+ * "does the own descriptor differ from the native baseline". Different
+ * engines put these methods in different places:
+ *
+ *   - Firefox and Chrome install the three Geolocation methods on
+ *     `Geolocation.prototype` (and `Permissions.prototype.query` on the
+ *     Permissions prototype). An own-descriptor lookup on the instance
+ *     returns `undefined`.
+ *   - Safari's native WebIDL binding installs the same methods as own
+ *     properties on the instance with `writable=false,
+ *     configurable=false, enumerable=true`.
+ *
+ * To handle both, we grab the native descriptor shape from a freshly
+ * mounted about:blank iframe (its navigator is pristine — the
+ * extension's content script hasn't touched it), snapshot that as the
+ * baseline, then compare the top-level's descriptor to it. If they
+ * match, the override is indistinguishable from native for this engine.
+ * If the top-level's descriptor drifts (e.g. we wrote an own property
+ * where native has none, or our writable/configurable/enumerable flags
+ * differ), that's a genuine detection signal.
  */
-function buildNoOwnDescriptorTest(
+function buildNativeDescriptorParityTest(
   id: string,
   name: string,
-  target: () => object | null | undefined,
+  /**
+   * Given a Window, return the object that owns the descriptor under
+   * test — e.g. `window.navigator.geolocation`. Returns null when the
+   * object isn't available.
+   */
+  resolveTarget: (win: Window) => object | null | undefined,
   targetDescribe: string,
   prop: string
 ): TestDefinition {
-  return buildBehavioralTest<boolean>({
+  return buildBehavioralTest<string>({
     id,
     group: "geolocation-stealth",
     name,
-    description: `Object.getOwnPropertyDescriptor(${targetDescribe}, "${prop}") should be undefined when ${prop} is inherited from its prototype (as it is in every native browser). A defined descriptor means ${prop} was shadowed onto the instance — the classic Object.defineProperty-based spoofing pattern that webbrowsertools.com flags via its ntgrtchcks integrity checks.`,
-    technique: `Resolve ${targetDescribe} synchronously, call Object.getOwnPropertyDescriptor for "${prop}", and assert the result is undefined.`,
-    codeSnippet: `Object.getOwnPropertyDescriptor(${targetDescribe}, "${prop}") === undefined`,
-    expected: async () => ({ value: true, describe: "undefined" }),
+    description: `Object.getOwnPropertyDescriptor(${targetDescribe}, "${prop}") should match the native shape observed in a pristine iframe realm. Native engines differ here — Firefox and Chrome return undefined (the method lives on the prototype), while Safari returns a descriptor with writable=false, configurable=false, enumerable=true (the WebIDL binding installs methods on the instance). A mismatch between the top-level descriptor and the pristine iframe baseline is the actual tampering signal — it means GeoSpoof's override drifted from what the engine natively ships.`,
+    technique: `Mount an about:blank iframe, read Object.getOwnPropertyDescriptor(${targetDescribe}, "${prop}") from both the iframe (native baseline) and the top-level page, and assert the top-level matches the baseline.`,
+    codeSnippet: `const iframe = document.createElement("iframe")
+iframe.src = "about:blank"
+document.body.appendChild(iframe)
+await new Promise((r) => iframe.addEventListener("load", r, { once: true }))
+const nativeDesc = Object.getOwnPropertyDescriptor(
+  iframe.contentWindow.${targetDescribe},
+  "${prop}",
+)
+const liveDesc = Object.getOwnPropertyDescriptor(
+  ${targetDescribe},
+  "${prop}",
+)
+describeDesc(liveDesc) === describeDesc(nativeDesc)`,
+    expected: async () => {
+      const win = await getPristineIframeWindow()
+      try {
+        const target = resolveTarget(win)
+        if (!target) {
+          return {
+            skipReason: `pristine iframe's ${targetDescribe} is unavailable`,
+          }
+        }
+        const nativeDesc = Object.getOwnPropertyDescriptor(target, prop)
+        return {
+          value: describeDescriptor(nativeDesc),
+          describe: describeDescriptor(nativeDesc),
+        }
+      } finally {
+        disposePristineIframe()
+      }
+    },
     observe: async () => {
-      const obj = target()
-      if (!obj) {
+      if (typeof window === "undefined") {
+        throw new Error("window is not available")
+      }
+      const target = resolveTarget(window)
+      if (!target) {
         throw new Error(`${targetDescribe} is not available`)
       }
-      const descriptor = Object.getOwnPropertyDescriptor(obj, prop)
-      const value = descriptor === undefined
+      const descriptor = Object.getOwnPropertyDescriptor(target, prop)
       return {
-        value,
-        describe:
-          descriptor === undefined
-            ? "undefined"
-            : `defined (writable=${String(descriptor.writable)}, configurable=${String(descriptor.configurable)}, enumerable=${String(descriptor.enumerable)})`,
+        value: describeDescriptor(descriptor),
+        describe: describeDescriptor(descriptor),
       }
     },
   })
 }
 
-const getCurrentPositionNoOwnDescriptorTest = buildNoOwnDescriptorTest(
+/**
+ * Canonical rendering of a `PropertyDescriptor` so two descriptors
+ * compare equal via string equality.
+ */
+function describeDescriptor(desc: PropertyDescriptor | undefined): string {
+  if (desc === undefined) return "undefined"
+  if ("value" in desc) {
+    return `data(writable=${String(desc.writable)}, configurable=${String(desc.configurable)}, enumerable=${String(desc.enumerable)})`
+  }
+  return `accessor(get=${desc.get ? "fn" : "undefined"}, set=${desc.set ? "fn" : "undefined"}, configurable=${String(desc.configurable)}, enumerable=${String(desc.enumerable)})`
+}
+
+/**
+ * Reusable pristine about:blank iframe.
+ *
+ * We only need one iframe per run to read native baselines from. The
+ * iframe is created lazily on first access and disposed when the last
+ * caller is done. Holding on to the same iframe across multiple
+ * descriptor tests avoids 4+ redundant mount/unmount cycles.
+ */
+let pristineIframe: HTMLIFrameElement | null = null
+let pristineRefs = 0
+
+async function getPristineIframeWindow(): Promise<Window> {
+  pristineRefs += 1
+  if (pristineIframe?.contentWindow) {
+    return pristineIframe.contentWindow
+  }
+  const iframe = document.createElement("iframe")
+  iframe.src = "about:blank"
+  iframe.setAttribute("aria-hidden", "true")
+  iframe.style.display = "none"
+  document.body.appendChild(iframe)
+  await new Promise<void>((resolve, reject) => {
+    const doc = iframe.contentDocument
+    if (doc && doc.readyState === "complete") {
+      resolve()
+      return
+    }
+    const timer = setTimeout(() => {
+      iframe.removeEventListener("load", onLoad)
+      reject(new Error("pristine iframe did not load within 3000ms"))
+    }, IFRAME_LOAD_TIMEOUT_MS)
+    function onLoad() {
+      clearTimeout(timer)
+      iframe.removeEventListener("load", onLoad)
+      resolve()
+    }
+    iframe.addEventListener("load", onLoad)
+  })
+  pristineIframe = iframe
+  const win = iframe.contentWindow
+  if (!win) {
+    throw new Error("pristine iframe has no contentWindow after load")
+  }
+  return win
+}
+
+function disposePristineIframe(): void {
+  pristineRefs -= 1
+  if (pristineRefs > 0) return
+  if (pristineIframe) {
+    try {
+      pristineIframe.remove()
+    } catch {
+      // cleanup never masks the primary result/error
+    }
+    pristineIframe = null
+  }
+}
+
+const getCurrentPositionNoOwnDescriptorTest = buildNativeDescriptorParityTest(
   "tampering.geolocation.getcurrentposition-has-no-own-descriptor",
-  "navigator.geolocation has no own getCurrentPosition descriptor",
-  () =>
-    typeof navigator !== "undefined" ? (navigator.geolocation ?? null) : null,
+  "navigator.geolocation getCurrentPosition descriptor matches native",
+  (win) => win.navigator.geolocation ?? null,
   "navigator.geolocation",
   "getCurrentPosition"
 )
 
-const watchPositionNoOwnDescriptorTest = buildNoOwnDescriptorTest(
+const watchPositionNoOwnDescriptorTest = buildNativeDescriptorParityTest(
   "tampering.geolocation.watchposition-has-no-own-descriptor",
-  "navigator.geolocation has no own watchPosition descriptor",
-  () =>
-    typeof navigator !== "undefined" ? (navigator.geolocation ?? null) : null,
+  "navigator.geolocation watchPosition descriptor matches native",
+  (win) => win.navigator.geolocation ?? null,
   "navigator.geolocation",
   "watchPosition"
 )
 
-const clearWatchNoOwnDescriptorTest = buildNoOwnDescriptorTest(
+const clearWatchNoOwnDescriptorTest = buildNativeDescriptorParityTest(
   "tampering.geolocation.clearwatch-has-no-own-descriptor",
-  "navigator.geolocation has no own clearWatch descriptor",
-  () =>
-    typeof navigator !== "undefined" ? (navigator.geolocation ?? null) : null,
+  "navigator.geolocation clearWatch descriptor matches native",
+  (win) => win.navigator.geolocation ?? null,
   "navigator.geolocation",
   "clearWatch"
 )
 
-const permissionsQueryNoOwnDescriptorTest = buildNoOwnDescriptorTest(
+const permissionsQueryNoOwnDescriptorTest = buildNativeDescriptorParityTest(
   "tampering.permissions.query-has-no-own-descriptor",
-  "navigator.permissions has no own query descriptor",
-  () =>
-    typeof navigator !== "undefined" ? (navigator.permissions ?? null) : null,
+  "navigator.permissions query descriptor matches native",
+  (win) => win.navigator.permissions ?? null,
   "navigator.permissions",
   "query"
 )

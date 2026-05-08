@@ -69,8 +69,9 @@ export function waitForSettings(): Promise<{ timedOut: boolean }> {
 export function installSettingsListener(): void {
   window.addEventListener(EVENT_NAME, ((event: CustomEvent<SettingsEventDetail>) => {
     if (event.detail) {
+      const receivedAt = performance.now();
       logger.debug(
-        `Settings event received at ${performance.now().toFixed(1)}ms — enabled:${String(event.detail.enabled)} hasLocation:${String(!!event.detail.location)}`
+        `Settings event received at ${receivedAt.toFixed(1)}ms — enabled:${String(event.detail.enabled)} hasLocation:${String(!!event.detail.location)}`
       );
       setSpoofingEnabled(event.detail.enabled);
       setSpoofedLocation(event.detail.location);

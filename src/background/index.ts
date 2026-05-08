@@ -19,7 +19,15 @@ import { syncVpnLocation } from "./vpn-sync";
 
 const logger = createLogger("BG");
 
-console.log("[BG] Background script loading...");
+// Record the moment the background script first evaluates. Used to
+// correlate content-script request timestamps with background-worker
+// boot timestamps during cold-start diagnostics — when the worker was
+// asleep, this log line appears just before `onMessage` fires for the
+// first time; when the worker was warm, the log is absent from the
+// run entirely. Routed through the logger so it's only visible when
+// debug logging is enabled.
+const BG_BOOT_AT = performance.now();
+logger.debug(`Background script loading (t=${BG_BOOT_AT.toFixed(1)}ms since worker start)`);
 
 // Re-export everything so `import("@/background")` keeps working for tests
 export { DEFAULT_SETTINGS } from "@/shared/types/settings";
@@ -208,7 +216,31 @@ export { onAlarm };
 // --- Event Listeners (registered synchronously at top level) ---
 
 browser.runtime.onMessage.addListener((message: Message, sender: Runtime.MessageSender) => {
-  return handleMessage(message, sender);
+  // Timing probe to diagnose cold-start latency. Logs the gap between
+  // worker boot and message arrival so we can tell if the delay users
+  // see on "Settings not received in time" is the worker waking up,
+  // the handler running, or the round-trip reply.
+  const t0 = performance.now();
+  logger.debug(
+    `onMessage fired (type=${message.type}, since-boot=${(t0 - BG_BOOT_AT).toFixed(1)}ms)`
+  );
+  const result = handleMessage(message, sender);
+  // `handleMessage` always returns a Promise (it's an async function).
+  // Attach a passive probe to log when the handler actually settles
+  // so we can correlate handler-time with round-trip time.
+  void result.then(
+    () => {
+      logger.debug(
+        `onMessage handler resolved (type=${message.type}, handler-time=${(performance.now() - t0).toFixed(1)}ms)`
+      );
+    },
+    (err: unknown) => {
+      logger.debug(
+        `onMessage handler rejected (type=${message.type}, handler-time=${(performance.now() - t0).toFixed(1)}ms): ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  );
+  return result;
 });
 
 browser.runtime.onInstalled.addListener((details: Runtime.OnInstalledDetailsType) => {

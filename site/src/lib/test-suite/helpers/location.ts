@@ -29,15 +29,25 @@ import type { LocationValue } from "../../verification/identity-snapshot"
 import type { TestRunContext } from "../types"
 
 /**
- * Max time tests will wait for the shared location snapshot. This must
- * be long enough to accommodate the full user-decision window on the
- * browser's native permission prompt (up to ~60s is a typical user
- * attention budget). The identity provider's `getLocation` correctly
- * waits for the user's decision rather than timing out, so this is
- * really a last-resort bound in case the prompt is dismissed without
- * any response.
+ * Max time tests will wait for the shared location snapshot.
+ *
+ * The provider's `getLocation` correctly waits for the user's decision
+ * on the permission prompt rather than timing out prematurely — so in
+ * the common case where permission has already been granted, the
+ * snapshot is `ready` by the time tests run and `awaitIdentity`
+ * returns immediately. This bound is a last-resort cap for the rare
+ * case where a test started while the prompt is still waiting on the
+ * user. Kept short (8s) because:
+ *   - The runner's per-test ceiling is 10s. A 60s bound would always
+ *     be clipped to 10s and surface as a misleading TEST_TIMEOUT
+ *     error rather than a clean skip.
+ *   - The dashboard is not a productivity tool — if a user can't
+ *     decide in 8s, they're probably not going to.
+ *   - `SkipTestError` is the right outcome here; the test then
+ *     reports as `skipped` with "location snapshot status was
+ *     pending" which is honest about what happened.
  */
-const IDENTITY_LOCATION_WAIT_MS = 60_000
+const IDENTITY_LOCATION_WAIT_MS = 8_000
 
 /**
  * Await the shared location snapshot. Resolves with the ready
