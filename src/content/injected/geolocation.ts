@@ -233,8 +233,9 @@ function createGeolocationPosition(location: SpoofedLocation): SpoofedGeolocatio
   const coordsFields: CoordsSlots = {
     latitude: padded.latitude,
     longitude: padded.longitude,
-    // Native GPS/Wi-Fi accuracy varies call-to-call (±a few meters) and
-    // is never a round integer. See `jitterAccuracy` for rationale.
+    // Native desktop geolocation (Wi-Fi / MLS / Google) returns an integer
+    // accuracy in metres that stays stable across back-to-back calls from
+    // a stationary device. See `jitterAccuracy` for the matching behaviour.
     accuracy: jitterAccuracy(location.accuracy),
     altitude: null,
     altitudeAccuracy: null,
@@ -275,17 +276,36 @@ function createGeolocationPosition(location: SpoofedLocation): SpoofedGeolocatio
 }
 
 /**
- * Produce a realistic geolocation accuracy value. Real GPS/Wi-Fi/cell
- * lookups return fractional values (e.g. `12.347`), vary call-to-call,
- * and aren't suspiciously round integers. This function applies a
- * ±15% jitter to the configured accuracy (or a 10m baseline) and
- * preserves 3 decimal places.
+ * Produce a realistic geolocation accuracy value.
+ *
+ * On desktop, native geolocation is served by Wi-Fi / Mozilla Location
+ * Service / Google Location Services — all of which return an **integer**
+ * accuracy in metres that is stable across back-to-back calls from a
+ * stationary device (e.g. two consecutive `getCurrentPosition` calls
+ * both report `36`). A spoofer that emits fractional values like
+ * `12.347m`, or that jitters the value call-to-call, visibly stands out
+ * against that native baseline.
+ *
+ * We therefore match native: round to an integer, and hold the value
+ * stable for the lifetime of the content-script context (re-generated
+ * only when the configured accuracy or location changes). A small
+ * ±2m randomisation on first use stops every GeoSpoof install from
+ * emitting the exact same default value, but once picked it stays put.
  */
+const DEFAULT_ACCURACY_M = 20;
+let accuracyCache: { configured: number; value: number } | null = null;
+
 function jitterAccuracy(configured?: number): number {
-  const base = configured && configured > 0 ? configured : 10;
-  const jitter = base * (Math.random() * 0.3 - 0.15);
-  const value = base + jitter;
-  return Math.max(0.1, Math.round(value * 1000) / 1000);
+  const base = configured && configured > 0 ? configured : DEFAULT_ACCURACY_M;
+  if (accuracyCache && accuracyCache.configured === base) {
+    return accuracyCache.value;
+  }
+  // ±2m session-initial randomisation, then stable. Clamp to a sensible
+  // lower bound so a tiny configured value doesn't round to 0.
+  const jitter = Math.round((Math.random() - 0.5) * 4);
+  const value = Math.max(1, Math.round(base + jitter));
+  accuracyCache = { configured: base, value };
+  return value;
 }
 
 /**

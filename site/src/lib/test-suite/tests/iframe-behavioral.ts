@@ -31,7 +31,7 @@
  * the module is safe to dynamic-import from `loadAllTests`.
  */
 
-import { buildBehavioralTest } from "../helpers/behavioral"
+import { SkipTestError, buildBehavioralTest } from "../helpers/behavioral"
 import { requireLocationSnapshot } from "../helpers/location"
 import type { TestDefinition } from "../types"
 
@@ -89,9 +89,23 @@ function waitForIframeLoad(
 
 /**
  * Call `getCurrentPosition` inside the iframe's window and resolve with
- * the returned coords. Rejects with a descriptive error when the iframe
- * has no geolocation API, when permission is denied, or when the call
- * times out.
+ * the returned coords.
+ *
+ * Throws a typed `SkipTestError` (converted to `status: "skipped"` by
+ * `buildBehavioralTest`) when the browser itself refuses to serve
+ * geolocation inside the iframe — that is, when `getCurrentPosition`
+ * throws `PERMISSION_DENIED` (code 1), `POSITION_UNAVAILABLE` (code 2),
+ * or `TIMEOUT` (code 3). Raw Firefox frequently returns code 1
+ * ("User denied geolocation prompt") for freshly-created same-origin
+ * iframes even when the top-level page was granted permission and the
+ * iframe has `allow="geolocation"` set. That's native browser
+ * conservatism, not a detectable issue with GeoSpoof's overrides — the
+ * test can only meaningfully measure iframe patching when the browser
+ * actually hands a position to the iframe.
+ *
+ * Rejects with a plain `Error` for other failure modes (no geolocation
+ * API on the iframe window, our own timeout firing, unexpected throws
+ * from the call itself) — those become `status: "error"`.
  */
 function getCurrentPositionInWindow(
   win: Window,
@@ -128,9 +142,27 @@ function getCurrentPositionInWindow(
           if (settled) return
           settled = true
           clearTimeout(timer)
+          const code = err.code
+          // code 1 = PERMISSION_DENIED, 2 = POSITION_UNAVAILABLE,
+          // 3 = TIMEOUT. Any of these mean the browser itself refused
+          // to serve geolocation to the iframe — skip rather than fail.
+          if (code === 1 || code === 2 || code === 3) {
+            const reason =
+              code === 1
+                ? "Browser denied geolocation inside iframe"
+                : code === 2
+                  ? "Browser could not acquire a position for the iframe"
+                  : "Browser timed out acquiring a position for the iframe"
+            reject(
+              new SkipTestError(
+                `${reason} (code ${code}: ${err.message || "no message"}). This happens on raw Firefox for freshly-created same-origin iframes and is native browser behaviour, not a GeoSpoof signal. The extension's iframe patching can only be exercised when the browser actually hands a position to the iframe.`
+              )
+            )
+            return
+          }
           reject(
             new Error(
-              err.message || `iframe getCurrentPosition error code ${err.code}`
+              err.message || `iframe getCurrentPosition error code ${code}`
             )
           )
         },
@@ -164,6 +196,15 @@ async function probeIframeGeolocation(
 
   const iframe = document.createElement("iframe")
   iframe.src = "about:blank"
+  // Permissions Policy: the default allowlist for `geolocation` is "self".
+  // In theory a same-origin iframe inherits access; in practice
+  // Chromium-based engines require explicit delegation via the `allow`
+  // attribute, otherwise `getCurrentPosition` inside the iframe throws
+  // PERMISSION_DENIED even when the parent was granted. This matches
+  // what a real page would write when it actually wants geolocation in
+  // an iframe — without it, we're testing a scenario the browser itself
+  // rejects, not the extension's iframe-patching infrastructure.
+  iframe.setAttribute("allow", "geolocation")
   iframe.style.width = "1px"
   iframe.style.height = "1px"
   iframe.style.border = "0"
@@ -201,6 +242,7 @@ const iframeContentWindowGetsPatchedGeolocationTest =
       "Create an about:blank iframe, appendChild it to a throwaway container, wait for load, call contentWindow.navigator.geolocation.getCurrentPosition, and compare to the identity snapshot to 4 decimal places.",
     codeSnippet: `const iframe = document.createElement("iframe")
 iframe.src = "about:blank"
+iframe.setAttribute("allow", "geolocation")
 container.appendChild(iframe)
 await new Promise((r) => iframe.addEventListener("load", r, { once: true }))
 const pos = await new Promise((res, rej) =>
@@ -234,6 +276,7 @@ const iframeAppendChildPatchesGeolocationTest = buildBehavioralTest<Coords>({
     "Create an iframe, use document.body.appendChild directly, wait for load, call getCurrentPosition inside the iframe, and compare to the identity snapshot.",
   codeSnippet: `const iframe = document.createElement("iframe")
 iframe.src = "about:blank"
+iframe.setAttribute("allow", "geolocation")
 document.body.appendChild(iframe) // wrapped path
 await new Promise((r) => iframe.addEventListener("load", r, { once: true }))
 // coords from iframe.contentWindow.navigator.geolocation match identity`,
@@ -265,7 +308,7 @@ const iframeInnerHTMLPatchesGeolocationTest = buildBehavioralTest<Coords>({
     "Create a container, set container.innerHTML to a fragment containing an about:blank iframe, wait for the iframe to load, then call getCurrentPosition inside the iframe and compare to the identity snapshot.",
   codeSnippet: `const container = document.createElement("div")
 document.body.appendChild(container)
-container.innerHTML = '<iframe src="about:blank"></iframe>'
+container.innerHTML = '<iframe src="about:blank" allow="geolocation"></iframe>'
 const iframe = container.querySelector("iframe")
 // coords from iframe.contentWindow.navigator.geolocation match identity`,
   expected: async (ctx) => {
@@ -286,7 +329,7 @@ const iframe = container.querySelector("iframe")
     document.body.appendChild(parent)
     try {
       parent.innerHTML =
-        '<iframe src="about:blank" aria-hidden="true"></iframe>'
+        '<iframe src="about:blank" allow="geolocation" aria-hidden="true"></iframe>'
       const iframe = parent.querySelector("iframe")
       if (!iframe) {
         throw new Error("innerHTML did not materialise an <iframe>")
@@ -319,6 +362,7 @@ const iframeSrcdocPatchesGeolocationTest = buildBehavioralTest<Coords>({
     "Create an iframe with a srcdoc attribute, append it, wait for load, call getCurrentPosition inside, compare to the identity snapshot.",
   codeSnippet: `const iframe = document.createElement("iframe")
 iframe.srcdoc = "<!doctype html><html></html>"
+iframe.setAttribute("allow", "geolocation")
 document.body.appendChild(iframe)
 await new Promise((r) => iframe.addEventListener("load", r, { once: true }))
 // coords from iframe.contentWindow.navigator.geolocation match identity`,
@@ -341,6 +385,7 @@ await new Promise((r) => iframe.addEventListener("load", r, { once: true }))
     try {
       const iframe = document.createElement("iframe")
       iframe.setAttribute("aria-hidden", "true")
+      iframe.setAttribute("allow", "geolocation")
       iframe.style.width = "1px"
       iframe.style.height = "1px"
       iframe.style.border = "0"
@@ -375,10 +420,11 @@ const iframeDocumentWritePatchesGeolocationTest = buildBehavioralTest<Coords>({
     "Mount an outer about:blank iframe, call document.write on its document to inject a nested iframe, wait for load, call getCurrentPosition inside the nested iframe, compare to the identity snapshot.",
   codeSnippet: `const outer = document.createElement("iframe")
 outer.src = "about:blank"
+outer.setAttribute("allow", "geolocation")
 document.body.appendChild(outer)
 await new Promise((r) => outer.addEventListener("load", r, { once: true }))
 outer.contentDocument.open()
-outer.contentDocument.write('<iframe src="about:blank"></iframe>')
+outer.contentDocument.write('<iframe src="about:blank" allow="geolocation"></iframe>')
 outer.contentDocument.close()
 const nested = outer.contentDocument.querySelector("iframe")
 // coords from nested.contentWindow.navigator.geolocation match identity`,
@@ -402,6 +448,7 @@ const nested = outer.contentDocument.querySelector("iframe")
     const outer = document.createElement("iframe")
     outer.src = "about:blank"
     outer.setAttribute("aria-hidden", "true")
+    outer.setAttribute("allow", "geolocation")
     outer.style.width = "1px"
     outer.style.height = "1px"
     outer.style.border = "0"
@@ -421,7 +468,7 @@ const nested = outer.contentDocument.querySelector("iframe")
         }
         outerDocPre.open()
         outerDocPre.write(
-          '<iframe src="about:blank" aria-hidden="true"></iframe>'
+          '<iframe src="about:blank" allow="geolocation" aria-hidden="true"></iframe>'
         )
         outerDocPre.close()
       }

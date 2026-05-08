@@ -467,39 +467,6 @@ GeolocationPositionError.TIMEOUT === 3`,
   },
 })
 
-const accuracyNotSuspiciousTest = buildBehavioralTest<boolean>({
-  id: "tampering.geolocation.accuracy-not-suspicious-default",
-  group: "geolocation-stealth",
-  name: "position.coords.accuracy is not a suspiciously round default",
-  description:
-    "Real geolocation accuracy varies by source (GPS, Wi-Fi, cell). A constant value across calls — especially a round number like exactly 10 meters — is a detectable signature of an override that didn't bother to vary it. A detector can call getCurrentPosition multiple times and flag zero variance.",
-  technique:
-    "Call getCurrentPosition twice with a small delay, compute the difference in accuracy, and assert it's not exactly zero. If both calls return exactly the same value, the override is using a static default.",
-  codeSnippet: `const p1 = await getPosition()
-await new Promise(r => setTimeout(r, 200))
-const p2 = await getPosition()
-p1.coords.accuracy !== p2.coords.accuracy
-  || p1.coords.accuracy % 1 !== 0  // or at least it's not an integer`,
-  expected: async () => ({
-    value: true,
-    describe: "accuracy varies or is non-integer",
-  }),
-  observe: async () => {
-    const p1 = await getFullPosition(GEO_CALL_TIMEOUT_MS)
-    await new Promise((r) => setTimeout(r, 200))
-    const p2 = await getFullPosition(GEO_CALL_TIMEOUT_MS)
-    const a1 = p1.coords.accuracy
-    const a2 = p2.coords.accuracy
-    const varies = a1 !== a2
-    const fractional = a1 % 1 !== 0 || a2 % 1 !== 0
-    const value = varies || fractional
-    return {
-      value,
-      describe: `call1=${a1}m, call2=${a2}m (varies=${String(varies)}, fractional=${String(fractional)})`,
-    }
-  },
-})
-
 const coordPrecisionRealisticTest = buildBehavioralTest<boolean>({
   id: "tampering.geolocation.coord-precision-realistic",
   group: "geolocation-stealth",
@@ -565,39 +532,14 @@ for (let i = 0; i < 8; i++) samples.push(await measureLatency())
   },
 })
 
-const highAccuracyLatencyDifferentialTest = buildBehavioralTest<boolean>({
-  id: "tampering.geolocation.high-accuracy-changes-latency",
-  group: "known-limitations",
-  name: "enableHighAccuracy changes callback latency",
-  description:
-    "Native geolocation reacts to `enableHighAccuracy: true` by engaging GPS hardware, which takes measurably longer than a Wi-Fi/IP-based fix. A content-script spoofer has no hardware to engage — both option values return through the same setTimeout path with indistinguishable latency. Adding an artificial delay when the flag is set would be detectable as a perfect step function, so we don't try. This is a documented limitation of JavaScript-level spoofing.",
-  technique:
-    "Run two bursts of 4 calls each — high-accuracy vs low-accuracy — compute mean latency of each, assert they differ by at least 5ms.",
-  codeSnippet: `const low = [await measureLatency({enableHighAccuracy: false}), ...]
-const high = [await measureLatency({enableHighAccuracy: true}), ...]
-Math.abs(mean(high) - mean(low)) > 5`,
-  expected: async () => ({
-    value: true,
-    describe: "latency differential > 5ms",
-  }),
-  observe: async () => {
-    const low: Array<number> = []
-    const high: Array<number> = []
-    for (let i = 0; i < 4; i++) {
-      low.push(await measureLatency({ enableHighAccuracy: false }))
-    }
-    for (let i = 0; i < 4; i++) {
-      high.push(await measureLatency({ enableHighAccuracy: true }))
-    }
-    const meanLow = low.reduce((a, b) => a + b, 0) / low.length
-    const meanHigh = high.reduce((a, b) => a + b, 0) / high.length
-    const diff = Math.abs(meanHigh - meanLow)
-    return {
-      value: diff > 5,
-      describe: `low-acc mean=${meanLow.toFixed(1)}ms, high-acc mean=${meanHigh.toFixed(1)}ms, |diff|=${diff.toFixed(1)}ms`,
-    }
-  },
-})
+// Note: there is intentionally no `high-accuracy-changes-latency` test
+// here. Native desktop Firefox/Chrome have no GPS hardware to engage, so
+// `enableHighAccuracy: true` and `false` both take the same Wi-Fi / MLS
+// path and produce near-identical latency (observed |diff| ≈ 0.5ms on
+// raw Firefox). The previous "known-limitation" framing implied this
+// was a gap specific to GeoSpoof; in reality it's a property of the
+// underlying browser on desktop, present with or without the extension.
+// Flagging it either way would mislead the user.
 
 const maximumAgeCachingTest = buildBehavioralTest<boolean>({
   id: "tampering.geolocation.maximumage-returns-cached-faster",
@@ -693,11 +635,9 @@ export const geolocationAdvancedTests: ReadonlyArray<TestDefinition> = [
   coordsOwnSymbolsTest,
   coordsDescriptorsAreAccessorsTest,
   errorConstantsTest,
-  accuracyNotSuspiciousTest,
   coordPrecisionRealisticTest,
   // Group 2 — timing channels
   latencyDistributionTest,
-  highAccuracyLatencyDifferentialTest,
   maximumAgeCachingTest,
   watchPositionCadenceTest,
 ]
