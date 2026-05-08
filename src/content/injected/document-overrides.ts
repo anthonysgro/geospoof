@@ -106,7 +106,9 @@ function formatInSpoofedZone(epoch: number, timezoneId: string): string {
 export function installLastModifiedOverride(documentProto: object): void {
   const desc = Object.getOwnPropertyDescriptor(documentProto, "lastModified");
   if (!desc?.get) {
-    logger.trace("lastModified getter not found on Document.prototype, skipping");
+    logger.debug("[lastModified-install] getter not found on Document.prototype, skipping", {
+      isTopLevel: documentProto === (typeof Document !== "undefined" ? Document.prototype : null),
+    });
     return;
   }
   if (desc.configurable === false) {
@@ -115,7 +117,9 @@ export function installLastModifiedOverride(documentProto: object): void {
     // at `Object.defineProperty` and crash the whole injection. Skip
     // the override and let the native value leak rather than breaking
     // every other override.
-    logger.warn("Document.prototype.lastModified is non-configurable, skipping override");
+    logger.warn(
+      "[lastModified-install] Document.prototype.lastModified is non-configurable, skipping override"
+    );
     return;
   }
   // eslint-disable-next-line @typescript-eslint/unbound-method -- intentional: re-bound via .call(this) inside the wrapper
@@ -127,13 +131,31 @@ export function installLastModifiedOverride(documentProto: object): void {
   const spoofedGet = {
     lastModified(this: Document): string {
       const native = originalGet.call(this) as string;
-      if (!spoofingEnabled || !timezoneData) return native;
+      if (!spoofingEnabled || !timezoneData) {
+        logger.debug("[lastModified-get] spoofing disabled, returning native", {
+          native,
+          spoofingEnabled,
+          hasTimezoneData: timezoneData !== null,
+        });
+        return native;
+      }
       try {
         const epoch = parseNativeLastModified(native);
-        if (epoch === null) return native;
-        return formatInSpoofedZone(epoch, timezoneData.identifier);
+        if (epoch === null) {
+          logger.debug("[lastModified-get] parse failed, returning native", {
+            native,
+          });
+          return native;
+        }
+        const spoofed = formatInSpoofedZone(epoch, timezoneData.identifier);
+        logger.debug("[lastModified-get] spoofed", {
+          native,
+          spoofed,
+          zone: timezoneData.identifier,
+        });
+        return spoofed;
       } catch (err) {
-        logger.warn("lastModified override failed, returning native value:", err);
+        logger.warn("[lastModified-get] override failed, returning native value:", err);
         return native;
       }
     },
@@ -150,6 +172,10 @@ export function installLastModifiedOverride(documentProto: object): void {
     get: spoofedGet,
     configurable: desc.configurable,
     enumerable: desc.enumerable,
+  });
+
+  logger.debug("[lastModified-install] override installed on Document.prototype", {
+    isTopLevel: documentProto === (typeof Document !== "undefined" ? Document.prototype : null),
   });
 }
 

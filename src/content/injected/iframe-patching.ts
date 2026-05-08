@@ -166,8 +166,21 @@ function defineOwnFields<T extends Record<string, unknown>>(target: object, fiel
  * Safe to call multiple times — subsequent calls for the same window are no-ops.
  */
 export function patchIframeWindow(iframeWindow: Window): void {
-  if (patchedIframeWindows.has(iframeWindow)) return;
+  if (patchedIframeWindows.has(iframeWindow)) {
+    logger.debug("[patchIframeWindow] already patched, skipping");
+    return;
+  }
   patchedIframeWindows.add(iframeWindow);
+  logger.debug("[patchIframeWindow] entering", {
+    hasDocument: (() => {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+        return !!(iframeWindow as any).document;
+      } catch (err) {
+        return `threw: ${err instanceof Error ? err.message : String(err)}`;
+      }
+    })(),
+  });
 
   // ── 1. toString masking ──────────────────────────────────────────────
   try {
@@ -198,7 +211,12 @@ export function patchIframeWindow(iframeWindow: Window): void {
         return (iframeOrigCall as any).call(iframeOrigToString, this) as string;
       },
     }.toString;
-  } catch {
+    logger.debug("[patchIframeWindow] section 1 (toString) complete");
+  } catch (err) {
+    logger.debug(
+      "[patchIframeWindow] section 1 (toString) threw:",
+      err instanceof Error ? err.message : String(err)
+    );
     // Cross-origin iframes throw SecurityError — silently ignore
   }
 
@@ -216,17 +234,22 @@ export function patchIframeWindow(iframeWindow: Window): void {
   // `patchedIframeWindows`) and use the iframe's own `navigator.
   // geolocation` instance only to capture pristine originals for
   // pass-through when spoofing is disabled.
-  try {
+  //
+  // Wrapped in a labeled block so the early-bailout `break` statements
+  // below skip only this section, not the rest of patchIframeWindow —
+  // a bare `return` here would also skip sections 3..8, leaking every
+  // downstream surface whenever the iframe lacks a Geolocation realm.
+  geolocationSection: try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
     const iframeNav = (iframeWindow as any).navigator as Navigator;
-    if (!iframeNav?.geolocation) return;
+    if (!iframeNav?.geolocation) break geolocationSection;
 
     const iframeGeo = iframeNav.geolocation;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
     const iframeGeolocationCtor = (iframeWindow as any).Geolocation as
       | { prototype: object }
       | undefined;
-    if (!iframeGeolocationCtor?.prototype) return;
+    if (!iframeGeolocationCtor?.prototype) break geolocationSection;
 
     // Capture the iframe's own originals before we install the override,
     // so pass-through mode (spoofing disabled) hits the real API.
@@ -314,8 +337,12 @@ export function patchIframeWindow(iframeWindow: Window): void {
     installOverride(iframeGeolocationCtor.prototype, "watchPosition", iframeWatchPosition, 1);
     installOverride(iframeGeolocationCtor.prototype, "clearWatch", iframeClearWatch, 1);
 
-    logger.trace("Patched iframe geolocation API");
-  } catch {
+    logger.debug("[patchIframeWindow] section 2 (geolocation) complete");
+  } catch (err) {
+    logger.debug(
+      "[patchIframeWindow] section 2 (geolocation) threw:",
+      err instanceof Error ? err.message : String(err)
+    );
     // Cross-origin or sandboxed iframes may throw — silently ignore
   }
 
@@ -324,12 +351,16 @@ export function patchIframeWindow(iframeWindow: Window): void {
   // permission checks from within the iframe (or from the parent via
   // `iframe.contentWindow.navigator.permissions.query(...)`) return
   // "granted" for geolocation.
-  try {
+  //
+  // Wrapped in a labeled block for the same reason as section 2 — a
+  // bare `return` on missing Permissions realm would skip sections
+  // 4..8 and leak Intl/Date/Temporal/DOM-insertion/lastModified.
+  permissionsSection: try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
     const iframePerms = (iframeWindow as any).navigator?.permissions as Permissions | undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
     const iframePermsCtor = (iframeWindow as any).Permissions as { prototype: object } | undefined;
-    if (!iframePerms?.query || !iframePermsCtor?.prototype) return;
+    if (!iframePerms?.query || !iframePermsCtor?.prototype) break permissionsSection;
 
     const iframeOrigQuery = iframePerms.query.bind(iframePerms);
 
@@ -374,7 +405,12 @@ export function patchIframeWindow(iframeWindow: Window): void {
     };
 
     installOverride(iframePermsCtor.prototype, "query", iframePermissionsQuery, 1);
-  } catch {
+    logger.debug("[patchIframeWindow] section 3 (permissions) complete");
+  } catch (err) {
+    logger.debug(
+      "[patchIframeWindow] section 3 (permissions) threw:",
+      err instanceof Error ? err.message : String(err)
+    );
     // Silently ignore
   }
 
@@ -386,10 +422,14 @@ export function patchIframeWindow(iframeWindow: Window): void {
   // timezone-overrides.ts — we inject the spoofed identifier when the
   // caller doesn't supply an explicit timeZone, and leave explicit
   // zones untouched.
-  try {
+  //
+  // Labeled block so a missing Intl realm skips only this section,
+  // not the downstream Date / Temporal / cascade / lastModified
+  // installs.
+  intlSection: try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
     const iframeIntl = (iframeWindow as any).Intl as typeof Intl | undefined;
-    if (!iframeIntl?.DateTimeFormat) return;
+    if (!iframeIntl?.DateTimeFormat) break intlSection;
 
     const IframeOriginalDTF = iframeIntl.DateTimeFormat;
     // eslint-disable-next-line @typescript-eslint/unbound-method -- intentional: re-bound via .call(this) inside the resolvedOptions override
@@ -456,8 +496,12 @@ export function patchIframeWindow(iframeWindow: Window): void {
       }
     );
 
-    logger.trace("Patched iframe Intl.DateTimeFormat");
-  } catch {
+    logger.debug("[patchIframeWindow] section 4 (Intl) complete");
+  } catch (err) {
+    logger.debug(
+      "[patchIframeWindow] section 4 (Intl) threw:",
+      err instanceof Error ? err.message : String(err)
+    );
     // Cross-origin or missing Intl — silently ignore
   }
 
@@ -470,10 +514,13 @@ export function patchIframeWindow(iframeWindow: Window): void {
   // `OriginalDate` (captured at module load before any overrides) as
   // the numeric epoch source — iframe and parent share the same UTC
   // clock, so this produces identical epoch values.
-  try {
+  //
+  // Labeled block so a missing Date realm skips only this section,
+  // not the downstream Temporal / cascade / lastModified installs.
+  dateSection: try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
     const IframeOriginalDate = (iframeWindow as any).Date as DateConstructor | undefined;
-    if (!IframeOriginalDate) return;
+    if (!IframeOriginalDate) break dateSection;
 
     const IframeOriginalDateParse = IframeOriginalDate.parse.bind(IframeOriginalDate);
 
@@ -641,8 +688,12 @@ export function patchIframeWindow(iframeWindow: Window): void {
     registerOverride((IframeDateOverride as unknown as DateConstructor).now, "now");
     registerOverride((IframeDateOverride as unknown as DateConstructor).UTC, "UTC");
 
-    logger.trace("Patched iframe Date constructor");
-  } catch {
+    logger.debug("[patchIframeWindow] section 5 (Date) complete");
+  } catch (err) {
+    logger.debug(
+      "[patchIframeWindow] section 5 (Date) threw:",
+      err instanceof Error ? err.message : String(err)
+    );
     // Cross-origin or missing Date — silently ignore
   }
 
@@ -652,7 +703,14 @@ export function patchIframeWindow(iframeWindow: Window): void {
   // `timeZoneId()` returns the spoofed identifier, and every
   // `plain*ISO` / `zonedDateTimeISO` method substitutes the spoofed zone
   // only when no explicit timezone argument was provided.
-  try {
+  //
+  // Labeled block so a missing Temporal realm skips only this section,
+  // not the downstream cascade / lastModified installs. This was the
+  // root cause of a Safari-only `iframe.contentDocument.lastModified`
+  // leak: Safari doesn't ship Temporal, so a bare `return` here
+  // aborted patchIframeWindow before section 8 could run and patched
+  // Document.prototype never got the spoofed getter.
+  temporalSection: try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
     const iframeTemporal = (iframeWindow as any).Temporal as
       | {
@@ -665,7 +723,7 @@ export function patchIframeWindow(iframeWindow: Window): void {
           };
         }
       | undefined;
-    if (!iframeTemporal?.Now) return;
+    if (!iframeTemporal?.Now) break temporalSection;
 
     const iframeNow = iframeTemporal.Now;
     const iframeOrigTimeZoneId = iframeNow.timeZoneId.bind(iframeNow);
@@ -711,8 +769,12 @@ export function patchIframeWindow(iframeWindow: Window): void {
       return iframeOrigZonedDateTimeISO(tzLike);
     });
 
-    logger.trace("Patched iframe Temporal.Now");
-  } catch {
+    logger.debug("[patchIframeWindow] section 6 (Temporal) complete");
+  } catch (err) {
+    logger.debug(
+      "[patchIframeWindow] section 6 (Temporal) threw:",
+      err instanceof Error ? err.message : String(err)
+    );
     // Temporal unavailable or cross-origin — silently ignore
   }
 
@@ -1066,8 +1128,12 @@ export function patchIframeWindow(iframeWindow: Window): void {
       // cross-origin or detached — silently skip
     }
 
-    logger.trace("Patched iframe nested-iframe cascade");
-  } catch {
+    logger.debug("[patchIframeWindow] section 7 (nested-iframe cascade) complete");
+  } catch (err) {
+    logger.debug(
+      "[patchIframeWindow] section 7 (nested-iframe cascade) threw:",
+      err instanceof Error ? err.message : String(err)
+    );
     // Cross-origin or missing constructors — silently ignore
   }
 
@@ -1077,15 +1143,72 @@ export function patchIframeWindow(iframeWindow: Window): void {
   // un-patched accessor and leaks the real system timezone. This is
   // one of TZP's primary ground-truth sources for detecting spoofing —
   // closing it removes the single highest-signal cross-surface leak.
+  //
+  // Safari quirk: WebKit treats about:blank iframes as cross-origin
+  // relative to their parent, so `(iframeWindow as any).Document`
+  // throws SecurityError. But `iframe.contentDocument.lastModified`
+  // itself still succeeds when read from the parent — leaking the
+  // real-zone string. To cover that case, we reach into the iframe's
+  // `Document.prototype` through the Document *instance* rather than
+  // through the iframe's window global, which sidesteps Safari's
+  // realm-access gating.
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-    const iframeDocumentCtor = (iframeWindow as any).Document as { prototype: object } | undefined;
-    if (iframeDocumentCtor?.prototype) {
-      installLastModifiedOverride(iframeDocumentCtor.prototype);
-      logger.trace("Patched iframe Document.prototype.lastModified");
+    let iframeDocumentProto: object | null = null;
+    let pathTaken: "window.Document" | "window.document" | "none" = "none";
+    let windowDocErr: string | null = null;
+    let windowDocumentErr: string | null = null;
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+      const iframeDocumentCtor = (iframeWindow as any).Document as
+        | { prototype: object }
+        | undefined;
+      if (iframeDocumentCtor?.prototype) {
+        iframeDocumentProto = iframeDocumentCtor.prototype;
+        pathTaken = "window.Document";
+      }
+    } catch (err) {
+      windowDocErr = err instanceof Error ? err.message : String(err);
+      // Safari gates Document access on the iframe window global —
+      // fall through to the instance-based path below.
     }
-  } catch {
-    // Cross-origin or missing Document — silently ignore
+    if (iframeDocumentProto === null) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+        const doc = (iframeWindow as any).document as Document | null | undefined;
+        if (doc) {
+          iframeDocumentProto = Object.getPrototypeOf(doc) as object | null;
+          pathTaken = "window.document";
+        }
+      } catch (err) {
+        windowDocumentErr = err instanceof Error ? err.message : String(err);
+        // If even this access throws, the iframe is genuinely
+        // inaccessible — nothing more we can do from the content script.
+      }
+    }
+
+    logger.debug("[lastModified-patch] iframe realm access result", {
+      pathTaken,
+      windowDocErr,
+      windowDocumentErr,
+      hasProto: iframeDocumentProto !== null,
+    });
+
+    if (iframeDocumentProto) {
+      installLastModifiedOverride(iframeDocumentProto);
+      logger.debug("[lastModified-patch] installed on iframe Document.prototype", {
+        pathTaken,
+      });
+    } else {
+      logger.debug(
+        "[lastModified-patch] could not reach iframe Document.prototype — iframe.contentDocument.lastModified will leak real zone"
+      );
+    }
+  } catch (err) {
+    logger.debug(
+      "[lastModified-patch] outer try caught error (cross-origin or missing Document):",
+      err instanceof Error ? err.message : String(err)
+    );
   }
 }
 
