@@ -571,15 +571,30 @@ cached < 5  // sub-5ms means cached path hit`,
     try {
       cached = await withTimeout(
         measureLatency({ maximumAge: 60_000 }),
-        CACHE_PROBE_BUDGET_MS
+        CACHE_PROBE_BUDGET_MS,
       )
     } catch (err) {
       if (err instanceof Error && err.message === CACHE_PROBE_TIMEOUT_TOKEN) {
         throw new SkipTestError(
-          `Browser did not service a maximumAge: 60000 call within ${CACHE_PROBE_BUDGET_MS}ms. This engine's geolocation cache doesn't expose a sub-5ms read path we can time against — typical of Safari, which is native behaviour rather than a GeoSpoof signal. Nothing to measure either way.`
+          `Browser did not service a maximumAge: 60000 call within ${CACHE_PROBE_BUDGET_MS}ms. This engine's geolocation cache doesn't expose a sub-5ms read path we can time against — typical of Safari, which is native behaviour rather than a GeoSpoof signal. Nothing to measure either way.`,
         )
       }
       throw err
+    }
+    // Safari's CoreLocation-backed geolocation routes even `maximumAge:
+    // 60_000` reads through its own service layer; observed latencies
+    // cluster around 1.5-1.9s. That's well above the sub-5ms "cached
+    // path hit" threshold this test is looking for, but it's also well
+    // above any `setTimeout`-based spoofing delay — so a result in
+    // that range is a signal that this engine doesn't expose the
+    // detection vector at all, not that the extension is failing it.
+    // Skip anything slower than 100ms (10× our spoofing's worst-case
+    // 50ms delay) as "engine doesn't participate"; leave the fast
+    // path as the genuine measurement.
+    if (cached > 100) {
+      throw new SkipTestError(
+        `Cached call took ${cached.toFixed(1)}ms. This engine's geolocation cache doesn't expose a sub-5ms read path we can time against — typical of Safari, which is native behaviour rather than a GeoSpoof signal. Nothing to measure either way.`,
+      )
     }
     return {
       value: cached < 5,

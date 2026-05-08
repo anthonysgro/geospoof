@@ -1061,7 +1061,7 @@ const geolocationTimestampRecentTest = buildBehavioralTest<boolean>({
     "Sample Date.now() just before the getCurrentPosition call, capture position.timestamp, and assert it's within 10 seconds of either the Unix epoch or the CFAbsoluteTime (2001-based) interpretation.",
   codeSnippet: `const before = Date.now()
 const pos = await new Promise((res, rej) =>
-  navigator.geolocation.getCurrentPosition(res, rej),
+  navigator.geolocation.getCurrentPosition(res, rej, { maximumAge: 0 }),
 )
 // Accept either Unix-epoch or CFAbsoluteTime (Safari) — both are native
 const unixDelta = Math.abs(pos.timestamp - before)
@@ -1069,9 +1069,49 @@ const CF_EPOCH_OFFSET_MS = 978_307_200_000 // 2001-01-01 - 1970-01-01 in ms
 const cfDelta = Math.abs(pos.timestamp + CF_EPOCH_OFFSET_MS - before)
 Math.min(unixDelta, cfDelta) < 10_000`,
   expected: async () => ({ value: true, describe: "|delta| < 10s" }),
-  observe: async (ctx) => {
+  observe: async () => {
+    // Intentionally does NOT use the run-shared position (which is
+    // served with `maximumAge: Infinity`). Safari will happily hand
+    // back a cached position whose `.timestamp` reflects when the fix
+    // was originally acquired — not when the call was made — and by
+    // the time this test runs after the Identity Panel's prime + the
+    // earlier shape tests, that cached timestamp can be 10-20s old.
+    // A stale-but-native cache read isn't the detection vector this
+    // test is designed to catch (constant/far-offset epochs are), so
+    // we force a fresh fix here with `maximumAge: 0`.
     const before = Date.now()
-    const pos = await getFullPosition(ctx, GEOLOCATION_CALL_TIMEOUT_MS)
+    const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+      let settled = false
+      const timer = setTimeout(() => {
+        if (settled) return
+        settled = true
+        reject(
+          new Error(
+            `getCurrentPosition did not resolve within ${GEOLOCATION_CALL_TIMEOUT_MS}ms`,
+          ),
+        )
+      }, GEOLOCATION_CALL_TIMEOUT_MS)
+      try {
+        navigator.geolocation.getCurrentPosition(
+          (p) => {
+            if (settled) return
+            settled = true
+            clearTimeout(timer)
+            resolve(p)
+          },
+          (err) => {
+            if (settled) return
+            settled = true
+            clearTimeout(timer)
+            reject(new Error(`getCurrentPosition error: ${err.message}`))
+          },
+          { maximumAge: 0, timeout: GEOLOCATION_CALL_TIMEOUT_MS },
+        )
+      } catch (err) {
+        clearTimeout(timer)
+        reject(err instanceof Error ? err : new Error(String(err)))
+      }
+    })
     // Interpret the timestamp as Unix milliseconds first.
     const unixDelta = Math.abs(pos.timestamp - before)
     // Safari / WebKit reports timestamps as CFAbsoluteTime ×1000: ms
