@@ -32,7 +32,7 @@
  * technique can detect that we're spoofing.
  */
 
-import { buildBehavioralTest } from "../helpers/behavioral"
+import { SkipTestError, buildBehavioralTest } from "../helpers/behavioral"
 import { requireLocationSnapshot } from "../helpers/location"
 import { getSharedPosition } from "../helpers/shared-position"
 import { coordsMatchApprox } from "../helpers/coords"
@@ -171,6 +171,39 @@ function callGetCurrentPosition(
 // Indirection techniques (3) and (4)
 // ---------------------------------------------------------------------------
 
+/**
+ * Heuristic: does this error look like a CSP eval/Function block?
+ *
+ * Browsers throw `EvalError` with engine-specific wording when
+ * `script-src` forbids `'unsafe-eval'`. The message varies
+ * ("call to eval() blocked by CSP" on Firefox, "Refused to evaluate
+ * a string as JavaScript because 'unsafe-eval' is not an allowed
+ * source of script..." on Chromium), so we look for the shape rather
+ * than an exact string. We also accept `EvalError` as the class
+ * because both engines use it for this condition.
+ *
+ * When this fires, skipping the test is the correct outcome: the
+ * technique these tests probe ("can a hostile page use eval to
+ * re-resolve navigator.geolocation and bypass our override?") is
+ * unanswerable against a CSP-locked host page — the attack can't
+ * launch in the first place, which is a property of the host, not
+ * of the extension. Running this extension on a page that DOES
+ * allow eval would still exercise the override correctly.
+ */
+function isCSPEvalBlock(err: unknown): boolean {
+  if (err instanceof EvalError) return true
+  if (!(err instanceof Error)) return false
+  const m = err.message.toLowerCase()
+  return (
+    m.includes("content security policy") ||
+    m.includes("content-security-policy") ||
+    m.includes("blocked by csp") ||
+    (m.includes("unsafe-eval") && m.includes("refused")) ||
+    m.includes("call to eval()") ||
+    m.includes("call to function()")
+  )
+}
+
 const evalIndirectionTest = buildBehavioralTest<Coords>({
   id: "tampering.geolocation.eval-indirection-returns-spoofed",
   group: "geolocation-stealth",
@@ -190,7 +223,17 @@ pos.coords matches identity.location`,
     return { value, describe: describeCoords(value) }
   },
   observe: async (ctx) => {
-    const geo = eval("navigator.geolocation") as Geolocation
+    let geo: Geolocation
+    try {
+      geo = eval("navigator.geolocation") as Geolocation
+    } catch (err) {
+      if (isCSPEvalBlock(err)) {
+        throw new SkipTestError(
+          "host page CSP blocks eval() — indirection technique cannot launch here"
+        )
+      }
+      throw err
+    }
     if (!geo) {
       throw new Error("eval did not return navigator.geolocation")
     }
@@ -223,9 +266,19 @@ pos.coords matches identity.location`,
     return { value, describe: describeCoords(value) }
   },
   observe: async (ctx) => {
-    const getter = new Function("return navigator.geolocation") as () =>
-      | Geolocation
-      | undefined
+    let getter: () => Geolocation | undefined
+    try {
+      getter = new Function("return navigator.geolocation") as () =>
+        | Geolocation
+        | undefined
+    } catch (err) {
+      if (isCSPEvalBlock(err)) {
+        throw new SkipTestError(
+          "host page CSP blocks Function() — indirection technique cannot launch here"
+        )
+      }
+      throw err
+    }
     const geo = getter()
     if (!geo) {
       throw new Error(
