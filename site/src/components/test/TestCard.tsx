@@ -10,6 +10,17 @@ import {
 } from "lucide-react"
 
 import type { TestState, TestStatus } from "@/lib/test-suite/types"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
 interface TestCardProps {
@@ -47,94 +58,123 @@ export function TestCard({ state, defaultOpen = false }: TestCardProps) {
     setOpen(defaultOpen)
   }, [defaultOpen])
 
+  // Auto-expand when the URL hash targets this test (e.g. from the
+  // command palette). Also fires on mount when the page loads with
+  // #test-<id> already in the URL.
+  React.useEffect(() => {
+    if (typeof window === "undefined") return
+    const targetHash = `#test-${definition.id}`
+    const check = (): void => {
+      if (window.location.hash === targetHash) {
+        setOpen(true)
+      }
+    }
+    check()
+    window.addEventListener("hashchange", check)
+    return () => window.removeEventListener("hashchange", check)
+  }, [definition.id])
+
   const hasDetails = result.details && Object.keys(result.details).length > 0
 
   return (
-    <div
-      className={cn(
-        "rounded-md border transition-colors",
-        "border-(--color-canvas-border) bg-(--color-canvas)",
-        // Soft tint so failing rows pop out of a long green list without
-        // shouting.
-        ROW_TONE[result.status]
-      )}
-    >
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
+    <TooltipProvider delayDuration={400}>
+      <div
+        id={`test-${definition.id}`}
         className={cn(
-          "flex w-full items-center gap-3 px-3 py-2 text-left",
-          "rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+          "scroll-mt-24 rounded-md border transition-colors",
+          "border-(--color-canvas-border) bg-(--color-canvas)",
+          // Soft tint so failing rows pop out of a long green list without
+          // shouting.
+          ROW_TONE[result.status]
         )}
       >
-        <StatusIcon status={result.status} />
-        <span className="min-w-0 flex-1 text-sm text-(--color-canvas-foreground)">
-          {definition.name}
-        </span>
-        {typeof result.durationMs === "number" && result.status !== "pending" ? (
-          <span className="shrink-0 font-mono text-[11px] tabular-nums text-(--color-canvas-muted)">
-            {formatDuration(result.durationMs)}
-          </span>
-        ) : null}
-        <ChevronDown
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
           className={cn(
-            "size-4 shrink-0 text-(--color-canvas-muted) transition-transform",
-            open && "rotate-180"
+            "flex w-full items-center gap-3 px-3 py-2 text-left",
+            "rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
           )}
-          aria-hidden="true"
-        />
-      </button>
-
-      {open ? (
-        <div className="space-y-4 border-t border-(--color-canvas-border) px-4 py-4 text-sm">
-          <p className="text-sm text-(--color-canvas-muted)">
-            {definition.description}
-          </p>
-
-          <DetailGrid>
-            <DetailCell label="Expected" value={result.expected || "—"} />
-            <DetailCell label="Actual" value={result.actual || "—"} />
-          </DetailGrid>
-
-          <DetailRow label="Technique" value={definition.technique} />
-
-          {definition.codeSnippet ? (
-            <details className="group">
-              <summary className="mb-1 flex cursor-pointer items-center gap-1 text-xs font-medium text-(--color-canvas-muted) select-none">
-                <ChevronDown
-                  aria-hidden="true"
-                  className="size-3 transition-transform group-open:rotate-180"
-                />
-                <span>Show code</span>
-              </summary>
-              <pre className="overflow-x-auto rounded-md bg-canvas-border/50 p-3 font-mono text-xs leading-relaxed text-(--color-canvas-foreground)">
-                {definition.codeSnippet}
-              </pre>
-            </details>
+        >
+          <StatusIcon status={result.status} />
+          <span className="min-w-0 flex-1 text-sm text-(--color-canvas-foreground)">
+            {definition.name}
+          </span>
+          {typeof result.durationMs === "number" &&
+          result.status !== "pending" ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="shrink-0 font-mono text-[11px] tabular-nums text-(--color-canvas-muted)">
+                  {formatDuration(result.durationMs)}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                {result.durationMs.toFixed(2)}ms total
+              </TooltipContent>
+            </Tooltip>
           ) : null}
+          <ChevronDown
+            className={cn(
+              "size-4 shrink-0 text-(--color-canvas-muted) transition-transform",
+              open && "rotate-180"
+            )}
+            aria-hidden="true"
+          />
+        </button>
 
-          {result.error ? (
-            <DetailRow label="Error" value={result.error} mono />
-          ) : null}
+        {open ? (
+          <div className="space-y-4 border-t border-(--color-canvas-border) px-4 py-4 text-sm">
+            <p className="text-sm text-(--color-canvas-muted)">
+              {definition.description}
+            </p>
 
-          {hasDetails ? (
-            <div>
-              <div className="mb-1 text-xs font-medium text-(--color-canvas-muted)">
-                Details
+            <DetailGrid>
+              <DetailCell label="Expected" value={result.expected || "—"} />
+              <DetailCell label="Actual" value={result.actual || "—"} />
+            </DetailGrid>
+
+            <DetailRow label="Technique" value={definition.technique} />
+
+            {definition.codeSnippet ? (
+              <Collapsible className="group/code">
+                <CollapsibleTrigger className="mb-1 flex cursor-pointer items-center gap-1 text-xs font-medium text-(--color-canvas-muted) select-none">
+                  <ChevronDown
+                    aria-hidden="true"
+                    className="size-3 transition-transform group-data-[state=open]/code:rotate-180"
+                  />
+                  <span>Show code</span>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <pre className="overflow-x-auto rounded-md bg-canvas-border/50 p-3 font-mono text-xs leading-relaxed text-(--color-canvas-foreground)">
+                    {definition.codeSnippet}
+                  </pre>
+                </CollapsibleContent>
+              </Collapsible>
+            ) : null}
+
+            {result.error ? (
+              <DetailRow label="Error" value={result.error} mono />
+            ) : null}
+
+            {hasDetails ? (
+              <div>
+                <div className="mb-1 text-xs font-medium text-(--color-canvas-muted)">
+                  Details
+                </div>
+                <pre className="overflow-x-auto rounded-md bg-canvas-border/50 p-3 font-mono text-xs leading-relaxed text-(--color-canvas-foreground)">
+                  {JSON.stringify(result.details, null, 2)}
+                </pre>
               </div>
-              <pre className="overflow-x-auto rounded-md bg-canvas-border/50 p-3 font-mono text-xs leading-relaxed text-(--color-canvas-foreground)">
-                {JSON.stringify(result.details, null, 2)}
-              </pre>
-            </div>
-          ) : null}
+            ) : null}
 
-          <p className="text-[11px] text-(--color-canvas-muted)">
-            <span className="font-mono">{definition.id}</span>
-          </p>
-        </div>
-      ) : null}
-    </div>
+            <p className="text-[11px] text-(--color-canvas-muted)">
+              <span className="font-mono">{definition.id}</span>
+            </p>
+          </div>
+        ) : null}
+      </div>
+    </TooltipProvider>
   )
 }
 

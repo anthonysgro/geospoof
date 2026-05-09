@@ -4,9 +4,9 @@ import { CheckCircle2, Info, MinusCircle, XCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 /**
- * Visual tone of the pill. Matches the palette used by
- * `site/src/components/test/StatusBadge.tsx` so the Identity Panel and
- * the Detectable_Issues_Section share a consistent status language.
+ * Visual tone of the pill. The Identity Panel, the Verification
+ * Summary headline, and any other dashboard surface that needs an
+ * inline status indicator share this tone language.
  */
 export type StatusPillTone = "pass" | "fail" | "muted" | "info"
 

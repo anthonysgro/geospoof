@@ -83,7 +83,7 @@ export function DetectableIssuesSection({
   )
 
   return (
-    <section aria-label="Detectable issues" className="space-y-8">
+    <section aria-labelledby="tier-details" className="space-y-8">
       <TestSuiteFilters
         filters={filters}
         onChange={setFilters}

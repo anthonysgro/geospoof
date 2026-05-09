@@ -56,12 +56,12 @@ export function CategoryBlock({ meta, states, headingId }: CategoryBlockProps) {
   return (
     <section aria-labelledby={headingId} className="space-y-4">
       <header className="space-y-1">
-        <h2
+        <h3
           id={headingId}
           className="text-lg font-semibold text-(--color-canvas-foreground)"
         >
           {meta.title}
-        </h2>
+        </h3>
         <p className="text-sm text-(--color-canvas-muted)">{meta.headline}</p>
       </header>
 

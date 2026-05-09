@@ -1,5 +1,6 @@
 import { StatusPill } from "./StatusPill"
 import type { TestState } from "@/lib/test-suite/types"
+import { Progress } from "@/components/ui/progress"
 
 /**
  * Anchor id of the collapsible "Known limitations" block rendered at the
@@ -103,19 +104,18 @@ export function VerificationSummary({
   let pill: React.ReactNode
   let clarifier: React.ReactNode = null
 
+  const headlineClass =
+    "text-lg font-semibold text-(--color-canvas-foreground)"
+
   if (isRunning || completed < total) {
     headline = (
-      <span className="text-lg font-semibold text-(--color-canvas-foreground)">
+      <h3 className={headlineClass}>
         {completed}/{total} tests complete
-      </span>
+      </h3>
     )
     pill = <StatusPill tone="muted">Running</StatusPill>
   } else if (issues === 0) {
-    headline = (
-      <span className="text-lg font-semibold text-(--color-canvas-foreground)">
-        No detectable issues found
-      </span>
-    )
+    headline = <h3 className={headlineClass}>No detectable issues found</h3>
     pill = <StatusPill tone="pass">Pass</StatusPill>
     clarifier = (
       <p className="text-sm text-(--color-canvas-muted)">
@@ -125,24 +125,32 @@ export function VerificationSummary({
     )
   } else {
     headline = (
-      <span className="text-lg font-semibold text-(--color-canvas-foreground)">
+      <h3 className={headlineClass}>
         {issues} detectable issue{issues === 1 ? "" : "s"} — review below
-      </span>
+      </h3>
     )
     pill = <StatusPill tone="fail">Fail</StatusPill>
   }
 
   return (
-    <section aria-label="Verification summary" className="space-y-2">
+    <section aria-labelledby="verdict-summary-heading" className="space-y-2">
       <div
         role="status"
         aria-live="polite"
         aria-atomic="true"
         className="flex flex-wrap items-center gap-3"
       >
-        {headline}
+        <div id="verdict-summary-heading">{headline}</div>
         {pill}
       </div>
+
+      {isRunning && total > 0 ? (
+        <Progress
+          value={Math.round((completed / total) * 100)}
+          aria-label={`${completed} of ${total} tests complete`}
+          className="mt-1"
+        />
+      ) : null}
 
       {clarifier}
 

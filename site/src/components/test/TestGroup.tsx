@@ -45,6 +45,24 @@ export function TestGroup({ meta, states }: TestGroupProps) {
     prevFailuresRef.current = hasFailures
   }, [hasFailures])
 
+  // Open this group when a child test is targeted via URL hash
+  // (e.g. from the command palette). Matches `#test-<id>` against
+  // every test in this group.
+  React.useEffect(() => {
+    if (typeof window === "undefined") return
+    const check = (): void => {
+      const hash = window.location.hash
+      if (!hash.startsWith("#test-")) return
+      const targetId = hash.slice("#test-".length)
+      if (states.some((s) => s.definition.id === targetId)) {
+        setOpen(true)
+      }
+    }
+    check()
+    window.addEventListener("hashchange", check)
+    return () => window.removeEventListener("hashchange", check)
+  }, [states])
+
   if (states.length === 0) return null
 
   return (

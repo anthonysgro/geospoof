@@ -1,10 +1,10 @@
 import * as React from "react"
 import { AlertTriangle } from "lucide-react"
 
-import { BrowserCapabilitiesSection } from "./BrowserCapabilitiesSection"
+import { CommandPalette } from "./CommandPalette"
+import { DashboardTier } from "./DashboardTier"
 import { DetectableIssuesSection } from "./DetectableIssuesSection"
 import IdentityPanel from "./IdentityPanel"
-import { PrivacyNotice } from "./PrivacyNotice"
 import { StickyVerdict } from "./StickyVerdict"
 import { VerificationSummary } from "./VerificationSummary"
 import type {
@@ -12,6 +12,13 @@ import type {
   TestRunContext,
   TestState,
 } from "@/lib/test-suite/types"
+import {
+  Alert,
+  AlertAction,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert"
+import { Card, CardContent } from "@/components/ui/card"
 import {
   IdentityProvider,
   useIdentity,
@@ -25,7 +32,6 @@ import { Button } from "@/components/ui/button"
  * page.
  *
  * Composition:
- *   - `PrivacyNotice` (static, SSR-safe) sits above everything.
  *   - `IdentityProvider` owns the shared `IdentitySnapshot` for one run
  *     and exposes `getSnapshot` / `waitFor` / `refresh` to both the
  *     Identity Panel (for rendering) and the test runner (via
@@ -35,17 +41,18 @@ import { Button } from "@/components/ui/button"
  *     `runSuite(...)` in parallel with the provider's async resolutions;
  *     and handles the "Run again" button.
  *
+ * The route subtitle above and the OpenStreetMap caption beneath the
+ * location map together convey the "nothing leaves your device"
+ * posture — no dedicated privacy-notice card is needed here.
+ *
  * Outer layout (Section narrow, SkipLink, Navigation, Footer) is owned
  * by `routes/test.tsx` and preserved unchanged (Req 21.3).
  */
 export function VerificationDashboard() {
   return (
-    <div className="space-y-6">
-      <PrivacyNotice />
-      <IdentityProvider>
-        <DashboardInner />
-      </IdentityProvider>
-    </div>
+    <IdentityProvider>
+      <DashboardInner />
+    </IdentityProvider>
   )
 }
 
@@ -214,72 +221,81 @@ function DashboardInner() {
    * language even when the test manifest itself failed to load.
    */
   const errorCard = manifestError ? (
-    <div
-      role="alert"
-      className="flex flex-col gap-3 rounded-xl border border-(--color-canvas-border) bg-(--color-canvas) p-5 sm:flex-row sm:items-center sm:justify-between"
-    >
-      <div className="flex items-start gap-3">
-        <AlertTriangle
-          aria-hidden="true"
-          className="mt-0.5 size-5 shrink-0 text-(--color-canvas-foreground)"
-        />
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-(--color-canvas-foreground)">
-            Couldn't load the test suite.
-          </p>
-          <p className="text-xs text-(--color-canvas-muted)">{manifestError}</p>
-        </div>
-      </div>
-      <Button type="button" variant="outline" onClick={handleRunAgain}>
-        Run again
-      </Button>
-    </div>
+    <Alert variant="destructive">
+      <AlertTriangle />
+      <AlertTitle>Couldn't load the test suite.</AlertTitle>
+      <AlertDescription>{manifestError}</AlertDescription>
+      <AlertAction>
+        <Button type="button" variant="outline" onClick={handleRunAgain}>
+          Run again
+        </Button>
+      </AlertAction>
+    </Alert>
   ) : null
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
       {errorCard}
 
-      <IdentityPanel />
-
-      <div className="mx-auto w-full max-w-4xl">
-        <BrowserCapabilitiesSection />
-      </div>
-
-      <div
-        ref={summaryAnchorRef}
-        className="mx-auto flex w-full max-w-4xl flex-col gap-4 rounded-xl border border-(--color-canvas-border) bg-(--color-canvas) p-6 shadow-sm sm:flex-row sm:items-start sm:justify-between"
+      <DashboardTier
+        id="tier-identity"
+        title="Your identity right now"
+        subtitle="What your browser reports about you through every surface GeoSpoof can reach."
       >
-        <div className="min-w-0 flex-1">
-          <VerificationSummary states={states} isRunning={isRunning} />
-        </div>
-        <div className="shrink-0">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleRunAgain}
-            disabled={isRunning || (!tests && !manifestError)}
-          >
-            {isRunning ? "Running…" : "Run again"}
-          </Button>
-        </div>
-      </div>
+        <IdentityPanel />
+      </DashboardTier>
 
-      <StickyVerdict
-        anchorRef={summaryAnchorRef}
+      <DashboardTier
+        id="tier-verdict"
+        title="Verdict"
+        subtitle="Can any probe on this page detect that GeoSpoof is active?"
+      >
+        <Card ref={summaryAnchorRef} className="mx-auto w-full max-w-4xl">
+          <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 flex-1">
+              <VerificationSummary states={states} isRunning={isRunning} />
+            </div>
+            <div className="shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleRunAgain}
+                disabled={isRunning || (!tests && !manifestError)}
+              >
+                {isRunning ? "Running…" : "Run again"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <StickyVerdict
+          anchorRef={summaryAnchorRef}
+          states={states}
+          isRunning={isRunning}
+        />
+      </DashboardTier>
+
+      <DashboardTier
+        id="tier-details"
+        title="Detectable issues"
+        subtitle="Per-test detail. Expand any failing check to see the technique used and the observed value."
+      >
+        <div className="mx-auto w-full max-w-4xl">
+          {tests ? (
+            <DetectableIssuesSection states={states} />
+          ) : manifestError ? null : (
+            <div className="rounded-xl border border-(--color-canvas-border) bg-(--color-canvas) p-5 text-sm text-(--color-canvas-muted)">
+              Loading tests…
+            </div>
+          )}
+        </div>
+      </DashboardTier>
+
+      <CommandPalette
         states={states}
+        onRunAgain={handleRunAgain}
         isRunning={isRunning}
       />
-
-      <div className="mx-auto w-full max-w-4xl">
-        {tests ? (
-          <DetectableIssuesSection states={states} />
-        ) : manifestError ? null : (
-          <div className="rounded-xl border border-(--color-canvas-border) bg-(--color-canvas) p-5 text-sm text-(--color-canvas-muted)">
-            Loading tests…
-          </div>
-        )}
-      </div>
     </div>
   )
 }

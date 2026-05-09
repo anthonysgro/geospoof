@@ -111,7 +111,17 @@ export function TestSuiteFilters({
                 <X aria-hidden="true" />
               </InputGroupButton>
             </InputGroupAddon>
-          ) : null}
+          ) : (
+            <InputGroupAddon align="inline-end">
+              <kbd
+                className="pointer-events-none hidden rounded border border-border bg-muted/40 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground sm:inline-block"
+                aria-label="Keyboard shortcut: Command or Control plus K"
+                title="Open command palette"
+              >
+                ⌘K
+              </kbd>
+            </InputGroupAddon>
+          )}
         </InputGroup>
 
         <DropdownMenu>
