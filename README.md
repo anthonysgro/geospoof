@@ -6,17 +6,69 @@
 **Your VPN changes your IP address. Your browser is still telling websites where you actually are.**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Website](https://img.shields.io/badge/Website-geospoof.com-4caf50.svg?logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABTElEQVQ4T41TS1LDMAyV3AXZsGPJJbgGC5qkoXG5Vi/AsAAS8uMi3AdmYiE5dRK7LoMzGSey9J70JCNcWLpNaSQDG1RA/FS7T4y5nhnL5oGQgxARiMjusuR7NAQfjz6QB6DbLQHgEnQ6Rba6NRqAuujnOA/g0GXWldiqFMDrdnI89IXwgwO6SW6T4/3xW85mAN1n5Bze8oVhXbcjEG3qkyYLAIvm2Kt8iAomAKKFZOh8Zsc918/SgWHFHXqouu6YhGmiAOWQk2KV1+mFAHMJ3Jk66yy53wXWwabIb5iFblJCNWW4LtED2FshufeSJu9VMfV87g7bzEZBnU7sZxmIwWkRDpKchexRADGWLJYI6ibRgcXaG22XbnZ3qMyXAxDVE7r+ec5frkJhowDi9DTwVHKkvQN8N+qs/d9l8iaPWysA71l8Mi9qEKb51/8vRNquEc5KgXwAAAAQZGVCRzg1RUVEM0EzRkYzNEI0MzTcy3bJAAAAAElFTkSuQmCC)](https://geospoof.com)
 [![Firefox](https://img.shields.io/badge/Firefox-140%2B-FF7139.svg?logo=firefox-browser)](https://addons.mozilla.org/firefox/addon/geo-spoof/)
-[![Chrome Web Store](https://img.shields.io/badge/Chrome_Web_Store-available-4285F4.svg?logo=googlechrome)](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje)
-[![Safari](https://img.shields.io/badge/Safari_macOS_%26_iOS-available-006CFF.svg?logo=safari)](https://apps.apple.com/app/geospoof/id6765719745)
+[![Chrome](https://img.shields.io/badge/Chrome-available-4285F4.svg?logo=googlechrome)](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje)
+[![Safari](https://img.shields.io/badge/Safari-available-006CFF.svg?logo=safari)](https://apps.apple.com/app/geospoof/id6765719745)
 [![Version](https://img.shields.io/github/package-json/v/anthonysgro/geospoof?color=green)](https://github.com/anthonysgro/geospoof/releases)
-
-[Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/geo-spoof/) &nbsp;|&nbsp; [Chrome Web Store](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje) &nbsp;|&nbsp; [Report Issues](https://github.com/anthonysgro/geospoof/issues) &nbsp;|&nbsp; [User Guide](docs/USER_GUIDE.md)
 
   <p>
     <img src="assets/chrome-store/screenshot1.png" alt="GeoSpoof main view" width="960" />
   </p>
 </div>
+
+## Getting started
+
+### Install
+
+|                                                                                     Browser                                                                                     | Store                                                                                                  | Works on                                                                                  |
+| :-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+|               [<img src="assets/github/firefox-store-icon.png" alt="Get GeoSpoof for Firefox" height="55">](https://addons.mozilla.org/firefox/addon/geo-spoof/)                | [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/geo-spoof/)                                 | Firefox 140+ on desktop and Android                                                       |
+| [<img src="assets/github/chrome-store-icon.png" alt="Get GeoSpoof for Chrome" height="55">](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje) | [Chrome Web Store](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje) | Chrome, Brave, Edge, Opera, and other Chromium browsers                                   |
+|              [<img src="assets/github/ios-store-icon.svg" alt="Download GeoSpoof on the App Store" height="55">](https://apps.apple.com/app/geospoof/id6765719745)              | [App Store](https://apps.apple.com/app/geospoof/id6765719745)                                          | Safari on iOS, iPadOS, and macOS                                                          |
+|             [<img src="assets/github/github-store-icon.svg" alt="Get GeoSpoof from GitHub Releases" height="55">](https://github.com/anthonysgro/geospoof/releases)             | [GitHub Releases](https://github.com/anthonysgro/geospoof/releases)                                    | Firefox self-hosted signed XPI — [setup below](#from-github-releases-firefox-self-hosted) |
+
+<details>
+<summary><strong>Safari setup</strong> — enabling after install</summary>
+
+<br>
+
+After installing on Safari, tap the puzzle piece icon (or go to Safari Settings → Extensions) and enable GeoSpoof for the sites you want to protect. On iOS/iPadOS, you can also enable it per-site from the **AA** menu in the address bar.
+
+</details>
+
+<details>
+<summary><strong>Other install paths</strong> — self-hosted XPI, from source</summary>
+
+#### From GitHub Releases (Firefox self-hosted)
+
+Each release includes a self-hosted signed XPI alongside the AMO submission. The self-hosted XPI uses a 4-segment version (e.g., `1.18.0.42`) to avoid collisions with the AMO listing.
+
+1. Go to the [Releases](https://github.com/anthonysgro/geospoof/releases) page
+2. Download `geospoof-<version>-signed.xpi` from the latest release
+3. In Firefox, open `about:addons`
+4. Click the gear icon (⚙) and select **Install Add-on From File…**
+5. Select the downloaded `.xpi` file
+
+The signed XPI works on standard Firefox with no extra configuration. Once installed, Firefox automatically checks for and installs new versions via the self-hosted update manifest. If you later install from AMO, Firefox will auto-upgrade to it since AMO releases use a higher base version.
+
+> **Note:** An unsigned `geospoof-<version>.xpi` is also included in each release for Firefox forks that don't support AMO signatures. Most users should use the signed version.
+
+#### From source
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for build instructions.
+
+</details>
+
+### Usage
+
+1. Click the GeoSpoof icon in your toolbar
+2. Search for a city, enter coordinates manually, or use "Sync with VPN" to auto-detect your VPN exit region
+3. Enable "Location Protection" and "WebRTC Protection"
+4. Refresh open tabs to apply
+5. Confirm it's working at [geospoof.com/test](https://geospoof.com/test) — a live dashboard that shows every signal GeoSpoof overrides, running 110 tests against your browser
+
+See [docs/USER_GUIDE.md](docs/USER_GUIDE.md) for details.
 
 ## Why GeoSpoof?
 
@@ -55,41 +107,6 @@ When protection is enabled, GeoSpoof overrides browser APIs synchronously at `do
 
 For the full API reference, see [docs/API.md](docs/API.md).
 
-## Installation
-
-**Firefox:** https://addons.mozilla.org/firefox/addon/geo-spoof/
-
-**Chrome / Brave / Edge:** https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje
-
-**Safari (iOS, iPadOS & macOS):** https://apps.apple.com/app/geospoof/id6765719745
-
-After installing on Safari, tap the puzzle piece icon (or go to Safari Settings → Extensions) and enable GeoSpoof for the sites you want to protect. On iOS/iPadOS, you can also enable it per-site from the **AA** menu in the address bar.
-
-**From GitHub Releases (Firefox self-hosted):**
-
-Each release includes a self-hosted signed XPI alongside the AMO submission. The self-hosted XPI uses a 4-segment version (e.g., `1.18.0.42`) to avoid collisions with the AMO listing.
-
-1. Go to the [Releases](https://github.com/anthonysgro/geospoof/releases) page
-2. Download `geospoof-<version>-signed.xpi` from the latest release
-3. In Firefox, open `about:addons`
-4. Click the gear icon (⚙) and select **Install Add-on From File…**
-5. Select the downloaded `.xpi` file
-
-The signed XPI works on standard Firefox with no extra configuration. Once installed, Firefox automatically checks for and installs new versions via the self-hosted update manifest. If you later install from AMO, Firefox will auto-upgrade to it since AMO releases use a higher base version.
-
-> **Note:** An unsigned `geospoof-<version>.xpi` is also included in each release for Firefox forks that don't support AMO signatures. Most users should use the signed version.
-
-**From source:** See [CONTRIBUTING.md](CONTRIBUTING.md) for build instructions.
-
-## Usage
-
-1. Click the GeoSpoof icon in your toolbar
-2. Search for a city, enter coordinates manually, or use "Sync with VPN" to auto-detect your VPN exit region
-3. Enable "Location Protection" and "WebRTC Protection"
-4. Refresh open tabs to apply
-
-See [docs/USER_GUIDE.md](docs/USER_GUIDE.md) for details.
-
 ## External Services
 
 | Service                                                            | When                           | What's sent                                                            | Source                                                                 |
@@ -120,6 +137,8 @@ MIT — see [LICENSE](LICENSE).
 
 ## Links
 
+- [Website — geospoof.com](https://geospoof.com)
+- [Verify your protection — geospoof.com/test](https://geospoof.com/test)
 - [User Guide](docs/USER_GUIDE.md)
 - [API Documentation](docs/API.md)
 - [How Browsers Track Location](docs/BACKGROUND.md)
