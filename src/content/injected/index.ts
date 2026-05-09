@@ -125,7 +125,16 @@ installDomInsertionWrapping();
 import { installDocumentOverrides } from "./document-overrides";
 installDocumentOverrides();
 
-// 14. WebRTC IP-leak protection. Wraps RTCPeerConnection so no ICE
+// 14. Worker constructor interception. Wraps window.Worker and
+//     window.SharedWorker so that classic Workers get a timezone
+//     spoofing payload prepended to their source. Module Workers
+//     pass through unmodified (blob URLs break relative imports).
+//     Must run after settings-listener so timezone data is available
+//     at Worker construction time.
+import { installWorkerPatching } from "./worker-patching";
+installWorkerPatching();
+
+// 15. WebRTC IP-leak protection. Wraps RTCPeerConnection so no ICE
 //     candidates ever gather when the user enables WebRTC Protection
 //     in the popup. Closes the srflx/host/relay leaks that Firefox's
 //     `disable_non_proxied_udp` policy misses without a proxy and
