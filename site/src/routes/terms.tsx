@@ -64,16 +64,19 @@ function TermsPage() {
               Terms of Service
             </h1>
             <p className="text-body-base text-(--color-canvas-muted)">
-              Last Updated: May 3, 2026
+              Last Updated: May 6, 2026
             </p>
           </div>
 
           <div className="space-y-8">
             <TermsSection title="1. Agreement to Terms">
               <p>
-                By installing or using the GeoSpoof browser extension (the
-                "Extension"), you agree to be bound by these Terms of Service.
-                If you do not agree, do not install or use the Extension.
+                These Terms of Service (the "Terms") are a binding agreement
+                between you and Anthony Sgro, an individual developer based in
+                the United States ("we," "us," or "the developer"). By
+                installing or using the GeoSpoof browser extension (the
+                "Extension"), you agree to be bound by these Terms. If you do
+                not agree, do not install or use the Extension.
               </p>
               <p>
                 Your use of the Extension is also governed by our{" "}
@@ -96,7 +99,7 @@ function TermsPage() {
               </p>
             </TermsSection>
 
-            <TermsSection title="3. Acceptable Use">
+            <TermsSection title="3. Acceptable Use and Prohibited Uses">
               <p>
                 You are solely responsible for how you use the Extension. You
                 agree not to use GeoSpoof to:
@@ -105,11 +108,27 @@ function TermsPage() {
                 <li>Violate the terms of service of any website or platform</li>
                 <li>
                   Commit fraud, including misrepresenting your location for
-                  financial gain
+                  financial gain, evading fraud-prevention systems, or obtaining
+                  services you are not entitled to receive
                 </li>
                 <li>
                   Circumvent geo-restrictions on copyrighted content in
-                  violation of applicable law
+                  violation of applicable law, including but not limited to the
+                  U.S. Digital Millennium Copyright Act (DMCA) and the EU
+                  Copyright Directive
+                </li>
+                <li>
+                  Access, use, or interact with any computer system in a manner
+                  that violates the U.S. Computer Fraud and Abuse Act (CFAA) or
+                  equivalent laws in your jurisdiction
+                </li>
+                <li>
+                  Evade bans, sanctions, age restrictions, legal compliance
+                  checks, or law-enforcement investigations
+                </li>
+                <li>
+                  Engage in harassment, stalking, impersonation, or any activity
+                  that harms another person
                 </li>
                 <li>
                   Engage in any activity that is illegal under applicable local,
@@ -122,17 +141,23 @@ function TermsPage() {
                   or applicable law is entirely at your own risk and
                   responsibility.
                 </strong>{" "}
-                The developer does not endorse or encourage any such use.
+                The developer does not endorse or encourage any such use. The
+                Extension is intended for privacy protection, web development
+                testing, and educational purposes.
               </p>
             </TermsSection>
 
             <TermsSection title="4. Third-Party Services">
               <p>
-                The Extension communicates with third-party services (Nominatim,
-                ipify, GeoJS, and others) to provide certain features. Your use
-                of those services is subject to their respective terms and
-                privacy policies. We are not responsible for the availability,
-                accuracy, or conduct of any third-party service.
+                The Extension communicates with third-party services to provide
+                certain features. These services include Nominatim
+                (OpenStreetMap), ipify, GeoJS, FreeIPAPI, ReallyFreeGeoIP,
+                ipinfo.io, and the browser-geo-tz CDN. Your use of those
+                services is subject to their respective terms and privacy
+                policies. We are not responsible for the availability, accuracy,
+                or conduct of any third-party service. The specific data sent to
+                each service and the conditions under which it is sent are
+                described in our <a href="/privacy">Privacy Policy</a>.
               </p>
             </TermsSection>
 
@@ -147,8 +172,16 @@ function TermsPage() {
                 >
                   github.com/anthonysgro/geospoof
                 </a>
-                . The MIT License governs your rights to use, copy, modify, and
-                distribute the source code.
+                . The{" "}
+                <a
+                  href="https://github.com/anthonysgro/geospoof/blob/main/LICENSE"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  MIT License
+                </a>{" "}
+                governs your rights to use, copy, modify, and distribute the
+                source code.
               </p>
             </TermsSection>
 
@@ -230,19 +263,44 @@ function TermsPage() {
               </p>
             </TermsSection>
 
-            <TermsSection title="11. Changes to Terms">
+            <TermsSection title="11. Limitation of Actions">
               <p>
-                We reserve the right to modify these Terms at any time. Changes
-                will be posted on this page with an updated date. Continued use
-                of the Extension after changes are posted constitutes your
-                acceptance of the revised Terms.
+                Any claim arising out of or relating to these Terms or the
+                Extension must be filed within one (1) year after the claim
+                arose; otherwise, the claim is permanently barred, to the
+                maximum extent permitted by applicable law.
               </p>
             </TermsSection>
 
-            <TermsSection title="12. Contact">
+            <TermsSection title="12. Severability">
               <p>
-                For questions about these Terms, contact us at{" "}
+                If any provision of these Terms is found to be unenforceable or
+                invalid under applicable law, that provision shall be modified
+                to the minimum extent necessary to make it enforceable, or
+                severed if modification is not possible. The remaining
+                provisions shall remain in full force and effect.
+              </p>
+            </TermsSection>
+
+            <TermsSection title="13. Changes to Terms">
+              <p>
+                We reserve the right to modify these Terms at any time. Changes
+                will be posted on this page with an updated date, and material
+                changes will be announced in the extension's release notes.
+                Continued use of the Extension after changes are posted
+                constitutes your acceptance of the revised Terms.
+              </p>
+            </TermsSection>
+
+            <TermsSection title="14. Contact and Notices">
+              <p>
+                For questions about these Terms, or to send legal notices,
+                contact us at{" "}
                 <a href="mailto:support@geospoof.com">support@geospoof.com</a>.
+                Electronic notice to this address satisfies any requirement of
+                written notice under these Terms. We will send notices to you at
+                the email address you provide (if any) or by posting on this
+                page.
               </p>
             </TermsSection>
           </div>

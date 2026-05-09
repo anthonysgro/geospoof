@@ -46,12 +46,17 @@ function BrandMark() {
       )}
       aria-label="GeoSpoof - Home"
     >
-      <img
-        src="/icon.png"
-        alt=""
-        className="hidden h-9 w-9 md:block"
-        aria-hidden="true"
-      />
+      <picture className="hidden md:block">
+        <source srcSet="/icon.webp" type="image/webp" />
+        <img
+          src="/icon.png"
+          alt=""
+          width={36}
+          height={36}
+          className="h-9 w-9"
+          aria-hidden="true"
+        />
+      </picture>
       <span className="whitespace-nowrap text-(--color-brand)">GeoSpoof</span>
     </a>
   )

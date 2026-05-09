@@ -3,6 +3,7 @@ import { Section } from "./Section"
 import { cn } from "@/lib/utils"
 import { useReducedMotion } from "@/hooks/use-reduced-motion"
 import { useTheme } from "@/hooks/use-theme"
+import { Badge } from "@/components/ui/badge"
 
 const heroTextVariants = {
   hidden: { opacity: 0, y: 24 },
@@ -32,8 +33,24 @@ export function HeroSection({ className }: { className?: string }) {
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === "dark"
 
-  const ios1 = isDark ? "/images/hero-ios-1-dark.png" : "/images/hero-ios-1.png"
-  const ios2 = isDark ? "/images/hero-ios-2-dark.png" : "/images/hero-ios-2.png"
+  const ios1Webp = isDark
+    ? "/images/hero-ios-1-dark.webp"
+    : "/images/hero-ios-1.webp"
+  const ios1Webp640 = isDark
+    ? "/images/hero-ios-1-dark-640.webp"
+    : "/images/hero-ios-1-640.webp"
+  const ios1Png = isDark
+    ? "/images/hero-ios-1-dark.png"
+    : "/images/hero-ios-1.png"
+  const ios2Webp = isDark
+    ? "/images/hero-ios-2-dark.webp"
+    : "/images/hero-ios-2.webp"
+  const ios2Webp640 = isDark
+    ? "/images/hero-ios-2-dark-640.webp"
+    : "/images/hero-ios-2-640.webp"
+  const ios2Png = isDark
+    ? "/images/hero-ios-2-dark.png"
+    : "/images/hero-ios-2.png"
 
   return (
     <Section
@@ -56,16 +73,34 @@ export function HeroSection({ className }: { className?: string }) {
           })}
         >
           <div className="relative">
-            <img
-              src={ios1}
-              alt="GeoSpoof app — secondary view"
-              className="absolute top-8 left-0 w-[264px] -rotate-6 drop-shadow-2xl xl:w-[330px]"
-            />
-            <img
-              src={ios2}
-              alt="GeoSpoof app — main view"
-              className="relative z-10 ml-28 w-[264px] rotate-3 drop-shadow-2xl xl:ml-32 xl:w-[330px]"
-            />
+            <picture className="absolute top-8 left-0 w-56 -rotate-6 drop-shadow-2xl xl:w-80">
+              <source
+                srcSet={`${ios1Webp640} 640w, ${ios1Webp} 1008w`}
+                sizes="(max-width: 1280px) 224px, 320px"
+                type="image/webp"
+              />
+              <img
+                src={ios1Png}
+                alt="GeoSpoof app — secondary view"
+                width={1008}
+                height={2050}
+                className="w-full"
+              />
+            </picture>
+            <picture className="relative z-10 ml-24 block w-56 rotate-3 drop-shadow-2xl xl:ml-32 xl:w-80">
+              <source
+                srcSet={`${ios2Webp640} 640w, ${ios2Webp} 1010w`}
+                sizes="(max-width: 1280px) 224px, 320px"
+                type="image/webp"
+              />
+              <img
+                src={ios2Png}
+                alt="GeoSpoof app — main view"
+                width={1010}
+                height={2050}
+                className="w-full"
+              />
+            </picture>
           </div>
         </MotionDiv>
 
@@ -78,9 +113,12 @@ export function HeroSection({ className }: { className?: string }) {
             variants: heroTextVariants,
           })}
         >
-          <span className="mb-4 inline-block rounded-full bg-(--color-brand)/10 px-3 py-1 text-sm font-semibold tracking-wide text-(--color-brand) uppercase">
+          <Badge
+            variant="outline"
+            className="mb-4 border-(--color-brand)/30 bg-(--color-brand)/10 tracking-wide text-(--color-brand) uppercase"
+          >
             Browser Extension
-          </span>
+          </Badge>
 
           <h1 className="mb-6 text-4xl leading-tight font-bold text-(--color-canvas-foreground) md:text-5xl xl:text-[4.5rem]">
             Your location,{" "}
@@ -134,6 +172,49 @@ export function HeroSection({ className }: { className?: string }) {
             >
               See how it works
             </a>
+          </div>
+
+          {/* Social proof */}
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 xl:justify-start">
+            <span className="text-sm text-(--color-canvas-muted)">
+              <span className="font-semibold text-(--color-canvas-foreground)">
+                1,000+
+              </span>{" "}
+              users
+            </span>
+            <span
+              className="hidden h-3.5 w-px bg-(--color-canvas-border) sm:block"
+              aria-hidden="true"
+            />
+            <span className="flex items-center gap-1 text-sm text-(--color-canvas-muted)">
+              <span className="text-amber-500" aria-hidden="true">
+                ★★★★★
+              </span>
+              <span>
+                <span className="font-semibold text-(--color-canvas-foreground)">
+                  5.0
+                </span>{" "}
+                Chrome
+              </span>
+            </span>
+            <span
+              className="hidden h-3.5 w-px bg-(--color-canvas-border) sm:block"
+              aria-hidden="true"
+            />
+            <span className="flex items-center gap-1 text-sm text-(--color-canvas-muted)">
+              <span className="text-amber-500" aria-hidden="true">
+                ★★★★
+              </span>
+              <span className="text-(--color-canvas-border)" aria-hidden="true">
+                ★
+              </span>
+              <span>
+                <span className="font-semibold text-(--color-canvas-foreground)">
+                  4.0
+                </span>{" "}
+                Firefox
+              </span>
+            </span>
           </div>
         </MotionDiv>
       </div>

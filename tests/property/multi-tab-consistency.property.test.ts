@@ -106,6 +106,7 @@ describe("Property 23: Multi-Tab Consistency", () => {
             timezone: settings.timezone,
             debugLogging: settings.debugLogging,
             verbosityLevel: settings.verbosityLevel,
+            webrtcProtection: settings.webrtcProtection,
           });
           expect(firstMessage.payload!.enabled).toBe(enabled);
           expect(firstMessage.payload!.location).toEqual(location);

@@ -12,3 +12,6 @@ count.txt
 .vinxi
 __unconfig*
 todos.json
+
+# Local dev HTTPS certs (mkcert-generated, per-machine)
+certs/

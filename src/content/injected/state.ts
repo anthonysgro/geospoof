@@ -115,6 +115,17 @@ export const originalGetFullYear = Date.prototype.getFullYear;
 // Permissions original (may be undefined if API unavailable)
 export const originalPermissionsQuery = navigator.permissions?.query?.bind(navigator.permissions);
 
+/**
+ * Original WebRTC constructor reference, captured at module load
+ * time before any overrides. May be `undefined` on engines that
+ * don't expose WebRTC at all (very rare — essentially legacy
+ * mobile browsers). Consumed by `webrtc.ts` to build the pristine
+ * passthrough when protection is disabled and to subclass the
+ * brand-checked prototype when protection is enabled.
+ */
+export const OriginalRTCPeerConnection: typeof RTCPeerConnection | undefined =
+  typeof RTCPeerConnection !== "undefined" ? RTCPeerConnection : undefined;
+
 // DOM method originals for iframe patching / DOM insertion wrapping
 /* eslint-disable @typescript-eslint/unbound-method */
 export const originalAppendChild = Node.prototype.appendChild;
@@ -134,6 +145,21 @@ export let spoofingEnabled = false;
 export let spoofedLocation: SpoofedLocation | null = null;
 export let timezoneData: TimezoneData | null = null;
 export let settingsReceived = false;
+/**
+ * Content-script-level WebRTC IP-leak protection flag.
+ *
+ * Set from the settings CustomEvent and consumed by the
+ * `installWebRTCOverride` module. When `true` the wrapped
+ * `RTCPeerConnection` constructor refuses to gather any ICE
+ * candidates (blocks srflx, host, relay — everything), and
+ * `.getStats()` strips address/ip fields from local-candidate
+ * reports. When `false` the native API passes through untouched.
+ *
+ * Orthogonal to `spoofingEnabled` — a user could have location
+ * spoofing off but WebRTC protection on (closes the leak in
+ * real-location mode too, useful for VPN users).
+ */
+export let webrtcProtectionEnabled = false;
 
 // Setter functions for state mutation from other modules
 export function setSpoofingEnabled(v: boolean): void {
@@ -154,4 +180,8 @@ export function setSettingsReceived(v: boolean): void {
 
 export function setDebugEnabled(v: boolean): void {
   debugEnabled = v;
+}
+
+export function setWebRTCProtectionEnabled(v: boolean): void {
+  webrtcProtectionEnabled = v;
 }

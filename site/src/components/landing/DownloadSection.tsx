@@ -1,5 +1,6 @@
 import { Section } from "./Section"
 import { cn } from "@/lib/utils"
+import { Badge } from "@/components/ui/badge"
 
 interface DownloadOption {
   name: string
@@ -25,9 +26,8 @@ const downloads: Array<DownloadOption> = [
   {
     name: "App Store",
     description: "Safari on iOS and macOS",
-    href: "#", // TODO: replace with App Store URL
+    href: "https://apps.apple.com/app/geospoof/id6765719745",
     primary: true,
-    badge: "Coming soon",
   },
 ]
 
@@ -60,16 +60,12 @@ export function DownloadSection({ className }: { className?: string }) {
           <a
             key={d.name}
             href={d.href}
-            target={d.href === "#" ? undefined : "_blank"}
+            target="_blank"
             rel="noopener noreferrer"
-            aria-disabled={d.href === "#"}
-            onClick={d.href === "#" ? (e) => e.preventDefault() : undefined}
             className={cn(
               "flex flex-col items-center gap-3 rounded-2xl p-6 text-center",
-              "border transition-all duration-200",
-              d.href === "#"
-                ? "cursor-not-allowed border-(--color-canvas-border) opacity-60"
-                : "cursor-pointer border-(--color-canvas-border) hover:border-(--color-brand) hover:shadow-lg",
+              "border border-(--color-canvas-border) transition-all duration-200",
+              "cursor-pointer hover:border-(--color-brand) hover:shadow-lg",
               "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
             )}
           >
@@ -80,9 +76,9 @@ export function DownloadSection({ className }: { className?: string }) {
               {d.description}
             </span>
             {d.badge ? (
-              <span className="mt-auto inline-block rounded-full bg-(--color-canvas-border) px-3 py-1 text-xs font-medium text-(--color-canvas-muted)">
+              <Badge variant="secondary" className="mt-auto">
                 {d.badge}
-              </span>
+              </Badge>
             ) : (
               <span className="mt-auto inline-block rounded-full bg-(--color-brand)/10 px-3 py-1 text-xs font-semibold text-(--color-brand)">
                 Install free →

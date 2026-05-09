@@ -4,8 +4,11 @@ import {
   Scripts,
   createRootRoute,
 } from "@tanstack/react-router"
+import { Analytics } from "@vercel/analytics/react"
+import { SpeedInsights } from "@vercel/speed-insights/react"
 import appCss from "../styles.css?url"
 import { ThemeProvider } from "@/components/theme-provider"
+import { TooltipProvider } from "@/components/ui/tooltip"
 
 export const Route = createRootRoute({
   head: () => ({
@@ -56,12 +59,32 @@ export const Route = createRootRoute({
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "icon", href: "/favicon.ico" },
-      { rel: "preload", href: "/images/hero-ios-1.png", as: "image" },
-      { rel: "preload", href: "/images/hero-ios-2.png", as: "image" },
-      { rel: "preload", href: "/images/hero-desktop-1.png", as: "image" },
-      { rel: "preload", href: "/images/hero-ios-1-dark.png", as: "image" },
-      { rel: "preload", href: "/images/hero-ios-2-dark.png", as: "image" },
-      { rel: "preload", href: "/images/hero-desktop-1-dark.png", as: "image" },
+      // Only preload the above-the-fold hero images (light + dark variants)
+      // Use 640w versions — matches the displayed size on most viewports
+      {
+        rel: "preload",
+        href: "/images/hero-ios-1-640.webp",
+        as: "image",
+        type: "image/webp",
+      },
+      {
+        rel: "preload",
+        href: "/images/hero-ios-2-640.webp",
+        as: "image",
+        type: "image/webp",
+      },
+      {
+        rel: "preload",
+        href: "/images/hero-ios-1-dark-640.webp",
+        as: "image",
+        type: "image/webp",
+      },
+      {
+        rel: "preload",
+        href: "/images/hero-ios-2-dark-640.webp",
+        as: "image",
+        type: "image/webp",
+      },
     ],
   }),
   notFoundComponent: () => (
@@ -104,8 +127,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body suppressHydrationWarning>
         <ThemeProvider defaultTheme="system" storageKey="geospoof-theme">
-          {children}
+          <TooltipProvider>{children}</TooltipProvider>
         </ThemeProvider>
+        <Analytics />
+        <SpeedInsights />
         <Scripts />
       </body>
     </html>

@@ -1,5 +1,5 @@
-/* Nunito Font - matches extension brand typography */
-@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800&display=swap");
+/* Self-hosted Nunito variable font — eliminates Google Fonts render-blocking request */
+@import "@fontsource-variable/nunito";
 
 @import "tailwindcss";
 @import "tw-animate-css";
@@ -10,7 +10,7 @@
 @theme inline {
   /* Typography */
   --font-sans:
-    "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    "Nunito Variable", "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-heading: var(--font-sans);
 
   /* Shadcn token mappings */

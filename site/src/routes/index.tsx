@@ -3,6 +3,7 @@ import { Navigation } from "@/components/landing/Navigation"
 import { HeroSection } from "@/components/landing/HeroSection"
 import { FeaturesSection } from "@/components/landing/FeaturesSection"
 import { ScreenshotsSection } from "@/components/landing/ScreenshotsSection"
+import { TestimonialsSection } from "@/components/landing/TestimonialsSection"
 import { CompatibilitySection } from "@/components/landing/CompatibilitySection"
 import { DownloadSection } from "@/components/landing/DownloadSection"
 import { Footer } from "@/components/landing/Footer"
@@ -21,6 +22,7 @@ function App() {
         <HeroSection />
         <ScreenshotsSection />
         <FeaturesSection />
+        <TestimonialsSection />
         <CompatibilitySection />
         <DownloadSection />
       </main>
