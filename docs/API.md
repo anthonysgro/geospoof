@@ -272,3 +272,328 @@ Validates that timezone spoofing is installed in iframe realms:
 | `document.lastModified`                                         | Top-level document's lastModified offset matches the spoofed timezone |
 | `new DOMParser().parseFromString("", "text/html").lastModified` | DOMParser-constructed document's lastModified offset matches          |
 | `iframe.contentDocument.lastModified`                           | Iframe realm's lastModified offset matches                            |
+
+## Injected Script Architecture
+
+The injected script runs in page context and overrides browser APIs. It's organized as modular TypeScript files bundled into a single IIFE by Vite.
+
+### Module Initialization Order
+
+Order matters — each module depends on the ones before it:
+
+1. **function-masking** — `toString` masking infrastructure
+2. **state** — Original API references captured at import time
+3. **date-constructor** — Global `Date` replaced
+4. **settings-listener** — CustomEvent listener for settings updates
+5. **geolocation** — `getCurrentPosition`, `watchPosition`, `clearWatch`
+6. **permissions** — `navigator.permissions.query`
+7. **timezone-overrides** — `getTimezoneOffset`, `Intl.DateTimeFormat` constructor + `resolvedOptions`
+8. **date-formatting** — `toString`, `toDateString`, `toTimeString`, `toLocale*`
+9. **date-getters** — `getHours`, `getMinutes`, `getSeconds`, `getDate`, `getDay`, `getMonth`, `getFullYear`
+10. **temporal** — `Temporal.Now.*` (feature-detected, no-ops if unavailable)
+11. **document-overrides** — `Document.prototype.lastModified` getter
+12. **iframe-patching** — `contentWindow`/`contentDocument` getter overrides
+13. **dom-insertion** — DOM method wrapping + MutationObserver fallback
+
+### Key Modules
+
+#### state.ts
+
+Centralized mutable state and original API references. All originals captured at module load time before any overrides.
+
+Exports:
+
+- `spoofingEnabled`, `spoofedLocation`, `timezoneData`, `settingsReceived` — mutable state with setter functions
+- `OriginalDate`, `OriginalDateParse`, `OriginalDateTimeFormat` — pristine constructors
+- `originalGetTimezoneOffset`, `originalToString`, `originalGetHours`, etc. — unbound prototype methods
+- `overrideRegistry` — `Map<Function, string>` for toString masking
+- `explicitTimezoneInstances` — `WeakSet<Intl.DateTimeFormat>` for self-interference prevention
+- `EVENT_NAME` — configurable event name (build-time)
+
+#### function-masking.ts
+
+Anti-fingerprinting infrastructure. Key exports:
+
+- `initFunctionMasking()` — Installs `Function.prototype.toString` override. Must be called first.
+- `registerOverride(fn, nativeName)` — Register a function in the override registry
+- `disguiseAsNative(fn, nativeName, length)` — Set name/length, delete prototype
+- `stripConstruct(fn)` — Wrap in method shorthand to remove `[[Construct]]` and `prototype`
+- `installOverride(target, prop, overrideFn)` — Full install: register, disguise, define property. Auto-wraps function expressions via `stripConstruct`.
+
+#### timezone-helpers.ts
+
+Pure utility functions (no side effects on globals):
+
+- `getIntlBasedOffset(date, timezoneId, fallback)` — Resolve UTC offset via `Intl.DateTimeFormat` with `shortOffset`
+- `formatGMTOffset(offsetMinutes)` — Convert offset to `GMT±HHMM` string
+- `getLongTimezoneName(date, timezoneId)` — Extract long timezone name (e.g. "Pacific Daylight Time")
+- `isAmbiguousDateString(str)` — Detect date strings without explicit timezone indicator
+- `computeEpochAdjustment(parsedDate, timezoneId, fallback)` — Compute ms adjustment for Date constructor spoofing with iterative DST refinement
+- `parseGMTOffset(gmtString)` — Parse `GMT+5:30` style strings to minutes
+- `validateTimezoneData(tz)` — Runtime type guard for TimezoneData
+
+#### geolocation.ts
+
+Installs geolocation and position/coordinate overrides on `Geolocation.prototype`, `GeolocationPosition.prototype`, and `GeolocationCoordinates.prototype`. Key exports:
+
+- `installGeolocationOverrides()` — Installs `getCurrentPosition` / `watchPosition` / `clearWatch` on `Geolocation.prototype`, plus prototype-level accessor and `toJSON` installers so spoofed instances have zero own properties (matching native layout — `Object.getOwnPropertyNames(pos)` returns `[]`).
+- `getPaddedCoords(location)` — Returns a padded coordinate pair for the given raw spoofed location. Pads values with fewer than 7 decimal places by appending a ±5mm jitter (well below any accuracy a user could configure), caches per unique raw pair, and is shared with `iframe-patching.ts` so main-window and iframe paths emit identical values. Closes the "suspiciously round spoofed coordinates" detection vector.
+
+Spoofed positions are allocated via `Object.create(GeolocationPosition.prototype)` with coordinate/timestamp values stored in a module-level `WeakMap<object, slots>`. Prototype getters consult the WeakMap for our instances and fall through to the native getters for pristine browser-allocated objects.
+
+#### document-overrides.ts
+
+Overrides `Document.prototype.lastModified` to reformat the native string in the spoofed timezone. Key exports:
+
+- `installDocumentOverrides()` — Installs the `lastModified` getter override on the top-level `Document.prototype`.
+- `installLastModifiedOverride(documentProto)` — Installs the override on any `Document.prototype` (used by `iframe-patching.ts` for iframe realms).
+
+The override parses the native `"MM/DD/YYYY HH:MM:SS"` string (which is in the real system timezone), recovers the UTC epoch, and reformats it in the spoofed timezone using `Intl.DateTimeFormat` via `formatToParts`.
+
+#### iframe-patching.ts
+
+Per-iframe realm patcher. When a same-origin iframe window is first accessed, `patchIframeWindow` installs eight sections of overrides on that iframe's realm:
+
+1. `Function.prototype.toString` — native-[native code]-reporting mask
+2. Geolocation — `getCurrentPosition` / `watchPosition` / `clearWatch` on the iframe's `Geolocation.prototype`
+3. Permissions — `query` on the iframe's `Permissions.prototype`, returning a prototype-linked `PermissionStatus` with `state: "granted"` for geolocation
+4. Intl — `Intl.DateTimeFormat` constructor + `resolvedOptions` on the iframe's realm
+5. Date — full spoofing-aware `Date` constructor + `Date.parse` on the iframe's realm
+6. Temporal — `Temporal.Now.{timeZoneId,plainDateTimeISO,plainDateISO,plainTimeISO,zonedDateTimeISO}` when available
+7. Document — `Document.prototype.lastModified` getter override on the iframe's realm
+8. Nested-iframe cascade — iframe-realm copies of `HTMLIFrameElement.prototype.{contentWindow,contentDocument}` getters, `Node.prototype.{appendChild,insertBefore,replaceChild}`, `Element.prototype.{append,prepend,replaceWith,insertAdjacentElement,insertAdjacentHTML}`, the `innerHTML` setter, plus a `MutationObserver` on the iframe's own `documentElement`. This causes a nested iframe created from inside the outer iframe to trigger `patchIframeWindow` on itself recursively — so grand-nested iframes get the same treatment, and so on.
+
+Cross-origin iframes throw `SecurityError` on any access and are silently skipped. All shape/descriptor checks in the cascade use tag-name / duck-typing rather than `instanceof`, because elements created in the iframe's realm are not instances of the top-level constructors.
+
+#### temporal.ts
+
+Feature-detected Temporal API overrides. Overrides `Temporal.Now` methods when available:
+
+- `timeZoneId()` — returns spoofed identifier
+- `plainDateTimeISO()`, `plainDateISO()`, `plainTimeISO()`, `zonedDateTimeISO()` — pass spoofed identifier when no explicit timezone argument provided
+
+### Content Script → Injected Script Communication
+
+Uses `CustomEvent` with a configurable event name (`EVENT_NAME`, set at build time, defaults to `"__x_evt"`). CSP-safe.
+
+```typescript
+interface SettingsEventDetail {
+  enabled: boolean;
+  location: Location | null;
+  timezone: Timezone | null;
+}
+```
+
+On Firefox, `cloneInto()` is used to make the detail object accessible across content-script / page-context boundaries.
+
+## Message Types and Payloads
+
+The extension uses `browser.runtime.sendMessage` and `browser.runtime.onMessage` for inter-component communication. All messages follow this structure:
+
+```typescript
+{
+  type: string,      // Message type identifier
+  payload?: object   // Message-specific data
+}
+```
+
+### Popup → Background Messages
+
+#### SET_LOCATION
+
+```typescript
+{ type: "SET_LOCATION", payload: { latitude: number, longitude: number } }
+```
+
+Side effects: Calculates timezone (offline via browser-geo-tz), performs reverse geocoding, saves to storage, broadcasts to all content scripts, updates badge.
+
+#### SET_PROTECTION_STATUS
+
+```typescript
+{ type: "SET_PROTECTION_STATUS", payload: { enabled: boolean } }
+```
+
+Side effects: Saves status, updates badge (green/gray), broadcasts to content scripts.
+
+#### SET_WEBRTC_PROTECTION
+
+```typescript
+{ type: "SET_WEBRTC_PROTECTION", payload: { enabled: boolean } }
+```
+
+Side effects: Configures browser privacy API settings, saves to storage.
+
+#### GEOCODE_QUERY
+
+```typescript
+{ type: "GEOCODE_QUERY", payload: { query: string } }
+```
+
+Response: `{ results: [{ name, latitude, longitude, city, country }] }`
+Error: `{ error: "TIMEOUT" | "NETWORK" | "NO_RESULTS", message: string }`
+
+#### GET_SETTINGS
+
+```typescript
+{
+  type: "GET_SETTINGS";
+}
+```
+
+Response: Complete settings object.
+
+#### COMPLETE_ONBOARDING
+
+```typescript
+{
+  type: "COMPLETE_ONBOARDING";
+}
+```
+
+### Background → Content Script Messages
+
+#### UPDATE_SETTINGS
+
+```typescript
+{
+  type: "UPDATE_SETTINGS",
+  payload: {
+    enabled: boolean,
+    location: { latitude: number, longitude: number, accuracy: number } | null,
+    timezone: { identifier: string, offset: number, dstOffset: number } | null
+  }
+}
+```
+
+#### PING
+
+```typescript
+{
+  type: "PING";
+}
+```
+
+Response: `{ pong: true }` — used for injection health checks via `browser.alarms`.
+
+## Settings Schema
+
+Persisted in `browser.storage.local` under the key `"settings"`.
+
+```typescript
+{
+  enabled: boolean,
+  location: { latitude: number, longitude: number, accuracy: number } | null,
+  timezone: { identifier: string, offset: number, dstOffset: number } | null,
+  locationName: { city: string, country: string, displayName: string } | null,
+  webrtcProtection: boolean,
+  onboardingCompleted: boolean,
+  vpnSyncEnabled: boolean,
+  version: string,
+  lastUpdated: number
+}
+```
+
+## Data Models
+
+### Location
+
+```typescript
+{ latitude: number, longitude: number, accuracy: number }
+```
+
+### Timezone
+
+```typescript
+{ identifier: string, offset: number, dstOffset: number }
+// identifier: IANA timezone ID (e.g. "America/Los_Angeles")
+// offset: Minutes from UTC (e.g. -480 for PST)
+// dstOffset: DST offset in minutes
+```
+
+### LocationName
+
+```typescript
+{ city: string, country: string, displayName: string }
+```
+
+### GeolocationPosition (W3C)
+
+```typescript
+{
+  coords: {
+    latitude: number, longitude: number, accuracy: number,
+    altitude: null, altitudeAccuracy: null, heading: null, speed: null
+  },
+  timestamp: number
+}
+```
+
+## External API Integration
+
+### Nominatim Geocoding API (OpenStreetMap)
+
+Base URL: `https://nominatim.openstreetmap.org`
+Rate Limit: 1 req/sec | Auth: None | Timeout: 5s | Retry: 3x exponential backoff
+
+- Forward geocoding: `/search?q=...&format=json&limit=5&addressdetails=1`
+- Reverse geocoding: `/reverse?lat=...&lon=...&format=json&addressdetails=1`
+- Caching: In-memory by rounded coordinates (4 decimal places)
+- User-Agent: `GeoSpoof-Extension/1.0`
+
+### Offline Timezone Lookup
+
+Uses `browser-geo-tz` npm package for offline coordinate-to-timezone resolution. No external API calls needed for timezone lookup.
+
+### VPN Sync IP Geolocation
+
+Public IP detected via `api.ipify.org`. Geolocation resolved in parallel across four services (first success wins):
+
+| Service                    | URL                                        |
+| -------------------------- | ------------------------------------------ |
+| GeoJS (primary)            | `https://get.geojs.io/v1/ip/geo/{ip}.json` |
+| FreeIPAPI (fallback)       | `https://free.freeipapi.com/api/json/{ip}` |
+| ReallyFreeGeoIP (fallback) | `https://reallyfreegeoip.org/json/{ip}`    |
+| ipinfo.io (fallback)       | `https://ipinfo.io/{ip}/json`              |
+
+Timeout: 5s per service | Retry: 2x exponential backoff | Results cached in memory and `browser.storage.local` (30 days).
+
+## Known Limitations
+
+1. **Web Workers** — Content scripts cannot inject into Worker/SharedWorker/ServiceWorker contexts. Code running inside a Worker sees the real system timezone via `Date` and `Intl.DateTimeFormat`, bypassing all main-thread overrides. This is a fundamental limitation of the content-script extension model — no public WebExtension API provides Worker-injection access. The test suite demonstrates this with blob-URL Workers that report their own `Intl.DateTimeFormat().resolvedOptions().timeZone` and `new Date().getTimezoneOffset()`.
+
+2. **XSLT/EXSLT datetime leak (Firefox only)** — `XSLTProcessor` runs inside a C++ engine that doesn't round-trip through JavaScript date machinery. The EXSLT function `date:date-time()` emits an ISO datetime string with the real system UTC offset, bypassing every Date/Intl/Temporal override. This is the technique arkenfox's TZP uses as its ground-truth timezone source. Chromium doesn't ship EXSLT, so the leak is Firefox-only. Unpatchable without browser-level changes.
+
+3. **Extension initialization race** — Browser extensions install overrides at `document_start`, but spoofing settings arrive asynchronously (typically 50-250ms on cold page loads). A fingerprinting script that reads timezone synchronously in `<head>` can win that race and learn the real zone. This is a fundamental MV3 limitation that requires browser-level fixes to eliminate (see Tor Browser, which patches C++ directly).
+
+4. **Cross-origin iframes** — `SecurityError` prevents any access from the content script, so `patchIframeWindow` silently skips them. Timing side-channels can reveal discrepancies between the parent's spoofed view and the cross-origin iframe's real view.
+
+5. **Date.prototype methods inside iframe realms** — `patchIframeWindow` installs the `Date` constructor, `Intl.DateTimeFormat`, and `Temporal.Now` into each iframe realm, but does **not** install iframe-realm copies of the per-method `Date.prototype.{toString, toDateString, toTimeString, toLocaleString, toLocaleDateString, toLocaleTimeString, getHours, getMinutes, getSeconds, getDate, getDay, getMonth, getFullYear, getTimezoneOffset}` overrides. A Date instance produced by `iframe.contentWindow.Date` has its prototype method calls resolved against the iframe's own unpatched `Date.prototype`. The iframe's `Intl` constructor-level spoofing still applies, so most real-world timezone leaks are closed — but a page that specifically constructs a Date through the iframe realm and reads `new iframe.contentWindow.Date().getHours()` sees the real system zone.
+
+6. **Timing channels** — A content-script spoofer returns fake positions via `setTimeout` on the JavaScript event loop. Real GPS/Wi-Fi/cell-tower lookups go through browser-internal threads with wider, heavier-tailed latency distributions. A detector with enough samples can fingerprint the artificial bounds (10-50ms floor). Additionally, native `maximumAge` caching serves positions sub-millisecond, while a `setTimeout`-based spoofer cannot emit below its configured delay. Only a browser-native implementation can match real hardware timing signatures.
+
+7. **SharedArrayBuffer timing** — High-resolution timing can fingerprint override execution patterns. Unfixable at the content-script level.
+
+8. **IP geolocation** — Extension does not mask IP address. Fingerprinting scripts cross-check public IP country/region against browser-reported geolocation. Closing this gap requires routing traffic through a VPN exit in the spoofed region (hence the VPN Sync feature).
+
+9. **WebRTC IP leaks** — Without `browser.privacy.network.webRTCIPHandlingPolicy` set to `disable_non_proxied_udp`, WebRTC ICE gathering can expose the real public IP via server-reflexive (srflx) candidates, even when geolocation is spoofed. On Firefox this only holds when behind a proxy/VPN; on Chromium it's strict. Safari doesn't expose `browser.privacy`.
+
+## Performance Targets
+
+| Operation                | Target                    |
+| ------------------------ | ------------------------- |
+| Geolocation API overhead | <50ms per call            |
+| Popup open time          | <200ms                    |
+| Settings save            | <500ms                    |
+| Settings load on startup | <1 second                 |
+| Geocoding request        | <5 seconds (with timeout) |
+| Badge update             | <100ms                    |
+
+## Browser Compatibility
+
+| Browser               | Minimum Version |
+| --------------------- | --------------- |
+| Firefox               | 140+ (MV3)      |
+| Firefox Android       | 140+            |
+| Chrome / Brave / Edge | MV3             |
+| Safari (macOS)        | 15+             |
+| Safari (iOS / iPadOS) | 15+             |
