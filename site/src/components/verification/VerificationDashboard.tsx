@@ -4,9 +4,11 @@ import { AlertTriangle } from "lucide-react"
 import { CommandPalette } from "./CommandPalette"
 import { DashboardTier } from "./DashboardTier"
 import { DetectableIssuesSection } from "./DetectableIssuesSection"
+import { FailedTestsPreview } from "./FailedTestsPreview"
 import IdentityPanel from "./IdentityPanel"
 import { StickyVerdict } from "./StickyVerdict"
 import { VerificationSummary } from "./VerificationSummary"
+import type { FilterCriteria } from "@/lib/test-suite/filters"
 import type {
   TestDefinition,
   TestRunContext,
@@ -19,6 +21,7 @@ import {
   AlertTitle,
 } from "@/components/ui/alert"
 import { Card, CardContent } from "@/components/ui/card"
+import { EMPTY_FILTER } from "@/lib/test-suite/filters"
 import {
   IdentityProvider,
   useIdentity,
@@ -71,6 +74,8 @@ function DashboardInner() {
   const [loadAttempt, setLoadAttempt] = React.useState(0)
   /** Bumped to re-run the suite without re-loading the manifest. */
   const [runAttempt, setRunAttempt] = React.useState(0)
+  /** Filter state owned here so the Verdict tier's failure callout can toggle it. */
+  const [filters, setFilters] = React.useState<FilterCriteria>(EMPTY_FILTER)
 
   /**
    * Abort controller scoped to the currently in-flight run. Each call to
@@ -214,6 +219,38 @@ function DashboardInner() {
   /** Ref used by the sticky verdict bar to know when to dock. */
   const summaryAnchorRef = React.useRef<HTMLDivElement | null>(null)
 
+  /** Count of fail + error tests, used by the Verdict-tier failure callout. */
+  const failureCount = React.useMemo(
+    () =>
+      states.filter(
+        (s) => s.result.status === "fail" || s.result.status === "error"
+      ).length,
+    [states]
+  )
+
+  /**
+   * Set the Detectable Issues filter to show only fail + error rows and
+   * scroll the user to the details tier. Used by the `FailedTestsPreview`
+   * callout so users can pivot from "I see N failures" to "show me the
+   * failing tests" in one click.
+   */
+  const showOnlyFailures = React.useCallback(() => {
+    setFilters({
+      query: "",
+      // Hide every status the dropdown surfaces except fail + error.
+      // Do NOT include `pending` here — it isn't offered in the
+      // TestSuiteFilters dropdown, so counting it into hiddenStatuses
+      // throws off the "Showing X of 5" label shown on the filter
+      // button (it would report 1 visible when there are actually 2).
+      hiddenStatuses: new Set(["pass", "skipped", "known-limitation"]),
+    })
+    requestAnimationFrame(() => {
+      document
+        .getElementById("tier-details")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" })
+    })
+  }, [])
+
   /**
    * Manifest-load failure card. Rendered above the panel/summary so the
    * failure is immediately visible, but the Identity Panel below still
@@ -268,6 +305,13 @@ function DashboardInner() {
           </CardContent>
         </Card>
 
+        <FailedTestsPreview
+          failureCount={failureCount}
+          totalCount={states.length}
+          isRunning={isRunning}
+          onShowOnlyFailures={showOnlyFailures}
+        />
+
         <StickyVerdict
           anchorRef={summaryAnchorRef}
           states={states}
@@ -282,7 +326,11 @@ function DashboardInner() {
       >
         <div className="mx-auto w-full max-w-4xl">
           {tests ? (
-            <DetectableIssuesSection states={states} />
+            <DetectableIssuesSection
+              states={states}
+              filters={filters}
+              onFiltersChange={setFilters}
+            />
           ) : manifestError ? null : (
             <div className="rounded-xl border border-(--color-canvas-border) bg-(--color-canvas) p-5 text-sm text-(--color-canvas-muted)">
               Loading tests…
