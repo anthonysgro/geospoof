@@ -108,24 +108,31 @@ installDateFormattingOverrides();
 import { installDateGetterOverrides } from "./date-getters";
 installDateGetterOverrides();
 
-// 10. Temporal API overrides (feature-detected, no-ops if unavailable)
+// 10. Date setter overrides (setHours, setMinutes, setDate, etc.)
+//     Installed AFTER the getters so multi-argument setters that
+//     preserve omitted components read through the spoofed getters
+//     when they fall back to "current" values.
+import { installDateSetterOverrides } from "./date-setters";
+installDateSetterOverrides();
+
+// 11. Temporal API overrides (feature-detected, no-ops if unavailable)
 import { installTemporalOverrides } from "./temporal";
 installTemporalOverrides();
 
-// 11. Iframe patching (contentWindow/contentDocument getter overrides)
+// 12. Iframe patching (contentWindow/contentDocument getter overrides)
 import { installIframePatching } from "./iframe-patching";
 installIframePatching();
 
-// 12. DOM insertion wrapping and MutationObserver fallback
+// 13. DOM insertion wrapping and MutationObserver fallback
 import { installDomInsertionWrapping } from "./dom-insertion";
 installDomInsertionWrapping();
 
-// 13. Document-level overrides (lastModified — ground-truth timezone
+// 14. Document-level overrides (lastModified — ground-truth timezone
 //     surface used by TZP and similar fingerprinters)
 import { installDocumentOverrides } from "./document-overrides";
 installDocumentOverrides();
 
-// 14. Worker constructor interception. Wraps window.Worker and
+// 15. Worker constructor interception. Wraps window.Worker and
 //     window.SharedWorker so that classic Workers get a timezone
 //     spoofing payload prepended to their source. Module Workers
 //     pass through unmodified (blob URLs break relative imports).
@@ -134,7 +141,7 @@ installDocumentOverrides();
 import { installWorkerPatching } from "./worker-patching";
 installWorkerPatching();
 
-// 15. WebRTC IP-leak protection. Wraps RTCPeerConnection so no ICE
+// 16. WebRTC IP-leak protection. Wraps RTCPeerConnection so no ICE
 //     candidates ever gather when the user enables WebRTC Protection
 //     in the popup. Closes the srflx/host/relay leaks that Firefox's
 //     `disable_non_proxied_udp` policy misses without a proxy and

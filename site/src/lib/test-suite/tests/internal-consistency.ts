@@ -682,6 +682,322 @@ const jul = new Date("2024-07-15T12:00:00Z").getTimezoneOffset()
 // ---------------------------------------------------------------------------
 // Manifest
 // ---------------------------------------------------------------------------
+// CreepJS-style Date self-consistency battery
+// ---------------------------------------------------------------------------
+//
+// CreepJS's timezone panel runs several checks that cross-verify pieces
+// of the Date/Intl/Temporal surface against each other. The following
+// tests replicate its most pedantic probes, catching bugs our
+// category-oriented tests missed.
+
+// The following six tests guard the set/get round-trip invariant for
+// every Date component the extension overrides a getter for. The
+// bug-surfacing behaviour is different for each one:
+//
+//   - setHours is the universal fingerprint of a get/set mismatch.
+//     Any zone pair where real ≠ spoofed offset (which is always,
+//     when spoofing is active and succeeds) produces divergence.
+//     CreepJS's valid.time check renders this exact invariant.
+//
+//   - setMinutes only diverges in zone pairs whose offset difference
+//     has a non-zero minute component (India +05:30, Nepal +05:45,
+//     Chatham +12:45, Newfoundland -03:30, etc.). In all-integer-hour
+//     offsets this test round-trips even with a broken setter, because
+//     the minute component is invariant under pure-hour shifts.
+//
+//   - setSeconds is safe under every real-world zone pair — no tzdb
+//     zone has a second-level offset — so this test is a pure
+//     regression guard against future spoofing mistakes, not a
+//     here-and-now bug surfacer.
+//
+//   - setDate / setMonth / setFullYear diverge only when the offset
+//     shift crosses a day / month / year boundary, which requires a
+//     specific starting epoch AND a large offset delta. These are
+//     regression guards for the rare edge case.
+//
+// They're grouped under Internal Consistency as set/get round-trip
+// assertions: the intent is to make sure a future refactor that
+// changes one of the six setter / getter pairs doesn't silently
+// break round-tripping for that particular component.
+
+const setHoursRoundTripsThroughGetHoursTest = buildBehavioralTest<number>({
+  id: "consistency.timezone.sethours-roundtrips-through-gethours",
+  group: "internal-consistency",
+  name: "setHours followed by getHours returns the value set",
+  description:
+    "date.setHours(H) followed by date.getHours() must return H — sites that drive time pickers or recompute schedules via setHours expect reads to agree with writes. This is the universal fingerprint of a get/set mismatch: whenever the real and spoofed offsets differ (which is always, during successful spoofing), a spoofer that overrides the getter but not the setter diverges here because the setter interprets its input in one zone and the getter reads back in another. CreepJS's valid.time check is a direct rendering of this invariant.",
+  technique:
+    "Instantiate a fresh Date, call setHours(7), then read getHours() and assert it equals 7. Req 11.10 is intentionally bypassed: this test is about the internal consistency of a single Date instance's setter/getter pair, not cross-API consistency at a shared instant.",
+  codeSnippet: `const d = new Date()
+d.setHours(7)
+d.getHours() === 7`,
+  expected: async () => {
+    return { value: 7, describe: "setHours(7) → getHours() should return 7" }
+  },
+  observe: async () => {
+    const d = new Date()
+    d.setHours(7)
+    const value = d.getHours()
+    return { value, describe: `getHours() returned ${value}` }
+  },
+})
+
+const setMinutesRoundTripsThroughGetMinutesTest = buildBehavioralTest<number>({
+  id: "consistency.timezone.setminutes-roundtrips-through-getminutes",
+  group: "internal-consistency",
+  name: "setMinutes followed by getMinutes returns the value set",
+  description:
+    "date.setMinutes(M) followed by date.getMinutes() must return M. This test only diverges in zone pairs whose offset difference includes a non-zero minute component — India (+05:30), Nepal (+05:45), Chatham (+12:45), Newfoundland (-03:30) — so a broken setter can silently round-trip with an all-integer-hour pair and then fail the moment the user spoofs to one of these zones.",
+  technique:
+    "Instantiate a fresh Date, call setMinutes(37), then read getMinutes() and assert it equals 37. The value is chosen to not be a multiple of 15 or 30 so it surfaces fractional-offset bugs cleanly.",
+  codeSnippet: `const d = new Date()
+d.setMinutes(37)
+d.getMinutes() === 37`,
+  expected: async () => {
+    return {
+      value: 37,
+      describe: "setMinutes(37) → getMinutes() should return 37",
+    }
+  },
+  observe: async () => {
+    const d = new Date()
+    d.setMinutes(37)
+    const value = d.getMinutes()
+    return { value, describe: `getMinutes() returned ${value}` }
+  },
+})
+
+const setSecondsRoundTripsThroughGetSecondsTest = buildBehavioralTest<number>({
+  id: "consistency.timezone.setseconds-roundtrips-through-getseconds",
+  group: "internal-consistency",
+  name: "setSeconds followed by getSeconds returns the value set",
+  description:
+    "date.setSeconds(S) followed by date.getSeconds() must return S. No IANA zone has a second-level offset, so this test is a regression guard against a future override that accidentally re-derives seconds through a timezone-dependent path rather than leaving the component passthrough.",
+  technique:
+    "Instantiate a fresh Date, call setSeconds(42), then read getSeconds() and assert it equals 42.",
+  codeSnippet: `const d = new Date()
+d.setSeconds(42)
+d.getSeconds() === 42`,
+  expected: async () => {
+    return {
+      value: 42,
+      describe: "setSeconds(42) → getSeconds() should return 42",
+    }
+  },
+  observe: async () => {
+    const d = new Date()
+    d.setSeconds(42)
+    const value = d.getSeconds()
+    return { value, describe: `getSeconds() returned ${value}` }
+  },
+})
+
+const setDateRoundTripsThroughGetDateTest = buildBehavioralTest<number>({
+  id: "consistency.timezone.setdate-roundtrips-through-getdate",
+  group: "internal-consistency",
+  name: "setDate followed by getDate returns the value set",
+  description:
+    "date.setDate(D) followed by date.getDate() must return D. Sites that do day arithmetic (date.setDate(date.getDate() + 1) for 'tomorrow') depend on this invariant. A broken setter only diverges here when the zone shift is large enough to push the epoch across a day boundary — a regression guard for that edge case.",
+  technique:
+    "Instantiate a fresh Date, call setDate(15) (a mid-month value that never overflows), then read getDate() and assert it equals 15.",
+  codeSnippet: `const d = new Date()
+d.setDate(15)
+d.getDate() === 15`,
+  expected: async () => {
+    return { value: 15, describe: "setDate(15) → getDate() should return 15" }
+  },
+  observe: async () => {
+    const d = new Date()
+    d.setDate(15)
+    const value = d.getDate()
+    return { value, describe: `getDate() returned ${value}` }
+  },
+})
+
+const setMonthRoundTripsThroughGetMonthTest = buildBehavioralTest<number>({
+  id: "consistency.timezone.setmonth-roundtrips-through-getmonth",
+  group: "internal-consistency",
+  name: "setMonth followed by getMonth returns the value set",
+  description:
+    "date.setMonth(M) followed by date.getMonth() must return M. A broken setter only diverges here when the zone shift combined with the starting epoch crosses a month boundary — rare, but possible near the 1st / 31st of a month in a zone pair with an ~12-hour difference. Kept as a regression guard for that edge case.",
+  technique:
+    "Instantiate a fresh Date, snap its day to the 15th (so setMonth never overflows into the next month on 31-day-to-shorter transitions), call setMonth(5) for June, then read getMonth() and assert it equals 5.",
+  codeSnippet: `const d = new Date()
+d.setDate(15)
+d.setMonth(5)
+d.getMonth() === 5`,
+  expected: async () => {
+    return {
+      value: 5,
+      describe: "setMonth(5) → getMonth() should return 5 (June, 0-indexed)",
+    }
+  },
+  observe: async () => {
+    const d = new Date()
+    d.setDate(15)
+    d.setMonth(5)
+    const value = d.getMonth()
+    return { value, describe: `getMonth() returned ${value}` }
+  },
+})
+
+const setFullYearRoundTripsThroughGetFullYearTest =
+  buildBehavioralTest<number>({
+    id: "consistency.timezone.setfullyear-roundtrips-through-getfullyear",
+    group: "internal-consistency",
+    name: "setFullYear followed by getFullYear returns the value set",
+    description:
+      "date.setFullYear(Y) followed by date.getFullYear() must return Y. A broken setter only diverges here in the narrow window around New Year's Eve in a zone pair large enough to shift the epoch across the year boundary — a regression guard for that edge case.",
+    technique:
+      "Instantiate a fresh Date, call setFullYear(2030), then read getFullYear() and assert it equals 2030.",
+    codeSnippet: `const d = new Date()
+d.setFullYear(2030)
+d.getFullYear() === 2030`,
+    expected: async () => {
+      return {
+        value: 2030,
+        describe: "setFullYear(2030) → getFullYear() should return 2030",
+      }
+    },
+    observe: async () => {
+      const d = new Date()
+      d.setFullYear(2030)
+      const value = d.getFullYear()
+      return { value, describe: `getFullYear() returned ${value}` }
+    },
+  })
+
+const epochOneSevenNineteenSeventyIsMidnightTest =
+  buildBehavioralTest<boolean>({
+    id: "consistency.timezone.epoch-1970-07-01-is-midnight-in-spoofed-zone",
+    group: "internal-consistency",
+    name: "new Date('07/01/1970') lands on midnight local (spoofed) time",
+    description:
+      'CreepJS\'s valid.clock check constructs new Date("07/01/1970") and asserts getHours/getMinutes/getSeconds/getMilliseconds are all zero. Ambiguous date strings must adjust to midnight in whatever timezone the browser reports as local — if our spoofing pipeline over- or under-adjusts for this fixed date the whole timezone panel goes red.',
+    technique:
+      'Construct new Date("07/01/1970") — an ambiguous date string with no explicit timezone — and assert all four local-time components round to zero.',
+    codeSnippet: `const d = new Date("07/01/1970")
+d.getHours() === 0 &&
+d.getMinutes() === 0 &&
+d.getSeconds() === 0 &&
+d.getMilliseconds() === 0`,
+    expected: async () => {
+      return {
+        value: true,
+        describe: "all four components equal 0",
+      }
+    },
+    observe: async () => {
+      const d = new Date("07/01/1970")
+      const h = d.getHours()
+      const m = d.getMinutes()
+      const s = d.getSeconds()
+      const ms = d.getMilliseconds()
+      const value = h === 0 && m === 0 && s === 0 && ms === 0
+      return {
+        value,
+        describe: `h=${h}, m=${m}, s=${s}, ms=${ms}`,
+      }
+    },
+  })
+
+const newDateEqualsDateCallTest = buildBehavioralTest<string>({
+  id: "consistency.timezone.new-date-equals-date-function-call",
+  group: "internal-consistency",
+  name: "new Date().toString() agrees with Date() on the timezone label",
+  description:
+    'CreepJS\'s valid.date check compares `new Date() == Date()` (both sides coerce to strings via Date.prototype.toString). Native engines produce the same timezone label on both sides; a spoofer that overrides new Date() but leaves the no-new Date() branch calling the real system zone produces two strings with different "GMT±HHMM" and timezone-name substrings, which is trivially detectable.',
+  technique:
+    "Capture the GMT-offset-and-zone-name tail of new Date().toString() and of the string returned by Date() (invoked without new), normalize the clock components out, and assert the two zone tails are identical.",
+  codeSnippet: `const a = new Date().toString()
+const b = Date()
+// "Mon May 12 2026 10:00:00 GMT-0800 (Alaska Daylight Time)"
+// zone tail: everything after the time portion
+a.slice(a.indexOf("GMT")) === b.slice(b.indexOf("GMT"))`,
+  expected: async () => {
+    const a = new Date().toString()
+    const idx = a.indexOf("GMT")
+    const tail = idx === -1 ? "" : a.slice(idx)
+    return { value: tail, describe: `new Date().toString() zone tail: "${tail}"` }
+  },
+  observe: async () => {
+    // Date() (no new) returns a string of the current time.
+    const b: unknown = (Date as unknown as () => string)()
+    const str = typeof b === "string" ? b : String(b)
+    const idx = str.indexOf("GMT")
+    const tail = idx === -1 ? "" : str.slice(idx)
+    return { value: tail, describe: `Date() zone tail: "${tail}"` }
+  },
+})
+
+const dateEpochSurfacesAgreeTest = buildBehavioralTest<boolean>({
+  id: "consistency.timezone.date-epoch-surfaces-agree",
+  group: "internal-consistency",
+  name: "Date.now, +new Date, valueOf, and getTime return the same epoch",
+  description:
+    'CreepJS\'s valid.nowTime check samples four ways to read the current epoch — Date.now(), +new Date(), new Date().getTime(), new Date().valueOf() — and asserts they all agree (within the millisecond those four calls take to execute). A spoofer that adjusts the epoch on one surface but not another diverges here. We tolerate a 10ms drift between the first and last sample to absorb slow machines; any gap larger than that is a genuine inconsistency.',
+  technique:
+    "Sample the four surfaces back-to-back and assert all four values fall within a 10ms window. This is the wall-clock equivalent of dateNowMonotonic but spans four independent entry points to the same underlying epoch.",
+  codeSnippet: `const a = Date.now()
+const d = new Date()
+const b = +d
+const c = d.getTime()
+const e = d.valueOf()
+// Max(a, b, c, e) - Min(a, b, c, e) < 10`,
+  expected: async () => {
+    return { value: true, describe: "all four surfaces within 10ms" }
+  },
+  observe: async () => {
+    const a = Date.now()
+    const d = new Date()
+    const b = +d
+    const c = d.getTime()
+    const e = d.valueOf()
+    const samples = [a, b, c, e]
+    const spread = Math.max(...samples) - Math.min(...samples)
+    const value = spread < 10
+    return {
+      value,
+      describe: `Date.now=${a}, +new Date=${b}, getTime=${c}, valueOf=${e} (spread=${spread}ms)`,
+    }
+  },
+})
+
+const utcSurfacesAgreeTest = buildBehavioralTest<string>({
+  id: "consistency.timezone.utc-surfaces-agree",
+  group: "internal-consistency",
+  name: "toISOString, toJSON, and JSON.stringify agree on UTC representation",
+  description:
+    'CreepJS\'s valid.utcTime check compares three UTC surfaces — new Date().toISOString(), new Date().toJSON(), and JSON.stringify(new Date()).slice(1, -1) — and asserts they all match. These surfaces are intentionally NOT overridden (they expose UTC, not local time), so they should all agree by default. A spoofer that accidentally hooks one of them will regress here.',
+  technique:
+    "Anchor on ctx.getIdentity().startedAt for a single Date, produce the three UTC surfaces, and assert they're pairwise equal. Using a fixed instant avoids millisecond-boundary flake that sampling `new Date()` three times would introduce.",
+  codeSnippet: `const d = new Date(identity.startedAt)
+const a = d.toISOString()
+const b = d.toJSON()
+const c = JSON.stringify(d).slice(1, -1)
+a === b && a === c`,
+  expected: async (ctx) => {
+    const instant = new Date(ctx.getIdentity().startedAt)
+    const a = instant.toISOString()
+    return { value: a, describe: `toISOString: "${a}"` }
+  },
+  observe: async (ctx) => {
+    const instant = new Date(ctx.getIdentity().startedAt)
+    const iso = instant.toISOString()
+    const json = instant.toJSON()
+    const stringified = JSON.stringify(instant).slice(1, -1)
+    const allAgree = iso === json && iso === stringified
+    const value = allAgree ? iso : `DIVERGED: iso=${iso}, toJSON=${json}, stringify=${stringified}`
+    return {
+      value,
+      describe: allAgree
+        ? `all three agree on "${iso}"`
+        : `DIVERGED: toISOString="${iso}", toJSON="${json}", JSON.stringify="${stringified}"`,
+    }
+  },
+})
+
+// ---------------------------------------------------------------------------
 
 export const internalConsistencyTests: ReadonlyArray<TestDefinition> = [
   offsetMatchesIntlResolvedTest,
@@ -701,4 +1017,15 @@ export const internalConsistencyTests: ReadonlyArray<TestDefinition> = [
   getTimezoneOffsetStableAcrossInstantsTest,
   dstOffsetDiffersAcrossSeasonsTest,
   dateNowMonotonicTest,
+  // CreepJS-style Date self-consistency battery
+  setHoursRoundTripsThroughGetHoursTest,
+  setMinutesRoundTripsThroughGetMinutesTest,
+  setSecondsRoundTripsThroughGetSecondsTest,
+  setDateRoundTripsThroughGetDateTest,
+  setMonthRoundTripsThroughGetMonthTest,
+  setFullYearRoundTripsThroughGetFullYearTest,
+  epochOneSevenNineteenSeventyIsMidnightTest,
+  newDateEqualsDateCallTest,
+  dateEpochSurfacesAgreeTest,
+  utcSurfacesAgreeTest,
 ]

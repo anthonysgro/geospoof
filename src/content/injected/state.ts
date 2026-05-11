@@ -118,8 +118,15 @@ export const originalGetDate = Date.prototype.getDate;
 export const originalGetDay = Date.prototype.getDay;
 export const originalGetMonth = Date.prototype.getMonth;
 export const originalGetFullYear = Date.prototype.getFullYear;
+export const originalSetHours = Date.prototype.setHours;
+export const originalSetMinutes = Date.prototype.setMinutes;
+export const originalSetSeconds = Date.prototype.setSeconds;
+export const originalSetMilliseconds = Date.prototype.setMilliseconds;
+export const originalSetDate = Date.prototype.setDate;
+export const originalSetMonth = Date.prototype.setMonth;
+export const originalSetFullYear = Date.prototype.setFullYear;
+export const originalSetTime = Date.prototype.setTime;
 /* eslint-enable @typescript-eslint/unbound-method */
-
 // Permissions original (may be undefined if API unavailable)
 export const originalPermissionsQuery = navigator.permissions?.query?.bind(navigator.permissions);
 

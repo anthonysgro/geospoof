@@ -30,11 +30,17 @@
  * `Intl.DateTimeFormat` constructor/`resolvedOptions`, its `Date`
  * constructor, and `Temporal.Now.*`. It does NOT install iframe-realm
  * copies of the full `Date.prototype` method overrides (toString,
- * getHours, etc.). The iframe's Date constructor reuses the iframe's
- * own `Date.prototype`, so methods called on a Date produced by our
- * iframe-realm constructor still hit the iframe's unpatched prototype
- * methods. A future PR can port the per-method overrides into this
- * realm-patcher if the need arises.
+ * getHours, getTimezoneOffset, the six setters, etc.). The iframe's
+ * Date constructor reuses the iframe's own `Date.prototype`, so
+ * methods called on a Date produced by our iframe-realm constructor
+ * still hit the iframe's unpatched prototype methods. The gap is
+ * surfaced by the three `known-limitation.iframe-realm.date-*` tests
+ * in `site/src/lib/test-suite/tests/iframe-realm.ts`. A future PR can
+ * port the per-method overrides into this realm-patcher if a real-
+ * world fingerprinter starts routing its checks through iframe-realm
+ * Date.prototype methods; the `consistency.iframe-realm.date-sethours-
+ * roundtrip` test in the same file is the regression guard for a
+ * partial port that installs only setters or only getters.
  */
 
 import type { AnyFunction, SpoofedLocation } from "./types";

@@ -242,6 +242,202 @@ const iframeTemporalTimezoneTest = buildBehavioralTest<string>({
 })
 
 // ---------------------------------------------------------------------------
+// Date.prototype methods inside iframe realms — documented gap
+// ---------------------------------------------------------------------------
+//
+// patchIframeWindow installs the Date CONSTRUCTOR and Intl.DateTimeFormat
+// into every same-origin iframe realm, but does NOT install per-method
+// Date.prototype overrides (getHours, getTimezoneOffset, toString, the six
+// setters, etc.). A Date instance produced by `iframe.contentWindow.Date`
+// has its prototype method calls resolved against the iframe's own
+// unpatched Date.prototype, so values like `new iframe.contentWindow
+// .Date().getHours()` fall through to the real system zone.
+//
+// In practice every mainstream fingerprinter reads the zone via
+// Intl.DateTimeFormat or the Date CONSTRUCTOR's ambiguous-string parse —
+// paths we DO patch. But the per-method prototype gap is real and
+// documented as known-limitation #5. These tests surface it honestly
+// under the Known Limitations group so the dashboard shows what would
+// leak if a fingerprinter routed its checks through an iframe's
+// Date.prototype instead.
+//
+// All four tests are assigned `group: "known-limitations"` so the
+// runner converts any `fail` or `error` into `known-limitation` and the
+// dashboard's "detectable issues" count excludes them.
+
+const iframeDateGetHoursTest = buildBehavioralTest<number>({
+  id: "known-limitation.iframe-realm.date-gethours-leaks-real-zone",
+  group: "known-limitations",
+  name: "new iframe.contentWindow.Date().getHours() agrees with top-level",
+  description:
+    "A Date constructed through an iframe's Date global has its getHours resolved against the iframe's unpatched Date.prototype, which computes hours in the real system zone. The top-level's spoofed getHours returns the hour in the spoofed zone. A page that routes `new iframe.contentWindow.Date().getHours()` can read the real zone's hour while the rest of the window shows the spoofed one — documented under known-limitation #5.",
+  technique:
+    "Mount an about:blank iframe, construct a top-level Date and an iframe-realm Date from the same fixed epoch (ctx.getIdentity().startedAt) so inter-call timing jitter cannot flake the test, and assert the two hour values match.",
+  codeSnippet: `const iframe = document.createElement("iframe")
+iframe.src = "about:blank"
+document.body.appendChild(iframe)
+await new Promise((r) => iframe.addEventListener("load", r, { once: true }))
+const e = identity.startedAt
+new iframe.contentWindow.Date(e).getHours() === new Date(e).getHours()`,
+  expected: async (ctx) => {
+    if (typeof HTMLIFrameElement === "undefined") {
+      return { skipReason: "HTMLIFrameElement not available (likely SSR)" }
+    }
+    const value = new Date(ctx.getIdentity().startedAt).getHours()
+    return { value, describe: `${value} (top-level getHours at startedAt)` }
+  },
+  observe: async (ctx) => {
+    const iframe = await mountAboutBlankIframe()
+    try {
+      const win = iframe.contentWindow
+      if (!win) throw new Error("iframe has no contentWindow after load")
+      const IframeDate = (win as unknown as { Date?: DateConstructor }).Date
+      if (typeof IframeDate !== "function") {
+        throw new Error("iframe has no Date constructor")
+      }
+      const value = new IframeDate(ctx.getIdentity().startedAt).getHours()
+      return { value, describe: `${value} (iframe getHours at startedAt)` }
+    } finally {
+      try {
+        iframe.remove()
+      } catch {
+        // cleanup never masks the primary result/error
+      }
+    }
+  },
+})
+
+const iframeDateToStringTest = buildBehavioralTest<string>({
+  id: "known-limitation.iframe-realm.date-tostring-leaks-real-zone-name",
+  group: "known-limitations",
+  name: "iframe.contentWindow.Date.prototype.toString carries the spoofed zone name",
+  description:
+    "The GMT-offset-and-zone-name tail of `new iframe.contentWindow.Date().toString()` should match the tail from `new Date().toString()`. Because the iframe realm's Date.prototype.toString is unpatched, it formats in the real system zone while the top-level toString formats in the spoofed zone — the two strings disagree on GMT offset and zone name. Documented under known-limitation #5.",
+  technique:
+    'Mount an about:blank iframe, anchor both Date instances on the same fixed epoch (ctx.getIdentity().startedAt) to eliminate inter-call jitter, then capture and compare the "GMT±HHMM (Zone Name)" substring of both toString outputs.',
+  codeSnippet: `const e = identity.startedAt
+const a = new Date(e).toString()
+const b = new iframe.contentWindow.Date(e).toString()
+a.slice(a.indexOf("GMT")) === b.slice(b.indexOf("GMT"))`,
+  expected: async (ctx) => {
+    if (typeof HTMLIFrameElement === "undefined") {
+      return { skipReason: "HTMLIFrameElement not available (likely SSR)" }
+    }
+    const full = new Date(ctx.getIdentity().startedAt).toString()
+    const idx = full.indexOf("GMT")
+    const tail = idx === -1 ? "" : full.slice(idx)
+    return { value: tail, describe: `"${tail}" (top-level toString tail)` }
+  },
+  observe: async (ctx) => {
+    const iframe = await mountAboutBlankIframe()
+    try {
+      const win = iframe.contentWindow
+      if (!win) throw new Error("iframe has no contentWindow after load")
+      const IframeDate = (win as unknown as { Date?: DateConstructor }).Date
+      if (typeof IframeDate !== "function") {
+        throw new Error("iframe has no Date constructor")
+      }
+      const full = new IframeDate(ctx.getIdentity().startedAt).toString()
+      const idx = full.indexOf("GMT")
+      const tail = idx === -1 ? "" : full.slice(idx)
+      return { value: tail, describe: `"${tail}" (iframe toString tail)` }
+    } finally {
+      try {
+        iframe.remove()
+      } catch {
+        // cleanup never masks the primary result/error
+      }
+    }
+  },
+})
+
+const iframeDateGetTimezoneOffsetTest = buildBehavioralTest<number>({
+  id: "known-limitation.iframe-realm.date-gettimezoneoffset-leaks-real-offset",
+  group: "known-limitations",
+  name: "new iframe.contentWindow.Date().getTimezoneOffset agrees with top-level",
+  description:
+    "The numeric offset returned by `iframe.contentWindow.Date.prototype.getTimezoneOffset` should equal the top-level spoofed offset from the identity snapshot. The iframe realm's Date.prototype.getTimezoneOffset is unpatched, so it reports the real system offset — a trivial one-line read leaks the real zone's offset. Documented under known-limitation #5.",
+  technique:
+    "Mount an about:blank iframe, read `new iframe.contentWindow.Date(startedAt).getTimezoneOffset()` at the identity snapshot's anchor instant, and compare to the top-level spoofed offset on the identity snapshot.",
+  codeSnippet: `const e = identity.startedAt
+new iframe.contentWindow.Date(e).getTimezoneOffset() === identity.timezone.offsetMinutes`,
+  expected: async (ctx) => {
+    if (typeof HTMLIFrameElement === "undefined") {
+      return { skipReason: "HTMLIFrameElement not available (likely SSR)" }
+    }
+    const value = ctx.getIdentity().timezone.offsetMinutes
+    return {
+      value,
+      describe: `${value} minutes (top-level spoofed offset)`,
+    }
+  },
+  observe: async (ctx) => {
+    const iframe = await mountAboutBlankIframe()
+    try {
+      const win = iframe.contentWindow
+      if (!win) throw new Error("iframe has no contentWindow after load")
+      const IframeDate = (win as unknown as { Date?: DateConstructor }).Date
+      if (typeof IframeDate !== "function") {
+        throw new Error("iframe has no Date constructor")
+      }
+      const value = new IframeDate(
+        ctx.getIdentity().startedAt
+      ).getTimezoneOffset()
+      return {
+        value,
+        describe: `${value} minutes (iframe getTimezoneOffset)`,
+      }
+    } finally {
+      try {
+        iframe.remove()
+      } catch {
+        // cleanup never masks the primary result/error
+      }
+    }
+  },
+})
+
+const iframeDateSetHoursRoundTripTest = buildBehavioralTest<number>({
+  id: "consistency.iframe-realm.date-sethours-roundtrip",
+  group: "internal-consistency",
+  name: "iframe.contentWindow.Date setHours/getHours round-trip",
+  description:
+    "date.setHours(H) followed by date.getHours() on an iframe-realm Date must return H. This is the CreepJS valid.time invariant applied inside the iframe realm. Today both sides of the pair are unpatched and the invariant holds trivially; if a future PR ports the per-method Date.prototype overrides into iframe realms it must port them as matched pairs so the round-trip continues to hold in the spoofed zone. This test is the regression guard that catches a half-ported PR where only getHours or only setHours is overridden.",
+  technique:
+    "Mount an about:blank iframe, construct `new iframe.contentWindow.Date()`, call `.setHours(7)`, read back `.getHours()`, and assert it equals 7.",
+  codeSnippet: `const d = new iframe.contentWindow.Date()
+d.setHours(7)
+d.getHours() === 7`,
+  expected: async () => {
+    if (typeof HTMLIFrameElement === "undefined") {
+      return { skipReason: "HTMLIFrameElement not available (likely SSR)" }
+    }
+    return { value: 7, describe: "setHours(7) → getHours() should return 7" }
+  },
+  observe: async () => {
+    const iframe = await mountAboutBlankIframe()
+    try {
+      const win = iframe.contentWindow
+      if (!win) throw new Error("iframe has no contentWindow after load")
+      const IframeDate = (win as unknown as { Date?: DateConstructor }).Date
+      if (typeof IframeDate !== "function") {
+        throw new Error("iframe has no Date constructor")
+      }
+      const d = new IframeDate()
+      d.setHours(7)
+      const value = d.getHours()
+      return { value, describe: `getHours() returned ${value}` }
+    } finally {
+      try {
+        iframe.remove()
+      } catch {
+        // cleanup never masks the primary result/error
+      }
+    }
+  },
+})
+
+// ---------------------------------------------------------------------------
 // Manifest
 // ---------------------------------------------------------------------------
 
@@ -249,4 +445,8 @@ export const iframeRealmTests: ReadonlyArray<TestDefinition> = [
   iframeIntlTimezoneTest,
   iframeDateConstructorTest,
   iframeTemporalTimezoneTest,
+  iframeDateGetHoursTest,
+  iframeDateToStringTest,
+  iframeDateGetTimezoneOffsetTest,
+  iframeDateSetHoursRoundTripTest,
 ]

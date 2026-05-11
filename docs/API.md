@@ -59,26 +59,35 @@ Installed on `Permissions.prototype` preserving native descriptor flags.
 
 ### Date.prototype methods
 
-| API                                  | Override Behavior                                                       |
-| ------------------------------------ | ----------------------------------------------------------------------- |
-| `Date.prototype.getTimezoneOffset`   | Negated Intl-based offset for spoofed tz                                |
-| `Date.prototype.toString`            | Formatted with spoofed tz name and offset                               |
-| `Date.prototype.toDateString`        | Formatted in spoofed timezone                                           |
-| `Date.prototype.toTimeString`        | Formatted with spoofed offset and tz name                               |
-| `Date.prototype.toLocaleString`      | Timezone injected into options                                          |
-| `Date.prototype.toLocaleDateString`  | Timezone injected into options                                          |
-| `Date.prototype.toLocaleTimeString`  | Timezone injected into options                                          |
-| `Date.prototype.getHours`            | Computed via engine-specific path in spoofed tz                         |
-| `Date.prototype.getMinutes`          | Computed via engine-specific path in spoofed tz                         |
-| `Date.prototype.getSeconds`          | Computed via engine-specific path in spoofed tz                         |
-| `Date.prototype.getMilliseconds`     | Behavior passthrough (timezone-independent)                             |
-| `Date.prototype.getDate`             | Computed via engine-specific path in spoofed tz                         |
-| `Date.prototype.getDay`              | Computed via engine-specific path in spoofed tz                         |
-| `Date.prototype.getMonth`            | Computed via engine-specific path in spoofed tz                         |
-| `Date.prototype.getFullYear`         | Computed via engine-specific path in spoofed tz                         |
-| `Date.prototype.toISOString`         | **Not overridden** — UTC surface, true UTC epoch preserved              |
-| `Date.prototype.toJSON`              | **Not overridden** — delegates to toISOString, true UTC epoch preserved |
-| `Date.prototype.getUTC*` (all eight) | **Not overridden** — UTC surfaces, true UTC values preserved            |
+| API                                    | Override Behavior                                                                                                                          |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Date.prototype.getTimezoneOffset`     | Negated Intl-based offset for spoofed tz                                                                                                   |
+| `Date.prototype.toString`              | Formatted with spoofed tz name and offset                                                                                                  |
+| `Date.prototype.toDateString`          | Formatted in spoofed timezone                                                                                                              |
+| `Date.prototype.toTimeString`          | Formatted with spoofed offset and tz name                                                                                                  |
+| `Date.prototype.toLocaleString`        | Timezone injected into options                                                                                                             |
+| `Date.prototype.toLocaleDateString`    | Timezone injected into options                                                                                                             |
+| `Date.prototype.toLocaleTimeString`    | Timezone injected into options                                                                                                             |
+| `Date.prototype.getHours`              | Computed via engine-specific path in spoofed tz                                                                                            |
+| `Date.prototype.getMinutes`            | Computed via engine-specific path in spoofed tz                                                                                            |
+| `Date.prototype.getSeconds`            | Computed via engine-specific path in spoofed tz                                                                                            |
+| `Date.prototype.getMilliseconds`       | Behavior passthrough (timezone-independent)                                                                                                |
+| `Date.prototype.getDate`               | Computed via engine-specific path in spoofed tz                                                                                            |
+| `Date.prototype.getDay`                | Computed via engine-specific path in spoofed tz                                                                                            |
+| `Date.prototype.getMonth`              | Computed via engine-specific path in spoofed tz                                                                                            |
+| `Date.prototype.getFullYear`           | Computed via engine-specific path in spoofed tz                                                                                            |
+| `Date.prototype.setHours(h,m?,s?,ms?)` | Components interpreted in spoofed tz; omitted args preserve current spoofed-zone component; DST-refined                                    |
+| `Date.prototype.setMinutes(m,s?,ms?)`  | Components interpreted in spoofed tz; omitted args preserve current spoofed-zone component; DST-refined                                    |
+| `Date.prototype.setSeconds(s,ms?)`     | Components interpreted in spoofed tz; omitted args preserve current spoofed-zone component; DST-refined                                    |
+| `Date.prototype.setDate(d)`            | Day-of-month interpreted in spoofed tz; time-of-day preserved in spoofed tz; DST-refined                                                   |
+| `Date.prototype.setMonth(m,d?)`        | Month (and optional day) interpreted in spoofed tz; time-of-day preserved; DST-refined                                                     |
+| `Date.prototype.setFullYear(y,m?,d?)`  | Year (and optional month/day) interpreted in spoofed tz; time-of-day preserved; DST-refined; small-year 0-99 literal (not 1900+y) per spec |
+| `Date.prototype.setMilliseconds`       | **Not overridden** — timezone-independent, round-trips natively                                                                            |
+| `Date.prototype.setTime`               | **Not overridden** — absolute UTC epoch write with no timezone interpretation                                                              |
+| `Date.prototype.setUTC*` (all seven)   | **Not overridden** — UTC surfaces, true UTC epoch preserved                                                                                |
+| `Date.prototype.toISOString`           | **Not overridden** — UTC surface, true UTC epoch preserved                                                                                 |
+| `Date.prototype.toJSON`                | **Not overridden** — delegates to toISOString, true UTC epoch preserved                                                                    |
+| `Date.prototype.getUTC*` (all eight)   | **Not overridden** — UTC surfaces, true UTC values preserved                                                                               |
 
 ### Intl
 
@@ -290,10 +299,11 @@ Order matters — each module depends on the ones before it:
 7. **timezone-overrides** — `getTimezoneOffset`, `Intl.DateTimeFormat` constructor + `resolvedOptions`
 8. **date-formatting** — `toString`, `toDateString`, `toTimeString`, `toLocale*`
 9. **date-getters** — `getHours`, `getMinutes`, `getSeconds`, `getDate`, `getDay`, `getMonth`, `getFullYear`
-10. **temporal** — `Temporal.Now.*` (feature-detected, no-ops if unavailable)
-11. **document-overrides** — `Document.prototype.lastModified` getter
-12. **iframe-patching** — `contentWindow`/`contentDocument` getter overrides
-13. **dom-insertion** — DOM method wrapping + MutationObserver fallback
+10. **date-setters** — `setHours`, `setMinutes`, `setSeconds`, `setDate`, `setMonth`, `setFullYear`
+11. **temporal** — `Temporal.Now.*` (feature-detected, no-ops if unavailable)
+12. **document-overrides** — `Document.prototype.lastModified` getter
+13. **iframe-patching** — `contentWindow`/`contentDocument` getter overrides
+14. **dom-insertion** — DOM method wrapping + MutationObserver fallback
 
 ### Key Modules
 
@@ -574,7 +584,7 @@ Timeout: 5s per service | Retry: 2x exponential backoff | Results cached in memo
 
 4. **Cross-origin iframes** — `SecurityError` prevents any access from the content script, so `patchIframeWindow` silently skips them. Timing side-channels can reveal discrepancies between the parent's spoofed view and the cross-origin iframe's real view.
 
-5. **Date.prototype methods inside iframe realms** — `patchIframeWindow` installs the `Date` constructor, `Intl.DateTimeFormat`, and `Temporal.Now` into each iframe realm, but does **not** install iframe-realm copies of the per-method `Date.prototype.{toString, toDateString, toTimeString, toLocaleString, toLocaleDateString, toLocaleTimeString, getHours, getMinutes, getSeconds, getDate, getDay, getMonth, getFullYear, getTimezoneOffset}` overrides. A Date instance produced by `iframe.contentWindow.Date` has its prototype method calls resolved against the iframe's own unpatched `Date.prototype`. The iframe's `Intl` constructor-level spoofing still applies, so most real-world timezone leaks are closed — but a page that specifically constructs a Date through the iframe realm and reads `new iframe.contentWindow.Date().getHours()` sees the real system zone.
+5. **Date.prototype methods inside iframe realms** — `patchIframeWindow` installs the `Date` constructor, `Intl.DateTimeFormat`, and `Temporal.Now` into each iframe realm, but does **not** install iframe-realm copies of the per-method `Date.prototype.{toString, toDateString, toTimeString, toLocaleString, toLocaleDateString, toLocaleTimeString, getHours, getMinutes, getSeconds, getDate, getDay, getMonth, getFullYear, getTimezoneOffset, setHours, setMinutes, setSeconds, setDate, setMonth, setFullYear}` overrides. A Date instance produced by `iframe.contentWindow.Date` has its prototype method calls resolved against the iframe's own unpatched `Date.prototype`. The iframe's `Intl` constructor-level spoofing still applies, so most real-world timezone leaks are closed — but a page that specifically constructs a Date through the iframe realm and reads `new iframe.contentWindow.Date().getHours()` sees the real system zone.
 
 6. **Timing channels** — A content-script spoofer returns fake positions via `setTimeout` on the JavaScript event loop. Real GPS/Wi-Fi/cell-tower lookups go through browser-internal threads with wider, heavier-tailed latency distributions. A detector with enough samples can fingerprint the artificial bounds (10-50ms floor). Additionally, native `maximumAge` caching serves positions sub-millisecond, while a `setTimeout`-based spoofer cannot emit below its configured delay. Only a browser-native implementation can match real hardware timing signatures.
 
