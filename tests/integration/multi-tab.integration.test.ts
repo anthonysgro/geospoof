@@ -247,6 +247,7 @@ describe("Multi-Tab Integration Tests", () => {
         debugLogging: false,
         verbosityLevel: "INFO",
         theme: "system" as const,
+        advancedWorkerProtection: false,
       };
 
       storageGet.mockResolvedValue({ settings });

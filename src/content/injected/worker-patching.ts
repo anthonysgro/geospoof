@@ -33,11 +33,57 @@
  * old timezone. This matches the main-thread behavior before settings arrive.
  */
 
-import { timezoneData, spoofingEnabled } from "./state";
+import {
+  timezoneData,
+  spoofingEnabled,
+  advancedWorkerProtectionEnabled,
+  ANNOUNCE_EVENT_NAME,
+} from "./state";
 import { registerOverride, disguiseAsNative } from "./function-masking";
+import { SPOOF_CORE } from "@/shared/worker-payload";
 import { createLogger } from "@/shared/utils/debug-logger";
 
 const logger = createLogger("INJ");
+
+/**
+ * Announce an imminent worker-script fetch to the content script, which
+ * forwards it to the background. The background adds `url` to a short-
+ * lived allowlist so its webRequest.filterResponseData listener knows
+ * to modify the next HTTP response for that URL.
+ *
+ * ## Sync vs. async
+ *
+ * `browser.runtime.sendMessage` is async. The `new Worker(url)` call
+ * below is synchronous and the browser dispatches the underlying
+ * network request on the current task's microtask queue — which means
+ * a naive async announce loses the race: the webRequest `onBeforeRequest`
+ * event fires before the background has populated the allowlist.
+ *
+ * We address this with a CustomEvent instead: it's synchronous end-to-end.
+ * The content script's listener for this event calls
+ * `browser.runtime.sendMessage` — which IS still async on the
+ * background side — but the event dispatch itself blocks until the
+ * content script has spawned the sendMessage. That's enough for the
+ * sendMessage to be in-flight by the time `new Worker(url)` runs,
+ * and Firefox prioritises runtime messages over page-initiated network
+ * dispatch for main-thread Workers.
+ *
+ * Remaining race: if `browser.runtime.sendMessage` serialisation takes
+ * longer than the browser's internal Worker-fetch dispatch, the
+ * allowlist won't have the URL yet when onBeforeRequest fires. In
+ * practice we've found this to be reliable on Firefox but the
+ * `isAllowlisted` check short-circuits cleanly when it isn't, so the
+ * failure mode is a pass-through (no spoofing) rather than a
+ * hanging worker.
+ */
+function announceWorkerFetch(url: string): void {
+  try {
+    const event = new CustomEvent(ANNOUNCE_EVENT_NAME, { detail: { url } });
+    window.dispatchEvent(event);
+  } catch (err) {
+    logger.debug("[worker-patching] announceWorkerFetch failed:", err);
+  }
+}
 
 // ── Original constructors ────────────────────────────────────────────
 
@@ -49,215 +95,11 @@ const OriginalSharedWorker: typeof SharedWorker | undefined =
 
 // ── Payload generation ───────────────────────────────────────────────
 
-/**
- * The core timezone spoofing payload — overrides Date/Intl/Temporal
- * inside the Worker scope. Does NOT include Worker-constructor
- * interception or importScripts wrapping. Those are layered on top
- * at payload-generation time.
- *
- * Uses a placeholder `__SPOOF_TZ_ID__` that's replaced with the
- * JSON-stringified identifier at payload-generation time. This
- * keeps the core as a static string we can embed inside a
- * JSON.stringify call (for nested-worker recursion) without
- * needing to escape it twice.
- */
-const SPOOF_CORE = `
-var __tz_id = __SPOOF_TZ_ID__;
-
-// --- Intl.DateTimeFormat override ---
-var OrigDTF = Intl.DateTimeFormat;
-var origResolvedOptions = OrigDTF.prototype.resolvedOptions;
-var explicitTzInstances = new WeakSet();
-
-function SpoofedDTF() {
-  var args = Array.prototype.slice.call(arguments);
-  var opts = args[1];
-  if (opts && typeof opts === "object" && "timeZone" in opts) {
-    var instance = new OrigDTF(args[0], opts);
-    explicitTzInstances.add(instance);
-    return instance;
-  }
-  var newOpts = Object.assign({}, opts || {}, { timeZone: __tz_id });
-  return new OrigDTF(args[0], newOpts);
-}
-SpoofedDTF.prototype = OrigDTF.prototype;
-SpoofedDTF.supportedLocalesOf = OrigDTF.supportedLocalesOf;
-Object.defineProperty(Intl, "DateTimeFormat", {
-  value: SpoofedDTF,
-  writable: true,
-  configurable: true,
-  enumerable: false
-});
-
-var origRO = origResolvedOptions;
-OrigDTF.prototype.resolvedOptions = function() {
-  var result = origRO.call(this);
-  if (!explicitTzInstances.has(this)) {
-    result.timeZone = __tz_id;
-  }
-  return result;
-};
-
-// --- Date.prototype.getTimezoneOffset override ---
-var origGTZO = Date.prototype.getTimezoneOffset;
-Date.prototype.getTimezoneOffset = function() {
-  try {
-    var fmt = new OrigDTF("en-US", { timeZone: __tz_id, timeZoneName: "shortOffset" });
-    var parts = fmt.formatToParts(this);
-    var tzPart = "";
-    for (var i = 0; i < parts.length; i++) {
-      if (parts[i].type === "timeZoneName") { tzPart = parts[i].value; break; }
-    }
-    var m = /^GMT(?:([+-])(\\d{1,2})(?::?(\\d{2}))?)?$/.exec(tzPart);
-    if (!m) return origGTZO.call(this);
-    if (!m[1]) return 0;
-    var h = parseInt(m[2], 10);
-    var min = m[3] ? parseInt(m[3], 10) : 0;
-    var east = (m[1] === "-" ? -1 : 1) * (h * 60 + min);
-    return -east;
-  } catch(e) {
-    return origGTZO.call(this);
-  }
-};
-
-// --- Date.prototype.toLocaleString family ---
-var origTLS = Date.prototype.toLocaleString;
-var origTLDS = Date.prototype.toLocaleDateString;
-var origTLTS = Date.prototype.toLocaleTimeString;
-Date.prototype.toLocaleString = function() {
-  var args = Array.prototype.slice.call(arguments);
-  var opts = args[1] && typeof args[1] === "object" ? Object.assign({}, args[1]) : {};
-  if (!("timeZone" in opts)) opts.timeZone = __tz_id;
-  return origTLS.call(this, args[0], opts);
-};
-Date.prototype.toLocaleDateString = function() {
-  var args = Array.prototype.slice.call(arguments);
-  var opts = args[1] && typeof args[1] === "object" ? Object.assign({}, args[1]) : {};
-  if (!("timeZone" in opts)) opts.timeZone = __tz_id;
-  return origTLDS.call(this, args[0], opts);
-};
-Date.prototype.toLocaleTimeString = function() {
-  var args = Array.prototype.slice.call(arguments);
-  var opts = args[1] && typeof args[1] === "object" ? Object.assign({}, args[1]) : {};
-  if (!("timeZone" in opts)) opts.timeZone = __tz_id;
-  return origTLTS.call(this, args[0], opts);
-};
-
-// --- Date.prototype getter overrides (getHours, getMinutes, etc.) ---
-var getterNames = ["getHours","getMinutes","getSeconds","getDate","getDay","getMonth","getFullYear"];
-var origGetters = {};
-for (var gi = 0; gi < getterNames.length; gi++) {
-  origGetters[getterNames[gi]] = Date.prototype[getterNames[gi]];
-}
-function spoofedGetter(name) {
-  return function() {
-    try {
-      var opts = { timeZone: __tz_id, hour12: false };
-      switch(name) {
-        case "getHours": opts.hour = "numeric"; break;
-        case "getMinutes": opts.minute = "numeric"; break;
-        case "getSeconds": opts.second = "numeric"; break;
-        case "getDate": opts.day = "numeric"; break;
-        case "getDay": opts.weekday = "short"; break;
-        case "getMonth": opts.month = "numeric"; break;
-        case "getFullYear": opts.year = "numeric"; break;
-      }
-      var fmt = new OrigDTF("en-US", opts);
-      var parts = fmt.formatToParts(this);
-      if (name === "getDay") {
-        var dayMap = {Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};
-        for (var di = 0; di < parts.length; di++) {
-          if (parts[di].type === "weekday") return dayMap[parts[di].value] || 0;
-        }
-        return origGetters[name].call(this);
-      }
-      if (name === "getMonth") {
-        for (var mi = 0; mi < parts.length; mi++) {
-          if (parts[mi].type === "month") return parseInt(parts[mi].value, 10) - 1;
-        }
-        return origGetters[name].call(this);
-      }
-      var typeMap = {getHours:"hour",getMinutes:"minute",getSeconds:"second",getDate:"day",getFullYear:"year"};
-      var partType = typeMap[name];
-      for (var pi = 0; pi < parts.length; pi++) {
-        if (parts[pi].type === partType) {
-          var val = parseInt(parts[pi].value, 10);
-          if (name === "getHours" && val === 24) return 0;
-          return val;
-        }
-      }
-      return origGetters[name].call(this);
-    } catch(e) {
-      return origGetters[name].call(this);
-    }
-  };
-}
-for (var si = 0; si < getterNames.length; si++) {
-  Date.prototype[getterNames[si]] = spoofedGetter(getterNames[si]);
-}
-
-// --- Date.prototype.toString / toTimeString / toDateString ---
-function getLongTzName(d) {
-  try {
-    var f = new OrigDTF("en-US", { timeZone: __tz_id, timeZoneName: "long" });
-    var p = f.formatToParts(d);
-    for (var i = 0; i < p.length; i++) {
-      if (p[i].type === "timeZoneName") return p[i].value;
-    }
-  } catch(e) {}
-  return __tz_id;
-}
-
-function getGmtOffset(d) {
-  var off = -d.getTimezoneOffset();
-  var sign = off >= 0 ? "+" : "-";
-  var abs = Math.abs(off);
-  var h = String(Math.floor(abs / 60)).padStart(2, "0");
-  var m = String(abs % 60).padStart(2, "0");
-  return "GMT" + sign + h + m;
-}
-
-Date.prototype.toString = function() {
-  if (isNaN(this.getTime())) return "Invalid Date";
-  var f = new OrigDTF("en-US", {
-    timeZone: __tz_id, weekday: "short", month: "short",
-    day: "2-digit", year: "numeric", hour: "2-digit",
-    minute: "2-digit", second: "2-digit", hour12: false
-  });
-  var p = f.formatToParts(this);
-  var get = function(t) { for (var i=0;i<p.length;i++) if(p[i].type===t) return p[i].value; return ""; };
-  var hr = get("hour"); if (hr === "24") hr = "00";
-  var offset = getGmtOffset(this);
-  var tzName = getLongTzName(this);
-  return get("weekday") + " " + get("month") + " " + get("day") + " " + get("year") + " " +
-    hr + ":" + get("minute") + ":" + get("second") + " " + offset + " (" + tzName + ")";
-};
-
-Date.prototype.toTimeString = function() {
-  if (isNaN(this.getTime())) return "Invalid Date";
-  var f = new OrigDTF("en-US", {
-    timeZone: __tz_id, hour: "2-digit", minute: "2-digit",
-    second: "2-digit", hour12: false
-  });
-  var p = f.formatToParts(this);
-  var get = function(t) { for (var i=0;i<p.length;i++) if(p[i].type===t) return p[i].value; return ""; };
-  var hr = get("hour"); if (hr === "24") hr = "00";
-  var offset = getGmtOffset(this);
-  var tzName = getLongTzName(this);
-  return hr + ":" + get("minute") + ":" + get("second") + " " + offset + " (" + tzName + ")";
-};
-
-Date.prototype.toDateString = function() {
-  if (isNaN(this.getTime())) return "Invalid Date";
-  var f = new OrigDTF("en-US", {
-    timeZone: __tz_id, weekday: "short", month: "short",
-    day: "2-digit", year: "numeric"
-  });
-  var p = f.formatToParts(this);
-  var get = function(t) { for (var i=0;i<p.length;i++) if(p[i].type===t) return p[i].value; return ""; };
-  return get("weekday") + " " + get("month") + " " + get("day") + " " + get("year");
-};
-`;
+// The core spoofing payload is imported from `@/shared/worker-payload`
+// so the content-script Worker wrapper and the Firefox-only
+// `webRequest.filterResponseData` listener share exactly one source
+// of truth. Any change to timezone overrides automatically applies
+// to both paths.
 
 /**
  * Wrapper that runs inside a Worker to:
@@ -274,12 +116,74 @@ Date.prototype.toDateString = function() {
  * workers can get it too.
  */
 const WORKER_WRAPPER = `
+// --- Global-install helper (stealth) ---
+//
+// CreepJS's getClientCode() enumerates Object.getOwnPropertyNames(self)
+// and flags any function-valued own property whose toString() doesn't
+// match the native "[native code]" mould. Native Worker globals like
+// Worker and importScripts are INHERITED from WorkerGlobalScope's
+// prototype — they're not own properties of self. If we replaced them
+// via self.X = ... or Object.defineProperty(self, "X", ...) we
+// would create an own property where none existed before, and CreepJS
+// would flag the new own property in its "code:" hash even if the
+// value's toString was masked to look native.
+//
+// This helper walks up self's prototype chain to find the exact
+// object that originally owns the property, and installs the
+// replacement there — preserving the native layout where self itself
+// has no own property for the global.
+var __installWorkerGlobal = function(name, value) {
+  var target = self;
+  var descriptor = Object.getOwnPropertyDescriptor(target, name);
+  while (!descriptor) {
+    target = Object.getPrototypeOf(target);
+    if (!target) break;
+    descriptor = Object.getOwnPropertyDescriptor(target, name);
+  }
+  if (!target) {
+    // Property not found in prototype chain — best-effort install on self.
+    try {
+      Object.defineProperty(self, name, {
+        value: value, writable: true, configurable: true, enumerable: false
+      });
+    } catch(e) {
+      try { self[name] = value; } catch(e2) { /* non-writable */ }
+    }
+    return;
+  }
+  try {
+    Object.defineProperty(target, name, {
+      value: value,
+      writable: descriptor.writable !== false,
+      configurable: descriptor.configurable !== false,
+      enumerable: !!descriptor.enumerable
+    });
+  } catch(e) {
+    // Prototype level refused redefinition — fall back to self as
+    // last resort. This leaves a stealth gap (code: hash will flag
+    // the new own property) but keeps the override functional.
+    try {
+      Object.defineProperty(self, name, {
+        value: value, writable: true, configurable: true, enumerable: false
+      });
+    } catch(e2) {
+      try { self[name] = value; } catch(e3) { /* non-writable */ }
+    }
+  }
+};
+
 // --- importScripts relative-path resolution ---
+//
+// Installed via __installWorkerGlobal so the override lives on
+// WorkerGlobalScope.prototype (where the native lives) rather than
+// becoming a new own property of self. Also registered with
+// SPOOF_CORE's __register map so the masked Function.prototype.toString
+// reports "[native code]" for the replacement.
 (function() {
   if (typeof self.importScripts !== "function") return;
   var origImportScripts = self.importScripts;
   var scriptBase = __ORIGINAL_SCRIPT_URL__;
-  self.importScripts = function() {
+  var spoofedImportScripts = function importScripts() {
     var resolved = [];
     for (var i = 0; i < arguments.length; i++) {
       try {
@@ -290,9 +194,14 @@ const WORKER_WRAPPER = `
     }
     return origImportScripts.apply(self, resolved);
   };
+  if (typeof __register === "function") __register(spoofedImportScripts, "importScripts");
+  __installWorkerGlobal("importScripts", spoofedImportScripts);
 })();
 
 // --- Nested Worker interception ---
+//
+// Same stealth treatment: register for toString masking, install at
+// prototype level via __installWorkerGlobal.
 (function() {
   if (typeof self.Worker === "undefined") return;
   var OrigW = self.Worker;
@@ -314,7 +223,7 @@ const WORKER_WRAPPER = `
     return "(function(){" + nestedCore + wrapper + "})();";
   }
 
-  self.Worker = function NestedWorker(url, opts) {
+  var spoofedNestedWorker = function Worker(url, opts) {
     if (opts && opts.type === "module") {
       return new OrigW(url, opts);
     }
@@ -351,7 +260,9 @@ const WORKER_WRAPPER = `
       return new OrigW(url, opts);
     }
   };
-  self.Worker.prototype = OrigW.prototype;
+  spoofedNestedWorker.prototype = OrigW.prototype;
+  if (typeof __register === "function") __register(spoofedNestedWorker, "Worker");
+  __installWorkerGlobal("Worker", spoofedNestedWorker);
 })();
 `;
 
@@ -450,7 +361,63 @@ export function installWorkerPatching(): void {
   if (OriginalSharedWorker) {
     installSharedWorkerOverride();
   }
+  installServiceWorkerAnnouncer();
   logger.debug("[worker-patching] Worker constructor interception installed");
+}
+
+/**
+ * Wrap `navigator.serviceWorker.register` to announce the script URL
+ * to the background's webRequest listener before the browser fetches
+ * it. Unlike Worker/SharedWorker, we don't modify the call itself —
+ * service workers require a stable URL that the browser manages for
+ * update checks, so any source modification must come from the
+ * network layer. We just tell the background "the next fetch for
+ * this URL is a service worker script, please patch it."
+ *
+ * No-op when `navigator.serviceWorker` is undefined (some contexts
+ * like private browsing on certain Firefox versions disable it).
+ */
+function installServiceWorkerAnnouncer(): void {
+  try {
+    if (typeof navigator === "undefined" || !navigator.serviceWorker) return;
+    const container = navigator.serviceWorker;
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- method re-bound inside wrapper
+    const originalRegister = container.register;
+    if (typeof originalRegister !== "function") return;
+
+    const wrappedRegister = function register(
+      this: ServiceWorkerContainer,
+      scriptURL: string | URL,
+      options?: RegistrationOptions
+    ): Promise<ServiceWorkerRegistration> {
+      try {
+        if (advancedWorkerProtectionEnabled) {
+          const urlStr = scriptURL instanceof URL ? scriptURL.href : String(scriptURL);
+          if (/^https?:\/\//.test(urlStr) || !urlStr.includes(":")) {
+            // Resolve against the document origin so the allowlist key
+            // exactly matches what webRequest will see for the request.
+            const absolute = new URL(urlStr, window.location.href).href;
+            announceWorkerFetch(absolute);
+          }
+        }
+      } catch (err) {
+        logger.debug("[worker-patching] SW announce failed:", err);
+      }
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+      return originalRegister.call(this, scriptURL, options);
+    };
+
+    registerOverride(wrappedRegister, "register");
+    disguiseAsNative(wrappedRegister, "register", 1);
+    Object.defineProperty(container, "register", {
+      value: wrappedRegister,
+      writable: true,
+      configurable: true,
+      enumerable: true,
+    });
+  } catch (err) {
+    logger.warn("[worker-patching] installServiceWorkerAnnouncer failed:", err);
+  }
 }
 
 function installWorkerOverride(): void {
@@ -463,12 +430,57 @@ function installWorkerOverride(): void {
     scriptURL: string | URL,
     options?: WorkerOptions
   ): Worker {
-    // Module workers can't be blob-wrapped (relative imports break)
+    // Module workers can't be blob-wrapped (relative imports break).
+    // When advanced worker protection is on, the background script's
+    // webRequest.filterResponseData listener is handling module workers
+    // at the network layer — we announce the URL so the listener knows
+    // to patch the next response, then let the worker construction
+    // proceed untouched. When advanced protection is OFF, we also pass
+    // through, leaving module workers as a documented known limitation
+    // on that configuration.
     if (options?.type === "module") {
+      if (advancedWorkerProtectionEnabled) {
+        const mUrl = scriptURL instanceof URL ? scriptURL.href : String(scriptURL);
+        // Any non-inline URL needs to be announced. The browser will
+        // fetch blob: and data: URLs without going through webRequest,
+        // so there's no point announcing those — nothing to filter.
+        // Everything else (relative paths, root-relative paths,
+        // protocol-relative URLs, absolute URLs) resolves against
+        // document origin into an absolute URL that webRequest WILL see.
+        if (!mUrl.startsWith("blob:") && !mUrl.startsWith("data:")) {
+          try {
+            announceWorkerFetch(new URL(mUrl, window.location.href).href);
+          } catch {
+            // Malformed URL — browser will reject the construction anyway.
+          }
+        }
+      }
       return new RealWorker(scriptURL, options);
     }
 
     const urlStr = scriptURL instanceof URL ? scriptURL.href : String(scriptURL);
+
+    // For URL-based classic workers, when advanced worker protection
+    // is on, the webRequest filter will prepend the payload to the
+    // network response — announce the URL, then pass through.
+    // The worker runs from the real URL with `self.location.href`
+    // showing the real script URL (not a blob), so relative
+    // importScripts paths resolve correctly and the resulting
+    // environment is indistinguishable from a native worker except
+    // for the spoofed Date/Intl behaviour that the filter injected.
+    if (
+      advancedWorkerProtectionEnabled &&
+      !urlStr.startsWith("blob:") &&
+      !urlStr.startsWith("data:")
+    ) {
+      try {
+        announceWorkerFetch(new URL(urlStr, window.location.href).href);
+      } catch {
+        // Malformed URL — browser will reject the construction anyway.
+      }
+      return new RealWorker(scriptURL, options);
+    }
+
     // Resolve absolute URL so that relative importScripts() calls
     // inside the Worker can be resolved against it. For blob: and
     // data: URLs, we use the current page URL as the base since the
@@ -552,12 +564,39 @@ function installSharedWorkerOverride(): void {
     const opts: WorkerOptions | undefined =
       typeof options === "string" ? { name: options } : options;
 
-    // Module workers can't be blob-wrapped
+    // Module workers can't be blob-wrapped. On Firefox with advanced
+    // protection the webRequest filter handles them — announce + pass.
     if (opts?.type === "module") {
+      if (advancedWorkerProtectionEnabled) {
+        const mUrl = scriptURL instanceof URL ? scriptURL.href : String(scriptURL);
+        if (!mUrl.startsWith("blob:") && !mUrl.startsWith("data:")) {
+          try {
+            announceWorkerFetch(new URL(mUrl, window.location.href).href);
+          } catch {
+            // Malformed URL — browser will reject the construction anyway.
+          }
+        }
+      }
       return new RealSharedWorker(scriptURL, options);
     }
 
     const urlStr = scriptURL instanceof URL ? scriptURL.href : String(scriptURL);
+
+    // On Firefox with advanced protection, let URL-based SharedWorkers
+    // flow through the network filter same as dedicated workers.
+    if (
+      advancedWorkerProtectionEnabled &&
+      !urlStr.startsWith("blob:") &&
+      !urlStr.startsWith("data:")
+    ) {
+      try {
+        announceWorkerFetch(new URL(urlStr, window.location.href).href);
+      } catch {
+        // Browser will reject malformed URLs anyway.
+      }
+      return new RealSharedWorker(scriptURL, options);
+    }
+
     const absoluteUrl =
       urlStr.startsWith("blob:") || urlStr.startsWith("data:")
         ? window.location.href

@@ -194,6 +194,19 @@ export function patchIframeWindow(iframeWindow: Window): void {
     const iframeOrigToString = iframeFnProto.toString;
     const iframeOrigCall = iframeFnProto.call;
 
+    // Derive the engine-specific "[native code]" surround format from
+    // the iframe's own Number constructor. Same rationale as the main
+    // window override: Firefox's native toString output is multi-line,
+    // Chrome's is single-line, and CreepJS reconstructs expected
+    // strings using this split.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+    const iframeNumber = (iframeWindow as any).Number as unknown;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+    const numSrc: string = (iframeOrigCall as any).call(iframeOrigToString, iframeNumber);
+    const iframeNativeParts = numSrc.split("Number");
+    const iframeNativeP1 = iframeNativeParts[0] ?? "function ";
+    const iframeNativeP2 = iframeNativeParts[1] ?? "() { [native code] }";
+
     // Use method shorthand so the patched toString has no prototype/[[Construct]]
     // eslint-disable-next-line @typescript-eslint/unbound-method -- intentional: method shorthand destructuring for anti-fingerprint
     iframeFnProto.toString = {
@@ -201,7 +214,7 @@ export function patchIframeWindow(iframeWindow: Window): void {
       toString(this: any): string {
         const nativeName = overrideRegistry.get(this as AnyFunction);
         if (nativeName !== undefined) {
-          return `function ${nativeName}() { [native code] }`;
+          return iframeNativeP1 + nativeName + iframeNativeP2;
         }
         // Pre-check: throw TypeError directly for non-functions (same
         // reason as the main window override — single stack frame).

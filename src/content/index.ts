@@ -27,9 +27,42 @@ let verbosityLevel = "INFO";
  * the first settings event lands.
  */
 let webrtcProtection = false;
+/**
+ * Mirrors `Settings.advancedWorkerProtection`. Forwarded to the injected
+ * script so its worker-constructor wrapper knows whether the background
+ * is actively modifying module/service worker responses via
+ * `webRequest.filterResponseData`. Firefox-only in effect — Chrome and
+ * Safari silently ignore it since those engines don't expose the API.
+ */
+let advancedWorkerProtection = false;
 
 // Event name for settings updates (configurable for stealth)
 const EVENT_NAME: string = process.env.EVENT_NAME || "__x_evt";
+
+/**
+ * Event name for worker-fetch announcements from the injected script.
+ * Must match the `ANNOUNCE_EVENT_NAME` constant in
+ * `src/content/injected/state.ts`.
+ */
+const ANNOUNCE_EVENT_NAME: string = (process.env.EVENT_NAME || "__x_evt") + "_announce";
+
+// Listen for worker-fetch announcements from the injected (page-world)
+// script and forward them to the background. The injected script can't
+// call browser.runtime.sendMessage from MAIN world, so it dispatches a
+// CustomEvent on window which we catch here and relay.
+window.addEventListener(ANNOUNCE_EVENT_NAME, ((event: CustomEvent<{ url: string }>) => {
+  const url = event.detail?.url;
+  if (typeof url !== "string" || !url) return;
+  // Fire-and-forget — don't await, don't fail the worker construction
+  // if the background is slow to respond. If the message is lost the
+  // worker will just not get the payload prepended, which degrades
+  // gracefully to the pre-feature behaviour.
+  void browser.runtime
+    .sendMessage({ type: "ANNOUNCE_WORKER_FETCH", payload: { url } })
+    .catch((err: unknown) => {
+      logger.debug("Failed to forward ANNOUNCE_WORKER_FETCH:", err);
+    });
+}) as EventListener);
 
 /** Data dispatched to the injected script via CustomEvent. */
 interface SettingsEventDetail {
@@ -39,6 +72,7 @@ interface SettingsEventDetail {
   debugLogging: boolean;
   verbosityLevel: string;
   webrtcProtection: boolean;
+  advancedWorkerProtection: boolean;
 }
 
 /**
@@ -78,6 +112,7 @@ function buildSettingsEventDetail(): SettingsEventDetail {
     debugLogging,
     verbosityLevel,
     webrtcProtection,
+    advancedWorkerProtection,
   };
 }
 
@@ -164,6 +199,7 @@ browser.runtime.onMessage.addListener(
       debugLogging = message.payload.debugLogging;
       verbosityLevel = message.payload.verbosityLevel ?? "INFO";
       webrtcProtection = message.payload.webrtcProtection ?? false;
+      advancedWorkerProtection = message.payload.advancedWorkerProtection ?? false;
       setDebugEnabled(debugLogging);
       setVerbosityLevel(verbosityLevel);
       logger.debug("Settings updated:", {
@@ -173,6 +209,7 @@ browser.runtime.onMessage.addListener(
         debugLogging,
         verbosityLevel,
         webrtcProtection,
+        advancedWorkerProtection,
       });
       updateInjectedScript();
     } else if (message.type === "PING") {
@@ -198,6 +235,7 @@ browser.runtime
       debugLogging: boolean;
       verbosityLevel: string;
       webrtcProtection?: boolean;
+      advancedWorkerProtection?: boolean;
     }) => {
       const roundTrip = performance.now() - CS_SEND_AT;
       logger.debug(
@@ -209,6 +247,7 @@ browser.runtime
       debugLogging = settings.debugLogging;
       verbosityLevel = settings.verbosityLevel ?? "INFO";
       webrtcProtection = settings.webrtcProtection ?? false;
+      advancedWorkerProtection = settings.advancedWorkerProtection ?? false;
       setDebugEnabled(debugLogging);
       setVerbosityLevel(verbosityLevel);
       logger.debug("Initial settings loaded:", {
@@ -218,6 +257,7 @@ browser.runtime
         debugLogging,
         verbosityLevel,
         webrtcProtection,
+        advancedWorkerProtection,
       });
       updateInjectedScript();
     }

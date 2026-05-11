@@ -256,6 +256,22 @@
           </button>
           <div class="advanced-content" id="advancedContent" style="display: none">
             <label class="toggle-label">
+              <span>Advanced Worker Protection</span>
+              <div class="toggle-wrapper">
+                <input type="checkbox" id="advancedWorkerProtectionToggle" />
+                <span class="toggle-slider"></span>
+              </div>
+            </label>
+            <div class="setting-disclaimer" id="advancedWorkerProtectionDisclaimer">
+              Spoofs timezone inside service workers and module workers by modifying worker script
+              responses. Firefox only. Enabling prompts Firefox to grant extra webRequest
+              permissions so the extension can prepend spoofing code to worker scripts at the
+              network layer; declining keeps this feature off.
+              <strong>Experimental:</strong> a few sites that ship integrity hashes on their workers
+              may break.
+            </div>
+
+            <label class="toggle-label">
               <span>Debug Logging</span>
               <div class="toggle-wrapper">
                 <input type="checkbox" id="debugLoggingToggle" />
