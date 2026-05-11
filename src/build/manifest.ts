@@ -77,14 +77,20 @@ export function generateManifest(target: BrowserTarget, version: string): Record
   if (target === "firefox") {
   // Firefox: scripts-based background, injected.js as world: "MAIN" content script.
   //
-  // Permission notes — all four of these are listed under
-  // `optional_permissions` rather than `permissions` so a fresh install
-  // does NOT show the scary "Block content on any page" string in the
-  // install prompt. The permissions are requested at runtime via
-  // `browser.permissions.request()` when the user flips the Advanced
-  // Worker Protection toggle on, and revoked when they flip it off.
-  // Users who never enable the feature never see the prompt, and the
-  // default install footprint matches the Chromium / Safari builds.
+  // Permission notes — all four of these are listed under required
+  // `permissions`. The scary install string users see is
+  // "Block content on any page" from `webRequestBlocking`. This is
+  // intentional: GeoSpoof's Firefox build uses `webRequest.
+  // filterResponseData` to inject its timezone-spoofing payload into
+  // Worker / SharedWorker / ServiceWorker script responses at the
+  // network layer. Without these permissions we cannot close the
+  // worker timezone leaks that are now widely known (CreepJS and
+  // similar tools flag them). The feature is baked in and always on
+  // — there is no opt-in toggle because the alternative (content-
+  // script blob-URL wrapping) fails on strict-CSP origins and can
+  // break site functionality, whereas filterResponseData degrades
+  // gracefully (onerror fallback keeps the site working, just
+  // unprotected) on the rare origin that ships SRI on workers.
   //
   //   - `webRequest` — baseline API access
   //   - `webRequestBlocking` — required to attach filters to responses.
@@ -103,7 +109,8 @@ export function generateManifest(target: BrowserTarget, version: string): Record
   // and Safari never implemented the API.
   return {
     ...shared,
-    optional_permissions: [
+    permissions: [
+      ...(shared.permissions as string[]),
       "webRequest",
       "webRequestBlocking",
       "webRequestFilterResponse",

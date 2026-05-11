@@ -34,16 +34,6 @@ export interface SettingsEventDetail {
    * Safari (which doesn't expose browser.privacy at all).
    */
   webrtcProtection: boolean;
-  /**
-   * Advanced worker protection. When true and running on Firefox, the
-   * background script's `webRequest.filterResponseData` listener will
-   * prepend the spoofing payload to module-worker and service-worker
-   * script responses. The injected script reads this flag to coordinate
-   * with the background listener — specifically, to skip module-worker
-   * interception on its own end (which would break imports with blob
-   * URLs) since the webRequest path handles those cleanly.
-   */
-  advancedWorkerProtection: boolean;
 }
 
 export interface SpoofedGeolocationPosition {

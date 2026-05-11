@@ -8,7 +8,6 @@ import type {
   SetLocationPayload,
   SetProtectionStatusPayload,
   SetWebRTCProtectionPayload,
-  SetAdvancedWorkerProtectionPayload,
   AnnounceWorkerFetchPayload,
   GeocodeQueryPayload,
   CheckTabInjectionPayload,
@@ -34,14 +33,7 @@ import {
   isRestrictedUrl,
 } from "./tabs";
 import { syncVpnLocation, clearIpGeoCache } from "./vpn-sync";
-import {
-  allowlistWorkerUrl,
-  installWorkerRequestFilter,
-  uninstallWorkerRequestFilter,
-  revokeWorkerFilterPermissions,
-  hasWorkerFilterPermissions,
-  isWorkerFilterSupported,
-} from "./worker-request-filter";
+import { allowlistWorkerUrl } from "./worker-request-filter";
 
 export async function handleMessage(
   message: Message,
@@ -85,14 +77,6 @@ export async function handleMessage(
         logger.debug("Setting WebRTC protection:", message.payload);
         await handleSetWebRTCProtection(message.payload as SetWebRTCProtectionPayload);
         return { success: true };
-
-      case "SET_ADVANCED_WORKER_PROTECTION": {
-        logger.debug("Setting advanced worker protection:", message.payload);
-        const result = await handleSetAdvancedWorkerProtection(
-          message.payload as SetAdvancedWorkerProtectionPayload
-        );
-        return result;
-      }
 
       case "ANNOUNCE_WORKER_FETCH": {
         const payload = message.payload as AnnounceWorkerFetchPayload;
@@ -310,71 +294,6 @@ export async function handleSetWebRTCProtection(
   // Push the new flag to every live content script so the injected
   // RTCPeerConnection wrapper flips state without needing a reload.
   await broadcastSettingsToTabs(settings);
-}
-
-export async function handleSetAdvancedWorkerProtection(
-  payload: SetAdvancedWorkerProtectionPayload
-): Promise<{ success: boolean; reason?: string }> {
-  const { enabled } = payload;
-
-  // The popup is responsible for calling `browser.permissions.request()`
-  // from its own user-gesture frame BEFORE sending us enable=true.
-  // By the time we get here, we just verify the grant landed, install
-  // the listener, and persist the setting. If the popup sends
-  // enable=true without first granting, we treat it as a programming
-  // bug and bail with "permission-denied" — the popup will revert
-  // the toggle visually.
-  if (enabled) {
-    if (!(await hasWorkerFilterPermissions())) {
-      logger.info(
-        "SET_ADVANCED_WORKER_PROTECTION enable=true received but permissions not granted"
-      );
-      return { success: false, reason: "permission-denied" };
-    }
-
-    // Post-grant: `browser.webRequest` is now exposed on Firefox.
-    // If the API is somehow still missing (engine without support
-    // that still accepted the optional permission, unlikely), back
-    // out cleanly.
-    if (!isWorkerFilterSupported()) {
-      logger.info(
-        "Advanced worker protection unavailable after grant: webRequest.filterResponseData not exposed"
-      );
-      await revokeWorkerFilterPermissions();
-      return { success: false, reason: "unsupported" };
-    }
-
-    try {
-      await installWorkerRequestFilter();
-      const settings = await updateSettings({ advancedWorkerProtection: true });
-      logger.info("Advanced worker protection enabled");
-      await broadcastSettingsToTabs(settings);
-      return { success: true };
-    } catch (err) {
-      uninstallWorkerRequestFilter();
-      logger.warn(
-        "Advanced worker protection install failed:",
-        err instanceof Error ? err.message : String(err)
-      );
-      return { success: false, reason: "install-failed" };
-    }
-  }
-
-  // Disabling: uninstall listener, release permissions, save setting.
-  // Uninstall first so the listener can't fire mid-handoff.
-  uninstallWorkerRequestFilter();
-  await revokeWorkerFilterPermissions();
-
-  const settings = await updateSettings({ advancedWorkerProtection: false });
-  logger.info("Advanced worker protection disabled");
-
-  // Push the new flag to every live content script so the injected
-  // worker-constructor wrapper flips state without needing a reload.
-  // Existing Workers/ServiceWorkers keep whatever payload they were
-  // loaded with — that's inherent to worker process isolation, not
-  // a bug in the handoff.
-  await broadcastSettingsToTabs(settings);
-  return { success: true };
 }
 
 export async function handleCompleteOnboarding(): Promise<void> {

@@ -63,7 +63,6 @@ export {
   handleSetWebRTCProtection,
   handleCompleteOnboarding,
 } from "./messages";
-export { handleSetAdvancedWorkerProtection } from "./messages";
 export {
   isValidIpAddress,
   detectPublicIp,
@@ -138,9 +137,9 @@ async function initialize(): Promise<void> {
 
   // Prime the worker-request-filter cache and install the listener
   // on engines that support webRequest.filterResponseData (Firefox
-  // only). The listener itself short-circuits based on
-  // cachedSettings.advancedWorkerProtection so we always install —
-  // flipping the toggle at runtime doesn't require re-registering.
+  // only). The listener itself short-circuits based on whether
+  // spoofing is enabled and a timezone is configured, so the install
+  // itself is unconditional on Firefox.
   updateWorkerFilterSettings(settings);
   await installWorkerRequestFilter();
   logger.debug(`[init] worker-request-filter support: ${isWorkerFilterSupported() ? "yes" : "no"}`);
@@ -186,15 +185,7 @@ async function onAlarm(alarm: Alarms.Alarm): Promise<void> {
   const { tabId, attempt } = parsed;
 
   const settings = await loadSettings();
-  const {
-    enabled,
-    location,
-    timezone,
-    debugLogging,
-    verbosityLevel,
-    webrtcProtection,
-    advancedWorkerProtection,
-  } = settings;
+  const { enabled, location, timezone, debugLogging, verbosityLevel, webrtcProtection } = settings;
   const scopedPayload: UpdateSettingsPayload = {
     enabled,
     location,
@@ -202,7 +193,6 @@ async function onAlarm(alarm: Alarms.Alarm): Promise<void> {
     debugLogging,
     verbosityLevel,
     webrtcProtection,
-    advancedWorkerProtection,
   };
 
   try {
@@ -287,15 +277,8 @@ if (browser.tabs && browser.tabs.onCreated) {
   browser.tabs.onCreated.addListener((tab: Tabs.Tab) => {
     void (async () => {
       const settings = await loadSettings();
-      const {
-        enabled,
-        location,
-        timezone,
-        debugLogging,
-        verbosityLevel,
-        webrtcProtection,
-        advancedWorkerProtection,
-      } = settings;
+      const { enabled, location, timezone, debugLogging, verbosityLevel, webrtcProtection } =
+        settings;
       const scopedPayload: UpdateSettingsPayload = {
         enabled,
         location,
@@ -303,7 +286,6 @@ if (browser.tabs && browser.tabs.onCreated) {
         debugLogging,
         verbosityLevel,
         webrtcProtection,
-        advancedWorkerProtection,
       };
 
       setTimeout(() => {

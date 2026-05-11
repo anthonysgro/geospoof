@@ -64,21 +64,6 @@ export interface Settings {
   verbosityLevel: string;
   /** UI theme preference */
   theme: "system" | "light" | "dark";
-  /**
-   * Advanced worker protection (Firefox only).
-   *
-   * When enabled, the background script uses `webRequest.filterResponseData`
-   * to prepend the timezone spoofing payload to module-worker and service-worker
-   * script responses, closing the two remaining worker leaks that can't be
-   * covered by the content-script-level constructor interception.
-   *
-   * Off by default because it touches network responses and can, in rare
-   * cases, break sites that ship Subresource Integrity hashes on their
-   * worker scripts. Feature-detected at background-script startup — on
-   * Chrome/Edge/Brave and Safari the setting can be true but has no effect
-   * (the API isn't available there).
-   */
-  advancedWorkerProtection: boolean;
 }
 
 /**
@@ -97,5 +82,4 @@ export const DEFAULT_SETTINGS: Settings = {
   debugLogging: false,
   verbosityLevel: "INFO",
   theme: "system",
-  advancedWorkerProtection: false,
 };

@@ -306,6 +306,10 @@ __register(Date.prototype.toDateString, "toDateString");
  */
 export function buildStandaloneWorkerPayload(identifier: string | null | undefined): string {
   if (!identifier) return "";
-  const core = SPOOF_CORE.replace("__SPOOF_TZ_ID__", JSON.stringify(identifier));
+  // Callback form so any `$`-backreference patterns in the identifier
+  // (unlikely for real IANA IDs but possible for user input) are
+  // passed through literally.
+  const idJson = JSON.stringify(identifier);
+  const core = SPOOF_CORE.replace("__SPOOF_TZ_ID__", () => idJson);
   return `(function(){\n"use strict";\n${core}\n})();\n`;
 }

@@ -153,14 +153,11 @@ describe("Chromium manifest structure", () => {
 // Shared fields preservation (Firefox vs Chromium)
 // ---------------------------------------------------------------------------
 describe("Shared fields preservation", () => {
-  // NOTE: Firefox `permissions` equals Chromium `permissions` now that
-  // the `webRequest*` set has moved to `optional_permissions`. The
-  // optional set is requested at runtime when the user flips Advanced
-  // Worker Protection on, so fresh installs don't show the scary
-  // "Block content on any page" string. The divergence now lives in
-  // the optional_permissions field, which is tested separately below.
+  // NOTE: `permissions` intentionally diverges between Firefox and Chromium
+  // because Firefox needs `webRequest` for worker filterResponseData
+  // (Firefox-only in MV3). That divergence is tested below with a
+  // dedicated assertion instead of the identity check.
   const sharedKeys = [
-    "permissions",
     "host_permissions",
     "action",
     "icons",
@@ -175,32 +172,31 @@ describe("Shared fields preservation", () => {
     expect(ff[key]).toEqual(cr[key]);
   });
 
-  test("Firefox manifest declares webRequest permissions as optional, not required", () => {
-    const ff = firefoxManifest();
-    const cr = chromiumManifest();
+  test("Firefox manifest includes the Chromium permission set plus required worker-filter permissions", () => {
+    const ff = firefoxManifest().permissions as string[];
+    const cr = chromiumManifest().permissions as string[];
 
-    // `permissions` parity: neither build should request the
-    // webRequest set at install time.
-    const ffPerms = ff.permissions as string[];
-    expect(ffPerms).not.toContain("webRequest");
-    expect(ffPerms).not.toContain("webRequestBlocking");
-    expect(ffPerms).not.toContain("webRequestFilterResponse");
-    expect(ffPerms).not.toContain("webRequestFilterResponse.serviceWorkerScript");
+    // Every Chromium permission must appear on Firefox.
+    for (const p of cr) expect(ff).toContain(p);
 
-    // The Firefox build lists the webRequest set under
-    // optional_permissions so `browser.permissions.request()` can
-    // prompt the user when Advanced Worker Protection is enabled.
-    const ffOptional = ff.optional_permissions as string[] | undefined;
-    expect(ffOptional).toBeDefined();
-    expect(ffOptional).toContain("webRequest");
-    expect(ffOptional).toContain("webRequestBlocking");
-    expect(ffOptional).toContain("webRequestFilterResponse");
-    expect(ffOptional).toContain("webRequestFilterResponse.serviceWorkerScript");
+    // Firefox adds the webRequest.filterResponseData permission set
+    // as required permissions so the background can always-on the
+    // worker script filter without a runtime prompt. Chromium MV3
+    // removed response-body modification so these are deliberately
+    // absent there.
+    expect(ff).toContain("webRequest");
+    expect(ff).toContain("webRequestBlocking");
+    expect(ff).toContain("webRequestFilterResponse");
+    expect(ff).toContain("webRequestFilterResponse.serviceWorkerScript");
+    expect(cr).not.toContain("webRequest");
+    expect(cr).not.toContain("webRequestBlocking");
+    expect(cr).not.toContain("webRequestFilterResponse");
+    expect(cr).not.toContain("webRequestFilterResponse.serviceWorkerScript");
 
-    // The Chromium build doesn't declare the optional set at all —
-    // filterResponseData was removed from MV3 on Chromium so the
-    // permissions wouldn't do anything if granted.
-    expect(cr.optional_permissions).toBeUndefined();
+    // Neither build declares optional_permissions — advanced worker
+    // protection is baked in on Firefox rather than opt-in.
+    expect(firefoxManifest().optional_permissions).toBeUndefined();
+    expect(chromiumManifest().optional_permissions).toBeUndefined();
   });
 });
 

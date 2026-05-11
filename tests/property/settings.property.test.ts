@@ -54,7 +54,6 @@ const settingsArb: fc.Arbitrary<Settings> = fc.record({
   debugLogging: fc.boolean(),
   verbosityLevel: fc.constantFrom("ERROR", "WARN", "INFO", "DEBUG", "TRACE"),
   theme: fc.constantFrom("system", "light", "dark"),
-  advancedWorkerProtection: fc.boolean(),
 });
 
 /** The keys that MUST NOT appear in the broadcast payload. */
@@ -79,10 +78,6 @@ const REQUIRED_KEYS: (keyof UpdateSettingsPayload)[] = [
   // the content-script layer (closes the gap where Firefox's
   // `disable_non_proxied_udp` policy only works behind a proxy).
   "webrtcProtection",
-  // advancedWorkerProtection coordinates the content-script Worker
-  // wrapper with the Firefox-only webRequest.filterResponseData
-  // listener for module/service worker timezone patching.
-  "advancedWorkerProtection",
 ];
 
 /**
@@ -129,8 +124,8 @@ test("Property 4: Broadcast Payload Contains Only Scoped Fields", async () => {
         expect(payload).not.toHaveProperty(key);
       }
 
-      // Payload must have exactly 7 keys (6 scoped + advancedWorkerProtection).
-      expect(Object.keys(payload)).toHaveLength(7);
+      // Payload must have exactly 6 scoped keys.
+      expect(Object.keys(payload)).toHaveLength(6);
 
       // Values must match the original settings
       expect(payload.enabled).toBe(settings.enabled);
@@ -138,7 +133,6 @@ test("Property 4: Broadcast Payload Contains Only Scoped Fields", async () => {
       expect(payload.timezone).toEqual(settings.timezone);
       expect(payload.debugLogging).toBe(settings.debugLogging);
       expect(payload.webrtcProtection).toBe(settings.webrtcProtection);
-      expect(payload.advancedWorkerProtection).toBe(settings.advancedWorkerProtection);
     }),
     { numRuns: 100 }
   );

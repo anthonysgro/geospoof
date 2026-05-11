@@ -169,20 +169,6 @@ export let settingsReceived = false;
  */
 export let webrtcProtectionEnabled = false;
 
-/**
- * Advanced worker protection (Firefox only). When true, the background
- * script is actively modifying module-worker and service-worker script
- * responses at the network layer. The injected script's own worker
- * constructor wrapper consults this flag before deciding whether to
- * handle module workers itself — when the background is handling them,
- * the injected script lets them pass through unmodified so the network
- * filter is the only source of modification.
- *
- * Orthogonal to `spoofingEnabled` — only meaningful when spoofing is on,
- * but tracked independently so the setting state round-trips cleanly.
- */
-export let advancedWorkerProtectionEnabled = false;
-
 // Setter functions for state mutation from other modules
 export function setSpoofingEnabled(v: boolean): void {
   spoofingEnabled = v;
@@ -206,8 +192,4 @@ export function setDebugEnabled(v: boolean): void {
 
 export function setWebRTCProtectionEnabled(v: boolean): void {
   webrtcProtectionEnabled = v;
-}
-
-export function setAdvancedWorkerProtectionEnabled(v: boolean): void {
-  advancedWorkerProtectionEnabled = v;
 }

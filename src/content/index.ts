@@ -27,14 +27,6 @@ let verbosityLevel = "INFO";
  * the first settings event lands.
  */
 let webrtcProtection = false;
-/**
- * Mirrors `Settings.advancedWorkerProtection`. Forwarded to the injected
- * script so its worker-constructor wrapper knows whether the background
- * is actively modifying module/service worker responses via
- * `webRequest.filterResponseData`. Firefox-only in effect — Chrome and
- * Safari silently ignore it since those engines don't expose the API.
- */
-let advancedWorkerProtection = false;
 
 // Event name for settings updates (configurable for stealth)
 const EVENT_NAME: string = process.env.EVENT_NAME || "__x_evt";
@@ -72,7 +64,6 @@ interface SettingsEventDetail {
   debugLogging: boolean;
   verbosityLevel: string;
   webrtcProtection: boolean;
-  advancedWorkerProtection: boolean;
 }
 
 /**
@@ -112,7 +103,6 @@ function buildSettingsEventDetail(): SettingsEventDetail {
     debugLogging,
     verbosityLevel,
     webrtcProtection,
-    advancedWorkerProtection,
   };
 }
 
@@ -199,7 +189,6 @@ browser.runtime.onMessage.addListener(
       debugLogging = message.payload.debugLogging;
       verbosityLevel = message.payload.verbosityLevel ?? "INFO";
       webrtcProtection = message.payload.webrtcProtection ?? false;
-      advancedWorkerProtection = message.payload.advancedWorkerProtection ?? false;
       setDebugEnabled(debugLogging);
       setVerbosityLevel(verbosityLevel);
       logger.debug("Settings updated:", {
@@ -209,7 +198,6 @@ browser.runtime.onMessage.addListener(
         debugLogging,
         verbosityLevel,
         webrtcProtection,
-        advancedWorkerProtection,
       });
       updateInjectedScript();
     } else if (message.type === "PING") {
@@ -235,7 +223,6 @@ browser.runtime
       debugLogging: boolean;
       verbosityLevel: string;
       webrtcProtection?: boolean;
-      advancedWorkerProtection?: boolean;
     }) => {
       const roundTrip = performance.now() - CS_SEND_AT;
       logger.debug(
@@ -247,7 +234,6 @@ browser.runtime
       debugLogging = settings.debugLogging;
       verbosityLevel = settings.verbosityLevel ?? "INFO";
       webrtcProtection = settings.webrtcProtection ?? false;
-      advancedWorkerProtection = settings.advancedWorkerProtection ?? false;
       setDebugEnabled(debugLogging);
       setVerbosityLevel(verbosityLevel);
       logger.debug("Initial settings loaded:", {
@@ -257,7 +243,6 @@ browser.runtime
         debugLogging,
         verbosityLevel,
         webrtcProtection,
-        advancedWorkerProtection,
       });
       updateInjectedScript();
     }

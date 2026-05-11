@@ -204,35 +204,18 @@ export function updateWorkerFilterSettings(settings: Settings): void {
 // ── Feature detection ────────────────────────────────────────────────
 
 /**
- * The four optional permissions that must all be granted for
- * `webRequest.filterResponseData` to actually attach to a response.
- * Exported so popup/settings code can ask for or revoke the set via
- * the shared helper functions below.
- *
- * Typed as `string[]` and cast at each call site because
- * `@types/firefox-webext-browser@143` has not yet added
- * `webRequestFilterResponse` and
- * `webRequestFilterResponse.serviceWorkerScript` to its
- * `OptionalPermission` union — the runtime accepts them fine but
- * the current type definitions don't list them.
- */
-export const WORKER_FILTER_PERMISSIONS: string[] = [
-  "webRequest",
-  "webRequestBlocking",
-  "webRequestFilterResponse",
-  "webRequestFilterResponse.serviceWorkerScript",
-];
-
-/**
  * Return true when the current engine exposes the
- * `webRequest.filterResponseData` API. Firefox (all MV3 versions)
- * returns true; Chromium / Safari / engines without the API return
- * false and the worker filter becomes a no-op.
+ * `webRequest.filterResponseData` API. Firefox (all MV3 versions
+ * the extension targets) returns true; Chromium and Safari return
+ * false and the worker filter becomes a no-op at install time.
  *
- * Note: this checks only whether the runtime API exists. It does NOT
- * check whether the user has granted the optional permissions — that
- * check happens inside `installWorkerRequestFilter()` via
- * `hasWorkerFilterPermissions()`.
+ * Permissions (webRequest / webRequestBlocking /
+ * webRequestFilterResponse / webRequestFilterResponse.
+ * serviceWorkerScript) are declared as required in the Firefox
+ * manifest, so if the user accepted the install prompt the
+ * permissions are already granted — no separate runtime check
+ * needed. Users who don't want the feature simply don't install
+ * the Firefox build.
  */
 export function isWorkerFilterSupported(): boolean {
   try {
@@ -240,93 +223,6 @@ export function isWorkerFilterSupported(): boolean {
     return typeof wr.filterResponseData === "function";
   } catch {
     return false;
-  }
-}
-
-/**
- * Return true when the user has granted all four optional permissions
- * required for the worker filter to operate. Called on startup to
- * decide whether to install the listener, and after a permission
- * request to confirm the grant succeeded.
- *
- * On engines without `browser.permissions` (very old Safari builds)
- * returns false — the filter install is then a no-op, which is
- * correct because those engines also lack `filterResponseData`.
- */
-export async function hasWorkerFilterPermissions(): Promise<boolean> {
-  try {
-    if (!browser.permissions || typeof browser.permissions.contains !== "function") {
-      return false;
-    }
-
-    return await browser.permissions.contains({
-      // Cast: `@types/firefox-webext-browser@143` lacks
-      // `webRequestFilterResponse` in its OptionalPermission union.
-      // Runtime accepts these strings on Firefox 110+.
-      permissions: WORKER_FILTER_PERMISSIONS,
-    });
-  } catch (err) {
-    logger.warn(
-      "[worker-filter] permissions.contains threw:",
-      err instanceof Error ? err.message : String(err)
-    );
-    return false;
-  }
-}
-
-/**
- * Ask the user for all four optional permissions required by the
- * worker filter. Firefox shows a single consent prompt listing the
- * strings (notably "Block content on any page"). Returns true when
- * the user accepts, false when they cancel or any error fires.
- *
- * Must be called from a user-gesture handler (a button click) or
- * Firefox will reject without prompting. The popup's advanced-worker
- * toggle handler is the intended call site.
- */
-export async function requestWorkerFilterPermissions(): Promise<boolean> {
-  try {
-    if (!browser.permissions || typeof browser.permissions.request !== "function") {
-      logger.warn("[worker-filter] permissions.request not available");
-      return false;
-    }
-
-    return await browser.permissions.request({
-      permissions: WORKER_FILTER_PERMISSIONS as unknown as browser._manifest.OptionalPermission[],
-    });
-  } catch (err) {
-    logger.warn(
-      "[worker-filter] permissions.request threw:",
-      err instanceof Error ? err.message : String(err)
-    );
-    return false;
-  }
-}
-
-/**
- * Release the four optional permissions. Called when the user flips
- * Advanced Worker Protection off, so the "Block content on any page"
- * permission disappears from `about:addons` until they opt in again.
- *
- * Best-effort — if the removal fails we continue operating with the
- * permission still held. The listener is uninstalled separately so
- * toggling the setting off always stops filter activity regardless
- * of permission state.
- */
-export async function revokeWorkerFilterPermissions(): Promise<void> {
-  try {
-    if (!browser.permissions || typeof browser.permissions.remove !== "function") {
-      return;
-    }
-
-    await browser.permissions.remove({
-      permissions: WORKER_FILTER_PERMISSIONS as unknown as browser._manifest.OptionalPermission[],
-    });
-  } catch (err) {
-    logger.warn(
-      "[worker-filter] permissions.remove threw:",
-      err instanceof Error ? err.message : String(err)
-    );
   }
 }
 
@@ -357,17 +253,14 @@ function onBeforeWorkerRequest(details: WebRequestDetails): void {
   // 1. Settings not yet loaded.
   if (!cachedSettings) return;
 
-  // 2. Setting disabled.
-  if (!cachedSettings.advancedWorkerProtection) return;
-
-  // 3. Spoofing disabled — nothing to prepend.
+  // 2. Spoofing disabled — nothing to prepend.
   if (!cachedSettings.enabled) return;
 
-  // 4. No timezone configured.
+  // 3. No timezone configured.
   const identifier = cachedSettings.timezone?.identifier;
   if (!identifier) return;
 
-  // 5. Wrong resource type. Firefox reports ALL worker scripts
+  // 4. Wrong resource type. Firefox reports ALL worker scripts
   //    (dedicated, shared, service) as `type: "script"` — there is
   //    no separate "worker" type in the public ResourceType enum.
   //    We previously filtered on `["worker", "shared_worker",
@@ -382,12 +275,12 @@ function onBeforeWorkerRequest(details: WebRequestDetails): void {
     return;
   }
 
-  // 6. Non-HTTP(S) URLs — skip (blob, data, about, etc.). Those are
+  // 5. Non-HTTP(S) URLs — skip (blob, data, about, etc.). Those are
   //    handled by the content-script wrapper because webRequest
   //    doesn't see them.
   if (!/^https?:\/\//.test(details.url)) return;
 
-  // 7. Content-script handshake. The content script's worker wrapper
+  // 6. Content-script handshake. The content script's worker wrapper
   //    sends us a ANNOUNCE_WORKER_FETCH message just before it calls
   //    `new Worker(url)` or `serviceWorker.register(url)`, adding the
   //    URL to a short-lived allowlist. If this request's URL isn't
@@ -489,27 +382,18 @@ function onBeforeWorkerRequest(details: WebRequestDetails): void {
 /**
  * Install the webRequest listener. Idempotent — subsequent calls are
  * no-ops. Feature-detects `filterResponseData` at install time and
- * silently skips installation on engines that don't support it OR
- * when the optional permissions have not been granted. Call
- * `requestWorkerFilterPermissions()` from a user-gesture context
- * before calling this to prompt the user for the permissions.
+ * silently skips installation on engines that don't support it (all
+ * non-Firefox engines).
+ *
+ * Permissions are declared as required in the Firefox manifest, so
+ * if the user has the Firefox build installed the permissions are
+ * already granted and there's nothing to prompt for.
  */
 export async function installWorkerRequestFilter(): Promise<void> {
   if (installedListener) return;
 
   if (!isWorkerFilterSupported()) {
     logger.debug("[worker-filter] filterResponseData not supported, skipping install");
-    return;
-  }
-
-  // Permissions are optional on Firefox — the manifest lists them
-  // under `optional_permissions`, and they're only granted after the
-  // user flips Advanced Worker Protection on and accepts the
-  // browser's consent prompt. Without the grant, `addListener` below
-  // would throw a generic "permission denied" error. Short-circuit
-  // cleanly instead.
-  if (!(await hasWorkerFilterPermissions())) {
-    logger.debug("[worker-filter] optional webRequest permissions not granted, skipping install");
     return;
   }
 

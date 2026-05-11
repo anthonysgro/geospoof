@@ -21,15 +21,7 @@ export async function broadcastSettingsToTabs(settings: Settings): Promise<void>
   // every mutation flows through broadcastSettingsToTabs.
   updateWorkerFilterSettings(settings);
 
-  const {
-    enabled,
-    location,
-    timezone,
-    debugLogging,
-    verbosityLevel,
-    webrtcProtection,
-    advancedWorkerProtection,
-  } = settings;
+  const { enabled, location, timezone, debugLogging, verbosityLevel, webrtcProtection } = settings;
   const payload: UpdateSettingsPayload = {
     enabled,
     location,
@@ -37,7 +29,6 @@ export async function broadcastSettingsToTabs(settings: Settings): Promise<void>
     debugLogging,
     verbosityLevel,
     webrtcProtection,
-    advancedWorkerProtection,
   };
   const tabs = await browser.tabs.query({});
 

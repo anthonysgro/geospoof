@@ -64,26 +64,6 @@ export async function loadSettings(): Promise<void> {
 
     updateDetailsView(settings);
 
-    // Restore advanced worker protection toggle state. The feature
-    // only has effect on Firefox (where webRequest.filterResponseData
-    // exists); on Chrome/Edge/Brave/Safari the toggle is disabled
-    // with a disclaimer explaining why.
-    const advancedWorkerToggle = document.getElementById(
-      "advancedWorkerProtectionToggle"
-    ) as HTMLInputElement | null;
-    const advancedWorkerDisclaimer = document.getElementById("advancedWorkerProtectionDisclaimer");
-    const isFirefox = /Firefox|Gecko\//.test(navigator.userAgent);
-    if (advancedWorkerToggle) {
-      advancedWorkerToggle.checked = !!settings.advancedWorkerProtection;
-      advancedWorkerToggle.disabled = !isFirefox;
-    }
-    if (advancedWorkerDisclaimer && !isFirefox) {
-      advancedWorkerDisclaimer.classList.add("unsupported");
-      advancedWorkerDisclaimer.innerHTML =
-        "<strong>Firefox only.</strong> Your browser doesn't support the " +
-        "response-stream API this feature relies on, so the toggle has no effect here.";
-    }
-
     // Restore debug logging toggle state
     const debugLoggingToggle = document.getElementById(
       "debugLoggingToggle"

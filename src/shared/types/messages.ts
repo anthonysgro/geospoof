@@ -7,7 +7,6 @@ export type MessageType =
   | "SET_LOCATION"
   | "SET_PROTECTION_STATUS"
   | "SET_WEBRTC_PROTECTION"
-  | "SET_ADVANCED_WORKER_PROTECTION"
   | "ANNOUNCE_WORKER_FETCH"
   | "GEOCODE_QUERY"
   | "GET_SETTINGS"
@@ -42,10 +41,6 @@ export interface SetProtectionStatusPayload {
 }
 
 export interface SetWebRTCProtectionPayload {
-  enabled: boolean;
-}
-
-export interface SetAdvancedWorkerProtectionPayload {
   enabled: boolean;
 }
 
@@ -126,15 +121,6 @@ export interface UpdateSettingsPayload {
    *   - Safari doesn't expose `browser.privacy` at all.
    */
   webrtcProtection: boolean;
-  /**
-   * Advanced worker protection (Firefox only). When true and the
-   * browser supports `webRequest.filterResponseData`, the background
-   * script prepends the spoofing payload to module-worker and
-   * service-worker script responses. The injected script also uses
-   * this flag to skip its own patching for module / URL workers on
-   * Firefox so the webRequest path is the sole modifier.
-   */
-  advancedWorkerProtection: boolean;
 }
 
 /**

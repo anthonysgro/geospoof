@@ -88,10 +88,6 @@ export function validateSettings(settings: Partial<Settings>): Settings {
     validated.webrtcProtection = settings.webrtcProtection;
   }
 
-  if (typeof settings.advancedWorkerProtection === "boolean") {
-    validated.advancedWorkerProtection = settings.advancedWorkerProtection;
-  }
-
   if (typeof settings.onboardingCompleted === "boolean") {
     validated.onboardingCompleted = settings.onboardingCompleted;
   }
