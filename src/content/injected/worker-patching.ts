@@ -122,6 +122,113 @@ const OriginalWorker: typeof Worker | undefined =
 const OriginalSharedWorker: typeof SharedWorker | undefined =
   typeof SharedWorker !== "undefined" ? SharedWorker : undefined;
 
+// ── Blob-URL tracking ────────────────────────────────────────────────
+//
+// Strict-CSP origins (like geospoof.com) may allow `worker-src blob:`
+// but forbid `blob:` under `connect-src`, `script-src`, and
+// `script-src-elem`. Every technique for reading a blob URL's bytes
+// at runtime hits one of those directives:
+//
+//   - `fetch(blobUrl)` / `XMLHttpRequest` → `connect-src`
+//   - `importScripts(blobUrl)` inside a worker → `script-src-elem`
+//   - `<script src="blob:...">` → `script-src-elem`
+//
+// The one path CSP does NOT gate is holding a reference to the `Blob`
+// object itself. `URL.createObjectURL(blob)` runs synchronously in the
+// page context and merely mints an opaque URL handle — by shimming it
+// we can capture each Blob before it's anonymized, keyed by the
+// returned URL string. When the page later calls `new Worker(blobUrl)`
+// we look up the original Blob, compose `new Blob([payload, origBlob])`
+// (an in-memory operation, no CSP involvement), and hand the resulting
+// URL to the real Worker constructor.
+//
+// `new Blob([string, Blob])` is well-specified and works in every
+// browser we support — the Blob spec accepts both BlobPart types and
+// concatenates them in order.
+//
+// We use a WeakRef-based map to avoid preventing the page's Blobs from
+// being garbage-collected — `URL.revokeObjectURL` is the page's signal
+// that it's done with the URL, at which point we drop our reference.
+
+interface BlobTrackingEntry {
+  ref: WeakRef<Blob>;
+}
+
+const trackedBlobs = new Map<string, BlobTrackingEntry>();
+
+/**
+ * Install overrides on `URL.createObjectURL` / `URL.revokeObjectURL`
+ * so we can intercept inline Worker construction without going through
+ * any CSP-gated fetch path.
+ *
+ * Called at `document_start` before any page script runs. Safe to call
+ * more than once (idempotent) but there's no reason to.
+ */
+function installBlobUrlTracking(): void {
+  if (typeof URL === "undefined" || typeof URL.createObjectURL !== "function") return;
+
+  const OriginalCreateObjectURL = URL.createObjectURL.bind(URL);
+  const OriginalRevokeObjectURL = URL.revokeObjectURL.bind(URL);
+
+  const spoofedCreateObjectURL = function createObjectURL(obj: Blob | MediaSource): string {
+    const url = OriginalCreateObjectURL(obj);
+    try {
+      // Only track Blobs — MediaSource URLs aren't worker-eligible and
+      // hoarding their references would leak memory for `<video>`
+      // pages that churn through streams.
+      if (typeof Blob !== "undefined" && obj instanceof Blob) {
+        trackedBlobs.set(url, { ref: new WeakRef(obj) });
+      }
+    } catch {
+      /* instanceof can throw in pathological cross-realm cases */
+    }
+    return url;
+  };
+
+  const spoofedRevokeObjectURL = function revokeObjectURL(url: string): void {
+    trackedBlobs.delete(url);
+    return OriginalRevokeObjectURL(url);
+  };
+
+  registerOverride(spoofedCreateObjectURL, "createObjectURL");
+  disguiseAsNative(spoofedCreateObjectURL, "createObjectURL", 1);
+  registerOverride(spoofedRevokeObjectURL, "revokeObjectURL");
+  disguiseAsNative(spoofedRevokeObjectURL, "revokeObjectURL", 1);
+
+  try {
+    Object.defineProperty(URL, "createObjectURL", {
+      value: spoofedCreateObjectURL,
+      writable: true,
+      configurable: true,
+      enumerable: true,
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      value: spoofedRevokeObjectURL,
+      writable: true,
+      configurable: true,
+      enumerable: true,
+    });
+  } catch (err) {
+    logger.warn("[worker-patching] URL.createObjectURL override install failed:", err);
+  }
+}
+
+/**
+ * Return the Blob that was handed to `URL.createObjectURL` to mint the
+ * given URL, or null if we don't have a live reference (URL not minted
+ * through our override, revoked, or the blob was GC'd).
+ */
+function lookupTrackedBlob(url: string): Blob | null {
+  const entry = trackedBlobs.get(url);
+  if (!entry) return null;
+  const blob = entry.ref.deref();
+  if (!blob) {
+    trackedBlobs.delete(url);
+    return null;
+  }
+  return blob;
+}
+
 // ── Inline worker payload (blob/data URL wrapping only) ──────────────
 
 // The core spoofing payload is imported from `@/shared/worker-payload`
@@ -141,6 +248,17 @@ const OriginalSharedWorker: typeof SharedWorker | undefined =
  * Only used when the original construction was inline (blob/data URL) —
  * URL-based workers are handled by the background network filter, which
  * leaves `self.location` intact and requires no wrapper.
+ *
+ * ## CSP note
+ *
+ * The wrapper never tries to load a blob URL over the network (no
+ * `importScripts(blob:)`, no `fetch(blob:)`, no sync XHR). Strict-CSP
+ * origins can allow `worker-src blob:` while forbidding `blob:` under
+ * `connect-src` and `script-src`, which would block every such route.
+ * Instead the wrapper shims `URL.createObjectURL` inside the worker
+ * realm, captures each Blob the page hands to the URL API, and
+ * composes a new `Blob([payload, origBlob])` at nested-Worker
+ * construction time — pure in-memory concatenation, no CSP gate.
  */
 const WORKER_WRAPPER = `
 // --- Global-install helper (stealth) ---
@@ -207,6 +325,61 @@ var __installWorkerGlobal = function(name, value) {
   __installWorkerGlobal("importScripts", spoofedImportScripts);
 })();
 
+// --- URL.createObjectURL tracking (inside the worker) ---
+//
+// Workers can call URL.createObjectURL(blob) the same way windows can.
+// To intercept a nested Worker spawned from inside this worker we need
+// to capture the Blob before it's anonymized by the URL API — same
+// strategy as the top-level content script. Without this, sites that
+// do 'new Worker(URL.createObjectURL(childBlob))' inside a worker
+// would leak the real timezone in the grandchild, because we'd have
+// no bytes to read without hitting a CSP-gated fetch path.
+var __nestedTrackedBlobs = new Map();
+(function() {
+  if (typeof URL === "undefined" || typeof URL.createObjectURL !== "function") return;
+  var OrigCreate = URL.createObjectURL.bind(URL);
+  var OrigRevoke = URL.revokeObjectURL.bind(URL);
+  var WeakRefCtor = typeof WeakRef === "function" ? WeakRef : null;
+  var spoofedCreate = function createObjectURL(obj) {
+    var url = OrigCreate(obj);
+    try {
+      if (typeof Blob !== "undefined" && obj instanceof Blob) {
+        __nestedTrackedBlobs.set(
+          url,
+          WeakRefCtor
+            ? new WeakRefCtor(obj)
+            : { deref: (function(b){ return function(){ return b; }; })(obj) }
+        );
+      }
+    } catch(e) { /* cross-realm instanceof edge cases */ }
+    return url;
+  };
+  var spoofedRevoke = function revokeObjectURL(url) {
+    __nestedTrackedBlobs.delete(url);
+    return OrigRevoke(url);
+  };
+  if (typeof __register === "function") {
+    __register(spoofedCreate, "createObjectURL");
+    __register(spoofedRevoke, "revokeObjectURL");
+  }
+  try {
+    Object.defineProperty(URL, "createObjectURL", {
+      value: spoofedCreate, writable: true, configurable: true, enumerable: true
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      value: spoofedRevoke, writable: true, configurable: true, enumerable: true
+    });
+  } catch(e) { /* non-configurable host URL prototype — best-effort */ }
+})();
+
+function lookupNestedBlob(url) {
+  var ref = __nestedTrackedBlobs.get(url);
+  if (!ref) return null;
+  var blob = ref.deref();
+  if (!blob) { __nestedTrackedBlobs.delete(url); return null; }
+  return blob;
+}
+
 // --- Nested Worker interception (inline-only) ---
 //
 // A child worker spawned from inside this blob-wrapped worker is given
@@ -243,9 +416,14 @@ var __installWorkerGlobal = function(name, value) {
     try {
       var urlStr = url instanceof URL ? url.href : String(url);
       if (urlStr.indexOf("blob:") === 0) {
+        // Compose a new Blob from [payload, originalBlob] using the
+        // worker-realm URL.createObjectURL tracker installed above.
+        // No fetch, no XHR, no importScripts — strictly in-memory
+        // concatenation, which no CSP directive gates.
+        var origBlob = lookupNestedBlob(urlStr);
+        if (!origBlob) return new OrigW(url, opts);
         var payload = buildNestedPayload(urlStr);
-        var bootstrap = payload + 'importScripts(' + JSON.stringify(urlStr) + ');';
-        var blob = new Blob([bootstrap], { type: "application/javascript" });
+        var blob = new Blob([payload + "\\n", origBlob], { type: "application/javascript" });
         return new OrigW(URL.createObjectURL(blob), opts);
       }
       if (urlStr.indexOf("data:") === 0) {
@@ -338,15 +516,26 @@ function createPatchedBlobUrl(source: string, payload: string): string {
 }
 
 /**
- * Create a blob URL that bootstraps with the payload and then loads
- * the original blob via `importScripts`. Used when the caller handed
- * us a blob URL (we can't retrieve the source bytes, but we can
- * reference the blob from a Worker context via importScripts).
+ * Compose a new Blob URL whose contents are the spoofing payload
+ * followed by the bytes of the original Blob. No network/XHR/fetch
+ * round-trip — `new Blob([string, Blob])` concatenates in-process,
+ * so no CSP directive applies. Returns null when we don't hold a
+ * live reference to the original Blob (URL minted before our
+ * override loaded, or already revoked/GC'd), in which case the
+ * caller must fall through to an unpatched construction.
  */
-function createImportScriptsBlobUrl(originalBlobUrl: string, payload: string): string {
-  const bootstrap = `${payload}\nimportScripts(${JSON.stringify(originalBlobUrl)});\n`;
-  const blob = new Blob([bootstrap], { type: "application/javascript" });
-  return URL.createObjectURL(blob);
+function createInlinedBlobWorkerUrl(originalBlobUrl: string, payload: string): string | null {
+  const originalBlob = lookupTrackedBlob(originalBlobUrl);
+  if (!originalBlob) return null;
+  try {
+    const patchedBlob = new Blob([payload + "\n", originalBlob], {
+      type: "application/javascript",
+    });
+    return URL.createObjectURL(patchedBlob);
+  } catch (err) {
+    logger.debug("[worker-patching] Blob composition failed:", err);
+    return null;
+  }
 }
 
 // ── Worker constructor wrapper ───────────────────────────────────────
@@ -366,6 +555,7 @@ function createImportScriptsBlobUrl(originalBlobUrl: string, payload: string): s
  * already allows it.
  */
 export function installWorkerPatching(): void {
+  installBlobUrlTracking();
   if (OriginalWorker) installWorkerOverride();
   if (OriginalSharedWorker) installSharedWorkerOverride();
   installServiceWorkerAnnouncer();
@@ -453,8 +643,13 @@ function installWorkerOverride(): void {
 
     try {
       if (urlStr.startsWith("blob:")) {
-        const blobUrl = createImportScriptsBlobUrl(urlStr, payload);
-        return new RealWorker(blobUrl, options);
+        const blobUrl = createInlinedBlobWorkerUrl(urlStr, payload);
+        if (blobUrl) return new RealWorker(blobUrl, options);
+        // Couldn't read the source (revoked, cross-origin, etc.) —
+        // fall through to unpatched rather than re-injecting an
+        // `importScripts(blob:)` bootstrap that would be blocked
+        // under strict `script-src` CSPs.
+        return new RealWorker(scriptURL, options);
       }
 
       // data: URL — decode inline, prepend payload, create fresh blob.
@@ -521,8 +716,9 @@ function installSharedWorkerOverride(): void {
 
     try {
       if (urlStr.startsWith("blob:")) {
-        const blobUrl = createImportScriptsBlobUrl(urlStr, payload);
-        return new RealSharedWorker(blobUrl, options);
+        const blobUrl = createInlinedBlobWorkerUrl(urlStr, payload);
+        if (blobUrl) return new RealSharedWorker(blobUrl, options);
+        return new RealSharedWorker(scriptURL, options);
       }
       const source = decodeDataUrl(urlStr);
       if (source !== null) {
