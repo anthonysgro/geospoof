@@ -5,15 +5,9 @@
  *
  * Content scripts cannot inject into Web Worker, SharedWorker, or
  * ServiceWorker contexts. The content-script-level worker-patching
- * module wraps `new Worker(url)` and prepends a blob-URL bootstrap for
- * classic workers, but this approach has two architectural limits:
- *
- *   1. Module workers (`{ type: "module" }`) — blob URLs break relative
- *      `import` statements because they have no meaningful base for
- *      resolution.
- *   2. Service workers — the browser requires same-origin HTTPS URLs
- *      for the script (blob URLs rejected at `register()` time) and
- *      manages its own update-check lifecycle.
+ * module wraps `new Worker(url)` for inline (blob / data) workers by
+ * prepending a bootstrap, but URL-based workers, module workers, and
+ * service workers all need bytes intercepted at the network layer.
  *
  * ## Solution
  *
@@ -21,23 +15,71 @@
  * Chromium-discontinued API that lets an extension pipe the raw bytes
  * of an HTTP response through a transformation. We use it to prepend
  * the timezone spoofing payload to any worker script response, leaving
- * the URL/origin/CSP/import-resolution behaviour untouched — from the
- * browser's perspective nothing unusual happened, it just fetched a
- * script that happened to contain our payload at the top.
+ * the URL / origin / CSP / import-resolution behaviour untouched — from
+ * the browser's perspective nothing unusual happened, it just fetched
+ * a script that happens to contain our payload at the top.
  *
- * ## Scope of URLs we modify
+ * ## How we identify worker scripts
  *
- * `webRequest` reports a `type` field for each request. Firefox lists:
+ * Firefox reports ALL worker script loads (dedicated, shared, service,
+ * classic, module) under `details.type === "script"` — the same bucket
+ * as every `<script src="...">` on the page. Blindly patching every
+ * script would obviously break the web.
  *
- *   - `script` — top-level HTML `<script>` tags (we ignore these)
- *   - `xmlhttprequest` — fetch / XHR (we ignore)
- *   - `worker` — dedicated Worker scripts (we patch)
- *   - `shared_worker` — SharedWorker scripts (we patch)
- *   - `serviceworker` — ServiceWorker register() scripts (we patch)
- *   - `xslt` — XSLT stylesheets (we ignore)
+ * The reliable distinguisher is the `Sec-Fetch-Dest` HTTP request
+ * header, which the browser sets according to the Fetch spec:
  *
- * Only the three worker types get piped through our filter. Everything
- * else passes through untouched.
+ *   - `Sec-Fetch-Dest: worker`        — `new Worker(url)` (classic or module)
+ *   - `Sec-Fetch-Dest: sharedworker`  — `new SharedWorker(url)`
+ *   - `Sec-Fetch-Dest: serviceworker` — `navigator.serviceWorker.register(url)`
+ *   - `Sec-Fetch-Dest: script`        — plain `<script src="...">` tags
+ *
+ * Headers are available in `onBeforeSendHeaders`, which fires after
+ * `onBeforeRequest` but before the request hits the network — and
+ * well before any response body arrives. So the classification is
+ * always available by the time `filter.ondata` starts firing.
+ *
+ * ## Two-stage filter flow
+ *
+ *   1. `onBeforeRequest` — attach a `filterResponseData` filter to
+ *      every script request, park state keyed by `requestId`, mark
+ *      decision as "pending". This is required because Firefox's
+ *      optimized script byte cache only honours filters attached in
+ *      `onBeforeRequest`; attaching later silently no-ops for scripts.
+ *
+ *   2. `onBeforeSendHeaders` — read `Sec-Fetch-Dest`, set the state's
+ *      decision to either "patch" (worker / sharedworker /
+ *      serviceworker) or "pass" (anything else, including regular
+ *      `<script>` tags). Falls back to the URL allowlist (populated
+ *      by the content-script `ANNOUNCE_WORKER_FETCH` handshake) when
+ *      the header is absent — defensive belt-and-braces.
+ *
+ *   3. `filter.ondata` / `filter.onstop`
+ *      - "patch": buffer all chunks, then emit payload + body + close
+ *      - "pass":  write each chunk straight through, close at stop
+ *      - "pending" (never arrived): default to pass-through
+ *
+ * ## Why this replaced the announce-only approach
+ *
+ * The old design was handshake-only: the injected script fires a
+ * CustomEvent → content script → `browser.runtime.sendMessage` →
+ * background adds URL to a short-lived allowlist → listener checks
+ * allowlist. On a cold MV3 background (post-idle or just-woken), the
+ * round-trip could take 50-500ms — and meanwhile `onBeforeRequest`
+ * fired synchronously from the worker constructor, found an empty
+ * allowlist, and passed the URL through unpatched. Classic race.
+ *
+ * Moving the signal into `Sec-Fetch-Dest` eliminates the race: the
+ * header arrives in the same I/O flow as the request itself, so
+ * there's nothing to race against. The allowlist stays in place as
+ * a fallback for engines / edge cases where `Sec-Fetch-Dest` is
+ * missing (e.g. proxied requests, some redirects).
+ *
+ * ## Scope of URLs we touch
+ *
+ * Every http(s) request with `type: "script"`. The filter attaches
+ * to all of them but only prepends bytes for the ones tagged as
+ * worker-like. Buffer memory is released on `close()` / `disconnect()`.
  *
  * ## Limitations
  *
@@ -66,10 +108,11 @@
  *      will show wrong positions when debugging an affected worker.
  *      Doesn't affect end-users, visible to devs only.
  *
- *   5. **One payload per response** — The filter reads the entire
- *      response into memory before writing back (small scripts only;
- *      workers are usually <1MB). For very large worker scripts this
- *      has a memory cost, though still bounded by the script size.
+ *   5. **Full-response buffering for patched scripts** — We hold the
+ *      entire body in memory before writing it back out, because the
+ *      payload has to come first. Worker scripts are usually small
+ *      (< 1 MB) so the RSS hit is bounded. Pass-through scripts are
+ *      streamed chunk-by-chunk with no buffering.
  */
 
 import type { Settings } from "@/shared/types/settings";
@@ -95,6 +138,17 @@ interface StreamFilter {
   error?: string;
 }
 
+/**
+ * HTTP request headers as reported by webRequest. Names are case-
+ * insensitive per the HTTP spec but Firefox preserves whatever case
+ * the browser emitted, so consumers lowercase before comparing.
+ */
+interface HttpHeader {
+  name: string;
+  value?: string;
+  binaryValue?: number[];
+}
+
 /** Shape of `browser.webRequest` that we touch. */
 interface WebRequestWithFilter {
   filterResponseData?: (requestId: string) => StreamFilter;
@@ -105,6 +159,14 @@ interface WebRequestWithFilter {
       extraInfoSpec?: string[]
     ) => void;
     removeListener: (listener: (details: WebRequestDetails) => void | Promise<void>) => void;
+  };
+  onBeforeSendHeaders?: {
+    addListener: (
+      listener: (details: WebRequestDetailsWithHeaders) => void,
+      filter: { urls: string[]; types: string[] },
+      extraInfoSpec?: string[]
+    ) => void;
+    removeListener: (listener: (details: WebRequestDetailsWithHeaders) => void) => void;
   };
 }
 
@@ -117,39 +179,55 @@ interface WebRequestDetails {
   frameId: number;
 }
 
-/**
- * We only need to register the listener against `type: "script"`
- * because Firefox reports all worker variants (dedicated, shared,
- * service) under that same bucket. The content-script handshake
- * below is what actually distinguishes a worker script load from
- * a regular `<script>` tag.
- */
+interface WebRequestDetailsWithHeaders extends WebRequestDetails {
+  requestHeaders?: HttpHeader[];
+}
 
 // ── State ────────────────────────────────────────────────────────────
 
-let installedListener: ((details: WebRequestDetails) => void) | null = null;
+/**
+ * Decision state for a single in-flight script request.
+ *
+ *   - "pending": filter attached, header classification not yet known.
+ *     Buffers any ondata chunks that arrive in this window (rare —
+ *     onBeforeSendHeaders normally fires before response body).
+ *   - "patch": `Sec-Fetch-Dest` identified as a worker variant (or the
+ *     URL was on the announce allowlist). Accumulate body, emit
+ *     payload + body + close at onstop.
+ *   - "pass": Identified as a regular `<script>` tag. Write each
+ *     chunk straight through on ondata, close at onstop.
+ */
+type Decision = "pending" | "patch" | "pass";
+
+interface PendingRequest {
+  filter: StreamFilter;
+  url: string;
+  decision: Decision;
+  chunks: Uint8Array[];
+}
+
+/** Map from requestId to the active filter + decision state. */
+const pending = new Map<string, PendingRequest>();
+
+let beforeRequestListener: ((details: WebRequestDetails) => void) | null = null;
+let beforeSendHeadersListener: ((details: WebRequestDetailsWithHeaders) => void) | null = null;
 
 /**
  * Cached settings snapshot. Refreshed on every settings change and
- * read synchronously inside the webRequest listener (listeners
- * can't be async on Firefox). When undefined, the listener is in
- * its "before-first-load" state and short-circuits to a no-op.
+ * read synchronously inside the webRequest listeners (listeners
+ * can't be async on Firefox). When undefined, the listeners are in
+ * their "before-first-load" state and short-circuit to a no-op.
  */
 let cachedSettings: Settings | undefined;
 
 /**
  * Short-lived allowlist of worker script URLs the content script has
- * announced it's about to fetch. Entries auto-expire after
- * ALLOWLIST_TTL_MS so a stale entry can never match an unrelated
- * future request.
+ * announced it's about to fetch. Retained as a secondary classifier
+ * for requests where `Sec-Fetch-Dest` is missing for any reason
+ * (some proxy configurations, historical Firefox edge cases).
  *
- * Why an allowlist? Firefox reports all worker scripts as
- * `type: "script"`, same as any regular `<script src="...">` tag.
- * Without the handshake we'd be unable to tell apart a Worker script
- * load from a normal page script load — and prepending the spoofing
- * payload to every JavaScript file the browser fetches would break
- * every page (strict-mode conflicts, import collisions, duplicate
- * declarations, etc).
+ * Entries auto-expire after ALLOWLIST_TTL_MS so a stale entry can
+ * never match an unrelated future request.
  */
 const ALLOWLIST_TTL_MS = 10_000;
 const workerUrlAllowlist = new Map<string, number>();
@@ -172,15 +250,11 @@ export function allowlistWorkerUrl(url: string): void {
 }
 
 /**
- * Check whether a URL is currently on the allowlist. Removes the
- * entry on match (one-shot) so subsequent identical requests still
- * need a fresh ANNOUNCE_WORKER_FETCH.
- *
- * Exception: service workers may be re-fetched by the browser's
- * update-check cycle without the content script announcing them.
- * We leave the entry in place for 10s after a match to cover the
- * immediate update-check that Firefox sometimes issues right after
- * register().
+ * Check whether a URL is currently on the allowlist. Does NOT remove
+ * the entry on match — service workers can be re-fetched by the
+ * browser's update-check cycle and need the same ruling applied,
+ * and module workers can trigger multiple sub-requests under the
+ * same parent announce.
  */
 function isAllowlisted(url: string): boolean {
   const expiry = workerUrlAllowlist.get(url);
@@ -193,9 +267,9 @@ function isAllowlisted(url: string): boolean {
 }
 
 /**
- * Update the cached settings snapshot that the listener reads.
- * Called from background/messages.ts whenever settings change and
- * from the initialize() path at startup.
+ * Update the cached settings snapshot that the listeners read.
+ * Called from background/tabs.ts → broadcastSettingsToTabs on every
+ * settings change, and from the initialize() path at startup.
  */
 export function updateWorkerFilterSettings(settings: Settings): void {
   cachedSettings = settings;
@@ -208,14 +282,6 @@ export function updateWorkerFilterSettings(settings: Settings): void {
  * `webRequest.filterResponseData` API. Firefox (all MV3 versions
  * the extension targets) returns true; Chromium and Safari return
  * false and the worker filter becomes a no-op at install time.
- *
- * Permissions (webRequest / webRequestBlocking /
- * webRequestFilterResponse / webRequestFilterResponse.
- * serviceWorkerScript) are declared as required in the Firefox
- * manifest, so if the user accepted the install prompt the
- * permissions are already granted — no separate runtime check
- * needed. Users who don't want the feature simply don't install
- * the Firefox build.
  */
 export function isWorkerFilterSupported(): boolean {
   try {
@@ -226,87 +292,75 @@ export function isWorkerFilterSupported(): boolean {
   }
 }
 
-// ── Listener ─────────────────────────────────────────────────────────
+// ── Classification ───────────────────────────────────────────────────
 
 /**
- * The webRequest listener body. Examines every outgoing request and,
- * when it's a worker script request AND advanced protection is on,
- * attaches a filter that prepends the spoofing payload.
- *
- * All work inside this function is synchronous (filter attach must
- * happen before the request continues) — we read cachedSettings
- * rather than awaiting loadSettings().
+ * Worker-like `Sec-Fetch-Dest` values. A request bearing any of
+ * these is a worker script load and gets the spoofing payload
+ * prepended; anything else is a regular script and passes through.
+ */
+const WORKER_FETCH_DESTS = new Set(["worker", "sharedworker", "serviceworker"]);
+
+/**
+ * Extract the `Sec-Fetch-Dest` value from a headers array. Lowercased
+ * comparison for case-insensitive header matching per HTTP spec.
+ * Returns null when the header is absent (legacy / proxied requests).
+ */
+function readSecFetchDest(headers: HttpHeader[] | undefined): string | null {
+  if (!headers) return null;
+  for (const h of headers) {
+    if (h.name.toLowerCase() === "sec-fetch-dest") {
+      return (h.value ?? "").toLowerCase();
+    }
+  }
+  return null;
+}
+
+/**
+ * Decide whether this request should have the spoofing payload
+ * prepended. Authoritative signal is `Sec-Fetch-Dest`; the URL
+ * allowlist is a fallback for the rare case where the header is
+ * stripped or absent.
+ */
+function classifyRequest(details: WebRequestDetailsWithHeaders): Decision {
+  const dest = readSecFetchDest(details.requestHeaders);
+  if (dest !== null) {
+    return WORKER_FETCH_DESTS.has(dest) ? "patch" : "pass";
+  }
+  // Header missing — fall back to the announce allowlist.
+  return isAllowlisted(details.url) ? "patch" : "pass";
+}
+
+// ── Listeners ────────────────────────────────────────────────────────
+
+/**
+ * onBeforeRequest: attach a filter to every script request so it's
+ * in place before Firefox's optimized script byte cache kicks in.
+ * The decision to actually modify bytes is deferred to
+ * onBeforeSendHeaders where Sec-Fetch-Dest is visible.
  */
 function onBeforeWorkerRequest(details: WebRequestDetails): void {
-  // DIAGNOSTIC: log every single request that reaches us so we can
-  // see what Firefox is actually dispatching. This fires a LOT —
-  // remove after debugging is done. Gate on debugLogging so normal
-  // users don't drown in console noise.
-  if (cachedSettings?.debugLogging) {
-    logger.debug(
-      `[worker-filter] onBeforeRequest: type=${details.type} url=${details.url} requestId=${details.requestId}`
-    );
-  }
-
-  // Short-circuits in order of cheapness
+  // Short-circuits in order of cheapness.
 
   // 1. Settings not yet loaded.
   if (!cachedSettings) return;
 
-  // 2. Spoofing disabled — nothing to prepend.
+  // 2. Spoofing disabled — nothing to prepend, don't bother attaching.
   if (!cachedSettings.enabled) return;
 
   // 3. No timezone configured.
-  const identifier = cachedSettings.timezone?.identifier;
-  if (!identifier) return;
+  if (!cachedSettings.timezone?.identifier) return;
 
-  // 4. Wrong resource type. Firefox reports ALL worker scripts
-  //    (dedicated, shared, service) as `type: "script"` — there is
-  //    no separate "worker" type in the public ResourceType enum.
-  //    We previously filtered on `["worker", "shared_worker",
-  //    "serviceworker"]` which matched nothing on Firefox. Now we
-  //    accept `script` and rely on the content-script handshake
-  //    allowlist (below) to distinguish worker script requests
-  //    from normal page script loads.
-  if (details.type !== "script") {
-    if (cachedSettings.debugLogging) {
-      logger.debug(`[worker-filter] skipping non-script type: ${details.type} ${details.url}`);
-    }
-    return;
-  }
-
-  // 5. Non-HTTP(S) URLs — skip (blob, data, about, etc.). Those are
-  //    handled by the content-script wrapper because webRequest
-  //    doesn't see them.
+  // 4. Only http(s) scripts — data:/blob: are handled by the content-
+  //    script constructor wrapper, webRequest doesn't see them.
+  if (details.type !== "script") return;
   if (!/^https?:\/\//.test(details.url)) return;
 
-  // 6. Content-script handshake. The content script's worker wrapper
-  //    sends us a ANNOUNCE_WORKER_FETCH message just before it calls
-  //    `new Worker(url)` or `serviceWorker.register(url)`, adding the
-  //    URL to a short-lived allowlist. If this request's URL isn't
-  //    on the list we assume it's a regular `<script>` load and
-  //    don't touch it — otherwise we'd prepend our payload to every
-  //    JavaScript file the browser fetches, which would break every
-  //    page on the internet.
-  if (!isAllowlisted(details.url)) {
-    if (cachedSettings.debugLogging) {
-      logger.debug(
-        `[worker-filter] script request not on worker allowlist, skipping: ${details.url}`
-      );
-    }
-    return;
-  }
-
   if (cachedSettings.debugLogging) {
-    logger.info(`[worker-filter] patching worker script: ${details.url}`);
+    logger.debug(
+      `[worker-filter] attach filter: url=${details.url} requestId=${details.requestId}`
+    );
   }
-
-  // Build payload with current timezone — every time, so toggling
-  // timezone mid-session is respected for the NEXT worker request.
-  // Workers already running keep their old payload; that's inherent
-  // to worker process isolation.
-  const payload = buildStandaloneWorkerPayload(identifier);
-  if (!payload) return;
 
   let filter: StreamFilter;
   try {
@@ -321,20 +375,28 @@ function onBeforeWorkerRequest(details: WebRequestDetails): void {
     return;
   }
 
-  // Accumulate the entire response body, then emit payload + body +
-  // close. This avoids parsing the script source — we just prepend
-  // the payload bytes to whatever the server sent. The filter must
-  // always call close() or disconnect() or the request hangs forever.
-  const chunks: Uint8Array[] = [];
-  const encoder = new TextEncoder();
-  const payloadBytes = encoder.encode(payload);
+  const state: PendingRequest = {
+    filter,
+    url: details.url,
+    decision: "pending",
+    chunks: [],
+  };
+  pending.set(details.requestId, state);
 
   filter.ondata = (event) => {
     try {
-      chunks.push(new Uint8Array(event.data));
+      if (state.decision === "pass") {
+        // Pass-through path: stream chunks straight to the browser
+        // with zero buffering.
+        filter.write(event.data);
+        return;
+      }
+      // "patch" or "pending" — hold bytes until we're sure. onstop
+      // will flush in the correct order once the decision is final.
+      state.chunks.push(new Uint8Array(event.data));
     } catch (err) {
       logger.warn(
-        `[worker-filter] ondata threw for ${details.url}:`,
+        `[worker-filter] ondata threw for ${state.url}:`,
         err instanceof Error ? err.message : String(err)
       );
       try {
@@ -342,19 +404,42 @@ function onBeforeWorkerRequest(details: WebRequestDetails): void {
       } catch {
         /* cleanup never masks primary failure */
       }
+      pending.delete(details.requestId);
     }
   };
 
   filter.onstop = () => {
     try {
-      filter.write(payloadBytes);
-      for (const chunk of chunks) {
-        filter.write(chunk);
+      if (state.decision === "patch") {
+        // Build payload fresh so any concurrent timezone change
+        // (rare, but possible mid-flight) is reflected in the next
+        // completed worker script.
+        const identifier = cachedSettings?.timezone?.identifier;
+        const payload = identifier ? buildStandaloneWorkerPayload(identifier) : "";
+        if (payload) {
+          if (cachedSettings?.debugLogging) {
+            logger.info(`[worker-filter] patching worker script: ${state.url}`);
+          }
+          filter.write(new TextEncoder().encode(payload));
+        }
+        for (const chunk of state.chunks) {
+          filter.write(chunk);
+        }
+        filter.close();
+      } else if (state.decision === "pass") {
+        // ondata already wrote chunks through; just close.
+        filter.close();
+      } else {
+        // Decision never arrived — treat as pass-through. Flush any
+        // buffered chunks so the browser sees the original response.
+        for (const chunk of state.chunks) {
+          filter.write(chunk);
+        }
+        filter.close();
       }
-      filter.close();
     } catch (err) {
       logger.warn(
-        `[worker-filter] onstop write/close threw for ${details.url}:`,
+        `[worker-filter] onstop threw for ${state.url}:`,
         err instanceof Error ? err.message : String(err)
       );
       try {
@@ -362,35 +447,73 @@ function onBeforeWorkerRequest(details: WebRequestDetails): void {
       } catch {
         /* cleanup never masks primary failure */
       }
+    } finally {
+      // Release buffer memory as soon as the request is done.
+      state.chunks.length = 0;
+      pending.delete(details.requestId);
     }
   };
 
   filter.onerror = () => {
     // Browser-side failure (e.g. SRI hash mismatch, request aborted,
-    // tab closed). Let the browser fall through to its default
-    // handling of the request — if bytes have already been flushed
-    // we can't un-flush, but calling disconnect() tells the filter
-    // infrastructure to stop waiting on us. The worker request will
-    // fail in its normal way (which is the right UX on SRI-protected
-    // sites — the site's own error handling kicks in, rather than
-    // us silently breaking the worker).
+    // tab closed). The browser falls through to its default handling
+    // of the request — if bytes have already been flushed we can't
+    // un-flush, but the filter infrastructure stops waiting on us.
     const reason = filter.error || "(no reason reported)";
-    logger.warn(`[worker-filter] filter error for ${details.url}: ${reason}`);
+    logger.warn(`[worker-filter] filter error for ${state.url}: ${reason}`);
+    state.chunks.length = 0;
+    pending.delete(details.requestId);
   };
 }
 
 /**
- * Install the webRequest listener. Idempotent — subsequent calls are
- * no-ops. Feature-detects `filterResponseData` at install time and
- * silently skips installation on engines that don't support it (all
- * non-Firefox engines).
- *
- * Permissions are declared as required in the Firefox manifest, so
- * if the user has the Firefox build installed the permissions are
- * already granted and there's nothing to prompt for.
+ * onBeforeSendHeaders: classify the request via `Sec-Fetch-Dest` (or
+ * the allowlist fallback) and record the decision so `ondata` /
+ * `onstop` know what to do. Non-blocking — we only read headers.
+ */
+function onBeforeWorkerSendHeaders(details: WebRequestDetailsWithHeaders): void {
+  const state = pending.get(details.requestId);
+  if (!state) return;
+
+  const decision = classifyRequest(details);
+  state.decision = decision;
+
+  if (cachedSettings?.debugLogging) {
+    const dest = readSecFetchDest(details.requestHeaders) ?? "(absent)";
+    logger.debug(
+      `[worker-filter] classify: requestId=${details.requestId} sec-fetch-dest=${dest} decision=${decision} url=${details.url}`
+    );
+  }
+
+  // If classification flipped to "pass" after data already started
+  // buffering (rare corner case when response body races the header
+  // event), flush the buffered chunks through so the browser doesn't
+  // see a truncated script.
+  if (decision === "pass" && state.chunks.length > 0) {
+    try {
+      for (const chunk of state.chunks) {
+        state.filter.write(chunk);
+      }
+    } catch (err) {
+      logger.warn(
+        `[worker-filter] pass-through flush threw for ${state.url}:`,
+        err instanceof Error ? err.message : String(err)
+      );
+    }
+    state.chunks.length = 0;
+  }
+}
+
+// ── Install / uninstall ──────────────────────────────────────────────
+
+/**
+ * Install both webRequest listeners. Idempotent — subsequent calls
+ * are no-ops. Feature-detects `filterResponseData` at install time
+ * and silently skips installation on engines that don't support it
+ * (all non-Firefox engines).
  */
 export async function installWorkerRequestFilter(): Promise<void> {
-  if (installedListener) return;
+  if (beforeRequestListener) return;
 
   if (!isWorkerFilterSupported()) {
     logger.debug("[worker-filter] filterResponseData not supported, skipping install");
@@ -406,35 +529,42 @@ export async function installWorkerRequestFilter(): Promise<void> {
       err instanceof Error ? err.message : String(err)
     );
     // Continue — cachedSettings will remain undefined until the first
-    // settings update arrives. The listener short-circuits on undefined.
+    // settings update arrives. The listeners short-circuit on undefined.
   }
 
   try {
     const wr = browser.webRequest as unknown as WebRequestWithFilter;
-    if (!wr.onBeforeRequest) {
-      logger.debug("[worker-filter] webRequest.onBeforeRequest not available");
+    if (!wr.onBeforeRequest || !wr.onBeforeSendHeaders) {
+      logger.debug("[worker-filter] required webRequest events not available");
       return;
     }
-    installedListener = onBeforeWorkerRequest;
-    // Register against the widest URL filter (all http/https) and
-    // `script` resource type — Firefox reports dedicated, shared,
-    // and service worker scripts all as type `script`. The listener
-    // body further narrows via the allowlist populated by the
-    // content-script handshake, so normal `<script>` loads pass
-    // through untouched.
+
+    beforeRequestListener = onBeforeWorkerRequest;
     wr.onBeforeRequest.addListener(
-      installedListener,
+      beforeRequestListener,
       {
         urls: ["http://*/*", "https://*/*"],
         types: ["script"],
       },
       ["blocking"]
     );
+
+    beforeSendHeadersListener = onBeforeWorkerSendHeaders;
+    wr.onBeforeSendHeaders.addListener(
+      beforeSendHeadersListener,
+      {
+        urls: ["http://*/*", "https://*/*"],
+        types: ["script"],
+      },
+      ["requestHeaders"]
+    );
+
     logger.info(
-      "[worker-filter] installed webRequest.filterResponseData listener for worker scripts"
+      "[worker-filter] installed webRequest listeners (onBeforeRequest + onBeforeSendHeaders)"
     );
   } catch (err) {
-    installedListener = null;
+    beforeRequestListener = null;
+    beforeSendHeadersListener = null;
     logger.warn(
       "[worker-filter] install failed:",
       err instanceof Error ? err.message : String(err)
@@ -443,19 +573,24 @@ export async function installWorkerRequestFilter(): Promise<void> {
 }
 
 /**
- * Remove the webRequest listener. Idempotent. Used for tests and,
+ * Remove both webRequest listeners. Idempotent. Used for tests and,
  * in principle, for runtime shutdown on unsupported engines.
  */
 export function uninstallWorkerRequestFilter(): void {
-  if (!installedListener) return;
   try {
     const wr = browser.webRequest as unknown as WebRequestWithFilter;
-    wr.onBeforeRequest?.removeListener(installedListener);
+    if (beforeRequestListener) {
+      wr.onBeforeRequest?.removeListener(beforeRequestListener);
+    }
+    if (beforeSendHeadersListener) {
+      wr.onBeforeSendHeaders?.removeListener(beforeSendHeadersListener);
+    }
   } catch (err) {
     logger.warn(
       "[worker-filter] uninstall failed:",
       err instanceof Error ? err.message : String(err)
     );
   }
-  installedListener = null;
+  beforeRequestListener = null;
+  beforeSendHeadersListener = null;
 }
