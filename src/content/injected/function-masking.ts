@@ -166,6 +166,20 @@ export function initFunctionMasking(): void {
     }
   }
 
+  // Derive the engine-specific "[native code]" surround format by
+  // splitting a known-native function's toString output. Chrome/V8
+  // returns "function Number() { [native code] }" (single line) and
+  // Firefox/SpiderMonkey returns "function Number() {\n    [native
+  // code]\n}" (multi-line, 4-space indent). CreepJS's getClientCode
+  // reconstructs the expected string using this same split, so our
+  // mask must match whatever shape the host engine produces or we
+  // get flagged as "non-native code" in their "code:" worker hash.
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+  const numberSrc: string = (originalCall as any).call(originalFunctionToString, Number);
+  const splitParts = numberSrc.split("Number");
+  const nativeP1 = splitParts[0] ?? "function ";
+  const nativeP2 = splitParts[1] ?? "() { [native code] }";
+
   // Method shorthand has no `prototype`, no `[[Construct]]`, and
   // `.arguments`/`.caller` throw TypeError — matching native methods
   // without using Proxy (which Firefox detects).
@@ -178,7 +192,7 @@ export function initFunctionMasking(): void {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       const nativeName = overrideRegistry.get(this);
       if (nativeName !== undefined) {
-        return `function ${nativeName}() { [native code] }`;
+        return nativeP1 + nativeName + nativeP2;
       }
       // Pre-check: throw TypeError directly for non-functions so only one
       // "Function.toString" frame appears in Chrome's stack trace. Without

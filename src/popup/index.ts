@@ -97,6 +97,141 @@ document.getElementById("webrtcToggle")?.addEventListener("change", (e: Event) =
   })();
 });
 
+// Advanced worker protection toggle (Firefox-only feature).
+//
+// The flow is:
+//   1. Popup checkbox change → this handler fires (user gesture).
+//   2. On enable: popup itself calls `browser.permissions.request()`
+//      from within the gesture frame. This is the most reliable way
+//      to guarantee Firefox shows the permission prompt — requesting
+//      from the background after a sendMessage round-trip occasionally
+//      loses the gesture annotation on older Firefox builds.
+//   3. If the user grants, popup forwards SET_ADVANCED_WORKER_PROTECTION
+//      to the background, which installs the webRequest listener and
+//      persists the setting.
+//   4. If the user denies, popup reverts the checkbox and never talks
+//      to the background about it.
+//   5. On disable: popup sends SET_ADVANCED_WORKER_PROTECTION { false }
+//      to the background, which uninstalls the listener AND revokes
+//      the optional permissions.
+//
+// The webextension-polyfill's `OptionalPermission` union doesn't
+// include the Firefox-specific `webRequestFilterResponse*` strings,
+// so we cast to `Permissions.Permissions` — which is the actual
+// runtime shape: `{ permissions?: string[]; origins?: string[] }`.
+
+interface WorkerFilterPermissionBag {
+  permissions: string[];
+}
+const WORKER_FILTER_PERMISSIONS: WorkerFilterPermissionBag = {
+  permissions: [
+    "webRequest",
+    "webRequestBlocking",
+    "webRequestFilterResponse",
+    "webRequestFilterResponse.serviceWorkerScript",
+  ],
+};
+
+document
+  .getElementById("advancedWorkerProtectionToggle")
+  ?.addEventListener("change", (e: Event) => {
+    const target = e.target as HTMLInputElement;
+    const enabled = target.checked;
+
+    void (async () => {
+      // --- Enabling ---------------------------------------------------
+      if (enabled) {
+        let granted = false;
+        try {
+          // Already granted? Skip the prompt.
+
+          granted = await browser.permissions.contains(WORKER_FILTER_PERMISSIONS);
+        } catch {
+          // Very old engines may throw on contains(); treat as
+          // not-granted and fall through to request().
+          granted = false;
+        }
+
+        if (!granted) {
+          try {
+            granted = await browser.permissions.request(WORKER_FILTER_PERMISSIONS);
+          } catch (err) {
+            // On Chromium/Safari the manifest doesn't list these in
+            // optional_permissions, so request() rejects. That's the
+            // expected path for non-Firefox users and we surface it
+            // as a silent revert.
+            console.info(
+              "Advanced worker protection unavailable on this browser:",
+              err instanceof Error ? err.message : String(err)
+            );
+            target.checked = false;
+            return;
+          }
+        }
+
+        if (!granted) {
+          // User clicked "Don't Allow" in the prompt — revert the UI
+          // and don't bother the background.
+          console.info(
+            "Advanced worker protection not enabled: user declined the permission request"
+          );
+          target.checked = false;
+          return;
+        }
+
+        // Permissions granted. Let the background install the
+        // listener and persist the setting.
+        try {
+          const response = (await browser.runtime.sendMessage({
+            type: "SET_ADVANCED_WORKER_PROTECTION",
+            payload: { enabled: true },
+          })) as { success?: boolean; reason?: string } | undefined;
+
+          if (response?.success === false) {
+            target.checked = false;
+            if (response.reason === "unsupported") {
+              console.info(
+                "Advanced worker protection not enabled: webRequest.filterResponseData not exposed"
+              );
+            } else {
+              console.warn(
+                "Advanced worker protection install failed:",
+                response.reason ?? "(no reason given)"
+              );
+            }
+          }
+        } catch (err) {
+          console.error("Failed to set advanced worker protection:", err);
+          target.checked = false;
+        }
+        return;
+      }
+
+      // --- Disabling --------------------------------------------------
+      // Background handles both listener teardown AND permission
+      // revocation — no contains()/request() dance needed.
+      try {
+        const response = (await browser.runtime.sendMessage({
+          type: "SET_ADVANCED_WORKER_PROTECTION",
+          payload: { enabled: false },
+        })) as { success?: boolean; reason?: string } | undefined;
+
+        if (response?.success === false) {
+          // Disable should never fail in the background — if it does,
+          // revert so the UI stays in sync with stored state.
+          target.checked = true;
+          console.warn(
+            "Advanced worker protection disable failed:",
+            response.reason ?? "(no reason given)"
+          );
+        }
+      } catch (err) {
+        console.error("Failed to set advanced worker protection:", err);
+        target.checked = true;
+      }
+    })();
+  });
+
 // Location search with debounce
 let searchTimeout: ReturnType<typeof setTimeout> | undefined;
 

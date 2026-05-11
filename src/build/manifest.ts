@@ -75,9 +75,40 @@ export function generateManifest(target: BrowserTarget, version: string): Record
   };
 
   if (target === "firefox") {
-  // Firefox: scripts-based background, injected.js as world: "MAIN" content script
+  // Firefox: scripts-based background, injected.js as world: "MAIN" content script.
+  //
+  // Permission notes — all four of these are listed under
+  // `optional_permissions` rather than `permissions` so a fresh install
+  // does NOT show the scary "Block content on any page" string in the
+  // install prompt. The permissions are requested at runtime via
+  // `browser.permissions.request()` when the user flips the Advanced
+  // Worker Protection toggle on, and revoked when they flip it off.
+  // Users who never enable the feature never see the prompt, and the
+  // default install footprint matches the Chromium / Safari builds.
+  //
+  //   - `webRequest` — baseline API access
+  //   - `webRequestBlocking` — required to attach filters to responses.
+  //     This is the permission whose user-facing string is "Block
+  //     content on any page."
+  //   - `webRequestFilterResponse` — MV3-specific gate added in Firefox
+  //     110. MV2 extensions got this implicitly from
+  //     `webRequestBlocking`; MV3 needs it listed separately.
+  //   - `webRequestFilterResponse.serviceWorkerScript` — required to
+  //     intercept `navigator.serviceWorker.register()` script fetches.
+  //     Without this the filter fires for dedicated / shared / module
+  //     workers but not service workers. Added in Firefox 95.
+  //
+  // These are Firefox-only; Chromium MV3 removed response-body
+  // modification entirely (declarativeNetRequest can't modify bodies)
+  // and Safari never implemented the API.
   return {
     ...shared,
+    optional_permissions: [
+      "webRequest",
+      "webRequestBlocking",
+      "webRequestFilterResponse",
+      "webRequestFilterResponse.serviceWorkerScript",
+    ],
     browser_specific_settings: {
       gecko: {
         id: "{a8f7e9c2-4d3b-4a1e-9f8c-7b6d5e4a3c2b}",

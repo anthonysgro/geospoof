@@ -18,6 +18,7 @@ import {
   setSettingsReceived,
   setDebugEnabled as setStateDebugEnabled,
   setWebRTCProtectionEnabled,
+  setAdvancedWorkerProtectionEnabled,
 } from "./state";
 import { validateTimezoneData } from "./timezone-helpers";
 import {
@@ -77,6 +78,7 @@ export function installSettingsListener(): void {
       setSpoofingEnabled(event.detail.enabled);
       setSpoofedLocation(event.detail.location);
       setWebRTCProtectionEnabled(event.detail.webrtcProtection === true);
+      setAdvancedWorkerProtectionEnabled(event.detail.advancedWorkerProtection === true);
       setSettingsReceived(true);
 
       const debugFlag = event.detail.debugLogging ?? false;
