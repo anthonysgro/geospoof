@@ -44,15 +44,7 @@
 //    reads timezone synchronously in <head> can win that race and
 //    learn the real zone. Fundamental MV3 limitation.
 //
-// 6. Date.prototype methods in iframe realms — patchIframeWindow
-//    installs the Date constructor and Intl into each iframe realm,
-//    but does NOT install per-method Date.prototype overrides
-//    (getHours, toString, etc.). A page that constructs a Date
-//    through the iframe realm and calls prototype methods on it
-//    sees the real system zone for those methods. The iframe's Intl
-//    constructor-level spoofing still closes most real-world leaks.
-//
-// 7. IP geolocation mismatch — The extension does not mask the
+// 6. IP geolocation mismatch — The extension does not mask the
 //    user's IP address. Fingerprinting scripts cross-check public
 //    IP country/region against browser-reported geolocation. Closing
 //    this requires a VPN exit in the spoofed region (hence VPN Sync).

@@ -2,8 +2,18 @@
  * Date getter overrides.
  *
  * Overrides `getHours`, `getMinutes`, `getSeconds`, `getMilliseconds`,
- * `getDate`, `getDay`, `getMonth`, and `getFullYear` on `Date.prototype`
- * to return values in the spoofed timezone when protection is enabled.
+ * `getDate`, `getDay`, `getMonth`, and `getFullYear` to return values
+ * in the spoofed timezone when protection is enabled.
+ *
+ * Exposes two entry points:
+ *   - `installDateGetterOverrides()` — installs on the top-level
+ *     `Date.prototype` using the originals captured in `state.ts`. Called
+ *     from `index.ts` at module init.
+ *   - `installDateGetterOverridesOn(proto, originals)` — installs on an
+ *     arbitrary `Date.prototype` using a caller-supplied originals bag.
+ *     Called from `iframe-patching.ts` against each same-origin iframe
+ *     realm, so the iframe's Date.prototype receives the same overrides
+ *     as the top-level one. A single implementation, two call sites.
  *
  * On Chrome (V8), native component getters use the shortOffset resolution
  * path internally. We match that by shifting the epoch via getIntlBasedOffset
@@ -33,12 +43,36 @@ import { createLogger } from "@/shared/utils/debug-logger";
 const logger = createLogger("INJ");
 
 /**
- * Install Date getter overrides on `Date.prototype`.
+ * Bag of original `Date.prototype` getter references for a single realm.
+ *
+ * Each `install*OverridesOn` variant accepts one of these so that when an
+ * override falls back (because spoofing is disabled, the offset resolution
+ * failed, or the handler threw), it calls into THAT realm's native method
+ * rather than the top-level realm's. Keeps each realm self-contained:
+ * pristine iframe Dates that somehow reach a top-level fallback path don't
+ * accidentally cross realms on the fallback call.
  */
-export function installDateGetterOverrides(): void {
-  // Override Date.prototype.getHours
+export interface DateGetterOriginals {
+  getHours: (this: Date) => number;
+  getMinutes: (this: Date) => number;
+  getSeconds: (this: Date) => number;
+  getMilliseconds: (this: Date) => number;
+  getDate: (this: Date) => number;
+  getDay: (this: Date) => number;
+  getMonth: (this: Date) => number;
+  getFullYear: (this: Date) => number;
+}
+
+/**
+ * Install Date getter overrides on the supplied `Date.prototype`.
+ *
+ * Shared by `installDateGetterOverrides()` (top level) and the iframe
+ * patcher (per iframe realm).
+ */
+export function installDateGetterOverridesOn(proto: object, originals: DateGetterOriginals): void {
+  // Override getHours
   try {
-    installOverride(Date.prototype, "getHours", function (this: Date): number {
+    installOverride(proto, "getHours", function (this: Date): number {
       try {
         if (spoofingEnabled && timezoneData) {
           if (engineTruncatesOffset) {
@@ -54,19 +88,19 @@ export function installDateGetterOverrides(): void {
           }
         }
         logger.debug("getHours: fallback", "spoofing disabled");
-        return originalGetHours.call(this);
+        return originals.getHours.call(this);
       } catch {
         logger.debug("getHours: fallback", "error");
-        return originalGetHours.call(this);
+        return originals.getHours.call(this);
       }
     });
   } catch {
     // Failed to override — original remains in place
   }
 
-  // Override Date.prototype.getMinutes
+  // Override getMinutes
   try {
-    installOverride(Date.prototype, "getMinutes", function (this: Date): number {
+    installOverride(proto, "getMinutes", function (this: Date): number {
       try {
         if (spoofingEnabled && timezoneData) {
           if (engineTruncatesOffset) {
@@ -82,19 +116,19 @@ export function installDateGetterOverrides(): void {
           }
         }
         logger.debug("getMinutes: fallback", "spoofing disabled");
-        return originalGetMinutes.call(this);
+        return originals.getMinutes.call(this);
       } catch {
         logger.debug("getMinutes: fallback", "error");
-        return originalGetMinutes.call(this);
+        return originals.getMinutes.call(this);
       }
     });
   } catch {
     // Failed to override — original remains in place
   }
 
-  // Override Date.prototype.getSeconds
+  // Override getSeconds
   try {
-    installOverride(Date.prototype, "getSeconds", function (this: Date): number {
+    installOverride(proto, "getSeconds", function (this: Date): number {
       try {
         if (spoofingEnabled && timezoneData) {
           if (engineTruncatesOffset) {
@@ -110,36 +144,34 @@ export function installDateGetterOverrides(): void {
           }
         }
         logger.debug("getSeconds: fallback", "spoofing disabled");
-        return originalGetSeconds.call(this);
+        return originals.getSeconds.call(this);
       } catch {
         logger.debug("getSeconds: fallback", "error");
-        return originalGetSeconds.call(this);
+        return originals.getSeconds.call(this);
       }
     });
   } catch {
     // Failed to override — original remains in place
   }
 
-  // Override Date.prototype.getMilliseconds
-  // Milliseconds are timezone-independent — no spoofing needed.
+  // Override getMilliseconds — timezone-independent, always passthrough
+  // but routed through installOverride so it's toString-masked in the
+  // override registry.
   try {
-    installOverride(Date.prototype, "getMilliseconds", function (this: Date): number {
+    installOverride(proto, "getMilliseconds", function (this: Date): number {
       try {
-        if (spoofingEnabled && timezoneData) {
-          return originalGetMilliseconds.call(this);
-        }
-        return originalGetMilliseconds.call(this);
+        return originals.getMilliseconds.call(this);
       } catch {
-        return originalGetMilliseconds.call(this);
+        return originals.getMilliseconds.call(this);
       }
     });
   } catch {
     // Failed to override — original remains in place
   }
 
-  // Override Date.prototype.getDate (day of month)
+  // Override getDate (day of month)
   try {
-    installOverride(Date.prototype, "getDate", function (this: Date): number {
+    installOverride(proto, "getDate", function (this: Date): number {
       try {
         if (spoofingEnabled && timezoneData) {
           if (engineTruncatesOffset) {
@@ -155,19 +187,19 @@ export function installDateGetterOverrides(): void {
           }
         }
         logger.debug("getDate: fallback", "spoofing disabled");
-        return originalGetDate.call(this);
+        return originals.getDate.call(this);
       } catch {
         logger.debug("getDate: fallback", "error");
-        return originalGetDate.call(this);
+        return originals.getDate.call(this);
       }
     });
   } catch {
     // Failed to override — original remains in place
   }
 
-  // Override Date.prototype.getDay (day of week, 0=Sun..6=Sat)
+  // Override getDay (day of week, 0=Sun..6=Sat)
   try {
-    installOverride(Date.prototype, "getDay", function (this: Date): number {
+    installOverride(proto, "getDay", function (this: Date): number {
       try {
         if (spoofingEnabled && timezoneData) {
           if (engineTruncatesOffset) {
@@ -184,19 +216,19 @@ export function installDateGetterOverrides(): void {
           }
         }
         logger.debug("getDay: fallback", "spoofing disabled");
-        return originalGetDay.call(this);
+        return originals.getDay.call(this);
       } catch {
         logger.debug("getDay: fallback", "error");
-        return originalGetDay.call(this);
+        return originals.getDay.call(this);
       }
     });
   } catch {
     // Failed to override — original remains in place
   }
 
-  // Override Date.prototype.getMonth (0-indexed: 0=Jan..11=Dec)
+  // Override getMonth (0-indexed: 0=Jan..11=Dec)
   try {
-    installOverride(Date.prototype, "getMonth", function (this: Date): number {
+    installOverride(proto, "getMonth", function (this: Date): number {
       try {
         if (spoofingEnabled && timezoneData) {
           if (engineTruncatesOffset) {
@@ -213,19 +245,19 @@ export function installDateGetterOverrides(): void {
           }
         }
         logger.debug("getMonth: fallback", "spoofing disabled");
-        return originalGetMonth.call(this);
+        return originals.getMonth.call(this);
       } catch {
         logger.debug("getMonth: fallback", "error");
-        return originalGetMonth.call(this);
+        return originals.getMonth.call(this);
       }
     });
   } catch {
     // Failed to override — original remains in place
   }
 
-  // Override Date.prototype.getFullYear
+  // Override getFullYear
   try {
-    installOverride(Date.prototype, "getFullYear", function (this: Date): number {
+    installOverride(proto, "getFullYear", function (this: Date): number {
       try {
         if (spoofingEnabled && timezoneData) {
           if (engineTruncatesOffset) {
@@ -241,13 +273,32 @@ export function installDateGetterOverrides(): void {
           }
         }
         logger.debug("getFullYear: fallback", "spoofing disabled");
-        return originalGetFullYear.call(this);
+        return originals.getFullYear.call(this);
       } catch {
         logger.debug("getFullYear: fallback", "error");
-        return originalGetFullYear.call(this);
+        return originals.getFullYear.call(this);
       }
     });
   } catch {
     // Failed to override — original remains in place
   }
+}
+
+/**
+ * Install Date getter overrides on the top-level `Date.prototype`.
+ *
+ * Convenience wrapper for the top-level realm — uses the originals
+ * captured at module load in `state.ts`.
+ */
+export function installDateGetterOverrides(): void {
+  installDateGetterOverridesOn(Date.prototype, {
+    getHours: originalGetHours,
+    getMinutes: originalGetMinutes,
+    getSeconds: originalGetSeconds,
+    getMilliseconds: originalGetMilliseconds,
+    getDate: originalGetDate,
+    getDay: originalGetDay,
+    getMonth: originalGetMonth,
+    getFullYear: originalGetFullYear,
+  });
 }

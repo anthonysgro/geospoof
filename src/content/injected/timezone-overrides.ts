@@ -4,6 +4,17 @@
  * Overrides `Date.prototype.getTimezoneOffset` and `Intl.DateTimeFormat`
  * constructor + `resolvedOptions` to return the spoofed timezone when
  * protection is enabled.
+ *
+ * Exposes the getTimezoneOffset installer in two flavors:
+ *   - `installTimezoneOverrides()` — installs everything on the top-level
+ *     realm.
+ *   - `installGetTimezoneOffsetOverrideOn(proto, original)` — installs
+ *     just the getTimezoneOffset override on an arbitrary Date.prototype.
+ *     The iframe patcher calls this against each same-origin iframe
+ *     realm. The Intl.DateTimeFormat constructor swap is realm-specific
+ *     enough (`Intl.DateTimeFormat = ...` on the iframe's `Intl`) that
+ *     the iframe patcher installs it directly; only getTimezoneOffset
+ *     needs the shared prototype-method pattern.
  */
 
 import {
@@ -22,19 +33,22 @@ import { createLogger } from "@/shared/utils/debug-logger";
 const logger = createLogger("INJ");
 
 /**
- * Install timezone-related overrides:
- * - `Date.prototype.getTimezoneOffset`
- * - `Intl.DateTimeFormat` constructor
- * - `Intl.DateTimeFormat.prototype.resolvedOptions`
+ * Install the `getTimezoneOffset` override on the supplied Date.prototype.
+ *
+ * `originalGetTimezoneOffset` is passed in rather than closed over so the
+ * iframe patcher can supply the iframe's own native method for the
+ * fallback path, keeping each realm self-contained.
  */
-export function installTimezoneOverrides(): void {
-  // Override Date.prototype.getTimezoneOffset()
+export function installGetTimezoneOffsetOverrideOn(
+  proto: object,
+  originalGetTzOffset: (this: Date) => number
+): void {
   try {
-    installOverride(Date.prototype, "getTimezoneOffset", function (this: Date): number {
+    installOverride(proto, "getTimezoneOffset", function (this: Date): number {
       try {
         if (spoofingEnabled && timezoneData) {
           const epoch = this.getTime();
-          if (isNaN(epoch)) return originalGetTimezoneOffset.call(this);
+          if (isNaN(epoch)) return originalGetTzOffset.call(this);
 
           if (engineTruncatesOffset) {
             // Chrome/V8: truncates sub-minute LMT offsets to integers natively.
@@ -56,14 +70,6 @@ export function installTimezoneOverrides(): void {
             }
           } else {
             // Firefox: preserves fractional sub-minute LMT offsets natively.
-            // deriveOffsetFromParts reconstructs the offset from formatToParts
-            // wall-clock components, which only have second precision — this loses
-            // the sub-second part of historical LMT offsets (e.g. Anchorage 1879
-            // is -9:59:36 = 599.6 min, but formatToParts gives components that
-            // reconstruct to exactly 599 min). TZP's offsetNanoseconds and
-            // timeZoneName methods both use the shortOffset string path which
-            // preserves the full 599.6 value. Using deriveOffsetFromParts here
-            // would cause a "mixed" result across TZP's 10 measurement methods.
             // getIntlBasedOffset reads the shortOffset string directly (e.g.
             // "GMT-9:59:36") and parses it to the full fractional value, matching
             // what offsetNanoseconds and timeZoneName see.
@@ -86,15 +92,25 @@ export function installTimezoneOverrides(): void {
 
           logger.warn("getTimezoneOffset: offset resolution failed, epoch", epoch);
         }
-        return originalGetTimezoneOffset.call(this);
+        return originalGetTzOffset.call(this);
       } catch (error) {
         logger.error("Error in getTimezoneOffset override:", error);
-        return originalGetTimezoneOffset.call(this);
+        return originalGetTzOffset.call(this);
       }
     });
   } catch (error) {
     logger.error("Failed to override getTimezoneOffset:", error);
   }
+}
+
+/**
+ * Install timezone-related overrides on the top-level realm:
+ * - `Date.prototype.getTimezoneOffset`
+ * - `Intl.DateTimeFormat` constructor
+ * - `Intl.DateTimeFormat.prototype.resolvedOptions`
+ */
+export function installTimezoneOverrides(): void {
+  installGetTimezoneOffsetOverrideOn(Date.prototype, originalGetTimezoneOffset);
 
   // Override Intl.DateTimeFormat constructor to inject timezone
   try {

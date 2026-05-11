@@ -242,35 +242,36 @@ const iframeTemporalTimezoneTest = buildBehavioralTest<string>({
 })
 
 // ---------------------------------------------------------------------------
-// Date.prototype methods inside iframe realms — documented gap
+// Date.prototype methods inside iframe realms
 // ---------------------------------------------------------------------------
 //
-// patchIframeWindow installs the Date CONSTRUCTOR and Intl.DateTimeFormat
-// into every same-origin iframe realm, but does NOT install per-method
-// Date.prototype overrides (getHours, getTimezoneOffset, toString, the six
-// setters, etc.). A Date instance produced by `iframe.contentWindow.Date`
-// has its prototype method calls resolved against the iframe's own
-// unpatched Date.prototype, so values like `new iframe.contentWindow
-// .Date().getHours()` fall through to the real system zone.
+// Each iframe realm has its own Date.prototype, independent of the
+// top-level's. `patchIframeWindow` installs the full set of per-method
+// overrides (getTimezoneOffset, the formatters, the getters, the
+// setters) into each same-origin iframe's Date.prototype via the
+// parameterized installers exported from `date-*.ts`. Without that
+// section-6 patcher, a page could trivially bypass timezone spoofing
+// by going through the iframe's Date globals — `new iframe.contentWindow
+// .Date().getHours()` would return the real system zone's hour.
 //
-// In practice every mainstream fingerprinter reads the zone via
-// Intl.DateTimeFormat or the Date CONSTRUCTOR's ambiguous-string parse —
-// paths we DO patch. But the per-method prototype gap is real and
-// documented as known-limitation #5. These tests surface it honestly
-// under the Known Limitations group so the dashboard shows what would
-// leak if a fingerprinter routed its checks through an iframe's
-// Date.prototype instead.
+// The tests below exercise the patched surface: they construct a Date
+// through the iframe realm, call a per-method override, and assert the
+// result matches top-level spoofed state. Each test is jitter-proof —
+// both Dates anchor on the identity snapshot's startedAt epoch so a
+// second-boundary crossing between the two reads can't flake the
+// comparison.
 //
-// All four tests are assigned `group: "known-limitations"` so the
-// runner converts any `fail` or `error` into `known-limitation` and the
-// dashboard's "detectable issues" count excludes them.
+// All four are assigned `group: "timezone-stealth"` so a failure
+// surfaces as a real detection signal under Tampering Signals. The
+// set/get round-trip test is kept in `internal-consistency` because
+// it's an invariant check, not a bypass vector.
 
 const iframeDateGetHoursTest = buildBehavioralTest<number>({
-  id: "known-limitation.iframe-realm.date-gethours-leaks-real-zone",
-  group: "known-limitations",
+  id: "tampering.iframe-realm.date-gethours-spoofed",
+  group: "timezone-stealth",
   name: "new iframe.contentWindow.Date().getHours() agrees with top-level",
   description:
-    "A Date constructed through an iframe's Date global has its getHours resolved against the iframe's unpatched Date.prototype, which computes hours in the real system zone. The top-level's spoofed getHours returns the hour in the spoofed zone. A page that routes `new iframe.contentWindow.Date().getHours()` can read the real zone's hour while the rest of the window shows the spoofed one — documented under known-limitation #5.",
+    "A Date constructed through an iframe's Date global must have its getHours resolved in the spoofed zone, matching the top-level's getHours. The iframe patcher installs the per-method Date.prototype overrides into each same-origin iframe realm, so both surfaces compute hours in the same zone. A failure here means the iframe-realm Date.prototype.getHours override didn't install.",
   technique:
     "Mount an about:blank iframe, construct a top-level Date and an iframe-realm Date from the same fixed epoch (ctx.getIdentity().startedAt) so inter-call timing jitter cannot flake the test, and assert the two hour values match.",
   codeSnippet: `const iframe = document.createElement("iframe")
@@ -308,11 +309,11 @@ new iframe.contentWindow.Date(e).getHours() === new Date(e).getHours()`,
 })
 
 const iframeDateToStringTest = buildBehavioralTest<string>({
-  id: "known-limitation.iframe-realm.date-tostring-leaks-real-zone-name",
-  group: "known-limitations",
+  id: "tampering.iframe-realm.date-tostring-spoofed-zone-name",
+  group: "timezone-stealth",
   name: "iframe.contentWindow.Date.prototype.toString carries the spoofed zone name",
   description:
-    "The GMT-offset-and-zone-name tail of `new iframe.contentWindow.Date().toString()` should match the tail from `new Date().toString()`. Because the iframe realm's Date.prototype.toString is unpatched, it formats in the real system zone while the top-level toString formats in the spoofed zone — the two strings disagree on GMT offset and zone name. Documented under known-limitation #5.",
+    'The GMT-offset-and-zone-name tail of `new iframe.contentWindow.Date().toString()` must match the tail from `new Date().toString()`. Both are formatted through the spoofed Date.prototype.toString override, which the iframe patcher installs on the iframe realm. A mismatch means the iframe-realm toString override didn\'t install and the iframe-realm Date formats in the real system zone while the top-level formats in the spoofed zone.',
   technique:
     'Mount an about:blank iframe, anchor both Date instances on the same fixed epoch (ctx.getIdentity().startedAt) to eliminate inter-call jitter, then capture and compare the "GMT±HHMM (Zone Name)" substring of both toString outputs.',
   codeSnippet: `const e = identity.startedAt
@@ -352,11 +353,11 @@ a.slice(a.indexOf("GMT")) === b.slice(b.indexOf("GMT"))`,
 })
 
 const iframeDateGetTimezoneOffsetTest = buildBehavioralTest<number>({
-  id: "known-limitation.iframe-realm.date-gettimezoneoffset-leaks-real-offset",
-  group: "known-limitations",
+  id: "tampering.iframe-realm.date-gettimezoneoffset-spoofed",
+  group: "timezone-stealth",
   name: "new iframe.contentWindow.Date().getTimezoneOffset agrees with top-level",
   description:
-    "The numeric offset returned by `iframe.contentWindow.Date.prototype.getTimezoneOffset` should equal the top-level spoofed offset from the identity snapshot. The iframe realm's Date.prototype.getTimezoneOffset is unpatched, so it reports the real system offset — a trivial one-line read leaks the real zone's offset. Documented under known-limitation #5.",
+    "The numeric offset returned by `iframe.contentWindow.Date.prototype.getTimezoneOffset` must equal the top-level spoofed offset from the identity snapshot. The iframe patcher installs a realm-local copy of the override. A failure means the iframe realm still reports the real system offset — a trivial one-line read that leaks both zones at once.",
   technique:
     "Mount an about:blank iframe, read `new iframe.contentWindow.Date(startedAt).getTimezoneOffset()` at the identity snapshot's anchor instant, and compare to the top-level spoofed offset on the identity snapshot.",
   codeSnippet: `const e = identity.startedAt
@@ -402,7 +403,7 @@ const iframeDateSetHoursRoundTripTest = buildBehavioralTest<number>({
   group: "internal-consistency",
   name: "iframe.contentWindow.Date setHours/getHours round-trip",
   description:
-    "date.setHours(H) followed by date.getHours() on an iframe-realm Date must return H. This is the CreepJS valid.time invariant applied inside the iframe realm. Today both sides of the pair are unpatched and the invariant holds trivially; if a future PR ports the per-method Date.prototype overrides into iframe realms it must port them as matched pairs so the round-trip continues to hold in the spoofed zone. This test is the regression guard that catches a half-ported PR where only getHours or only setHours is overridden.",
+    "date.setHours(H) followed by date.getHours() on an iframe-realm Date must return H. This is the CreepJS valid.time invariant applied inside the iframe realm. With the iframe patcher installing matched setter + getter overrides on the iframe's Date.prototype, the round-trip holds in the spoofed zone. This test is the regression guard that catches a future refactor where only setHours or only getHours gets re-installed in the iframe realm.",
   technique:
     "Mount an about:blank iframe, construct `new iframe.contentWindow.Date()`, call `.setHours(7)`, read back `.getHours()`, and assert it equals 7.",
   codeSnippet: `const d = new iframe.contentWindow.Date()

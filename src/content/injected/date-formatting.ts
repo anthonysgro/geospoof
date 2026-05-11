@@ -4,6 +4,14 @@
  * Overrides `toString`, `toDateString`, `toTimeString`, `toLocaleString`,
  * `toLocaleDateString`, and `toLocaleTimeString` on `Date.prototype` to
  * format dates using the spoofed timezone when protection is enabled.
+ *
+ * Exposes two entry points:
+ *   - `installDateFormattingOverrides()` — installs on the top-level
+ *     `Date.prototype` using the originals captured in `state.ts`.
+ *   - `installDateFormattingOverridesOn(proto, originals)` — installs on
+ *     an arbitrary `Date.prototype` using a caller-supplied originals
+ *     bag. The iframe patcher invokes this against each same-origin
+ *     iframe's Date.prototype.
  */
 
 import {
@@ -53,12 +61,44 @@ function pad2(n: number): string {
 }
 
 /**
- * Install Date formatting overrides on `Date.prototype`.
+ * Bag of original `Date.prototype` formatter references for a single
+ * realm. Same rationale as the getter/setter originals bags: fall-throughs
+ * stay inside whichever realm triggered them.
  */
-export function installDateFormattingOverrides(): void {
-  // Override Date.prototype.toDateString()
+export interface DateFormattingOriginals {
+  toString: (this: Date) => string;
+  toDateString: (this: Date) => string;
+  toTimeString: (this: Date) => string;
+  toLocaleString: (
+    this: Date,
+    locales?: string | string[],
+    options?: Intl.DateTimeFormatOptions
+  ) => string;
+  toLocaleDateString: (
+    this: Date,
+    locales?: string | string[],
+    options?: Intl.DateTimeFormatOptions
+  ) => string;
+  toLocaleTimeString: (
+    this: Date,
+    locales?: string | string[],
+    options?: Intl.DateTimeFormatOptions
+  ) => string;
+}
+
+/**
+ * Install Date formatting overrides on the supplied `Date.prototype`.
+ *
+ * Shared by `installDateFormattingOverrides()` (top level) and the
+ * iframe patcher (per iframe realm).
+ */
+export function installDateFormattingOverridesOn(
+  proto: object,
+  originals: DateFormattingOriginals
+): void {
+  // Override toDateString
   try {
-    installOverride(Date.prototype, "toDateString", function (this: Date): string {
+    installOverride(proto, "toDateString", function (this: Date): string {
       try {
         if (spoofingEnabled && timezoneData) {
           if (engineTruncatesOffset) {
@@ -84,24 +124,23 @@ export function installDateFormattingOverrides(): void {
           }
         }
         logger.debug("toDateString: fallback", "spoofing disabled");
-        return originalToDateString.call(this);
+        return originals.toDateString.call(this);
       } catch (error) {
         logger.error("Error in toDateString override:", error);
         logger.debug("toDateString: fallback", "error");
-        return originalToDateString.call(this);
+        return originals.toDateString.call(this);
       }
     });
   } catch (error) {
     logger.error("Failed to override Date.toDateString:", error);
   }
 
-  // Override Date.prototype.toString()
+  // Override toString
   try {
-    installOverride(Date.prototype, "toString", function (this: Date): string {
+    installOverride(proto, "toString", function (this: Date): string {
       try {
         if (spoofingEnabled && timezoneData) {
           if (engineTruncatesOffset) {
-            // Chrome: shortOffset-derived components (matches native getter path)
             const local = getLocalDateViaOffset(this, timezoneData.identifier, timezoneData.offset);
             const offsetMinutes = getIntlBasedOffset(
               this,
@@ -139,24 +178,23 @@ export function installDateFormattingOverrides(): void {
           }
         }
         logger.debug("toString: fallback", "spoofing disabled");
-        return originalToString.call(this);
+        return originals.toString.call(this);
       } catch (error) {
         logger.error("Error in toString override:", error);
         logger.debug("toString: fallback", "error");
-        return originalToString.call(this);
+        return originals.toString.call(this);
       }
     });
   } catch (error) {
     logger.error("Failed to override Date.toString:", error);
   }
 
-  // Override Date.prototype.toTimeString()
+  // Override toTimeString
   try {
-    installOverride(Date.prototype, "toTimeString", function (this: Date): string {
+    installOverride(proto, "toTimeString", function (this: Date): string {
       try {
         if (spoofingEnabled && timezoneData) {
           if (engineTruncatesOffset) {
-            // Chrome: shortOffset-derived components
             const local = getLocalDateViaOffset(this, timezoneData.identifier, timezoneData.offset);
             const offsetMinutes = getIntlBasedOffset(
               this,
@@ -192,21 +230,21 @@ export function installDateFormattingOverrides(): void {
           }
         }
         logger.debug("toTimeString: fallback", "spoofing disabled");
-        return originalToTimeString.call(this);
+        return originals.toTimeString.call(this);
       } catch (error) {
         logger.error("Error in toTimeString override:", error);
         logger.debug("toTimeString: fallback", "error");
-        return originalToTimeString.call(this);
+        return originals.toTimeString.call(this);
       }
     });
   } catch (error) {
     logger.error("Failed to override Date.toTimeString:", error);
   }
 
-  // Override Date.prototype.toLocaleString()
+  // Override toLocaleString
   try {
     installOverride(
-      Date.prototype,
+      proto,
       "toLocaleString",
       function (
         this: Date,
@@ -222,16 +260,16 @@ export function installDateFormattingOverrides(): void {
                 ...options,
                 timeZone: timezoneData.identifier,
               };
-              return originalToLocaleString.call(this, locales as string, opts);
+              return originals.toLocaleString.call(this, locales as string, opts);
             }
-            return originalToLocaleString.call(this, locales, options);
+            return originals.toLocaleString.call(this, locales, options);
           }
           logger.debug("toLocaleString: fallback", "spoofing disabled");
-          return originalToLocaleString.call(this, locales as string, options);
+          return originals.toLocaleString.call(this, locales as string, options);
         } catch (error) {
           logger.error("Error in toLocaleString override:", error);
           logger.debug("toLocaleString: fallback", "error");
-          return originalToLocaleString.call(this, locales as string, options);
+          return originals.toLocaleString.call(this, locales as string, options);
         }
       }
     );
@@ -239,10 +277,10 @@ export function installDateFormattingOverrides(): void {
     logger.error("Failed to override Date.toLocaleString:", error);
   }
 
-  // Override Date.prototype.toLocaleDateString()
+  // Override toLocaleDateString
   try {
     installOverride(
-      Date.prototype,
+      proto,
       "toLocaleDateString",
       function (
         this: Date,
@@ -258,16 +296,16 @@ export function installDateFormattingOverrides(): void {
                 ...options,
                 timeZone: timezoneData.identifier,
               };
-              return originalToLocaleDateString.call(this, locales as string, opts);
+              return originals.toLocaleDateString.call(this, locales as string, opts);
             }
-            return originalToLocaleDateString.call(this, locales, options);
+            return originals.toLocaleDateString.call(this, locales, options);
           }
           logger.debug("toLocaleDateString: fallback", "spoofing disabled");
-          return originalToLocaleDateString.call(this, locales as string, options);
+          return originals.toLocaleDateString.call(this, locales as string, options);
         } catch (error) {
           logger.error("Error in toLocaleDateString override:", error);
           logger.debug("toLocaleDateString: fallback", "error");
-          return originalToLocaleDateString.call(this, locales as string, options);
+          return originals.toLocaleDateString.call(this, locales as string, options);
         }
       }
     );
@@ -275,10 +313,10 @@ export function installDateFormattingOverrides(): void {
     logger.error("Failed to override Date.toLocaleDateString:", error);
   }
 
-  // Override Date.prototype.toLocaleTimeString()
+  // Override toLocaleTimeString
   try {
     installOverride(
-      Date.prototype,
+      proto,
       "toLocaleTimeString",
       function (
         this: Date,
@@ -294,20 +332,37 @@ export function installDateFormattingOverrides(): void {
                 ...options,
                 timeZone: timezoneData.identifier,
               };
-              return originalToLocaleTimeString.call(this, locales as string, opts);
+              return originals.toLocaleTimeString.call(this, locales as string, opts);
             }
-            return originalToLocaleTimeString.call(this, locales, options);
+            return originals.toLocaleTimeString.call(this, locales, options);
           }
           logger.debug("toLocaleTimeString: fallback", "spoofing disabled");
-          return originalToLocaleTimeString.call(this, locales as string, options);
+          return originals.toLocaleTimeString.call(this, locales as string, options);
         } catch (error) {
           logger.error("Error in toLocaleTimeString override:", error);
           logger.debug("toLocaleTimeString: fallback", "error");
-          return originalToLocaleTimeString.call(this, locales as string, options);
+          return originals.toLocaleTimeString.call(this, locales as string, options);
         }
       }
     );
   } catch (error) {
     logger.error("Failed to override Date.toLocaleTimeString:", error);
   }
+}
+
+/**
+ * Install Date formatting overrides on the top-level `Date.prototype`.
+ *
+ * Convenience wrapper for the top-level realm — uses the originals
+ * captured at module load in `state.ts`.
+ */
+export function installDateFormattingOverrides(): void {
+  installDateFormattingOverridesOn(Date.prototype, {
+    toString: originalToString,
+    toDateString: originalToDateString,
+    toTimeString: originalToTimeString,
+    toLocaleString: originalToLocaleString,
+    toLocaleDateString: originalToLocaleDateString,
+    toLocaleTimeString: originalToLocaleTimeString,
+  });
 }

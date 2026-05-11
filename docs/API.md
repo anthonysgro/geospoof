@@ -362,16 +362,18 @@ The override parses the native `"MM/DD/YYYY HH:MM:SS"` string (which is in the r
 
 #### iframe-patching.ts
 
-Per-iframe realm patcher. When a same-origin iframe window is first accessed, `patchIframeWindow` installs eight sections of overrides on that iframe's realm:
+Per-iframe realm patcher. When a same-origin iframe window is first accessed, `patchIframeWindow` installs ten sections of overrides on that iframe's realm:
 
 1. `Function.prototype.toString` — native-[native code]-reporting mask
 2. Geolocation — `getCurrentPosition` / `watchPosition` / `clearWatch` on the iframe's `Geolocation.prototype`
 3. Permissions — `query` on the iframe's `Permissions.prototype`, returning a prototype-linked `PermissionStatus` with `state: "granted"` for geolocation
 4. Intl — `Intl.DateTimeFormat` constructor + `resolvedOptions` on the iframe's realm
 5. Date — full spoofing-aware `Date` constructor + `Date.parse` on the iframe's realm
-6. Temporal — `Temporal.Now.{timeZoneId,plainDateTimeISO,plainDateISO,plainTimeISO,zonedDateTimeISO}` when available
-7. Document — `Document.prototype.lastModified` getter override on the iframe's realm
+6. Date.prototype methods — full per-method overrides on the iframe's `Date.prototype` via the parameterized installers from `date-getters.ts`, `date-setters.ts`, `date-formatting.ts`, and `timezone-overrides.ts`. Captures the iframe realm's native methods for fallback paths so each realm stays self-contained.
+7. Temporal — `Temporal.Now.{timeZoneId,plainDateTimeISO,plainDateISO,plainTimeISO,zonedDateTimeISO}` when available
 8. Nested-iframe cascade — iframe-realm copies of `HTMLIFrameElement.prototype.{contentWindow,contentDocument}` getters, `Node.prototype.{appendChild,insertBefore,replaceChild}`, `Element.prototype.{append,prepend,replaceWith,insertAdjacentElement,insertAdjacentHTML}`, the `innerHTML` setter, plus a `MutationObserver` on the iframe's own `documentElement`. This causes a nested iframe created from inside the outer iframe to trigger `patchIframeWindow` on itself recursively — so grand-nested iframes get the same treatment, and so on.
+9. Document — `Document.prototype.lastModified` getter override on the iframe's realm
+10. RTCPeerConnection — iframe-realm copy of the top-level WebRTC override
 
 Cross-origin iframes throw `SecurityError` on any access and are silently skipped. All shape/descriptor checks in the cascade use tag-name / duck-typing rather than `instanceof`, because elements created in the iframe's realm are not instances of the top-level constructors.
 
@@ -584,15 +586,13 @@ Timeout: 5s per service | Retry: 2x exponential backoff | Results cached in memo
 
 4. **Cross-origin iframes** — `SecurityError` prevents any access from the content script, so `patchIframeWindow` silently skips them. Timing side-channels can reveal discrepancies between the parent's spoofed view and the cross-origin iframe's real view.
 
-5. **Date.prototype methods inside iframe realms** — `patchIframeWindow` installs the `Date` constructor, `Intl.DateTimeFormat`, and `Temporal.Now` into each iframe realm, but does **not** install iframe-realm copies of the per-method `Date.prototype.{toString, toDateString, toTimeString, toLocaleString, toLocaleDateString, toLocaleTimeString, getHours, getMinutes, getSeconds, getDate, getDay, getMonth, getFullYear, getTimezoneOffset, setHours, setMinutes, setSeconds, setDate, setMonth, setFullYear}` overrides. A Date instance produced by `iframe.contentWindow.Date` has its prototype method calls resolved against the iframe's own unpatched `Date.prototype`. The iframe's `Intl` constructor-level spoofing still applies, so most real-world timezone leaks are closed — but a page that specifically constructs a Date through the iframe realm and reads `new iframe.contentWindow.Date().getHours()` sees the real system zone.
+5. **Timing channels** — A content-script spoofer returns fake positions via `setTimeout` on the JavaScript event loop. Real GPS/Wi-Fi/cell-tower lookups go through browser-internal threads with wider, heavier-tailed latency distributions. A detector with enough samples can fingerprint the artificial bounds (10-50ms floor). Additionally, native `maximumAge` caching serves positions sub-millisecond, while a `setTimeout`-based spoofer cannot emit below its configured delay. Only a browser-native implementation can match real hardware timing signatures.
 
-6. **Timing channels** — A content-script spoofer returns fake positions via `setTimeout` on the JavaScript event loop. Real GPS/Wi-Fi/cell-tower lookups go through browser-internal threads with wider, heavier-tailed latency distributions. A detector with enough samples can fingerprint the artificial bounds (10-50ms floor). Additionally, native `maximumAge` caching serves positions sub-millisecond, while a `setTimeout`-based spoofer cannot emit below its configured delay. Only a browser-native implementation can match real hardware timing signatures.
+6. **SharedArrayBuffer timing** — High-resolution timing can fingerprint override execution patterns. Unfixable at the content-script level.
 
-7. **SharedArrayBuffer timing** — High-resolution timing can fingerprint override execution patterns. Unfixable at the content-script level.
+7. **IP geolocation** — Extension does not mask IP address. Fingerprinting scripts cross-check public IP country/region against browser-reported geolocation. Closing this gap requires routing traffic through a VPN exit in the spoofed region (hence the VPN Sync feature).
 
-8. **IP geolocation** — Extension does not mask IP address. Fingerprinting scripts cross-check public IP country/region against browser-reported geolocation. Closing this gap requires routing traffic through a VPN exit in the spoofed region (hence the VPN Sync feature).
-
-9. **WebRTC IP leaks** — Without `browser.privacy.network.webRTCIPHandlingPolicy` set to `disable_non_proxied_udp`, WebRTC ICE gathering can expose the real public IP via server-reflexive (srflx) candidates, even when geolocation is spoofed. On Firefox this only holds when behind a proxy/VPN; on Chromium it's strict. Safari doesn't expose `browser.privacy`.
+8. **WebRTC IP leaks** — Without `browser.privacy.network.webRTCIPHandlingPolicy` set to `disable_non_proxied_udp`, WebRTC ICE gathering can expose the real public IP via server-reflexive (srflx) candidates, even when geolocation is spoofed. On Firefox this only holds when behind a proxy/VPN; on Chromium it's strict. Safari doesn't expose `browser.privacy`.
 
 ## Performance Targets
 
