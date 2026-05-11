@@ -36,8 +36,13 @@ export function resolveBrowserTarget(envBrowser: string | undefined): BrowserTar
 export function generateManifest(target: BrowserTarget, version: string): Record<string, unknown> {
   const shared: Record<string, unknown> = {
     manifest_version: 3,
-    name: "GeoSpoof",
-    description: "Spoof your browser's geolocation and timezone. Prevent WebRTC IP leaks.",
+    // Use __MSG_*__ references so the Chrome Web Store, AMO, and the
+    // App Store can localize the extension name and description to
+    // match each user's browser/OS locale. `default_locale` is the
+    // fallback when a user's locale has no messages.json file.
+    name: "__MSG_extensionName__",
+    description: "__MSG_extensionDescription__",
+    default_locale: "en",
     author: "Anthony Sgro",
     homepage_url: "https://github.com/anthonysgro/geospoof",
     incognito: "spanning",

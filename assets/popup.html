@@ -11,29 +11,37 @@
       <!-- Onboarding Overlay -->
       <div class="onboarding-overlay" id="onboardingOverlay" style="display: none">
         <div class="onboarding-content">
-          <h2>Welcome to GeoSpoof! 🌍</h2>
+          <h2 data-i18n="onboarding_title">Welcome to GeoSpoof! 🌍</h2>
           <div class="onboarding-steps">
             <div class="onboarding-step">
               <div class="step-number">1</div>
               <div class="step-text">
-                <strong>Choose your input method:</strong> Search for a city or enter coordinates
-                manually using the tabs
+                <strong data-i18n="onboarding_step1_strong">Choose your input method:</strong>
+                <span data-i18n="onboarding_step1_text">
+                  Search for a city or enter coordinates manually using the tabs
+                </span>
               </div>
             </div>
             <div class="onboarding-step">
               <div class="step-number">2</div>
               <div class="step-text">
-                <strong>Enable Location Protection</strong> to start spoofing
+                <strong data-i18n="onboarding_step2_strong">Enable Location Protection</strong>
+                <span data-i18n="onboarding_step2_text">to start spoofing</span>
               </div>
             </div>
             <div class="onboarding-step">
               <div class="step-number">3</div>
               <div class="step-text">
-                <strong>Optional:</strong> Enable WebRTC Protection for extra privacy
+                <strong data-i18n="onboarding_step3_strong">Optional:</strong>
+                <span data-i18n="onboarding_step3_text">
+                  Enable WebRTC Protection for extra privacy
+                </span>
               </div>
             </div>
           </div>
-          <button id="closeOnboarding" class="onboarding-button">Get Started</button>
+          <button id="closeOnboarding" class="onboarding-button" data-i18n="onboarding_button">
+            Get Started
+          </button>
         </div>
       </div>
 
@@ -44,14 +52,14 @@
           <h1>GeoSpoof</h1>
         </div>
         <div class="status-badge" id="statusBadge">
-          <span id="statusText">Disabled</span>
+          <span id="statusText" data-i18n="status_disabled">Disabled</span>
         </div>
       </div>
 
       <!-- Tab Navigation -->
       <div class="tab-navigation">
-        <button class="nav-tab active" id="mainTab">Main</button>
-        <button class="nav-tab" id="detailsTab">Details</button>
+        <button class="nav-tab active" id="mainTab" data-i18n="tab_main">Main</button>
+        <button class="nav-tab" id="detailsTab" data-i18n="tab_details">Details</button>
       </div>
 
       <!-- Main View -->
@@ -59,7 +67,7 @@
         <!-- Protection Toggle -->
         <div class="toggle-section">
           <label class="toggle-label">
-            <span>Location Protection</span>
+            <span data-i18n="toggle_locationProtection">Location Protection</span>
             <div class="toggle-wrapper">
               <input type="checkbox" id="protectionToggle" />
               <span class="toggle-slider"></span>
@@ -70,7 +78,7 @@
         <!-- WebRTC Protection -->
         <div class="webrtc-section">
           <label class="toggle-label">
-            <span>WebRTC Protection</span>
+            <span data-i18n="toggle_webrtcProtection">WebRTC Protection</span>
             <div class="toggle-wrapper">
               <input type="checkbox" id="webrtcToggle" />
               <span class="toggle-slider"></span>
@@ -81,13 +89,15 @@
         <!-- Divider between protection toggles and location controls -->
         <hr class="section-divider" />
 
-        <div class="section-heading">Location</div>
+        <div class="section-heading" data-i18n="heading_location">Location</div>
 
         <!-- Current Location Display -->
         <div class="current-location" id="currentLocation">
           <div class="location-icon">📍</div>
           <div class="location-info">
-            <div class="location-name" id="locationName">No location set</div>
+            <div class="location-name" id="locationName" data-i18n="location_none">
+              No location set
+            </div>
             <div class="location-coords" id="locationCoords">—</div>
           </div>
           <button
@@ -96,6 +106,8 @@
             style="display: none"
             title="Clear location"
             aria-label="Clear location"
+            data-i18n-title="location_clearTitle"
+            data-i18n-aria-label="location_clearAriaLabel"
           >
             ×
           </button>
@@ -105,12 +117,13 @@
         <div class="vpn-sync-toggle">
           <label class="toggle-label" for="vpnSyncToggle">
             <span class="label-with-info">
-              Sync with VPN
+              <span data-i18n="toggle_syncWithVpn">Sync with VPN</span>
               <button
                 type="button"
                 class="info-icon"
                 id="vpnSyncInfo"
                 aria-label="More info about Sync with VPN"
+                data-i18n-aria-label="vpnSync_infoAriaLabel"
               >
                 ⓘ
               </button>
@@ -120,7 +133,7 @@
               <span class="toggle-slider"></span>
             </div>
           </label>
-          <div class="info-tooltip" id="vpnSyncTooltip" role="tooltip">
+          <div class="info-tooltip" id="vpnSyncTooltip" role="tooltip" data-i18n="vpnSync_tooltip">
             This is a one-time sync to your current public IP location. It does not auto-update when
             your VPN changes servers — use Re-sync to update manually.
           </div>
@@ -128,8 +141,12 @@
 
         <!-- Location Input Mode Tabs -->
         <div class="input-mode-tabs" id="inputModeTabs">
-          <button class="tab-button active" id="searchModeTab">Search City</button>
-          <button class="tab-button" id="coordsModeTab">Enter Coordinates</button>
+          <button class="tab-button active" id="searchModeTab" data-i18n="inputTab_searchCity">
+            Search City
+          </button>
+          <button class="tab-button" id="coordsModeTab" data-i18n="inputTab_enterCoords">
+            Enter Coordinates
+          </button>
         </div>
 
         <!-- Location Picker (Search Mode) -->
@@ -139,6 +156,7 @@
             id="locationSearch"
             placeholder="Search for a city..."
             autocomplete="off"
+            data-i18n-placeholder="search_placeholder"
           />
           <div class="search-results" id="searchResults"></div>
         </div>
@@ -152,6 +170,7 @@
             step="0.0001"
             min="-90"
             max="90"
+            data-i18n-placeholder="coords_latPlaceholder"
           />
           <input
             type="number"
@@ -160,8 +179,9 @@
             step="0.0001"
             min="-180"
             max="180"
+            data-i18n-placeholder="coords_lonPlaceholder"
           />
-          <button id="setManualCoords">Set Location</button>
+          <button id="setManualCoords" data-i18n="coords_setButton">Set Location</button>
         </div>
 
         <!-- VPN Sync Mode -->
@@ -171,45 +191,85 @@
           </div>
           <div class="vpn-sync-error" id="vpnSyncError" style="display: none"></div>
           <div class="vpn-sync-actions">
-            <button id="vpnSyncButton" class="vpn-sync-btn">Sync Now</button>
-            <button id="vpnResyncButton" class="vpn-resync-btn" style="display: none">
+            <button id="vpnSyncButton" class="vpn-sync-btn" data-i18n="vpnSync_syncNow">
+              Sync Now
+            </button>
+            <button
+              id="vpnResyncButton"
+              class="vpn-resync-btn"
+              style="display: none"
+              data-i18n="vpnSync_resync"
+            >
               Re-sync
             </button>
           </div>
         </div>
 
         <!-- Warning Message -->
-        <div class="warning" id="warningMessage" style="display: none">
+        <div
+          class="warning"
+          id="warningMessage"
+          style="display: none"
+          data-i18n="warning_noLocationSet"
+        >
           ⚠️ Protection enabled but no location set
         </div>
 
         <!-- Injection Warning -->
-        <div class="warning" id="injectionWarning" style="display: none">
+        <div
+          class="warning"
+          id="injectionWarning"
+          style="display: none"
+          data-i18n="warning_refreshPage"
+        >
           ⚠️ Refresh this page to apply protection
         </div>
 
         <!-- Restricted Page Notice -->
-        <div class="info-notice" id="restrictedPageNotice" style="display: none">
+        <div
+          class="info-notice"
+          id="restrictedPageNotice"
+          style="display: none"
+          data-i18n="notice_restrictedPage"
+        >
           ℹ️ Extensions cannot run on this page
         </div>
 
         <!-- Test Links -->
         <div class="test-links">
-          <div class="test-links-label">Test your protection:</div>
-          <a href="https://webbrowsertools.com/geolocation/" target="_blank" class="test-link"
+          <div class="test-links-label" data-i18n="testLinks_label">Test your protection:</div>
+          <a
+            href="https://webbrowsertools.com/geolocation/"
+            target="_blank"
+            class="test-link"
+            data-i18n="testLinks_geolocation"
             >Geolocation</a
           >
           <span class="test-links-separator">•</span>
-          <a href="https://webbrowsertools.com/timezone/" target="_blank" class="test-link"
+          <a
+            href="https://webbrowsertools.com/timezone/"
+            target="_blank"
+            class="test-link"
+            data-i18n="testLinks_timezone"
             >Timezone</a
           >
           <span class="test-links-separator">•</span>
-          <a href="https://browserleaks.com/webrtc" target="_blank" class="test-link">IP Leak</a>
+          <a
+            href="https://browserleaks.com/webrtc"
+            target="_blank"
+            class="test-link"
+            data-i18n="testLinks_ipLeak"
+            >IP Leak</a
+          >
         </div>
 
         <!-- Support Link -->
         <div class="support-link">
-          <a href="https://www.geospoof.com/support" target="_blank" class="help-link"
+          <a
+            href="https://www.geospoof.com/support"
+            target="_blank"
+            class="help-link"
+            data-i18n="support_needHelp"
             >Need help?</a
           >
         </div>
@@ -218,29 +278,29 @@
 
       <!-- Details View -->
       <div class="tab-content" id="detailsView" style="display: none">
-        <h3>Protection Details</h3>
+        <h3 data-i18n="details_heading">Protection Details</h3>
 
         <!-- Location Details -->
         <div class="detail-section">
-          <div class="detail-label">Spoofed Location</div>
+          <div class="detail-label" data-i18n="details_spoofedLocation">Spoofed Location</div>
           <div id="detailLocation" class="detail-value">Not configured</div>
         </div>
 
         <!-- Timezone Details -->
         <div class="detail-section">
-          <div class="detail-label">Spoofed Timezone</div>
+          <div class="detail-label" data-i18n="details_spoofedTimezone">Spoofed Timezone</div>
           <div id="detailTimezone" class="detail-value">Not configured</div>
         </div>
 
         <!-- WebRTC Details -->
         <div class="detail-section">
-          <div class="detail-label">WebRTC Protection</div>
+          <div class="detail-label" data-i18n="details_webrtcProtection">WebRTC Protection</div>
           <div id="detailWebRTC" class="detail-value">✗ Inactive</div>
         </div>
 
         <!-- Overridden APIs -->
         <div class="detail-section">
-          <div class="detail-label">Overridden APIs</div>
+          <div class="detail-label" data-i18n="details_overriddenApis">Overridden APIs</div>
           <div id="detailAPIs" class="detail-value">None</div>
         </div>
 
@@ -252,11 +312,12 @@
             aria-expanded="false"
             aria-controls="advancedContent"
           >
-            <span class="advanced-chevron">▶</span> Advanced
+            <span class="advanced-chevron">▶</span>
+            <span data-i18n="advanced_button">Advanced</span>
           </button>
           <div class="advanced-content" id="advancedContent" style="display: none">
             <label class="toggle-label">
-              <span>Debug Logging</span>
+              <span data-i18n="advanced_debugLogging">Debug Logging</span>
               <div class="toggle-wrapper">
                 <input type="checkbox" id="debugLoggingToggle" />
                 <span class="toggle-slider"></span>
@@ -264,26 +325,30 @@
             </label>
             <div class="verbosity-selector" id="verbositySelector" style="display: none">
               <label class="select-label" for="verbosityLevel">
-                <span>Verbosity Level</span>
+                <span data-i18n="advanced_verbosityLevel">Verbosity Level</span>
                 <select id="verbosityLevel">
-                  <option value="INFO">Info</option>
-                  <option value="DEBUG">Debug</option>
-                  <option value="TRACE">Trace</option>
+                  <option value="INFO" data-i18n="advanced_verbosity_info">Info</option>
+                  <option value="DEBUG" data-i18n="advanced_verbosity_debug">Debug</option>
+                  <option value="TRACE" data-i18n="advanced_verbosity_trace">Trace</option>
                 </select>
               </label>
             </div>
             <div class="theme-selector">
               <label class="select-label" for="themeSelect">
-                <span>Theme</span>
+                <span data-i18n="advanced_theme">Theme</span>
                 <select id="themeSelect">
-                  <option value="system">System</option>
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
+                  <option value="system" data-i18n="advanced_theme_system">System</option>
+                  <option value="light" data-i18n="advanced_theme_light">Light</option>
+                  <option value="dark" data-i18n="advanced_theme_dark">Dark</option>
                 </select>
               </label>
             </div>
             <div class="coffee-row" id="coffeeRow">
-              <a href="https://buymeacoffee.com/sgro" target="_blank" class="coffee-link"
+              <a
+                href="https://buymeacoffee.com/sgro"
+                target="_blank"
+                class="coffee-link"
+                data-i18n="advanced_coffee"
                 >☕ Buy me a coffee</a
               >
             </div>

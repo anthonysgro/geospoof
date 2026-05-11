@@ -1,0 +1,134 @@
+{
+  "extensionName": {
+    "message": "GeoSpoof",
+    "description": "⚠️ MACHINE-TRANSLATED — NEEDS NATIVE-SPEAKER REVIEW. Extension name shown in the browser and store listing. 'GeoSpoof' is a brand name and should not be translated."
+  },
+  "extensionDescription": {
+    "message": "伪造浏览器的地理位置和时区,防止 WebRTC 泄漏 IP。不更改 IP 地址——与 VPN 配合使用。",
+    "description": "Extension description shown in the browser and store listing."
+  },
+
+  "onboarding_title": { "message": "欢迎使用 GeoSpoof! 🌍" },
+  "onboarding_step1_strong": { "message": "选择输入方式:" },
+  "onboarding_step1_text": {
+    "message": "使用选项卡搜索城市或手动输入坐标"
+  },
+  "onboarding_step2_strong": { "message": "启用位置保护" },
+  "onboarding_step2_text": { "message": "以开始伪造" },
+  "onboarding_step3_strong": { "message": "可选:" },
+  "onboarding_step3_text": {
+    "message": "启用 WebRTC 保护以获得更多隐私"
+  },
+  "onboarding_button": { "message": "开始使用" },
+
+  "status_disabled": { "message": "已禁用" },
+  "status_enabled": { "message": "已启用" },
+
+  "tab_main": { "message": "主页" },
+  "tab_details": { "message": "详情" },
+
+  "toggle_locationProtection": { "message": "位置保护" },
+  "toggle_webrtcProtection": { "message": "WebRTC 保护" },
+
+  "heading_location": { "message": "位置" },
+  "location_none": { "message": "未设置位置" },
+  "location_custom": { "message": "自定义位置" },
+  "location_clearTitle": { "message": "清除位置" },
+  "location_clearAriaLabel": { "message": "清除位置" },
+
+  "toggle_syncWithVpn": { "message": "与 VPN 同步" },
+  "vpnSync_infoAriaLabel": { "message": "关于「与 VPN 同步」的更多信息" },
+  "vpnSync_tooltip": {
+    "message": "这是一次性同步到您当前公网 IP 的位置。当 VPN 更换服务器时不会自动更新——请使用「重新同步」按钮手动更新。"
+  },
+  "vpnSync_syncNow": { "message": "立即同步" },
+  "vpnSync_resync": { "message": "重新同步" },
+  "vpnSync_detectedIp": {
+    "message": "检测到的 IP:$IP$",
+    "placeholders": { "ip": { "content": "$1", "example": "203.0.113.42" } }
+  },
+  "vpnSync_networkError": { "message": "发生网络错误。请重试。" },
+
+  "inputTab_searchCity": { "message": "搜索城市" },
+  "inputTab_enterCoords": { "message": "输入坐标" },
+
+  "search_placeholder": { "message": "搜索城市..." },
+  "search_searching": { "message": "正在搜索..." },
+  "search_noResults": { "message": "未找到位置" },
+  "search_failed": { "message": "搜索失败。请重试。" },
+  "search_settingLocation": { "message": "正在设置位置..." },
+  "search_setLocationFailed": {
+    "message": "设置位置失败。请重试。"
+  },
+
+  "coords_latPlaceholder": { "message": "纬度(-90 到 90)" },
+  "coords_lonPlaceholder": { "message": "经度(-180 到 180)" },
+  "coords_setButton": { "message": "设置位置" },
+  "coords_invalidLat": { "message": "无效纬度。必须在 -90 到 90 之间。" },
+  "coords_invalidLon": { "message": "无效经度。必须在 -180 到 180 之间。" },
+
+  "warning_noLocationSet": {
+    "message": "⚠️ 保护已启用但未设置位置"
+  },
+  "warning_refreshPage": { "message": "⚠️ 刷新此页面以应用保护" },
+  "notice_restrictedPage": {
+    "message": "ℹ️ 扩展无法在此页面上运行"
+  },
+
+  "testLinks_label": { "message": "测试您的保护:" },
+  "testLinks_geolocation": { "message": "地理位置" },
+  "testLinks_timezone": { "message": "时区" },
+  "testLinks_ipLeak": { "message": "IP 泄漏" },
+
+  "support_needHelp": { "message": "需要帮助?" },
+
+  "webrtc_configFailed": {
+    "message": "无法配置 WebRTC 保护。请检查扩展权限。"
+  },
+
+  "details_heading": { "message": "保护详情" },
+  "details_spoofedLocation": { "message": "伪造的位置" },
+  "details_spoofedTimezone": { "message": "伪造的时区" },
+  "details_webrtcProtection": { "message": "WebRTC 保护" },
+  "details_overriddenApis": { "message": "已覆盖的 API" },
+
+  "details_notConfigured": { "message": "未配置" },
+  "details_none": { "message": "无" },
+  "details_noneDisabled": { "message": "无(保护已禁用)" },
+
+  "details_latitudeLabel": { "message": "纬度" },
+  "details_longitudeLabel": { "message": "经度" },
+  "details_accuracyLabel": { "message": "精度" },
+  "details_locationLabel": { "message": "位置" },
+  "details_identifierLabel": { "message": "标识符" },
+  "details_offsetLabel": { "message": "偏移" },
+  "details_dstOffsetLabel": { "message": "夏令时偏移" },
+  "details_dstOffsetMinutes": {
+    "message": "$MINUTES$ 分钟",
+    "placeholders": { "minutes": { "content": "$1", "example": "60" } }
+  },
+  "details_fallbackNote": { "message": "⚠️ 估算值(API 不可用)" },
+
+  "details_webrtcActive": {
+    "message": "✓ 活动\n\nRTCPeerConnection 已被包装以抑制 ICE 候选收集。\n这可以防止 WebRTC 泄漏您的真实 IP 地址。"
+  },
+  "details_webrtcInactive": {
+    "message": "✗ 非活动\n\n即使使用 VPN,WebRTC 仍可能泄漏您的真实 IP 地址。"
+  },
+
+  "details_section_geolocation": { "message": "地理位置" },
+  "details_section_timezone": { "message": "时区" },
+  "details_section_webrtc": { "message": "WebRTC" },
+
+  "advanced_button": { "message": "高级" },
+  "advanced_debugLogging": { "message": "调试日志" },
+  "advanced_verbosityLevel": { "message": "详细级别" },
+  "advanced_verbosity_info": { "message": "信息" },
+  "advanced_verbosity_debug": { "message": "调试" },
+  "advanced_verbosity_trace": { "message": "跟踪" },
+  "advanced_theme": { "message": "主题" },
+  "advanced_theme_system": { "message": "系统" },
+  "advanced_theme_light": { "message": "浅色" },
+  "advanced_theme_dark": { "message": "深色" },
+  "advanced_coffee": { "message": "☕ 请我喝咖啡" }
+}

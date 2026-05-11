@@ -5,6 +5,7 @@
 
 import type { SyncVpnSuccessResponse, SyncVpnErrorResponse } from "@/shared/types/messages";
 import { loadSettings } from "./settings";
+import { t } from "./i18n";
 
 /**
  * Initiate a VPN sync from the popup.
@@ -33,7 +34,7 @@ export async function handleVpnSync(forceRefresh: boolean): Promise<void> {
     console.error("[POPUP-VPN] sendMessage threw:", error);
     displayVpnSyncError({
       error: "NETWORK",
-      message: "A network error occurred. Please try again.",
+      message: t("vpnSync_networkError") || "A network error occurred. Please try again.",
     });
   } finally {
     setVpnSyncLoading(false);
@@ -50,7 +51,7 @@ export function displayVpnSyncResult(result: SyncVpnSuccessResponse): void {
   const resyncBtn = document.getElementById("vpnResyncButton");
 
   if (statusEl) statusEl.style.display = "block";
-  if (ipEl) ipEl.textContent = `Detected IP: ${result.ip}`;
+  if (ipEl) ipEl.textContent = t("vpnSync_detectedIp", [result.ip]) || `Detected IP: ${result.ip}`;
 
   // After first successful sync, hide "Sync Now" and show "Re-sync"
   if (syncBtn) syncBtn.style.display = "none";

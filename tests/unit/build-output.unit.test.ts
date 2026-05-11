@@ -78,8 +78,13 @@ describe("Firefox manifest structure", () => {
     expect(m.action).toBeDefined();
     expect(m.icons).toBeDefined();
     expect(m.manifest_version).toBe(3);
-    expect(m.name).toBe("GeoSpoof");
-    expect(m.description).toBeDefined();
+    // Name and description are now __MSG_*__ references so the browser
+    // picks the right locale from _locales/<lang>/messages.json. The
+    // actual displayed name/description is asserted in the i18n
+    // test suite against the messages.json files themselves.
+    expect(m.name).toBe("__MSG_extensionName__");
+    expect(m.description).toBe("__MSG_extensionDescription__");
+    expect(m.default_locale).toBe("en");
   });
 });
 
@@ -138,8 +143,9 @@ describe("Chromium manifest structure", () => {
     expect(m.action).toBeDefined();
     expect(m.icons).toBeDefined();
     expect(m.manifest_version).toBe(3);
-    expect(m.name).toBe("GeoSpoof");
-    expect(m.description).toBeDefined();
+    expect(m.name).toBe("__MSG_extensionName__");
+    expect(m.description).toBe("__MSG_extensionDescription__");
+    expect(m.default_locale).toBe("en");
   });
 });
 

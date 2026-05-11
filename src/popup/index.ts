@@ -9,6 +9,7 @@ import { closeOnboarding } from "./onboarding";
 import { displaySearchResults } from "./search";
 import { updateStatusBadge, formatWebRTCDetails, clearChildren } from "./ui";
 import { handleVpnSync } from "./vpn-sync";
+import { applyI18n, t } from "./i18n";
 
 // --- Location setting ---
 
@@ -23,7 +24,9 @@ async function setLocation(latitude: number, longitude: number): Promise<void> {
       const spinner = document.createElement("div");
       spinner.className = "spinner";
       loadingDiv.appendChild(spinner);
-      loadingDiv.appendChild(document.createTextNode("Setting location..."));
+      loadingDiv.appendChild(
+        document.createTextNode(t("search_settingLocation") || "Setting location...")
+      );
       container.appendChild(loadingDiv);
     }
 
@@ -40,7 +43,7 @@ async function setLocation(latitude: number, longitude: number): Promise<void> {
   } catch (error: unknown) {
     console.error("Failed to set location:", error);
     if (container) clearChildren(container);
-    alert("Failed to set location. Please try again.");
+    alert(t("search_setLocationFailed") || "Failed to set location. Please try again.");
   }
 }
 
@@ -86,7 +89,10 @@ document.getElementById("webrtcToggle")?.addEventListener("change", (e: Event) =
     } catch (error: unknown) {
       console.error("Failed to set WebRTC protection:", error);
       target.checked = !enabled;
-      alert("Failed to configure WebRTC protection. Check extension permissions.");
+      alert(
+        t("webrtc_configFailed") ||
+          "Failed to configure WebRTC protection. Check extension permissions."
+      );
     }
   })();
 });
@@ -134,7 +140,7 @@ document.getElementById("locationSearch")?.addEventListener("input", (e: Event) 
   const spinner = document.createElement("div");
   spinner.className = "spinner";
   loadingDiv.appendChild(spinner);
-  loadingDiv.appendChild(document.createTextNode("Searching..."));
+  loadingDiv.appendChild(document.createTextNode(t("search_searching") || "Searching..."));
   container.appendChild(loadingDiv);
 
   searchTimeout = setTimeout(() => {
@@ -165,7 +171,7 @@ document.getElementById("locationSearch")?.addEventListener("input", (e: Event) 
         clearChildren(container);
         const errorDiv = document.createElement("div");
         errorDiv.className = "no-results";
-        errorDiv.textContent = "Search failed. Please try again.";
+        errorDiv.textContent = t("search_failed") || "Search failed. Please try again.";
         container.appendChild(errorDiv);
       }
     })();
@@ -183,12 +189,12 @@ document.getElementById("setManualCoords")?.addEventListener("click", () => {
   const lon = parseFloat(lonInput.value);
 
   if (isNaN(lat) || lat < -90 || lat > 90) {
-    alert("Invalid latitude. Must be between -90 and 90.");
+    alert(t("coords_invalidLat") || "Invalid latitude. Must be between -90 and 90.");
     return;
   }
 
   if (isNaN(lon) || lon < -180 || lon > 180) {
-    alert("Invalid longitude. Must be between -180 and 180.");
+    alert(t("coords_invalidLon") || "Invalid longitude. Must be between -180 and 180.");
     return;
   }
 
@@ -416,6 +422,11 @@ document.addEventListener("click", (e: Event) => {
 // Initialize
 document.addEventListener("DOMContentLoaded", () => {
   document.body.classList.add("loaded");
+
+  // Translate all [data-i18n*] nodes once the DOM is parsed. Happens
+  // before loadSettings() so any text we later overwrite dynamically
+  // inherits the localized copy rather than the English fallback.
+  applyI18n();
 
   const versionLabel = document.getElementById("versionLabel");
   if (versionLabel) {

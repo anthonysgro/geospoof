@@ -5,6 +5,7 @@
 
 import type { GeocodeResult } from "@/shared/types/messages";
 import { clearChildren } from "./ui";
+import { t } from "./i18n";
 
 /**
  * Display geocoding search results in the popup.
@@ -22,7 +23,7 @@ export function displaySearchResults(
   if (results.length === 0) {
     const noResults = document.createElement("div");
     noResults.className = "no-results";
-    noResults.textContent = "No locations found";
+    noResults.textContent = t("search_noResults") || "No locations found";
     container.appendChild(noResults);
     return;
   }

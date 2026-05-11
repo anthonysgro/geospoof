@@ -1,0 +1,134 @@
+{
+  "extensionName": {
+    "message": "GeoSpoof",
+    "description": "⚠️ MACHINE-TRANSLATED — NEEDS NATIVE-SPEAKER REVIEW. Extension name shown in the browser and store listing. 'GeoSpoof' is a brand name and should not be translated."
+  },
+  "extensionDescription": {
+    "message": "Falsifique a geolocalização e o fuso horário do seu navegador. Evite vazamentos de IP pelo WebRTC. Não muda o seu IP — funciona junto com uma VPN.",
+    "description": "Extension description shown in the browser and store listing."
+  },
+
+  "onboarding_title": { "message": "Bem-vindo ao GeoSpoof! 🌍" },
+  "onboarding_step1_strong": { "message": "Escolha seu método de entrada:" },
+  "onboarding_step1_text": {
+    "message": "Busque por uma cidade ou insira coordenadas manualmente usando as abas"
+  },
+  "onboarding_step2_strong": { "message": "Ative a Proteção de localização" },
+  "onboarding_step2_text": { "message": "para começar a falsificar" },
+  "onboarding_step3_strong": { "message": "Opcional:" },
+  "onboarding_step3_text": {
+    "message": "ative a Proteção WebRTC para mais privacidade"
+  },
+  "onboarding_button": { "message": "Começar" },
+
+  "status_disabled": { "message": "Desativado" },
+  "status_enabled": { "message": "Ativado" },
+
+  "tab_main": { "message": "Principal" },
+  "tab_details": { "message": "Detalhes" },
+
+  "toggle_locationProtection": { "message": "Proteção de localização" },
+  "toggle_webrtcProtection": { "message": "Proteção WebRTC" },
+
+  "heading_location": { "message": "Localização" },
+  "location_none": { "message": "Nenhuma localização definida" },
+  "location_custom": { "message": "Localização personalizada" },
+  "location_clearTitle": { "message": "Limpar localização" },
+  "location_clearAriaLabel": { "message": "Limpar localização" },
+
+  "toggle_syncWithVpn": { "message": "Sincronizar com VPN" },
+  "vpnSync_infoAriaLabel": { "message": "Mais informações sobre Sincronizar com VPN" },
+  "vpnSync_tooltip": {
+    "message": "Esta é uma sincronização única com a localização do seu IP público atual. Ela não se atualiza automaticamente quando sua VPN troca de servidor — use Ressincronizar para atualizar manualmente."
+  },
+  "vpnSync_syncNow": { "message": "Sincronizar agora" },
+  "vpnSync_resync": { "message": "Ressincronizar" },
+  "vpnSync_detectedIp": {
+    "message": "IP detectado: $IP$",
+    "placeholders": { "ip": { "content": "$1", "example": "203.0.113.42" } }
+  },
+  "vpnSync_networkError": { "message": "Ocorreu um erro de rede. Por favor, tente novamente." },
+
+  "inputTab_searchCity": { "message": "Buscar cidade" },
+  "inputTab_enterCoords": { "message": "Inserir coordenadas" },
+
+  "search_placeholder": { "message": "Buscar uma cidade..." },
+  "search_searching": { "message": "Buscando..." },
+  "search_noResults": { "message": "Nenhuma localização encontrada" },
+  "search_failed": { "message": "A busca falhou. Por favor, tente novamente." },
+  "search_settingLocation": { "message": "Definindo localização..." },
+  "search_setLocationFailed": {
+    "message": "Falha ao definir a localização. Por favor, tente novamente."
+  },
+
+  "coords_latPlaceholder": { "message": "Latitude (-90 a 90)" },
+  "coords_lonPlaceholder": { "message": "Longitude (-180 a 180)" },
+  "coords_setButton": { "message": "Definir localização" },
+  "coords_invalidLat": { "message": "Latitude inválida. Deve estar entre -90 e 90." },
+  "coords_invalidLon": { "message": "Longitude inválida. Deve estar entre -180 e 180." },
+
+  "warning_noLocationSet": {
+    "message": "⚠️ Proteção ativada mas sem localização definida"
+  },
+  "warning_refreshPage": { "message": "⚠️ Recarregue esta página para aplicar a proteção" },
+  "notice_restrictedPage": {
+    "message": "ℹ️ Extensões não podem ser executadas nesta página"
+  },
+
+  "testLinks_label": { "message": "Teste sua proteção:" },
+  "testLinks_geolocation": { "message": "Geolocalização" },
+  "testLinks_timezone": { "message": "Fuso horário" },
+  "testLinks_ipLeak": { "message": "Vazamento de IP" },
+
+  "support_needHelp": { "message": "Precisa de ajuda?" },
+
+  "webrtc_configFailed": {
+    "message": "Falha ao configurar a proteção WebRTC. Verifique as permissões da extensão."
+  },
+
+  "details_heading": { "message": "Detalhes da proteção" },
+  "details_spoofedLocation": { "message": "Localização falsificada" },
+  "details_spoofedTimezone": { "message": "Fuso horário falsificado" },
+  "details_webrtcProtection": { "message": "Proteção WebRTC" },
+  "details_overriddenApis": { "message": "APIs substituídas" },
+
+  "details_notConfigured": { "message": "Não configurado" },
+  "details_none": { "message": "Nenhuma" },
+  "details_noneDisabled": { "message": "Nenhuma (proteção desativada)" },
+
+  "details_latitudeLabel": { "message": "Latitude" },
+  "details_longitudeLabel": { "message": "Longitude" },
+  "details_accuracyLabel": { "message": "Precisão" },
+  "details_locationLabel": { "message": "Localização" },
+  "details_identifierLabel": { "message": "Identificador" },
+  "details_offsetLabel": { "message": "Deslocamento" },
+  "details_dstOffsetLabel": { "message": "Deslocamento horário de verão" },
+  "details_dstOffsetMinutes": {
+    "message": "$MINUTES$ minutos",
+    "placeholders": { "minutes": { "content": "$1", "example": "60" } }
+  },
+  "details_fallbackNote": { "message": "⚠️ Estimado (API indisponível)" },
+
+  "details_webrtcActive": {
+    "message": "✓ Ativa\n\nRTCPeerConnection é encapsulado para suprimir a coleta de candidatos ICE.\nIsso impede que o WebRTC vaze seu endereço IP real."
+  },
+  "details_webrtcInactive": {
+    "message": "✗ Inativa\n\nO WebRTC pode vazar seu endereço IP real mesmo ao usar uma VPN."
+  },
+
+  "details_section_geolocation": { "message": "Geolocalização" },
+  "details_section_timezone": { "message": "Fuso horário" },
+  "details_section_webrtc": { "message": "WebRTC" },
+
+  "advanced_button": { "message": "Avançado" },
+  "advanced_debugLogging": { "message": "Registro de depuração" },
+  "advanced_verbosityLevel": { "message": "Nível de detalhes" },
+  "advanced_verbosity_info": { "message": "Info" },
+  "advanced_verbosity_debug": { "message": "Depuração" },
+  "advanced_verbosity_trace": { "message": "Rastreio" },
+  "advanced_theme": { "message": "Tema" },
+  "advanced_theme_system": { "message": "Sistema" },
+  "advanced_theme_light": { "message": "Claro" },
+  "advanced_theme_dark": { "message": "Escuro" },
+  "advanced_coffee": { "message": "☕ Me pague um café" }
+}
