@@ -88,10 +88,6 @@ describe("Known Limitations Comment Block", () => {
     expect(source).toMatch(/[Ee]xtension initialization race/);
   });
 
-  test("documents Date.prototype methods leak in iframe realms", () => {
-    expect(source).toMatch(/Date\.prototype methods in iframe realms/);
-  });
-
   test("documents IP geolocation limitation", () => {
     expect(source).toMatch(/IP geolocation mismatch/);
   });

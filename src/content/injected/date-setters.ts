@@ -176,6 +176,30 @@ function toSetterNumber(value: unknown): number {
 }
 
 /**
+ * Forward a setter passthrough using the caller's original arguments.
+ *
+ * Using `.apply` with the exact arity the caller supplied avoids the
+ * "present undefined coerces to NaN" footgun that poisons the Date
+ * when trailing optional args aren't forwarded as they were received.
+ * For example, `date.setHours(7)` must forward as arity-1, not
+ * arity-4 with three `undefined`s — native reads absent args as "keep
+ * current component" but a present `undefined` as NaN.
+ */
+function passthrough(
+  fn: (this: Date, ...args: never[]) => number,
+  self: Date,
+  args: IArguments
+): number {
+  // Cast to a broad apply signature so TypeScript accepts the
+  // variadic-arity forward (native setters require at least one
+  // typed arg in their declaration, but here we may forward zero).
+  const applyable = fn as unknown as {
+    apply(this: unknown, self: unknown, args: unknown): number;
+  };
+  return applyable.apply(self, args);
+}
+
+/**
  * Install Date setter overrides on the supplied `Date.prototype`.
  *
  * Shared by `installDateSetterOverrides()` (top level) and the iframe
@@ -188,15 +212,14 @@ export function installDateSetterOverridesOn(proto: object, originals: DateSette
       proto,
       "setHours",
       function (this: Date, h?: number, m?: number, s?: number, ms?: number): number {
+        // Forward only as many arguments as the caller supplied. Native
+        // setters interpret omitted trailing args as "keep current"; a
+        // present `undefined` coerces to NaN and poisons the Date value.
+        // eslint-disable-next-line prefer-rest-params
+        const argsIn = arguments;
         try {
           if (!spoofingEnabled || !timezoneData) {
-            return originals.setHours.call(
-              this,
-              h as number,
-              m as number,
-              s as number,
-              ms as number
-            );
+            return passthrough(originals.setHours, this, argsIn);
           }
           const epoch = this.getTime();
           if (isNaN(epoch)) {
@@ -204,19 +227,13 @@ export function installDateSetterOverridesOn(proto: object, originals: DateSette
           }
           const parts = resolvePartsForDate(this, timezoneData.identifier);
           if (!parts) {
-            return originals.setHours.call(
-              this,
-              h as number,
-              m as number,
-              s as number,
-              ms as number
-            );
+            return passthrough(originals.setHours, this, argsIn);
           }
           const newHour = toSetterNumber(h);
-          const newMinute = arguments.length >= 2 ? toSetterNumber(m) : parts.minute;
-          const newSecond = arguments.length >= 3 ? toSetterNumber(s) : parts.second;
+          const newMinute = argsIn.length >= 2 ? toSetterNumber(m) : parts.minute;
+          const newSecond = argsIn.length >= 3 ? toSetterNumber(s) : parts.second;
           const newMs =
-            arguments.length >= 4 ? toSetterNumber(ms) : originals.getMilliseconds.call(this);
+            argsIn.length >= 4 ? toSetterNumber(ms) : originals.getMilliseconds.call(this);
           const newEpoch = composeUtcFromSpoofedLocal(
             parts.year,
             parts.month - 1,
@@ -240,7 +257,7 @@ export function installDateSetterOverridesOn(proto: object, originals: DateSette
           return newEpoch;
         } catch (error) {
           logger.error("Error in setHours override:", error);
-          return originals.setHours.call(this, h as number, m as number, s as number, ms as number);
+          return passthrough(originals.setHours, this, argsIn);
         }
       },
       4
@@ -255,20 +272,22 @@ export function installDateSetterOverridesOn(proto: object, originals: DateSette
       proto,
       "setMinutes",
       function (this: Date, m?: number, s?: number, ms?: number): number {
+        // eslint-disable-next-line prefer-rest-params
+        const argsIn = arguments;
         try {
           if (!spoofingEnabled || !timezoneData) {
-            return originals.setMinutes.call(this, m as number, s as number, ms as number);
+            return passthrough(originals.setMinutes, this, argsIn);
           }
           const epoch = this.getTime();
           if (isNaN(epoch)) return NaN;
           const parts = resolvePartsForDate(this, timezoneData.identifier);
           if (!parts) {
-            return originals.setMinutes.call(this, m as number, s as number, ms as number);
+            return passthrough(originals.setMinutes, this, argsIn);
           }
           const newMinute = toSetterNumber(m);
-          const newSecond = arguments.length >= 2 ? toSetterNumber(s) : parts.second;
+          const newSecond = argsIn.length >= 2 ? toSetterNumber(s) : parts.second;
           const newMs =
-            arguments.length >= 3 ? toSetterNumber(ms) : originals.getMilliseconds.call(this);
+            argsIn.length >= 3 ? toSetterNumber(ms) : originals.getMilliseconds.call(this);
           const newEpoch = composeUtcFromSpoofedLocal(
             parts.year,
             parts.month - 1,
@@ -284,7 +303,7 @@ export function installDateSetterOverridesOn(proto: object, originals: DateSette
           return newEpoch;
         } catch (error) {
           logger.error("Error in setMinutes override:", error);
-          return originals.setMinutes.call(this, m as number, s as number, ms as number);
+          return passthrough(originals.setMinutes, this, argsIn);
         }
       },
       3
@@ -299,19 +318,21 @@ export function installDateSetterOverridesOn(proto: object, originals: DateSette
       proto,
       "setSeconds",
       function (this: Date, s?: number, ms?: number): number {
+        // eslint-disable-next-line prefer-rest-params
+        const argsIn = arguments;
         try {
           if (!spoofingEnabled || !timezoneData) {
-            return originals.setSeconds.call(this, s as number, ms as number);
+            return passthrough(originals.setSeconds, this, argsIn);
           }
           const epoch = this.getTime();
           if (isNaN(epoch)) return NaN;
           const parts = resolvePartsForDate(this, timezoneData.identifier);
           if (!parts) {
-            return originals.setSeconds.call(this, s as number, ms as number);
+            return passthrough(originals.setSeconds, this, argsIn);
           }
           const newSecond = toSetterNumber(s);
           const newMs =
-            arguments.length >= 2 ? toSetterNumber(ms) : originals.getMilliseconds.call(this);
+            argsIn.length >= 2 ? toSetterNumber(ms) : originals.getMilliseconds.call(this);
           const newEpoch = composeUtcFromSpoofedLocal(
             parts.year,
             parts.month - 1,
@@ -327,7 +348,7 @@ export function installDateSetterOverridesOn(proto: object, originals: DateSette
           return newEpoch;
         } catch (error) {
           logger.error("Error in setSeconds override:", error);
-          return originals.setSeconds.call(this, s as number, ms as number);
+          return passthrough(originals.setSeconds, this, argsIn);
         }
       },
       2
@@ -339,15 +360,17 @@ export function installDateSetterOverridesOn(proto: object, originals: DateSette
   // ── setDate(d) ───────────────────────────────────────────────────────
   try {
     installOverride(proto, "setDate", function (this: Date, d?: number): number {
+      // eslint-disable-next-line prefer-rest-params
+      const argsIn = arguments;
       try {
         if (!spoofingEnabled || !timezoneData) {
-          return originals.setDate.call(this, d as number);
+          return passthrough(originals.setDate, this, argsIn);
         }
         const epoch = this.getTime();
         if (isNaN(epoch)) return NaN;
         const parts = resolvePartsForDate(this, timezoneData.identifier);
         if (!parts) {
-          return originals.setDate.call(this, d as number);
+          return passthrough(originals.setDate, this, argsIn);
         }
         const newDay = toSetterNumber(d);
         const newEpoch = composeUtcFromSpoofedLocal(
@@ -365,7 +388,7 @@ export function installDateSetterOverridesOn(proto: object, originals: DateSette
         return newEpoch;
       } catch (error) {
         logger.error("Error in setDate override:", error);
-        return originals.setDate.call(this, d as number);
+        return passthrough(originals.setDate, this, argsIn);
       }
     });
   } catch (error) {
@@ -378,18 +401,20 @@ export function installDateSetterOverridesOn(proto: object, originals: DateSette
       proto,
       "setMonth",
       function (this: Date, m?: number, d?: number): number {
+        // eslint-disable-next-line prefer-rest-params
+        const argsIn = arguments;
         try {
           if (!spoofingEnabled || !timezoneData) {
-            return originals.setMonth.call(this, m as number, d as number);
+            return passthrough(originals.setMonth, this, argsIn);
           }
           const epoch = this.getTime();
           if (isNaN(epoch)) return NaN;
           const parts = resolvePartsForDate(this, timezoneData.identifier);
           if (!parts) {
-            return originals.setMonth.call(this, m as number, d as number);
+            return passthrough(originals.setMonth, this, argsIn);
           }
           const newMonth = toSetterNumber(m);
-          const newDay = arguments.length >= 2 ? toSetterNumber(d) : parts.day;
+          const newDay = argsIn.length >= 2 ? toSetterNumber(d) : parts.day;
           const newEpoch = composeUtcFromSpoofedLocal(
             parts.year,
             newMonth,
@@ -405,7 +430,7 @@ export function installDateSetterOverridesOn(proto: object, originals: DateSette
           return newEpoch;
         } catch (error) {
           logger.error("Error in setMonth override:", error);
-          return originals.setMonth.call(this, m as number, d as number);
+          return passthrough(originals.setMonth, this, argsIn);
         }
       },
       2
@@ -420,9 +445,11 @@ export function installDateSetterOverridesOn(proto: object, originals: DateSette
       proto,
       "setFullYear",
       function (this: Date, y?: number, m?: number, d?: number): number {
+        // eslint-disable-next-line prefer-rest-params
+        const argsIn = arguments;
         try {
           if (!spoofingEnabled || !timezoneData) {
-            return originals.setFullYear.call(this, y as number, m as number, d as number);
+            return passthrough(originals.setFullYear, this, argsIn);
           }
           const epoch = this.getTime();
           // Spec quirk: setFullYear on a NaN date starts from epoch 0
@@ -431,12 +458,12 @@ export function installDateSetterOverridesOn(proto: object, originals: DateSette
             ? resolvePartsForDate(new OriginalDate(0), timezoneData.identifier)
             : resolvePartsForDate(this, timezoneData.identifier);
           if (!parts) {
-            return originals.setFullYear.call(this, y as number, m as number, d as number);
+            return passthrough(originals.setFullYear, this, argsIn);
           }
           const ms = isNaN(epoch) ? 0 : originals.getMilliseconds.call(this);
           const newYear = toSetterNumber(y);
-          const newMonth = arguments.length >= 2 ? toSetterNumber(m) : parts.month - 1;
-          const newDay = arguments.length >= 3 ? toSetterNumber(d) : parts.day;
+          const newMonth = argsIn.length >= 2 ? toSetterNumber(m) : parts.month - 1;
+          const newDay = argsIn.length >= 3 ? toSetterNumber(d) : parts.day;
           const newEpoch = composeUtcFromSpoofedLocal(
             newYear,
             newMonth,
@@ -452,7 +479,7 @@ export function installDateSetterOverridesOn(proto: object, originals: DateSette
           return newEpoch;
         } catch (error) {
           logger.error("Error in setFullYear override:", error);
-          return originals.setFullYear.call(this, y as number, m as number, d as number);
+          return passthrough(originals.setFullYear, this, argsIn);
         }
       },
       3
