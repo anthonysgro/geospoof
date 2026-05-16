@@ -31,6 +31,31 @@ let webrtcProtection = false;
 // Event name for settings updates (configurable for stealth)
 const EVENT_NAME: string = process.env.EVENT_NAME || "__x_evt";
 
+/**
+ * Event name for worker-fetch announcements from the injected script.
+ * Must match the `ANNOUNCE_EVENT_NAME` constant in
+ * `src/content/injected/state.ts`.
+ */
+const ANNOUNCE_EVENT_NAME: string = (process.env.EVENT_NAME || "__x_evt") + "_announce";
+
+// Listen for worker-fetch announcements from the injected (page-world)
+// script and forward them to the background. The injected script can't
+// call browser.runtime.sendMessage from MAIN world, so it dispatches a
+// CustomEvent on window which we catch here and relay.
+window.addEventListener(ANNOUNCE_EVENT_NAME, ((event: CustomEvent<{ url: string }>) => {
+  const url = event.detail?.url;
+  if (typeof url !== "string" || !url) return;
+  // Fire-and-forget — don't await, don't fail the worker construction
+  // if the background is slow to respond. If the message is lost the
+  // worker will just not get the payload prepended, which degrades
+  // gracefully to the pre-feature behaviour.
+  void browser.runtime
+    .sendMessage({ type: "ANNOUNCE_WORKER_FETCH", payload: { url } })
+    .catch((err: unknown) => {
+      logger.debug("Failed to forward ANNOUNCE_WORKER_FETCH:", err);
+    });
+}) as EventListener);
+
 /** Data dispatched to the injected script via CustomEvent. */
 interface SettingsEventDetail {
   enabled: boolean;

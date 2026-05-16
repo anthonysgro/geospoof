@@ -32,9 +32,26 @@ export function installDateConstructor(): void {
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function DateOverride(this: any, ...args: any[]): any {
-    // Called as function (without new) — return current time string
+    // Called as function (without new) — return current time string.
+    //
+    // Native `Date()` returns a string of the current time formatted
+    // in the SYSTEM timezone. If we passed through to the native we'd
+    // produce a system-zone string here while `new Date().toString()`
+    // produces a SPOOFED-zone string (because the instance's
+    // `.toString()` goes through our overridden Date.prototype.toString).
+    //
+    // That inconsistency is detectable: CreepJS's `valid.date` check
+    // compares `new Date() == Date()`, and the two sides coerce to
+    // strings with different timezone labels when system ≠ spoofed.
+    //
+    // Fix: construct a pristine instance and stringify it through the
+    // same prototype chain that `new Date()` uses — our spoofed
+    // toString formats in the spoofed zone, so both sides agree.
     if (!new.target) {
-      return OriginalDate();
+      if (!spoofingEnabled || !timezoneData) {
+        return OriginalDate();
+      }
+      return new OriginalDate().toString();
     }
 
     // When spoofing is disabled, delegate entirely to OriginalDate

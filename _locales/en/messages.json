@@ -1,0 +1,151 @@
+{
+  "extensionName": {
+    "message": "GeoSpoof",
+    "description": "Extension name shown in the browser and store listing."
+  },
+  "extensionDescription": {
+    "message": "Spoof your browser's geolocation and timezone. Prevent WebRTC IP leaks.",
+    "description": "Extension description shown in the browser and store listing."
+  },
+
+  "onboarding_title": {
+    "message": "Welcome to GeoSpoof! 🌍",
+    "description": "Onboarding overlay heading."
+  },
+  "onboarding_step1_strong": {
+    "message": "Choose your input method:",
+    "description": "Bolded lead-in for the first onboarding step."
+  },
+  "onboarding_step1_text": {
+    "message": "Search for a city or enter coordinates manually using the tabs",
+    "description": "Body text of the first onboarding step."
+  },
+  "onboarding_step2_strong": {
+    "message": "Enable Location Protection",
+    "description": "Bolded lead-in for the second onboarding step."
+  },
+  "onboarding_step2_text": {
+    "message": "to start spoofing",
+    "description": "Body text of the second onboarding step."
+  },
+  "onboarding_step3_strong": {
+    "message": "Optional:",
+    "description": "Bolded lead-in for the third onboarding step."
+  },
+  "onboarding_step3_text": {
+    "message": "Enable WebRTC Protection for extra privacy",
+    "description": "Body text of the third onboarding step."
+  },
+  "onboarding_button": {
+    "message": "Get Started",
+    "description": "Button that closes the onboarding overlay."
+  },
+
+  "status_disabled": { "message": "Disabled" },
+  "status_enabled": { "message": "Enabled" },
+
+  "tab_main": { "message": "Main" },
+  "tab_details": { "message": "Details" },
+
+  "toggle_locationProtection": { "message": "Location Protection" },
+  "toggle_webrtcProtection": { "message": "WebRTC Protection" },
+
+  "heading_location": { "message": "Location" },
+  "location_none": { "message": "No location set" },
+  "location_custom": { "message": "Custom Location" },
+  "location_clearTitle": { "message": "Clear location" },
+  "location_clearAriaLabel": { "message": "Clear location" },
+
+  "toggle_syncWithVpn": { "message": "Sync with VPN" },
+  "vpnSync_infoAriaLabel": { "message": "More info about Sync with VPN" },
+  "vpnSync_tooltip": {
+    "message": "This is a one-time sync to your current public IP location. It does not auto-update when your VPN changes servers — use Re-sync to update manually."
+  },
+  "vpnSync_syncNow": { "message": "Sync Now" },
+  "vpnSync_resync": { "message": "Re-sync" },
+  "vpnSync_detectedIp": {
+    "message": "Detected IP: $IP$",
+    "description": "Shown after a successful VPN sync. $IP$ is the detected public IP address.",
+    "placeholders": {
+      "ip": { "content": "$1", "example": "203.0.113.42" }
+    }
+  },
+  "vpnSync_networkError": { "message": "A network error occurred. Please try again." },
+
+  "inputTab_searchCity": { "message": "Search City" },
+  "inputTab_enterCoords": { "message": "Enter Coordinates" },
+
+  "search_placeholder": { "message": "Search for a city..." },
+  "search_searching": { "message": "Searching..." },
+  "search_noResults": { "message": "No locations found" },
+  "search_failed": { "message": "Search failed. Please try again." },
+  "search_settingLocation": { "message": "Setting location..." },
+  "search_setLocationFailed": { "message": "Failed to set location. Please try again." },
+
+  "coords_latPlaceholder": { "message": "Latitude (-90 to 90)" },
+  "coords_lonPlaceholder": { "message": "Longitude (-180 to 180)" },
+  "coords_setButton": { "message": "Set Location" },
+  "coords_invalidLat": { "message": "Invalid latitude. Must be between -90 and 90." },
+  "coords_invalidLon": { "message": "Invalid longitude. Must be between -180 and 180." },
+
+  "warning_noLocationSet": { "message": "⚠️ Protection enabled but no location set" },
+  "warning_refreshPage": { "message": "⚠️ Refresh this page to apply protection" },
+  "notice_restrictedPage": { "message": "ℹ️ Extensions cannot run on this page" },
+
+  "testLinks_label": { "message": "Test your protection:" },
+  "testLinks_geolocation": { "message": "Geolocation" },
+  "testLinks_timezone": { "message": "Timezone" },
+  "testLinks_ipLeak": { "message": "IP Leak" },
+
+  "support_needHelp": { "message": "Need help?" },
+
+  "webrtc_configFailed": {
+    "message": "Failed to configure WebRTC protection. Check extension permissions."
+  },
+
+  "details_heading": { "message": "Protection Details" },
+  "details_spoofedLocation": { "message": "Spoofed Location" },
+  "details_spoofedTimezone": { "message": "Spoofed Timezone" },
+  "details_webrtcProtection": { "message": "WebRTC Protection" },
+  "details_overriddenApis": { "message": "Overridden APIs" },
+
+  "details_notConfigured": { "message": "Not configured" },
+  "details_none": { "message": "None" },
+  "details_noneDisabled": { "message": "None (protection disabled)" },
+
+  "details_latitudeLabel": { "message": "Latitude" },
+  "details_longitudeLabel": { "message": "Longitude" },
+  "details_accuracyLabel": { "message": "Accuracy" },
+  "details_locationLabel": { "message": "Location" },
+  "details_identifierLabel": { "message": "Identifier" },
+  "details_offsetLabel": { "message": "Offset" },
+  "details_dstOffsetLabel": { "message": "DST Offset" },
+  "details_dstOffsetMinutes": {
+    "message": "$MINUTES$ minutes",
+    "placeholders": { "minutes": { "content": "$1", "example": "60" } }
+  },
+  "details_fallbackNote": { "message": "⚠️ Estimated (API unavailable)" },
+
+  "details_webrtcActive": {
+    "message": "✓ Active\n\nRTCPeerConnection is wrapped to suppress ICE candidate gathering.\nThis prevents WebRTC from leaking your real IP address."
+  },
+  "details_webrtcInactive": {
+    "message": "✗ Inactive\n\nWebRTC can leak your real IP address even when using a VPN."
+  },
+
+  "details_section_geolocation": { "message": "Geolocation" },
+  "details_section_timezone": { "message": "Timezone" },
+  "details_section_webrtc": { "message": "WebRTC" },
+
+  "advanced_button": { "message": "Advanced" },
+  "advanced_debugLogging": { "message": "Debug Logging" },
+  "advanced_verbosityLevel": { "message": "Verbosity Level" },
+  "advanced_verbosity_info": { "message": "Info" },
+  "advanced_verbosity_debug": { "message": "Debug" },
+  "advanced_verbosity_trace": { "message": "Trace" },
+  "advanced_theme": { "message": "Theme" },
+  "advanced_theme_system": { "message": "System" },
+  "advanced_theme_light": { "message": "Light" },
+  "advanced_theme_dark": { "message": "Dark" },
+  "advanced_coffee": { "message": "☕ Buy me a coffee" }
+}

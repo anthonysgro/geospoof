@@ -26,15 +26,16 @@
  *   insertion hooks — the iframe is in the DOM before the index is
  *   valid)
  *
- * Known limitation: this module currently patches the iframe's
- * `Intl.DateTimeFormat` constructor/`resolvedOptions`, its `Date`
- * constructor, and `Temporal.Now.*`. It does NOT install iframe-realm
- * copies of the full `Date.prototype` method overrides (toString,
- * getHours, etc.). The iframe's Date constructor reuses the iframe's
- * own `Date.prototype`, so methods called on a Date produced by our
- * iframe-realm constructor still hit the iframe's unpatched prototype
- * methods. A future PR can port the per-method overrides into this
- * realm-patcher if the need arises.
+ * Per-method `Date.prototype` overrides (getTimezoneOffset, the six
+ * formatters, the seven getters, the six setters) install into each
+ * iframe realm via the parameterized helpers exported from
+ * `date-getters.ts`, `date-setters.ts`, `date-formatting.ts`, and
+ * `timezone-overrides.ts`. Each realm captures its own native method
+ * references for fallback paths, so cross-realm errors or disabled
+ * spoofing still land inside the correct realm's native
+ * implementation. This closes the "iframe-realm Date.prototype
+ * methods" bypass that an earlier version of this module documented
+ * as a gap.
  */
 
 import type { AnyFunction, SpoofedLocation } from "./types";
@@ -58,6 +59,10 @@ import { getPaddedCoords } from "./geolocation";
 import { installLastModifiedOverride } from "./document-overrides";
 import { buildRTCPeerConnectionWrapper, installRTCGetStatsOverride } from "./webrtc";
 import { waitForSettings } from "./settings-listener";
+import { installDateGetterOverridesOn, type DateGetterOriginals } from "./date-getters";
+import { installDateSetterOverridesOn, type DateSetterOriginals } from "./date-setters";
+import { installDateFormattingOverridesOn, type DateFormattingOriginals } from "./date-formatting";
+import { installGetTimezoneOffsetOverrideOn } from "./timezone-overrides";
 import { createLogger } from "@/shared/utils/debug-logger";
 
 const logger = createLogger("INJ");
@@ -194,6 +199,19 @@ export function patchIframeWindow(iframeWindow: Window): void {
     const iframeOrigToString = iframeFnProto.toString;
     const iframeOrigCall = iframeFnProto.call;
 
+    // Derive the engine-specific "[native code]" surround format from
+    // the iframe's own Number constructor. Same rationale as the main
+    // window override: Firefox's native toString output is multi-line,
+    // Chrome's is single-line, and CreepJS reconstructs expected
+    // strings using this split.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+    const iframeNumber = (iframeWindow as any).Number as unknown;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+    const numSrc: string = (iframeOrigCall as any).call(iframeOrigToString, iframeNumber);
+    const iframeNativeParts = numSrc.split("Number");
+    const iframeNativeP1 = iframeNativeParts[0] ?? "function ";
+    const iframeNativeP2 = iframeNativeParts[1] ?? "() { [native code] }";
+
     // Use method shorthand so the patched toString has no prototype/[[Construct]]
     // eslint-disable-next-line @typescript-eslint/unbound-method -- intentional: method shorthand destructuring for anti-fingerprint
     iframeFnProto.toString = {
@@ -201,7 +219,7 @@ export function patchIframeWindow(iframeWindow: Window): void {
       toString(this: any): string {
         const nativeName = overrideRegistry.get(this as AnyFunction);
         if (nativeName !== undefined) {
-          return `function ${nativeName}() { [native code] }`;
+          return iframeNativeP1 + nativeName + iframeNativeP2;
         }
         // Pre-check: throw TypeError directly for non-functions (same
         // reason as the main window override — single stack frame).
@@ -698,7 +716,119 @@ export function patchIframeWindow(iframeWindow: Window): void {
     // Cross-origin or missing Date — silently ignore
   }
 
-  // ── 6. Temporal.Now override ─────────────────────────────────────────
+  // ── 6. Date.prototype methods (getters, setters, formatters,
+  //      getTimezoneOffset) ───────────────────────────────────────────
+  //
+  // Each iframe realm has its own `Date.prototype`, independent of the
+  // top-level's. Top-level overrides installed on the top-level
+  // Date.prototype don't apply to Dates produced by the iframe's
+  // constructor. Without this section, a page can trivially bypass
+  // the per-method overrides by going through the iframe:
+  //
+  //     new iframe.contentWindow.Date().getHours()
+  //     // ^ falls through to the iframe's unpatched native getHours,
+  //     //   which returns the hour in the real system zone
+  //
+  // The four `install*OverridesOn` helpers below are the parameterized
+  // variants of the top-level installers — the same implementation is
+  // shared across realms. They accept a target Date.prototype and a bag
+  // of THAT realm's native methods, so fall-through paths stay inside
+  // the correct realm (no cross-realm calls on error paths).
+  //
+  // Ordering within this section matches the top-level init order:
+  // getTimezoneOffset → formatters → getters → setters. Setters must
+  // come last because their multi-argument "preserve current component"
+  // branch reads through the spoofed getters.
+  //
+  // Labeled block so a missing Date.prototype (cross-origin
+  // SecurityError) skips only this section, not the downstream
+  // Temporal / cascade / lastModified installs.
+  dateProtoSection: try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+    const iframeDateProto = (iframeWindow as any).Date?.prototype as Date | undefined;
+    if (!iframeDateProto) break dateProtoSection;
+
+    // Capture the iframe realm's native Date.prototype method references
+    // BEFORE we install any overrides on that prototype. These go into
+    // the originals bags so each spoofed method's fall-through path
+    // calls back into the iframe's native method rather than the
+    // top-level's. Cross-realm fallbacks would work (the methods only
+    // touch the instance's internal [[DateValue]] slot and that is
+    // realm-agnostic) but keeping each realm self-contained is cleaner
+    // and removes a class of potential realm-boundary bugs.
+    //
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    const origGetTzOffset = iframeDateProto.getTimezoneOffset;
+    const getterOriginals: DateGetterOriginals = {
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      getHours: iframeDateProto.getHours,
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      getMinutes: iframeDateProto.getMinutes,
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      getSeconds: iframeDateProto.getSeconds,
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      getMilliseconds: iframeDateProto.getMilliseconds,
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      getDate: iframeDateProto.getDate,
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      getDay: iframeDateProto.getDay,
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      getMonth: iframeDateProto.getMonth,
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      getFullYear: iframeDateProto.getFullYear,
+    };
+    const setterOriginals: DateSetterOriginals = {
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      setHours: iframeDateProto.setHours,
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      setMinutes: iframeDateProto.setMinutes,
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      setSeconds: iframeDateProto.setSeconds,
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      setDate: iframeDateProto.setDate,
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      setMonth: iframeDateProto.setMonth,
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      setFullYear: iframeDateProto.setFullYear,
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      setTime: iframeDateProto.setTime,
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      getMilliseconds: iframeDateProto.getMilliseconds,
+    };
+    const formattingOriginals: DateFormattingOriginals = {
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      toString: iframeDateProto.toString,
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      toDateString: iframeDateProto.toDateString,
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      toTimeString: iframeDateProto.toTimeString,
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      toLocaleString: iframeDateProto.toLocaleString,
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      toLocaleDateString: iframeDateProto.toLocaleDateString,
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      toLocaleTimeString: iframeDateProto.toLocaleTimeString,
+    };
+
+    // Install in the same order as top-level index.ts: getTimezoneOffset,
+    // formatters, getters, setters. Each call is defensive — individual
+    // installers swallow per-method failures internally so a bad override
+    // on one method doesn't prevent others from installing.
+    installGetTimezoneOffsetOverrideOn(iframeDateProto, origGetTzOffset);
+    installDateFormattingOverridesOn(iframeDateProto, formattingOriginals);
+    installDateGetterOverridesOn(iframeDateProto, getterOriginals);
+    installDateSetterOverridesOn(iframeDateProto, setterOriginals);
+
+    logger.debug("[patchIframeWindow] section 6 (Date.prototype methods) complete");
+  } catch (err) {
+    logger.debug(
+      "[patchIframeWindow] section 6 (Date.prototype methods) threw:",
+      err instanceof Error ? err.message : String(err)
+    );
+    // Cross-origin or missing Date.prototype — silently skip
+  }
+
+  // ── 7. Temporal.Now override ─────────────────────────────────────────
   // Temporal is feature-detected; skip when unavailable in the iframe's
   // realm. Same override pattern as the top-level temporal.ts:
   // `timeZoneId()` returns the spoofed identifier, and every
@@ -709,7 +839,7 @@ export function patchIframeWindow(iframeWindow: Window): void {
   // not the downstream cascade / lastModified installs. This was the
   // root cause of a Safari-only `iframe.contentDocument.lastModified`
   // leak: Safari doesn't ship Temporal, so a bare `return` here
-  // aborted patchIframeWindow before section 8 could run and patched
+  // aborted patchIframeWindow before section 9 could run and patched
   // Document.prototype never got the spoofed getter.
   temporalSection: try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
@@ -770,16 +900,16 @@ export function patchIframeWindow(iframeWindow: Window): void {
       return iframeOrigZonedDateTimeISO(tzLike);
     });
 
-    logger.debug("[patchIframeWindow] section 6 (Temporal) complete");
+    logger.debug("[patchIframeWindow] section 7 (Temporal) complete");
   } catch (err) {
     logger.debug(
-      "[patchIframeWindow] section 6 (Temporal) threw:",
+      "[patchIframeWindow] section 7 (Temporal) threw:",
       err instanceof Error ? err.message : String(err)
     );
     // Temporal unavailable or cross-origin — silently ignore
   }
 
-  // ── 7. Nested-iframe cascade ─────────────────────────────────────────
+  // ── 8. Nested-iframe cascade ─────────────────────────────────────────
   // A same-origin iframe's document has its own HTMLIFrameElement
   // prototype, its own Node/Element prototypes, and its own document
   // tree that the top-level MutationObserver cannot see. Without
@@ -1129,16 +1259,16 @@ export function patchIframeWindow(iframeWindow: Window): void {
       // cross-origin or detached — silently skip
     }
 
-    logger.debug("[patchIframeWindow] section 7 (nested-iframe cascade) complete");
+    logger.debug("[patchIframeWindow] section 8 (nested-iframe cascade) complete");
   } catch (err) {
     logger.debug(
-      "[patchIframeWindow] section 7 (nested-iframe cascade) threw:",
+      "[patchIframeWindow] section 8 (nested-iframe cascade) threw:",
       err instanceof Error ? err.message : String(err)
     );
     // Cross-origin or missing constructors — silently ignore
   }
 
-  // ── 8. Document.prototype.lastModified ───────────────────────────────
+  // ── 9. Document.prototype.lastModified ───────────────────────────────
   // Each iframe realm has its own `Document.prototype`, which means
   // `iframe.contentDocument.lastModified` reads through the iframe's
   // un-patched accessor and leaks the real system timezone. This is
@@ -1212,7 +1342,7 @@ export function patchIframeWindow(iframeWindow: Window): void {
     );
   }
 
-  // ── 9. RTCPeerConnection override ────────────────────────────────────
+  // ── 10. RTCPeerConnection override ────────────────────────────────────
   // Each iframe realm has its own `RTCPeerConnection` global. A page
   // can bypass the top-level wrapper by calling
   // `iframe.contentWindow.RTCPeerConnection(...)` from the parent;
@@ -1244,7 +1374,7 @@ export function patchIframeWindow(iframeWindow: Window): void {
       installRTCGetStatsOverride(iframeRTC.prototype as RTCPeerConnection);
     } catch (err) {
       logger.debug(
-        "[patchIframeWindow] section 9 (webrtc) failed to install getStats override:",
+        "[patchIframeWindow] section 10 (webrtc) failed to install getStats override:",
         err instanceof Error ? err.message : String(err)
       );
     }
@@ -1260,15 +1390,15 @@ export function patchIframeWindow(iframeWindow: Window): void {
       });
     } catch (err) {
       logger.debug(
-        "[patchIframeWindow] section 9 (webrtc) failed to swap iframe RTCPeerConnection:",
+        "[patchIframeWindow] section 10 (webrtc) failed to swap iframe RTCPeerConnection:",
         err instanceof Error ? err.message : String(err)
       );
     }
 
-    logger.debug("[patchIframeWindow] section 9 (webrtc) complete");
+    logger.debug("[patchIframeWindow] section 10 (webrtc) complete");
   } catch (err) {
     logger.debug(
-      "[patchIframeWindow] section 9 (webrtc) threw:",
+      "[patchIframeWindow] section 10 (webrtc) threw:",
       err instanceof Error ? err.message : String(err)
     );
     // Cross-origin or missing RTCPeerConnection — silently ignore.

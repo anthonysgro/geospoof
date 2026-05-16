@@ -5,10 +5,7 @@ import { KNOWN_LIMITATIONS_ANCHOR_ID } from "./VerificationSummary"
 import type { FilterCriteria } from "@/lib/test-suite/filters"
 import type { TestState } from "@/lib/test-suite/types"
 import type { UserCategory } from "@/lib/verification/categories"
-import {
-  DEFAULT_FILTER_STATE,
-  TestSuiteFilters,
-} from "@/components/test/TestSuiteFilters"
+import { TestSuiteFilters } from "@/components/test/TestSuiteFilters"
 import { applyFilter, isFilterEmpty } from "@/lib/test-suite/filters"
 import {
   USER_CATEGORIES,
@@ -36,6 +33,8 @@ const CATEGORY_HEADING_IDS: Record<UserCategory, string> = {
 
 interface DetectableIssuesSectionProps {
   states: ReadonlyArray<TestState>
+  filters: FilterCriteria
+  onFiltersChange: (next: FilterCriteria) => void
 }
 
 /**
@@ -53,13 +52,16 @@ interface DetectableIssuesSectionProps {
  * (section card → group section → test card) and made the page feel
  * heavy. The category blocks are now flat headers + group lists; the
  * only bordered surface is the test row itself.
+ *
+ * Filter state is lifted to the parent dashboard so the
+ * `FailedTestsPreview` block in the Verdict tier can trigger
+ * "show only failures" on it without a parallel filter UI.
  */
 export function DetectableIssuesSection({
   states,
+  filters,
+  onFiltersChange,
 }: DetectableIssuesSectionProps) {
-  const [filters, setFilters] =
-    React.useState<FilterCriteria>(DEFAULT_FILTER_STATE)
-
   const filteredStates = React.useMemo(
     () => applyFilter(states, filters),
     [states, filters]
@@ -83,10 +85,10 @@ export function DetectableIssuesSection({
   )
 
   return (
-    <section aria-label="Detectable issues" className="space-y-8">
+    <section aria-labelledby="tier-details" className="space-y-8">
       <TestSuiteFilters
         filters={filters}
-        onChange={setFilters}
+        onChange={onFiltersChange}
         matchedCount={filteredStates.length}
         totalCount={states.length}
       />

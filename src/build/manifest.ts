@@ -36,8 +36,13 @@ export function resolveBrowserTarget(envBrowser: string | undefined): BrowserTar
 export function generateManifest(target: BrowserTarget, version: string): Record<string, unknown> {
   const shared: Record<string, unknown> = {
     manifest_version: 3,
-    name: "GeoSpoof",
-    description: "Spoof your browser's geolocation and timezone. Prevent WebRTC IP leaks.",
+    // Use __MSG_*__ references so the Chrome Web Store, AMO, and the
+    // App Store can localize the extension name and description to
+    // match each user's browser/OS locale. `default_locale` is the
+    // fallback when a user's locale has no messages.json file.
+    name: "__MSG_extensionName__",
+    description: "__MSG_extensionDescription__",
+    default_locale: "en",
     author: "Anthony Sgro",
     homepage_url: "https://github.com/anthonysgro/geospoof",
     incognito: "spanning",
@@ -70,9 +75,47 @@ export function generateManifest(target: BrowserTarget, version: string): Record
   };
 
   if (target === "firefox") {
-  // Firefox: scripts-based background, injected.js as world: "MAIN" content script
+  // Firefox: scripts-based background, injected.js as world: "MAIN" content script.
+  //
+  // Permission notes — all four of these are listed under required
+  // `permissions`. The scary install string users see is
+  // "Block content on any page" from `webRequestBlocking`. This is
+  // intentional: GeoSpoof's Firefox build uses `webRequest.
+  // filterResponseData` to inject its timezone-spoofing payload into
+  // Worker / SharedWorker / ServiceWorker script responses at the
+  // network layer. Without these permissions we cannot close the
+  // worker timezone leaks that are now widely known (CreepJS and
+  // similar tools flag them). The feature is baked in and always on
+  // — there is no opt-in toggle because the alternative (content-
+  // script blob-URL wrapping) fails on strict-CSP origins and can
+  // break site functionality, whereas filterResponseData degrades
+  // gracefully (onerror fallback keeps the site working, just
+  // unprotected) on the rare origin that ships SRI on workers.
+  //
+  //   - `webRequest` — baseline API access
+  //   - `webRequestBlocking` — required to attach filters to responses.
+  //     This is the permission whose user-facing string is "Block
+  //     content on any page."
+  //   - `webRequestFilterResponse` — MV3-specific gate added in Firefox
+  //     110. MV2 extensions got this implicitly from
+  //     `webRequestBlocking`; MV3 needs it listed separately.
+  //   - `webRequestFilterResponse.serviceWorkerScript` — required to
+  //     intercept `navigator.serviceWorker.register()` script fetches.
+  //     Without this the filter fires for dedicated / shared / module
+  //     workers but not service workers. Added in Firefox 95.
+  //
+  // These are Firefox-only; Chromium MV3 removed response-body
+  // modification entirely (declarativeNetRequest can't modify bodies)
+  // and Safari never implemented the API.
   return {
     ...shared,
+    permissions: [
+      ...(shared.permissions as string[]),
+      "webRequest",
+      "webRequestBlocking",
+      "webRequestFilterResponse",
+      "webRequestFilterResponse.serviceWorkerScript",
+    ],
     browser_specific_settings: {
       gecko: {
         id: "{a8f7e9c2-4d3b-4a1e-9f8c-7b6d5e4a3c2b}",

@@ -46,9 +46,8 @@ function TestPage() {
               Verify your protection, privately
             </h1>
             <p className="text-body-lg text-(--color-canvas-muted)">
-              See what your browser is reporting as your identity and whether
-              any site could tell that GeoSpoof is active. Every check runs
-              locally in your browser — nothing leaves your device.
+              See what your browser reports and whether any site could detect
+              GeoSpoof.
             </p>
           </header>
 

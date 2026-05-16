@@ -8,6 +8,7 @@ import type {
   SetLocationPayload,
   SetProtectionStatusPayload,
   SetWebRTCProtectionPayload,
+  AnnounceWorkerFetchPayload,
   GeocodeQueryPayload,
   CheckTabInjectionPayload,
   SyncVpnPayload,
@@ -32,6 +33,7 @@ import {
   isRestrictedUrl,
 } from "./tabs";
 import { syncVpnLocation, clearIpGeoCache } from "./vpn-sync";
+import { allowlistWorkerUrl } from "./worker-request-filter";
 
 export async function handleMessage(
   message: Message,
@@ -75,6 +77,17 @@ export async function handleMessage(
         logger.debug("Setting WebRTC protection:", message.payload);
         await handleSetWebRTCProtection(message.payload as SetWebRTCProtectionPayload);
         return { success: true };
+
+      case "ANNOUNCE_WORKER_FETCH": {
+        const payload = message.payload as AnnounceWorkerFetchPayload;
+        if (typeof payload?.url === "string") {
+          allowlistWorkerUrl(payload.url);
+        }
+        // Fire-and-forget — the content script doesn't await the result
+        // because blocking the worker construction on a background
+        // round-trip would regress cold-start performance.
+        return { success: true };
+      }
 
       case "GEOCODE_QUERY": {
         const results = await geocodeQuery((message.payload as GeocodeQueryPayload).query);

@@ -854,6 +854,35 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   border-top: 1px solid #f0f0f0;
 }
 
+/* Per-setting inline disclaimer (e.g. advanced worker protection).
+   Small, de-emphasised text that sits under the toggle it describes. */
+.setting-disclaimer {
+  margin-top: 6px;
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #666;
+  background: #faf8f1;
+  border-left: 3px solid #e0c060;
+  border-radius: 4px;
+}
+
+.setting-disclaimer strong {
+  font-weight: 600;
+  color: #8a6a10;
+}
+
+.setting-disclaimer.unsupported {
+  background: #f5f5f5;
+  border-left-color: #bbb;
+  color: #888;
+}
+
+.setting-disclaimer.unsupported strong {
+  color: #555;
+}
+
 /* Theme Selector */
 .theme-selector {
   margin-top: 12px;

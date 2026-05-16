@@ -101,7 +101,15 @@ Browser extensions operate in a privileged but sandboxed context. Several attack
 
 ### Web Workers
 
-[Content scripts](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Content_scripts) cannot inject into [`Worker`](https://developer.mozilla.org/en-US/docs/Web/API/Worker) or [`SharedWorker`](https://developer.mozilla.org/en-US/docs/Web/API/SharedWorker) contexts. A page that performs timezone detection inside a worker will receive the real system timezone. This is a known limitation with no extension-level solution.
+[Content scripts](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Content_scripts) cannot directly inject into [`Worker`](https://developer.mozilla.org/en-US/docs/Web/API/Worker), [`SharedWorker`](https://developer.mozilla.org/en-US/docs/Web/API/SharedWorker), or [`ServiceWorker`](https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorker) contexts — they run in separate global scopes with no shared state. GeoSpoof routes different worker-construction patterns through different mechanisms to balance protection coverage with site-breakage risk.
+
+For URL-based workers (`new Worker("/foo.js")`, module workers, SharedWorker with a URL, `navigator.serviceWorker.register(url)`) the content script announces the URL to the background and passes the original URL through to the real constructor. On Firefox the background's always-on [`webRequest.filterResponseData`](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/filterResponseData) listener prepends the spoofing payload to the response bytes, preserving the original URL and avoiding any CSP/import/location drift. On Chromium and Safari the API doesn't exist and URL-based workers run unpatched — a documented engine limit.
+
+For inline workers (`new Worker(URL.createObjectURL(new Blob([...])))` or `new Worker("data:application/javascript,...")`), the content script blob-wraps the worker on every engine. The site already committed to an inline URL and its CSP necessarily allows it, so our replacement blob stays within the same CSP allowance.
+
+Rewriting URL-based workers to blob URLs is deliberately avoided because blob wrapping fails on strict-CSP origins (breaking the site's worker entirely), shifts `self.location` which breaks relative `fetch`/`import` calls inside the worker, and can't preserve module-worker `import` resolution. When Advanced Worker Protection's `filterResponseData` path encounters a worker script protected by Subresource Integrity, the browser rejects the modified bytes, our `onerror` handler disconnects, the original response serves unmodified, and the site keeps working (with no protection on that origin).
+
+When running on Firefox, CreepJS's `code:` worker-fingerprint hash matches the main window: the shared payload derives the engine-specific `[native code]` surround format at runtime to match Firefox's multi-line shape, so every spoofed function passes the native-shape check inside workers.
 
 ### Engine Internals
 

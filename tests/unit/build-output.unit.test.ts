@@ -78,8 +78,13 @@ describe("Firefox manifest structure", () => {
     expect(m.action).toBeDefined();
     expect(m.icons).toBeDefined();
     expect(m.manifest_version).toBe(3);
-    expect(m.name).toBe("GeoSpoof");
-    expect(m.description).toBeDefined();
+    // Name and description are now __MSG_*__ references so the browser
+    // picks the right locale from _locales/<lang>/messages.json. The
+    // actual displayed name/description is asserted in the i18n
+    // test suite against the messages.json files themselves.
+    expect(m.name).toBe("__MSG_extensionName__");
+    expect(m.description).toBe("__MSG_extensionDescription__");
+    expect(m.default_locale).toBe("en");
   });
 });
 
@@ -138,8 +143,9 @@ describe("Chromium manifest structure", () => {
     expect(m.action).toBeDefined();
     expect(m.icons).toBeDefined();
     expect(m.manifest_version).toBe(3);
-    expect(m.name).toBe("GeoSpoof");
-    expect(m.description).toBeDefined();
+    expect(m.name).toBe("__MSG_extensionName__");
+    expect(m.description).toBe("__MSG_extensionDescription__");
+    expect(m.default_locale).toBe("en");
   });
 });
 
@@ -147,8 +153,11 @@ describe("Chromium manifest structure", () => {
 // Shared fields preservation (Firefox vs Chromium)
 // ---------------------------------------------------------------------------
 describe("Shared fields preservation", () => {
+  // NOTE: `permissions` intentionally diverges between Firefox and Chromium
+  // because Firefox needs `webRequest` for worker filterResponseData
+  // (Firefox-only in MV3). That divergence is tested below with a
+  // dedicated assertion instead of the identity check.
   const sharedKeys = [
-    "permissions",
     "host_permissions",
     "action",
     "icons",
@@ -161,6 +170,33 @@ describe("Shared fields preservation", () => {
     const ff = firefoxManifest();
     const cr = chromiumManifest();
     expect(ff[key]).toEqual(cr[key]);
+  });
+
+  test("Firefox manifest includes the Chromium permission set plus required worker-filter permissions", () => {
+    const ff = firefoxManifest().permissions as string[];
+    const cr = chromiumManifest().permissions as string[];
+
+    // Every Chromium permission must appear on Firefox.
+    for (const p of cr) expect(ff).toContain(p);
+
+    // Firefox adds the webRequest.filterResponseData permission set
+    // as required permissions so the background can always-on the
+    // worker script filter without a runtime prompt. Chromium MV3
+    // removed response-body modification so these are deliberately
+    // absent there.
+    expect(ff).toContain("webRequest");
+    expect(ff).toContain("webRequestBlocking");
+    expect(ff).toContain("webRequestFilterResponse");
+    expect(ff).toContain("webRequestFilterResponse.serviceWorkerScript");
+    expect(cr).not.toContain("webRequest");
+    expect(cr).not.toContain("webRequestBlocking");
+    expect(cr).not.toContain("webRequestFilterResponse");
+    expect(cr).not.toContain("webRequestFilterResponse.serviceWorkerScript");
+
+    // Neither build declares optional_permissions — advanced worker
+    // protection is baked in on Firefox rather than opt-in.
+    expect(firefoxManifest().optional_permissions).toBeUndefined();
+    expect(chromiumManifest().optional_permissions).toBeUndefined();
   });
 });
 

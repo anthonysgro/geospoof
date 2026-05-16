@@ -2,6 +2,7 @@ import { Info } from "lucide-react"
 
 import { LeafletMap } from "./LeafletMap"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useIdentity } from "@/lib/verification/identity-context"
 import {
   formatSignedLat,
@@ -101,9 +102,9 @@ function describeError(raw: string): {
 function LocationSkeleton() {
   return (
     <div className="space-y-3" aria-hidden="true">
-      <div className="h-[340px] w-full animate-pulse rounded-lg bg-(--color-canvas-border) sm:h-[400px] lg:h-[460px]" />
-      <div className="h-5 w-64 animate-pulse rounded bg-(--color-canvas-border)" />
-      <div className="h-4 w-40 animate-pulse rounded bg-(--color-canvas-border)" />
+      <Skeleton className="h-[320px] w-full rounded-lg sm:h-[420px] lg:h-[500px]" />
+      <Skeleton className="h-5 w-64" />
+      <Skeleton className="h-4 w-40" />
     </div>
   )
 }

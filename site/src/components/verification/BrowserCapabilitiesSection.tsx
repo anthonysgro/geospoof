@@ -1,7 +1,11 @@
-import * as React from "react"
 import { ChevronDown } from "lucide-react"
 
 import type { FeatureAvailability } from "@/lib/verification/identity-snapshot"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { useIdentity } from "@/lib/verification/identity-context"
 import { cn } from "@/lib/utils"
 
@@ -48,25 +52,20 @@ const FEATURE_GROUPS: ReadonlyArray<FeatureGroup> = [
 ]
 
 /**
- * Browser_Capabilities_Section.
+ * Compact Browser Capabilities trigger for the Identity Panel sidebar.
  *
- * Explains which browser APIs are present in the current runtime. This
- * is the sibling question to the Identity Panel: the panel shows what
- * the browser reports, and this section shows what the browser actually
- * supports. It's rendered between the Identity Panel and the
- * Verification Summary so skipped tests ("Temporal unavailable") can be
- * explained by a single scroll upward rather than a dig into a footer.
+ * Renders a single "APIs available N/M" row as a Popover trigger.
+ * Clicking opens a floating panel with the full grouped list — so
+ * expanding it doesn't reflow the rest of the sidebar below.
  *
- * Styled as a flat collapsible header — no border, no card — matching
- * the design language the rest of the dashboard moved to.
- *
- * Missing capabilities never contribute to the detectable-issue count
- * (Req 6.3, 6.4) — rows render neutral availability only, never fail.
+ * Lives at the bottom of the Identity sidebar as environment
+ * metadata closely related to Platform. Missing capabilities never
+ * contribute to the detectable-issue count (Req 6.3, 6.4) — rows
+ * render neutral availability only, never fail.
  */
 export function BrowserCapabilitiesSection() {
   const { snapshot } = useIdentity()
   const { features } = snapshot
-  const [open, setOpen] = React.useState(false)
 
   const totalRows = FEATURE_GROUPS.reduce(
     (sum, group) => sum + group.rows.length,
@@ -76,59 +75,54 @@ export function BrowserCapabilitiesSection() {
     (sum, group) => sum + group.rows.filter((row) => features[row.key]).length,
     0
   )
-
   const allAvailable = availableRows === totalRows
 
   return (
-    <section aria-label="Browser capabilities" className="space-y-3">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
+    <Popover>
+      <PopoverTrigger
         className={cn(
-          "flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left",
-          "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)",
-          "hover:bg-(--color-canvas-border)/30"
+          "group/caps flex w-full items-center gap-2 rounded-md py-1 text-left text-sm outline-none",
+          "focus-visible:ring-2 focus-visible:ring-(--color-brand)",
+          "hover:text-(--color-canvas-foreground)"
         )}
       >
+        <span className="text-sm font-medium text-(--color-canvas-foreground)">
+          APIs available
+        </span>
+        <span
+          className={cn(
+            "ml-auto text-xs font-medium",
+            allAvailable
+              ? "text-(--color-brand)"
+              : "text-(--color-canvas-muted)"
+          )}
+        >
+          {availableRows}/{totalRows}
+        </span>
         <ChevronDown
           aria-hidden="true"
-          className={cn(
-            "size-4 shrink-0 text-(--color-canvas-muted) transition-transform",
-            open && "rotate-180"
-          )}
+          className="size-3.5 shrink-0 text-(--color-canvas-muted) transition-transform group-aria-expanded/caps:rotate-180"
         />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-            <h2 className="text-sm font-semibold text-(--color-canvas-foreground)">
-              Browser capabilities
-            </h2>
-            <span
-              className={cn(
-                "text-xs font-medium",
-                allAvailable
-                  ? "text-(--color-brand)"
-                  : "text-(--color-canvas-muted)"
-              )}
-            >
-              {availableRows}/{totalRows} available
-            </span>
-          </div>
-          <p className="text-xs text-(--color-canvas-muted)">
-            Which APIs the current runtime exposes. Missing APIs explain why
-            some tests are skipped.
-          </p>
-        </div>
-      </button>
+      </PopoverTrigger>
 
-      {open ? (
-        <div className="grid grid-cols-1 gap-x-8 gap-y-5 pl-6 md:grid-cols-3">
+      <PopoverContent align="end" className="w-80 max-w-[90vw]">
+        <div className="space-y-4">
+          <div>
+            <p className="text-sm font-medium text-(--color-canvas-foreground)">
+              APIs available
+            </p>
+            <p className="mt-0.5 text-xs text-(--color-canvas-muted)">
+              Which surfaces the current runtime exposes. Missing APIs explain
+              why some tests are skipped.
+            </p>
+          </div>
+
           {FEATURE_GROUPS.map((group) => (
             <div key={group.title}>
-              <div className="mb-2 text-[11px] font-medium tracking-wide text-(--color-canvas-muted) uppercase">
+              <div className="mb-1.5 text-[11px] font-medium tracking-wide text-(--color-canvas-muted) uppercase">
                 {group.title}
               </div>
-              <ul className="space-y-1.5">
+              <ul className="space-y-1">
                 {group.rows.map((row) => {
                   const available = features[row.key]
                   return (
@@ -162,7 +156,7 @@ export function BrowserCapabilitiesSection() {
             </div>
           ))}
         </div>
-      ) : null}
-    </section>
+      </PopoverContent>
+    </Popover>
   )
 }

@@ -16,6 +16,11 @@ import { updateBadge } from "./badge";
 import { broadcastSettingsToTabs, isRestrictedUrl, checkTabInjection } from "./tabs";
 import { handleMessage, handleSetLocation } from "./messages";
 import { syncVpnLocation } from "./vpn-sync";
+import {
+  installWorkerRequestFilter,
+  updateWorkerFilterSettings,
+  isWorkerFilterSupported,
+} from "./worker-request-filter";
 
 const logger = createLogger("BG");
 
@@ -129,6 +134,15 @@ async function initialize(): Promise<void> {
   // Restore logger state from persisted settings
   setDebugEnabled(settings.debugLogging);
   setVerbosityLevel(settings.verbosityLevel);
+
+  // Prime the worker-request-filter cache and install the listener
+  // on engines that support webRequest.filterResponseData (Firefox
+  // only). The listener itself short-circuits based on whether
+  // spoofing is enabled and a timezone is configured, so the install
+  // itself is unconditional on Firefox.
+  updateWorkerFilterSettings(settings);
+  await installWorkerRequestFilter();
+  logger.debug(`[init] worker-request-filter support: ${isWorkerFilterSupported() ? "yes" : "no"}`);
 
   if (settings.webrtcProtection) {
     try {

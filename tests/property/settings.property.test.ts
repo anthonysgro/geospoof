@@ -124,7 +124,7 @@ test("Property 4: Broadcast Payload Contains Only Scoped Fields", async () => {
         expect(payload).not.toHaveProperty(key);
       }
 
-      // Payload must have exactly 6 keys (5 scoped + webrtcProtection).
+      // Payload must have exactly 6 scoped keys.
       expect(Object.keys(payload)).toHaveLength(6);
 
       // Values must match the original settings

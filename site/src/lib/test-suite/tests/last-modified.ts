@@ -109,8 +109,14 @@ function deriveOffsetFromLastModified(str: string, now: Date): number | null {
     parts.second
   )
   const diffMinutes = (wallClockAsUtc - now.getTime()) / 60000
-  // Round to nearest 15 minutes.
-  return Math.round(diffMinutes / 15) * 15
+  // Round to nearest 15 minutes. Normalize -0 to +0 so Object.is
+  // comparisons succeed for UTC+0 zones (Atlantic/Reykjavik,
+  // Africa/Abidjan, Europe/London in winter, etc.), where
+  // `lastModified` is always a few seconds earlier than `now`:
+  // `Math.round(-0.0055) * 15` yields -0, which Object.is treats as
+  // distinct from the +0 produced on the expected side.
+  const rounded = Math.round(diffMinutes / 15) * 15
+  return rounded === 0 ? 0 : rounded
 }
 
 /** Wait for an iframe to fire its `load` event or time out. */

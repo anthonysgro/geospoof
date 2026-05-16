@@ -4,52 +4,64 @@
  */
 
 import type { Settings, Location, Timezone, LocationName } from "@/shared/types/settings";
+import { t } from "./i18n";
 
 export function formatLocationDetails(
   location: Location | null,
   locationName: LocationName | null
 ): string {
-  if (!location) return "Not configured";
+  if (!location) return t("details_notConfigured") || "Not configured";
 
-  let details = `Latitude: ${location.latitude.toFixed(6)}\n`;
-  details += `Longitude: ${location.longitude.toFixed(6)}\n`;
-  details += `Accuracy: ±${location.accuracy}m\n`;
+  let details = `${t("details_latitudeLabel") || "Latitude"}: ${location.latitude.toFixed(6)}\n`;
+  details += `${t("details_longitudeLabel") || "Longitude"}: ${location.longitude.toFixed(6)}\n`;
+  details += `${t("details_accuracyLabel") || "Accuracy"}: ±${location.accuracy}m\n`;
 
   if (locationName && locationName.displayName) {
-    details += `\nLocation: ${locationName.displayName}`;
+    details += `\n${t("details_locationLabel") || "Location"}: ${locationName.displayName}`;
   }
 
   return details;
 }
 
 export function formatTimezoneDetails(timezone: Timezone | null): string {
-  if (!timezone) return "Not configured";
+  if (!timezone) return t("details_notConfigured") || "Not configured";
 
   const offsetHours = Math.floor(Math.abs(timezone.offset) / 60);
   const offsetMinutes = Math.abs(timezone.offset) % 60;
   const sign = timezone.offset >= 0 ? "+" : "-";
   const offsetStr = `UTC${sign}${String(offsetHours).padStart(2, "0")}:${String(offsetMinutes).padStart(2, "0")}`;
 
-  let details = `Identifier: ${timezone.identifier}\n`;
-  details += `Offset: ${offsetStr}\n`;
-  details += `DST Offset: ${timezone.dstOffset} minutes`;
+  let details = `${t("details_identifierLabel") || "Identifier"}: ${timezone.identifier}\n`;
+  details += `${t("details_offsetLabel") || "Offset"}: ${offsetStr}\n`;
+  const dstMinutes = String(timezone.dstOffset);
+  const dstLabel = t("details_dstOffsetLabel") || "DST Offset";
+  const dstValue = t("details_dstOffsetMinutes", [dstMinutes]) || `${dstMinutes} minutes`;
+  details += `${dstLabel}: ${dstValue}`;
 
   if (timezone.fallback) {
-    details += "\n\n⚠️ Estimated (API unavailable)";
+    details += `\n\n${t("details_fallbackNote") || "⚠️ Estimated (API unavailable)"}`;
   }
 
   return details;
 }
 
 export function formatWebRTCDetails(enabled: boolean): string {
-  if (!enabled) return "✗ Inactive\n\nWebRTC can leak your real IP address even when using a VPN.";
   // Wording is engine-agnostic because the protection mechanism
   // differs by engine: Chromium/Firefox use the browser-level
   // webRTCIPHandlingPolicy pref (strict on Chromium, proxy-gated on
   // Firefox), Safari relies on the content-script RTCPeerConnection
   // wrapper. Both paths block candidate gathering end-to-end; the
   // user doesn't need to know which one fired.
-  return "✓ Active\n\nRTCPeerConnection is wrapped to suppress ICE candidate gathering.\nThis prevents WebRTC from leaking your real IP address.";
+  if (!enabled) {
+    return (
+      t("details_webrtcInactive") ||
+      "✗ Inactive\n\nWebRTC can leak your real IP address even when using a VPN."
+    );
+  }
+  return (
+    t("details_webrtcActive") ||
+    "✓ Active\n\nRTCPeerConnection is wrapped to suppress ICE candidate gathering.\nThis prevents WebRTC from leaking your real IP address."
+  );
 }
 
 export function formatAPIsDetails(
@@ -58,12 +70,12 @@ export function formatAPIsDetails(
   hasTimezone: boolean,
   hasWebRTC: boolean = false
 ): string {
-  if (!enabled) return "None (protection disabled)";
+  if (!enabled) return t("details_noneDisabled") || "None (protection disabled)";
 
   const sections: string[] = [];
 
   if (hasLocation) {
-    sections.push("Geolocation");
+    sections.push(t("details_section_geolocation") || "Geolocation");
     sections.push("    • navigator.geolocation.getCurrentPosition()");
     sections.push("    • navigator.geolocation.watchPosition()");
     sections.push("    • navigator.geolocation.clearWatch()");
@@ -71,7 +83,7 @@ export function formatAPIsDetails(
   }
 
   if (hasTimezone) {
-    sections.push("Timezone");
+    sections.push(t("details_section_timezone") || "Timezone");
     sections.push("    • Date.prototype.getTimezoneOffset()");
     sections.push("    • Intl.DateTimeFormat() constructor");
     sections.push("    • Intl.DateTimeFormat.resolvedOptions()");
@@ -83,13 +95,13 @@ export function formatAPIsDetails(
   }
 
   if (hasWebRTC) {
-    sections.push("WebRTC");
+    sections.push(t("details_section_webrtc") || "WebRTC");
     sections.push("    • RTCPeerConnection (content-script wrapper)");
     sections.push("    • RTCPeerConnection.prototype.getStats");
     sections.push("    • privacy.network.webRTCIPHandlingPolicy (where available)");
   }
 
-  return sections.length > 0 ? sections.join("\n") : "None";
+  return sections.length > 0 ? sections.join("\n") : t("details_none") || "None";
 }
 
 export function updateDetailsView(settings: Settings): void {
@@ -129,7 +141,9 @@ export function updateStatusBadge(enabled: boolean): void {
     }
   }
   if (text) {
-    text.textContent = enabled ? "Enabled" : "Disabled";
+    text.textContent = enabled
+      ? t("status_enabled") || "Enabled"
+      : t("status_disabled") || "Disabled";
   }
 }
 
@@ -143,7 +157,7 @@ export function displayLocation(location: Location, locationName: LocationName |
     } else if (locationName && locationName.city) {
       nameEl.textContent = `${locationName.city}, ${locationName.country}`;
     } else {
-      nameEl.textContent = "Custom Location";
+      nameEl.textContent = t("location_custom") || "Custom Location";
     }
   }
 

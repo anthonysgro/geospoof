@@ -42,7 +42,7 @@ export function LeafletMap({ lat, lon }: LeafletMapProps) {
 
       const map = L.map(container, {
         center: [lat, lon],
-        zoom: 12,
+        zoom: 6,
         scrollWheelZoom: false,
         zoomAnimation: !reducedMotion,
         fadeAnimation: !reducedMotion,
@@ -85,7 +85,7 @@ export function LeafletMap({ lat, lon }: LeafletMapProps) {
       // constrained to the map container. Without this the tile pane
       // punches through the sticky Navigation (z-50) and the sticky
       // verdict bar (z-40) when the user scrolls.
-      className="isolate h-[340px] w-full overflow-hidden rounded-lg border border-(--color-canvas-border) sm:h-[400px] lg:h-[460px]"
+      className="isolate h-[320px] w-full overflow-hidden rounded-lg border border-(--color-canvas-border) sm:h-[420px] lg:h-[500px]"
     />
   )
 }

@@ -6,6 +6,7 @@
 import type { Settings } from "@/shared/types/settings";
 import { updateDetailsView, updateStatusBadge, displayLocation } from "./ui";
 import { showOnboarding } from "./onboarding";
+import { t } from "./i18n";
 
 /**
  * Apply a theme class to the document body.
@@ -51,7 +52,7 @@ export async function loadSettings(): Promise<void> {
     } else {
       const nameEl = document.getElementById("locationName");
       const coordsEl = document.getElementById("locationCoords");
-      if (nameEl) nameEl.textContent = "No location set";
+      if (nameEl) nameEl.textContent = t("location_none") || "No location set";
       if (coordsEl) coordsEl.textContent = "—";
     }
 
@@ -124,7 +125,8 @@ export async function loadSettings(): Promise<void> {
     if (warningMessage) {
       if (settings.enabled && !settings.location) {
         warningMessage.style.display = "block";
-        warningMessage.textContent = "⚠️ Protection enabled but no location set";
+        warningMessage.textContent =
+          t("warning_noLocationSet") || "⚠️ Protection enabled but no location set";
       } else {
         warningMessage.style.display = "none";
       }

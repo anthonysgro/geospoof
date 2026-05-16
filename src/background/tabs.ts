@@ -6,6 +6,7 @@
 import type { Settings } from "@/shared/types/settings";
 import type { UpdateSettingsPayload, InjectionStatus } from "@/shared/types/messages";
 import { createLogger } from "@/shared/utils/debug-logger";
+import { updateWorkerFilterSettings } from "./worker-request-filter";
 
 const logger = createLogger("BG");
 
@@ -13,6 +14,13 @@ const logger = createLogger("BG");
  * Broadcast settings to all tabs via content scripts.
  */
 export async function broadcastSettingsToTabs(settings: Settings): Promise<void> {
+  // Refresh the webRequest listener's cached settings snapshot. The
+  // listener reads this synchronously on every request (Firefox doesn't
+  // allow async listeners when using blocking / filterResponseData), so
+  // keeping it fresh here covers every settings-change code path —
+  // every mutation flows through broadcastSettingsToTabs.
+  updateWorkerFilterSettings(settings);
+
   const { enabled, location, timezone, debugLogging, verbosityLevel, webrtcProtection } = settings;
   const payload: UpdateSettingsPayload = {
     enabled,

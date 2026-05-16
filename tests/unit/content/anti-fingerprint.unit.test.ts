@@ -80,12 +80,22 @@ describe("Known Limitations Comment Block", () => {
     expect(source).toMatch(/SharedArrayBuffer timing attacks/i);
   });
 
-  test("documents proxy/engine-internal detection", () => {
-    expect(source).toMatch(/engine.internal checks/i);
+  test("documents XSLT datetime leak", () => {
+    expect(source).toMatch(/XSLT.*datetime leak/i);
   });
 
-  test("documents that content scripts cannot inject into Web Workers", () => {
-    expect(source).toMatch(/content scripts cannot inject into (Web )?[Ww]orkers/i);
+  test("documents extension initialization race", () => {
+    expect(source).toMatch(/[Ee]xtension initialization race/);
+  });
+
+  test("documents IP geolocation limitation", () => {
+    expect(source).toMatch(/IP geolocation mismatch/);
+  });
+
+  test("documents that content scripts cannot inject into Workers", () => {
+    expect(source).toMatch(/[Cc]ontent scripts cannot inject into/);
+    // And the limitation mentions the Worker context family somewhere nearby
+    expect(source).toMatch(/Web Worker.*SharedWorker.*ServiceWorker/s);
   });
 });
 

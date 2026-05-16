@@ -24,12 +24,13 @@ export async function loadAllTests(): Promise<ReadonlyArray<TestDefinition>> {
     { timezoneStealthTests },
     { extensionPresenceTests },
     { iframeRealmTests },
-    { workerLeakTests },
+    { workerTimezoneTests },
     { lastModifiedTests },
     { crossMethodOffsetTests },
     { raceConditionTests },
     { xsltDatetimeLeakTests },
     { webrtcLeakTests },
+    { ipCountryMatchTests },
   ] = await Promise.all([
     import("./geolocation"),
     import("./values-correctness"),
@@ -41,12 +42,13 @@ export async function loadAllTests(): Promise<ReadonlyArray<TestDefinition>> {
     import("./timezone-stealth"),
     import("./extension-presence"),
     import("./iframe-realm"),
-    import("./worker-leaks"),
+    import("./worker-timezone"),
     import("./last-modified"),
     import("./cross-method-offsets"),
     import("./race-condition"),
     import("./xslt-datetime-leak"),
     import("./webrtc-leak"),
+    import("./ip-country-match"),
   ])
 
   return [
@@ -61,11 +63,12 @@ export async function loadAllTests(): Promise<ReadonlyArray<TestDefinition>> {
     ...timezoneStealthTests,
     ...extensionPresenceTests,
     ...iframeRealmTests,
-    ...workerLeakTests,
+    ...workerTimezoneTests,
     ...lastModifiedTests,
     ...crossMethodOffsetTests,
     ...raceConditionTests,
     ...xsltDatetimeLeakTests,
     ...webrtcLeakTests,
+    ...ipCountryMatchTests,
   ]
 }

@@ -100,6 +100,21 @@ function browserTargetPlugin(target: BrowserTarget): Plugin {
         cpSync(iconsSrc, resolve(__dirname, "dist/icons"), { recursive: true });
       }
 
+      // Copy _locales directory. All three MV3 targets (Firefox,
+      // Chromium, Safari Web Extension) read localized strings from
+      // _locales/<lang>/messages.json and resolve __MSG_*__ references
+      // in manifest.json against it. The directory has to sit at the
+      // root of the extension bundle for the browser to find it.
+      const localesSrc = resolve(__dirname, "_locales");
+      if (existsSync(localesSrc)) {
+        cpSync(localesSrc, resolve(__dirname, "dist/_locales"), {
+          recursive: true,
+          // Skip the contributor README — it's for GitHub, not for
+          // shipping inside the bundled extension.
+          filter: (src) => !src.endsWith("README.md"),
+        });
+      }
+
       // Firefox and Safari: re-bundle content scripts as IIFE.
       if (target === "firefox" || target === "safari") {
         const contentScripts = ["content/content.js", "content/injected.js"];

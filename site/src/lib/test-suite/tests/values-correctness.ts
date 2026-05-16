@@ -52,11 +52,20 @@ const GEOLOCATION_CALL_TIMEOUT_MS = 15_000
  * `Intl.DateTimeFormat` for the given IANA identifier at the given
  * instant. Returns an empty string when the identifier is unusable or
  * when `formatToParts` is unavailable.
+ *
+ * `locale` defaults to the browser UI locale (via `undefined`). Tests
+ * that check substrings of `Date.prototype.toString()` must pass
+ * "en-US" explicitly because `toString` emits English timezone names
+ * regardless of UI locale in every major engine.
  */
-function deriveLongTimezoneName(identifier: string, when: Date): string {
+function deriveLongTimezoneName(
+  identifier: string,
+  when: Date,
+  locale: string | undefined = undefined,
+): string {
   if (!identifier) return ""
   try {
-    const fmt = new Intl.DateTimeFormat(undefined, {
+    const fmt = new Intl.DateTimeFormat(locale, {
       timeZone: identifier,
       timeZoneName: "long",
     })
@@ -364,9 +373,11 @@ const dateToStringTimezoneNameTest = buildBehavioralTest<string>({
   description:
     "The long timezone name embedded in `new Date().toString()` should match the long name derived from Intl.DateTimeFormat for the same resolved zone. A mismatch here means Date.toString and Intl disagree on the current timezone.",
   technique:
-    "Derive the long timezone name from Intl.DateTimeFormat at the current resolved zone, then assert it is a substring of new Date().toString().",
+    "Derive the long timezone name from Intl.DateTimeFormat at the current resolved zone (forcing en-US because Date.prototype.toString emits English timezone names regardless of browser UI locale per all major engine implementations), then assert it is a substring of new Date().toString().",
   codeSnippet: `const tz = new Intl.DateTimeFormat().resolvedOptions().timeZone
-const expected = new Intl.DateTimeFormat(undefined, {
+// Date.prototype.toString always emits the English timezone name,
+// so derive expected in en-US regardless of browser UI locale.
+const expected = new Intl.DateTimeFormat("en-US", {
   timeZone: tz,
   timeZoneName: "long",
 }).formatToParts(new Date())
@@ -376,7 +387,11 @@ const expected = new Intl.DateTimeFormat(undefined, {
 new Date().toString()`,
   expected: async () => {
     const identifier = resolveLiveTimezoneIdentifier()
-    const longName = deriveLongTimezoneName(identifier, new Date())
+    // Date.prototype.toString emits English timezone names in all
+    // engines (V8, SpiderMonkey, JSC), regardless of the browser UI
+    // locale. Pin the expected value to en-US so this test doesn't
+    // spuriously fail in non-English Firefox / Chrome.
+    const longName = deriveLongTimezoneName(identifier, new Date(), "en-US")
     return {
       value: longName,
       describe: longName

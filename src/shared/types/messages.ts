@@ -7,6 +7,7 @@ export type MessageType =
   | "SET_LOCATION"
   | "SET_PROTECTION_STATUS"
   | "SET_WEBRTC_PROTECTION"
+  | "ANNOUNCE_WORKER_FETCH"
   | "GEOCODE_QUERY"
   | "GET_SETTINGS"
   | "UPDATE_SETTINGS"
@@ -41,6 +42,21 @@ export interface SetProtectionStatusPayload {
 
 export interface SetWebRTCProtectionPayload {
   enabled: boolean;
+}
+
+/**
+ * Sent by the content-script Worker / ServiceWorker wrapper just
+ * before it hands off to the real browser constructor so the
+ * background script's webRequest.filterResponseData listener knows
+ * the next request for `url` is a worker script (not a regular
+ * `<script>` tag) and should be modified.
+ *
+ * The background registers the URL in a short-lived allowlist; the
+ * webRequest listener matches incoming requests against that list.
+ * No response is needed — this is fire-and-forget.
+ */
+export interface AnnounceWorkerFetchPayload {
+  url: string;
 }
 
 export interface GeocodeQueryPayload {

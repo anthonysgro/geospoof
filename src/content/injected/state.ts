@@ -18,6 +18,14 @@ declare var process: { env: Record<string, string | undefined> };
 export const EVENT_NAME: string = process.env.EVENT_NAME || "__x_evt";
 
 /**
+ * Event name for announcing an imminent worker-script fetch so the
+ * background-script webRequest listener can allowlist the URL. One-way
+ * (page-context → content script → background). Must match the
+ * constant in `src/content/index.ts`.
+ */
+export const ANNOUNCE_EVENT_NAME: string = (process.env.EVENT_NAME || "__x_evt") + "_announce";
+
+/**
  * Milliseconds to wait for settings before giving up.
  * This must be long enough to cover the background script round-trip on a
  * cold page load (GET_SETTINGS → background → content script → CustomEvent).
@@ -110,8 +118,15 @@ export const originalGetDate = Date.prototype.getDate;
 export const originalGetDay = Date.prototype.getDay;
 export const originalGetMonth = Date.prototype.getMonth;
 export const originalGetFullYear = Date.prototype.getFullYear;
+export const originalSetHours = Date.prototype.setHours;
+export const originalSetMinutes = Date.prototype.setMinutes;
+export const originalSetSeconds = Date.prototype.setSeconds;
+export const originalSetMilliseconds = Date.prototype.setMilliseconds;
+export const originalSetDate = Date.prototype.setDate;
+export const originalSetMonth = Date.prototype.setMonth;
+export const originalSetFullYear = Date.prototype.setFullYear;
+export const originalSetTime = Date.prototype.setTime;
 /* eslint-enable @typescript-eslint/unbound-method */
-
 // Permissions original (may be undefined if API unavailable)
 export const originalPermissionsQuery = navigator.permissions?.query?.bind(navigator.permissions);
 
