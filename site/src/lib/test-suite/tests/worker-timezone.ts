@@ -4,33 +4,78 @@
  * Tests every Worker construction pattern a fingerprinting script might
  * use to probe the real system timezone from inside a Worker context:
  *
- *   1. Blob-URL classic Worker (inline source)               [stealth]
- *   2. URL-based classic Worker (served from /workers/…)     [stealth]
- *   3. SharedWorker (served from /workers/…)                 [stealth]
- *   4. importScripts inside a Worker                         [stealth]
- *   5. Nested Worker (Worker-in-Worker)                      [stealth]
- *   6. Data-URL Worker                                       [stealth]
- *   7. Module Worker (type: "module")                        [known-limitation]
+ *   1. Blob-URL classic Worker (inline source)               [stealth, all engines]
+ *   2. URL-based classic Worker (served from /workers/…)     [Firefox-only coverage]
+ *   3. SharedWorker (served from /workers/…)                 [Firefox-only coverage]
+ *   4. importScripts inside a Worker                         [Firefox-only coverage]
+ *   5. Nested Worker (Worker-in-Worker)                      [stealth, all engines]
+ *   6. Data-URL Worker                                       [stealth, all engines]
+ *   7. Module Worker (type: "module")                        [known-limitation, all engines]
+ *   8. ServiceWorker                                         [known-limitation, all engines]
  *
  * Each test compares the Worker-reported timezone against the main
  * thread's post-settlement timezone. When they match, the Worker sees
  * the spoofed zone (test passes). When they differ, the Worker leaked
  * the real system zone.
  *
- * Six of the seven patterns are closed by the `worker-patching` injected
- * module: it intercepts `window.Worker` and `window.SharedWorker`,
- * prepends a self-contained timezone spoofing payload to each Worker's
- * source, and recursively wraps `self.Worker` inside each Worker so
- * nested Workers also get the payload. Module Workers remain an
- * unpatched detection vector because blob URLs break relative `import`
- * statements — that test stays in `known-limitations`.
+ * The `worker-patching` injected module closes the blob/data/nested
+ * surfaces on every engine by intercepting `window.Worker` and
+ * `window.SharedWorker` with a blob bootstrap that prepends the
+ * spoofing payload and recursively wraps `self.Worker` inside each
+ * Worker so nested Workers also get the payload.
+ *
+ * URL-based workers (classic Worker, SharedWorker, importScripts) need
+ * the response bytes modified at the network layer. The extension does
+ * this on Firefox via the background-script
+ * `webRequest.filterResponseData` listener, which Chromium removed in
+ * MV3 and Safari never shipped. So on Chromium/Safari those three
+ * surfaces leak the real zone — not a regression, an engine-level
+ * capability gap. We reclassify those three tests into
+ * `known-limitations` at module-load time when `filterResponseData`
+ * isn't available, so the dashboard credits them as documented gaps
+ * rather than fresh detectable issues.
  *
  * Browser-global access lives inside `expected` / `observe` callbacks,
  * so the module is safe to dynamic-import from `loadAllTests`.
  */
 
 import { SkipTestError, buildBehavioralTest } from "../helpers/behavioral"
-import type { TestDefinition } from "../types"
+import type { TestDefinition, TestGroupId } from "../types"
+
+/**
+ * True on Firefox (desktop + Android), where
+ * `webRequest.filterResponseData` exists and the extension's background
+ * listener can prepend the spoofing payload to URL-based worker script
+ * responses. False on Chromium-based browsers and Safari, where the
+ * three URL-based worker tests below can't be closed without a
+ * fundamentally different architecture (service worker interception,
+ * module bundler at construction time, etc.) and are reclassified as
+ * documented known limitations.
+ *
+ * We sniff the userAgent rather than feature-detect because the feature
+ * we care about (`webRequest.filterResponseData`) lives on the
+ * background-script `browser` global which isn't accessible from the
+ * page context. The userAgent is spoofable in principle, but any
+ * plausible detection path a fingerprinter would use to exploit this
+ * would itself rely on the same UA — so the failure mode of a
+ * misclassification is at worst "test says known-limitation when it
+ * could have said pass", which is strictly safer than the reverse.
+ */
+const engineHasResponseFilter: boolean = (() => {
+  if (typeof navigator === "undefined") return false
+  return /\bFirefox\//.test(navigator.userAgent ?? "")
+})()
+
+/**
+ * Resolve the display group for a URL-based worker test. On Firefox
+ * these close cleanly via `filterResponseData` and live alongside the
+ * other stealth tests; on other engines they document an
+ * architectural gap and live under known-limitations so the dashboard
+ * doesn't flag them as fresh detectable issues.
+ */
+const urlWorkerGroup: TestGroupId = engineHasResponseFilter
+  ? "timezone-stealth"
+  : "known-limitations"
 
 const WORKER_TIMEOUT_MS = 5_000
 
@@ -268,7 +313,7 @@ worker.postMessage(null)
 
 const urlWorkerTimezoneTest = buildBehavioralTest<string>({
   id: "tampering.worker.url-classic-timezone",
-  group: "timezone-stealth",
+  group: urlWorkerGroup,
   name: "URL-based classic Worker honors the spoofed Intl timezone",
   description:
     "A classic Worker constructed from a script URL (`new Worker('/workers/classic-probe.js')`) must report the same timezone as the main thread. This is the traditional Worker construction pattern — the script is served as a static file. The injected script intercepts the Worker constructor, creates a blob bootstrap that prepends the spoofing payload, and loads the original script via importScripts.",
@@ -296,7 +341,7 @@ worker.postMessage({ start: true })
 
 const sharedWorkerTimezoneTest = buildBehavioralTest<string>({
   id: "tampering.worker.shared-worker-timezone",
-  group: "timezone-stealth",
+  group: urlWorkerGroup,
   name: "SharedWorker honors the spoofed Intl timezone",
   description:
     "A SharedWorker (`new SharedWorker('/workers/shared-probe.js')`) must report the same timezone as the main thread. SharedWorkers persist across tabs and use a different lifecycle than dedicated Workers — they use `onconnect` and port-based messaging. The injected script intercepts the SharedWorker constructor using the same blob-bootstrap technique.",
@@ -325,7 +370,7 @@ shared.port.postMessage({ start: true })
 
 const importScriptsTimezoneTest = buildBehavioralTest<string>({
   id: "tampering.worker.importscripts-timezone",
-  group: "timezone-stealth",
+  group: urlWorkerGroup,
   name: "importScripts-loaded code honors the spoofed Intl timezone",
   description:
     "A classic Worker that calls `importScripts('./helper.js')` loads secondary code at runtime. The injected script's payload wraps `self.importScripts` inside the Worker to resolve relative URLs against the original script URL (blob URLs have no meaningful base path). Code loaded via importScripts runs in the same scope as the wrapping payload, so it inherits the spoofed `Date` / `Intl.DateTimeFormat` overrides.",
