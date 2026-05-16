@@ -1,72 +1,135 @@
 {
   "extensionName": {
     "message": "GeoSpoof",
-    "description": "⚠️ MACHINE-TRANSLATED — NEEDS NATIVE-SPEAKER REVIEW. Extension name shown in the browser and store listing. 'GeoSpoof' is a brand name and should not be translated."
+    "description": "⚠️ MACHINE-TRANSLATED — needs native-speaker review. 'GeoSpoof' is a brand name; do not translate."
   },
   "extensionDescription": {
     "message": "Usurpez la géolocalisation et le fuseau horaire de votre navigateur. Empêchez les fuites d'IP via WebRTC. Ne change pas votre IP — fonctionne avec un VPN.",
     "description": "Extension description shown in the browser and store listing."
   },
-
-  "onboarding_title": { "message": "Bienvenue dans GeoSpoof ! 🌍" },
-  "onboarding_step1_strong": { "message": "Choisissez votre méthode de saisie :" },
+  "onboarding_title": {
+    "message": "Bienvenue dans GeoSpoof ! 🌍"
+  },
+  "onboarding_step1_strong": {
+    "message": "Choisissez votre méthode de saisie :"
+  },
   "onboarding_step1_text": {
     "message": "Recherchez une ville ou saisissez des coordonnées manuellement via les onglets"
   },
-  "onboarding_step2_strong": { "message": "Activez la Protection de localisation" },
-  "onboarding_step2_text": { "message": "pour commencer l'usurpation" },
-  "onboarding_step3_strong": { "message": "Optionnel :" },
+  "onboarding_step2_strong": {
+    "message": "Activez la Protection de localisation"
+  },
+  "onboarding_step2_text": {
+    "message": "pour commencer l'usurpation"
+  },
+  "onboarding_step3_strong": {
+    "message": "Optionnel :"
+  },
   "onboarding_step3_text": {
     "message": "activez la Protection WebRTC pour plus de confidentialité"
   },
-  "onboarding_button": { "message": "Commencer" },
-
-  "status_disabled": { "message": "Désactivé" },
-  "status_enabled": { "message": "Activé" },
-
-  "tab_main": { "message": "Principal" },
-  "tab_details": { "message": "Détails" },
-
-  "toggle_locationProtection": { "message": "Protection de localisation" },
-  "toggle_webrtcProtection": { "message": "Protection WebRTC" },
-
-  "heading_location": { "message": "Localisation" },
-  "location_none": { "message": "Aucune localisation définie" },
-  "location_custom": { "message": "Localisation personnalisée" },
-  "location_clearTitle": { "message": "Effacer la localisation" },
-  "location_clearAriaLabel": { "message": "Effacer la localisation" },
-
-  "toggle_syncWithVpn": { "message": "Synchroniser avec le VPN" },
-  "vpnSync_infoAriaLabel": { "message": "Plus d'infos sur la synchronisation VPN" },
+  "onboarding_button": {
+    "message": "Commencer"
+  },
+  "status_disabled": {
+    "message": "Désactivé"
+  },
+  "status_enabled": {
+    "message": "Activé"
+  },
+  "tab_main": {
+    "message": "Principal"
+  },
+  "tab_details": {
+    "message": "Détails"
+  },
+  "toggle_locationProtection": {
+    "message": "Protection de localisation"
+  },
+  "toggle_webrtcProtection": {
+    "message": "Protection WebRTC"
+  },
+  "heading_location": {
+    "message": "Localisation"
+  },
+  "location_none": {
+    "message": "Aucune localisation définie"
+  },
+  "location_custom": {
+    "message": "Localisation personnalisée"
+  },
+  "location_clearTitle": {
+    "message": "Effacer la localisation"
+  },
+  "location_clearAriaLabel": {
+    "message": "Effacer la localisation"
+  },
+  "toggle_syncWithVpn": {
+    "message": "Synchroniser avec le VPN"
+  },
+  "vpnSync_infoAriaLabel": {
+    "message": "Plus d'infos sur la synchronisation VPN"
+  },
   "vpnSync_tooltip": {
     "message": "Il s'agit d'une synchronisation unique avec votre localisation d'IP publique actuelle. Elle ne se met pas à jour automatiquement lorsque votre VPN change de serveur — utilisez Resynchroniser pour actualiser manuellement."
   },
-  "vpnSync_syncNow": { "message": "Synchroniser maintenant" },
-  "vpnSync_resync": { "message": "Resynchroniser" },
+  "vpnSync_syncNow": {
+    "message": "Synchroniser maintenant"
+  },
+  "vpnSync_resync": {
+    "message": "Resynchroniser"
+  },
   "vpnSync_detectedIp": {
     "message": "IP détectée : $IP$",
-    "placeholders": { "ip": { "content": "$1", "example": "203.0.113.42" } }
+    "placeholders": {
+      "ip": {
+        "content": "$1",
+        "example": "203.0.113.42"
+      }
+    }
   },
-  "vpnSync_networkError": { "message": "Une erreur réseau est survenue. Veuillez réessayer." },
-
-  "inputTab_searchCity": { "message": "Rechercher une ville" },
-  "inputTab_enterCoords": { "message": "Saisir des coordonnées" },
-
-  "search_placeholder": { "message": "Rechercher une ville..." },
-  "search_searching": { "message": "Recherche..." },
-  "search_noResults": { "message": "Aucun lieu trouvé" },
-  "search_failed": { "message": "La recherche a échoué. Veuillez réessayer." },
-  "search_settingLocation": { "message": "Définition de la localisation..." },
+  "vpnSync_networkError": {
+    "message": "Une erreur réseau est survenue. Veuillez réessayer."
+  },
+  "inputTab_searchCity": {
+    "message": "Rechercher une ville"
+  },
+  "inputTab_enterCoords": {
+    "message": "Saisir des coordonnées"
+  },
+  "search_placeholder": {
+    "message": "Rechercher une ville..."
+  },
+  "search_searching": {
+    "message": "Recherche..."
+  },
+  "search_noResults": {
+    "message": "Aucun lieu trouvé"
+  },
+  "search_failed": {
+    "message": "La recherche a échoué. Veuillez réessayer."
+  },
+  "search_settingLocation": {
+    "message": "Définition de la localisation..."
+  },
   "search_setLocationFailed": {
     "message": "Échec de la définition de la localisation. Veuillez réessayer."
   },
-
-  "coords_latPlaceholder": { "message": "Latitude (-90 à 90)" },
-  "coords_lonPlaceholder": { "message": "Longitude (-180 à 180)" },
-  "coords_setButton": { "message": "Définir la localisation" },
-  "coords_invalidLat": { "message": "Latitude invalide. Doit être entre -90 et 90." },
-  "coords_invalidLon": { "message": "Longitude invalide. Doit être entre -180 et 180." },
-
+  "coords_latPlaceholder": {
+    "message": "Latitude (-90 à 90)"
+  },
+  "coords_lonPlaceholder": {
+    "message": "Longitude (-180 à 180)"
+  },
+  "coords_setButton": {
+    "message": "Définir la localisation"
+  },
+  "coords_invalidLat": {
+    "message": "Latitude invalide. Doit être entre -90 et 90."
+  },
+  "coords_invalidLon": {
+    "message": "Longitude invalide. Doit être entre -180 et 180."
+  },
   "warning_noLocationSet": {
     "message": "⚠️ Protection activée mais aucune localisation définie"
   },
@@ -76,61 +139,127 @@
   "notice_restrictedPage": {
     "message": "ℹ️ Les extensions ne peuvent pas s'exécuter sur cette page"
   },
-
-  "testLinks_label": { "message": "Testez votre protection :" },
-  "testLinks_geolocation": { "message": "Géolocalisation" },
-  "testLinks_timezone": { "message": "Fuseau horaire" },
-  "testLinks_ipLeak": { "message": "Fuite d'IP" },
-
-  "support_needHelp": { "message": "Besoin d'aide ?" },
-
+  "testLinks_label": {
+    "message": "Testez votre protection :"
+  },
+  "testLinks_geolocation": {
+    "message": "Géolocalisation"
+  },
+  "testLinks_timezone": {
+    "message": "Fuseau horaire"
+  },
+  "testLinks_ipLeak": {
+    "message": "Fuite d'IP"
+  },
+  "support_needHelp": {
+    "message": "Besoin d'aide ?"
+  },
   "webrtc_configFailed": {
     "message": "Échec de la configuration de la protection WebRTC. Vérifiez les autorisations de l'extension."
   },
-
-  "details_heading": { "message": "Détails de la protection" },
-  "details_spoofedLocation": { "message": "Localisation usurpée" },
-  "details_spoofedTimezone": { "message": "Fuseau horaire usurpé" },
-  "details_webrtcProtection": { "message": "Protection WebRTC" },
-  "details_overriddenApis": { "message": "API remplacées" },
-
-  "details_notConfigured": { "message": "Non configuré" },
-  "details_none": { "message": "Aucune" },
-  "details_noneDisabled": { "message": "Aucune (protection désactivée)" },
-
-  "details_latitudeLabel": { "message": "Latitude" },
-  "details_longitudeLabel": { "message": "Longitude" },
-  "details_accuracyLabel": { "message": "Précision" },
-  "details_locationLabel": { "message": "Localisation" },
-  "details_identifierLabel": { "message": "Identifiant" },
-  "details_offsetLabel": { "message": "Décalage" },
-  "details_dstOffsetLabel": { "message": "Décalage heure d'été" },
+  "details_heading": {
+    "message": "Détails de la protection"
+  },
+  "details_spoofedLocation": {
+    "message": "Localisation usurpée"
+  },
+  "details_spoofedTimezone": {
+    "message": "Fuseau horaire usurpé"
+  },
+  "details_webrtcProtection": {
+    "message": "Protection WebRTC"
+  },
+  "details_overriddenApis": {
+    "message": "API remplacées"
+  },
+  "details_notConfigured": {
+    "message": "Non configuré"
+  },
+  "details_none": {
+    "message": "Aucune"
+  },
+  "details_noneDisabled": {
+    "message": "Aucune (protection désactivée)"
+  },
+  "details_latitudeLabel": {
+    "message": "Latitude"
+  },
+  "details_longitudeLabel": {
+    "message": "Longitude"
+  },
+  "details_accuracyLabel": {
+    "message": "Précision"
+  },
+  "details_locationLabel": {
+    "message": "Localisation"
+  },
+  "details_identifierLabel": {
+    "message": "Identifiant"
+  },
+  "details_offsetLabel": {
+    "message": "Décalage"
+  },
+  "details_dstOffsetLabel": {
+    "message": "Décalage heure d'été"
+  },
   "details_dstOffsetMinutes": {
     "message": "$MINUTES$ minutes",
-    "placeholders": { "minutes": { "content": "$1", "example": "60" } }
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "60"
+      }
+    }
   },
-  "details_fallbackNote": { "message": "⚠️ Estimé (API indisponible)" },
-
+  "details_fallbackNote": {
+    "message": "⚠️ Estimé (API indisponible)"
+  },
   "details_webrtcActive": {
     "message": "✓ Active\n\nRTCPeerConnection est enveloppé pour supprimer la collecte de candidats ICE.\nCela empêche WebRTC de divulguer votre véritable adresse IP."
   },
   "details_webrtcInactive": {
     "message": "✗ Inactive\n\nWebRTC peut divulguer votre véritable adresse IP même en utilisant un VPN."
   },
-
-  "details_section_geolocation": { "message": "Géolocalisation" },
-  "details_section_timezone": { "message": "Fuseau horaire" },
-  "details_section_webrtc": { "message": "WebRTC" },
-
-  "advanced_button": { "message": "Avancé" },
-  "advanced_debugLogging": { "message": "Journalisation de débogage" },
-  "advanced_verbosityLevel": { "message": "Niveau de verbosité" },
-  "advanced_verbosity_info": { "message": "Info" },
-  "advanced_verbosity_debug": { "message": "Débogage" },
-  "advanced_verbosity_trace": { "message": "Trace" },
-  "advanced_theme": { "message": "Thème" },
-  "advanced_theme_system": { "message": "Système" },
-  "advanced_theme_light": { "message": "Clair" },
-  "advanced_theme_dark": { "message": "Sombre" },
-  "advanced_coffee": { "message": "☕ Offrez-moi un café" }
+  "details_section_geolocation": {
+    "message": "Géolocalisation"
+  },
+  "details_section_timezone": {
+    "message": "Fuseau horaire"
+  },
+  "details_section_webrtc": {
+    "message": "WebRTC"
+  },
+  "advanced_button": {
+    "message": "Avancé"
+  },
+  "advanced_debugLogging": {
+    "message": "Journalisation de débogage"
+  },
+  "advanced_verbosityLevel": {
+    "message": "Niveau de verbosité"
+  },
+  "advanced_verbosity_info": {
+    "message": "Info"
+  },
+  "advanced_verbosity_debug": {
+    "message": "Débogage"
+  },
+  "advanced_verbosity_trace": {
+    "message": "Trace"
+  },
+  "advanced_theme": {
+    "message": "Thème"
+  },
+  "advanced_theme_system": {
+    "message": "Système"
+  },
+  "advanced_theme_light": {
+    "message": "Clair"
+  },
+  "advanced_theme_dark": {
+    "message": "Sombre"
+  },
+  "advanced_coffee": {
+    "message": "☕ Offrez-moi un café"
+  }
 }

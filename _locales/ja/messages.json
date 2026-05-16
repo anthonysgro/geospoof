@@ -1,78 +1,135 @@
 {
   "extensionName": {
     "message": "GeoSpoof",
-    "description": "⚠️ MACHINE-TRANSLATED — NEEDS NATIVE-SPEAKER REVIEW. Extension name shown in the browser and store listing. 'GeoSpoof' is a brand name and should not be translated."
+    "description": "⚠️ MACHINE-TRANSLATED — needs native-speaker review. 'GeoSpoof' is a brand name; do not translate."
   },
   "extensionDescription": {
     "message": "ブラウザの位置情報とタイムゾーンを偽装します。WebRTC による IP 漏洩を防止します。IP は変更しません — VPN と併用してください。",
     "description": "Extension description shown in the browser and store listing."
   },
-
-  "onboarding_title": { "message": "GeoSpoof へようこそ! 🌍" },
-  "onboarding_step1_strong": { "message": "入力方法を選択:" },
+  "onboarding_title": {
+    "message": "GeoSpoof へようこそ! 🌍"
+  },
+  "onboarding_step1_strong": {
+    "message": "入力方法を選択:"
+  },
   "onboarding_step1_text": {
     "message": "タブから都市を検索するか、座標を手動で入力してください"
   },
-  "onboarding_step2_strong": { "message": "位置情報保護を有効にすると" },
-  "onboarding_step2_text": { "message": "偽装が開始されます" },
-  "onboarding_step3_strong": { "message": "オプション:" },
+  "onboarding_step2_strong": {
+    "message": "位置情報保護を有効にすると"
+  },
+  "onboarding_step2_text": {
+    "message": "偽装が開始されます"
+  },
+  "onboarding_step3_strong": {
+    "message": "オプション:"
+  },
   "onboarding_step3_text": {
     "message": "プライバシーを強化するには WebRTC 保護を有効にしてください"
   },
-  "onboarding_button": { "message": "はじめる" },
-
-  "status_disabled": { "message": "無効" },
-  "status_enabled": { "message": "有効" },
-
-  "tab_main": { "message": "メイン" },
-  "tab_details": { "message": "詳細" },
-
-  "toggle_locationProtection": { "message": "位置情報保護" },
-  "toggle_webrtcProtection": { "message": "WebRTC 保護" },
-
-  "heading_location": { "message": "位置" },
-  "location_none": { "message": "位置が設定されていません" },
-  "location_custom": { "message": "カスタム位置" },
-  "location_clearTitle": { "message": "位置をクリア" },
-  "location_clearAriaLabel": { "message": "位置をクリア" },
-
-  "toggle_syncWithVpn": { "message": "VPN と同期" },
-  "vpnSync_infoAriaLabel": { "message": "VPN 同期の詳細情報" },
+  "onboarding_button": {
+    "message": "はじめる"
+  },
+  "status_disabled": {
+    "message": "無効"
+  },
+  "status_enabled": {
+    "message": "有効"
+  },
+  "tab_main": {
+    "message": "メイン"
+  },
+  "tab_details": {
+    "message": "詳細"
+  },
+  "toggle_locationProtection": {
+    "message": "位置情報保護"
+  },
+  "toggle_webrtcProtection": {
+    "message": "WebRTC 保護"
+  },
+  "heading_location": {
+    "message": "位置"
+  },
+  "location_none": {
+    "message": "位置が設定されていません"
+  },
+  "location_custom": {
+    "message": "カスタム位置"
+  },
+  "location_clearTitle": {
+    "message": "位置をクリア"
+  },
+  "location_clearAriaLabel": {
+    "message": "位置をクリア"
+  },
+  "toggle_syncWithVpn": {
+    "message": "VPN と同期"
+  },
+  "vpnSync_infoAriaLabel": {
+    "message": "VPN 同期の詳細情報"
+  },
   "vpnSync_tooltip": {
     "message": "これは現在のパブリック IP の位置への 1 回限りの同期です。VPN がサーバーを変更しても自動更新されません — 手動で更新するには「再同期」を使用してください。"
   },
-  "vpnSync_syncNow": { "message": "今すぐ同期" },
-  "vpnSync_resync": { "message": "再同期" },
+  "vpnSync_syncNow": {
+    "message": "今すぐ同期"
+  },
+  "vpnSync_resync": {
+    "message": "再同期"
+  },
   "vpnSync_detectedIp": {
     "message": "検出された IP: $IP$",
-    "placeholders": { "ip": { "content": "$1", "example": "203.0.113.42" } }
+    "placeholders": {
+      "ip": {
+        "content": "$1",
+        "example": "203.0.113.42"
+      }
+    }
   },
   "vpnSync_networkError": {
     "message": "ネットワークエラーが発生しました。もう一度お試しください。"
   },
-
-  "inputTab_searchCity": { "message": "都市を検索" },
-  "inputTab_enterCoords": { "message": "座標を入力" },
-
-  "search_placeholder": { "message": "都市を検索..." },
-  "search_searching": { "message": "検索中..." },
-  "search_noResults": { "message": "場所が見つかりません" },
-  "search_failed": { "message": "検索に失敗しました。もう一度お試しください。" },
-  "search_settingLocation": { "message": "位置を設定中..." },
+  "inputTab_searchCity": {
+    "message": "都市を検索"
+  },
+  "inputTab_enterCoords": {
+    "message": "座標を入力"
+  },
+  "search_placeholder": {
+    "message": "都市を検索..."
+  },
+  "search_searching": {
+    "message": "検索中..."
+  },
+  "search_noResults": {
+    "message": "場所が見つかりません"
+  },
+  "search_failed": {
+    "message": "検索に失敗しました。もう一度お試しください。"
+  },
+  "search_settingLocation": {
+    "message": "位置を設定中..."
+  },
   "search_setLocationFailed": {
     "message": "位置の設定に失敗しました。もう一度お試しください。"
   },
-
-  "coords_latPlaceholder": { "message": "緯度 (-90 〜 90)" },
-  "coords_lonPlaceholder": { "message": "経度 (-180 〜 180)" },
-  "coords_setButton": { "message": "位置を設定" },
+  "coords_latPlaceholder": {
+    "message": "緯度 (-90 〜 90)"
+  },
+  "coords_lonPlaceholder": {
+    "message": "経度 (-180 〜 180)"
+  },
+  "coords_setButton": {
+    "message": "位置を設定"
+  },
   "coords_invalidLat": {
     "message": "無効な緯度です。-90 から 90 の間である必要があります。"
   },
   "coords_invalidLon": {
     "message": "無効な経度です。-180 から 180 の間である必要があります。"
   },
-
   "warning_noLocationSet": {
     "message": "⚠️ 保護は有効ですが位置が設定されていません"
   },
@@ -82,61 +139,127 @@
   "notice_restrictedPage": {
     "message": "ℹ️ このページでは拡張機能を実行できません"
   },
-
-  "testLinks_label": { "message": "保護をテスト:" },
-  "testLinks_geolocation": { "message": "位置情報" },
-  "testLinks_timezone": { "message": "タイムゾーン" },
-  "testLinks_ipLeak": { "message": "IP 漏洩" },
-
-  "support_needHelp": { "message": "ヘルプが必要ですか?" },
-
+  "testLinks_label": {
+    "message": "保護をテスト:"
+  },
+  "testLinks_geolocation": {
+    "message": "位置情報"
+  },
+  "testLinks_timezone": {
+    "message": "タイムゾーン"
+  },
+  "testLinks_ipLeak": {
+    "message": "IP 漏洩"
+  },
+  "support_needHelp": {
+    "message": "ヘルプが必要ですか?"
+  },
   "webrtc_configFailed": {
     "message": "WebRTC 保護の設定に失敗しました。拡張機能の権限を確認してください。"
   },
-
-  "details_heading": { "message": "保護の詳細" },
-  "details_spoofedLocation": { "message": "偽装された位置" },
-  "details_spoofedTimezone": { "message": "偽装されたタイムゾーン" },
-  "details_webrtcProtection": { "message": "WebRTC 保護" },
-  "details_overriddenApis": { "message": "オーバーライドされた API" },
-
-  "details_notConfigured": { "message": "未設定" },
-  "details_none": { "message": "なし" },
-  "details_noneDisabled": { "message": "なし (保護が無効)" },
-
-  "details_latitudeLabel": { "message": "緯度" },
-  "details_longitudeLabel": { "message": "経度" },
-  "details_accuracyLabel": { "message": "精度" },
-  "details_locationLabel": { "message": "位置" },
-  "details_identifierLabel": { "message": "識別子" },
-  "details_offsetLabel": { "message": "オフセット" },
-  "details_dstOffsetLabel": { "message": "夏時間オフセット" },
+  "details_heading": {
+    "message": "保護の詳細"
+  },
+  "details_spoofedLocation": {
+    "message": "偽装された位置"
+  },
+  "details_spoofedTimezone": {
+    "message": "偽装されたタイムゾーン"
+  },
+  "details_webrtcProtection": {
+    "message": "WebRTC 保護"
+  },
+  "details_overriddenApis": {
+    "message": "オーバーライドされた API"
+  },
+  "details_notConfigured": {
+    "message": "未設定"
+  },
+  "details_none": {
+    "message": "なし"
+  },
+  "details_noneDisabled": {
+    "message": "なし (保護が無効)"
+  },
+  "details_latitudeLabel": {
+    "message": "緯度"
+  },
+  "details_longitudeLabel": {
+    "message": "経度"
+  },
+  "details_accuracyLabel": {
+    "message": "精度"
+  },
+  "details_locationLabel": {
+    "message": "位置"
+  },
+  "details_identifierLabel": {
+    "message": "識別子"
+  },
+  "details_offsetLabel": {
+    "message": "オフセット"
+  },
+  "details_dstOffsetLabel": {
+    "message": "夏時間オフセット"
+  },
   "details_dstOffsetMinutes": {
     "message": "$MINUTES$ 分",
-    "placeholders": { "minutes": { "content": "$1", "example": "60" } }
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "60"
+      }
+    }
   },
-  "details_fallbackNote": { "message": "⚠️ 推定値 (API 利用不可)" },
-
+  "details_fallbackNote": {
+    "message": "⚠️ 推定値 (API 利用不可)"
+  },
   "details_webrtcActive": {
     "message": "✓ 有効\n\nRTCPeerConnection がラップされ、ICE 候補の収集が抑制されます。\nこれにより WebRTC による真の IP アドレスの漏洩が防止されます。"
   },
   "details_webrtcInactive": {
     "message": "✗ 無効\n\nVPN を使用していても WebRTC が真の IP アドレスを漏洩する可能性があります。"
   },
-
-  "details_section_geolocation": { "message": "位置情報" },
-  "details_section_timezone": { "message": "タイムゾーン" },
-  "details_section_webrtc": { "message": "WebRTC" },
-
-  "advanced_button": { "message": "詳細設定" },
-  "advanced_debugLogging": { "message": "デバッグログ" },
-  "advanced_verbosityLevel": { "message": "詳細レベル" },
-  "advanced_verbosity_info": { "message": "情報" },
-  "advanced_verbosity_debug": { "message": "デバッグ" },
-  "advanced_verbosity_trace": { "message": "トレース" },
-  "advanced_theme": { "message": "テーマ" },
-  "advanced_theme_system": { "message": "システム" },
-  "advanced_theme_light": { "message": "ライト" },
-  "advanced_theme_dark": { "message": "ダーク" },
-  "advanced_coffee": { "message": "☕ コーヒーをおごる" }
+  "details_section_geolocation": {
+    "message": "位置情報"
+  },
+  "details_section_timezone": {
+    "message": "タイムゾーン"
+  },
+  "details_section_webrtc": {
+    "message": "WebRTC"
+  },
+  "advanced_button": {
+    "message": "詳細設定"
+  },
+  "advanced_debugLogging": {
+    "message": "デバッグログ"
+  },
+  "advanced_verbosityLevel": {
+    "message": "詳細レベル"
+  },
+  "advanced_verbosity_info": {
+    "message": "情報"
+  },
+  "advanced_verbosity_debug": {
+    "message": "デバッグ"
+  },
+  "advanced_verbosity_trace": {
+    "message": "トレース"
+  },
+  "advanced_theme": {
+    "message": "テーマ"
+  },
+  "advanced_theme_system": {
+    "message": "システム"
+  },
+  "advanced_theme_light": {
+    "message": "ライト"
+  },
+  "advanced_theme_dark": {
+    "message": "ダーク"
+  },
+  "advanced_coffee": {
+    "message": "☕ コーヒーをおごる"
+  }
 }

@@ -1,134 +1,265 @@
 {
   "extensionName": {
     "message": "GeoSpoof",
-    "description": "⚠️ MACHINE-TRANSLATED — NEEDS NATIVE-SPEAKER REVIEW. Extension name shown in the browser and store listing. 'GeoSpoof' is a brand name and should not be translated."
+    "description": "⚠️ MACHINE-TRANSLATED — needs native-speaker review. 'GeoSpoof' is a brand name; do not translate."
   },
   "extensionDescription": {
     "message": "Подмена геолокации и часового пояса браузера. Защита от утечек IP через WebRTC. Не меняет IP — работает в паре с VPN.",
     "description": "Extension description shown in the browser and store listing."
   },
-
-  "onboarding_title": { "message": "Добро пожаловать в GeoSpoof! 🌍" },
-  "onboarding_step1_strong": { "message": "Выберите способ ввода:" },
+  "onboarding_title": {
+    "message": "Добро пожаловать в GeoSpoof! 🌍"
+  },
+  "onboarding_step1_strong": {
+    "message": "Выберите способ ввода:"
+  },
   "onboarding_step1_text": {
     "message": "Найдите город или введите координаты вручную через вкладки"
   },
-  "onboarding_step2_strong": { "message": "Включите защиту геолокации," },
-  "onboarding_step2_text": { "message": "чтобы начать подмену" },
-  "onboarding_step3_strong": { "message": "По желанию:" },
+  "onboarding_step2_strong": {
+    "message": "Включите защиту геолокации,"
+  },
+  "onboarding_step2_text": {
+    "message": "чтобы начать подмену"
+  },
+  "onboarding_step3_strong": {
+    "message": "По желанию:"
+  },
   "onboarding_step3_text": {
     "message": "включите защиту WebRTC для дополнительной приватности"
   },
-  "onboarding_button": { "message": "Начать" },
-
-  "status_disabled": { "message": "Отключено" },
-  "status_enabled": { "message": "Включено" },
-
-  "tab_main": { "message": "Главная" },
-  "tab_details": { "message": "Подробности" },
-
-  "toggle_locationProtection": { "message": "Защита геолокации" },
-  "toggle_webrtcProtection": { "message": "Защита WebRTC" },
-
-  "heading_location": { "message": "Местоположение" },
-  "location_none": { "message": "Местоположение не задано" },
-  "location_custom": { "message": "Пользовательское местоположение" },
-  "location_clearTitle": { "message": "Очистить местоположение" },
-  "location_clearAriaLabel": { "message": "Очистить местоположение" },
-
-  "toggle_syncWithVpn": { "message": "Синхронизация с VPN" },
-  "vpnSync_infoAriaLabel": { "message": "Подробнее о синхронизации с VPN" },
+  "onboarding_button": {
+    "message": "Начать"
+  },
+  "status_disabled": {
+    "message": "Отключено"
+  },
+  "status_enabled": {
+    "message": "Включено"
+  },
+  "tab_main": {
+    "message": "Главная"
+  },
+  "tab_details": {
+    "message": "Подробности"
+  },
+  "toggle_locationProtection": {
+    "message": "Защита геолокации"
+  },
+  "toggle_webrtcProtection": {
+    "message": "Защита WebRTC"
+  },
+  "heading_location": {
+    "message": "Местоположение"
+  },
+  "location_none": {
+    "message": "Местоположение не задано"
+  },
+  "location_custom": {
+    "message": "Пользовательское местоположение"
+  },
+  "location_clearTitle": {
+    "message": "Очистить местоположение"
+  },
+  "location_clearAriaLabel": {
+    "message": "Очистить местоположение"
+  },
+  "toggle_syncWithVpn": {
+    "message": "Синхронизация с VPN"
+  },
+  "vpnSync_infoAriaLabel": {
+    "message": "Подробнее о синхронизации с VPN"
+  },
   "vpnSync_tooltip": {
     "message": "Это разовая синхронизация с текущим публичным IP. Она не обновляется автоматически при смене сервера VPN — используйте «Пересинхронизировать», чтобы обновить вручную."
   },
-  "vpnSync_syncNow": { "message": "Синхронизировать" },
-  "vpnSync_resync": { "message": "Пересинхронизировать" },
+  "vpnSync_syncNow": {
+    "message": "Синхронизировать"
+  },
+  "vpnSync_resync": {
+    "message": "Пересинхронизировать"
+  },
   "vpnSync_detectedIp": {
     "message": "Обнаружен IP: $IP$",
     "placeholders": {
-      "ip": { "content": "$1", "example": "203.0.113.42" }
+      "ip": {
+        "content": "$1",
+        "example": "203.0.113.42"
+      }
     }
   },
   "vpnSync_networkError": {
     "message": "Произошла сетевая ошибка. Пожалуйста, попробуйте ещё раз."
   },
-
-  "inputTab_searchCity": { "message": "Поиск города" },
-  "inputTab_enterCoords": { "message": "Ввести координаты" },
-
-  "search_placeholder": { "message": "Поиск города..." },
-  "search_searching": { "message": "Поиск..." },
-  "search_noResults": { "message": "Места не найдены" },
-  "search_failed": { "message": "Поиск не удался. Пожалуйста, попробуйте ещё раз." },
-  "search_settingLocation": { "message": "Установка местоположения..." },
+  "inputTab_searchCity": {
+    "message": "Поиск города"
+  },
+  "inputTab_enterCoords": {
+    "message": "Ввести координаты"
+  },
+  "search_placeholder": {
+    "message": "Поиск города..."
+  },
+  "search_searching": {
+    "message": "Поиск..."
+  },
+  "search_noResults": {
+    "message": "Места не найдены"
+  },
+  "search_failed": {
+    "message": "Поиск не удался. Пожалуйста, попробуйте ещё раз."
+  },
+  "search_settingLocation": {
+    "message": "Установка местоположения..."
+  },
   "search_setLocationFailed": {
     "message": "Не удалось установить местоположение. Пожалуйста, попробуйте ещё раз."
   },
-
-  "coords_latPlaceholder": { "message": "Широта (-90 до 90)" },
-  "coords_lonPlaceholder": { "message": "Долгота (-180 до 180)" },
-  "coords_setButton": { "message": "Установить" },
-  "coords_invalidLat": { "message": "Неверная широта. Должна быть от -90 до 90." },
-  "coords_invalidLon": { "message": "Неверная долгота. Должна быть от -180 до 180." },
-
-  "warning_noLocationSet": { "message": "⚠️ Защита включена, но местоположение не задано" },
-  "warning_refreshPage": { "message": "⚠️ Обновите страницу, чтобы применить защиту" },
-  "notice_restrictedPage": { "message": "ℹ️ Расширения не работают на этой странице" },
-
-  "testLinks_label": { "message": "Проверьте вашу защиту:" },
-  "testLinks_geolocation": { "message": "Геолокация" },
-  "testLinks_timezone": { "message": "Часовой пояс" },
-  "testLinks_ipLeak": { "message": "Утечка IP" },
-
-  "support_needHelp": { "message": "Нужна помощь?" },
-
+  "coords_latPlaceholder": {
+    "message": "Широта (-90 до 90)"
+  },
+  "coords_lonPlaceholder": {
+    "message": "Долгота (-180 до 180)"
+  },
+  "coords_setButton": {
+    "message": "Установить"
+  },
+  "coords_invalidLat": {
+    "message": "Неверная широта. Должна быть от -90 до 90."
+  },
+  "coords_invalidLon": {
+    "message": "Неверная долгота. Должна быть от -180 до 180."
+  },
+  "warning_noLocationSet": {
+    "message": "⚠️ Защита включена, но местоположение не задано"
+  },
+  "warning_refreshPage": {
+    "message": "⚠️ Обновите страницу, чтобы применить защиту"
+  },
+  "notice_restrictedPage": {
+    "message": "ℹ️ Расширения не работают на этой странице"
+  },
+  "testLinks_label": {
+    "message": "Проверьте вашу защиту:"
+  },
+  "testLinks_geolocation": {
+    "message": "Геолокация"
+  },
+  "testLinks_timezone": {
+    "message": "Часовой пояс"
+  },
+  "testLinks_ipLeak": {
+    "message": "Утечка IP"
+  },
+  "support_needHelp": {
+    "message": "Нужна помощь?"
+  },
   "webrtc_configFailed": {
     "message": "Не удалось настроить защиту WebRTC. Проверьте разрешения расширения."
   },
-
-  "details_heading": { "message": "Детали защиты" },
-  "details_spoofedLocation": { "message": "Подменённое местоположение" },
-  "details_spoofedTimezone": { "message": "Подменённый часовой пояс" },
-  "details_webrtcProtection": { "message": "Защита WebRTC" },
-  "details_overriddenApis": { "message": "Переопределённые API" },
-
-  "details_notConfigured": { "message": "Не настроено" },
-  "details_none": { "message": "Нет" },
-  "details_noneDisabled": { "message": "Нет (защита отключена)" },
-
-  "details_latitudeLabel": { "message": "Широта" },
-  "details_longitudeLabel": { "message": "Долгота" },
-  "details_accuracyLabel": { "message": "Точность" },
-  "details_locationLabel": { "message": "Местоположение" },
-  "details_identifierLabel": { "message": "Идентификатор" },
-  "details_offsetLabel": { "message": "Смещение" },
-  "details_dstOffsetLabel": { "message": "Смещение DST" },
+  "details_heading": {
+    "message": "Детали защиты"
+  },
+  "details_spoofedLocation": {
+    "message": "Подменённое местоположение"
+  },
+  "details_spoofedTimezone": {
+    "message": "Подменённый часовой пояс"
+  },
+  "details_webrtcProtection": {
+    "message": "Защита WebRTC"
+  },
+  "details_overriddenApis": {
+    "message": "Переопределённые API"
+  },
+  "details_notConfigured": {
+    "message": "Не настроено"
+  },
+  "details_none": {
+    "message": "Нет"
+  },
+  "details_noneDisabled": {
+    "message": "Нет (защита отключена)"
+  },
+  "details_latitudeLabel": {
+    "message": "Широта"
+  },
+  "details_longitudeLabel": {
+    "message": "Долгота"
+  },
+  "details_accuracyLabel": {
+    "message": "Точность"
+  },
+  "details_locationLabel": {
+    "message": "Местоположение"
+  },
+  "details_identifierLabel": {
+    "message": "Идентификатор"
+  },
+  "details_offsetLabel": {
+    "message": "Смещение"
+  },
+  "details_dstOffsetLabel": {
+    "message": "Смещение DST"
+  },
   "details_dstOffsetMinutes": {
     "message": "$MINUTES$ мин.",
-    "placeholders": { "minutes": { "content": "$1", "example": "60" } }
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "60"
+      }
+    }
   },
-  "details_fallbackNote": { "message": "⚠️ Приблизительно (API недоступен)" },
-
+  "details_fallbackNote": {
+    "message": "⚠️ Приблизительно (API недоступен)"
+  },
   "details_webrtcActive": {
     "message": "✓ Активна\n\nRTCPeerConnection обёрнут, чтобы подавлять сбор ICE-кандидатов.\nЭто предотвращает утечку настоящего IP через WebRTC."
   },
   "details_webrtcInactive": {
     "message": "✗ Неактивна\n\nWebRTC может раскрыть ваш настоящий IP даже при использовании VPN."
   },
-
-  "details_section_geolocation": { "message": "Геолокация" },
-  "details_section_timezone": { "message": "Часовой пояс" },
-  "details_section_webrtc": { "message": "WebRTC" },
-
-  "advanced_button": { "message": "Дополнительно" },
-  "advanced_debugLogging": { "message": "Отладочное логирование" },
-  "advanced_verbosityLevel": { "message": "Уровень подробности" },
-  "advanced_verbosity_info": { "message": "Инфо" },
-  "advanced_verbosity_debug": { "message": "Отладка" },
-  "advanced_verbosity_trace": { "message": "Трассировка" },
-  "advanced_theme": { "message": "Тема" },
-  "advanced_theme_system": { "message": "Системная" },
-  "advanced_theme_light": { "message": "Светлая" },
-  "advanced_theme_dark": { "message": "Тёмная" },
-  "advanced_coffee": { "message": "☕ Поддержать автора" }
+  "details_section_geolocation": {
+    "message": "Геолокация"
+  },
+  "details_section_timezone": {
+    "message": "Часовой пояс"
+  },
+  "details_section_webrtc": {
+    "message": "WebRTC"
+  },
+  "advanced_button": {
+    "message": "Дополнительно"
+  },
+  "advanced_debugLogging": {
+    "message": "Отладочное логирование"
+  },
+  "advanced_verbosityLevel": {
+    "message": "Уровень подробности"
+  },
+  "advanced_verbosity_info": {
+    "message": "Инфо"
+  },
+  "advanced_verbosity_debug": {
+    "message": "Отладка"
+  },
+  "advanced_verbosity_trace": {
+    "message": "Трассировка"
+  },
+  "advanced_theme": {
+    "message": "Тема"
+  },
+  "advanced_theme_system": {
+    "message": "Системная"
+  },
+  "advanced_theme_light": {
+    "message": "Светлая"
+  },
+  "advanced_theme_dark": {
+    "message": "Тёмная"
+  },
+  "advanced_coffee": {
+    "message": "☕ Поддержать автора"
+  }
 }
