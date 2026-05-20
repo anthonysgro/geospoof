@@ -455,6 +455,7 @@ describe("Error Recovery Integration Tests", () => {
         debugLogging: false,
         verbosityLevel: "INFO",
         theme: "system" as const,
+        favorites: [],
       };
 
       // Act: Broadcast settings (should not throw)

@@ -15,6 +15,10 @@ import type {
   SetDebugLoggingPayload,
   SetVerbosityLevelPayload,
   SetThemePayload,
+  SaveFavoritePayload,
+  RemoveFavoritePayload,
+  RenameFavoritePayload,
+  FavoriteResponse,
 } from "@/shared/types/messages";
 import type { LocationName } from "@/shared/types/settings";
 import { setDebugEnabled, setVerbosityLevel, createLogger } from "@/shared/utils/debug-logger";
@@ -201,6 +205,15 @@ export async function handleMessage(
         return { success: true };
       }
 
+      case "SAVE_FAVORITE":
+        return await handleSaveFavorite(message.payload as SaveFavoritePayload);
+
+      case "REMOVE_FAVORITE":
+        return await handleRemoveFavorite(message.payload as RemoveFavoritePayload);
+
+      case "RENAME_FAVORITE":
+        return await handleRenameFavorite(message.payload as RenameFavoritePayload);
+
       default:
         logger.warn("Unknown message type:", message.type);
         return { error: "Unknown message type" };
@@ -305,4 +318,84 @@ export async function handleSetWebRTCProtection(
 export async function handleCompleteOnboarding(): Promise<void> {
   await updateSettings({ onboardingCompleted: true });
   logger.info("Onboarding completed");
+}
+
+export async function handleSaveFavorite(payload: SaveFavoritePayload): Promise<FavoriteResponse> {
+  const settings = await loadSettings();
+
+  // Capacity check (Req 2.6, 8.5)
+  if (settings.favorites.length >= 10) {
+    return { error: "AT_CAPACITY" };
+  }
+
+  // Deduplication by coordinates rounded to 4dp (Req 10.1)
+  const roundCoord = (v: number) => Math.round(v * 10000) / 10000;
+  const roundedLat = roundCoord(payload.latitude);
+  const roundedLon = roundCoord(payload.longitude);
+  const isDuplicate = settings.favorites.some(
+    (f) => roundCoord(f.latitude) === roundedLat && roundCoord(f.longitude) === roundedLon
+  );
+  if (isDuplicate) {
+    return { success: true };
+  }
+
+  // Append new favorite (Req 2.2, 8.4)
+  const newFavorite = {
+    id: payload.id,
+    latitude: payload.latitude,
+    longitude: payload.longitude,
+    city: payload.city,
+    country: payload.country,
+    displayName: payload.displayName.slice(0, 100),
+    label: payload.label,
+  };
+
+  try {
+    await updateSettings({ favorites: [...settings.favorites, newFavorite] });
+  } catch {
+    return { error: "STORAGE_ERROR" };
+  }
+
+  return { success: true };
+}
+
+export async function handleRemoveFavorite(
+  payload: RemoveFavoritePayload
+): Promise<FavoriteResponse> {
+  const settings = await loadSettings();
+
+  // Filter out matching id — no-op if not found (Req 2.3, 2.4, 8.6, 8.7)
+  const filtered = settings.favorites.filter((f) => f.id !== payload.id);
+
+  try {
+    await updateSettings({ favorites: filtered });
+  } catch {
+    return { error: "STORAGE_ERROR" };
+  }
+
+  return { success: true };
+}
+
+export async function handleRenameFavorite(
+  payload: RenameFavoritePayload
+): Promise<FavoriteResponse> {
+  const settings = await loadSettings();
+
+  // No-op if id not found (Req 8.8)
+  const match = settings.favorites.find((f) => f.id === payload.id);
+  if (!match) {
+    return { success: true };
+  }
+
+  const updated = settings.favorites.map((f) =>
+    f.id === payload.id ? { ...f, label: payload.label } : f
+  );
+
+  try {
+    await updateSettings({ favorites: updated });
+  } catch {
+    return { error: "STORAGE_ERROR" };
+  }
+
+  return { success: true };
 }

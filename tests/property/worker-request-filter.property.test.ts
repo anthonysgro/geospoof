@@ -30,7 +30,7 @@ const hostnameArb = fc.oneof(
   fc.tuple(labelArb, labelArb, labelArb).map(([a, b, c]) => `${a}.${b}.${c}`)
 );
 
-const httpUrlArb = (hostname: string) => fc.constant(`https://${hostname}/`);
+const _httpUrlArb = (hostname: string) => fc.constant(`https://${hostname}/`);
 
 /** Pair of URLs that share the same registrable domain. */
 const sameOriginPairArb = hostnameArb.chain((hostname) => {

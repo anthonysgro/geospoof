@@ -50,6 +50,7 @@ const settingsArb: fc.Arbitrary<Settings> = fc.record({
   debugLogging: fc.boolean(),
   verbosityLevel: fc.constantFrom("DEBUG", "INFO", "WARN", "ERROR"),
   theme: fc.constantFrom("system", "light", "dark"),
+  favorites: fc.constant([]),
 });
 
 describe("Property 7: State restoration on re-awakening", () => {

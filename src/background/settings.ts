@@ -3,7 +3,7 @@
  * Load, save, validate, and update extension settings in browser.storage.local.
  */
 
-import type { Settings } from "@/shared/types/settings";
+import type { Favorite, Settings } from "@/shared/types/settings";
 import { DEFAULT_SETTINGS } from "@/shared/types/settings";
 import { createLogger } from "@/shared/utils/debug-logger";
 
@@ -119,6 +119,42 @@ export function validateSettings(settings: Partial<Settings>): Settings {
   const VALID_THEMES = new Set(["system", "light", "dark"]);
   if (typeof settings.theme === "string" && VALID_THEMES.has(settings.theme)) {
     validated.theme = settings.theme;
+  }
+
+  if (Array.isArray(settings.favorites)) {
+    const validatedFavorites: Favorite[] = [];
+    for (const entry of settings.favorites) {
+      if (
+        typeof entry === "object" &&
+        entry !== null &&
+        typeof entry.id === "string" &&
+        typeof entry.latitude === "number" &&
+        typeof entry.longitude === "number" &&
+        entry.latitude >= -90 &&
+        entry.latitude <= 90 &&
+        entry.longitude >= -180 &&
+        entry.longitude <= 180 &&
+        typeof entry.city === "string" &&
+        typeof entry.country === "string" &&
+        typeof entry.displayName === "string" &&
+        (entry.label === null || typeof entry.label === "string")
+      ) {
+        validatedFavorites.push({
+          id: entry.id,
+          latitude: entry.latitude,
+          longitude: entry.longitude,
+          city: entry.city,
+          country: entry.country,
+          displayName: entry.displayName.slice(0, 100),
+          label: entry.label,
+        });
+      }
+    }
+    // Enforce capacity cap on load (defensive against manual storage edits)
+    validated.favorites = validatedFavorites.slice(0, 10);
+  } else {
+    // Missing field (first run / migration) — treat as empty
+    validated.favorites = [];
   }
 
   return validated;

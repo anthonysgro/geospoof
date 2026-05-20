@@ -227,7 +227,7 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   font-size: 18px;
   line-height: 1;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 4px 3px;
   border-radius: 4px;
   transition:
     color 0.2s,
@@ -922,6 +922,282 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   text-align: center;
 }
 
+/* ── Star Favorite Button ─────────────────────────────────────── */
+.star-favorite-btn {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 3px;
+  border-radius: 4px;
+  transition:
+    color 0.2s,
+    background 0.2s;
+  flex-shrink: 0;
+}
+
+.star-favorite-btn .star-icon {
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  transition: fill 0.2s;
+}
+
+.star-favorite-btn:hover {
+  color: #f5a623;
+  background: #fff8ee;
+}
+
+.star-favorite-btn.saved {
+  color: #f5a623;
+}
+
+.star-favorite-btn.saved .star-icon {
+  fill: currentColor;
+}
+
+.star-favorite-btn:focus-visible {
+  outline: 2px solid #4caf50;
+  outline-offset: 2px;
+}
+
+/* ── Capacity Message ─────────────────────────────────────────── */
+.favorites-capacity-msg {
+  font-size: 11px;
+  color: #d32f2f;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Favorites Chip Wrapper (gradient fade edges) ─────────────── */
+.favorites-chip-wrapper {
+  position: relative;
+  margin-bottom: 8px;
+}
+
+.favorites-chip-wrapper::before,
+.favorites-chip-wrapper::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 20px;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.favorites-chip-wrapper::before {
+  left: 0;
+  background: linear-gradient(to right, #f5f5f5, transparent);
+}
+
+.favorites-chip-wrapper::after {
+  right: 0;
+  background: linear-gradient(to left, #f5f5f5, transparent);
+}
+
+.favorites-chip-wrapper.fade-left::before {
+  opacity: 1;
+}
+.favorites-chip-wrapper.fade-right::after {
+  opacity: 1;
+}
+
+/* ── Favorites Chip Row ───────────────────────────────────────── */
+.favorites-chip-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 20px 2px 0;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.favorites-chip-row::-webkit-scrollbar {
+  display: none;
+}
+
+/* Suppress hover animations while scrolling */
+.favorites-chip-row.is-scrolling .chip-menu-btn {
+  opacity: 0 !important;
+  max-width: 0 !important;
+  padding: 0 !important;
+  transition: none !important;
+}
+
+/* ── Individual Chip ──────────────────────────────────────────── */
+.favorite-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    color 0.2s;
+  position: relative;
+}
+
+.favorite-chip:hover,
+.favorite-chip:focus-within {
+  border-color: #4caf50;
+}
+
+.favorite-chip:focus-visible {
+  outline: 2px solid #4caf50;
+  outline-offset: 2px;
+}
+
+.favorite-chip.active {
+  background: #4caf50;
+  border-color: #4caf50;
+  color: white;
+}
+
+/* ── Chip Label ───────────────────────────────────────────────── */
+.chip-label {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Chip Menu Button ─────────────────────────────────────────── */
+.chip-menu-btn {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 4px;
+  flex-shrink: 0;
+  letter-spacing: 0.5px;
+  /* Hidden at rest: zero width + invisible */
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+  transition:
+    opacity 0.2s ease,
+    max-width 0.2s ease,
+    padding 0.2s ease;
+}
+
+.favorite-chip:hover .chip-menu-btn,
+.favorite-chip:focus-within .chip-menu-btn {
+  opacity: 1;
+  max-width: 28px;
+  padding: 0 3px;
+  transition-delay: 0.3s;
+}
+
+.chip-menu-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.favorite-chip.active .chip-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ── Chip Dropdown Menu ───────────────────────────────────────── */
+.chip-dropdown {
+  position: fixed;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  z-index: 1000;
+  min-width: 110px;
+  overflow: hidden;
+}
+
+.chip-dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.chip-dropdown-item:hover {
+  background: #f5f5f5;
+}
+
+.chip-dropdown-item.danger {
+  color: #d32f2f;
+}
+
+.chip-dropdown-item.danger:hover {
+  background: #fdecea;
+}
+
+/* ── Chip Rename Input ────────────────────────────────────────── */
+.chip-rename-input {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+  color: inherit;
+  padding: 0;
+  min-width: 4px;
+}
+
+.favorite-chip.active .chip-rename-input {
+  color: white;
+}
+
+/* ── Chip Confirm Button ──────────────────────────────────────── */
+.chip-confirm-btn {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 3px;
+  border-radius: 4px;
+  opacity: 0.7;
+  flex-shrink: 0;
+  transition:
+    opacity 0.15s,
+    background 0.15s;
+}
+
+.chip-confirm-btn:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.favorite-chip.active .chip-confirm-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
 /* Firefox for Android renders the popup as a full page in a new tab */
 @media (hover: none) and (pointer: coarse) {
   body {
@@ -1062,6 +1338,55 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   .coffee-row {
     border-top: 1px solid #393941;
   }
+  .favorite-chip {
+    background: #23222b;
+    border-color: #393941;
+    color: #fbfbfe;
+  }
+  .favorite-chip:hover,
+  .favorite-chip:focus-within {
+    border-color: #4caf50;
+  }
+  .favorite-chip.active {
+    background: #4caf50;
+    border-color: #4caf50;
+    color: white;
+  }
+  .favorites-chip-wrapper::before {
+    background: linear-gradient(to right, #2b2a33, transparent);
+  }
+  .favorites-chip-wrapper::after {
+    background: linear-gradient(to left, #2b2a33, transparent);
+  }
+  .chip-dropdown {
+    background: #23222b;
+    border-color: #393941;
+  }
+  .chip-dropdown-item {
+    color: #fbfbfe;
+  }
+  .chip-dropdown-item:hover {
+    background: #3b3a41;
+  }
+  .chip-dropdown-item.danger {
+    color: #ef9a9a;
+  }
+  .chip-dropdown-item.danger:hover {
+    background: #3b1a1a;
+  }
+  .star-favorite-btn {
+    color: #999;
+  }
+  .star-favorite-btn:hover {
+    color: #f5a623;
+    background: #3b3a41;
+  }
+  .star-favorite-btn.saved {
+    color: #f5a623;
+  }
+  .favorites-capacity-msg {
+    color: #ef9a9a;
+  }
 }
 
 /* Explicit dark theme (overrides system preference) */
@@ -1188,6 +1513,55 @@ body.theme-dark .version-label {
 body.theme-dark .coffee-row {
   border-top: 1px solid #393941;
 }
+body.theme-dark .favorite-chip {
+  background: #23222b;
+  border-color: #393941;
+  color: #fbfbfe;
+}
+body.theme-dark .favorite-chip:hover,
+body.theme-dark .favorite-chip:focus-within {
+  border-color: #4caf50;
+}
+body.theme-dark .favorite-chip.active {
+  background: #4caf50;
+  border-color: #4caf50;
+  color: white;
+}
+body.theme-dark .favorites-chip-wrapper::before {
+  background: linear-gradient(to right, #2b2a33, transparent);
+}
+body.theme-dark .favorites-chip-wrapper::after {
+  background: linear-gradient(to left, #2b2a33, transparent);
+}
+body.theme-dark .chip-dropdown {
+  background: #23222b;
+  border-color: #393941;
+}
+body.theme-dark .chip-dropdown-item {
+  color: #fbfbfe;
+}
+body.theme-dark .chip-dropdown-item:hover {
+  background: #3b3a41;
+}
+body.theme-dark .chip-dropdown-item.danger {
+  color: #ef9a9a;
+}
+body.theme-dark .chip-dropdown-item.danger:hover {
+  background: #3b1a1a;
+}
+body.theme-dark .star-favorite-btn {
+  color: #999;
+}
+body.theme-dark .star-favorite-btn:hover {
+  color: #f5a623;
+  background: #3b3a41;
+}
+body.theme-dark .star-favorite-btn.saved {
+  color: #f5a623;
+}
+body.theme-dark .favorites-capacity-msg {
+  color: #ef9a9a;
+}
 
 /* Explicit light theme (overrides system dark preference) */
 body.theme-light {
@@ -1312,4 +1686,23 @@ body.theme-light .version-label {
 }
 body.theme-light .coffee-row {
   border-top: 1px solid #e0e0e0;
+}
+body.theme-light .favorite-chip {
+  background: white;
+  border-color: #e0e0e0;
+  color: #333;
+}
+body.theme-light .favorite-chip.active {
+  background: #4caf50;
+  border-color: #4caf50;
+  color: white;
+}
+body.theme-light .star-favorite-btn {
+  color: #999;
+}
+body.theme-light .star-favorite-btn.saved {
+  color: #f5a623;
+}
+body.theme-light .favorites-capacity-msg {
+  color: #d32f2f;
 }
