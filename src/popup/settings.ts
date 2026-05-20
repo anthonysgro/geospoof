@@ -7,6 +7,7 @@ import type { Settings } from "@/shared/types/settings";
 import { updateDetailsView, updateStatusBadge, displayLocation } from "./ui";
 import { showOnboarding } from "./onboarding";
 import { t } from "./i18n";
+import { renderFavorites } from "./favorites";
 
 /**
  * Apply a theme class to the document body.
@@ -61,6 +62,8 @@ export async function loadSettings(): Promise<void> {
     if (clearBtn) {
       clearBtn.style.display = settings.location && !settings.vpnSyncEnabled ? "block" : "none";
     }
+
+    renderFavorites(settings);
 
     updateDetailsView(settings);
 

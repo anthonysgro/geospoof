@@ -27,6 +27,7 @@ function makeSettings(overrides?: Partial<Settings>): Settings {
     debugLogging: false,
     verbosityLevel: "INFO",
     theme: "system",
+    favorites: [],
     ...overrides,
   };
 }

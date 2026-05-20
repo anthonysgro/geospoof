@@ -37,6 +37,24 @@ export interface LocationName {
 }
 
 /**
+ * A saved favorite location.
+ */
+export interface Favorite {
+  /** Unique identifier — timestamp-based string, e.g. Date.now().toString() */
+  id: string;
+  latitude: number;
+  longitude: number;
+  /** City name from reverse geocode */
+  city: string;
+  /** Country name from reverse geocode */
+  country: string;
+  /** Full display name from reverse geocode, capped at 100 characters */
+  displayName: string;
+  /** User-defined label; overrides city when non-empty. null = use city fallback */
+  label: string | null;
+}
+
+/**
  * Complete extension settings persisted in browser.storage.local.
  */
 export interface Settings {
@@ -64,6 +82,8 @@ export interface Settings {
   verbosityLevel: string;
   /** UI theme preference */
   theme: "system" | "light" | "dark";
+  /** Saved favorite locations */
+  favorites: Favorite[];
 }
 
 /**
@@ -82,4 +102,5 @@ export const DEFAULT_SETTINGS: Settings = {
   debugLogging: false,
   verbosityLevel: "INFO",
   theme: "system",
+  favorites: [],
 };

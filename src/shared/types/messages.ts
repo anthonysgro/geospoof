@@ -19,7 +19,10 @@ export type MessageType =
   | "CLEAR_LOCATION"
   | "SET_DEBUG_LOGGING"
   | "SET_VERBOSITY_LEVEL"
-  | "SET_THEME";
+  | "SET_THEME"
+  | "SAVE_FAVORITE"
+  | "REMOVE_FAVORITE"
+  | "RENAME_FAVORITE";
 
 /**
  * Generic message structure for runtime messaging.
@@ -154,3 +157,36 @@ export interface SyncVpnErrorResponse {
 }
 
 export type SyncVpnResponse = SyncVpnSuccessResponse | SyncVpnErrorResponse;
+
+// --- Favorites payload types ---
+
+export interface SaveFavoritePayload {
+  id: string;
+  latitude: number;
+  longitude: number;
+  city: string;
+  country: string;
+  displayName: string;
+  label: string | null;
+}
+
+export interface RemoveFavoritePayload {
+  id: string;
+}
+
+export interface RenameFavoritePayload {
+  id: string;
+  label: string;
+}
+
+// --- Favorites response types ---
+
+export interface FavoriteSuccessResponse {
+  success: true;
+}
+
+export interface FavoriteErrorResponse {
+  error: "AT_CAPACITY" | "STORAGE_ERROR";
+}
+
+export type FavoriteResponse = FavoriteSuccessResponse | FavoriteErrorResponse;

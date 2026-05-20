@@ -54,6 +54,7 @@ const settingsArb: fc.Arbitrary<Settings> = fc.record({
   debugLogging: fc.boolean(),
   verbosityLevel: fc.constantFrom("ERROR", "WARN", "INFO", "DEBUG", "TRACE"),
   theme: fc.constantFrom("system", "light", "dark"),
+  favorites: fc.constant([]),
 });
 
 /** The keys that MUST NOT appear in the broadcast payload. */

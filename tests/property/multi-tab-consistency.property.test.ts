@@ -32,6 +32,7 @@ function makeSettings(partial: Partial<Settings>): Settings {
     debugLogging: false,
     verbosityLevel: "INFO",
     theme: "system" as const,
+    favorites: [],
     ...partial,
   };
 }
