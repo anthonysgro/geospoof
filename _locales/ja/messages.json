@@ -1,142 +1,346 @@
 {
   "extensionName": {
     "message": "GeoSpoof",
-    "description": "⚠️ MACHINE-TRANSLATED — NEEDS NATIVE-SPEAKER REVIEW. Extension name shown in the browser and store listing. 'GeoSpoof' is a brand name and should not be translated."
+    "description": "⚠️ MACHINE-TRANSLATED — needs native-speaker review. 'GeoSpoof' is a brand name; do not translate."
   },
   "extensionDescription": {
     "message": "ブラウザの位置情報とタイムゾーンを偽装します。WebRTC による IP 漏洩を防止します。IP は変更しません — VPN と併用してください。",
     "description": "Extension description shown in the browser and store listing."
   },
-
-  "onboarding_title": { "message": "GeoSpoof へようこそ! 🌍" },
-  "onboarding_step1_strong": { "message": "入力方法を選択:" },
+  "onboarding_title": {
+    "message": "GeoSpoof へようこそ! 🌍",
+    "description": "Onboarding overlay heading."
+  },
+  "onboarding_step1_strong": {
+    "message": "入力方法を選択:",
+    "description": "Bolded lead-in for the first onboarding step."
+  },
   "onboarding_step1_text": {
-    "message": "タブから都市を検索するか、座標を手動で入力してください"
+    "message": "タブから都市を検索するか、座標を手動で入力してください",
+    "description": "Body text of the first onboarding step."
   },
-  "onboarding_step2_strong": { "message": "位置情報保護を有効にすると" },
-  "onboarding_step2_text": { "message": "偽装が開始されます" },
-  "onboarding_step3_strong": { "message": "オプション:" },
+  "onboarding_step2_strong": {
+    "message": "位置情報保護を有効にすると",
+    "description": "Bolded lead-in for the second onboarding step."
+  },
+  "onboarding_step2_text": {
+    "message": "偽装が開始されます",
+    "description": "Body text of the second onboarding step."
+  },
+  "onboarding_step3_strong": {
+    "message": "オプション:",
+    "description": "Bolded lead-in for the third onboarding step."
+  },
   "onboarding_step3_text": {
-    "message": "プライバシーを強化するには WebRTC 保護を有効にしてください"
+    "message": "プライバシーを強化するには WebRTC 保護を有効にしてください",
+    "description": "Body text of the third onboarding step."
   },
-  "onboarding_button": { "message": "はじめる" },
-
-  "status_disabled": { "message": "無効" },
-  "status_enabled": { "message": "有効" },
-
-  "tab_main": { "message": "メイン" },
-  "tab_details": { "message": "詳細" },
-
-  "toggle_locationProtection": { "message": "位置情報保護" },
-  "toggle_webrtcProtection": { "message": "WebRTC 保護" },
-
-  "heading_location": { "message": "位置" },
-  "location_none": { "message": "位置が設定されていません" },
-  "location_custom": { "message": "カスタム位置" },
-  "location_clearTitle": { "message": "位置をクリア" },
-  "location_clearAriaLabel": { "message": "位置をクリア" },
-
-  "toggle_syncWithVpn": { "message": "VPN と同期" },
-  "vpnSync_infoAriaLabel": { "message": "VPN 同期の詳細情報" },
+  "onboarding_button": {
+    "message": "はじめる",
+    "description": "Button that closes the onboarding overlay."
+  },
+  "status_disabled": {
+    "message": "無効",
+    "description": "Status pill shown when location protection is off."
+  },
+  "status_enabled": {
+    "message": "有効",
+    "description": "Status pill shown when location protection is on."
+  },
+  "tab_main": {
+    "message": "メイン",
+    "description": "Tab label for the main popup view."
+  },
+  "tab_details": {
+    "message": "詳細",
+    "description": "Tab label for the protection details view."
+  },
+  "toggle_locationProtection": {
+    "message": "位置情報保護",
+    "description": "Label for the toggle that enables location spoofing."
+  },
+  "toggle_webrtcProtection": {
+    "message": "WebRTC 保護",
+    "description": "Label for the toggle that enables WebRTC IP leak protection."
+  },
+  "heading_location": {
+    "message": "位置",
+    "description": "Section heading above the spoofed location display."
+  },
+  "location_none": {
+    "message": "位置が設定されていません",
+    "description": "Shown when no spoofed location has been configured."
+  },
+  "location_custom": {
+    "message": "カスタム位置",
+    "description": "Shown above a manually entered (non-search) location."
+  },
+  "location_clearTitle": {
+    "message": "位置をクリア",
+    "description": "Tooltip title on the clear-location button."
+  },
+  "location_clearAriaLabel": {
+    "message": "位置をクリア",
+    "description": "Accessible label on the clear-location button."
+  },
+  "toggle_syncWithVpn": {
+    "message": "VPN と同期",
+    "description": "Label for the toggle that syncs location to the user's public IP."
+  },
+  "vpnSync_infoAriaLabel": {
+    "message": "VPN 同期の詳細情報",
+    "description": "Accessible label on the VPN sync info icon."
+  },
   "vpnSync_tooltip": {
-    "message": "これは現在のパブリック IP の位置への 1 回限りの同期です。VPN がサーバーを変更しても自動更新されません — 手動で更新するには「再同期」を使用してください。"
+    "message": "これは現在のパブリック IP の位置への 1 回限りの同期です。VPN がサーバーを変更しても自動更新されません — 手動で更新するには「再同期」を使用してください。",
+    "description": "Tooltip explaining that VPN sync is one-time and does not auto-update."
   },
-  "vpnSync_syncNow": { "message": "今すぐ同期" },
-  "vpnSync_resync": { "message": "再同期" },
+  "vpnSync_syncNow": {
+    "message": "今すぐ同期",
+    "description": "Button that performs an initial VPN sync."
+  },
+  "vpnSync_resync": {
+    "message": "再同期",
+    "description": "Button that performs a follow-up VPN sync."
+  },
   "vpnSync_detectedIp": {
     "message": "検出された IP: $IP$",
-    "placeholders": { "ip": { "content": "$1", "example": "203.0.113.42" } }
+    "placeholders": {
+      "ip": {
+        "content": "$1",
+        "example": "203.0.113.42"
+      }
+    },
+    "description": "Shown after a successful VPN sync. $IP$ is the detected public IP address."
   },
   "vpnSync_networkError": {
-    "message": "ネットワークエラーが発生しました。もう一度お試しください。"
+    "message": "ネットワークエラーが発生しました。もう一度お試しください。",
+    "description": "Error toast shown when the VPN sync network call fails."
   },
-
-  "inputTab_searchCity": { "message": "都市を検索" },
-  "inputTab_enterCoords": { "message": "座標を入力" },
-
-  "search_placeholder": { "message": "都市を検索..." },
-  "search_searching": { "message": "検索中..." },
-  "search_noResults": { "message": "場所が見つかりません" },
-  "search_failed": { "message": "検索に失敗しました。もう一度お試しください。" },
-  "search_settingLocation": { "message": "位置を設定中..." },
+  "inputTab_searchCity": {
+    "message": "都市を検索",
+    "description": "Tab label for the city-search input mode."
+  },
+  "inputTab_enterCoords": {
+    "message": "座標を入力",
+    "description": "Tab label for the manual-coordinates input mode."
+  },
+  "search_placeholder": {
+    "message": "都市を検索...",
+    "description": "Placeholder text in the city search input."
+  },
+  "search_searching": {
+    "message": "検索中...",
+    "description": "Status shown while a city search is in flight."
+  },
+  "search_noResults": {
+    "message": "場所が見つかりません",
+    "description": "Status shown when a city search returns no matches."
+  },
+  "search_failed": {
+    "message": "検索に失敗しました。もう一度お試しください。",
+    "description": "Error toast shown when a city search request fails."
+  },
+  "search_settingLocation": {
+    "message": "位置を設定中...",
+    "description": "Status shown while a chosen location is being applied."
+  },
   "search_setLocationFailed": {
-    "message": "位置の設定に失敗しました。もう一度お試しください。"
+    "message": "位置の設定に失敗しました。もう一度お試しください。",
+    "description": "Error toast shown when applying a chosen location fails."
   },
-
-  "coords_latPlaceholder": { "message": "緯度 (-90 〜 90)" },
-  "coords_lonPlaceholder": { "message": "経度 (-180 〜 180)" },
-  "coords_setButton": { "message": "位置を設定" },
+  "coords_latPlaceholder": {
+    "message": "緯度 (-90 〜 90)",
+    "description": "Placeholder text in the latitude input."
+  },
+  "coords_lonPlaceholder": {
+    "message": "経度 (-180 〜 180)",
+    "description": "Placeholder text in the longitude input."
+  },
+  "coords_setButton": {
+    "message": "位置を設定",
+    "description": "Button that applies the manually entered coordinates."
+  },
   "coords_invalidLat": {
-    "message": "無効な緯度です。-90 から 90 の間である必要があります。"
+    "message": "無効な緯度です。-90 から 90 の間である必要があります。",
+    "description": "Validation error shown when latitude is out of range."
   },
   "coords_invalidLon": {
-    "message": "無効な経度です。-180 から 180 の間である必要があります。"
+    "message": "無効な経度です。-180 から 180 の間である必要があります。",
+    "description": "Validation error shown when longitude is out of range."
   },
-
   "warning_noLocationSet": {
-    "message": "⚠️ 保護は有効ですが位置が設定されていません"
+    "message": "⚠️ 保護は有効ですが位置が設定されていません",
+    "description": "Warning shown when protection is on but no location is configured."
   },
   "warning_refreshPage": {
-    "message": "⚠️ 保護を適用するにはこのページを再読み込みしてください"
+    "message": "⚠️ 保護を適用するにはこのページを再読み込みしてください",
+    "description": "Warning shown when the active page must be reloaded for protection to apply."
   },
   "notice_restrictedPage": {
-    "message": "ℹ️ このページでは拡張機能を実行できません"
+    "message": "ℹ️ このページでは拡張機能を実行できません",
+    "description": "Notice shown on browser-internal pages where extensions cannot run."
   },
-
-  "testLinks_label": { "message": "保護をテスト:" },
-  "testLinks_geolocation": { "message": "位置情報" },
-  "testLinks_timezone": { "message": "タイムゾーン" },
-  "testLinks_ipLeak": { "message": "IP 漏洩" },
-
-  "support_needHelp": { "message": "ヘルプが必要ですか?" },
-
+  "testLinks_label": {
+    "message": "保護をテスト:",
+    "description": "Heading above the test-your-protection links."
+  },
+  "testLinks_geolocation": {
+    "message": "位置情報",
+    "description": "Link label for the geolocation test page."
+  },
+  "testLinks_timezone": {
+    "message": "タイムゾーン",
+    "description": "Link label for the timezone test page."
+  },
+  "testLinks_ipLeak": {
+    "message": "IP 漏洩",
+    "description": "Link label for the IP leak test page."
+  },
+  "support_needHelp": {
+    "message": "ヘルプが必要ですか?",
+    "description": "Footer link prompting the user to open the support page."
+  },
   "webrtc_configFailed": {
-    "message": "WebRTC 保護の設定に失敗しました。拡張機能の権限を確認してください。"
+    "message": "WebRTC 保護の設定に失敗しました。拡張機能の権限を確認してください。",
+    "description": "Error toast shown when WebRTC protection cannot be configured."
   },
-
-  "details_heading": { "message": "保護の詳細" },
-  "details_spoofedLocation": { "message": "偽装された位置" },
-  "details_spoofedTimezone": { "message": "偽装されたタイムゾーン" },
-  "details_webrtcProtection": { "message": "WebRTC 保護" },
-  "details_overriddenApis": { "message": "オーバーライドされた API" },
-
-  "details_notConfigured": { "message": "未設定" },
-  "details_none": { "message": "なし" },
-  "details_noneDisabled": { "message": "なし (保護が無効)" },
-
-  "details_latitudeLabel": { "message": "緯度" },
-  "details_longitudeLabel": { "message": "経度" },
-  "details_accuracyLabel": { "message": "精度" },
-  "details_locationLabel": { "message": "位置" },
-  "details_identifierLabel": { "message": "識別子" },
-  "details_offsetLabel": { "message": "オフセット" },
-  "details_dstOffsetLabel": { "message": "夏時間オフセット" },
+  "details_heading": {
+    "message": "保護の詳細",
+    "description": "Heading for the protection-details panel."
+  },
+  "details_spoofedLocation": {
+    "message": "偽装された位置",
+    "description": "Section title for the spoofed-location details."
+  },
+  "details_spoofedTimezone": {
+    "message": "偽装されたタイムゾーン",
+    "description": "Section title for the spoofed-timezone details."
+  },
+  "details_webrtcProtection": {
+    "message": "WebRTC 保護",
+    "description": "Section title for the WebRTC protection details."
+  },
+  "details_overriddenApis": {
+    "message": "オーバーライドされた API",
+    "description": "Section title for the list of overridden browser APIs."
+  },
+  "details_notConfigured": {
+    "message": "未設定",
+    "description": "Placeholder shown when a detail field has no value."
+  },
+  "details_none": {
+    "message": "なし",
+    "description": "Shown when a detail field has no items."
+  },
+  "details_noneDisabled": {
+    "message": "なし (保護が無効)",
+    "description": "Shown when a detail field is empty because protection is off."
+  },
+  "details_latitudeLabel": {
+    "message": "緯度",
+    "description": "Label for the latitude row in the location details."
+  },
+  "details_longitudeLabel": {
+    "message": "経度",
+    "description": "Label for the longitude row in the location details."
+  },
+  "details_accuracyLabel": {
+    "message": "精度",
+    "description": "Label for the accuracy row in the location details."
+  },
+  "details_locationLabel": {
+    "message": "位置",
+    "description": "Label for the location-name row in the location details."
+  },
+  "details_identifierLabel": {
+    "message": "識別子",
+    "description": "Label for the timezone-identifier row in the timezone details."
+  },
+  "details_offsetLabel": {
+    "message": "オフセット",
+    "description": "Label for the UTC-offset row in the timezone details."
+  },
+  "details_dstOffsetLabel": {
+    "message": "夏時間オフセット",
+    "description": "Label for the DST-offset row in the timezone details."
+  },
   "details_dstOffsetMinutes": {
     "message": "$MINUTES$ 分",
-    "placeholders": { "minutes": { "content": "$1", "example": "60" } }
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "60"
+      }
+    },
+    "description": "Formatted DST offset in minutes. $MINUTES$ is the integer minute count."
   },
-  "details_fallbackNote": { "message": "⚠️ 推定値 (API 利用不可)" },
-
+  "details_fallbackNote": {
+    "message": "⚠️ 推定値 (API 利用不可)",
+    "description": "Inline note shown when timezone data is estimated rather than authoritative."
+  },
   "details_webrtcActive": {
-    "message": "✓ 有効\n\nRTCPeerConnection がラップされ、ICE 候補の収集が抑制されます。\nこれにより WebRTC による真の IP アドレスの漏洩が防止されます。"
+    "message": "✓ 有効\n\nRTCPeerConnection がラップされ、ICE 候補の収集が抑制されます。\nこれにより WebRTC による真の IP アドレスの漏洩が防止されます。",
+    "description": "Body text shown in the WebRTC details when protection is active."
   },
   "details_webrtcInactive": {
-    "message": "✗ 無効\n\nVPN を使用していても WebRTC が真の IP アドレスを漏洩する可能性があります。"
+    "message": "✗ 無効\n\nVPN を使用していても WebRTC が真の IP アドレスを漏洩する可能性があります。",
+    "description": "Body text shown in the WebRTC details when protection is inactive."
   },
-
-  "details_section_geolocation": { "message": "位置情報" },
-  "details_section_timezone": { "message": "タイムゾーン" },
-  "details_section_webrtc": { "message": "WebRTC" },
-
-  "advanced_button": { "message": "詳細設定" },
-  "advanced_debugLogging": { "message": "デバッグログ" },
-  "advanced_verbosityLevel": { "message": "詳細レベル" },
-  "advanced_verbosity_info": { "message": "情報" },
-  "advanced_verbosity_debug": { "message": "デバッグ" },
-  "advanced_verbosity_trace": { "message": "トレース" },
-  "advanced_theme": { "message": "テーマ" },
-  "advanced_theme_system": { "message": "システム" },
-  "advanced_theme_light": { "message": "ライト" },
-  "advanced_theme_dark": { "message": "ダーク" },
-  "advanced_coffee": { "message": "☕ コーヒーをおごる" }
+  "details_section_geolocation": {
+    "message": "位置情報",
+    "description": "Header for the geolocation overrides section."
+  },
+  "details_section_timezone": {
+    "message": "タイムゾーン",
+    "description": "Header for the timezone overrides section."
+  },
+  "details_section_webrtc": {
+    "message": "WebRTC",
+    "description": "Header for the WebRTC overrides section."
+  },
+  "advanced_button": {
+    "message": "詳細設定",
+    "description": "Button that opens the advanced-settings drawer."
+  },
+  "advanced_debugLogging": {
+    "message": "デバッグログ",
+    "description": "Label for the debug-logging toggle."
+  },
+  "advanced_verbosityLevel": {
+    "message": "詳細レベル",
+    "description": "Label for the log-verbosity selector."
+  },
+  "advanced_verbosity_info": {
+    "message": "情報",
+    "description": "Verbosity level: only info-level logs."
+  },
+  "advanced_verbosity_debug": {
+    "message": "デバッグ",
+    "description": "Verbosity level: info and debug logs."
+  },
+  "advanced_verbosity_trace": {
+    "message": "トレース",
+    "description": "Verbosity level: full trace including per-call logs."
+  },
+  "advanced_theme": {
+    "message": "テーマ",
+    "description": "Label for the popup theme selector."
+  },
+  "advanced_theme_system": {
+    "message": "システム",
+    "description": "Theme option that follows the OS appearance."
+  },
+  "advanced_theme_light": {
+    "message": "ライト",
+    "description": "Theme option that forces the light popup theme."
+  },
+  "advanced_theme_dark": {
+    "message": "ダーク",
+    "description": "Theme option that forces the dark popup theme."
+  },
+  "advanced_coffee": {
+    "message": "☕ コーヒーをおごる",
+    "description": "Footer link inviting the user to buy the maintainer a coffee."
+  }
 }

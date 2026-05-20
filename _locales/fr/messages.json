@@ -1,136 +1,346 @@
 {
   "extensionName": {
     "message": "GeoSpoof",
-    "description": "⚠️ MACHINE-TRANSLATED — NEEDS NATIVE-SPEAKER REVIEW. Extension name shown in the browser and store listing. 'GeoSpoof' is a brand name and should not be translated."
+    "description": "⚠️ MACHINE-TRANSLATED — needs native-speaker review. 'GeoSpoof' is a brand name; do not translate."
   },
   "extensionDescription": {
-    "message": "Usurpez la géolocalisation et le fuseau horaire de votre navigateur. Empêchez les fuites d'IP via WebRTC. Ne change pas votre IP — fonctionne avec un VPN.",
+    "message": "Falsifiez géolocalisation et fuseau horaire. Empêchez les fuites d'IP WebRTC. IP inchangée — avec VPN.",
     "description": "Extension description shown in the browser and store listing."
   },
-
-  "onboarding_title": { "message": "Bienvenue dans GeoSpoof ! 🌍" },
-  "onboarding_step1_strong": { "message": "Choisissez votre méthode de saisie :" },
+  "onboarding_title": {
+    "message": "Bienvenue dans GeoSpoof ! 🌍",
+    "description": "Onboarding overlay heading."
+  },
+  "onboarding_step1_strong": {
+    "message": "Choisissez votre méthode de saisie :",
+    "description": "Bolded lead-in for the first onboarding step."
+  },
   "onboarding_step1_text": {
-    "message": "Recherchez une ville ou saisissez des coordonnées manuellement via les onglets"
+    "message": "Recherchez une ville ou saisissez des coordonnées manuellement via les onglets",
+    "description": "Body text of the first onboarding step."
   },
-  "onboarding_step2_strong": { "message": "Activez la Protection de localisation" },
-  "onboarding_step2_text": { "message": "pour commencer l'usurpation" },
-  "onboarding_step3_strong": { "message": "Optionnel :" },
+  "onboarding_step2_strong": {
+    "message": "Activez la Protection de localisation",
+    "description": "Bolded lead-in for the second onboarding step."
+  },
+  "onboarding_step2_text": {
+    "message": "pour commencer l'usurpation",
+    "description": "Body text of the second onboarding step."
+  },
+  "onboarding_step3_strong": {
+    "message": "Optionnel :",
+    "description": "Bolded lead-in for the third onboarding step."
+  },
   "onboarding_step3_text": {
-    "message": "activez la Protection WebRTC pour plus de confidentialité"
+    "message": "activez la Protection WebRTC pour plus de confidentialité",
+    "description": "Body text of the third onboarding step."
   },
-  "onboarding_button": { "message": "Commencer" },
-
-  "status_disabled": { "message": "Désactivé" },
-  "status_enabled": { "message": "Activé" },
-
-  "tab_main": { "message": "Principal" },
-  "tab_details": { "message": "Détails" },
-
-  "toggle_locationProtection": { "message": "Protection de localisation" },
-  "toggle_webrtcProtection": { "message": "Protection WebRTC" },
-
-  "heading_location": { "message": "Localisation" },
-  "location_none": { "message": "Aucune localisation définie" },
-  "location_custom": { "message": "Localisation personnalisée" },
-  "location_clearTitle": { "message": "Effacer la localisation" },
-  "location_clearAriaLabel": { "message": "Effacer la localisation" },
-
-  "toggle_syncWithVpn": { "message": "Synchroniser avec le VPN" },
-  "vpnSync_infoAriaLabel": { "message": "Plus d'infos sur la synchronisation VPN" },
+  "onboarding_button": {
+    "message": "Commencer",
+    "description": "Button that closes the onboarding overlay."
+  },
+  "status_disabled": {
+    "message": "Désactivé",
+    "description": "Status pill shown when location protection is off."
+  },
+  "status_enabled": {
+    "message": "Activé",
+    "description": "Status pill shown when location protection is on."
+  },
+  "tab_main": {
+    "message": "Principal",
+    "description": "Tab label for the main popup view."
+  },
+  "tab_details": {
+    "message": "Détails",
+    "description": "Tab label for the protection details view."
+  },
+  "toggle_locationProtection": {
+    "message": "Protection de localisation",
+    "description": "Label for the toggle that enables location spoofing."
+  },
+  "toggle_webrtcProtection": {
+    "message": "Protection WebRTC",
+    "description": "Label for the toggle that enables WebRTC IP leak protection."
+  },
+  "heading_location": {
+    "message": "Localisation",
+    "description": "Section heading above the spoofed location display."
+  },
+  "location_none": {
+    "message": "Aucune localisation définie",
+    "description": "Shown when no spoofed location has been configured."
+  },
+  "location_custom": {
+    "message": "Localisation personnalisée",
+    "description": "Shown above a manually entered (non-search) location."
+  },
+  "location_clearTitle": {
+    "message": "Effacer la localisation",
+    "description": "Tooltip title on the clear-location button."
+  },
+  "location_clearAriaLabel": {
+    "message": "Effacer la localisation",
+    "description": "Accessible label on the clear-location button."
+  },
+  "toggle_syncWithVpn": {
+    "message": "Synchroniser avec le VPN",
+    "description": "Label for the toggle that syncs location to the user's public IP."
+  },
+  "vpnSync_infoAriaLabel": {
+    "message": "Plus d'infos sur la synchronisation VPN",
+    "description": "Accessible label on the VPN sync info icon."
+  },
   "vpnSync_tooltip": {
-    "message": "Il s'agit d'une synchronisation unique avec votre localisation d'IP publique actuelle. Elle ne se met pas à jour automatiquement lorsque votre VPN change de serveur — utilisez Resynchroniser pour actualiser manuellement."
+    "message": "Il s'agit d'une synchronisation unique avec votre localisation d'IP publique actuelle. Elle ne se met pas à jour automatiquement lorsque votre VPN change de serveur — utilisez Resynchroniser pour actualiser manuellement.",
+    "description": "Tooltip explaining that VPN sync is one-time and does not auto-update."
   },
-  "vpnSync_syncNow": { "message": "Synchroniser maintenant" },
-  "vpnSync_resync": { "message": "Resynchroniser" },
+  "vpnSync_syncNow": {
+    "message": "Synchroniser maintenant",
+    "description": "Button that performs an initial VPN sync."
+  },
+  "vpnSync_resync": {
+    "message": "Resynchroniser",
+    "description": "Button that performs a follow-up VPN sync."
+  },
   "vpnSync_detectedIp": {
     "message": "IP détectée : $IP$",
-    "placeholders": { "ip": { "content": "$1", "example": "203.0.113.42" } }
+    "placeholders": {
+      "ip": {
+        "content": "$1",
+        "example": "203.0.113.42"
+      }
+    },
+    "description": "Shown after a successful VPN sync. $IP$ is the detected public IP address."
   },
-  "vpnSync_networkError": { "message": "Une erreur réseau est survenue. Veuillez réessayer." },
-
-  "inputTab_searchCity": { "message": "Rechercher une ville" },
-  "inputTab_enterCoords": { "message": "Saisir des coordonnées" },
-
-  "search_placeholder": { "message": "Rechercher une ville..." },
-  "search_searching": { "message": "Recherche..." },
-  "search_noResults": { "message": "Aucun lieu trouvé" },
-  "search_failed": { "message": "La recherche a échoué. Veuillez réessayer." },
-  "search_settingLocation": { "message": "Définition de la localisation..." },
+  "vpnSync_networkError": {
+    "message": "Une erreur réseau est survenue. Veuillez réessayer.",
+    "description": "Error toast shown when the VPN sync network call fails."
+  },
+  "inputTab_searchCity": {
+    "message": "Rechercher une ville",
+    "description": "Tab label for the city-search input mode."
+  },
+  "inputTab_enterCoords": {
+    "message": "Saisir des coordonnées",
+    "description": "Tab label for the manual-coordinates input mode."
+  },
+  "search_placeholder": {
+    "message": "Rechercher une ville...",
+    "description": "Placeholder text in the city search input."
+  },
+  "search_searching": {
+    "message": "Recherche...",
+    "description": "Status shown while a city search is in flight."
+  },
+  "search_noResults": {
+    "message": "Aucun lieu trouvé",
+    "description": "Status shown when a city search returns no matches."
+  },
+  "search_failed": {
+    "message": "La recherche a échoué. Veuillez réessayer.",
+    "description": "Error toast shown when a city search request fails."
+  },
+  "search_settingLocation": {
+    "message": "Définition de la localisation...",
+    "description": "Status shown while a chosen location is being applied."
+  },
   "search_setLocationFailed": {
-    "message": "Échec de la définition de la localisation. Veuillez réessayer."
+    "message": "Échec de la définition de la localisation. Veuillez réessayer.",
+    "description": "Error toast shown when applying a chosen location fails."
   },
-
-  "coords_latPlaceholder": { "message": "Latitude (-90 à 90)" },
-  "coords_lonPlaceholder": { "message": "Longitude (-180 à 180)" },
-  "coords_setButton": { "message": "Définir la localisation" },
-  "coords_invalidLat": { "message": "Latitude invalide. Doit être entre -90 et 90." },
-  "coords_invalidLon": { "message": "Longitude invalide. Doit être entre -180 et 180." },
-
+  "coords_latPlaceholder": {
+    "message": "Latitude (-90 à 90)",
+    "description": "Placeholder text in the latitude input."
+  },
+  "coords_lonPlaceholder": {
+    "message": "Longitude (-180 à 180)",
+    "description": "Placeholder text in the longitude input."
+  },
+  "coords_setButton": {
+    "message": "Définir la localisation",
+    "description": "Button that applies the manually entered coordinates."
+  },
+  "coords_invalidLat": {
+    "message": "Latitude invalide. Doit être entre -90 et 90.",
+    "description": "Validation error shown when latitude is out of range."
+  },
+  "coords_invalidLon": {
+    "message": "Longitude invalide. Doit être entre -180 et 180.",
+    "description": "Validation error shown when longitude is out of range."
+  },
   "warning_noLocationSet": {
-    "message": "⚠️ Protection activée mais aucune localisation définie"
+    "message": "⚠️ Protection activée mais aucune localisation définie",
+    "description": "Warning shown when protection is on but no location is configured."
   },
   "warning_refreshPage": {
-    "message": "⚠️ Actualisez cette page pour appliquer la protection"
+    "message": "⚠️ Actualisez cette page pour appliquer la protection",
+    "description": "Warning shown when the active page must be reloaded for protection to apply."
   },
   "notice_restrictedPage": {
-    "message": "ℹ️ Les extensions ne peuvent pas s'exécuter sur cette page"
+    "message": "ℹ️ Les extensions ne peuvent pas s'exécuter sur cette page",
+    "description": "Notice shown on browser-internal pages where extensions cannot run."
   },
-
-  "testLinks_label": { "message": "Testez votre protection :" },
-  "testLinks_geolocation": { "message": "Géolocalisation" },
-  "testLinks_timezone": { "message": "Fuseau horaire" },
-  "testLinks_ipLeak": { "message": "Fuite d'IP" },
-
-  "support_needHelp": { "message": "Besoin d'aide ?" },
-
+  "testLinks_label": {
+    "message": "Testez votre protection :",
+    "description": "Heading above the test-your-protection links."
+  },
+  "testLinks_geolocation": {
+    "message": "Géolocalisation",
+    "description": "Link label for the geolocation test page."
+  },
+  "testLinks_timezone": {
+    "message": "Fuseau horaire",
+    "description": "Link label for the timezone test page."
+  },
+  "testLinks_ipLeak": {
+    "message": "Fuite d'IP",
+    "description": "Link label for the IP leak test page."
+  },
+  "support_needHelp": {
+    "message": "Besoin d'aide ?",
+    "description": "Footer link prompting the user to open the support page."
+  },
   "webrtc_configFailed": {
-    "message": "Échec de la configuration de la protection WebRTC. Vérifiez les autorisations de l'extension."
+    "message": "Échec de la configuration de la protection WebRTC. Vérifiez les autorisations de l'extension.",
+    "description": "Error toast shown when WebRTC protection cannot be configured."
   },
-
-  "details_heading": { "message": "Détails de la protection" },
-  "details_spoofedLocation": { "message": "Localisation usurpée" },
-  "details_spoofedTimezone": { "message": "Fuseau horaire usurpé" },
-  "details_webrtcProtection": { "message": "Protection WebRTC" },
-  "details_overriddenApis": { "message": "API remplacées" },
-
-  "details_notConfigured": { "message": "Non configuré" },
-  "details_none": { "message": "Aucune" },
-  "details_noneDisabled": { "message": "Aucune (protection désactivée)" },
-
-  "details_latitudeLabel": { "message": "Latitude" },
-  "details_longitudeLabel": { "message": "Longitude" },
-  "details_accuracyLabel": { "message": "Précision" },
-  "details_locationLabel": { "message": "Localisation" },
-  "details_identifierLabel": { "message": "Identifiant" },
-  "details_offsetLabel": { "message": "Décalage" },
-  "details_dstOffsetLabel": { "message": "Décalage heure d'été" },
+  "details_heading": {
+    "message": "Détails de la protection",
+    "description": "Heading for the protection-details panel."
+  },
+  "details_spoofedLocation": {
+    "message": "Localisation usurpée",
+    "description": "Section title for the spoofed-location details."
+  },
+  "details_spoofedTimezone": {
+    "message": "Fuseau horaire usurpé",
+    "description": "Section title for the spoofed-timezone details."
+  },
+  "details_webrtcProtection": {
+    "message": "Protection WebRTC",
+    "description": "Section title for the WebRTC protection details."
+  },
+  "details_overriddenApis": {
+    "message": "API remplacées",
+    "description": "Section title for the list of overridden browser APIs."
+  },
+  "details_notConfigured": {
+    "message": "Non configuré",
+    "description": "Placeholder shown when a detail field has no value."
+  },
+  "details_none": {
+    "message": "Aucune",
+    "description": "Shown when a detail field has no items."
+  },
+  "details_noneDisabled": {
+    "message": "Aucune (protection désactivée)",
+    "description": "Shown when a detail field is empty because protection is off."
+  },
+  "details_latitudeLabel": {
+    "message": "Latitude",
+    "description": "Label for the latitude row in the location details."
+  },
+  "details_longitudeLabel": {
+    "message": "Longitude",
+    "description": "Label for the longitude row in the location details."
+  },
+  "details_accuracyLabel": {
+    "message": "Précision",
+    "description": "Label for the accuracy row in the location details."
+  },
+  "details_locationLabel": {
+    "message": "Localisation",
+    "description": "Label for the location-name row in the location details."
+  },
+  "details_identifierLabel": {
+    "message": "Identifiant",
+    "description": "Label for the timezone-identifier row in the timezone details."
+  },
+  "details_offsetLabel": {
+    "message": "Décalage",
+    "description": "Label for the UTC-offset row in the timezone details."
+  },
+  "details_dstOffsetLabel": {
+    "message": "Décalage heure d'été",
+    "description": "Label for the DST-offset row in the timezone details."
+  },
   "details_dstOffsetMinutes": {
     "message": "$MINUTES$ minutes",
-    "placeholders": { "minutes": { "content": "$1", "example": "60" } }
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "60"
+      }
+    },
+    "description": "Formatted DST offset in minutes. $MINUTES$ is the integer minute count."
   },
-  "details_fallbackNote": { "message": "⚠️ Estimé (API indisponible)" },
-
+  "details_fallbackNote": {
+    "message": "⚠️ Estimé (API indisponible)",
+    "description": "Inline note shown when timezone data is estimated rather than authoritative."
+  },
   "details_webrtcActive": {
-    "message": "✓ Active\n\nRTCPeerConnection est enveloppé pour supprimer la collecte de candidats ICE.\nCela empêche WebRTC de divulguer votre véritable adresse IP."
+    "message": "✓ Active\n\nRTCPeerConnection est enveloppé pour supprimer la collecte de candidats ICE.\nCela empêche WebRTC de divulguer votre véritable adresse IP.",
+    "description": "Body text shown in the WebRTC details when protection is active."
   },
   "details_webrtcInactive": {
-    "message": "✗ Inactive\n\nWebRTC peut divulguer votre véritable adresse IP même en utilisant un VPN."
+    "message": "✗ Inactive\n\nWebRTC peut divulguer votre véritable adresse IP même en utilisant un VPN.",
+    "description": "Body text shown in the WebRTC details when protection is inactive."
   },
-
-  "details_section_geolocation": { "message": "Géolocalisation" },
-  "details_section_timezone": { "message": "Fuseau horaire" },
-  "details_section_webrtc": { "message": "WebRTC" },
-
-  "advanced_button": { "message": "Avancé" },
-  "advanced_debugLogging": { "message": "Journalisation de débogage" },
-  "advanced_verbosityLevel": { "message": "Niveau de verbosité" },
-  "advanced_verbosity_info": { "message": "Info" },
-  "advanced_verbosity_debug": { "message": "Débogage" },
-  "advanced_verbosity_trace": { "message": "Trace" },
-  "advanced_theme": { "message": "Thème" },
-  "advanced_theme_system": { "message": "Système" },
-  "advanced_theme_light": { "message": "Clair" },
-  "advanced_theme_dark": { "message": "Sombre" },
-  "advanced_coffee": { "message": "☕ Offrez-moi un café" }
+  "details_section_geolocation": {
+    "message": "Géolocalisation",
+    "description": "Header for the geolocation overrides section."
+  },
+  "details_section_timezone": {
+    "message": "Fuseau horaire",
+    "description": "Header for the timezone overrides section."
+  },
+  "details_section_webrtc": {
+    "message": "WebRTC",
+    "description": "Header for the WebRTC overrides section."
+  },
+  "advanced_button": {
+    "message": "Avancé",
+    "description": "Button that opens the advanced-settings drawer."
+  },
+  "advanced_debugLogging": {
+    "message": "Journalisation de débogage",
+    "description": "Label for the debug-logging toggle."
+  },
+  "advanced_verbosityLevel": {
+    "message": "Niveau de verbosité",
+    "description": "Label for the log-verbosity selector."
+  },
+  "advanced_verbosity_info": {
+    "message": "Info",
+    "description": "Verbosity level: only info-level logs."
+  },
+  "advanced_verbosity_debug": {
+    "message": "Débogage",
+    "description": "Verbosity level: info and debug logs."
+  },
+  "advanced_verbosity_trace": {
+    "message": "Trace",
+    "description": "Verbosity level: full trace including per-call logs."
+  },
+  "advanced_theme": {
+    "message": "Thème",
+    "description": "Label for the popup theme selector."
+  },
+  "advanced_theme_system": {
+    "message": "Système",
+    "description": "Theme option that follows the OS appearance."
+  },
+  "advanced_theme_light": {
+    "message": "Clair",
+    "description": "Theme option that forces the light popup theme."
+  },
+  "advanced_theme_dark": {
+    "message": "Sombre",
+    "description": "Theme option that forces the dark popup theme."
+  },
+  "advanced_coffee": {
+    "message": "☕ Offrez-moi un café",
+    "description": "Footer link inviting the user to buy the maintainer a coffee."
+  }
 }

@@ -22,6 +22,13 @@
 //    Temporal, lastModified, and nested-iframe cascades into every
 //    same-origin iframe realm synchronously on first access.
 //
+//    Worker patching, iframe patching, and DOM insertion wrapping are
+//    also skipped when the injected script itself runs inside a
+//    cross-origin frame (detected via window.top.location access).
+//    Installing those overrides inside third-party iframes (e.g.
+//    Cloudflare Turnstile) causes those scripts to detect tampering
+//    and break. Date/Intl/timezone overrides still run in all frames.
+//
 // 2. Web Worker timezone leaks — Content scripts cannot inject into
 //    Web Worker, SharedWorker, or ServiceWorker contexts. Code running
 //    inside a Worker sees the real system timezone via Date and Intl.
@@ -111,13 +118,31 @@ installDateSetterOverrides();
 import { installTemporalOverrides } from "./temporal";
 installTemporalOverrides();
 
+// ── Frame context detection ──────────────────────────────────────────
+// Determine whether this script is running in a cross-origin frame.
+// If window.top.location is inaccessible (throws SecurityError), we are
+// inside a cross-origin iframe. Worker patching, iframe patching, and
+// DOM insertion wrapping must be skipped in that case — installing them
+// in a cross-origin context (e.g. Cloudflare Turnstile) causes those
+// third-party scripts to detect tampering and break.
+const isCrossOriginFrame = (() => {
+  if (window === window.top) return false; // top-level page
+  try {
+    // Will throw SecurityError if cross-origin
+    void window.top?.location.origin;
+    return false;
+  } catch {
+    return true;
+  }
+})();
+
 // 12. Iframe patching (contentWindow/contentDocument getter overrides)
 import { installIframePatching } from "./iframe-patching";
-installIframePatching();
+if (!isCrossOriginFrame) installIframePatching();
 
 // 13. DOM insertion wrapping and MutationObserver fallback
 import { installDomInsertionWrapping } from "./dom-insertion";
-installDomInsertionWrapping();
+if (!isCrossOriginFrame) installDomInsertionWrapping();
 
 // 14. Document-level overrides (lastModified — ground-truth timezone
 //     surface used by TZP and similar fingerprinters)
@@ -130,8 +155,11 @@ installDocumentOverrides();
 //     pass through unmodified (blob URLs break relative imports).
 //     Must run after settings-listener so timezone data is available
 //     at Worker construction time.
+//     Skipped in cross-origin frames — installing Worker overrides
+//     inside third-party iframes (e.g. Cloudflare Turnstile) causes
+//     those scripts to detect tampering and break.
 import { installWorkerPatching } from "./worker-patching";
-installWorkerPatching();
+if (!isCrossOriginFrame) installWorkerPatching();
 
 // 16. WebRTC IP-leak protection. Wraps RTCPeerConnection so no ICE
 //     candidates ever gather when the user enables WebRTC Protection
