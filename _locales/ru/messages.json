@@ -4,80 +4,104 @@
     "description": "⚠️ MACHINE-TRANSLATED — needs native-speaker review. 'GeoSpoof' is a brand name; do not translate."
   },
   "extensionDescription": {
-    "message": "Подмена геолокации и часового пояса браузера. Защита от утечек IP через WebRTC. Не меняет IP — работает в паре с VPN.",
+    "message": "Подмена геолокации и часового пояса. Защита от утечек IP через WebRTC. IP не меняется — с VPN.",
     "description": "Extension description shown in the browser and store listing."
   },
   "onboarding_title": {
-    "message": "Добро пожаловать в GeoSpoof! 🌍"
+    "message": "Добро пожаловать в GeoSpoof! 🌍",
+    "description": "Onboarding overlay heading."
   },
   "onboarding_step1_strong": {
-    "message": "Выберите способ ввода:"
+    "message": "Выберите способ ввода:",
+    "description": "Bolded lead-in for the first onboarding step."
   },
   "onboarding_step1_text": {
-    "message": "Найдите город или введите координаты вручную через вкладки"
+    "message": "Найдите город или введите координаты вручную через вкладки",
+    "description": "Body text of the first onboarding step."
   },
   "onboarding_step2_strong": {
-    "message": "Включите защиту геолокации,"
+    "message": "Включите защиту геолокации,",
+    "description": "Bolded lead-in for the second onboarding step."
   },
   "onboarding_step2_text": {
-    "message": "чтобы начать подмену"
+    "message": "чтобы начать подмену",
+    "description": "Body text of the second onboarding step."
   },
   "onboarding_step3_strong": {
-    "message": "По желанию:"
+    "message": "По желанию:",
+    "description": "Bolded lead-in for the third onboarding step."
   },
   "onboarding_step3_text": {
-    "message": "включите защиту WebRTC для дополнительной приватности"
+    "message": "включите защиту WebRTC для дополнительной приватности",
+    "description": "Body text of the third onboarding step."
   },
   "onboarding_button": {
-    "message": "Начать"
+    "message": "Начать",
+    "description": "Button that closes the onboarding overlay."
   },
   "status_disabled": {
-    "message": "Отключено"
+    "message": "Отключено",
+    "description": "Status pill shown when location protection is off."
   },
   "status_enabled": {
-    "message": "Включено"
+    "message": "Включено",
+    "description": "Status pill shown when location protection is on."
   },
   "tab_main": {
-    "message": "Главная"
+    "message": "Главная",
+    "description": "Tab label for the main popup view."
   },
   "tab_details": {
-    "message": "Подробности"
+    "message": "Подробности",
+    "description": "Tab label for the protection details view."
   },
   "toggle_locationProtection": {
-    "message": "Защита геолокации"
+    "message": "Защита геолокации",
+    "description": "Label for the toggle that enables location spoofing."
   },
   "toggle_webrtcProtection": {
-    "message": "Защита WebRTC"
+    "message": "Защита WebRTC",
+    "description": "Label for the toggle that enables WebRTC IP leak protection."
   },
   "heading_location": {
-    "message": "Местоположение"
+    "message": "Местоположение",
+    "description": "Section heading above the spoofed location display."
   },
   "location_none": {
-    "message": "Местоположение не задано"
+    "message": "Местоположение не задано",
+    "description": "Shown when no spoofed location has been configured."
   },
   "location_custom": {
-    "message": "Пользовательское местоположение"
+    "message": "Пользовательское местоположение",
+    "description": "Shown above a manually entered (non-search) location."
   },
   "location_clearTitle": {
-    "message": "Очистить местоположение"
+    "message": "Очистить местоположение",
+    "description": "Tooltip title on the clear-location button."
   },
   "location_clearAriaLabel": {
-    "message": "Очистить местоположение"
+    "message": "Очистить местоположение",
+    "description": "Accessible label on the clear-location button."
   },
   "toggle_syncWithVpn": {
-    "message": "Синхронизация с VPN"
+    "message": "Синхронизация с VPN",
+    "description": "Label for the toggle that syncs location to the user's public IP."
   },
   "vpnSync_infoAriaLabel": {
-    "message": "Подробнее о синхронизации с VPN"
+    "message": "Подробнее о синхронизации с VPN",
+    "description": "Accessible label on the VPN sync info icon."
   },
   "vpnSync_tooltip": {
-    "message": "Это разовая синхронизация с текущим публичным IP. Она не обновляется автоматически при смене сервера VPN — используйте «Пересинхронизировать», чтобы обновить вручную."
+    "message": "Это разовая синхронизация с текущим публичным IP. Она не обновляется автоматически при смене сервера VPN — используйте «Пересинхронизировать», чтобы обновить вручную.",
+    "description": "Tooltip explaining that VPN sync is one-time and does not auto-update."
   },
   "vpnSync_syncNow": {
-    "message": "Синхронизировать"
+    "message": "Синхронизировать",
+    "description": "Button that performs an initial VPN sync."
   },
   "vpnSync_resync": {
-    "message": "Пересинхронизировать"
+    "message": "Пересинхронизировать",
+    "description": "Button that performs a follow-up VPN sync."
   },
   "vpnSync_detectedIp": {
     "message": "Обнаружен IP: $IP$",
@@ -86,121 +110,160 @@
         "content": "$1",
         "example": "203.0.113.42"
       }
-    }
+    },
+    "description": "Shown after a successful VPN sync. $IP$ is the detected public IP address."
   },
   "vpnSync_networkError": {
-    "message": "Произошла сетевая ошибка. Пожалуйста, попробуйте ещё раз."
+    "message": "Произошла сетевая ошибка. Пожалуйста, попробуйте ещё раз.",
+    "description": "Error toast shown when the VPN sync network call fails."
   },
   "inputTab_searchCity": {
-    "message": "Поиск города"
+    "message": "Поиск города",
+    "description": "Tab label for the city-search input mode."
   },
   "inputTab_enterCoords": {
-    "message": "Ввести координаты"
+    "message": "Ввести координаты",
+    "description": "Tab label for the manual-coordinates input mode."
   },
   "search_placeholder": {
-    "message": "Поиск города..."
+    "message": "Поиск города...",
+    "description": "Placeholder text in the city search input."
   },
   "search_searching": {
-    "message": "Поиск..."
+    "message": "Поиск...",
+    "description": "Status shown while a city search is in flight."
   },
   "search_noResults": {
-    "message": "Места не найдены"
+    "message": "Места не найдены",
+    "description": "Status shown when a city search returns no matches."
   },
   "search_failed": {
-    "message": "Поиск не удался. Пожалуйста, попробуйте ещё раз."
+    "message": "Поиск не удался. Пожалуйста, попробуйте ещё раз.",
+    "description": "Error toast shown when a city search request fails."
   },
   "search_settingLocation": {
-    "message": "Установка местоположения..."
+    "message": "Установка местоположения...",
+    "description": "Status shown while a chosen location is being applied."
   },
   "search_setLocationFailed": {
-    "message": "Не удалось установить местоположение. Пожалуйста, попробуйте ещё раз."
+    "message": "Не удалось установить местоположение. Пожалуйста, попробуйте ещё раз.",
+    "description": "Error toast shown when applying a chosen location fails."
   },
   "coords_latPlaceholder": {
-    "message": "Широта (-90 до 90)"
+    "message": "Широта (-90 до 90)",
+    "description": "Placeholder text in the latitude input."
   },
   "coords_lonPlaceholder": {
-    "message": "Долгота (-180 до 180)"
+    "message": "Долгота (-180 до 180)",
+    "description": "Placeholder text in the longitude input."
   },
   "coords_setButton": {
-    "message": "Установить"
+    "message": "Установить",
+    "description": "Button that applies the manually entered coordinates."
   },
   "coords_invalidLat": {
-    "message": "Неверная широта. Должна быть от -90 до 90."
+    "message": "Неверная широта. Должна быть от -90 до 90.",
+    "description": "Validation error shown when latitude is out of range."
   },
   "coords_invalidLon": {
-    "message": "Неверная долгота. Должна быть от -180 до 180."
+    "message": "Неверная долгота. Должна быть от -180 до 180.",
+    "description": "Validation error shown when longitude is out of range."
   },
   "warning_noLocationSet": {
-    "message": "⚠️ Защита включена, но местоположение не задано"
+    "message": "⚠️ Защита включена, но местоположение не задано",
+    "description": "Warning shown when protection is on but no location is configured."
   },
   "warning_refreshPage": {
-    "message": "⚠️ Обновите страницу, чтобы применить защиту"
+    "message": "⚠️ Обновите страницу, чтобы применить защиту",
+    "description": "Warning shown when the active page must be reloaded for protection to apply."
   },
   "notice_restrictedPage": {
-    "message": "ℹ️ Расширения не работают на этой странице"
+    "message": "ℹ️ Расширения не работают на этой странице",
+    "description": "Notice shown on browser-internal pages where extensions cannot run."
   },
   "testLinks_label": {
-    "message": "Проверьте вашу защиту:"
+    "message": "Проверьте вашу защиту:",
+    "description": "Heading above the test-your-protection links."
   },
   "testLinks_geolocation": {
-    "message": "Геолокация"
+    "message": "Геолокация",
+    "description": "Link label for the geolocation test page."
   },
   "testLinks_timezone": {
-    "message": "Часовой пояс"
+    "message": "Часовой пояс",
+    "description": "Link label for the timezone test page."
   },
   "testLinks_ipLeak": {
-    "message": "Утечка IP"
+    "message": "Утечка IP",
+    "description": "Link label for the IP leak test page."
   },
   "support_needHelp": {
-    "message": "Нужна помощь?"
+    "message": "Нужна помощь?",
+    "description": "Footer link prompting the user to open the support page."
   },
   "webrtc_configFailed": {
-    "message": "Не удалось настроить защиту WebRTC. Проверьте разрешения расширения."
+    "message": "Не удалось настроить защиту WebRTC. Проверьте разрешения расширения.",
+    "description": "Error toast shown when WebRTC protection cannot be configured."
   },
   "details_heading": {
-    "message": "Детали защиты"
+    "message": "Детали защиты",
+    "description": "Heading for the protection-details panel."
   },
   "details_spoofedLocation": {
-    "message": "Подменённое местоположение"
+    "message": "Подменённое местоположение",
+    "description": "Section title for the spoofed-location details."
   },
   "details_spoofedTimezone": {
-    "message": "Подменённый часовой пояс"
+    "message": "Подменённый часовой пояс",
+    "description": "Section title for the spoofed-timezone details."
   },
   "details_webrtcProtection": {
-    "message": "Защита WebRTC"
+    "message": "Защита WebRTC",
+    "description": "Section title for the WebRTC protection details."
   },
   "details_overriddenApis": {
-    "message": "Переопределённые API"
+    "message": "Переопределённые API",
+    "description": "Section title for the list of overridden browser APIs."
   },
   "details_notConfigured": {
-    "message": "Не настроено"
+    "message": "Не настроено",
+    "description": "Placeholder shown when a detail field has no value."
   },
   "details_none": {
-    "message": "Нет"
+    "message": "Нет",
+    "description": "Shown when a detail field has no items."
   },
   "details_noneDisabled": {
-    "message": "Нет (защита отключена)"
+    "message": "Нет (защита отключена)",
+    "description": "Shown when a detail field is empty because protection is off."
   },
   "details_latitudeLabel": {
-    "message": "Широта"
+    "message": "Широта",
+    "description": "Label for the latitude row in the location details."
   },
   "details_longitudeLabel": {
-    "message": "Долгота"
+    "message": "Долгота",
+    "description": "Label for the longitude row in the location details."
   },
   "details_accuracyLabel": {
-    "message": "Точность"
+    "message": "Точность",
+    "description": "Label for the accuracy row in the location details."
   },
   "details_locationLabel": {
-    "message": "Местоположение"
+    "message": "Местоположение",
+    "description": "Label for the location-name row in the location details."
   },
   "details_identifierLabel": {
-    "message": "Идентификатор"
+    "message": "Идентификатор",
+    "description": "Label for the timezone-identifier row in the timezone details."
   },
   "details_offsetLabel": {
-    "message": "Смещение"
+    "message": "Смещение",
+    "description": "Label for the UTC-offset row in the timezone details."
   },
   "details_dstOffsetLabel": {
-    "message": "Смещение DST"
+    "message": "Смещение DST",
+    "description": "Label for the DST-offset row in the timezone details."
   },
   "details_dstOffsetMinutes": {
     "message": "$MINUTES$ мин.",
@@ -209,57 +272,75 @@
         "content": "$1",
         "example": "60"
       }
-    }
+    },
+    "description": "Formatted DST offset in minutes. $MINUTES$ is the integer minute count."
   },
   "details_fallbackNote": {
-    "message": "⚠️ Приблизительно (API недоступен)"
+    "message": "⚠️ Приблизительно (API недоступен)",
+    "description": "Inline note shown when timezone data is estimated rather than authoritative."
   },
   "details_webrtcActive": {
-    "message": "✓ Активна\n\nRTCPeerConnection обёрнут, чтобы подавлять сбор ICE-кандидатов.\nЭто предотвращает утечку настоящего IP через WebRTC."
+    "message": "✓ Активна\n\nRTCPeerConnection обёрнут, чтобы подавлять сбор ICE-кандидатов.\nЭто предотвращает утечку настоящего IP через WebRTC.",
+    "description": "Body text shown in the WebRTC details when protection is active."
   },
   "details_webrtcInactive": {
-    "message": "✗ Неактивна\n\nWebRTC может раскрыть ваш настоящий IP даже при использовании VPN."
+    "message": "✗ Неактивна\n\nWebRTC может раскрыть ваш настоящий IP даже при использовании VPN.",
+    "description": "Body text shown in the WebRTC details when protection is inactive."
   },
   "details_section_geolocation": {
-    "message": "Геолокация"
+    "message": "Геолокация",
+    "description": "Header for the geolocation overrides section."
   },
   "details_section_timezone": {
-    "message": "Часовой пояс"
+    "message": "Часовой пояс",
+    "description": "Header for the timezone overrides section."
   },
   "details_section_webrtc": {
-    "message": "WebRTC"
+    "message": "WebRTC",
+    "description": "Header for the WebRTC overrides section."
   },
   "advanced_button": {
-    "message": "Дополнительно"
+    "message": "Дополнительно",
+    "description": "Button that opens the advanced-settings drawer."
   },
   "advanced_debugLogging": {
-    "message": "Отладочное логирование"
+    "message": "Отладочное логирование",
+    "description": "Label for the debug-logging toggle."
   },
   "advanced_verbosityLevel": {
-    "message": "Уровень подробности"
+    "message": "Уровень подробности",
+    "description": "Label for the log-verbosity selector."
   },
   "advanced_verbosity_info": {
-    "message": "Инфо"
+    "message": "Инфо",
+    "description": "Verbosity level: only info-level logs."
   },
   "advanced_verbosity_debug": {
-    "message": "Отладка"
+    "message": "Отладка",
+    "description": "Verbosity level: info and debug logs."
   },
   "advanced_verbosity_trace": {
-    "message": "Трассировка"
+    "message": "Трассировка",
+    "description": "Verbosity level: full trace including per-call logs."
   },
   "advanced_theme": {
-    "message": "Тема"
+    "message": "Тема",
+    "description": "Label for the popup theme selector."
   },
   "advanced_theme_system": {
-    "message": "Системная"
+    "message": "Системная",
+    "description": "Theme option that follows the OS appearance."
   },
   "advanced_theme_light": {
-    "message": "Светлая"
+    "message": "Светлая",
+    "description": "Theme option that forces the light popup theme."
   },
   "advanced_theme_dark": {
-    "message": "Тёмная"
+    "message": "Тёмная",
+    "description": "Theme option that forces the dark popup theme."
   },
   "advanced_coffee": {
-    "message": "☕ Поддержать автора"
+    "message": "☕ Поддержать автора",
+    "description": "Footer link inviting the user to buy the maintainer a coffee."
   }
 }

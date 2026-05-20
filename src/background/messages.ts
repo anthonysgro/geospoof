@@ -33,7 +33,7 @@ import {
   isRestrictedUrl,
 } from "./tabs";
 import { syncVpnLocation, clearIpGeoCache } from "./vpn-sync";
-import { allowlistWorkerUrl } from "./worker-request-filter";
+import { allowlistWorkerUrl, isSameOriginWorker, tabPageUrlCache } from "./worker-request-filter";
 
 export async function handleMessage(
   message: Message,
@@ -81,7 +81,13 @@ export async function handleMessage(
       case "ANNOUNCE_WORKER_FETCH": {
         const payload = message.payload as AnnounceWorkerFetchPayload;
         if (typeof payload?.url === "string") {
-          allowlistWorkerUrl(payload.url);
+          const tabId = _sender.tab?.id;
+          const tabPageUrl = tabId != null ? tabPageUrlCache.get(tabId) : undefined;
+          // Only allowlist same-origin workers — cross-origin workers
+          // (e.g. Cloudflare Turnstile, Stripe) must not be patched.
+          if (isSameOriginWorker(payload.url, tabPageUrl)) {
+            allowlistWorkerUrl(payload.url);
+          }
         }
         // Fire-and-forget — the content script doesn't await the result
         // because blocking the worker construction on a background

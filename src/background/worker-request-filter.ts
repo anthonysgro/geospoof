@@ -209,6 +209,15 @@ interface PendingRequest {
 /** Map from requestId to the active filter + decision state. */
 const pending = new Map<string, PendingRequest>();
 
+/**
+ * Cache of the current top-level page URL for each open tab, keyed by tabId.
+ * Populated by `onTabUpdated` and seeded from existing tabs in
+ * `installWorkerRequestFilter`. Read synchronously inside `classifyRequest`
+ * to perform the same-origin gate without an async `browser.tabs.get` call.
+ * Exported so `messages.ts` can read it for the `ANNOUNCE_WORKER_FETCH` gate.
+ */
+export const tabPageUrlCache = new Map<number, string>();
+
 let beforeRequestListener: ((details: WebRequestDetails) => void) | null = null;
 let beforeSendHeadersListener: ((details: WebRequestDetailsWithHeaders) => void) | null = null;
 
@@ -275,6 +284,40 @@ export function updateWorkerFilterSettings(settings: Settings): void {
   cachedSettings = settings;
 }
 
+/**
+ * Exposed for unit testing only. Calls the internal `classifyRequest`
+ * function with the given details so tests can assert classification
+ * decisions without going through the full webRequest listener stack.
+ *
+ * @internal
+ */
+export function _classifyRequestForTest(details: {
+  requestId: string;
+  url: string;
+  type: string;
+  method: string;
+  tabId: number;
+  frameId: number;
+  requestHeaders?: { name: string; value?: string }[];
+}): Decision {
+  return classifyRequest(details);
+}
+
+/**
+ * Return true when `workerUrl` shares the same registrable domain
+ * (eTLD+1) as `tabPageUrl`. Used by the `ANNOUNCE_WORKER_FETCH`
+ * message handler to gate allowlist entries to same-origin workers only.
+ *
+ * Returns false when `tabPageUrl` is undefined (unknown tab) or when
+ * either URL resolves to a null registrable domain (IP, localhost, etc.).
+ */
+export function isSameOriginWorker(workerUrl: string, tabPageUrl: string | undefined): boolean {
+  if (!tabPageUrl) return false;
+  const workerDomain = getRegistrableDomain(workerUrl);
+  const pageDomain = getRegistrableDomain(tabPageUrl);
+  return workerDomain !== null && pageDomain !== null && workerDomain === pageDomain;
+}
+
 // ── Feature detection ────────────────────────────────────────────────
 
 /**
@@ -293,6 +336,72 @@ export function isWorkerFilterSupported(): boolean {
 }
 
 // ── Classification ───────────────────────────────────────────────────
+
+/**
+ * Known two-label eTLDs that need special handling when extracting
+ * the registrable domain (eTLD+1). This list covers the most common
+ * cases; it is not exhaustive.
+ */
+const TWO_PART_ETLDS = new Set([
+  "co.uk",
+  "co.jp",
+  "co.nz",
+  "co.za",
+  "co.in",
+  "co.kr",
+  "com.au",
+  "com.br",
+  "com.mx",
+  "com.ar",
+  "com.sg",
+  "com.hk",
+  "org.uk",
+  "net.au",
+  "gov.uk",
+  "ac.uk",
+  "me.uk",
+]);
+
+/**
+ * Extract the registrable domain (eTLD+1) from a URL string.
+ *
+ * Returns `null` for:
+ *   - Non-HTTP(S) URLs or invalid URLs
+ *   - Bare IPv4 addresses (e.g. `192.168.1.1`)
+ *   - IPv6 bracket notation (e.g. `[::1]`)
+ *   - Single-label hostnames (e.g. `localhost`)
+ *
+ * Handles known two-part eTLDs (e.g. `co.uk`, `com.au`) so that
+ * `example.co.uk` returns `"example.co.uk"` rather than `"co.uk"`.
+ *
+ * @example
+ *   getRegistrableDomain("https://app.example.com/path") // "example.com"
+ *   getRegistrableDomain("https://api.example.co.uk/")   // "example.co.uk"
+ *   getRegistrableDomain("https://192.168.1.1/")         // null
+ */
+export function getRegistrableDomain(url: string): string | null {
+  let hostname: string;
+  try {
+    hostname = new URL(url).hostname;
+  } catch {
+    return null;
+  }
+  // Reject bare IPv4 addresses and IPv6 bracket notation.
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname) || hostname.startsWith("[")) return null;
+
+  const parts = hostname.split(".");
+  if (parts.length < 2) return null;
+
+  // Check for known two-part eTLD (e.g. "co.uk").
+  if (parts.length >= 3) {
+    const candidate = `${parts[parts.length - 2]}.${parts[parts.length - 1]}`;
+    if (TWO_PART_ETLDS.has(candidate)) {
+      return `${parts[parts.length - 3]}.${candidate}`;
+    }
+  }
+  // Default: last two labels.
+  return `${parts[parts.length - 2]}.${parts[parts.length - 1]}`;
+}
 
 /**
  * Worker-like `Sec-Fetch-Dest` values. A request bearing any of
@@ -321,14 +430,37 @@ function readSecFetchDest(headers: HttpHeader[] | undefined): string | null {
  * prepended. Authoritative signal is `Sec-Fetch-Dest`; the URL
  * allowlist is a fallback for the rare case where the header is
  * stripped or absent.
+ *
+ * Same-origin gate: only patch workers whose registrable domain
+ * (eTLD+1) matches the tab's page origin. Cross-origin workers
+ * (e.g. Cloudflare Turnstile, Stripe) are classified as "pass"
+ * and left completely unmodified. When the tab's page URL is
+ * unknown, defaults to "pass" (safe fallback).
  */
 function classifyRequest(details: WebRequestDetailsWithHeaders): Decision {
   const dest = readSecFetchDest(details.requestHeaders);
-  if (dest !== null) {
-    return WORKER_FETCH_DESTS.has(dest) ? "patch" : "pass";
-  }
-  // Header missing — fall back to the announce allowlist.
-  return isAllowlisted(details.url) ? "patch" : "pass";
+  const baseDecision: Decision =
+    dest !== null
+      ? WORKER_FETCH_DESTS.has(dest)
+        ? "patch"
+        : "pass"
+      : isAllowlisted(details.url)
+        ? "patch"
+        : "pass";
+
+  // Already a pass — no origin check needed.
+  if (baseDecision === "pass") return "pass";
+
+  // Origin gate: only patch same-registrable-domain workers.
+  const tabPageUrl = tabPageUrlCache.get(details.tabId);
+  if (!tabPageUrl) return "pass"; // unknown tab → safe fallback
+
+  const workerDomain = getRegistrableDomain(details.url);
+  const pageDomain = getRegistrableDomain(tabPageUrl);
+
+  if (!workerDomain || !pageDomain || workerDomain !== pageDomain) return "pass";
+
+  return "patch";
 }
 
 // ── Listeners ────────────────────────────────────────────────────────
@@ -504,6 +636,30 @@ function onBeforeWorkerSendHeaders(details: WebRequestDetailsWithHeaders): void 
   }
 }
 
+// ── Tab lifecycle listeners ──────────────────────────────────────────
+
+/**
+ * Update the tab URL cache whenever a tab navigates. Called by
+ * `browser.tabs.onUpdated`. Stores the URL when it is an http(s) URL;
+ * removes a stale entry when the tab navigates away to a non-HTTP URL.
+ */
+function onTabUpdated(tabId: number, changeInfo: { url?: string }, tab: { url?: string }): void {
+  if (tab.url && (tab.url.startsWith("http://") || tab.url.startsWith("https://"))) {
+    tabPageUrlCache.set(tabId, tab.url);
+  } else if (changeInfo.url === undefined && tab.url) {
+    // Tab navigated to a non-HTTP URL — remove stale entry.
+    tabPageUrlCache.delete(tabId);
+  }
+}
+
+/**
+ * Remove the tab's URL cache entry when the tab is closed.
+ * Called by `browser.tabs.onRemoved`.
+ */
+function onTabRemoved(tabId: number): void {
+  tabPageUrlCache.delete(tabId);
+}
+
 // ── Install / uninstall ──────────────────────────────────────────────
 
 /**
@@ -530,6 +686,27 @@ export async function installWorkerRequestFilter(): Promise<void> {
     );
     // Continue — cachedSettings will remain undefined until the first
     // settings update arrives. The listeners short-circuit on undefined.
+  }
+
+  // Seed the tab URL cache from existing tabs.
+  try {
+    const existingTabs = await browser.tabs.query({});
+    for (const tab of existingTabs) {
+      if (
+        tab.id != null &&
+        tab.url &&
+        (tab.url.startsWith("http://") || tab.url.startsWith("https://"))
+      ) {
+        tabPageUrlCache.set(tab.id, tab.url);
+      }
+    }
+    browser.tabs.onUpdated.addListener(onTabUpdated);
+    browser.tabs.onRemoved.addListener(onTabRemoved);
+  } catch (err) {
+    logger.warn(
+      "[worker-filter] failed to seed tab URL cache:",
+      err instanceof Error ? err.message : String(err)
+    );
   }
 
   try {
@@ -591,6 +768,13 @@ export function uninstallWorkerRequestFilter(): void {
       err instanceof Error ? err.message : String(err)
     );
   }
+  try {
+    browser.tabs.onUpdated.removeListener(onTabUpdated);
+    browser.tabs.onRemoved.removeListener(onTabRemoved);
+  } catch {
+    /* ignore — listeners may not have been registered (e.g. unsupported engine) */
+  }
+  tabPageUrlCache.clear();
   beforeRequestListener = null;
   beforeSendHeadersListener = null;
 }

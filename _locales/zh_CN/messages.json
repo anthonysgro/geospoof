@@ -8,76 +8,100 @@
     "description": "Extension description shown in the browser and store listing."
   },
   "onboarding_title": {
-    "message": "欢迎使用 GeoSpoof! 🌍"
+    "message": "欢迎使用 GeoSpoof! 🌍",
+    "description": "Onboarding overlay heading."
   },
   "onboarding_step1_strong": {
-    "message": "选择输入方式:"
+    "message": "选择输入方式:",
+    "description": "Bolded lead-in for the first onboarding step."
   },
   "onboarding_step1_text": {
-    "message": "使用选项卡搜索城市或手动输入坐标"
+    "message": "使用选项卡搜索城市或手动输入坐标",
+    "description": "Body text of the first onboarding step."
   },
   "onboarding_step2_strong": {
-    "message": "启用位置保护"
+    "message": "启用位置保护",
+    "description": "Bolded lead-in for the second onboarding step."
   },
   "onboarding_step2_text": {
-    "message": "以开始伪造"
+    "message": "以开始伪造",
+    "description": "Body text of the second onboarding step."
   },
   "onboarding_step3_strong": {
-    "message": "可选:"
+    "message": "可选:",
+    "description": "Bolded lead-in for the third onboarding step."
   },
   "onboarding_step3_text": {
-    "message": "启用 WebRTC 保护以获得更多隐私"
+    "message": "启用 WebRTC 保护以获得更多隐私",
+    "description": "Body text of the third onboarding step."
   },
   "onboarding_button": {
-    "message": "开始使用"
+    "message": "开始使用",
+    "description": "Button that closes the onboarding overlay."
   },
   "status_disabled": {
-    "message": "已禁用"
+    "message": "已禁用",
+    "description": "Status pill shown when location protection is off."
   },
   "status_enabled": {
-    "message": "已启用"
+    "message": "已启用",
+    "description": "Status pill shown when location protection is on."
   },
   "tab_main": {
-    "message": "主页"
+    "message": "主页",
+    "description": "Tab label for the main popup view."
   },
   "tab_details": {
-    "message": "详情"
+    "message": "详情",
+    "description": "Tab label for the protection details view."
   },
   "toggle_locationProtection": {
-    "message": "位置保护"
+    "message": "位置保护",
+    "description": "Label for the toggle that enables location spoofing."
   },
   "toggle_webrtcProtection": {
-    "message": "WebRTC 保护"
+    "message": "WebRTC 保护",
+    "description": "Label for the toggle that enables WebRTC IP leak protection."
   },
   "heading_location": {
-    "message": "位置"
+    "message": "位置",
+    "description": "Section heading above the spoofed location display."
   },
   "location_none": {
-    "message": "未设置位置"
+    "message": "未设置位置",
+    "description": "Shown when no spoofed location has been configured."
   },
   "location_custom": {
-    "message": "自定义位置"
+    "message": "自定义位置",
+    "description": "Shown above a manually entered (non-search) location."
   },
   "location_clearTitle": {
-    "message": "清除位置"
+    "message": "清除位置",
+    "description": "Tooltip title on the clear-location button."
   },
   "location_clearAriaLabel": {
-    "message": "清除位置"
+    "message": "清除位置",
+    "description": "Accessible label on the clear-location button."
   },
   "toggle_syncWithVpn": {
-    "message": "与 VPN 同步"
+    "message": "与 VPN 同步",
+    "description": "Label for the toggle that syncs location to the user's public IP."
   },
   "vpnSync_infoAriaLabel": {
-    "message": "关于「与 VPN 同步」的更多信息"
+    "message": "关于「与 VPN 同步」的更多信息",
+    "description": "Accessible label on the VPN sync info icon."
   },
   "vpnSync_tooltip": {
-    "message": "这是一次性同步到您当前公网 IP 的位置。当 VPN 更换服务器时不会自动更新——请使用「重新同步」按钮手动更新。"
+    "message": "这是一次性同步到您当前公网 IP 的位置。当 VPN 更换服务器时不会自动更新——请使用「重新同步」按钮手动更新。",
+    "description": "Tooltip explaining that VPN sync is one-time and does not auto-update."
   },
   "vpnSync_syncNow": {
-    "message": "立即同步"
+    "message": "立即同步",
+    "description": "Button that performs an initial VPN sync."
   },
   "vpnSync_resync": {
-    "message": "重新同步"
+    "message": "重新同步",
+    "description": "Button that performs a follow-up VPN sync."
   },
   "vpnSync_detectedIp": {
     "message": "检测到的 IP:$IP$",
@@ -86,121 +110,160 @@
         "content": "$1",
         "example": "203.0.113.42"
       }
-    }
+    },
+    "description": "Shown after a successful VPN sync. $IP$ is the detected public IP address."
   },
   "vpnSync_networkError": {
-    "message": "发生网络错误。请重试。"
+    "message": "发生网络错误。请重试。",
+    "description": "Error toast shown when the VPN sync network call fails."
   },
   "inputTab_searchCity": {
-    "message": "搜索城市"
+    "message": "搜索城市",
+    "description": "Tab label for the city-search input mode."
   },
   "inputTab_enterCoords": {
-    "message": "输入坐标"
+    "message": "输入坐标",
+    "description": "Tab label for the manual-coordinates input mode."
   },
   "search_placeholder": {
-    "message": "搜索城市..."
+    "message": "搜索城市...",
+    "description": "Placeholder text in the city search input."
   },
   "search_searching": {
-    "message": "正在搜索..."
+    "message": "正在搜索...",
+    "description": "Status shown while a city search is in flight."
   },
   "search_noResults": {
-    "message": "未找到位置"
+    "message": "未找到位置",
+    "description": "Status shown when a city search returns no matches."
   },
   "search_failed": {
-    "message": "搜索失败。请重试。"
+    "message": "搜索失败。请重试。",
+    "description": "Error toast shown when a city search request fails."
   },
   "search_settingLocation": {
-    "message": "正在设置位置..."
+    "message": "正在设置位置...",
+    "description": "Status shown while a chosen location is being applied."
   },
   "search_setLocationFailed": {
-    "message": "设置位置失败。请重试。"
+    "message": "设置位置失败。请重试。",
+    "description": "Error toast shown when applying a chosen location fails."
   },
   "coords_latPlaceholder": {
-    "message": "纬度(-90 到 90)"
+    "message": "纬度(-90 到 90)",
+    "description": "Placeholder text in the latitude input."
   },
   "coords_lonPlaceholder": {
-    "message": "经度(-180 到 180)"
+    "message": "经度(-180 到 180)",
+    "description": "Placeholder text in the longitude input."
   },
   "coords_setButton": {
-    "message": "设置位置"
+    "message": "设置位置",
+    "description": "Button that applies the manually entered coordinates."
   },
   "coords_invalidLat": {
-    "message": "无效纬度。必须在 -90 到 90 之间。"
+    "message": "无效纬度。必须在 -90 到 90 之间。",
+    "description": "Validation error shown when latitude is out of range."
   },
   "coords_invalidLon": {
-    "message": "无效经度。必须在 -180 到 180 之间。"
+    "message": "无效经度。必须在 -180 到 180 之间。",
+    "description": "Validation error shown when longitude is out of range."
   },
   "warning_noLocationSet": {
-    "message": "⚠️ 保护已启用但未设置位置"
+    "message": "⚠️ 保护已启用但未设置位置",
+    "description": "Warning shown when protection is on but no location is configured."
   },
   "warning_refreshPage": {
-    "message": "⚠️ 刷新此页面以应用保护"
+    "message": "⚠️ 刷新此页面以应用保护",
+    "description": "Warning shown when the active page must be reloaded for protection to apply."
   },
   "notice_restrictedPage": {
-    "message": "ℹ️ 扩展无法在此页面上运行"
+    "message": "ℹ️ 扩展无法在此页面上运行",
+    "description": "Notice shown on browser-internal pages where extensions cannot run."
   },
   "testLinks_label": {
-    "message": "测试您的保护:"
+    "message": "测试您的保护:",
+    "description": "Heading above the test-your-protection links."
   },
   "testLinks_geolocation": {
-    "message": "地理位置"
+    "message": "地理位置",
+    "description": "Link label for the geolocation test page."
   },
   "testLinks_timezone": {
-    "message": "时区"
+    "message": "时区",
+    "description": "Link label for the timezone test page."
   },
   "testLinks_ipLeak": {
-    "message": "IP 泄漏"
+    "message": "IP 泄漏",
+    "description": "Link label for the IP leak test page."
   },
   "support_needHelp": {
-    "message": "需要帮助?"
+    "message": "需要帮助?",
+    "description": "Footer link prompting the user to open the support page."
   },
   "webrtc_configFailed": {
-    "message": "无法配置 WebRTC 保护。请检查扩展权限。"
+    "message": "无法配置 WebRTC 保护。请检查扩展权限。",
+    "description": "Error toast shown when WebRTC protection cannot be configured."
   },
   "details_heading": {
-    "message": "保护详情"
+    "message": "保护详情",
+    "description": "Heading for the protection-details panel."
   },
   "details_spoofedLocation": {
-    "message": "伪造的位置"
+    "message": "伪造的位置",
+    "description": "Section title for the spoofed-location details."
   },
   "details_spoofedTimezone": {
-    "message": "伪造的时区"
+    "message": "伪造的时区",
+    "description": "Section title for the spoofed-timezone details."
   },
   "details_webrtcProtection": {
-    "message": "WebRTC 保护"
+    "message": "WebRTC 保护",
+    "description": "Section title for the WebRTC protection details."
   },
   "details_overriddenApis": {
-    "message": "已覆盖的 API"
+    "message": "已覆盖的 API",
+    "description": "Section title for the list of overridden browser APIs."
   },
   "details_notConfigured": {
-    "message": "未配置"
+    "message": "未配置",
+    "description": "Placeholder shown when a detail field has no value."
   },
   "details_none": {
-    "message": "无"
+    "message": "无",
+    "description": "Shown when a detail field has no items."
   },
   "details_noneDisabled": {
-    "message": "无(保护已禁用)"
+    "message": "无(保护已禁用)",
+    "description": "Shown when a detail field is empty because protection is off."
   },
   "details_latitudeLabel": {
-    "message": "纬度"
+    "message": "纬度",
+    "description": "Label for the latitude row in the location details."
   },
   "details_longitudeLabel": {
-    "message": "经度"
+    "message": "经度",
+    "description": "Label for the longitude row in the location details."
   },
   "details_accuracyLabel": {
-    "message": "精度"
+    "message": "精度",
+    "description": "Label for the accuracy row in the location details."
   },
   "details_locationLabel": {
-    "message": "位置"
+    "message": "位置",
+    "description": "Label for the location-name row in the location details."
   },
   "details_identifierLabel": {
-    "message": "标识符"
+    "message": "标识符",
+    "description": "Label for the timezone-identifier row in the timezone details."
   },
   "details_offsetLabel": {
-    "message": "偏移"
+    "message": "偏移",
+    "description": "Label for the UTC-offset row in the timezone details."
   },
   "details_dstOffsetLabel": {
-    "message": "夏令时偏移"
+    "message": "夏令时偏移",
+    "description": "Label for the DST-offset row in the timezone details."
   },
   "details_dstOffsetMinutes": {
     "message": "$MINUTES$ 分钟",
@@ -209,57 +272,75 @@
         "content": "$1",
         "example": "60"
       }
-    }
+    },
+    "description": "Formatted DST offset in minutes. $MINUTES$ is the integer minute count."
   },
   "details_fallbackNote": {
-    "message": "⚠️ 估算值(API 不可用)"
+    "message": "⚠️ 估算值(API 不可用)",
+    "description": "Inline note shown when timezone data is estimated rather than authoritative."
   },
   "details_webrtcActive": {
-    "message": "✓ 活动\n\nRTCPeerConnection 已被包装以抑制 ICE 候选收集。\n这可以防止 WebRTC 泄漏您的真实 IP 地址。"
+    "message": "✓ 活动\n\nRTCPeerConnection 已被包装以抑制 ICE 候选收集。\n这可以防止 WebRTC 泄漏您的真实 IP 地址。",
+    "description": "Body text shown in the WebRTC details when protection is active."
   },
   "details_webrtcInactive": {
-    "message": "✗ 非活动\n\n即使使用 VPN,WebRTC 仍可能泄漏您的真实 IP 地址。"
+    "message": "✗ 非活动\n\n即使使用 VPN,WebRTC 仍可能泄漏您的真实 IP 地址。",
+    "description": "Body text shown in the WebRTC details when protection is inactive."
   },
   "details_section_geolocation": {
-    "message": "地理位置"
+    "message": "地理位置",
+    "description": "Header for the geolocation overrides section."
   },
   "details_section_timezone": {
-    "message": "时区"
+    "message": "时区",
+    "description": "Header for the timezone overrides section."
   },
   "details_section_webrtc": {
-    "message": "WebRTC"
+    "message": "WebRTC",
+    "description": "Header for the WebRTC overrides section."
   },
   "advanced_button": {
-    "message": "高级"
+    "message": "高级",
+    "description": "Button that opens the advanced-settings drawer."
   },
   "advanced_debugLogging": {
-    "message": "调试日志"
+    "message": "调试日志",
+    "description": "Label for the debug-logging toggle."
   },
   "advanced_verbosityLevel": {
-    "message": "详细级别"
+    "message": "详细级别",
+    "description": "Label for the log-verbosity selector."
   },
   "advanced_verbosity_info": {
-    "message": "信息"
+    "message": "信息",
+    "description": "Verbosity level: only info-level logs."
   },
   "advanced_verbosity_debug": {
-    "message": "调试"
+    "message": "调试",
+    "description": "Verbosity level: info and debug logs."
   },
   "advanced_verbosity_trace": {
-    "message": "跟踪"
+    "message": "跟踪",
+    "description": "Verbosity level: full trace including per-call logs."
   },
   "advanced_theme": {
-    "message": "主题"
+    "message": "主题",
+    "description": "Label for the popup theme selector."
   },
   "advanced_theme_system": {
-    "message": "系统"
+    "message": "系统",
+    "description": "Theme option that follows the OS appearance."
   },
   "advanced_theme_light": {
-    "message": "浅色"
+    "message": "浅色",
+    "description": "Theme option that forces the light popup theme."
   },
   "advanced_theme_dark": {
-    "message": "深色"
+    "message": "深色",
+    "description": "Theme option that forces the dark popup theme."
   },
   "advanced_coffee": {
-    "message": "☕ 请我喝咖啡"
+    "message": "☕ 请我喝咖啡",
+    "description": "Footer link inviting the user to buy the maintainer a coffee."
   }
 }
