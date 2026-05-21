@@ -1,6 +1,10 @@
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 import prettierConfig from "eslint-config-prettier";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default [
   // Global ignores
@@ -30,7 +34,7 @@ export default [
     languageOptions: {
       parserOptions: {
         project: "./tsconfig.json",
-        tsconfigRootDir: import.meta.dirname,
+        tsconfigRootDir: __dirname,
       },
       globals: {
         browser: "readonly",
