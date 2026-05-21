@@ -59,8 +59,21 @@ export const Route = createRootRoute({
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "icon", href: "/favicon.ico" },
-      // Only preload the above-the-fold hero images (light + dark variants)
-      // Use 640w versions — matches the displayed size on most viewports
+      // Preload the above-the-fold hero phone images (light theme only —
+      // dark variants load on demand after theme detection).
+      // Two sizes per image: 400w for mobile, 640w for larger viewports.
+      {
+        rel: "preload",
+        href: "/images/hero-ios-1-400.webp",
+        as: "image",
+        type: "image/webp",
+      },
+      {
+        rel: "preload",
+        href: "/images/hero-ios-2-400.webp",
+        as: "image",
+        type: "image/webp",
+      },
       {
         rel: "preload",
         href: "/images/hero-ios-1-640.webp",
@@ -70,18 +83,6 @@ export const Route = createRootRoute({
       {
         rel: "preload",
         href: "/images/hero-ios-2-640.webp",
-        as: "image",
-        type: "image/webp",
-      },
-      {
-        rel: "preload",
-        href: "/images/hero-ios-1-dark-640.webp",
-        as: "image",
-        type: "image/webp",
-      },
-      {
-        rel: "preload",
-        href: "/images/hero-ios-2-dark-640.webp",
         as: "image",
         type: "image/webp",
       },
