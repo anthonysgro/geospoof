@@ -39,9 +39,6 @@ export function HeroSection({ className }: { className?: string }) {
   const ios1Webp640 = isDark
     ? "/images/hero-ios-1-dark-640.webp"
     : "/images/hero-ios-1-640.webp"
-  const ios1Webp400 = isDark
-    ? "/images/hero-ios-1-dark-400.webp"
-    : "/images/hero-ios-1-400.webp"
   const ios1Png = isDark
     ? "/images/hero-ios-1-dark.png"
     : "/images/hero-ios-1.png"
@@ -51,9 +48,6 @@ export function HeroSection({ className }: { className?: string }) {
   const ios2Webp640 = isDark
     ? "/images/hero-ios-2-dark-640.webp"
     : "/images/hero-ios-2-640.webp"
-  const ios2Webp400 = isDark
-    ? "/images/hero-ios-2-dark-400.webp"
-    : "/images/hero-ios-2-400.webp"
   const ios2Png = isDark
     ? "/images/hero-ios-2-dark.png"
     : "/images/hero-ios-2.png"
@@ -81,7 +75,7 @@ export function HeroSection({ className }: { className?: string }) {
           <div className="relative">
             <picture className="absolute top-8 left-0 w-56 -rotate-6 drop-shadow-2xl xl:w-80">
               <source
-                srcSet={`${ios1Webp400} 400w, ${ios1Webp640} 640w, ${ios1Webp} 1008w`}
+                srcSet={`${ios1Webp640} 640w, ${ios1Webp} 1008w`}
                 sizes="(max-width: 1280px) 224px, 320px"
                 type="image/webp"
               />
@@ -96,7 +90,7 @@ export function HeroSection({ className }: { className?: string }) {
             </picture>
             <picture className="relative z-10 ml-24 block w-56 rotate-3 drop-shadow-2xl xl:ml-32 xl:w-80">
               <source
-                srcSet={`${ios2Webp400} 400w, ${ios2Webp640} 640w, ${ios2Webp} 1010w`}
+                srcSet={`${ios2Webp640} 640w, ${ios2Webp} 1010w`}
                 sizes="(max-width: 1280px) 224px, 320px"
                 type="image/webp"
               />
