@@ -180,7 +180,7 @@ export function HeroSection({ className }: { className?: string }) {
           <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 xl:justify-start">
             <span className="text-sm text-(--color-canvas-muted)">
               <span className="font-semibold text-(--color-canvas-foreground)">
-                1,000+
+                4,000+
               </span>{" "}
               users
             </span>
