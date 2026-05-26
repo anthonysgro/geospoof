@@ -57,10 +57,11 @@ export async function loadSettings(): Promise<void> {
       if (coordsEl) coordsEl.textContent = "—";
     }
 
-    // Show clear button only when location is set and VPN sync is not active
+    // Show clear button only when location is set and VPN sync is not active.
+    // Use empty string (not "block") so the CSS `display: inline-flex` wins.
     const clearBtn = document.getElementById("clearLocationBtn");
     if (clearBtn) {
-      clearBtn.style.display = settings.location && !settings.vpnSyncEnabled ? "block" : "none";
+      clearBtn.style.display = settings.location && !settings.vpnSyncEnabled ? "" : "none";
     }
 
     renderFavorites(settings);
