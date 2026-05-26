@@ -70,7 +70,19 @@ const config = defineConfig({
       projects: ["./tsconfig.json"],
     }),
     tailwindcss(),
-    tanstackStart(),
+    tanstackStart({
+      // Prerender all static routes at build time so Vercel serves them
+      // as static assets from the CDN edge — eliminates SSR cold-start
+      // latency and improves FCP/TTFB for the landing page and docs.
+      //
+      // /test is excluded: it runs live browser API probes that only
+      // make sense in a real browser context, not a prerender environment.
+      prerender: {
+        enabled: true,
+        crawlLinks: true,
+        filter: ({ path: routePath }: { path: string }) => routePath !== "/test",
+      },
+    }),
     viteReact(),
   ],
 })

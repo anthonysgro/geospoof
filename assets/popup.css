@@ -1214,6 +1214,27 @@ input[type="checkbox"]:checked + .toggle-slider:before {
     margin: 0 auto;
     padding-bottom: 40vh; /* extra breathing room so the keyboard doesn't cover the input */
   }
+
+  /* No hover on touch — always show the ⋯ menu button at reduced opacity */
+  .chip-menu-btn {
+    opacity: 0.45;
+    max-width: 28px;
+    padding: 0 3px;
+    transition: none;
+  }
+
+  /* Remove the hover-reveal delay entirely */
+  .favorite-chip:hover .chip-menu-btn,
+  .favorite-chip:focus-within .chip-menu-btn {
+    transition-delay: 0s;
+  }
+
+  /* Suppress the is-scrolling hide override so the button stays visible while scrolling */
+  .favorites-chip-row.is-scrolling .chip-menu-btn {
+    opacity: 0.45 !important;
+    max-width: 28px !important;
+    padding: 0 3px !important;
+  }
 }
 
 /* Dark Mode */
