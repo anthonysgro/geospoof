@@ -87,7 +87,8 @@ export function renderStarButton(
     return;
   }
 
-  btn.style.display = "block";
+  // Show: clear inline display so CSS (`display: inline-flex`) wins.
+  btn.style.display = "";
 
   const match = isFavorite(location, favorites);
 

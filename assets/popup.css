@@ -1,3 +1,156 @@
+/* ───────────────────────────────────────────────────────────────────────────
+   Design tokens
+   ─────────────────────────────────────────────────────────────────────────
+   Theming is a pure token swap. Component rules below reference var(--...)
+   and never hardcode color values. To re-theme a component, change the
+   token; to add a new theme variant, override the tokens in a new block.
+   ────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Brand & accent (theme-invariant) */
+  --brand: #4caf50;
+  --brand-hover: #45a049;
+  --accent: #f5a623; /* favorite star */
+
+  /* Surfaces (light defaults) */
+  --bg: #f5f5f5;
+  --surface: #ffffff;
+  --surface-alt: #f5f5f5; /* sub-cards, tooltips, vpn-sync-status */
+  --surface-hover: #f5f5f5; /* neutral hover background */
+  --badge-bg: #e0e0e0;
+
+  /* Text */
+  --text: #333;
+  --text-muted: #666;
+  --text-subtle: #999;
+  --text-faint: #aaa;
+  --text-strong: #2c3e50; /* h1, h2, h3 brand-styled headings */
+  --text-on-brand: #ffffff;
+
+  /* Borders */
+  --border: #e0e0e0;
+  --border-input: #ddd;
+  --border-subtle: #f0f0f0;
+
+  /* Form controls */
+  --toggle-off: #ccc;
+
+  /* Status — danger (red) */
+  --danger: #d32f2f;
+  --danger-bg: #fdecea;
+  --danger-bg-text: #b71c1c;
+
+  /* Status — warning (amber) */
+  --warn-bg: #fff3cd;
+  --warn-text: #856404;
+  --warn-border: #ffeaa7;
+
+  /* Status — info (blue) */
+  --info-bg: #e3f2fd;
+  --info-text: #1565c0;
+  --info-border: #90caf9;
+
+  /* Setting disclaimer (amber-tan, theme-invariant) */
+  --disclaimer-bg: #faf8f1;
+  --disclaimer-border: #e0c060;
+  --disclaimer-text: #666;
+  --disclaimer-strong: #8a6a10;
+  --disclaimer-unsupported-bg: #f5f5f5;
+  --disclaimer-unsupported-border: #bbb;
+  --disclaimer-unsupported-text: #888;
+  --disclaimer-unsupported-strong: #555;
+
+  /* Effects */
+  --shadow-pop: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --shadow-results: 0 -2px 8px rgba(0, 0, 0, 0.1);
+  --scrim: rgba(0, 0, 0, 0.8);
+  --hover-tint-on-light: rgba(0, 0, 0, 0.1); /* hover scrim over light surfaces */
+  --hover-tint-on-brand: rgba(255, 255, 255, 0.25); /* hover scrim over brand bg */
+}
+
+/* Dark theme tokens — applied via system preference. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #2b2a33;
+    --surface: #23222b;
+    --surface-alt: #2b2a33;
+    --surface-hover: #3b3a41;
+    --badge-bg: #23222b;
+
+    --text: #fbfbfe;
+    --text-muted: #fbfbfe;
+    --text-strong: #fbfbfe;
+
+    --border: #393941;
+    --border-input: #393941;
+    --border-subtle: #393941;
+
+    --danger: #ef5350;
+    --danger-bg: #b71c1c;
+    --danger-bg-text: #fdecea;
+
+    --warn-bg: #856404;
+    --warn-text: #fff3cd;
+    --warn-border: #856404;
+
+    --info-bg: #0b3b5f;
+    --info-text: #7fa5cf;
+    --info-border: #0b3b5f;
+  }
+}
+
+/* Explicit light theme override (wins over system dark preference). */
+body.theme-light {
+  --bg: #f5f5f5;
+  --surface: #ffffff;
+  --surface-alt: #f5f5f5;
+  --surface-hover: #f5f5f5;
+  --badge-bg: #e0e0e0;
+  --text: #333;
+  --text-muted: #666;
+  --text-strong: #2c3e50;
+  --border: #e0e0e0;
+  --border-input: #ddd;
+  --border-subtle: #f0f0f0;
+  --danger: #d32f2f;
+  --danger-bg: #fdecea;
+  --danger-bg-text: #b71c1c;
+  --warn-bg: #fff3cd;
+  --warn-text: #856404;
+  --warn-border: #ffeaa7;
+  --info-bg: #e3f2fd;
+  --info-text: #1565c0;
+  --info-border: #90caf9;
+}
+
+/* Explicit dark theme override (wins over system light preference). */
+body.theme-dark {
+  --bg: #2b2a33;
+  --surface: #23222b;
+  --surface-alt: #2b2a33;
+  --surface-hover: #3b3a41;
+  --badge-bg: #23222b;
+  --text: #fbfbfe;
+  --text-muted: #fbfbfe;
+  --text-strong: #fbfbfe;
+  --border: #393941;
+  --border-input: #393941;
+  --border-subtle: #393941;
+  --danger: #ef5350;
+  --danger-bg: #b71c1c;
+  --danger-bg-text: #fdecea;
+  --warn-bg: #856404;
+  --warn-text: #fff3cd;
+  --warn-border: #856404;
+  --info-bg: #0b3b5f;
+  --info-text: #7fa5cf;
+  --info-border: #0b3b5f;
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   Base
+   ────────────────────────────────────────────────────────────────────── */
+
 * {
   margin: 0;
   padding: 0;
@@ -8,13 +161,13 @@ body {
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   font-size: 14px;
-  color: #333;
+  color: var(--text);
   width: 350px;
   min-width: 350px;
   min-height: 400px;
   max-height: 600px;
   overflow: hidden;
-  background: #f5f5f5;
+  background: var(--bg);
   opacity: 0;
   transition: opacity 0.1s;
 }
@@ -31,7 +184,15 @@ body.loaded {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Header */
+input {
+  background-color: var(--surface);
+  color: var(--text);
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   Header
+   ────────────────────────────────────────────────────────────────────── */
+
 .header {
   display: flex;
   justify-content: space-between;
@@ -53,7 +214,7 @@ body.loaded {
 .header h1 {
   font-size: 20px;
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--text-strong);
 }
 
 .status-badge {
@@ -61,21 +222,24 @@ body.loaded {
   border-radius: 12px;
   font-size: 12px;
   font-weight: 500;
-  background: #e0e0e0;
-  color: #666;
+  background: var(--badge-bg);
+  color: var(--text-muted);
 }
 
 .status-badge.enabled {
-  background: #4caf50;
-  color: white;
+  background: var(--brand);
+  color: var(--text-on-brand);
 }
 
-/* Tab Navigation */
+/* ───────────────────────────────────────────────────────────────────────────
+   Tab navigation
+   ────────────────────────────────────────────────────────────────────── */
+
 .tab-navigation {
   display: flex;
   gap: 8px;
   margin-bottom: 16px;
-  border-bottom: 2px solid #e0e0e0;
+  border-bottom: 2px solid var(--border);
 }
 
 .nav-tab {
@@ -87,19 +251,19 @@ body.loaded {
   margin-bottom: -2px;
   font-size: 14px;
   font-weight: 500;
-  color: #666;
+  color: var(--text-muted);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .nav-tab:hover {
-  color: #333;
-  background: #f5f5f5;
+  color: var(--text);
+  background: var(--surface-hover);
 }
 
 .nav-tab.active {
-  color: #4caf50;
-  border-bottom-color: #4caf50;
+  color: var(--brand);
+  border-bottom-color: var(--brand);
 }
 
 /* Tab Content */
@@ -116,10 +280,13 @@ body.loaded {
   }
 }
 
-/* Toggle Section */
+/* ───────────────────────────────────────────────────────────────────────────
+   Toggle sections
+   ────────────────────────────────────────────────────────────────────── */
+
 .toggle-section,
 .webrtc-section {
-  background: white;
+  background: var(--surface);
   padding: 12px;
   border-radius: 8px;
   margin-bottom: 12px;
@@ -150,7 +317,7 @@ body.loaded {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #ccc;
+  background-color: var(--toggle-off);
   border-radius: 24px;
   transition: 0.3s;
 }
@@ -162,37 +329,40 @@ body.loaded {
   width: 18px;
   left: 3px;
   bottom: 3px;
-  background-color: white;
+  background-color: #ffffff;
   border-radius: 50%;
   transition: 0.3s;
 }
 
 input[type="checkbox"]:checked + .toggle-slider {
-  background-color: #4caf50;
+  background-color: var(--brand);
 }
 
 input[type="checkbox"]:checked + .toggle-slider:before {
   transform: translateX(20px);
 }
 
-/* Current Location */
+/* ───────────────────────────────────────────────────────────────────────────
+   Current location
+   ────────────────────────────────────────────────────────────────────── */
+
 .section-divider {
   border: none;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid var(--border);
   margin: 4px 0 12px;
 }
 
 .section-heading {
   font-size: 12px;
   font-weight: 600;
-  color: #4caf50;
+  color: var(--brand);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 8px;
 }
 
 .current-location {
-  background: white;
+  background: var(--surface);
   padding: 12px;
   border-radius: 8px;
   margin-bottom: 12px;
@@ -216,18 +386,24 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 
 .location-coords {
   font-size: 12px;
-  color: #666;
+  color: var(--text-muted);
 }
 
-/* Clear Location Button */
+/* Clear Location Button.
+   Same flex-centered 22×22 geometry as .star-favorite-btn so the two buttons
+   sit at identical baselines inside the .current-location row. */
 .clear-location-btn {
   background: none;
   border: none;
-  color: #999;
-  font-size: 18px;
+  color: var(--text-subtle);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
   line-height: 1;
   cursor: pointer;
-  padding: 4px 3px;
+  padding: 0;
   border-radius: 4px;
   transition:
     color 0.2s,
@@ -235,14 +411,21 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   flex-shrink: 0;
 }
 
-.clear-location-btn:hover {
-  color: #d32f2f;
-  background: #fdecea;
+.clear-location-btn .clear-icon {
+  display: block;
 }
 
-/* VPN Sync Toggle */
+.clear-location-btn:hover {
+  color: var(--danger);
+  background: var(--surface-hover);
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   VPN sync
+   ────────────────────────────────────────────────────────────────────── */
+
 .vpn-sync-toggle {
-  background: white;
+  background: var(--surface);
   padding: 12px;
   border-radius: 8px;
   margin-bottom: 12px;
@@ -261,7 +444,7 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   border: none;
   padding: 0;
   font-size: 14px;
-  color: #999;
+  color: var(--text-subtle);
   cursor: pointer;
   line-height: 1;
   user-select: none;
@@ -271,8 +454,8 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   display: none;
   margin-top: 8px;
   padding: 8px 10px;
-  background: #f0f0f0;
-  color: #666;
+  background: var(--surface-alt);
+  color: var(--text-muted);
   font-size: 12px;
   font-weight: 400;
   line-height: 1.4;
@@ -283,7 +466,10 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   display: block;
 }
 
-/* Location Input Mode Tabs */
+/* ───────────────────────────────────────────────────────────────────────────
+   Location input mode tabs
+   ────────────────────────────────────────────────────────────────────── */
+
 .input-mode-tabs {
   display: flex;
   gap: 8px;
@@ -293,28 +479,31 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 .tab-button {
   flex: 1;
   padding: 10px;
-  background: white;
-  border: 2px solid #e0e0e0;
+  background: var(--surface);
+  border: 2px solid var(--border);
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
-  color: #666;
+  color: var(--text-muted);
   cursor: pointer;
   transition: all 0.3s;
 }
 
 .tab-button:hover {
-  border-color: #4caf50;
-  color: #4caf50;
+  border-color: var(--brand);
+  color: var(--brand);
 }
 
 .tab-button.active {
-  background: #4caf50;
-  border-color: #4caf50;
-  color: white;
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--text-on-brand);
 }
 
-/* Location Picker */
+/* ───────────────────────────────────────────────────────────────────────────
+   Location picker / search
+   ────────────────────────────────────────────────────────────────────── */
+
 .location-picker {
   margin-bottom: 12px;
   position: relative;
@@ -323,14 +512,14 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 #locationSearch {
   width: 100%;
   padding: 10px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-input);
   border-radius: 8px;
   font-size: 14px;
 }
 
 #locationSearch:focus {
   outline: none;
-  border-color: #4caf50;
+  border-color: var(--brand);
 }
 
 .search-results {
@@ -338,20 +527,21 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   bottom: 100%;
   left: 0;
   right: 0;
-  background: white;
-  border: 1px solid #ddd;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-input);
   border-radius: 8px;
   margin-bottom: 4px;
   max-height: 200px;
   overflow-y: auto;
   z-index: 10;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-results);
 }
 
 .search-result {
   padding: 10px;
   cursor: pointer;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .search-result:last-child {
@@ -359,7 +549,7 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 }
 
 .search-result:hover {
-  background: #f5f5f5;
+  background: var(--surface-hover);
 }
 
 .result-name {
@@ -369,19 +559,19 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 
 .result-coords {
   font-size: 12px;
-  color: #666;
+  color: var(--text-muted);
 }
 
 .no-results {
   padding: 10px;
   text-align: center;
-  color: #666;
+  color: var(--text-muted);
 }
 
 .loading {
   padding: 10px;
   text-align: center;
-  color: #4caf50;
+  color: var(--brand);
   font-style: italic;
   display: flex;
   align-items: center;
@@ -392,8 +582,8 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 .spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid #e0e0e0;
-  border-top-color: #4caf50;
+  border: 2px solid var(--border);
+  border-top-color: var(--brand);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -404,9 +594,12 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   }
 }
 
-/* Manual Coordinates */
+/* ───────────────────────────────────────────────────────────────────────────
+   Manual coordinates
+   ────────────────────────────────────────────────────────────────────── */
+
 .manual-coords {
-  background: white;
+  background: var(--surface);
   padding: 12px;
   border-radius: 8px;
   margin-bottom: 12px;
@@ -415,22 +608,24 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 .manual-coords input {
   width: 100%;
   padding: 8px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-input);
   border-radius: 4px;
   margin-bottom: 8px;
   font-size: 14px;
+  background-color: var(--surface-alt);
+  color: var(--text);
 }
 
 .manual-coords input:focus {
   outline: none;
-  border-color: #4caf50;
+  border-color: var(--brand);
 }
 
 .manual-coords button {
   width: 100%;
   padding: 10px;
-  background: #4caf50;
-  color: white;
+  background: var(--brand);
+  color: var(--text-on-brand);
   border: none;
   border-radius: 4px;
   font-size: 14px;
@@ -440,12 +635,15 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 }
 
 .manual-coords button:hover {
-  background: #45a049;
+  background: var(--brand-hover);
 }
 
-/* VPN Sync Panel */
+/* ───────────────────────────────────────────────────────────────────────────
+   VPN sync panel
+   ────────────────────────────────────────────────────────────────────── */
+
 .vpn-sync-panel {
-  background: white;
+  background: var(--surface);
   padding: 12px;
   border-radius: 8px;
   margin-bottom: 12px;
@@ -453,13 +651,13 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 
 .vpn-sync-description {
   font-size: 13px;
-  color: #666;
+  color: var(--text-muted);
   margin-bottom: 12px;
   line-height: 1.4;
 }
 
 .vpn-sync-status {
-  background: #f5f5f5;
+  background: var(--surface-alt);
   padding: 10px;
   border-radius: 6px;
   margin-bottom: 12px;
@@ -467,18 +665,18 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 }
 
 .vpn-sync-ip {
-  color: #666;
+  color: var(--text-muted);
   margin-bottom: 4px;
 }
 
 .vpn-sync-region {
   font-weight: 500;
-  color: #333;
+  color: var(--text);
 }
 
 .vpn-sync-error {
-  background: #fdecea;
-  color: #b71c1c;
+  background: var(--danger-bg);
+  color: var(--danger-bg-text);
   padding: 10px;
   border-radius: 6px;
   margin-bottom: 12px;
@@ -501,24 +699,13 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   font-weight: 500;
   cursor: pointer;
   transition: background 0.3s;
+  background: var(--brand);
+  color: var(--text-on-brand);
 }
 
-.vpn-sync-btn {
-  background: #4caf50;
-  color: white;
-}
-
-.vpn-sync-btn:hover {
-  background: #45a049;
-}
-
-.vpn-resync-btn {
-  background: #4caf50;
-  color: white;
-}
-
+.vpn-sync-btn:hover,
 .vpn-resync-btn:hover {
-  background: #45a049;
+  background: var(--brand-hover);
 }
 
 .vpn-sync-btn:disabled,
@@ -542,65 +729,69 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   width: 16px;
   height: 16px;
   margin: -8px 0 0 -8px;
-  border: 2px solid #e0e0e0;
-  border-top-color: #fff;
+  border: 2px solid var(--border);
+  border-top-color: #ffffff;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 
-/* Warning */
+/* ───────────────────────────────────────────────────────────────────────────
+   Status messages (warning, info)
+   ────────────────────────────────────────────────────────────────────── */
+
 .warning {
-  background: #fff3cd;
-  color: #856404;
+  background: var(--warn-bg);
+  color: var(--warn-text);
   padding: 10px;
   border-radius: 8px;
   font-size: 13px;
-  border: 1px solid #ffeaa7;
+  border: 1px solid var(--warn-border);
   margin-bottom: 12px;
 }
 
-/* Info Notice */
 .info-notice {
-  background: #e3f2fd;
-  color: #1565c0;
+  background: var(--info-bg);
+  color: var(--info-text);
   padding: 10px;
   border-radius: 8px;
   font-size: 13px;
-  border: 1px solid #90caf9;
+  border: 1px solid var(--info-border);
   margin-bottom: 12px;
 }
 
-/* Test Links */
+/* ───────────────────────────────────────────────────────────────────────────
+   Test & support links
+   ────────────────────────────────────────────────────────────────────── */
+
 .test-links {
   text-align: center;
   padding: 12px 0;
   font-size: 12px;
-  color: #aaa;
+  color: var(--text-faint);
 }
 
 .test-links-label {
   margin-bottom: 6px;
   font-weight: 400;
-  color: #aaa;
+  color: var(--text-faint);
 }
 
 .test-link {
-  color: #4caf50;
+  color: var(--brand);
   text-decoration: none;
   transition: color 0.2s;
 }
 
 .test-link:hover {
-  color: #45a049;
+  color: var(--brand-hover);
   text-decoration: underline;
 }
 
 .test-links-separator {
   margin: 0 8px;
-  color: #ddd;
+  color: var(--border-input);
 }
 
-/* Support Link */
 .support-link {
   text-align: center;
   padding: 8px 0 4px 0;
@@ -608,42 +799,44 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 }
 
 .help-link {
-  color: #999;
+  color: var(--text-subtle);
   text-decoration: none;
   transition: color 0.2s;
 }
 
 .help-link:hover {
-  color: #4caf50;
+  color: var(--brand);
 }
 
-/* Coffee row inside Advanced section */
 .coffee-row {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid var(--border);
   text-align: center;
 }
 
 .coffee-link {
-  color: #999;
+  color: var(--text-subtle);
   text-decoration: none;
   font-size: 12px;
   transition: color 0.2s;
 }
 
 .coffee-link:hover {
-  color: #4caf50;
+  color: var(--brand);
 }
 
-/* Onboarding Overlay */
+/* ───────────────────────────────────────────────────────────────────────────
+   Onboarding overlay
+   ────────────────────────────────────────────────────────────────────── */
+
 .onboarding-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
+  background: var(--scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -652,7 +845,7 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 }
 
 .onboarding-content {
-  background: white;
+  background: var(--surface);
   border-radius: 12px;
   padding: 24px;
   max-width: 320px;
@@ -662,7 +855,7 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 .onboarding-content h2 {
   font-size: 20px;
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--text-strong);
   margin-bottom: 20px;
   text-align: center;
 }
@@ -683,8 +876,8 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 }
 
 .step-number {
-  background: #4caf50;
-  color: white;
+  background: var(--brand);
+  color: var(--text-on-brand);
   width: 28px;
   height: 28px;
   border-radius: 50%;
@@ -704,15 +897,15 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 }
 
 .step-text strong {
-  color: #2c3e50;
+  color: var(--text-strong);
   font-weight: 600;
 }
 
 .onboarding-button {
   width: 100%;
   padding: 12px;
-  background: #4caf50;
-  color: white;
+  background: var(--brand);
+  color: var(--text-on-brand);
   border: none;
   border-radius: 8px;
   font-size: 15px;
@@ -722,12 +915,15 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 }
 
 .onboarding-button:hover {
-  background: #45a049;
+  background: var(--brand-hover);
 }
 
-/* Status Section */
+/* ───────────────────────────────────────────────────────────────────────────
+   Status section (logs / debug)
+   ────────────────────────────────────────────────────────────────────── */
+
 .status-section {
-  background: white;
+  background: var(--surface);
   padding: 12px;
   border-radius: 8px;
   margin-bottom: 12px;
@@ -736,7 +932,7 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 .status-section h3 {
   font-size: 14px;
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--text-strong);
   margin-bottom: 12px;
 }
 
@@ -745,7 +941,7 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   justify-content: space-between;
   align-items: flex-start;
   padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .status-item:last-child {
@@ -754,28 +950,31 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 
 .status-label {
   font-weight: 500;
-  color: #555;
+  color: var(--text-muted);
   flex-shrink: 0;
   margin-right: 12px;
 }
 
 .status-value {
   text-align: right;
-  color: #333;
+  color: var(--text);
   font-size: 13px;
   word-break: break-word;
 }
 
 .status-error {
-  color: #d32f2f;
+  color: var(--danger);
   font-size: 13px;
   padding: 8px;
   text-align: center;
 }
 
-/* Details View */
+/* ───────────────────────────────────────────────────────────────────────────
+   Details view
+   ────────────────────────────────────────────────────────────────────── */
+
 .detail-section {
-  background: white;
+  background: var(--surface);
   padding: 12px 16px;
   border-radius: 8px;
   margin-bottom: 12px;
@@ -784,7 +983,7 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 .detail-label {
   font-size: 12px;
   font-weight: 600;
-  color: #666;
+  color: var(--text-muted);
   margin-bottom: 6px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -792,7 +991,7 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 
 .detail-value {
   font-size: 13px;
-  color: #333;
+  color: var(--text);
   line-height: 1.5;
   word-break: break-word;
   white-space: pre-wrap;
@@ -801,11 +1000,14 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 #detailsView h3 {
   font-size: 16px;
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--text-strong);
   margin-bottom: 16px;
 }
 
-/* Advanced Section */
+/* ───────────────────────────────────────────────────────────────────────────
+   Advanced section
+   ────────────────────────────────────────────────────────────────────── */
+
 .advanced-section {
   margin-top: 12px;
 }
@@ -816,18 +1018,18 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   gap: 6px;
   width: 100%;
   padding: 10px 12px;
-  background: white;
+  background: var(--surface);
+  color: var(--text-muted);
   border: none;
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
-  color: #666;
   cursor: pointer;
   transition: color 0.2s;
 }
 
 .advanced-toggle:hover {
-  color: #333;
+  color: var(--text);
 }
 
 .advanced-chevron {
@@ -841,53 +1043,55 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 }
 
 .advanced-content {
-  background: white;
+  background: var(--surface);
+  color: var(--text);
   padding: 12px;
   border-radius: 0 0 8px 8px;
   margin-top: -4px;
 }
 
-/* Verbosity Selector */
+/* Verbosity selector */
 .verbosity-selector {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border-subtle);
 }
 
 /* Per-setting inline disclaimer (e.g. advanced worker protection).
-   Small, de-emphasised text that sits under the toggle it describes. */
+   Small, de-emphasised text that sits under the toggle it describes.
+   Theme-invariant amber/tan tint. */
 .setting-disclaimer {
   margin-top: 6px;
   margin-bottom: 12px;
   padding: 8px 10px;
   font-size: 11px;
   line-height: 1.4;
-  color: #666;
-  background: #faf8f1;
-  border-left: 3px solid #e0c060;
+  color: var(--disclaimer-text);
+  background: var(--disclaimer-bg);
+  border-left: 3px solid var(--disclaimer-border);
   border-radius: 4px;
 }
 
 .setting-disclaimer strong {
   font-weight: 600;
-  color: #8a6a10;
+  color: var(--disclaimer-strong);
 }
 
 .setting-disclaimer.unsupported {
-  background: #f5f5f5;
-  border-left-color: #bbb;
-  color: #888;
+  background: var(--disclaimer-unsupported-bg);
+  border-left-color: var(--disclaimer-unsupported-border);
+  color: var(--disclaimer-unsupported-text);
 }
 
 .setting-disclaimer.unsupported strong {
-  color: #555;
+  color: var(--disclaimer-unsupported-strong);
 }
 
-/* Theme Selector */
+/* Theme selector */
 .theme-selector {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border-subtle);
 }
 
 .select-label {
@@ -899,38 +1103,47 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 
 .select-label select {
   padding: 4px 8px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-input);
   border-radius: 4px;
   font-size: 13px;
-  color: #333;
-  background: #f5f5f5;
+  color: var(--text);
+  background: var(--surface-alt);
   cursor: pointer;
 }
 
 .select-label select:focus {
   outline: none;
-  border-color: #4caf50;
+  border-color: var(--brand);
 }
 
-/* Version Label */
+/* Version label */
 .version-label {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border-subtle);
   font-size: 11px;
-  color: #999;
+  color: var(--text-subtle);
   text-align: center;
 }
 
-/* ── Star Favorite Button ─────────────────────────────────────── */
+/* ───────────────────────────────────────────────────────────────────────────
+   Favorites — Star button
+   ────────────────────────────────────────────────────────────────────── */
+
 .star-favorite-btn {
   background: none;
   border: none;
-  color: #999;
-  font-size: 14px;
+  color: var(--text-subtle);
+  /* Match clear-location-btn's centering box so the two buttons sit at
+     identical baselines inside the .current-location row. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
   line-height: 1;
   cursor: pointer;
-  padding: 4px 3px;
+  padding: 0;
   border-radius: 4px;
   transition:
     color 0.2s,
@@ -946,12 +1159,12 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 }
 
 .star-favorite-btn:hover {
-  color: #f5a623;
-  background: #fff8ee;
+  color: var(--accent);
+  background: var(--surface-hover);
 }
 
 .star-favorite-btn.saved {
-  color: #f5a623;
+  color: var(--accent);
 }
 
 .star-favorite-btn.saved .star-icon {
@@ -959,19 +1172,22 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 }
 
 .star-favorite-btn:focus-visible {
-  outline: 2px solid #4caf50;
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
 
-/* ── Capacity Message ─────────────────────────────────────────── */
+/* Capacity message */
 .favorites-capacity-msg {
   font-size: 11px;
-  color: #d32f2f;
+  color: var(--danger);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
-/* ── Favorites Chip Wrapper (gradient fade edges) ─────────────── */
+/* ───────────────────────────────────────────────────────────────────────────
+   Favorites — Chip row
+   ────────────────────────────────────────────────────────────────────── */
+
 .favorites-chip-wrapper {
   position: relative;
   margin-bottom: 8px;
@@ -992,22 +1208,22 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 
 .favorites-chip-wrapper::before {
   left: 0;
-  background: linear-gradient(to right, #f5f5f5, transparent);
+  background: linear-gradient(to right, var(--bg), transparent);
 }
 
 .favorites-chip-wrapper::after {
   right: 0;
-  background: linear-gradient(to left, #f5f5f5, transparent);
+  background: linear-gradient(to left, var(--bg), transparent);
 }
 
 .favorites-chip-wrapper.fade-left::before {
   opacity: 1;
 }
+
 .favorites-chip-wrapper.fade-right::after {
   opacity: 1;
 }
 
-/* ── Favorites Chip Row ───────────────────────────────────────── */
 .favorites-chip-row {
   display: flex;
   flex-direction: row;
@@ -1016,7 +1232,10 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   gap: 6px;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 2px 20px 2px 0;
+  /* Top/bottom/left padding ≥ outline-width (2px) + outline-offset (2px)
+     so the chip's :focus-visible ring isn't clipped by overflow-y: hidden
+     (matters on Safari, which auto-focuses the first chip on popup open). */
+  padding: 4px 20px 4px 4px;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
@@ -1033,18 +1252,21 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   transition: none !important;
 }
 
-/* ── Individual Chip ──────────────────────────────────────────── */
+/* ───────────────────────────────────────────────────────────────────────────
+   Favorites — Individual chip
+   ────────────────────────────────────────────────────────────────────── */
+
 .favorite-chip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   padding: 5px 10px;
-  background: white;
-  border: 1px solid #e0e0e0;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 16px;
   font-size: 13px;
   font-weight: 500;
-  color: #333;
+  color: var(--text);
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
@@ -1057,21 +1279,20 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 
 .favorite-chip:hover,
 .favorite-chip:focus-within {
-  border-color: #4caf50;
+  border-color: var(--brand);
 }
 
 .favorite-chip:focus-visible {
-  outline: 2px solid #4caf50;
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
 
 .favorite-chip.active {
-  background: #4caf50;
-  border-color: #4caf50;
-  color: white;
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--text-on-brand);
 }
 
-/* ── Chip Label ───────────────────────────────────────────────── */
 .chip-label {
   max-width: 160px;
   overflow: hidden;
@@ -1079,7 +1300,7 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   white-space: nowrap;
 }
 
-/* ── Chip Menu Button ─────────────────────────────────────────── */
+/* Chip menu button (⋯) */
 .chip-menu-btn {
   background: none;
   border: none;
@@ -1110,20 +1331,21 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 }
 
 .chip-menu-btn:hover {
-  background: rgba(0, 0, 0, 0.1);
+  background: var(--hover-tint-on-light);
 }
 
 .favorite-chip.active .chip-menu-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--hover-tint-on-brand);
 }
 
-/* ── Chip Dropdown Menu ───────────────────────────────────────── */
+/* Chip dropdown menu */
 .chip-dropdown {
   position: fixed;
-  background: white;
-  border: 1px solid #e0e0e0;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-pop);
   z-index: 1000;
   min-width: 110px;
   overflow: hidden;
@@ -1138,26 +1360,30 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   text-align: left;
   font-size: 13px;
   font-weight: 500;
-  color: #333;
+  color: var(--text);
   cursor: pointer;
   transition: background 0.15s;
   white-space: nowrap;
 }
 
 .chip-dropdown-item:hover {
-  background: #f5f5f5;
+  background: var(--surface-hover);
 }
 
 .chip-dropdown-item.danger {
-  color: #d32f2f;
+  color: var(--danger);
 }
 
 .chip-dropdown-item.danger:hover {
-  background: #fdecea;
+  background: var(--danger-bg);
+  color: var(--danger-bg-text);
 }
 
-/* ── Chip Rename Input ────────────────────────────────────────── */
-.chip-rename-input {
+/* Chip rename input.
+   Scoped under .favorite-chip so specificity (0,2,0) beats the generic
+   `input` rule (0,0,1) and any future themed input overrides, keeping the
+   input transparent so the chip's own background shows through. */
+.favorite-chip .chip-rename-input {
   border: none;
   outline: none;
   background: transparent;
@@ -1169,10 +1395,10 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 }
 
 .favorite-chip.active .chip-rename-input {
-  color: white;
+  color: var(--text-on-brand);
 }
 
-/* ── Chip Confirm Button ──────────────────────────────────────── */
+/* Chip confirm button */
 .chip-confirm-btn {
   background: none;
   border: none;
@@ -1191,14 +1417,17 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 
 .chip-confirm-btn:hover {
   opacity: 1;
-  background: rgba(0, 0, 0, 0.1);
+  background: var(--hover-tint-on-light);
 }
 
 .favorite-chip.active .chip-confirm-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--hover-tint-on-brand);
 }
 
-/* Firefox for Android renders the popup as a full page in a new tab */
+/* ───────────────────────────────────────────────────────────────────────────
+   Touch / Firefox-Android: full-page popup
+   ────────────────────────────────────────────────────────────────────── */
+
 @media (hover: none) and (pointer: coarse) {
   body {
     width: 100%;
@@ -1212,7 +1441,7 @@ input[type="checkbox"]:checked + .toggle-slider:before {
     max-width: 500px;
     max-height: none;
     margin: 0 auto;
-    padding-bottom: 40vh; /* extra breathing room so the keyboard doesn't cover the input */
+    padding-bottom: 40vh; /* breathing room so the keyboard doesn't cover the input */
   }
 
   /* No hover on touch — always show the ⋯ menu button at reduced opacity */
@@ -1223,507 +1452,15 @@ input[type="checkbox"]:checked + .toggle-slider:before {
     transition: none;
   }
 
-  /* Remove the hover-reveal delay entirely */
   .favorite-chip:hover .chip-menu-btn,
   .favorite-chip:focus-within .chip-menu-btn {
     transition-delay: 0s;
   }
 
-  /* Suppress the is-scrolling hide override so the button stays visible while scrolling */
+  /* Keep the button visible during scroll on touch */
   .favorites-chip-row.is-scrolling .chip-menu-btn {
     opacity: 0.45 !important;
     max-width: 28px !important;
     padding: 0 3px !important;
   }
-}
-
-/* Dark Mode */
-@media (prefers-color-scheme: dark) {
-  body {
-    background-color: #2b2a33;
-    color: #fbfbfe;
-  }
-  .onboarding-content {
-    background: #2b2a33;
-  }
-  .onboarding-content h2,
-  .step-text strong,
-  .header h1,
-  #detailsView h3 {
-    color: #fbfbfe;
-  }
-  .status-badge {
-    background: #23222b;
-    color: #fbfbfe;
-  }
-  .nav-tab {
-    color: #fbfbfe;
-  }
-  .nav-tab:hover {
-    color: #b1b1b1;
-    background: #3b3a41;
-  }
-  .tab-navigation {
-    border-bottom: 2px solid #393941;
-  }
-  .toggle-section,
-  .webrtc-section,
-  .current-location,
-  .vpn-sync-toggle {
-    background: #23222b;
-    color: #fbfbfe;
-  }
-  .section-divider {
-    border-top: 1px solid #393941;
-  }
-  .tab-button {
-    background: #23222b;
-    color: #fbfbfe;
-    border: 2px solid #393941;
-  }
-  #locationSearch {
-    border: 1px solid #393941;
-  }
-  input {
-    background-color: #2b2a33;
-    color: #fbfbfe;
-  }
-  .warning {
-    background: #856404;
-    color: #fff3cd;
-  }
-  .vpn-sync-panel,
-  .vpn-sync-status {
-    background: #23222b;
-  }
-  .vpn-sync-ip {
-    color: #fbfbfe;
-  }
-  .vpn-sync-error {
-    background: #b71c1c;
-    color: #fdecea;
-  }
-  .info-notice {
-    background: #0b3b5f;
-    color: #7fa5cf;
-  }
-  .search-results {
-    background: #23222b;
-    color: #fbfbfe;
-    border: 1px solid #393941;
-  }
-  .result-coords {
-    color: #fbfbfe;
-  }
-  .search-result {
-    border-bottom: 1px solid #393941;
-  }
-  .search-result:hover {
-    background: #3b3a41;
-  }
-  .manual-coords {
-    background: #23222b;
-  }
-  .manual-coords input {
-    background-color: #2b2a33;
-    color: #fbfbfe;
-    border: 1px solid #393941;
-  }
-  .detail-section {
-    background: #23222b;
-  }
-  .detail-label,
-  .detail-value {
-    color: #fbfbfe;
-  }
-  .advanced-toggle,
-  .advanced-content {
-    background: #23222b;
-    color: #fbfbfe;
-  }
-  .advanced-toggle:hover {
-    color: #b1b1b1;
-  }
-  .verbosity-selector {
-    border-top: 1px solid #393941;
-  }
-  .select-label select {
-    border: 1px solid #393941;
-    color: #fbfbfe;
-    background: #23222b;
-  }
-  .version-label {
-    border-top: 1px solid #393941;
-    color: #fbfbfe;
-  }
-  .coffee-row {
-    border-top: 1px solid #393941;
-  }
-  .favorite-chip {
-    background: #23222b;
-    border-color: #393941;
-    color: #fbfbfe;
-  }
-  .favorite-chip:hover,
-  .favorite-chip:focus-within {
-    border-color: #4caf50;
-  }
-  .favorite-chip.active {
-    background: #4caf50;
-    border-color: #4caf50;
-    color: white;
-  }
-  .favorites-chip-wrapper::before {
-    background: linear-gradient(to right, #2b2a33, transparent);
-  }
-  .favorites-chip-wrapper::after {
-    background: linear-gradient(to left, #2b2a33, transparent);
-  }
-  .chip-dropdown {
-    background: #23222b;
-    border-color: #393941;
-  }
-  .chip-dropdown-item {
-    color: #fbfbfe;
-  }
-  .chip-dropdown-item:hover {
-    background: #3b3a41;
-  }
-  .chip-dropdown-item.danger {
-    color: #ef9a9a;
-  }
-  .chip-dropdown-item.danger:hover {
-    background: #3b1a1a;
-  }
-  .star-favorite-btn {
-    color: #999;
-  }
-  .star-favorite-btn:hover {
-    color: #f5a623;
-    background: #3b3a41;
-  }
-  .star-favorite-btn.saved {
-    color: #f5a623;
-  }
-  .favorites-capacity-msg {
-    color: #ef9a9a;
-  }
-}
-
-/* Explicit dark theme (overrides system preference) */
-body.theme-dark {
-  background-color: #2b2a33;
-  color: #fbfbfe;
-}
-body.theme-dark .onboarding-content {
-  background: #2b2a33;
-}
-body.theme-dark .onboarding-content h2,
-body.theme-dark .step-text strong,
-body.theme-dark .header h1,
-body.theme-dark #detailsView h3 {
-  color: #fbfbfe;
-}
-body.theme-dark .status-badge {
-  background: #23222b;
-  color: #fbfbfe;
-}
-body.theme-dark .nav-tab {
-  color: #fbfbfe;
-}
-body.theme-dark .nav-tab:hover {
-  color: #b1b1b1;
-  background: #3b3a41;
-}
-body.theme-dark .tab-navigation {
-  border-bottom: 2px solid #393941;
-}
-body.theme-dark .toggle-section,
-body.theme-dark .webrtc-section,
-body.theme-dark .current-location,
-body.theme-dark .vpn-sync-toggle {
-  background: #23222b;
-  color: #fbfbfe;
-}
-body.theme-dark .section-divider {
-  border-top: 1px solid #393941;
-}
-body.theme-dark .tab-button {
-  background: #23222b;
-  color: #fbfbfe;
-  border: 2px solid #393941;
-}
-body.theme-dark #locationSearch {
-  border: 1px solid #393941;
-}
-body.theme-dark input {
-  background-color: #2b2a33;
-  color: #fbfbfe;
-}
-body.theme-dark .warning {
-  background: #856404;
-  color: #fff3cd;
-}
-body.theme-dark .vpn-sync-panel,
-body.theme-dark .vpn-sync-status {
-  background: #23222b;
-}
-body.theme-dark .vpn-sync-ip {
-  color: #fbfbfe;
-}
-body.theme-dark .vpn-sync-error {
-  background: #b71c1c;
-  color: #fdecea;
-}
-body.theme-dark .info-notice {
-  background: #0b3b5f;
-  color: #7fa5cf;
-}
-body.theme-dark .search-results {
-  background: #23222b;
-  color: #fbfbfe;
-  border: 1px solid #393941;
-}
-body.theme-dark .result-coords {
-  color: #fbfbfe;
-}
-body.theme-dark .search-result {
-  border-bottom: 1px solid #393941;
-}
-body.theme-dark .search-result:hover {
-  background: #3b3a41;
-}
-body.theme-dark .manual-coords {
-  background: #23222b;
-}
-body.theme-dark .manual-coords input {
-  background-color: #2b2a33;
-  color: #fbfbfe;
-  border: 1px solid #393941;
-}
-body.theme-dark .detail-section {
-  background: #23222b;
-}
-body.theme-dark .detail-label,
-body.theme-dark .detail-value {
-  color: #fbfbfe;
-}
-body.theme-dark .advanced-toggle,
-body.theme-dark .advanced-content {
-  background: #23222b;
-  color: #fbfbfe;
-}
-body.theme-dark .advanced-toggle:hover {
-  color: #b1b1b1;
-}
-body.theme-dark .verbosity-selector {
-  border-top: 1px solid #393941;
-}
-body.theme-dark .theme-selector {
-  border-top: 1px solid #393941;
-}
-body.theme-dark .select-label select {
-  border: 1px solid #393941;
-  color: #fbfbfe;
-  background: #23222b;
-}
-body.theme-dark .version-label {
-  border-top: 1px solid #393941;
-  color: #fbfbfe;
-}
-body.theme-dark .coffee-row {
-  border-top: 1px solid #393941;
-}
-body.theme-dark .favorite-chip {
-  background: #23222b;
-  border-color: #393941;
-  color: #fbfbfe;
-}
-body.theme-dark .favorite-chip:hover,
-body.theme-dark .favorite-chip:focus-within {
-  border-color: #4caf50;
-}
-body.theme-dark .favorite-chip.active {
-  background: #4caf50;
-  border-color: #4caf50;
-  color: white;
-}
-body.theme-dark .favorites-chip-wrapper::before {
-  background: linear-gradient(to right, #2b2a33, transparent);
-}
-body.theme-dark .favorites-chip-wrapper::after {
-  background: linear-gradient(to left, #2b2a33, transparent);
-}
-body.theme-dark .chip-dropdown {
-  background: #23222b;
-  border-color: #393941;
-}
-body.theme-dark .chip-dropdown-item {
-  color: #fbfbfe;
-}
-body.theme-dark .chip-dropdown-item:hover {
-  background: #3b3a41;
-}
-body.theme-dark .chip-dropdown-item.danger {
-  color: #ef9a9a;
-}
-body.theme-dark .chip-dropdown-item.danger:hover {
-  background: #3b1a1a;
-}
-body.theme-dark .star-favorite-btn {
-  color: #999;
-}
-body.theme-dark .star-favorite-btn:hover {
-  color: #f5a623;
-  background: #3b3a41;
-}
-body.theme-dark .star-favorite-btn.saved {
-  color: #f5a623;
-}
-body.theme-dark .favorites-capacity-msg {
-  color: #ef9a9a;
-}
-
-/* Explicit light theme (overrides system dark preference) */
-body.theme-light {
-  background-color: #f5f5f5;
-  color: #333;
-}
-body.theme-light .onboarding-content {
-  background: white;
-}
-body.theme-light .onboarding-content h2,
-body.theme-light .step-text strong,
-body.theme-light .header h1,
-body.theme-light #detailsView h3 {
-  color: inherit;
-}
-body.theme-light .status-badge {
-  background: #e0e0e0;
-  color: #666;
-}
-body.theme-light .nav-tab {
-  color: #555;
-}
-body.theme-light .nav-tab:hover {
-  color: #333;
-  background: #f5f5f5;
-}
-body.theme-light .tab-navigation {
-  border-bottom: 2px solid #e0e0e0;
-}
-body.theme-light .toggle-section,
-body.theme-light .webrtc-section,
-body.theme-light .current-location,
-body.theme-light .vpn-sync-toggle {
-  background: white;
-  color: #333;
-}
-body.theme-light .section-divider {
-  border-top: 1px solid #e0e0e0;
-}
-body.theme-light .tab-button {
-  background: white;
-  color: #333;
-  border: 2px solid #e0e0e0;
-}
-body.theme-light #locationSearch {
-  border: 1px solid #ddd;
-}
-body.theme-light input {
-  background-color: white;
-  color: #333;
-}
-body.theme-light .warning {
-  background: #fff3cd;
-  color: #856404;
-}
-body.theme-light .vpn-sync-panel,
-body.theme-light .vpn-sync-status {
-  background: white;
-}
-body.theme-light .vpn-sync-ip {
-  color: #333;
-}
-body.theme-light .vpn-sync-error {
-  background: #fdecea;
-  color: #b71c1c;
-}
-body.theme-light .info-notice {
-  background: #e3f2fd;
-  color: #1565c0;
-}
-body.theme-light .search-results {
-  background: white;
-  color: #333;
-  border: 1px solid #ddd;
-}
-body.theme-light .result-coords {
-  color: #666;
-}
-body.theme-light .search-result {
-  border-bottom: 1px solid #eee;
-}
-body.theme-light .search-result:hover {
-  background: #f5f5f5;
-}
-body.theme-light .manual-coords {
-  background: white;
-}
-body.theme-light .manual-coords input {
-  background-color: white;
-  color: #333;
-  border: 1px solid #ddd;
-}
-body.theme-light .detail-section {
-  background: white;
-}
-body.theme-light .detail-label,
-body.theme-light .detail-value {
-  color: #333;
-}
-body.theme-light .advanced-toggle,
-body.theme-light .advanced-content {
-  background: white;
-  color: #333;
-}
-body.theme-light .advanced-toggle:hover {
-  color: #555;
-}
-body.theme-light .verbosity-selector {
-  border-top: 1px solid #e0e0e0;
-}
-body.theme-light .theme-selector {
-  border-top: 1px solid #e0e0e0;
-}
-body.theme-light .select-label select {
-  border: 1px solid #ddd;
-  color: #333;
-  background: white;
-}
-body.theme-light .version-label {
-  border-top: 1px solid #e0e0e0;
-  color: #666;
-}
-body.theme-light .coffee-row {
-  border-top: 1px solid #e0e0e0;
-}
-body.theme-light .favorite-chip {
-  background: white;
-  border-color: #e0e0e0;
-  color: #333;
-}
-body.theme-light .favorite-chip.active {
-  background: #4caf50;
-  border-color: #4caf50;
-  color: white;
-}
-body.theme-light .star-favorite-btn {
-  color: #999;
-}
-body.theme-light .star-favorite-btn.saved {
-  color: #f5a623;
-}
-body.theme-light .favorites-capacity-msg {
-  color: #d32f2f;
 }
