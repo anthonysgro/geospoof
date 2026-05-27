@@ -31,12 +31,20 @@ const downloads: Array<DownloadOption> = [
   },
 ]
 
-const selfHosted: DownloadOption = {
-  name: "Self-hosted XPI (Firefox)",
-  description:
-    "Signed XPI for Firefox forks or manual installs. Auto-updates via our update manifest.",
-  href: "https://github.com/anthonysgro/geospoof/releases/latest",
-}
+const selfHosted: Array<DownloadOption> = [
+  {
+    name: "Self-hosted XPI (Firefox)",
+    description:
+      "Signed XPI for Firefox forks or manual installs. Auto-updates via our update manifest.",
+    href: "https://github.com/anthonysgro/geospoof/releases/latest",
+  },
+  {
+    name: "Direct download (macOS)",
+    description:
+      "Notarized DMG for Safari on macOS. No Apple ID required. Manual updates — re-download to upgrade.",
+    href: "https://github.com/anthonysgro/geospoof/releases/latest",
+  },
+]
 
 export function DownloadSection({ className }: { className?: string }) {
   return (
@@ -88,31 +96,36 @@ export function DownloadSection({ className }: { className?: string }) {
         ))}
       </div>
 
-      {/* Self-hosted option */}
-      <div className="mx-auto max-w-3xl">
-        <div className="flex flex-col gap-3 rounded-xl border border-(--color-canvas-border) px-6 py-4 md:flex-row md:items-center">
-          <div className="flex-1">
-            <span className="text-sm font-semibold text-(--color-canvas-foreground)">
-              {selfHosted.name}
-            </span>
-            <p className="mt-0.5 text-xs text-(--color-canvas-muted)">
-              {selfHosted.description}
-            </p>
-          </div>
-          <a
-            href={selfHosted.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              "shrink-0 rounded-lg border border-(--color-canvas-border) px-4 py-2",
-              "text-sm font-medium text-(--color-canvas-foreground)",
-              "transition-colors hover:border-(--color-brand) hover:text-(--color-brand)",
-              "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
-            )}
+      {/* Self-hosted options */}
+      <div className="mx-auto max-w-3xl space-y-3">
+        {selfHosted.map((option) => (
+          <div
+            key={option.name}
+            className="flex flex-col gap-3 rounded-xl border border-(--color-canvas-border) px-6 py-4 md:flex-row md:items-center"
           >
-            GitHub Releases →
-          </a>
-        </div>
+            <div className="flex-1">
+              <span className="text-sm font-semibold text-(--color-canvas-foreground)">
+                {option.name}
+              </span>
+              <p className="mt-0.5 text-xs text-(--color-canvas-muted)">
+                {option.description}
+              </p>
+            </div>
+            <a
+              href={option.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                "shrink-0 rounded-lg border border-(--color-canvas-border) px-4 py-2",
+                "text-sm font-medium text-(--color-canvas-foreground)",
+                "transition-colors hover:border-(--color-brand) hover:text-(--color-brand)",
+                "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+              )}
+            >
+              GitHub Releases →
+            </a>
+          </div>
+        ))}
       </div>
     </Section>
   )

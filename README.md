@@ -21,12 +21,13 @@
 
 ### Install
 
-|                                                                                     Browser                                                                                     | Store                                                                                                  | Works on                                                                                  |
-| :-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
-|               [<img src="assets/github/firefox-store-icon.png" alt="Get GeoSpoof for Firefox" height="55">](https://addons.mozilla.org/firefox/addon/geo-spoof/)                | [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/geo-spoof/)                                 | Firefox 140+ on desktop and Android                                                       |
-| [<img src="assets/github/chrome-store-icon.png" alt="Get GeoSpoof for Chrome" height="55">](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje) | [Chrome Web Store](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje) | Chrome, Brave, Edge, Opera, and other Chromium browsers                                   |
-|              [<img src="assets/github/ios-store-icon.svg" alt="Download GeoSpoof on the App Store" height="55">](https://apps.apple.com/app/geospoof/id6765719745)              | [App Store](https://apps.apple.com/app/geospoof/id6765719745)                                          | Safari on iOS, iPadOS, and macOS                                                          |
-|             [<img src="assets/github/github-store-icon.svg" alt="Get GeoSpoof from GitHub Releases" height="55">](https://github.com/anthonysgro/geospoof/releases)             | [GitHub Releases](https://github.com/anthonysgro/geospoof/releases)                                    | Firefox self-hosted signed XPI — [setup below](#from-github-releases-firefox-self-hosted) |
+|                                                                                     Browser                                                                                     | Store                                                                                                  | Works on                                                                                                             |
+| :-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------: | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+|               [<img src="assets/github/firefox-store-icon.png" alt="Get GeoSpoof for Firefox" height="55">](https://addons.mozilla.org/firefox/addon/geo-spoof/)                | [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/geo-spoof/)                                 | Firefox 140+ on desktop and Android                                                                                  |
+| [<img src="assets/github/chrome-store-icon.png" alt="Get GeoSpoof for Chrome" height="55">](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje) | [Chrome Web Store](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje) | Chrome, Brave, Edge, Opera, and other Chromium browsers                                                              |
+|              [<img src="assets/github/ios-store-icon.svg" alt="Download GeoSpoof on the App Store" height="55">](https://apps.apple.com/app/geospoof/id6765719745)              | [App Store](https://apps.apple.com/app/geospoof/id6765719745)                                          | Safari on iOS, iPadOS, and macOS                                                                                     |
+|           [<img src="assets/github/dmg-install-icon.png" alt="Download GeoSpoof DMG for macOS" height="55">](https://github.com/anthonysgro/geospoof/releases/latest)           | [GitHub Releases (macOS DMG)](https://github.com/anthonysgro/geospoof/releases/latest)                 | Safari on macOS — direct download, no Apple ID required — [setup below](#from-github-releases-macos-direct-download) |
+|             [<img src="assets/github/github-store-icon.svg" alt="Get GeoSpoof from GitHub Releases" height="55">](https://github.com/anthonysgro/geospoof/releases)             | [GitHub Releases](https://github.com/anthonysgro/geospoof/releases)                                    | Firefox self-hosted signed XPI — [setup below](#from-github-releases-firefox-self-hosted)                            |
 
 <details>
 <summary><strong>Safari setup</strong> — enabling after install</summary>
@@ -38,21 +39,37 @@ After installing on Safari, tap the puzzle piece icon (or go to Safari Settings 
 </details>
 
 <details>
-<summary><strong>Other install paths</strong> — self-hosted XPI, from source</summary>
+<summary><strong>Other install paths</strong> — macOS DMG, self-hosted XPI, from source</summary>
+
+#### From GitHub Releases (macOS direct download)
+
+If you'd rather not sign in to the App Store, you can install GeoSpoof from a notarized DMG distributed through GitHub Releases. Same code as the App Store build — signed with our Developer ID and notarized by Apple, so Gatekeeper accepts it on first launch.
+
+1. Go to the [Releases](https://github.com/anthonysgro/geospoof/releases) page
+2. Download `geospoof-macos-v<version>.dmg` from the latest release
+3. Double-click the DMG and drag **GeoSpoof.app** to your **Applications** folder
+4. Launch GeoSpoof once from `/Applications` (the first launch enables the Safari extension)
+5. Open Safari → Settings → Extensions, enable **GeoSpoof**, and grant the website permissions you want
+
+> **First launch:** macOS will ask "GeoSpoof was downloaded from the internet — are you sure you want to open it?" the first time. Click **Open** — this only appears once. The wrapper app's window just confirms the extension is active; you'll spend the rest of your time in Safari.
+
+> **Updates:** the direct-download build does not auto-update. To upgrade, re-download the latest DMG and replace `GeoSpoof.app` in `/Applications`. Your settings persist across upgrades. If you'd prefer auto-updates, install from the [App Store](https://apps.apple.com/app/geospoof/id6765719745) instead.
+
+> **Requirements:** macOS 11+ on Apple Silicon or Intel. iOS / iPadOS users still need the [App Store](https://apps.apple.com/app/geospoof/id6765719745) build — Apple does not allow sideloading Safari extensions on those platforms.
 
 #### From GitHub Releases (Firefox self-hosted)
 
 Each release includes a self-hosted signed XPI alongside the AMO submission. The self-hosted XPI uses a 4-segment version (e.g., `1.18.0.42`) to avoid collisions with the AMO listing.
 
 1. Go to the [Releases](https://github.com/anthonysgro/geospoof/releases) page
-2. Download `geospoof-<version>-signed.xpi` from the latest release
+2. Download `geospoof-firefox-v<version>-signed.xpi` from the latest release
 3. In Firefox, open `about:addons`
 4. Click the gear icon (⚙) and select **Install Add-on From File…**
 5. Select the downloaded `.xpi` file
 
 The signed XPI works on standard Firefox with no extra configuration. Once installed, Firefox automatically checks for and installs new versions via the self-hosted update manifest. If you later install from AMO, Firefox will auto-upgrade to it since AMO releases use a higher base version.
 
-> **Note:** An unsigned `geospoof-<version>.xpi` is also included in each release for Firefox forks that don't support AMO signatures. Most users should use the signed version.
+> **Note:** An unsigned `geospoof-firefox-v<version>-unsigned.xpi` is also included in each release for Firefox forks that don't support AMO signatures. Most users should use the signed version.
 
 #### From source
 

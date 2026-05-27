@@ -58,5 +58,5 @@ export function generateUpdateManifest(version: string, url: string): object {
 
 /** Returns the canonical signed XPI filename. */
 export function formatSignedXpiName(baseVersion: string): string {
-  return `geospoof-${baseVersion}-signed.xpi`;
+  return `geospoof-firefox-v${baseVersion}-signed.xpi`;
 }
