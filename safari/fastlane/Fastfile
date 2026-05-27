@@ -1,0 +1,119 @@
+app_store_connect_api_key(
+  key_id: "UZBN452J8D",
+  issuer_id: "2a0c5baa-92b0-489c-b4c7-b1771b5e6df8",
+  key_filepath: "~/.appstoreconnect/private_keys/AuthKey_UZBN452J8D.p8"
+)
+
+default_platform(:mac)
+
+def next_build_number(platform)
+  latest = latest_testflight_build_number(
+    app_identifier: "com.moonloaf.geospoof",
+    platform: platform
+  )
+  latest + 1
+end
+
+platform :mac do
+  desc "Build and upload macOS app to App Store Connect"
+  lane :release do
+    build_number = next_build_number("osx")
+    increment_build_number(build_number: build_number)
+
+    gym(
+      scheme: "GeoSpoof-macOS",
+      project: "GeoSpoof.xcodeproj",
+      configuration: "Release",
+      destination: "generic/platform=macOS",
+      export_method: "app-store",
+      export_options: {
+        signingStyle: "automatic",
+        teamID: "9445Q654K8"
+      },
+      output_directory: "./build",
+      output_name: "GeoSpoof-macOS"
+    )
+
+    deliver(
+      platform: "osx",
+      skip_metadata: true,
+      skip_screenshots: true,
+      run_precheck_before_submit: false
+    )
+  end
+
+  desc "Build, notarize, and package macOS app for direct download (Developer ID)"
+  lane :developer_id do
+    gym(
+      scheme: "GeoSpoof-macOS",
+      project: "GeoSpoof.xcodeproj",
+      configuration: "Release",
+      destination: "generic/platform=macOS",
+      export_method: "developer-id",
+      export_options: {
+        signingStyle: "automatic",
+        teamID: "9445Q654K8"
+      },
+      output_directory: "./build",
+      output_name: "GeoSpoof-macOS-DeveloperID"
+    )
+
+    app_path = "./build/GeoSpoof-macOS-DeveloperID.app"
+
+    # Notarize the .app. The App Store Connect API key from the top of this
+    # Fastfile is picked up automatically. notarize() staples on success.
+    notarize(
+      package: app_path,
+      bundle_id: "com.moonloaf.geospoof",
+      print_log: true,
+      verbose: false
+    )
+
+    # Build a DMG with the notarized .app and an Applications symlink.
+    sh("rm -rf ../build/dmg-staging ../build/GeoSpoof.dmg")
+    sh("mkdir -p ../build/dmg-staging")
+    sh("cp -R '../build/GeoSpoof-macOS-DeveloperID.app' '../build/dmg-staging/GeoSpoof.app'")
+    sh("ln -sf /Applications ../build/dmg-staging/Applications")
+    sh("hdiutil create -volname 'GeoSpoof' -srcfolder ../build/dmg-staging -ov -format UDZO ../build/GeoSpoof.dmg")
+    sh("rm -rf ../build/dmg-staging")
+
+    # Notarize and staple the DMG itself so Gatekeeper accepts it offline.
+    notarize(
+      package: "./build/GeoSpoof.dmg",
+      bundle_id: "com.moonloaf.geospoof.dmg",
+      print_log: true,
+      verbose: false
+    )
+
+    UI.success("Notarized DMG: build/GeoSpoof.dmg")
+  end
+end
+
+platform :ios do
+  desc "Build and upload iOS app to App Store Connect"
+  lane :release do
+    build_number = next_build_number("ios")
+    increment_build_number(build_number: build_number)
+
+    gym(
+      scheme: "GeoSpoof-iOS",
+      project: "GeoSpoof.xcodeproj",
+      configuration: "Release",
+      destination: "generic/platform=iOS",
+      export_method: "app-store",
+      export_options: {
+        signingStyle: "automatic",
+        teamID: "9445Q654K8"
+      },
+      output_directory: "./build",
+      output_name: "GeoSpoof-iOS"
+    )
+
+    deliver(
+      platform: "ios",
+      skip_metadata: true,
+      skip_screenshots: true,
+      run_precheck_before_submit: false
+    )
+  end
+end

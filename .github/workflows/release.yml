@@ -111,3 +111,74 @@ jobs:
           publish_branch: gh-pages
           keep_files: true
           include_files: update.json
+
+  release-macos:
+    needs: release
+    runs-on: macos-15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: "npm"
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+          working-directory: safari
+
+      - run: npm ci
+      - run: cp .env.example .env
+
+      - name: Extract version
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          BASE_VERSION="${TAG#v}"
+          echo "BASE_VERSION=${BASE_VERSION}" >> "$GITHUB_ENV"
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.app
+
+      # ── Import Developer ID Application cert into a temporary keychain ──
+      - name: Import Developer ID certificate
+        env:
+          CERT_P12_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_P12 }}
+          CERT_PASSWORD: ${{ secrets.MACOS_DEVELOPER_ID_P12_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
+          echo "$CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$RUNNER_TEMP/cert.p12" -P "$CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/cert.p12"
+
+      # ── Place App Store Connect API key where fastlane's Appfile expects it ──
+      - name: Place App Store Connect API key
+        env:
+          ASC_API_KEY_BASE64: ${{ secrets.ASC_API_KEY_P8 }}
+        run: |
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          echo "$ASC_API_KEY_BASE64" | base64 --decode > "$HOME/.appstoreconnect/private_keys/AuthKey_UZBN452J8D.p8"
+          chmod 600 "$HOME/.appstoreconnect/private_keys/AuthKey_UZBN452J8D.p8"
+
+      - name: Build, notarize, and package DMG
+        working-directory: safari
+        run: bundle exec fastlane mac developer_id
+
+      - name: Rename DMG to release naming convention
+        run: mv "safari/build/GeoSpoof.dmg" "safari/build/geospoof-macos-v${BASE_VERSION}.dmg"
+
+      - name: Attach DMG to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: safari/build/geospoof-macos-v${{ env.BASE_VERSION }}.dmg
+
+      - name: Clean up keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/build.keychain-db" || true

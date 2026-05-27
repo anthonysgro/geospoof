@@ -1,0 +1,17 @@
+# Build output
+build/
+
+# Xcode
+*.xcuserdata/
+xcuserdata/
+DerivedData/
+
+# Fastlane
+fastlane/report.xml
+fastlane/test_output
+fastlane/screenshots/*.png
+fastlane/Preview.html
+*.bak.*
+
+# macOS
+.DS_Store

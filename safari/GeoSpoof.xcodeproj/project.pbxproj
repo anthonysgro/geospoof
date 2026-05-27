@@ -1,0 +1,1047 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		9281AA8F2FA50690007C77A7 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9281AA8E2FA50690007C77A7 /* AppDelegate.swift */; };
+		9281AA912FA50690007C77A7 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9281AA902FA50690007C77A7 /* SceneDelegate.swift */; };
+		9281AA942FA50690007C77A7 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 9281AA922FA50690007C77A7 /* LaunchScreen.storyboard */; };
+		9281AA972FA50690007C77A7 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 9281AA952FA50690007C77A7 /* Main.storyboard */; };
+		9281AAA02FA50690007C77A7 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9281AA9F2FA50690007C77A7 /* AppDelegate.swift */; };
+		9281AAA32FA50690007C77A7 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 9281AAA12FA50690007C77A7 /* Main.storyboard */; };
+		9281AAAA2FA50690007C77A7 /* GeoSpoof Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 9281AAA92FA50690007C77A7 /* GeoSpoof Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		9281AAB42FA50690007C77A7 /* GeoSpoof Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 9281AAB32FA50690007C77A7 /* GeoSpoof Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		9281AAB92FA50690007C77A7 /* Main.html in Resources */ = {isa = PBXBuildFile; fileRef = 9281AA7E2FA50690007C77A7 /* Main.html */; };
+		9281AABA2FA50690007C77A7 /* Main.html in Resources */ = {isa = PBXBuildFile; fileRef = 9281AA7E2FA50690007C77A7 /* Main.html */; };
+		9281AABB2FA50690007C77A7 /* Icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 9281AA802FA50690007C77A7 /* Icon.png */; };
+		9281AABC2FA50690007C77A7 /* Icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 9281AA802FA50690007C77A7 /* Icon.png */; };
+		9281AABD2FA50690007C77A7 /* Style.css in Resources */ = {isa = PBXBuildFile; fileRef = 9281AA812FA50690007C77A7 /* Style.css */; };
+		9281AABE2FA50690007C77A7 /* Style.css in Resources */ = {isa = PBXBuildFile; fileRef = 9281AA812FA50690007C77A7 /* Style.css */; };
+		9281AABF2FA50690007C77A7 /* Script.js in Resources */ = {isa = PBXBuildFile; fileRef = 9281AA822FA50690007C77A7 /* Script.js */; };
+		9281AAC02FA50690007C77A7 /* Script.js in Resources */ = {isa = PBXBuildFile; fileRef = 9281AA822FA50690007C77A7 /* Script.js */; };
+		9281AAC12FA50690007C77A7 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9281AA832FA50690007C77A7 /* ViewController.swift */; };
+		9281AAC22FA50690007C77A7 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9281AA832FA50690007C77A7 /* ViewController.swift */; };
+		9281AAC32FA50690007C77A7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9281AA842FA50690007C77A7 /* Assets.xcassets */; };
+		9281AAC42FA50690007C77A7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9281AA842FA50690007C77A7 /* Assets.xcassets */; };
+		9281AAC52FA50690007C77A7 /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9281AA862FA50690007C77A7 /* SafariWebExtensionHandler.swift */; };
+		9281AAC62FA50690007C77A7 /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9281AA862FA50690007C77A7 /* SafariWebExtensionHandler.swift */; };
+		9281AADE2FA50691007C77A7 /* background in Resources */ = {isa = PBXBuildFile; fileRef = 9281AAD82FA50691007C77A7 /* background */; };
+		9281AADF2FA50691007C77A7 /* popup in Resources */ = {isa = PBXBuildFile; fileRef = 9281AAD92FA50691007C77A7 /* popup */; };
+		9281AAE02FA50691007C77A7 /* content in Resources */ = {isa = PBXBuildFile; fileRef = 9281AADA2FA50691007C77A7 /* content */; };
+		9281AAE12FA50691007C77A7 /* shared in Resources */ = {isa = PBXBuildFile; fileRef = 9281AADB2FA50691007C77A7 /* shared */; };
+		9281AAE22FA50691007C77A7 /* icons in Resources */ = {isa = PBXBuildFile; fileRef = 9281AADC2FA50691007C77A7 /* icons */; };
+		9281AAE32FA50691007C77A7 /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 9281AADD2FA50691007C77A7 /* manifest.json */; };
+		9281AAE42FA50691007C77A7 /* background in Resources */ = {isa = PBXBuildFile; fileRef = 9281AAD82FA50691007C77A7 /* background */; };
+		9281AAE52FA50691007C77A7 /* popup in Resources */ = {isa = PBXBuildFile; fileRef = 9281AAD92FA50691007C77A7 /* popup */; };
+		9281AAE62FA50691007C77A7 /* content in Resources */ = {isa = PBXBuildFile; fileRef = 9281AADA2FA50691007C77A7 /* content */; };
+		9281AAE72FA50691007C77A7 /* shared in Resources */ = {isa = PBXBuildFile; fileRef = 9281AADB2FA50691007C77A7 /* shared */; };
+		9281AAE82FA50691007C77A7 /* icons in Resources */ = {isa = PBXBuildFile; fileRef = 9281AADC2FA50691007C77A7 /* icons */; };
+		9281AAE92FA50691007C77A7 /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 9281AADD2FA50691007C77A7 /* manifest.json */; };
+		92AABCDF2FB8E9C200B1E5DB /* _locales in Resources */ = {isa = PBXBuildFile; fileRef = 92AABCDE2FB8E9C200B1E5DB /* _locales */; };
+		92AABCE02FB8E9C200B1E5DB /* _locales in Resources */ = {isa = PBXBuildFile; fileRef = 92AABCDE2FB8E9C200B1E5DB /* _locales */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		9281AAAB2FA50690007C77A7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9281AA782FA50690007C77A7 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9281AAA82FA50690007C77A7;
+			remoteInfo = "GeoSpoof Extension (iOS)";
+		};
+		9281AAB52FA50690007C77A7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9281AA782FA50690007C77A7 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9281AAB22FA50690007C77A7;
+			remoteInfo = "GeoSpoof Extension (macOS)";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		9281AACC2FA50690007C77A7 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				9281AAAA2FA50690007C77A7 /* GeoSpoof Extension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9281AAD32FA50690007C77A7 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				9281AAB42FA50690007C77A7 /* GeoSpoof Extension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		9281AA7F2FA50690007C77A7 /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = Base; path = Base.lproj/Main.html; sourceTree = "<group>"; };
+		9281AA802FA50690007C77A7 /* Icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Icon.png; sourceTree = "<group>"; };
+		9281AA812FA50690007C77A7 /* Style.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = Style.css; sourceTree = "<group>"; };
+		9281AA822FA50690007C77A7 /* Script.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = Script.js; sourceTree = "<group>"; };
+		9281AA832FA50690007C77A7 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
+		9281AA842FA50690007C77A7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		9281AA862FA50690007C77A7 /* SafariWebExtensionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariWebExtensionHandler.swift; sourceTree = "<group>"; };
+		9281AA8B2FA50690007C77A7 /* GeoSpoof.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GeoSpoof.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9281AA8E2FA50690007C77A7 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		9281AA902FA50690007C77A7 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		9281AA932FA50690007C77A7 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		9281AA962FA50690007C77A7 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		9281AA982FA50690007C77A7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		9281AA9D2FA50690007C77A7 /* GeoSpoof.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GeoSpoof.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9281AA9F2FA50690007C77A7 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		9281AAA22FA50690007C77A7 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		9281AAA42FA50690007C77A7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		9281AAA92FA50690007C77A7 /* GeoSpoof Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "GeoSpoof Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9281AAAE2FA50690007C77A7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		9281AAB32FA50690007C77A7 /* GeoSpoof Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "GeoSpoof Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9281AAB82FA50690007C77A7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		9281AAD82FA50691007C77A7 /* background */ = {isa = PBXFileReference; lastKnownFileType = folder; name = background; path = ../../dist/background; sourceTree = "<group>"; };
+		9281AAD92FA50691007C77A7 /* popup */ = {isa = PBXFileReference; lastKnownFileType = folder; name = popup; path = ../../dist/popup; sourceTree = "<group>"; };
+		9281AADA2FA50691007C77A7 /* content */ = {isa = PBXFileReference; lastKnownFileType = folder; name = content; path = ../../dist/content; sourceTree = "<group>"; };
+		9281AADB2FA50691007C77A7 /* shared */ = {isa = PBXFileReference; lastKnownFileType = folder; name = shared; path = ../../dist/shared; sourceTree = "<group>"; };
+		9281AADC2FA50691007C77A7 /* icons */ = {isa = PBXFileReference; lastKnownFileType = folder; name = icons; path = ../../dist/icons; sourceTree = "<group>"; };
+		9281AADD2FA50691007C77A7 /* manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = manifest.json; path = ../../dist/manifest.json; sourceTree = "<group>"; };
+		928E357D2FA660B200A67B9A /* GeoSpoof Extension (macOS) copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GeoSpoof Extension (macOS) copy-Info.plist"; sourceTree = "<group>"; };
+		928E35922FA665B700A67B9A /* GeoSpoof (macOS) copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GeoSpoof (macOS) copy-Info.plist"; sourceTree = "<group>"; };
+		92AABCDE2FB8E9C200B1E5DB /* _locales */ = {isa = PBXFileReference; lastKnownFileType = folder; name = _locales; path = ../../dist/_locales; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		9281AA882FA50690007C77A7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9281AA9A2FA50690007C77A7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9281AAA62FA50690007C77A7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9281AAB02FA50690007C77A7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		9281AA772FA50690007C77A7 = {
+			isa = PBXGroup;
+			children = (
+				9281AA7C2FA50690007C77A7 /* Shared (App) */,
+				9281AA852FA50690007C77A7 /* Shared (Extension) */,
+				9281AA8D2FA50690007C77A7 /* iOS (App) */,
+				9281AA9E2FA50690007C77A7 /* macOS (App) */,
+				9281AAAD2FA50690007C77A7 /* iOS (Extension) */,
+				9281AAB72FA50690007C77A7 /* macOS (Extension) */,
+				928E357D2FA660B200A67B9A /* GeoSpoof Extension (macOS) copy-Info.plist */,
+				928E35922FA665B700A67B9A /* GeoSpoof (macOS) copy-Info.plist */,
+				9281AA8C2FA50690007C77A7 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		9281AA7C2FA50690007C77A7 /* Shared (App) */ = {
+			isa = PBXGroup;
+			children = (
+				9281AA832FA50690007C77A7 /* ViewController.swift */,
+				9281AA842FA50690007C77A7 /* Assets.xcassets */,
+				9281AA7D2FA50690007C77A7 /* Resources */,
+			);
+			path = "Shared (App)";
+			sourceTree = "<group>";
+		};
+		9281AA7D2FA50690007C77A7 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				9281AA7E2FA50690007C77A7 /* Main.html */,
+				9281AA802FA50690007C77A7 /* Icon.png */,
+				9281AA812FA50690007C77A7 /* Style.css */,
+				9281AA822FA50690007C77A7 /* Script.js */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		9281AA852FA50690007C77A7 /* Shared (Extension) */ = {
+			isa = PBXGroup;
+			children = (
+				9281AAD72FA50691007C77A7 /* Resources */,
+				9281AA862FA50690007C77A7 /* SafariWebExtensionHandler.swift */,
+			);
+			path = "Shared (Extension)";
+			sourceTree = "<group>";
+		};
+		9281AA8C2FA50690007C77A7 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				9281AA8B2FA50690007C77A7 /* GeoSpoof.app */,
+				9281AA9D2FA50690007C77A7 /* GeoSpoof.app */,
+				9281AAA92FA50690007C77A7 /* GeoSpoof Extension.appex */,
+				9281AAB32FA50690007C77A7 /* GeoSpoof Extension.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		9281AA8D2FA50690007C77A7 /* iOS (App) */ = {
+			isa = PBXGroup;
+			children = (
+				9281AA8E2FA50690007C77A7 /* AppDelegate.swift */,
+				9281AA902FA50690007C77A7 /* SceneDelegate.swift */,
+				9281AA922FA50690007C77A7 /* LaunchScreen.storyboard */,
+				9281AA952FA50690007C77A7 /* Main.storyboard */,
+				9281AA982FA50690007C77A7 /* Info.plist */,
+			);
+			path = "iOS (App)";
+			sourceTree = "<group>";
+		};
+		9281AA9E2FA50690007C77A7 /* macOS (App) */ = {
+			isa = PBXGroup;
+			children = (
+				9281AA9F2FA50690007C77A7 /* AppDelegate.swift */,
+				9281AAA12FA50690007C77A7 /* Main.storyboard */,
+				9281AAA42FA50690007C77A7 /* Info.plist */,
+			);
+			path = "macOS (App)";
+			sourceTree = "<group>";
+		};
+		9281AAAD2FA50690007C77A7 /* iOS (Extension) */ = {
+			isa = PBXGroup;
+			children = (
+				9281AAAE2FA50690007C77A7 /* Info.plist */,
+			);
+			path = "iOS (Extension)";
+			sourceTree = "<group>";
+		};
+		9281AAB72FA50690007C77A7 /* macOS (Extension) */ = {
+			isa = PBXGroup;
+			children = (
+				9281AAB82FA50690007C77A7 /* Info.plist */,
+			);
+			path = "macOS (Extension)";
+			sourceTree = "<group>";
+		};
+		9281AAD72FA50691007C77A7 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				92AABCDE2FB8E9C200B1E5DB /* _locales */,
+				9281AAD82FA50691007C77A7 /* background */,
+				9281AAD92FA50691007C77A7 /* popup */,
+				9281AADA2FA50691007C77A7 /* content */,
+				9281AADB2FA50691007C77A7 /* shared */,
+				9281AADC2FA50691007C77A7 /* icons */,
+				9281AADD2FA50691007C77A7 /* manifest.json */,
+			);
+			name = Resources;
+			path = "Shared (Extension)";
+			sourceTree = SOURCE_ROOT;
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		9281AA8A2FA50690007C77A7 /* GeoSpoof (iOS) */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9281AACD2FA50690007C77A7 /* Build configuration list for PBXNativeTarget "GeoSpoof (iOS)" */;
+			buildPhases = (
+				9281AA872FA50690007C77A7 /* Sources */,
+				9281AA882FA50690007C77A7 /* Frameworks */,
+				9281AA892FA50690007C77A7 /* Resources */,
+				9281AACC2FA50690007C77A7 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9281AAAC2FA50690007C77A7 /* PBXTargetDependency */,
+			);
+			name = "GeoSpoof (iOS)";
+			packageProductDependencies = (
+			);
+			productName = "GeoSpoof (iOS)";
+			productReference = 9281AA8B2FA50690007C77A7 /* GeoSpoof.app */;
+			productType = "com.apple.product-type.application";
+		};
+		9281AA9C2FA50690007C77A7 /* GeoSpoof (macOS) */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9281AAD42FA50690007C77A7 /* Build configuration list for PBXNativeTarget "GeoSpoof (macOS)" */;
+			buildPhases = (
+				9281AA992FA50690007C77A7 /* Sources */,
+				9281AA9A2FA50690007C77A7 /* Frameworks */,
+				9281AA9B2FA50690007C77A7 /* Resources */,
+				9281AAD32FA50690007C77A7 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9281AAB62FA50690007C77A7 /* PBXTargetDependency */,
+			);
+			name = "GeoSpoof (macOS)";
+			packageProductDependencies = (
+			);
+			productName = "GeoSpoof (macOS)";
+			productReference = 9281AA9D2FA50690007C77A7 /* GeoSpoof.app */;
+			productType = "com.apple.product-type.application";
+		};
+		9281AAA82FA50690007C77A7 /* GeoSpoof Extension (iOS) */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9281AAC92FA50690007C77A7 /* Build configuration list for PBXNativeTarget "GeoSpoof Extension (iOS)" */;
+			buildPhases = (
+				9281AAA52FA50690007C77A7 /* Sources */,
+				9281AAA62FA50690007C77A7 /* Frameworks */,
+				9281AAA72FA50690007C77A7 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "GeoSpoof Extension (iOS)";
+			packageProductDependencies = (
+			);
+			productName = "GeoSpoof Extension (iOS)";
+			productReference = 9281AAA92FA50690007C77A7 /* GeoSpoof Extension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		9281AAB22FA50690007C77A7 /* GeoSpoof Extension (macOS) */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9281AAD02FA50690007C77A7 /* Build configuration list for PBXNativeTarget "GeoSpoof Extension (macOS)" */;
+			buildPhases = (
+				928E356C2FA53A0000A67B9A /* ShellScript */,
+				9281AAAF2FA50690007C77A7 /* Sources */,
+				9281AAB02FA50690007C77A7 /* Frameworks */,
+				9281AAB12FA50690007C77A7 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "GeoSpoof Extension (macOS)";
+			packageProductDependencies = (
+			);
+			productName = "GeoSpoof Extension (macOS)";
+			productReference = 9281AAB32FA50690007C77A7 /* GeoSpoof Extension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		9281AA782FA50690007C77A7 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2640;
+				LastUpgradeCheck = 2650;
+				TargetAttributes = {
+					9281AA8A2FA50690007C77A7 = {
+						CreatedOnToolsVersion = 26.4.1;
+					};
+					9281AA9C2FA50690007C77A7 = {
+						CreatedOnToolsVersion = 26.4.1;
+					};
+					9281AAA82FA50690007C77A7 = {
+						CreatedOnToolsVersion = 26.4.1;
+					};
+					9281AAB22FA50690007C77A7 = {
+						CreatedOnToolsVersion = 26.4.1;
+					};
+				};
+			};
+			buildConfigurationList = 9281AA7B2FA50690007C77A7 /* Build configuration list for PBXProject "GeoSpoof" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 9281AA772FA50690007C77A7;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 9281AA8C2FA50690007C77A7 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				9281AA8A2FA50690007C77A7 /* GeoSpoof (iOS) */,
+				9281AA9C2FA50690007C77A7 /* GeoSpoof (macOS) */,
+				9281AAA82FA50690007C77A7 /* GeoSpoof Extension (iOS) */,
+				9281AAB22FA50690007C77A7 /* GeoSpoof Extension (macOS) */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		9281AA892FA50690007C77A7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9281AABB2FA50690007C77A7 /* Icon.png in Resources */,
+				9281AA942FA50690007C77A7 /* LaunchScreen.storyboard in Resources */,
+				9281AAB92FA50690007C77A7 /* Main.html in Resources */,
+				9281AABF2FA50690007C77A7 /* Script.js in Resources */,
+				9281AAC32FA50690007C77A7 /* Assets.xcassets in Resources */,
+				9281AA972FA50690007C77A7 /* Main.storyboard in Resources */,
+				9281AABD2FA50690007C77A7 /* Style.css in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9281AA9B2FA50690007C77A7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9281AABC2FA50690007C77A7 /* Icon.png in Resources */,
+				9281AABE2FA50690007C77A7 /* Style.css in Resources */,
+				9281AAA32FA50690007C77A7 /* Main.storyboard in Resources */,
+				9281AAC02FA50690007C77A7 /* Script.js in Resources */,
+				9281AAC42FA50690007C77A7 /* Assets.xcassets in Resources */,
+				9281AABA2FA50690007C77A7 /* Main.html in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9281AAA72FA50690007C77A7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				92AABCDF2FB8E9C200B1E5DB /* _locales in Resources */,
+				9281AAE62FA50691007C77A7 /* content in Resources */,
+				9281AAE72FA50691007C77A7 /* shared in Resources */,
+				9281AAE42FA50691007C77A7 /* background in Resources */,
+				9281AAE82FA50691007C77A7 /* icons in Resources */,
+				9281AAE92FA50691007C77A7 /* manifest.json in Resources */,
+				9281AAE52FA50691007C77A7 /* popup in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9281AAB12FA50690007C77A7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				92AABCE02FB8E9C200B1E5DB /* _locales in Resources */,
+				9281AAE02FA50691007C77A7 /* content in Resources */,
+				9281AAE12FA50691007C77A7 /* shared in Resources */,
+				9281AADE2FA50691007C77A7 /* background in Resources */,
+				9281AAE22FA50691007C77A7 /* icons in Resources */,
+				9281AAE32FA50691007C77A7 /* manifest.json in Resources */,
+				9281AADF2FA50691007C77A7 /* popup in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		928E356C2FA53A0000A67B9A /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "export PATH=\"/usr/local/bin:/opt/homebrew/bin:$PATH\"\ncd \"${SRCROOT}/..\"\nnpm run build:safari\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		9281AA872FA50690007C77A7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9281AAC12FA50690007C77A7 /* ViewController.swift in Sources */,
+				9281AA8F2FA50690007C77A7 /* AppDelegate.swift in Sources */,
+				9281AA912FA50690007C77A7 /* SceneDelegate.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9281AA992FA50690007C77A7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9281AAC22FA50690007C77A7 /* ViewController.swift in Sources */,
+				9281AAA02FA50690007C77A7 /* AppDelegate.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9281AAA52FA50690007C77A7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9281AAC52FA50690007C77A7 /* SafariWebExtensionHandler.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9281AAAF2FA50690007C77A7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9281AAC62FA50690007C77A7 /* SafariWebExtensionHandler.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		9281AAAC2FA50690007C77A7 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9281AAA82FA50690007C77A7 /* GeoSpoof Extension (iOS) */;
+			targetProxy = 9281AAAB2FA50690007C77A7 /* PBXContainerItemProxy */;
+		};
+		9281AAB62FA50690007C77A7 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9281AAB22FA50690007C77A7 /* GeoSpoof Extension (macOS) */;
+			targetProxy = 9281AAB52FA50690007C77A7 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		9281AA7E2FA50690007C77A7 /* Main.html */ = {
+			isa = PBXVariantGroup;
+			children = (
+				9281AA7F2FA50690007C77A7 /* Base */,
+			);
+			name = Main.html;
+			sourceTree = "<group>";
+		};
+		9281AA922FA50690007C77A7 /* LaunchScreen.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				9281AA932FA50690007C77A7 /* Base */,
+			);
+			name = LaunchScreen.storyboard;
+			sourceTree = "<group>";
+		};
+		9281AA952FA50690007C77A7 /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				9281AA962FA50690007C77A7 /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
+		9281AAA12FA50690007C77A7 /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				9281AAA22FA50690007C77A7 /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		9281AAC72FA50690007C77A7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 9445Q654K8;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		9281AAC82FA50690007C77A7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 9445Q654K8;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		9281AACA2FA50690007C77A7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 12;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "iOS (Extension)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "GeoSpoof Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.19.5;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.moonloaf.geospoof.Extension;
+				PRODUCT_NAME = "GeoSpoof Extension";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Debug;
+		};
+		9281AACB2FA50690007C77A7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 12;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "iOS (Extension)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "GeoSpoof Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.19.5;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.moonloaf.geospoof.Extension;
+				PRODUCT_NAME = "GeoSpoof Extension";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Release;
+		};
+		9281AACE2FA50690007C77A7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 12;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "iOS (App)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = GeoSpoof;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UIMainStoryboardFile = Main;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.19.5;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					WebKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.moonloaf.geospoof;
+				PRODUCT_NAME = GeoSpoof;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Debug;
+		};
+		9281AACF2FA50690007C77A7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 12;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "iOS (App)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = GeoSpoof;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UIMainStoryboardFile = Main;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.19.5;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					WebKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.moonloaf.geospoof;
+				PRODUCT_NAME = GeoSpoof;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Release;
+		};
+		9281AAD12FA50690007C77A7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 12;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "macOS (Extension)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "GeoSpoof Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
+				MARKETING_VERSION = 1.19.5;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.moonloaf.geospoof.Extension;
+				PRODUCT_NAME = "GeoSpoof Extension";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Debug;
+		};
+		9281AAD22FA50690007C77A7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 12;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "macOS (Extension)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "GeoSpoof Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
+				MARKETING_VERSION = 1.19.5;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.moonloaf.geospoof.Extension;
+				PRODUCT_NAME = "GeoSpoof Extension";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Release;
+		};
+		9281AAD52FA50690007C77A7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 12;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "macOS (App)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = GeoSpoof;
+				INFOPLIST_KEY_NSMainStoryboardFile = Main;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
+				MARKETING_VERSION = 1.19.5;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					WebKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.moonloaf.geospoof;
+				PRODUCT_NAME = GeoSpoof;
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Debug;
+		};
+		9281AAD62FA50690007C77A7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 12;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "macOS (App)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = GeoSpoof;
+				INFOPLIST_KEY_NSMainStoryboardFile = Main;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
+				MARKETING_VERSION = 1.19.5;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					WebKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.moonloaf.geospoof;
+				PRODUCT_NAME = GeoSpoof;
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		9281AA7B2FA50690007C77A7 /* Build configuration list for PBXProject "GeoSpoof" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9281AAC72FA50690007C77A7 /* Debug */,
+				9281AAC82FA50690007C77A7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9281AAC92FA50690007C77A7 /* Build configuration list for PBXNativeTarget "GeoSpoof Extension (iOS)" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9281AACA2FA50690007C77A7 /* Debug */,
+				9281AACB2FA50690007C77A7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9281AACD2FA50690007C77A7 /* Build configuration list for PBXNativeTarget "GeoSpoof (iOS)" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9281AACE2FA50690007C77A7 /* Debug */,
+				9281AACF2FA50690007C77A7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9281AAD02FA50690007C77A7 /* Build configuration list for PBXNativeTarget "GeoSpoof Extension (macOS)" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9281AAD12FA50690007C77A7 /* Debug */,
+				9281AAD22FA50690007C77A7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9281AAD42FA50690007C77A7 /* Build configuration list for PBXNativeTarget "GeoSpoof (macOS)" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9281AAD52FA50690007C77A7 /* Debug */,
+				9281AAD62FA50690007C77A7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 9281AA782FA50690007C77A7 /* Project object */;
+}
