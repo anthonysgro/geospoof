@@ -51,9 +51,18 @@ platform :mac do
       destination: "generic/platform=macOS",
       export_method: "developer-id",
       export_options: {
-        signingStyle: "automatic",
+        signingStyle: "manual",
         teamID: "9445Q654K8"
       },
+      # Override the project's automatic signing for the archive step.
+      # CI runners only have the Developer ID cert (no Mac Development cert),
+      # so we force-switch the whole archive build to manual Developer ID signing.
+      xcargs: [
+        "CODE_SIGN_STYLE=Manual",
+        "CODE_SIGN_IDENTITY=Developer\\ ID\\ Application",
+        "DEVELOPMENT_TEAM=9445Q654K8",
+        "PROVISIONING_PROFILE_SPECIFIER=",
+      ].join(" "),
       output_directory: "./build",
       output_name: "GeoSpoof-macOS-DeveloperID"
     )
