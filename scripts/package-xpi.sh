@@ -4,7 +4,7 @@ set -euo pipefail
 VERSION=$(node -p "require('./package.json').version")
 DIST_DIR="dist"
 OUT_DIR="web-ext-artifacts"
-XPI_FILE="$OUT_DIR/geospoof-$VERSION.xpi"
+XPI_FILE="$OUT_DIR/geospoof-firefox-v$VERSION-unsigned.xpi"
 
 if [ ! -d "$DIST_DIR" ] || [ -z "$(ls -A "$DIST_DIR")" ]; then
   echo "Error: $DIST_DIR does not exist or is empty. Run 'npm run build:prod' first."

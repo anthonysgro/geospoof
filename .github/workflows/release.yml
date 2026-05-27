@@ -56,9 +56,9 @@ jobs:
 
       - name: Rename signed XPI
         run: |
-          SIGNED=$(find web-ext-artifacts -name '*.xpi' ! -name "geospoof-${BASE_VERSION}.xpi" | head -1)
+          SIGNED=$(find web-ext-artifacts -name '*.xpi' ! -name "geospoof-firefox-v${BASE_VERSION}-unsigned.xpi" | head -1)
           if [ -n "$SIGNED" ]; then
-            mv "$SIGNED" "web-ext-artifacts/geospoof-${BASE_VERSION}-signed.xpi"
+            mv "$SIGNED" "web-ext-artifacts/geospoof-firefox-v${BASE_VERSION}-signed.xpi"
           fi
 
       # ── Listed (AMO) signing ──
@@ -83,15 +83,15 @@ jobs:
       - name: Generate update manifest
         run: |
           REPO="${{ github.repository }}"
-          DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${GITHUB_REF_NAME}/geospoof-${BASE_VERSION}-signed.xpi"
+          DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${GITHUB_REF_NAME}/geospoof-firefox-v${BASE_VERSION}-signed.xpi"
           bash scripts/generate-update-manifest.sh "$BUILD_VERSION" "$DOWNLOAD_URL"
 
       # ── Collect release artifacts ──
       - name: Collect release artifacts
         run: |
           mkdir -p release-assets
-          cp "web-ext-artifacts/geospoof-${BASE_VERSION}-signed.xpi" release-assets/
-          cp "web-ext-artifacts/geospoof-${BASE_VERSION}.xpi" release-assets/
+          cp "web-ext-artifacts/geospoof-firefox-v${BASE_VERSION}-signed.xpi" release-assets/
+          cp "web-ext-artifacts/geospoof-firefox-v${BASE_VERSION}-unsigned.xpi" release-assets/
           cp "web-ext-artifacts/geospoof-chromium-v${BASE_VERSION}.zip" release-assets/
           cp "geospoof-source-v${BASE_VERSION}.zip" release-assets/
 

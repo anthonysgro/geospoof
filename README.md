@@ -62,14 +62,14 @@ If you'd rather not sign in to the App Store, you can install GeoSpoof from a no
 Each release includes a self-hosted signed XPI alongside the AMO submission. The self-hosted XPI uses a 4-segment version (e.g., `1.18.0.42`) to avoid collisions with the AMO listing.
 
 1. Go to the [Releases](https://github.com/anthonysgro/geospoof/releases) page
-2. Download `geospoof-<version>-signed.xpi` from the latest release
+2. Download `geospoof-firefox-v<version>-signed.xpi` from the latest release
 3. In Firefox, open `about:addons`
 4. Click the gear icon (⚙) and select **Install Add-on From File…**
 5. Select the downloaded `.xpi` file
 
 The signed XPI works on standard Firefox with no extra configuration. Once installed, Firefox automatically checks for and installs new versions via the self-hosted update manifest. If you later install from AMO, Firefox will auto-upgrade to it since AMO releases use a higher base version.
 
-> **Note:** An unsigned `geospoof-<version>.xpi` is also included in each release for Firefox forks that don't support AMO signatures. Most users should use the signed version.
+> **Note:** An unsigned `geospoof-firefox-v<version>-unsigned.xpi` is also included in each release for Firefox forks that don't support AMO signatures. Most users should use the signed version.
 
 #### From source
 

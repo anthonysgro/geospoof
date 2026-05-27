@@ -250,17 +250,17 @@ describe("Feature: dual-channel-release, Property 6: Signed XPI filename formatt
     fc.assert(
       fc.property(semverArb, (version) => {
         const result = formatSignedXpiName(version);
-        expect(result).toBe(`geospoof-${version}-signed.xpi`);
+        expect(result).toBe(`geospoof-firefox-v${version}-signed.xpi`);
       }),
       { numRuns: 100 }
     );
   });
 
-  test("formatSignedXpiName output starts with geospoof- and ends with -signed.xpi", () => {
+  test("formatSignedXpiName output starts with geospoof-firefox-v and ends with -signed.xpi", () => {
     fc.assert(
       fc.property(semverArb, (version) => {
         const result = formatSignedXpiName(version);
-        expect(result.startsWith("geospoof-")).toBe(true);
+        expect(result.startsWith("geospoof-firefox-v")).toBe(true);
         expect(result.endsWith("-signed.xpi")).toBe(true);
       }),
       { numRuns: 100 }
