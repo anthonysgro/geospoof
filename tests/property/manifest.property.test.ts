@@ -23,7 +23,7 @@ test("Example 10: Manifest Permissions - manifest.json contains required permiss
   const manifest = firefoxManifest();
 
   // Required permissions (MV3: <all_urls> moved to host_permissions)
-  const requiredPermissions = ["storage", "privacy", "scripting", "alarms"];
+  const requiredPermissions = ["storage", "privacy", "proxy", "scripting", "alarms"];
 
   expect(manifest.permissions).toBeDefined();
   expect(Array.isArray(manifest.permissions)).toBe(true);
@@ -133,4 +133,27 @@ test("Both Firefox and Chromium use world:MAIN for injected.js", () => {
     expect(injectedEntry).toBeDefined();
     expect(injectedEntry!.world).toBe("MAIN");
   }
+});
+
+/**
+ * Proxy permission gating for the VPN-sync proxy-change watcher.
+ *
+ * The watcher observes `proxy.settings.onChange` to detect when a browser-based
+ * VPN switches exit nodes. That requires the `proxy` permission on the engines
+ * that expose the API (Chromium, Firefox desktop). Safari has no proxy
+ * WebExtensions API, so the permission must be omitted there (it would be an
+ * invalid permission and the watcher feature-detects to a no-op anyway).
+ */
+test("proxy permission present on Firefox and Chromium, absent on Safari", () => {
+  const firefox = generateManifest("firefox", "0.0.1") as unknown as Manifest;
+  const chromium = generateManifest("chromium", "0.0.1") as unknown as Manifest;
+  const safari = generateManifest("safari", "0.0.1") as unknown as Manifest;
+
+  expect(firefox.permissions).toContain("proxy");
+  expect(chromium.permissions).toContain("proxy");
+  expect(safari.permissions).not.toContain("proxy");
+
+  // Safari also omits `privacy` (unsupported) — guard against regressing the
+  // shared filter that strips both.
+  expect(safari.permissions).not.toContain("privacy");
 });

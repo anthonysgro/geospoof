@@ -47,7 +47,16 @@ export function generateManifest(target: BrowserTarget, version: string): Record
     homepage_url: "https://github.com/anthonysgro/geospoof",
     incognito: "spanning",
     version,
-    permissions: ["storage", "privacy", "scripting", "alarms"],
+    // `proxy` powers the VPN-sync auto-resync watcher: GeoSpoof observes
+    // `proxy.settings.onChange` to detect when a browser-based VPN (e.g. the
+    // Proton VPN extension) switches exit nodes, and re-syncs the spoofed
+    // location to match the new exit IP. It is observe-only — GeoSpoof never
+    // *sets* the proxy. On Chromium the permission's user-facing warning
+    // ("Read and change all your data on all websites") is already triggered
+    // by the existing `<all_urls>` host permission, so it adds no new install
+    // prompt there. Safari has no proxy WebExtensions API, so it is filtered
+    // out of the Safari build below (the watcher feature-detects and no-ops).
+    permissions: ["storage", "privacy", "proxy", "scripting", "alarms", "idle"],
     host_permissions: ["<all_urls>"],
     content_scripts: [
       {
@@ -154,10 +163,14 @@ export function generateManifest(target: BrowserTarget, version: string): Record
 
   if (target === "safari") {
     // Safari: scripts-based background (avoids service worker suspension bug),
-    // no privacy permission (unsupported), no browser_specific_settings.
+    // no privacy permission (unsupported), no proxy permission (no proxy API),
+    // no idle permission (the activity watcher's idle trigger feature-detects to
+    // a no-op; tab-navigation triggers still work), no browser_specific_settings.
     // Safari may not honor <all_urls> wildcard for CORS exemption in background pages,
     // so we explicitly list the geo/IP service domains to ensure CORS is bypassed.
-    const safariPermissions = (shared.permissions as string[]).filter((p) => p !== "privacy");
+    const safariPermissions = (shared.permissions as string[]).filter(
+      (p) => p !== "privacy" && p !== "proxy" && p !== "idle"
+    );
     const safariHostPermissions = [
       ...(shared.host_permissions as string[]),
       "https://api.ipify.org/*",
