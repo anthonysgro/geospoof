@@ -93,6 +93,36 @@ Use the built-in test links at the bottom of the extension:
 
 ⚠️ **Terms of Service**: Using location spoofing may violate the terms of service of some websites, particularly streaming services. Use responsibly and at your own risk.
 
+## Safari Permissions FAQ
+
+When you enable GeoSpoof in Safari, you'll see a prompt warning that the extension can "read and alter webpages" and "see your browsing history," possibly including "passwords, phone numbers, and credit cards." This is alarming the first time you see it. Here's what's actually going on.
+
+<p align="center">
+  <img src="../assets/github/safari-permissions.png" alt="Safari permission prompt shown when enabling GeoSpoof, warning that the extension can read and alter webpages" width="480" />
+</p>
+
+**Why does Safari say GeoSpoof can read and alter webpages?**
+Because GeoSpoof runs on every website to override the location, timezone, and date APIs before each page loads. Safari shows this same standard warning for _any_ extension that works across all sites — ad blockers, password managers, dark-mode tools. The websites Safari names in the prompt are just the tabs you have open right now; GeoSpoof has no special interest in them.
+
+**Does GeoSpoof actually read my pages, passwords, or browsing history?**
+No. GeoSpoof never reads form fields, passwords, page text, or your history, and it never sends any of that anywhere. Its script only replaces the values returned by the Geolocation, `Date`, `Intl`, and Temporal APIs. It's open source, so you can verify this: https://github.com/anthonysgro/geospoof
+
+**Does it send any data to the developer?**
+No. The only outbound requests are the optional city-search and VPN-sync lookups, and only when you actively use those features. See [PRIVACY_POLICY.md](../PRIVACY_POLICY.md) for the full breakdown.
+
+**Which permission option should I choose?**
+
+- **Allow for One Day** — best for trying it out; access expires automatically.
+- **Always Allow on Every Website** — most convenient for location protection everywhere.
+- **Allow on specific websites** — grant per-site if you only want spoofing on certain sites.
+- **Deny** — GeoSpoof won't run on that site and can't spoof your location there.
+
+**How do I restrict or revoke access later?**
+Open **Safari → Settings → Extensions → GeoSpoof** (or the **AA** menu in the address bar on iOS/iPadOS) and adjust which sites are allowed. Changing this never deletes your settings — it only controls where spoofing runs.
+
+**Why not request fewer permissions?**
+Spoofing your location only works if the extension can run on the sites you visit. There's no narrower permission that still lets GeoSpoof override location site-wide, so broad website access is required for the core feature to work at all.
+
 ## Troubleshooting
 
 **Protection not working?**
