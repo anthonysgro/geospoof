@@ -9,6 +9,28 @@ import { sessionGet, sessionSet, sessionDelete, sessionClearNamespace } from "./
 
 const logger = createLogger("BG");
 
+/**
+ * Log a geo-service error at the appropriate level. The parallel-geolocation
+ * orchestrator aborts the losing services once one wins (and aborts an entire
+ * in-flight batch when a newer sync supersedes it), which surfaces here as
+ * `AbortError` / "Sync cancelled". Those are expected, healthy control flow —
+ * log them at debug so only genuine failures show up as errors in the console.
+ */
+function logGeoError(tag: string, err: Error & { code?: string; blocked?: boolean }): void {
+  const expected = err.name === "AbortError" || err.message === "Sync cancelled";
+  const detail = {
+    name: err.name,
+    message: err.message,
+    code: err.code,
+    blocked: err.blocked,
+  };
+  if (expected) {
+    logger.debug(`${tag} cancelled (expected):`, detail);
+  } else {
+    logger.error(`${tag} Error:`, detail);
+  }
+}
+
 // --- Constants ---
 const PUBLIC_IP_URL = "https://api.ipify.org?format=json";
 const GEOJS_URL = "https://get.geojs.io/v1/ip/geo/"; // Primary — CORS-friendly, no key, no rate limits
@@ -24,6 +46,30 @@ const MIN_REQUEST_INTERVAL = 2000; // 2 seconds between API calls
 
 const IP_GEO_CACHE_KEY = "ipGeoCache";
 const IP_GEO_CACHE_TTL = 30 * 24 * 60 * 60 * 1000; // 30 days in ms
+
+/**
+ * Session-cache key holding the public IP that the currently-applied spoofed
+ * location was derived from. Written on every successful sync (startup auto-sync,
+ * manual popup sync, and proxy-change-triggered re-sync) so the proxy-change
+ * watcher can cheaply decide whether a proxy change actually moved the exit IP
+ * before spending a geolocation API call. Cleared when sync mode is disabled.
+ */
+const SYNCED_IP_KEY = "lastSyncedIp";
+
+/**
+ * Record the public IP behind the currently-applied spoofed location.
+ */
+export async function setLastSyncedIp(ip: string): Promise<void> {
+  await sessionSet(SYNCED_IP_KEY, ip);
+}
+
+/**
+ * Read the public IP behind the currently-applied spoofed location, or
+ * undefined if no sync has happened this session.
+ */
+export async function getLastSyncedIp(): Promise<string | undefined> {
+  return sessionGet<string>(SYNCED_IP_KEY);
+}
 
 interface IpGeoCacheEntry {
   result: IpGeolocationResult;
@@ -363,12 +409,7 @@ async function geolocateWithFreeIpApi(
     };
   } catch (error) {
     const err = error as Error & { code?: string; blocked?: boolean };
-    logger.error("[IP-GEO] Error:", {
-      name: err.name,
-      message: err.message,
-      code: err.code,
-      blocked: err.blocked,
-    });
+    logGeoError("[IP-GEO]", err);
 
     if (err.code === "GEOLOCATION_FAILED") {
       throw err;
@@ -457,12 +498,7 @@ async function geolocateWithGeoJs(
     };
   } catch (error) {
     const err = error as Error & { code?: string; blocked?: boolean };
-    logger.error("[IP-GEO-GEOJS] Error:", {
-      name: err.name,
-      message: err.message,
-      code: err.code,
-      blocked: err.blocked,
-    });
+    logGeoError("[IP-GEO-GEOJS]", err);
 
     if (err.code === "GEOLOCATION_FAILED") throw err;
     if (err.name === "AbortError") {
@@ -544,12 +580,7 @@ async function geolocateWithReallyFreeGeoIp(
     };
   } catch (error) {
     const err = error as Error & { code?: string; blocked?: boolean };
-    logger.error("[IP-GEO-RFGI] Error:", {
-      name: err.name,
-      message: err.message,
-      code: err.code,
-      blocked: err.blocked,
-    });
+    logGeoError("[IP-GEO-RFGI]", err);
 
     if (err.code === "GEOLOCATION_FAILED") throw err;
     if (err.name === "AbortError") {
@@ -634,12 +665,7 @@ async function geolocateWithIpInfo(
     };
   } catch (error) {
     const err = error as Error & { code?: string; blocked?: boolean };
-    logger.error("[IP-GEO-IPINFO] Error:", {
-      name: err.name,
-      message: err.message,
-      code: err.code,
-      blocked: err.blocked,
-    });
+    logGeoError("[IP-GEO-IPINFO]", err);
 
     if (err.code === "GEOLOCATION_FAILED") throw err;
     if (err.name === "AbortError") {
@@ -732,6 +758,7 @@ async function _doSyncVpnLocation(
       const cached = await sessionGet<IpGeolocationResult>("ipGeo:" + ip);
       if (cached !== undefined) {
         logger.debug("[VPN-SYNC] Session cache hit, total time:", Date.now() - syncStart, "ms");
+        await setLastSyncedIp(ip);
         return cached;
       }
       const persistent = await persistentCacheGet(ip);
@@ -739,6 +766,7 @@ async function _doSyncVpnLocation(
         // Warm the session cache so subsequent lookups are instant
         await sessionSet("ipGeo:" + ip, persistent);
         logger.debug("[VPN-SYNC] Persistent cache hit, total time:", Date.now() - syncStart, "ms");
+        await setLastSyncedIp(ip);
         return persistent;
       }
     }
@@ -807,6 +835,7 @@ async function _doSyncVpnLocation(
     // Cache the result in both session and persistent storage
     await sessionSet("ipGeo:" + ip, result);
     await persistentCacheSet(ip, result);
+    await setLastSyncedIp(ip);
 
     logger.info("[VPN-SYNC] Total sync time:", Date.now() - syncStart, "ms");
     return result;
@@ -838,6 +867,7 @@ async function _doSyncVpnLocation(
  */
 export async function clearIpGeoCache(): Promise<void> {
   await sessionClearNamespace("ipGeo");
+  await sessionDelete(SYNCED_IP_KEY);
   await persistentCacheClear();
 }
 

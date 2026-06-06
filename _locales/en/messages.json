@@ -92,8 +92,8 @@
     "description": "Accessible label on the VPN sync info icon."
   },
   "vpnSync_tooltip": {
-    "message": "This is a one-time sync to your current public IP location. It does not auto-update when your VPN changes servers — use Re-sync to update manually.",
-    "description": "Tooltip explaining that VPN sync is one-time and does not auto-update."
+    "message": "This syncs your spoofed location to your current public IP. It auto-updates a few seconds after your VPN changes servers — or use Re-sync to update immediately.",
+    "description": "Tooltip explaining that VPN sync auto-updates when the VPN changes servers, with a manual Re-sync option."
   },
   "vpnSync_syncNow": {
     "message": "Sync Now",

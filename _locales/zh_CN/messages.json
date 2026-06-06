@@ -92,8 +92,8 @@
     "description": "Accessible label on the VPN sync info icon."
   },
   "vpnSync_tooltip": {
-    "message": "这是一次性同步到您当前公网 IP 的位置。当 VPN 更换服务器时不会自动更新——请使用「重新同步」按钮手动更新。",
-    "description": "Tooltip explaining that VPN sync is one-time and does not auto-update."
+    "message": "将您的伪装位置同步到当前公网 IP 的位置。当 VPN 更换服务器后会在几秒内自动更新——或使用「重新同步」立即更新。",
+    "description": "Tooltip explaining that VPN sync auto-updates when the VPN changes servers, with a manual Re-sync option."
   },
   "vpnSync_syncNow": {
     "message": "立即同步",

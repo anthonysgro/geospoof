@@ -92,8 +92,8 @@
     "description": "Accessible label on the VPN sync info icon."
   },
   "vpnSync_tooltip": {
-    "message": "これは現在のパブリック IP の位置への 1 回限りの同期です。VPN がサーバーを変更しても自動更新されません — 手動で更新するには「再同期」を使用してください。",
-    "description": "Tooltip explaining that VPN sync is one-time and does not auto-update."
+    "message": "現在のパブリック IP の位置にスプーフィングした位置を同期します。VPN がサーバーを変更すると数秒後に自動更新されます — すぐに更新するには「再同期」を使用してください。",
+    "description": "Tooltip explaining that VPN sync auto-updates when the VPN changes servers, with a manual Re-sync option."
   },
   "vpnSync_syncNow": {
     "message": "今すぐ同期",

@@ -92,8 +92,8 @@
     "description": "Accessible label on the VPN sync info icon."
   },
   "vpnSync_tooltip": {
-    "message": "Esta es una sincronización única con tu ubicación de IP pública actual. No se actualiza automáticamente cuando tu VPN cambia de servidor — usa Resincronizar para actualizar manualmente.",
-    "description": "Tooltip explaining that VPN sync is one-time and does not auto-update."
+    "message": "Esto sincroniza tu ubicación falsa con tu IP pública actual. Se actualiza automáticamente unos segundos después de que tu VPN cambia de servidor — o usa Resincronizar para actualizar de inmediato.",
+    "description": "Tooltip explaining that VPN sync auto-updates when the VPN changes servers, with a manual Re-sync option."
   },
   "vpnSync_syncNow": {
     "message": "Sincronizar ahora",

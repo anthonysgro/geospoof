@@ -16,6 +16,8 @@ import { updateBadge } from "./badge";
 import { broadcastSettingsToTabs, isRestrictedUrl, checkTabInjection } from "./tabs";
 import { handleMessage, handleSetLocation } from "./messages";
 import { syncVpnLocation } from "./vpn-sync";
+import { installProxyWatcher } from "./proxy-watcher";
+import { installActivityWatcher } from "./activity-watcher";
 import {
   installWorkerRequestFilter,
   updateWorkerFilterSettings,
@@ -69,11 +71,31 @@ export {
   syncVpnLocation,
   clearIpGeoCache,
   resetRateLimiter,
+  getLastSyncedIp,
+  setLastSyncedIp,
   MIN_REQUEST_INTERVAL,
   REQUEST_TIMEOUT,
   GEO_TIMEOUT,
 } from "./vpn-sync";
 export type { IpGeolocationResult, VpnSyncError, VpnSyncResponse } from "./vpn-sync";
+export {
+  installProxyWatcher,
+  isProxyWatcherSupported,
+  PROXY_CHANGE_DEBOUNCE_MS,
+  MIN_CHECK_INTERVAL_MS,
+  _resetProxyWatcherState,
+} from "./proxy-watcher";
+export {
+  installActivityWatcher,
+  isActivityWatcherSupported,
+  _resetActivityWatcherState,
+} from "./activity-watcher";
+export {
+  triggerResyncCheck,
+  RESYNC_DEBOUNCE_MS,
+  SWITCH_SETTLE_MS,
+  _resetResyncCoreState,
+} from "./resync-core";
 
 // --- Alarm constants ---
 
@@ -172,6 +194,21 @@ async function initialize(): Promise<void> {
       logger.warn("VPN auto-sync on startup failed:", error);
     }
   }
+
+  // Install the proxy-change watcher so a browser-based VPN (e.g. the Proton
+  // VPN extension) switching exit nodes triggers an event-driven re-sync,
+  // instead of GeoSpoof staying pinned to whatever exit IP it saw at startup.
+  // Feature-detects the proxy API and no-ops where unavailable (Safari,
+  // Firefox Android). The handler self-gates on `vpnSyncEnabled` at fire time.
+  installProxyWatcher();
+
+  // Install the activity-driven watcher (tab navigation + idle→active). This
+  // covers the VPN classes the proxy watcher can't see — Firefox onRequest
+  // VPNs and OS/desktop VPNs — by re-checking the exit IP on real browser
+  // activity. Both watchers feed the same debounced, rate-limited, IP-diff
+  // gate, so they coalesce rather than double up. Also self-gates on
+  // `vpnSyncEnabled` at check time.
+  installActivityWatcher();
 }
 
 export { initialize };
