@@ -41,7 +41,28 @@ struct RootView: View {
                     Label("Settings", systemImage: "gearshape")
                 }
         }
-        .preferredColorScheme(appearance.colorScheme)
+        .onAppear { applyInterfaceStyle(appearance) }
+        .onChange(of: appearance) { newValue in applyInterfaceStyle(newValue) }
+    }
+}
+
+/// Drives the app's appearance at the window level. `.unspecified` cleanly
+/// reverts to following the system — unlike `preferredColorScheme(nil)`, which
+/// can leave content stuck on the previously forced scheme.
+@MainActor
+private func applyInterfaceStyle(_ mode: AppearanceMode) {
+    let style: UIUserInterfaceStyle
+    switch mode {
+    case .system: style = .unspecified
+    case .light: style = .light
+    case .dark: style = .dark
+    }
+
+    for scene in UIApplication.shared.connectedScenes {
+        guard let windowScene = scene as? UIWindowScene else { continue }
+        for window in windowScene.windows {
+            window.overrideUserInterfaceStyle = style
+        }
     }
 }
 
