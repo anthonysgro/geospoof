@@ -31,7 +31,7 @@ struct SpoofControlPanel: View {
         }
         .groupedFormStyle()
         .tint(.brand)
-        .refreshableWhen(controller.vpnSyncEnabled) { await controller.performVpnSync() }
+        .refreshable { await controller.refreshFromExtensionInteractive() }
         .sheet(isPresented: $showOnboarding) {
             OnboardingView { onboardingCompleted = true; showOnboarding = false }
         }
@@ -256,12 +256,20 @@ private struct LiveMapPreview: View {
     let longitude: Double
     let timezoneID: String?
     @ObservedObject private var shapes = TimezoneShapeStore.shared
+    @State private var camera: MapCameraPosition
+
+    init(latitude: Double, longitude: Double, timezoneID: String?) {
+        self.latitude = latitude
+        self.longitude = longitude
+        self.timezoneID = timezoneID
+        _camera = State(initialValue: .camera(MapCamera(
+            centerCoordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
+            distance: 2_400_000, heading: 0, pitch: 0
+        )))
+    }
 
     private var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
-    }
-    private var camera: MapCameraPosition {
-        .camera(MapCamera(centerCoordinate: coordinate, distance: 2_400_000, heading: 0, pitch: 0))
     }
     private var rings: [[CLLocationCoordinate2D]] {
         guard let timezoneID, shapes.isReady else { return [] }
@@ -269,7 +277,11 @@ private struct LiveMapPreview: View {
     }
 
     var body: some View {
-        Map(initialPosition: camera, interactionModes: []) {
+        // No `.id` here: re-creating the Map on every coordinate change tears
+        // down tiles, the waypoint, and the polygon (a visible flash). Instead we
+        // keep the Map alive and animate the camera to the new location, so the
+        // annotation and timezone mesh update in place.
+        Map(position: $camera, interactionModes: []) {
             ForEach(Array(rings.enumerated()), id: \.offset) { _, ring in
                 MapPolygon(coordinates: ring)
                     .foregroundStyle(Color.mapHighlight.opacity(0.28))
@@ -278,7 +290,14 @@ private struct LiveMapPreview: View {
             Annotation("", coordinate: coordinate, anchor: .bottom) { SpoofMap.pin }
         }
         .mapStyle(.hybrid(elevation: .realistic))
-        .id("\(latitude),\(longitude)")
+        .onChange(of: "\(latitude),\(longitude)") { _, _ in
+            withAnimation(.easeInOut(duration: 0.6)) {
+                camera = .camera(MapCamera(
+                    centerCoordinate: coordinate,
+                    distance: 2_400_000, heading: 0, pitch: 0
+                ))
+            }
+        }
         .onAppear { shapes.preload() }
     }
 }

@@ -156,6 +156,8 @@ struct ExtensionStatusBanner: View {
 
 struct MacSettingsView: View {
     @AppStorage("appearanceMode") private var appearance: AppearanceMode = .system
+    @AppStorage(LogSettingsKey.enabled) private var loggingEnabled = false
+    @AppStorage(LogSettingsKey.level) private var logLevelRaw = AppLogLevel.info.rawValue
 
     var body: some View {
         ScrollView {
@@ -166,6 +168,28 @@ struct MacSettingsView: View {
                 AppearancePickerView(selection: $appearance)
 
                 Text("Sets how this app looks. Doesn’t change websites or the Safari extension.")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+
+                Divider().padding(.vertical, 8)
+
+                Text("Advanced")
+                    .font(.headline)
+
+                Toggle(isOn: $loggingEnabled) {
+                    Label("Diagnostic Logging", systemImage: "ladybug")
+                }
+                if loggingEnabled {
+                    Picker("Log Level", selection: $logLevelRaw) {
+                        ForEach(AppLogLevel.allCases) { level in
+                            Text(level.label).tag(level.rawValue)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .fixedSize()
+                }
+
+                Text("Records diagnostic logs to the system console (open Console.app and filter by the “GeoSpoof” category). Useful when reporting an issue. Errors and warnings are always recorded; the level controls how much detail is added.")
                     .font(.footnote)
                     .foregroundColor(.secondary)
 

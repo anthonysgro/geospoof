@@ -245,12 +245,20 @@ final class TimezoneShapeStore: ObservableObject {
     @discardableResult
     private func ensureLoading() -> Task<TopoJSONTimezoneDecoder?, Never> {
         if let loadTask { return loadTask }
+        Log.data.debug("Timezone boundaries: loading bundled timezones.topo.json")
         let task = Task<TopoJSONTimezoneDecoder?, Never> {
+            let started = Date()
             let loaded = await Task.detached(priority: .utility) {
                 TopoJSONTimezoneDecoder.loadBundled()
             }.value
             self.decoder = loaded
             self.isReady = loaded != nil
+            let ms = Int(Date().timeIntervalSince(started) * 1000)
+            if loaded == nil {
+                Log.data.error("Timezone boundaries: failed to load timezones.topo.json")
+            } else {
+                Log.data.info("Timezone boundaries loaded in \(ms)ms")
+            }
             return loaded
         }
         loadTask = task

@@ -54,9 +54,9 @@
 		C0DE000000000000000000E1 /* cities.json in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D1 /* cities.json */; };
 		C0DE000000000000000000E2 /* timezones.topo.json in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D2 /* timezones.topo.json */; };
 		C0DE000000000000000000E3 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D3 /* PrivacyInfo.xcprivacy */; };
-		C0DE000000000000000000F3 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D3 /* PrivacyInfo.xcprivacy */; };
 		C0DE000000000000000000F1 /* cities.json in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D1 /* cities.json */; };
 		C0DE000000000000000000F2 /* timezones.topo.json in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D2 /* timezones.topo.json */; };
+		C0DE000000000000000000F3 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D3 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -732,7 +732,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "GeoSpoof Extension (iOS)Release.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "iOS (Extension)/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "GeoSpoof Extension";
@@ -767,7 +767,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "GeoSpoof Extension (iOS)Release.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "iOS (Extension)/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "GeoSpoof Extension";
@@ -806,7 +806,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = "GeoSpoof (iOS)Release.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "iOS (App)/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = GeoSpoof;
@@ -849,7 +849,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = "GeoSpoof (iOS)Release.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "iOS (App)/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = GeoSpoof;
@@ -891,7 +891,7 @@
 				CODE_SIGN_ENTITLEMENTS = "GeoSpoof Extension (macOS)Release.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -931,7 +931,7 @@
 				CODE_SIGN_ENTITLEMENTS = "GeoSpoof Extension (macOS)Release.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -973,7 +973,7 @@
 				CODE_SIGN_ENTITLEMENTS = "GeoSpoof (macOS)Release.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1018,7 +1018,7 @@
 				CODE_SIGN_ENTITLEMENTS = "GeoSpoof (macOS)Release.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 16;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
