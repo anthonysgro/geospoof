@@ -7,6 +7,7 @@
 
 import AppKit
 import Combine
+import os
 import SafariServices
 import SwiftUI
 
@@ -87,6 +88,11 @@ struct MacHomeView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
             model.refresh()
+        }
+        .alert("Couldn’t Open Safari Settings", isPresented: $model.openSettingsFailed) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Open Safari, then choose Settings → Extensions to manage GeoSpoof.")
         }
     }
 }
@@ -231,8 +237,14 @@ final class ExtensionStateModel: ObservableObject {
     }
 
     @Published var state: ExtensionState = .unknown
+    @Published var openSettingsFailed = false
 
     private let bundleIdentifier = "com.moonloaf.geospoof.Extension"
+
+    private static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "com.moonloaf.geospoof",
+        category: "ExtensionState"
+    )
 
     private var settingsLocation: String {
         if #available(macOS 13, *) {
@@ -275,8 +287,22 @@ final class ExtensionStateModel: ObservableObject {
     }
 
     func openSafariSettings() {
-        SFSafariApplication.showPreferencesForExtension(withIdentifier: bundleIdentifier) { _ in
+        SFSafariApplication.showPreferencesForExtension(withIdentifier: bundleIdentifier) { error in
             Task { @MainActor in
+                if let error {
+                    // Couldn't open Safari's settings — keep the window open so
+                    // the user isn't left with a vanished app and no Safari, and
+                    // surface manual instructions. (showPreferencesForExtension
+                    // commonly returns SFErrorDomain error 1 for unsigned/dev
+                    // builds even when the extension is installed; signed builds
+                    // resolve it.)
+                    Self.logger.error("Failed to open Safari extension settings: \(error.localizedDescription, privacy: .public)")
+                    self.openSettingsFailed = true
+                    return
+                }
+                // Give Safari a moment to come to the foreground before quitting,
+                // otherwise terminating immediately can cut off its activation.
+                try? await Task.sleep(nanoseconds: 400_000_000)
                 NSApp.terminate(nil)
             }
         }
