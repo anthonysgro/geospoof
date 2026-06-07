@@ -6,6 +6,7 @@
 import type { Favorite, Settings } from "@/shared/types/settings";
 import { DEFAULT_SETTINGS } from "@/shared/types/settings";
 import { createLogger } from "@/shared/utils/debug-logger";
+import { getLastSyncedIp } from "./vpn-sync";
 
 const logger = createLogger("BG");
 
@@ -197,6 +198,44 @@ export async function saveSettings(settings: Settings): Promise<void> {
       logger.error("Failed to save settings:", error);
       throw error;
     }
+  }
+
+  // Push the current region to the native host (Safari only) so the
+  // containing app can display the active spoofed location without needing
+  // to read browser.storage.local directly. Fire-and-forget — a failure
+  // here must never block saving the actual settings.
+  if (__SAFARI__) {
+    void pushRegionToNativeHost(settings);
+  }
+}
+
+/**
+ * Push the current spoofed region to the containing native app via
+ * browser.runtime.sendNativeMessage → SafariWebExtensionHandler →
+ * UserDefaults(suiteName: "group.com.moonloaf.geospoof").
+ *
+ * Called after every successful settings save. Non-throwing.
+ */
+async function pushRegionToNativeHost(settings: Settings): Promise<void> {
+  try {
+    let ip: string | null = null;
+    if (settings.vpnSyncEnabled) {
+      ip = (await getLastSyncedIp()) ?? null;
+    }
+    await browser.runtime.sendNativeMessage("com.moonloaf.geospoof", {
+      type: "REGION_UPDATE",
+      enabled: settings.enabled,
+      locationName: settings.locationName ?? null,
+      location: settings.location ?? null,
+      timezone: settings.timezone ?? null,
+      webrtcProtection: settings.webrtcProtection,
+      vpnSyncEnabled: settings.vpnSyncEnabled,
+      ip,
+    });
+  } catch (error) {
+    // Swallow — native messaging may not be available in all contexts
+    // (e.g., Firefox, Chromium, or Safari without the host app running).
+    logger.debug("pushRegionToNativeHost: native message failed (expected on non-Safari):", error);
   }
 }
 

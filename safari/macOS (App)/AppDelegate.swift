@@ -33,13 +33,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 // MARK: - SwiftUI
 
 struct MacRootView: View {
+    @StateObject private var controller = SpoofController()
     @AppStorage("appearanceMode") private var appearance: AppearanceMode = .system
 
     var body: some View {
         TabView {
-            MacHomeView()
+            MacHomeView(controller: controller)
                 .tabItem {
-                    Label("Home", systemImage: "house")
+                    Label("Home", systemImage: "location.circle")
+                }
+
+            DetailsTab(controller: controller)
+                .tabItem {
+                    Label("Details", systemImage: "list.bullet.rectangle")
                 }
 
             MacSettingsView()
@@ -47,7 +53,7 @@ struct MacRootView: View {
                     Label("Settings", systemImage: "gearshape")
                 }
         }
-        .frame(minWidth: 520, minHeight: 420)
+        .frame(minWidth: 540, minHeight: 600)
         .onAppear { applyAppearance(appearance) }
         .onChange(of: appearance) { newValue in applyAppearance(newValue) }
     }
@@ -65,35 +71,86 @@ private func applyAppearance(_ mode: AppearanceMode) {
     }
 }
 
+// MARK: - Home (native control panel — parity with the extension popup)
+
 struct MacHomeView: View {
+    @ObservedObject var controller: SpoofController
     @StateObject private var model = ExtensionStateModel()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
-        VStack(spacing: 20) {
-            Image("LargeIcon")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 96, height: 96)
-                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        AdaptiveNavigationStack {
+            VStack(spacing: 0) {
+                // Centered app identity header — standard HIG pattern for
+                // macOS utility/preference windows (cf. System Settings panels).
+                VStack(spacing: 6) {
+                    Image("LargeIcon")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 64, height: 64)
+                    Text("GeoSpoof")
+                        .font(.title2.weight(.semibold))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 20)
+                .padding(.bottom, 8)
 
-            Text(model.statusText)
-                .multilineTextAlignment(.center)
-                .foregroundColor(.secondary)
-
-            Button(model.buttonTitle) {
-                model.openSafariSettings()
+                if model.state != .on {
+                    ExtensionStatusBanner(model: model)
+                        .padding([.horizontal, .top])
+                }
+                SpoofControlPanel(controller: controller)
             }
+            .navigationTitle("GeoSpoof")
         }
-        .padding(40)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onAppear {
-            model.refresh()
+        .onAppear { model.refresh() }
+        .onChange(of: scenePhase) { phase in
+            if phase == .active {
+                model.refresh()
+                controller.refreshFromExtension()
+            }
         }
         .alert("Couldn’t Open Safari Settings", isPresented: $model.openSettingsFailed) {
             Button("OK", role: .cancel) {}
         } message: {
             Text("Open Safari, then choose Settings → Extensions to manage GeoSpoof.")
         }
+        .safeAreaInset(edge: .bottom) {
+            Text("You can also control GeoSpoof from the extension icon in Safari's toolbar — feel free to close this window.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+        }
+    }
+}
+
+/// Compact banner shown on macOS when the Safari extension isn't enabled,
+/// guiding the user to turn it on (the extension is what actually applies the
+/// spoof; the app just configures it).
+struct ExtensionStatusBanner: View {
+    @ObservedObject var model: ExtensionStateModel
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "puzzlepiece.extension.fill")
+                .font(.title3)
+                .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(model.state == .off ? "Extension is turned off" : "Enable the GeoSpoof extension")
+                    .font(.subheadline.weight(.semibold))
+                Text(model.statusText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 8)
+            Button("Open Settings…") { model.openSafariSettings() }
+                .glassButtonStyle(prominent: true)
+        }
+        .glassCard()
     }
 }
 
@@ -109,6 +166,12 @@ struct MacSettingsView: View {
                 AppearancePickerView(selection: $appearance)
 
                 Text("Sets how this app looks. Doesn’t change websites or the Safari extension.")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+
+                Divider().padding(.vertical, 8)
+
+                Text("Version \(AppInfo.version)")
                     .font(.footnote)
                     .foregroundColor(.secondary)
             }
@@ -265,14 +328,6 @@ final class ExtensionStateModel: ObservableObject {
         }
     }
 
-    var buttonTitle: String {
-        if #available(macOS 13, *) {
-            return "Quit and Open Safari Settings…"
-        } else {
-            return "Quit and Open Safari Extensions Preferences…"
-        }
-    }
-
     func refresh() {
         SFSafariExtensionManager.getStateOfSafariExtension(withIdentifier: bundleIdentifier) { [weak self] state, error in
             Task { @MainActor in
@@ -300,10 +355,6 @@ final class ExtensionStateModel: ObservableObject {
                     self.openSettingsFailed = true
                     return
                 }
-                // Give Safari a moment to come to the foreground before quitting,
-                // otherwise terminating immediately can cut off its activation.
-                try? await Task.sleep(nanoseconds: 400_000_000)
-                NSApp.terminate(nil)
             }
         }
     }

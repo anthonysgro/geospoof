@@ -18,6 +18,7 @@ import { handleMessage, handleSetLocation } from "./messages";
 import { syncVpnLocation } from "./vpn-sync";
 import { installProxyWatcher } from "./proxy-watcher";
 import { installActivityWatcher } from "./activity-watcher";
+import { adoptPendingSettingsFromApp } from "./app-bridge";
 import {
   installWorkerRequestFilter,
   updateWorkerFilterSettings,
@@ -151,6 +152,12 @@ export { clearAlarmsForTab };
 // --- Initialization ---
 
 async function initialize(): Promise<void> {
+  // Safari only: adopt any location the containing app queued in the shared
+  // App Group first, so a location set in the app takes effect as soon as
+  // Safari launches — no popup interaction needed. Done before loadSettings so
+  // the rest of init broadcasts the adopted state.
+  await adoptPendingSettingsFromApp();
+
   const settings = await loadSettings();
 
   // Restore logger state from persisted settings
@@ -305,6 +312,31 @@ browser.runtime.onInstalled.addListener((details: Runtime.OnInstalledDetailsType
 browser.runtime.onStartup.addListener(() => {
   void initialize();
 });
+
+// Safari only: app → extension pending-location bridge.
+// onStartup is unreliable on iOS Safari, so adopt on background boot AND on
+// tab activation/navigation — i.e. whenever the user is actually browsing.
+// adoptPendingSettingsFromApp() dedups by timestamp, so repeated calls no-op
+// once a change has been applied.
+if (__SAFARI__) {
+  void adoptPendingSettingsFromApp();
+
+  if (browser.tabs?.onActivated) {
+    browser.tabs.onActivated.addListener(() => {
+      void adoptPendingSettingsFromApp();
+    });
+  }
+
+  if (browser.tabs?.onUpdated) {
+    browser.tabs.onUpdated.addListener(
+      (_tabId: number, changeInfo: Tabs.OnUpdatedChangeInfoType) => {
+        if (changeInfo.status === "loading") {
+          void adoptPendingSettingsFromApp();
+        }
+      }
+    );
+  }
+}
 
 browser.alarms.onAlarm.addListener((alarm: Alarms.Alarm) => {
   void onAlarm(alarm);

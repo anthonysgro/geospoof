@@ -27,13 +27,19 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 // MARK: - SwiftUI
 
 struct RootView: View {
+    @StateObject private var controller = SpoofController()
     @AppStorage("appearanceMode") private var appearance: AppearanceMode = .system
 
     var body: some View {
         TabView {
-            HomeView()
+            HomeView(controller: controller)
                 .tabItem {
-                    Label("Home", systemImage: "house")
+                    Label("Home", systemImage: "location.circle")
+                }
+
+            DetailsTab(controller: controller)
+                .tabItem {
+                    Label("Details", systemImage: "list.bullet.rectangle")
                 }
 
             SettingsView()
@@ -91,25 +97,16 @@ enum AppearanceMode: String, CaseIterable, Identifiable {
     }
 }
 
-struct HomeView: View {
-    var body: some View {
-        NavigationView {
-            VStack(spacing: 20) {
-                Image("LargeIcon")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 96, height: 96)
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+// MARK: - Home (native control panel — parity with the extension popup)
 
-                Text("You can turn on GeoSpoof’s Safari extension in Settings.")
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .navigationTitle("GeoSpoof")
+struct HomeView: View {
+    @ObservedObject var controller: SpoofController
+
+    var body: some View {
+        AdaptiveNavigationStack {
+            SpoofControlPanel(controller: controller)
+                .navigationTitle("GeoSpoof")
         }
-        .navigationViewStyle(.stack)
     }
 }
 
@@ -152,6 +149,10 @@ struct SettingsView: View {
                     Text("App Icon")
                 } footer: {
                     Text("Choose GeoSpoof’s Home Screen icon.")
+                }
+
+                Section {
+                    LabeledRow(label: "Version", value: AppInfo.version)
                 }
             }
             .navigationTitle("Settings")

@@ -43,6 +43,20 @@
 		9281AAE92FA50691007C77A7 /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 9281AADD2FA50691007C77A7 /* manifest.json */; };
 		92AABCDF2FB8E9C200B1E5DB /* _locales in Resources */ = {isa = PBXBuildFile; fileRef = 92AABCDE2FB8E9C200B1E5DB /* _locales */; };
 		92AABCE02FB8E9C200B1E5DB /* _locales in Resources */ = {isa = PBXBuildFile; fileRef = 92AABCDE2FB8E9C200B1E5DB /* _locales */; };
+		C0DE000000000000000000B1 /* SpoofModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000A1 /* SpoofModel.swift */; };
+		C0DE000000000000000000B2 /* SpoofControlPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000A2 /* SpoofControlPanel.swift */; };
+		C0DE000000000000000000B3 /* SpoofDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000A3 /* SpoofDetailsView.swift */; };
+		C0DE000000000000000000B4 /* TimezoneShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000A4 /* TimezoneShape.swift */; };
+		C0DE000000000000000000C1 /* SpoofModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000A1 /* SpoofModel.swift */; };
+		C0DE000000000000000000C2 /* SpoofControlPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000A2 /* SpoofControlPanel.swift */; };
+		C0DE000000000000000000C3 /* SpoofDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000A3 /* SpoofDetailsView.swift */; };
+		C0DE000000000000000000C4 /* TimezoneShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000A4 /* TimezoneShape.swift */; };
+		C0DE000000000000000000E1 /* cities.json in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D1 /* cities.json */; };
+		C0DE000000000000000000E2 /* timezones.topo.json in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D2 /* timezones.topo.json */; };
+		C0DE000000000000000000E3 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D3 /* PrivacyInfo.xcprivacy */; };
+		C0DE000000000000000000F3 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D3 /* PrivacyInfo.xcprivacy */; };
+		C0DE000000000000000000F1 /* cities.json in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D1 /* cities.json */; };
+		C0DE000000000000000000F2 /* timezones.topo.json in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D2 /* timezones.topo.json */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -88,6 +102,10 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		923A6B042FD501A800D06B19 /* GeoSpoof (iOS)Release.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "GeoSpoof (iOS)Release.entitlements"; sourceTree = "<group>"; };
+		923A6B052FD501B400D06B19 /* GeoSpoof (macOS)Release.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "GeoSpoof (macOS)Release.entitlements"; sourceTree = "<group>"; };
+		923A6B062FD501C300D06B19 /* GeoSpoof Extension (iOS)Release.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "GeoSpoof Extension (iOS)Release.entitlements"; sourceTree = "<group>"; };
+		923A6B072FD501CD00D06B19 /* GeoSpoof Extension (macOS)Release.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "GeoSpoof Extension (macOS)Release.entitlements"; sourceTree = "<group>"; };
 		9281AA7F2FA50690007C77A7 /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = Base; path = Base.lproj/Main.html; sourceTree = "<group>"; };
 		9281AA802FA50690007C77A7 /* Icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Icon.png; sourceTree = "<group>"; };
 		9281AA812FA50690007C77A7 /* Style.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = Style.css; sourceTree = "<group>"; };
@@ -118,6 +136,13 @@
 		928E357D2FA660B200A67B9A /* GeoSpoof Extension (macOS) copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GeoSpoof Extension (macOS) copy-Info.plist"; sourceTree = "<group>"; };
 		928E35922FA665B700A67B9A /* GeoSpoof (macOS) copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GeoSpoof (macOS) copy-Info.plist"; sourceTree = "<group>"; };
 		92AABCDE2FB8E9C200B1E5DB /* _locales */ = {isa = PBXFileReference; lastKnownFileType = folder; name = _locales; path = ../../dist/_locales; sourceTree = "<group>"; };
+		C0DE000000000000000000A1 /* SpoofModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpoofModel.swift; sourceTree = "<group>"; };
+		C0DE000000000000000000A2 /* SpoofControlPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpoofControlPanel.swift; sourceTree = "<group>"; };
+		C0DE000000000000000000A3 /* SpoofDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpoofDetailsView.swift; sourceTree = "<group>"; };
+		C0DE000000000000000000A4 /* TimezoneShape.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimezoneShape.swift; sourceTree = "<group>"; };
+		C0DE000000000000000000D1 /* cities.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = cities.json; sourceTree = "<group>"; };
+		C0DE000000000000000000D2 /* timezones.topo.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = timezones.topo.json; sourceTree = "<group>"; };
+		C0DE000000000000000000D3 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -155,6 +180,10 @@
 		9281AA772FA50690007C77A7 = {
 			isa = PBXGroup;
 			children = (
+				923A6B072FD501CD00D06B19 /* GeoSpoof Extension (macOS)Release.entitlements */,
+				923A6B062FD501C300D06B19 /* GeoSpoof Extension (iOS)Release.entitlements */,
+				923A6B052FD501B400D06B19 /* GeoSpoof (macOS)Release.entitlements */,
+				923A6B042FD501A800D06B19 /* GeoSpoof (iOS)Release.entitlements */,
 				9281AA7C2FA50690007C77A7 /* Shared (App) */,
 				9281AA852FA50690007C77A7 /* Shared (Extension) */,
 				9281AA8D2FA50690007C77A7 /* iOS (App) */,
@@ -171,6 +200,11 @@
 			isa = PBXGroup;
 			children = (
 				9281AA832FA50690007C77A7 /* ViewController.swift */,
+				C0DE000000000000000000A1 /* SpoofModel.swift */,
+				C0DE000000000000000000A2 /* SpoofControlPanel.swift */,
+				C0DE000000000000000000A3 /* SpoofDetailsView.swift */,
+				C0DE000000000000000000A4 /* TimezoneShape.swift */,
+				C0DE000000000000000000D3 /* PrivacyInfo.xcprivacy */,
 				9281AA842FA50690007C77A7 /* Assets.xcassets */,
 				9281AA7D2FA50690007C77A7 /* Resources */,
 			);
@@ -184,6 +218,8 @@
 				9281AA802FA50690007C77A7 /* Icon.png */,
 				9281AA812FA50690007C77A7 /* Style.css */,
 				9281AA822FA50690007C77A7 /* Script.js */,
+				C0DE000000000000000000D1 /* cities.json */,
+				C0DE000000000000000000D2 /* timezones.topo.json */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -401,6 +437,9 @@
 				9281AAB92FA50690007C77A7 /* Main.html in Resources */,
 				9281AABF2FA50690007C77A7 /* Script.js in Resources */,
 				9281AAC32FA50690007C77A7 /* Assets.xcassets in Resources */,
+				C0DE000000000000000000E1 /* cities.json in Resources */,
+				C0DE000000000000000000E2 /* timezones.topo.json in Resources */,
+				C0DE000000000000000000E3 /* PrivacyInfo.xcprivacy in Resources */,
 				9281AA972FA50690007C77A7 /* Main.storyboard in Resources */,
 				9281AABD2FA50690007C77A7 /* Style.css in Resources */,
 			);
@@ -415,6 +454,9 @@
 				9281AAA32FA50690007C77A7 /* Main.storyboard in Resources */,
 				9281AAC02FA50690007C77A7 /* Script.js in Resources */,
 				9281AAC42FA50690007C77A7 /* Assets.xcassets in Resources */,
+				C0DE000000000000000000F1 /* cities.json in Resources */,
+				C0DE000000000000000000F2 /* timezones.topo.json in Resources */,
+				C0DE000000000000000000F3 /* PrivacyInfo.xcprivacy in Resources */,
 				9281AABA2FA50690007C77A7 /* Main.html in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -476,6 +518,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				9281AAC12FA50690007C77A7 /* ViewController.swift in Sources */,
+				C0DE000000000000000000B1 /* SpoofModel.swift in Sources */,
+				C0DE000000000000000000B2 /* SpoofControlPanel.swift in Sources */,
+				C0DE000000000000000000B3 /* SpoofDetailsView.swift in Sources */,
+				C0DE000000000000000000B4 /* TimezoneShape.swift in Sources */,
 				9281AA8F2FA50690007C77A7 /* AppDelegate.swift in Sources */,
 				9281AA912FA50690007C77A7 /* SceneDelegate.swift in Sources */,
 			);
@@ -486,6 +532,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				9281AAC22FA50690007C77A7 /* ViewController.swift in Sources */,
+				C0DE000000000000000000C1 /* SpoofModel.swift in Sources */,
+				C0DE000000000000000000C2 /* SpoofControlPanel.swift in Sources */,
+				C0DE000000000000000000C3 /* SpoofDetailsView.swift in Sources */,
+				C0DE000000000000000000C4 /* TimezoneShape.swift in Sources */,
 				9281AAA02FA50690007C77A7 /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -680,8 +730,9 @@
 		9281AACA2FA50690007C77A7 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "GeoSpoof Extension (iOS)Release.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 15;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "iOS (Extension)/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "GeoSpoof Extension";
@@ -692,7 +743,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.19.10;
+				MARKETING_VERSION = 1.20.0;
 				OTHER_LDFLAGS = (
 					"-framework",
 					SafariServices,
@@ -714,8 +765,9 @@
 		9281AACB2FA50690007C77A7 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "GeoSpoof Extension (iOS)Release.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 15;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "iOS (Extension)/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "GeoSpoof Extension";
@@ -726,7 +778,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.19.10;
+				MARKETING_VERSION = 1.20.0;
 				OTHER_LDFLAGS = (
 					"-framework",
 					SafariServices,
@@ -752,8 +804,9 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_ENTITLEMENTS = "GeoSpoof (iOS)Release.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 15;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "iOS (App)/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = GeoSpoof;
@@ -767,7 +820,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.19.10;
+				MARKETING_VERSION = 1.20.0;
 				OTHER_LDFLAGS = (
 					"-framework",
 					SafariServices,
@@ -794,8 +847,9 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_ENTITLEMENTS = "GeoSpoof (iOS)Release.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 15;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "iOS (App)/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = GeoSpoof;
@@ -809,7 +863,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.19.10;
+				MARKETING_VERSION = 1.20.0;
 				OTHER_LDFLAGS = (
 					"-framework",
 					SafariServices,
@@ -834,9 +888,10 @@
 		9281AAD12FA50690007C77A7 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "GeoSpoof Extension (macOS)Release.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 15;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -851,13 +906,14 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.19.10;
+				MARKETING_VERSION = 1.20.0;
 				OTHER_LDFLAGS = (
 					"-framework",
 					SafariServices,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.moonloaf.geospoof.Extension;
 				PRODUCT_NAME = "GeoSpoof Extension";
+				REGISTER_APP_GROUPS = YES;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -872,9 +928,10 @@
 		9281AAD22FA50690007C77A7 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "GeoSpoof Extension (macOS)Release.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 15;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -889,13 +946,14 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.19.10;
+				MARKETING_VERSION = 1.20.0;
 				OTHER_LDFLAGS = (
 					"-framework",
 					SafariServices,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.moonloaf.geospoof.Extension;
 				PRODUCT_NAME = "GeoSpoof Extension";
+				REGISTER_APP_GROUPS = YES;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -912,9 +970,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "GeoSpoof (macOS)Release.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 15;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -930,7 +989,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.19.10;
+				MARKETING_VERSION = 1.20.0;
 				OTHER_LDFLAGS = (
 					"-framework",
 					SafariServices,
@@ -956,9 +1015,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "GeoSpoof (macOS)Release.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 15;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -974,7 +1034,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.19.10;
+				MARKETING_VERSION = 1.20.0;
 				OTHER_LDFLAGS = (
 					"-framework",
 					SafariServices,
