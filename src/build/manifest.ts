@@ -171,6 +171,12 @@ export function generateManifest(target: BrowserTarget, version: string): Record
     const safariPermissions = (shared.permissions as string[]).filter(
       (p) => p !== "privacy" && p !== "proxy" && p !== "idle"
     );
+    // nativeMessaging enables browser.runtime.sendNativeMessage →
+    // SafariWebExtensionHandler, used to push the current region to the
+    // containing app via the shared App Group UserDefaults suite.
+    if (!safariPermissions.includes("nativeMessaging")) {
+      safariPermissions.push("nativeMessaging");
+    }
     const safariHostPermissions = [
       ...(shared.host_permissions as string[]),
       "https://api.ipify.org/*",

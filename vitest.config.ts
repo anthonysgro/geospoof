@@ -2,6 +2,13 @@ import { defineConfig } from "vitest/config";
 import { resolve } from "path";
 
 export default defineConfig({
+  // Build-time flags injected by Vite's `define` in production builds. Vitest
+  // doesn't run that plugin, so define them here (default to the Firefox build)
+  // — otherwise importing the background entry throws on top-level `__SAFARI__`.
+  define: {
+    __SAFARI__: "false",
+    __CHROMIUM__: "false",
+  },
   test: {
     globals: true,
     environment: "jsdom",

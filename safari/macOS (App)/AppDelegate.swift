@@ -7,6 +7,7 @@
 
 import AppKit
 import Combine
+import os
 import SafariServices
 import SwiftUI
 
@@ -32,28 +33,258 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 // MARK: - SwiftUI
 
 struct MacRootView: View {
-    @StateObject private var model = ExtensionStateModel()
+    @StateObject private var controller = SpoofController()
+    @AppStorage("appearanceMode") private var appearance: AppearanceMode = .system
 
     var body: some View {
-        VStack(spacing: 20) {
-            Image("LargeIcon")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 96, height: 96)
-                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        TabView {
+            MacHomeView(controller: controller)
+                .tabItem {
+                    Label("Home", systemImage: "location.circle")
+                }
 
-            Text(model.statusText)
-                .multilineTextAlignment(.center)
-                .foregroundColor(.secondary)
+            DetailsTab(controller: controller)
+                .tabItem {
+                    Label("Details", systemImage: "list.bullet.rectangle")
+                }
 
-            Button(model.buttonTitle) {
-                model.openSafariSettings()
+            MacSettingsView()
+                .tabItem {
+                    Label("Settings", systemImage: "gearshape")
+                }
+        }
+        .frame(minWidth: 540, minHeight: 600)
+        .onAppear { applyAppearance(appearance) }
+        .onChange(of: appearance) { newValue in applyAppearance(newValue) }
+    }
+}
+
+/// Drives the app's appearance at the `NSApplication` level. `nil` cleanly
+/// reverts to following the system — unlike `preferredColorScheme(nil)`, which
+/// can leave content stuck on the previously forced scheme.
+@MainActor
+private func applyAppearance(_ mode: AppearanceMode) {
+    switch mode {
+    case .system: NSApp.appearance = nil
+    case .light: NSApp.appearance = NSAppearance(named: .aqua)
+    case .dark: NSApp.appearance = NSAppearance(named: .darkAqua)
+    }
+}
+
+// MARK: - Home (native control panel — parity with the extension popup)
+
+struct MacHomeView: View {
+    @ObservedObject var controller: SpoofController
+    @StateObject private var model = ExtensionStateModel()
+    @Environment(\.scenePhase) private var scenePhase
+
+    var body: some View {
+        AdaptiveNavigationStack {
+            VStack(spacing: 0) {
+                // Centered app identity header — standard HIG pattern for
+                // macOS utility/preference windows (cf. System Settings panels).
+                VStack(spacing: 6) {
+                    Image("LargeIcon")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 64, height: 64)
+                    Text("GeoSpoof")
+                        .font(.title2.weight(.semibold))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 20)
+                .padding(.bottom, 8)
+
+                if model.state != .on {
+                    ExtensionStatusBanner(model: model)
+                        .padding([.horizontal, .top])
+                }
+                SpoofControlPanel(controller: controller)
+            }
+            .navigationTitle("GeoSpoof")
+        }
+        .onAppear { model.refresh() }
+        .onChange(of: scenePhase) { phase in
+            if phase == .active {
+                model.refresh()
+                controller.refreshFromExtension()
             }
         }
-        .padding(40)
-        .frame(minWidth: 420, minHeight: 300)
-        .onAppear {
-            model.refresh()
+        .alert("Couldn’t Open Safari Settings", isPresented: $model.openSettingsFailed) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Open Safari, then choose Settings → Extensions to manage GeoSpoof.")
+        }
+        .safeAreaInset(edge: .bottom) {
+            Text("You can also control GeoSpoof from the extension icon in Safari's toolbar — feel free to close this window.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+        }
+    }
+}
+
+/// Compact banner shown on macOS when the Safari extension isn't enabled,
+/// guiding the user to turn it on (the extension is what actually applies the
+/// spoof; the app just configures it).
+struct ExtensionStatusBanner: View {
+    @ObservedObject var model: ExtensionStateModel
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "puzzlepiece.extension.fill")
+                .font(.title3)
+                .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(model.state == .off ? "Extension is turned off" : "Enable the GeoSpoof extension")
+                    .font(.subheadline.weight(.semibold))
+                Text(model.statusText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 8)
+            Button("Open Settings…") { model.openSafariSettings() }
+                .glassButtonStyle(prominent: true)
+        }
+        .glassCard()
+    }
+}
+
+struct MacSettingsView: View {
+    @AppStorage("appearanceMode") private var appearance: AppearanceMode = .system
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Appearance")
+                    .font(.headline)
+
+                AppearancePickerView(selection: $appearance)
+
+                Text("Sets how this app looks. Doesn’t change websites or the Safari extension.")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+
+                Divider().padding(.vertical, 8)
+
+                Text("Version \(AppInfo.version)")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            }
+            .padding(24)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
+struct AppearancePickerView: View {
+    @Binding var selection: AppearanceMode
+
+    private let columns = [GridItem(.adaptive(minimum: 88), spacing: 20)]
+
+    var body: some View {
+        LazyVGrid(columns: columns, alignment: .leading, spacing: 24) {
+            ForEach(AppearanceMode.allCases) { mode in
+                cell(for: mode)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func cell(for mode: AppearanceMode) -> some View {
+        let isSelected = selection == mode
+
+        Button {
+            selection = mode
+        } label: {
+            VStack(spacing: 8) {
+                ZStack(alignment: .topTrailing) {
+                    swatch(for: mode)
+                        .frame(width: 72, height: 72)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .strokeBorder(
+                                    isSelected ? Color.accentColor : Color.primary.opacity(0.12),
+                                    lineWidth: isSelected ? 3 : 1
+                                )
+                        )
+
+                    if isSelected {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.body.weight(.bold))
+                            .symbolRenderingMode(.palette)
+                            .foregroundStyle(.white, Color.accentColor)
+                            .padding(4)
+                    }
+                }
+
+                Text(mode.displayName)
+                    .font(.caption)
+                    .foregroundColor(isSelected ? Color.accentColor : .secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(mode.displayName)
+        .accessibilityHint(isSelected ? "Selected" : "Tap to apply")
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
+
+    /// A visual preview of each appearance: white for Light, near-black for
+    /// Dark, and a split for System.
+    @ViewBuilder
+    private func swatch(for mode: AppearanceMode) -> some View {
+        switch mode {
+        case .light:
+            Color.white.overlay(
+                Image(systemName: "sun.max.fill")
+                    .font(.title2)
+                    .foregroundColor(.orange)
+            )
+        case .dark:
+            Color(white: 0.11).overlay(
+                Image(systemName: "moon.fill")
+                    .font(.title2)
+                    .foregroundColor(.yellow)
+            )
+        case .system:
+            HStack(spacing: 0) {
+                Color.white
+                Color(white: 0.11)
+            }
+        }
+    }
+}
+
+enum AppearanceMode: String, CaseIterable, Identifiable {
+    case system
+    case light
+    case dark
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .system: return "System"
+        case .light: return "Light"
+        case .dark: return "Dark"
+        }
+    }
+
+    /// `nil` follows the system setting; otherwise forces the scheme.
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: return nil
+        case .light: return .light
+        case .dark: return .dark
         }
     }
 }
@@ -69,8 +300,14 @@ final class ExtensionStateModel: ObservableObject {
     }
 
     @Published var state: ExtensionState = .unknown
+    @Published var openSettingsFailed = false
 
     private let bundleIdentifier = "com.moonloaf.geospoof.Extension"
+
+    private static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "com.moonloaf.geospoof",
+        category: "ExtensionState"
+    )
 
     private var settingsLocation: String {
         if #available(macOS 13, *) {
@@ -91,14 +328,6 @@ final class ExtensionStateModel: ObservableObject {
         }
     }
 
-    var buttonTitle: String {
-        if #available(macOS 13, *) {
-            return "Quit and Open Safari Settings…"
-        } else {
-            return "Quit and Open Safari Extensions Preferences…"
-        }
-    }
-
     func refresh() {
         SFSafariExtensionManager.getStateOfSafariExtension(withIdentifier: bundleIdentifier) { [weak self] state, error in
             Task { @MainActor in
@@ -113,9 +342,19 @@ final class ExtensionStateModel: ObservableObject {
     }
 
     func openSafariSettings() {
-        SFSafariApplication.showPreferencesForExtension(withIdentifier: bundleIdentifier) { _ in
+        SFSafariApplication.showPreferencesForExtension(withIdentifier: bundleIdentifier) { error in
             Task { @MainActor in
-                NSApp.terminate(nil)
+                if let error {
+                    // Couldn't open Safari's settings — keep the window open so
+                    // the user isn't left with a vanished app and no Safari, and
+                    // surface manual instructions. (showPreferencesForExtension
+                    // commonly returns SFErrorDomain error 1 for unsigned/dev
+                    // builds even when the extension is installed; signed builds
+                    // resolve it.)
+                    Self.logger.error("Failed to open Safari extension settings: \(error.localizedDescription, privacy: .public)")
+                    self.openSettingsFailed = true
+                    return
+                }
             }
         }
     }
