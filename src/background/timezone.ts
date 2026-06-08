@@ -18,9 +18,15 @@ const logger = createLogger("BG");
 // (using @latest risks a version mismatch between the two files if a new release
 // is published between when each CDN cache entry was populated).
 const GEO_TZ_VERSION = "8.1.5";
+// Use timezones.geojson (not timezones-1970.geojson) — the 1970 variant unions
+// zones with identical behavior since 1970 and uses the highest-population
+// identifier, which means coordinates near water bodies or zone boundaries
+// (e.g. coastal Chicago) can land in an Etc/GMT±N zone with no DST instead of
+// the correct named zone like America/Chicago. The full timezones.geojson has
+// complete land coverage and always returns the proper IANA identifier.
 const _geoTz = geoTzInit(
-  `https://cdn.jsdelivr.net/npm/geo-tz@${GEO_TZ_VERSION}/data/timezones-1970.geojson.geo.dat`,
-  `https://cdn.jsdelivr.net/npm/geo-tz@${GEO_TZ_VERSION}/data/timezones-1970.geojson.index.json`
+  `https://cdn.jsdelivr.net/npm/geo-tz@${GEO_TZ_VERSION}/data/timezones.geojson.geo.dat`,
+  `https://cdn.jsdelivr.net/npm/geo-tz@${GEO_TZ_VERSION}/data/timezones.geojson.index.json`
 );
 
 /**
