@@ -167,6 +167,20 @@ jobs:
           echo "$ASC_API_KEY_BASE64" | base64 --decode > "$HOME/.appstoreconnect/private_keys/AuthKey_UZBN452J8D.p8"
           chmod 600 "$HOME/.appstoreconnect/private_keys/AuthKey_UZBN452J8D.p8"
 
+      # ── Install Developer ID provisioning profiles ──
+      # Both macOS targets use App Groups, which requires an explicit provisioning
+      # profile even when signing manually with a Developer ID cert.
+      # Profiles must be Developer ID Application type with App Groups enabled.
+      - name: Install Developer ID provisioning profiles
+        env:
+          PROFILE_APP_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_PROFILE_APP }}
+          PROFILE_EXT_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_PROFILE_EXT }}
+        run: |
+          PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILES_DIR"
+          echo "$PROFILE_APP_BASE64" | base64 --decode > "$PROFILES_DIR/geospoof_macos_app.provisionprofile"
+          echo "$PROFILE_EXT_BASE64" | base64 --decode > "$PROFILES_DIR/geospoof_macos_ext.provisionprofile"
+
       - name: Build, notarize, and package DMG
         working-directory: safari
         run: bundle exec fastlane mac developer_id
