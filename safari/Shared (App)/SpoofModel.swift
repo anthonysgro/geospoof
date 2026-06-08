@@ -419,11 +419,21 @@ final class SpoofController: ObservableObject {
     private var lastLocalChangeAt: TimeInterval = 0
 
     private var foregroundObserver: NSObjectProtocol?
+    private var backgroundObserver: NSObjectProtocol?
     /// NWPathMonitor + dedicated queue for OS-level VPN change detection.
     private var pathMonitor: NWPathMonitor?
     private var pathMonitorQueue: DispatchQueue?
     /// Cancels any in-flight debounce + resync task when a newer change arrives.
     private var vpnResyncTask: Task<Void, Never>?
+    /// Periodic exit-IP check while VPN sync is on. Catches same-tunnel VPN
+    /// server switches, which fire no NWPathMonitor event. On macOS it runs
+    /// continuously (the app keeps running when not frontmost); on iOS it's
+    /// paused while the app is backgrounded (the OS suspends it anyway).
+    private var heartbeatTask: Task<Void, Never>?
+    /// Heartbeat cadence. STUN is a single cheap UDP round-trip with no
+    /// rate-limit risk, so we poll briskly for a near-instant feel. A tick with
+    /// no exit-IP change costs one UDP packet (the IP-diff gate stops there).
+    private static let heartbeatInterval: Double = 5
 
     init() {
         Log.app.info("SpoofController init")
@@ -432,6 +442,7 @@ final class SpoofController: ObservableObject {
         CityStore.shared.preload()
         startForegroundObserver()
         startNetworkWatcher()
+        startHeartbeat()
     }
 
     /// Refresh from the extension whenever the app returns to the foreground
@@ -443,12 +454,12 @@ final class SpoofController: ObservableObject {
     /// mid-initialization (a Swift 6 concurrency error).
     private func startForegroundObserver() {
         #if os(iOS)
-        let name = UIApplication.didBecomeActiveNotification
+        let activeName = UIApplication.didBecomeActiveNotification
         #else
-        let name = NSApplication.didBecomeActiveNotification
+        let activeName = NSApplication.didBecomeActiveNotification
         #endif
         foregroundObserver = NotificationCenter.default.addObserver(
-            forName: name,
+            forName: activeName,
             object: nil,
             queue: .main
         ) { [weak self] _ in
@@ -460,8 +471,44 @@ final class SpoofController: ObservableObject {
                 // fresh sample is authoritative — no need to poll. A no-op when
                 // the exit IP hasn't moved.
                 self.scheduleVpnResync(initialDelay: 0, pollFor: 0)
+                self.startHeartbeat()
             }
         }
+        // iOS suspends background apps, so pause the heartbeat when backgrounded
+        // and resume on foreground. macOS keeps running when not frontmost, so
+        // the heartbeat there runs continuously (started in init) — that's what
+        // makes a VPN switch get picked up while the app isn't the active app.
+        #if os(iOS)
+        backgroundObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.stopHeartbeat() }
+        }
+        #endif
+    }
+
+    /// Start the foreground heartbeat: a light STUN exit-IP check every
+    /// `heartbeatInterval` seconds while VPN sync is on. The IP-diff gate makes
+    /// each tick a no-op unless the exit actually moved, so this is the thing
+    /// that picks up same-tunnel server switches without any user action.
+    private func startHeartbeat() {
+        heartbeatTask?.cancel()
+        heartbeatTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: UInt64(Self.heartbeatInterval * 1_000_000_000))
+                guard !Task.isCancelled else { return }
+                guard let self, self.vpnSyncEnabled else { continue }
+                Log.vpn.trace("Heartbeat tick")
+                self.scheduleVpnResync(initialDelay: 0, pollFor: 0)
+            }
+        }
+    }
+
+    private func stopHeartbeat() {
+        heartbeatTask?.cancel()
+        heartbeatTask = nil
     }
 
     /// Watches for OS-level network path changes (VPN connect/switch/disconnect)
@@ -479,8 +526,11 @@ final class SpoofController: ObservableObject {
             Task { @MainActor [weak self] in
                 Log.vpn.debug("Network path changed (status: \(String(describing: path.status)))")
                 // A path change may have a transition still settling, so poll
-                // briefly for the new exit IP to appear.
-                self?.scheduleVpnResync(initialDelay: 1.0, pollFor: Self.pathChangePollWindow)
+                // briefly for the new exit IP to appear. Short initial delay —
+                // by the time the path reports "satisfied" the new exit is
+                // usually already live, and the confirm-steady step guards the
+                // kill-switch flash.
+                self?.scheduleVpnResync(initialDelay: 0.4, pollFor: Self.pathChangePollWindow)
             }
         }
         monitor.start(queue: queue)
@@ -507,8 +557,9 @@ final class SpoofController: ObservableObject {
     }
 
     /// Confirm-steady delay: a switch can briefly surface the real ISP IP, so a
-    /// changed IP must hold across this window before we commit.
-    private static let confirmSteadyDelay: Double = 1.5
+    /// changed IP must hold across this window before we commit. Kept short — the
+    /// real-IP flash is sub-second — so syncs stay snappy.
+    private static let confirmSteadyDelay: Double = 1.0
     /// How long the path-change trigger keeps re-sampling for the new exit IP.
     private static let pathChangePollWindow: Double = 12
     /// Backoff bounds between IP polls.
@@ -596,8 +647,12 @@ final class SpoofController: ObservableObject {
         if let foregroundObserver {
             NotificationCenter.default.removeObserver(foregroundObserver)
         }
+        if let backgroundObserver {
+            NotificationCenter.default.removeObserver(backgroundObserver)
+        }
         pathMonitor?.cancel()
         vpnResyncTask?.cancel()
+        heartbeatTask?.cancel()
     }
 
     // MARK: Derived
@@ -1038,11 +1093,142 @@ extension Color {
     static let brand = Color(red: 0x4C / 255, green: 0xAF / 255, blue: 0x50 / 255)
     /// Brand green pressed/hover (`--brand-hover: #45a049`).
     static let brandHover = Color(red: 0x45 / 255, green: 0xA0 / 255, blue: 0x49 / 255)
+    /// Deeper brand green for the macOS header/sidebar top — rich and on-brand,
+    /// but dark enough that the bright macOS traffic-light buttons (especially
+    /// the green fullscreen dot) stay clearly legible against it.
+    static let brandDeep = Color(red: 0x2E / 255, green: 0x7D / 255, blue: 0x32 / 255)
     /// Favorite-star amber (`--accent: #f5a623`).
     static let starAccent = Color(red: 0xF5 / 255, green: 0xA6 / 255, blue: 0x23 / 255)
     /// Timezone-overlay color — a vivid orange that reads clearly over the
     /// green/blue satellite earth (the brand green blends in).
     static let mapHighlight = Color(red: 1.0, green: 0.45, blue: 0.0)
+    /// Warm off-white / nude — a soft, charming neutral used (at low opacity)
+    /// alongside the brand green in the menu bar location header.
+    static let nude = Color(red: 0.96, green: 0.93, blue: 0.87)
+}
+
+// MARK: - STUN client (public IP via UDP)
+
+/// Minimal STUN (RFC 5389) client that discovers the device's public exit IP
+/// with a single UDP binding request. Used as the primary IP-detection method
+/// on native apps: STUN servers (Google, Cloudflare) are built for hyperscale
+/// and don't rate-limit, so a shared VPN exit IP can't get users blocked.
+enum StunClient {
+    struct Server: Sendable { let host: String; let port: UInt16 }
+
+    /// Tried in order; first to answer wins. Cloudflare leads (privacy-conscious
+    /// users reasonably prefer not to send signals to Google STUN). Google is
+    /// kept as a last-resort fallback given its massive reliability.
+    nonisolated static let servers: [Server] = [
+        Server(host: "stun.cloudflare.com", port: 3478),
+        Server(host: "stun.l.google.com", port: 19302),
+    ]
+
+    enum StunError: Error { case timeout, connection, parse, allFailed }
+
+    /// Resolve the public IP, trying each server until one answers.
+    nonisolated static func publicIP() async throws -> String {
+        var lastError: Error = StunError.allFailed
+        for server in servers {
+            do { return try await query(server) } catch { lastError = error }
+        }
+        throw lastError
+    }
+
+    /// Single binding request to one server.
+    nonisolated private static func query(_ server: Server, timeoutSeconds: Double = 2.5) async throws -> String {
+        // 20-byte binding request: type(0x0001) + length(0) + magic cookie + 96-bit txid.
+        let cookie: [UInt8] = [0x21, 0x12, 0xA4, 0x42]
+        var txidBuilder = [UInt8]()
+        for _ in 0..<12 { txidBuilder.append(UInt8.random(in: 0...255)) }
+        let txid = txidBuilder
+        var requestBuilder = Data([0x00, 0x01, 0x00, 0x00])
+        requestBuilder.append(contentsOf: cookie)
+        requestBuilder.append(contentsOf: txid)
+        let request = requestBuilder
+
+        guard let port = NWEndpoint.Port(rawValue: server.port) else { throw StunError.connection }
+        let connection = NWConnection(host: NWEndpoint.Host(server.host), port: port, using: .udp)
+        let once = ResumeOnce()
+
+        return try await withCheckedThrowingContinuation { (cont: CheckedContinuation<String, Error>) in
+            DispatchQueue.global().asyncAfter(deadline: .now() + timeoutSeconds) {
+                if once.claim() { connection.cancel(); cont.resume(throwing: StunError.timeout) }
+            }
+
+            connection.stateUpdateHandler = { state in
+                switch state {
+                case .ready:
+                    connection.send(content: request, completion: .contentProcessed { _ in })
+                    connection.receiveMessage { data, _, _, _ in
+                        guard let data, let ip = parseMappedAddress(data, txid: txid) else {
+                            if once.claim() { connection.cancel(); cont.resume(throwing: StunError.parse) }
+                            return
+                        }
+                        if once.claim() { connection.cancel(); cont.resume(returning: ip) }
+                    }
+                case .failed, .cancelled:
+                    if once.claim() { connection.cancel(); cont.resume(throwing: StunError.connection) }
+                default:
+                    break
+                }
+            }
+            connection.start(queue: DispatchQueue.global(qos: .userInitiated))
+        }
+    }
+
+    /// Parse XOR-MAPPED-ADDRESS (0x0020) or MAPPED-ADDRESS (0x0001) from a STUN
+    /// success response. Returns a dotted IPv4 or colon IPv6 string.
+    nonisolated private static func parseMappedAddress(_ data: Data, txid: [UInt8]) -> String? {
+        let b = [UInt8](data)
+        // Header is 20 bytes: type(2) length(2) cookie(4) txid(12).
+        guard b.count >= 20 else { return nil }
+        let cookie: [UInt8] = [0x21, 0x12, 0xA4, 0x42]
+
+        var offset = 20
+        while offset + 4 <= b.count {
+            let type = (UInt16(b[offset]) << 8) | UInt16(b[offset + 1])
+            let len = Int((UInt16(b[offset + 2]) << 8) | UInt16(b[offset + 3]))
+            let valueStart = offset + 4
+            guard valueStart + len <= b.count else { break }
+
+            if type == 0x0020 || type == 0x0001, len >= 8 {
+                let xor = (type == 0x0020)
+                let family = b[valueStart + 1]
+                if family == 0x01 { // IPv4
+                    var addr = Array(b[(valueStart + 4)..<(valueStart + 8)])
+                    if xor { for i in 0..<4 { addr[i] ^= cookie[i] } }
+                    return addr.map(String.init).joined(separator: ".")
+                } else if family == 0x02, len >= 20 { // IPv6
+                    var addr = Array(b[(valueStart + 4)..<(valueStart + 20)])
+                    if xor {
+                        let key = cookie + txid // 16-byte XOR key
+                        for i in 0..<16 { addr[i] ^= key[i] }
+                    }
+                    var groups: [String] = []
+                    var i = 0
+                    while i < 16 { groups.append(String(format: "%02x%02x", addr[i], addr[i + 1])); i += 2 }
+                    return groups.joined(separator: ":")
+                }
+            }
+            // Advance, honoring 4-byte attribute padding.
+            offset = valueStart + len + ((len % 4 == 0) ? 0 : (4 - len % 4))
+        }
+        return nil
+    }
+}
+
+/// One-shot guard so a continuation is resumed exactly once across the several
+/// callbacks/timeout that race to finish a STUN query.
+private final class ResumeOnce: @unchecked Sendable {
+    private let lock = NSLock()
+    nonisolated(unsafe) private var done = false
+    nonisolated func claim() -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        if done { return false }
+        done = true
+        return true
+    }
 }
 
 // MARK: - VPN lookup (app-side IP + geolocation)
@@ -1052,7 +1238,7 @@ extension Color {
 /// it sees matches the browser's exit IP — letting "Sync with VPN" resolve
 /// instantly in the app instead of waiting for the extension to run.
 enum VpnLookup {
-    struct Result {
+    struct Result: Sendable {
         let latitude: Double
         let longitude: Double
         let city: String
@@ -1060,6 +1246,8 @@ enum VpnLookup {
         let ip: String
         /// IANA timezone identifier reported by the geo provider (may be empty).
         let timezoneID: String
+        /// Which provider produced this result (for logging).
+        var source: String = ""
     }
 
     enum LookupError: Error { case ip, geo }
@@ -1071,6 +1259,12 @@ enum VpnLookup {
         let config = URLSessionConfiguration.ephemeral
         config.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
         config.urlCache = nil
+        // Fail fast during a VPN switch: the tunnel teardown leaves dead sockets
+        // that would otherwise stall on the default 60s timeout. A short timeout
+        // lets the poll loop retry against the recovered tunnel instead of hanging.
+        config.timeoutIntervalForRequest = 6
+        config.timeoutIntervalForResource = 10
+        config.waitsForConnectivity = false
         return URLSession(configuration: config)
     }()
 
@@ -1082,6 +1276,21 @@ enum VpnLookup {
     }
 
     static func detectPublicIP() async throws -> String {
+        // STUN first: a single UDP round-trip to a hyperscale STUN server
+        // (Google / Cloudflare) returns our public exit IP. These servers are
+        // built for massive volume and don't rate-limit, so a shared VPN exit IP
+        // can't get our users blocked the way a small HTTP IP-echo service might.
+        if let ip = try? await StunClient.publicIP() {
+            Log.vpn.trace("STUN → \(ip)")
+            return ip
+        }
+        Log.vpn.debug("STUN failed; falling back to HTTP IP echo")
+        return try await detectPublicIPViaHTTP()
+    }
+
+    /// HTTP fallback for public-IP detection (used only when STUN is blocked,
+    /// e.g. a VPN that drops UDP).
+    private static func detectPublicIPViaHTTP() async throws -> String {
         let url = URL(string: "https://api.ipify.org?format=json")!
         let (data, response) = try await session.data(for: noCacheRequest(url))
         guard (response as? HTTPURLResponse)?.statusCode == 200,
@@ -1095,23 +1304,148 @@ enum VpnLookup {
     }
 
     static func geolocate(_ ip: String) async throws -> Result {
+        // geojs is the most accurate/consistent of the providers (and the
+        // extension's designated primary), so give it a head start: the
+        // fallbacks only fire if geojs hasn't already won after `headStart`.
+        // First valid result wins; the rest are cancelled. This keeps results
+        // consistent (and aligned with the extension) while still failing over
+        // to the other networks (Cloudflare vs Google Cloud) if geojs is down.
+        let headStart: UInt64 = 900_000_000 // 0.9s
+        return try await withThrowingTaskGroup(of: Result?.self) { group in
+            group.addTask { try? await geolocateGeoJs(ip) }
+            group.addTask {
+                try? await Task.sleep(nanoseconds: headStart)
+                if Task.isCancelled { return nil }
+                return try? await geolocateFreeIpApi(ip)
+            }
+            group.addTask {
+                try? await Task.sleep(nanoseconds: headStart)
+                if Task.isCancelled { return nil }
+                return try? await geolocateReallyFreeGeoIp(ip)
+            }
+            group.addTask {
+                try? await Task.sleep(nanoseconds: headStart)
+                if Task.isCancelled { return nil }
+                return try? await geolocateIpInfo(ip)
+            }
+
+            for try await result in group {
+                if let result {
+                    group.cancelAll()
+                    Log.vpn.info("[geo] winner \(result.source): \(result.city.isEmpty ? "?" : result.city), \(result.country) (\(result.latitude), \(result.longitude)) tz=\(result.timezoneID.isEmpty ? "?" : result.timezoneID)")
+                    return result
+                }
+            }
+            Log.vpn.error("All geolocation providers failed for \(ip)")
+            throw LookupError.geo
+        }
+    }
+
+    /// Log a provider's result (so the parallel responses can be compared in the
+    /// console) and pass it through.
+    private static func logResult(_ r: Result) -> Result {
+        Log.vpn.debug("[geo] \(r.source): \(r.city.isEmpty ? "?" : r.city), \(r.country) (\(r.latitude), \(r.longitude)) tz=\(r.timezoneID.isEmpty ? "?" : r.timezoneID)")
+        return r
+    }
+
+    // MARK: Individual providers
+
+    /// geojs.io — primary. Returns lat/lng as strings; includes IANA timezone.
+    private static func geolocateGeoJs(_ ip: String) async throws -> Result {
         let url = URL(string: "https://get.geojs.io/v1/ip/geo/\(ip).json")!
         let (data, response) = try await session.data(for: noCacheRequest(url))
         guard (response as? HTTPURLResponse)?.statusCode == 200,
               let o = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let lat = Double((o["latitude"] as? String) ?? ""),
-              let lon = Double((o["longitude"] as? String) ?? "") else {
-            Log.vpn.error("geojs: failed to geolocate \(ip) (status \((response as? HTTPURLResponse)?.statusCode ?? -1))")
+              let lon = Double((o["longitude"] as? String) ?? ""),
+              isValidCoord(lat, lon) else {
             throw LookupError.geo
         }
-        return Result(
-            latitude: lat,
-            longitude: lon,
+        return logResult(Result(
+            latitude: lat, longitude: lon,
             city: o["city"] as? String ?? "",
             country: o["country"] as? String ?? "",
             ip: o["ip"] as? String ?? ip,
-            timezoneID: o["timezone"] as? String ?? ""
-        )
+            timezoneID: o["timezone"] as? String ?? "",
+            source: "geojs"
+        ))
+    }
+
+    /// freeipapi.com — fallback #1. Numeric lat/lng; no timezone field used.
+    private static func geolocateFreeIpApi(_ ip: String) async throws -> Result {
+        let url = URL(string: "https://free.freeipapi.com/api/json/\(ip)")!
+        let (data, response) = try await session.data(for: noCacheRequest(url))
+        guard (response as? HTTPURLResponse)?.statusCode == 200,
+              let o = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let lat = numeric(o["latitude"]), let lon = numeric(o["longitude"]),
+              isValidCoord(lat, lon) else {
+            throw LookupError.geo
+        }
+        return logResult(Result(
+            latitude: lat, longitude: lon,
+            city: o["cityName"] as? String ?? "",
+            country: o["countryName"] as? String ?? "",
+            ip: o["ipAddress"] as? String ?? ip,
+            timezoneID: "",
+            source: "freeipapi"
+        ))
+    }
+
+    /// reallyfreegeoip.org — fallback #2. Numeric lat/lng.
+    private static func geolocateReallyFreeGeoIp(_ ip: String) async throws -> Result {
+        let url = URL(string: "https://reallyfreegeoip.org/json/\(ip)")!
+        let (data, response) = try await session.data(for: noCacheRequest(url))
+        guard (response as? HTTPURLResponse)?.statusCode == 200,
+              let o = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let lat = numeric(o["latitude"]), let lon = numeric(o["longitude"]),
+              isValidCoord(lat, lon) else {
+            throw LookupError.geo
+        }
+        return logResult(Result(
+            latitude: lat, longitude: lon,
+            city: o["city"] as? String ?? "",
+            country: o["country_name"] as? String ?? "",
+            ip: o["ip"] as? String ?? ip,
+            timezoneID: o["time_zone"] as? String ?? "",
+            source: "reallyfreegeoip"
+        ))
+    }
+
+    /// ipinfo.io — fallback #3. Google Cloud network (different from the
+    /// Cloudflare-hosted others). `loc` is a "lat,lng" string.
+    private static func geolocateIpInfo(_ ip: String) async throws -> Result {
+        let url = URL(string: "https://ipinfo.io/\(ip)/json")!
+        let (data, response) = try await session.data(for: noCacheRequest(url))
+        guard (response as? HTTPURLResponse)?.statusCode == 200,
+              let o = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let loc = o["loc"] as? String else {
+            throw LookupError.geo
+        }
+        let parts = loc.split(separator: ",")
+        guard parts.count == 2, let lat = Double(parts[0]), let lon = Double(parts[1]),
+              isValidCoord(lat, lon) else {
+            throw LookupError.geo
+        }
+        return logResult(Result(
+            latitude: lat, longitude: lon,
+            city: o["city"] as? String ?? "",
+            country: o["country"] as? String ?? "",
+            ip: o["ip"] as? String ?? ip,
+            timezoneID: o["timezone"] as? String ?? "",
+            source: "ipinfo"
+        ))
+    }
+
+    /// Accept both numeric and string-encoded coordinate values.
+    private static func numeric(_ value: Any?) -> Double? {
+        if let d = value as? Double { return d }
+        if let n = value as? NSNumber { return n.doubleValue }
+        if let s = value as? String { return Double(s) }
+        return nil
+    }
+
+    private static func isValidCoord(_ lat: Double, _ lon: Double) -> Bool {
+        lat.isFinite && lon.isFinite && (-90...90).contains(lat) && (-180...180).contains(lon)
     }
 
     /// Full sync: detect IP, then geolocate it.

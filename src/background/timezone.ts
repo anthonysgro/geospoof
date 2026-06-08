@@ -128,7 +128,8 @@ export async function getTimezoneForCoordinates(
     if (results.length === 0) {
       const fallback = buildFallbackTimezone(longitude);
       logger.debug("Timezone lookup returned no results, using fallback:", fallback);
-      await sessionSet("timezone:" + cacheKey, fallback);
+      // Don't cache fallback results — a transient CDN failure should be retried
+      // on the next call rather than pinning the wrong Etc/GMT±N zone indefinitely.
       return fallback;
     }
 
@@ -137,7 +138,7 @@ export async function getTimezoneForCoordinates(
     if (!isValidIANATimezone(identifier)) {
       const fallback = buildFallbackTimezone(longitude);
       logger.warn("Invalid IANA timezone, using fallback:", { identifier, fallback });
-      await sessionSet("timezone:" + cacheKey, fallback);
+      // Don't cache fallback results — same reason as above.
       return fallback;
     }
 
@@ -152,7 +153,10 @@ export async function getTimezoneForCoordinates(
 
     const fallback = buildFallbackTimezone(longitude);
     logger.warn("Timezone lookup failed, using fallback:", { error, fallback });
-    await sessionSet("timezone:" + cacheKey, fallback);
+    // Don't cache fallback results — a transient CDN failure (network error,
+    // service worker suspension mid-fetch, CDN hiccup) should be retried on
+    // the next SET_LOCATION call. Caching Etc/GMT±N zones would pin the wrong
+    // no-DST offset for the entire browser session.
     return fallback;
   }
 }
