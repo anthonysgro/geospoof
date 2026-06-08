@@ -781,8 +781,9 @@ describe("Timezone Error Recovery Tests", () => {
 
       expect(savedSettings.location).toBeDefined();
       expect(savedSettings.location!.latitude).toBe(35.6762);
-      expect(savedSettings.timezone).toBeDefined();
-      expect(savedSettings.timezone!.fallback).toBe(true); // Fallback timezone used
+      // Fallback timezones are not persisted to storage (they are DST-unaware estimates);
+      // timezone is saved as null so the next session retries the real lookup.
+      expect(savedSettings.timezone).toBeNull();
     });
 
     test("should continue geolocation spoofing when timezone API fails", async () => {
@@ -817,8 +818,9 @@ describe("Timezone Error Recovery Tests", () => {
 
       expect(savedSettings.location).toBeDefined();
       expect(savedSettings.location!.latitude).toBe(48.8566);
-      expect(savedSettings.timezone).toBeDefined(); // Fallback timezone
-      expect(savedSettings.timezone!.fallback).toBe(true);
+      // Fallback timezones are not persisted to storage — timezone is null so the
+      // next session retries the real lookup rather than loading a wrong Etc/GMT zone.
+      expect(savedSettings.timezone).toBeNull();
 
       // Enable protection
       browser.storage.local.get.mockResolvedValueOnce({
@@ -871,8 +873,9 @@ describe("Timezone Error Recovery Tests", () => {
       const savedSettings = getSavedSettings();
 
       expect(savedSettings.location).toBeDefined();
-      expect(savedSettings.timezone).toBeDefined();
-      expect(savedSettings.timezone!.fallback).toBe(true);
+      // Fallback timezones are not persisted — timezone is null when geo-tz returns
+      // an invalid identifier, so the next session retries the real lookup.
+      expect(savedSettings.timezone).toBeNull();
     });
 
     test("should handle invalid timezone offset", async () => {
@@ -901,13 +904,14 @@ describe("Timezone Error Recovery Tests", () => {
       // Act: Set location
       await background.handleSetLocation(location);
 
-      // Assert: Location saved with fallback timezone
+      // Assert: Location saved with fallback timezone (not persisted)
       expectStorageSet().toHaveBeenCalled();
       const savedSettings = getSavedSettings();
 
       expect(savedSettings.location).toBeDefined();
-      expect(savedSettings.timezone).toBeDefined();
-      expect(savedSettings.timezone!.fallback).toBe(true);
+      // Fallback timezones are not persisted — timezone is null when geo-tz returns
+      // empty results, so the next session retries the real lookup.
+      expect(savedSettings.timezone).toBeNull();
     });
   });
 
@@ -948,12 +952,13 @@ describe("Timezone Error Recovery Tests", () => {
         expect.any(Error)
       );
 
-      // Assert: Location still saved with fallback timezone
+      // Assert: Location still saved, timezone null (fallback not persisted)
       expectStorageSet().toHaveBeenCalled();
       const savedSettings = getSavedSettings();
       expect(savedSettings.location).toBeDefined();
-      expect(savedSettings.timezone).toBeDefined();
-      expect(savedSettings.timezone!.fallback).toBe(true);
+      // Fallback timezones are not persisted to storage — timezone is null so the
+      // next session retries the real lookup rather than loading a wrong Etc/GMT zone.
+      expect(savedSettings.timezone).toBeNull();
 
       consoleWarnSpy.mockRestore();
     });
