@@ -8,6 +8,10 @@
 	<false/>
 	<key>SFSafariWebExtensionConverterVersion</key>
 	<string>26.4.1</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Outfit.ttf</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

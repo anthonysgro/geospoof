@@ -37,6 +37,11 @@ struct RootView: View {
                     Label("Home", systemImage: "location.circle")
                 }
 
+            TestView()
+                .tabItem {
+                    Label("Test", systemImage: "checkmark.shield")
+                }
+
             DetailsTab(controller: controller)
                 .tabItem {
                     Label("Details", systemImage: "list.bullet.rectangle")
@@ -104,8 +109,23 @@ struct HomeView: View {
 
     var body: some View {
         AdaptiveNavigationStack {
-            SpoofControlPanel(controller: controller)
+            SpoofControlPanel(controller: controller, includeTestLinks: false)
                 .navigationTitle("GeoSpoof")
+        }
+    }
+}
+
+/// iOS Test tab — the "Test Your Protection" links and Help, in their own tab
+/// (parity with the macOS Test sidebar section) instead of inline on Home.
+struct TestView: View {
+    var body: some View {
+        AdaptiveNavigationStack {
+            Form {
+                ProtectionTestLinks()
+            }
+            .groupedFormStyle()
+            .tint(.brand)
+            .navigationTitle("Test")
         }
     }
 }
@@ -130,13 +150,6 @@ struct SettingsView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
-                } header: {
-                    Text("Display")
-                } footer: {
-                    Text("Sets how this app looks. Doesn’t change websites or the Safari extension.")
-                }
-
-                Section {
                     NavigationLink {
                         AppIconPickerView(iconModel: iconModel)
                     } label: {
@@ -148,11 +161,9 @@ struct SettingsView: View {
                         }
                     }
                 } header: {
-                    Text("App Icon")
-                } footer: {
-                    Text("Choose GeoSpoof’s Home Screen icon.")
+                    Text("Appearance")
                 }
-
+                
                 Section {
                     Toggle(isOn: $loggingEnabled) {
                         Label("Diagnostic Logging", systemImage: "ladybug")
@@ -168,8 +179,6 @@ struct SettingsView: View {
                     }
                 } header: {
                     Text("Advanced")
-                } footer: {
-                    Text("Records diagnostic logs to the system console (open Console.app and filter by the “GeoSpoof” category). Useful when reporting an issue. Errors and warnings are always recorded; the level controls how much detail is added.")
                 }
 
                 Section {

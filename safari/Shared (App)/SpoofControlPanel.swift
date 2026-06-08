@@ -14,6 +14,11 @@ import MapKit
 struct SpoofControlPanel: View {
     @ObservedObject var controller: SpoofController
 
+    /// When false, the "Test Your Protection" / Help links are omitted (macOS
+    /// shows them in a dedicated Test sidebar tab instead). iOS keeps them
+    /// inline on the main screen.
+    var includeTestLinks: Bool = true
+
     @AppStorage("spoofOnboardingCompleted") private var onboardingCompleted = false
     @State private var showOnboarding = false
     @State private var renaming: SpoofFavorite?
@@ -26,8 +31,9 @@ struct SpoofControlPanel: View {
             if !controller.favorites.isEmpty {
                 favoritesSection
             }
-            testLinksSection
-            helpSection
+            if includeTestLinks {
+                ProtectionTestLinks()
+            }
         }
         .groupedFormStyle()
         .tint(.brand)
@@ -64,6 +70,8 @@ struct SpoofControlPanel: View {
             )) {
                 Label("WebRTC Protection", systemImage: "network.badge.shield.half.filled")
             }
+        } header: {
+            Text("Protection")
         } footer: {
             if controller.enabled && !controller.hasLocation {
                 Label("Protection is on, but no location is set yet.", systemImage: "exclamationmark.triangle.fill")
@@ -140,6 +148,8 @@ struct SpoofControlPanel: View {
                 }
                 .disabled(controller.isSyncing)
             }
+        } header: {
+            Text("VPN")
         } footer: {
             if controller.vpnSyncEnabled {
                 Text("Matches your spoofed location to your current public IP. Re-sync after switching VPN servers.")
@@ -201,19 +211,22 @@ struct SpoofControlPanel: View {
         }
     }
 
-    // MARK: Test links
+    // MARK: Test links — see ProtectionTestLinks (shared with the macOS Test tab)
+}
 
-    private var testLinksSection: some View {
-        Section("Test Your Protection") {
-            testLink("Geolocation", "https://webbrowsertools.com/geolocation/", symbol: "location.magnifyingglass")
-            testLink("Timezone", "https://webbrowsertools.com/timezone/", symbol: "clock")
-            testLink("IP Leak", "https://browserleaks.com/webrtc", symbol: "wifi.exclamationmark")
-        }
-    }
-
-    private var helpSection: some View {
-        Section {
-            testLink("Help & Support", "https://www.geospoof.com/support", symbol: "questionmark.circle")
+/// The external "Test Your Protection" links plus Help & Support, as Form
+/// sections. Used inline on iOS and in the dedicated Test sidebar tab on macOS.
+struct ProtectionTestLinks: View {
+    var body: some View {
+        Group {
+            Section("Test Your Protection") {
+                testLink("Geolocation", "https://webbrowsertools.com/geolocation/", symbol: "location.magnifyingglass")
+                testLink("Timezone", "https://webbrowsertools.com/timezone/", symbol: "clock")
+                testLink("IP Leak", "https://browserleaks.com/webrtc", symbol: "wifi.exclamationmark")
+            }
+            Section {
+                testLink("Help & Support", "https://www.geospoof.com/support", symbol: "questionmark.circle")
+            }
         }
     }
 
@@ -488,25 +501,37 @@ struct LocationMapPane: View {
             .accessibilityElement()
             .accessibilityAddTraits(.isButton)
             .accessibilityLabel("Expand map to full screen")
+            .help("Expand map to full screen")
 
-            HStack(spacing: 10) {
+            HStack(spacing: 12) {
                 Image(systemName: "mappin.circle.fill")
+                    .font(.system(size: 30))
                     .foregroundStyle(Color.brand)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title).lineLimit(2)
+                    .frame(width: 36, height: 36)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title)
+                        .font(.headline)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                     Text(String(format: "%.4f, %.4f", latitude, longitude))
-                        .font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                        .textSelection(.enabled)
                 }
-                Spacer(minLength: 4)
+                Spacer(minLength: 8)
                 if !controller.vpnSyncEnabled {
                     Button {
                         controller.toggleFavorite()
                     } label: {
                         Image(systemName: controller.isActiveFavorite ? "star.fill" : "star")
+                            .font(.system(size: 18))
                             .foregroundStyle(controller.isActiveFavorite ? Color.starAccent : Color.secondary)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(controller.isActiveFavorite ? "Remove from favorites" : "Save as favorite")
+                    .help(controller.isActiveFavorite ? "Remove from Favorites" : "Save as Favorite")
                 }
             }
             .padding(.horizontal, 16)
@@ -682,7 +707,9 @@ struct SetLocationView: View {
                         Button {
                             Haptics.impact(.light)
                             controller.setLocation(from: place)
+                            #if os(iOS)
                             dismiss()
+                            #endif
                         } label: {
                             HStack(spacing: 12) {
                                 Text(place.flag)
@@ -761,7 +788,9 @@ struct SetLocationView: View {
         coordError = nil
         Haptics.impact(.light)
         controller.setLocation(latitude: lat, longitude: lon, name: nil)
+        #if os(iOS)
         dismiss()
+        #endif
     }
 }
 
@@ -774,7 +803,10 @@ struct LabeledRow: View {
         HStack {
             Text(label)
             Spacer()
-            Text(value).foregroundStyle(.secondary).monospacedDigit()
+            Text(value)
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+                .textSelection(.enabled)
         }
     }
 }

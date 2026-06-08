@@ -26,6 +26,7 @@ struct DetailsTab: View {
 
 struct SpoofDetailsView: View {
     @ObservedObject var controller: SpoofController
+    @State private var expandedGroups: Set<String> = []
 
     var body: some View {
         Form {
@@ -93,54 +94,146 @@ struct SpoofDetailsView: View {
 
     // MARK: Overridden APIs
 
+    /// The full set of overridden APIs, grouped by surface. Only groups whose
+    /// protection is active are included; the structural / anti-fingerprinting
+    /// overrides are always installed while protection is on.
+    private var apiGroups: [APICategory] {
+        var groups: [APICategory] = []
+
+        if controller.hasLocation {
+            groups.append(APICategory(title: "Geolocation", apis: [
+                "navigator.geolocation.getCurrentPosition()",
+                "navigator.geolocation.watchPosition()",
+                "navigator.geolocation.clearWatch()",
+                "navigator.permissions.query()",
+                "GeolocationCoordinates.prototype.latitude",
+                "GeolocationCoordinates.prototype.longitude",
+                "GeolocationCoordinates.prototype.accuracy",
+                "GeolocationCoordinates.prototype.altitude",
+                "GeolocationCoordinates.prototype.altitudeAccuracy",
+                "GeolocationCoordinates.prototype.heading",
+                "GeolocationCoordinates.prototype.speed",
+                "GeolocationCoordinates.prototype.toJSON()",
+                "GeolocationPosition.prototype.coords",
+                "GeolocationPosition.prototype.timestamp",
+                "GeolocationPosition.prototype.toJSON()",
+            ]))
+        }
+
+        if controller.timezone != nil {
+            groups.append(APICategory(title: "Date & Time", apis: [
+                "Date() constructor",
+                "Date.parse()",
+                "Date.prototype.getTimezoneOffset()",
+                "Date.prototype.getHours() / getMinutes() / getSeconds()",
+                "Date.prototype.getDate() / getDay() / getMonth() / getFullYear()",
+                "Date.prototype.setHours() / setMinutes() / setSeconds()",
+                "Date.prototype.setDate() / setMonth() / setFullYear()",
+                "Date.prototype.toString() / toDateString() / toTimeString()",
+                "Date.prototype.toLocaleString() / toLocaleDateString() / toLocaleTimeString()",
+                "Intl.DateTimeFormat()",
+                "Intl.DateTimeFormat.prototype.resolvedOptions()",
+                "Intl.DateTimeFormat.prototype.formatToParts()",
+                "Intl.DateTimeFormat.prototype.formatRange() / formatRangeToParts()",
+            ]))
+
+            groups.append(APICategory(title: "Temporal (where available)", apis: [
+                "Temporal.Now.timeZoneId()",
+                "Temporal.Now.plainDateTimeISO()",
+                "Temporal.Now.plainDateISO()",
+                "Temporal.Now.plainTimeISO()",
+                "Temporal.Now.zonedDateTimeISO()",
+            ]))
+        }
+
+        if controller.webrtcProtection {
+            groups.append(APICategory(title: "WebRTC", apis: [
+                "RTCPeerConnection (constructor wrapper)",
+                "RTCPeerConnection.prototype.getStats()",
+            ]))
+        }
+
+        groups.append(APICategory(title: "Anti-Fingerprinting & Structural", apis: [
+            "Function.prototype.toString()",
+            "Document.prototype.lastModified",
+            "HTMLIFrameElement.prototype.contentWindow",
+            "HTMLIFrameElement.prototype.contentDocument",
+            "Node.prototype.appendChild() / insertBefore() / replaceChild()",
+            "Element.prototype.append() / prepend() / replaceWith()",
+            "Element.prototype.insertAdjacentElement() / insertAdjacentHTML()",
+            "Element.prototype.innerHTML (setter)",
+        ]))
+
+        return groups
+    }
+
     private var apisSection: some View {
         Section("Overridden APIs") {
             if !controller.enabled {
                 Text("None (protection disabled)").foregroundStyle(.secondary)
             } else {
-                if controller.hasLocation {
-                    APIGroup(title: "Geolocation", apis: [
-                        "navigator.geolocation.getCurrentPosition()",
-                        "navigator.geolocation.watchPosition()",
-                        "navigator.geolocation.clearWatch()",
-                        "navigator.permissions.query()",
-                    ])
+                let groups = apiGroups
+                let total = groups.reduce(0) { $0 + $1.apis.count }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Key Overrides")
+                        .font(.subheadline.weight(.semibold))
+                    Text("\(total) JavaScript APIs are intercepted across \(groups.count) groups while protection is active. Expand a group for the full list.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
-                if controller.timezone != nil {
-                    APIGroup(title: "Timezone", apis: [
-                        "Date.prototype.getTimezoneOffset()",
-                        "Intl.DateTimeFormat()",
-                        "Intl.DateTimeFormat.resolvedOptions()",
-                        "Date.prototype.toString()",
-                        "Date.prototype.toLocaleString()",
-                    ])
-                }
-                if controller.webrtcProtection {
-                    APIGroup(title: "WebRTC", apis: [
-                        "RTCPeerConnection (content-script wrapper)",
-                        "RTCPeerConnection.prototype.getStats",
-                    ])
+                .padding(.vertical, 2)
+
+                ForEach(groups) { group in
+                    let isExpanded = expandedGroups.contains(group.id)
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            if isExpanded {
+                                expandedGroups.remove(group.id)
+                            } else {
+                                expandedGroups.insert(group.id)
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 8) {
+                            Text(group.title)
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Text("\(group.apis.count)")
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(group.title)
+                    .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
+                    .accessibilityHint("\(group.apis.count) APIs")
+
+                    if isExpanded {
+                        ForEach(group.apis, id: \.self) { api in
+                            Text(api)
+                                .font(.caption.monospaced())
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .textSelection(.enabled)
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-private struct APIGroup: View {
+private struct APICategory: Identifiable {
+    var id: String { title }
     let title: String
     let apis: [String]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title).font(.subheadline.weight(.semibold))
-            ForEach(apis, id: \.self) { api in
-                Text("• \(api)")
-                    .font(.caption.monospaced())
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(.vertical, 2)
-    }
 }
 
 // MARK: - Onboarding
