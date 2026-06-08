@@ -24,7 +24,7 @@ struct GeoSpoofApp: App {
         WindowGroup("GeoSpoof", id: "main") {
             MacRootView(controller: controller)
         }
-        .windowStyle(.hiddenTitleBar)
+        .windowResizability(.contentSize)
 
         MenuBarExtra {
             MenuBarContent(controller: controller)
@@ -56,35 +56,64 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 struct MacRootView: View {
     @ObservedObject var controller: SpoofController
     @AppStorage("appearanceMode") private var appearance: AppearanceMode = .system
-    @State private var section: MacSection = .home
+    @State private var section: MacSection? = .home
 
     var body: some View {
-        HStack(spacing: 0) {
-            MacSidebar(selection: $section)
-                .frame(width: 216)
-
-            Divider()
-
-            // Detail pane for the selected section.
-            Group {
-                switch section {
-                case .home: MacHomeView(controller: controller)
-                case .details: DetailsTab(controller: controller)
-                case .settings: MacSettingsView()
+        // Standard, HIG-conformant macOS split view: a collapsible sidebar with
+        // its system toggle. This is the pattern Mail/Notes/Finder/Reminders use,
+        // and it's what makes the window adopt the full-height-sidebar title bar
+        // where the traffic lights sit over the sidebar. On macOS 26 the system
+        // renders the sidebar as floating Liquid Glass; on 13–15 it's the
+        // standard inset sidebar. All chrome is system-managed.
+        NavigationSplitView {
+            List(selection: $section) {
+                ForEach(MacSection.allCases) { item in
+                    Label(item.rawValue, systemImage: item.icon)
+                        .font(.title3)
+                        .tag(item)
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .tint(.brand)
+            .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 320)
+            .navigationTitle("GeoSpoof")
+            .safeAreaInset(edge: .bottom) {
+                // Brand lockup pinned to the bottom of the sidebar.
+                VStack(spacing: 0) {
+                    Divider()
+                    HStack(spacing: 10) {
+                        Image("LargeIcon")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 40, height: 40)
+                            .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("GeoSpoof")
+                                .font(.custom("Outfit", size: 26).weight(.medium))
+                                .foregroundStyle(.primary)
+                            Text(AppInfo.version)
+                                .font(.system(size: 13))
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                }
+            }
+        } detail: {
+            switch section ?? .home {
+            case .home: MacHomeView(controller: controller)
+            case .details: DetailsTab(controller: controller)
+            case .test: MacTestView()
+            case .settings: MacSettingsView()
+            }
         }
-        .frame(minWidth: 760, minHeight: 600)
-        // Fills the title-bar zone (where the traffic lights sit) with brand
-        // green across the full width, so the whole top row is green and the
-        // content/sidebar start just beneath it.
-        .safeAreaInset(edge: .top, spacing: 0) {
-            Color.brandDeep
-                .frame(height: 44)
-                .frame(maxWidth: .infinity)
-                .ignoresSafeArea(edges: .top)
-        }
+        .tint(.brand)
+        .dynamicTypeSize(.xLarge)
+        .frame(
+            minWidth: 840, idealWidth: 940, maxWidth: 1200,
+            minHeight: 680, idealHeight: 820, maxHeight: 1100
+        )
         .onAppear { applyAppearance(appearance) }
         .onChange(of: appearance) { newValue in applyAppearance(newValue) }
     }
@@ -93,6 +122,7 @@ struct MacRootView: View {
 /// macOS navigation sections (sidebar items).
 enum MacSection: String, CaseIterable, Identifiable {
     case home = "Home"
+    case test = "Test"
     case details = "Details"
     case settings = "Settings"
 
@@ -101,94 +131,9 @@ enum MacSection: String, CaseIterable, Identifiable {
         switch self {
         case .home: return "location.circle"
         case .details: return "list.bullet.rectangle"
+        case .test: return "checkmark.shield"
         case .settings: return "gearshape"
         }
-    }
-}
-
-/// Green branded sidebar: GeoSpoof identity lockup at the top (below the
-/// traffic lights), nav items beneath, version pinned to the bottom. The whole
-/// column carries the brand gradient and extends under the hidden title bar.
-struct MacSidebar: View {
-    @Binding var selection: MacSection
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Brand lockup — sits just under the strip, near the top.
-            HStack(spacing: 12) {
-                Image("LargeIcon")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 34, height: 34)
-                    .padding(7)
-                    .background(
-                        RoundedRectangle(cornerRadius: 11, style: .continuous)
-                            .fill(.white.opacity(0.95))
-                    )
-                    .shadow(color: .black.opacity(0.12), radius: 2, y: 1)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("GeoSpoof")
-                        .font(.system(size: 19, weight: .bold))
-                        .foregroundStyle(.white)
-                    Text("Location Privacy")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.85))
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 18)
-
-            // Nav items
-            VStack(spacing: 3) {
-                ForEach(MacSection.allCases) { item in
-                    navRow(item)
-                }
-            }
-            .padding(.horizontal, 8)
-
-            Spacer()
-
-            Text(AppInfo.version)
-                .font(.system(size: 12))
-                .foregroundStyle(.white.opacity(0.7))
-                .padding(.horizontal, 18)
-                .padding(.bottom, 14)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(
-            LinearGradient(
-                colors: [Color.brandDeep, Color.brand],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-        )
-    }
-
-    private func navRow(_ item: MacSection) -> some View {
-        let active = selection == item
-        return Button {
-            selection = item
-        } label: {
-            HStack(spacing: 11) {
-                Image(systemName: item.icon)
-                    .font(.system(size: 16))
-                    .frame(width: 22)
-                Text(item.rawValue)
-                    .font(.system(size: 15, weight: active ? .semibold : .regular))
-                Spacer()
-            }
-            .foregroundStyle(.white)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 9)
-            .background(
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(.white.opacity(active ? 0.22 : 0))
-            )
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 }
 
@@ -425,9 +370,9 @@ struct MacHomeView: View {
                     ExtensionStatusBanner(model: model)
                         .padding([.horizontal, .top])
                 }
-                SpoofControlPanel(controller: controller)
+                SpoofControlPanel(controller: controller, includeTestLinks: false)
             }
-            .navigationTitle("GeoSpoof")
+            .navigationTitle("Home")
         }
         .onAppear { model.refresh() }
         .onChange(of: scenePhase) { phase in
@@ -441,13 +386,20 @@ struct MacHomeView: View {
         } message: {
             Text("Open Safari, then choose Settings → Extensions to manage GeoSpoof.")
         }
-        .safeAreaInset(edge: .bottom) {
-            Text("You can also control GeoSpoof from the extension icon in Safari's toolbar — feel free to close this window.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 24)
-                .padding(.vertical, 12)
+    }
+}
+
+/// macOS Test tab — the external "Test Your Protection" links and Help, moved
+/// off the Home screen into their own sidebar section.
+struct MacTestView: View {
+    var body: some View {
+        AdaptiveNavigationStack {
+            Form {
+                ProtectionTestLinks()
+            }
+            .groupedFormStyle()
+            .tint(.brand)
+            .navigationTitle("Test")
         }
     }
 }
@@ -486,47 +438,36 @@ struct MacSettingsView: View {
     @AppStorage(LogSettingsKey.level) private var logLevelRaw = AppLogLevel.info.rawValue
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Appearance")
-                    .font(.headline)
-
-                AppearancePickerView(selection: $appearance)
-
-                Text("Sets how this app looks. Doesn’t change websites or the Safari extension.")
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
-
-                Divider().padding(.vertical, 8)
-
-                Text("Advanced")
-                    .font(.headline)
-
-                Toggle(isOn: $loggingEnabled) {
-                    Label("Diagnostic Logging", systemImage: "ladybug")
+        AdaptiveNavigationStack {
+            Form {
+                Section {
+                    AppearancePickerView(selection: $appearance)
+                } header: {
+                    Text("Appearance")
                 }
-                if loggingEnabled {
-                    Picker("Log Level", selection: $logLevelRaw) {
-                        ForEach(AppLogLevel.allCases) { level in
-                            Text(level.label).tag(level.rawValue)
-                        }
+
+                Section {
+                    Toggle(isOn: $loggingEnabled) {
+                        Label("Diagnostic Logging", systemImage: "ladybug")
                     }
-                    .pickerStyle(.menu)
-                    .fixedSize()
+                    if loggingEnabled {
+                        Picker("Log Level", selection: $logLevelRaw) {
+                            ForEach(AppLogLevel.allCases) { level in
+                                Text(level.label).tag(level.rawValue)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                    }
+                } header: {
+                    Text("Advanced")
                 }
-
-                Text("Records diagnostic logs to the system console (open Console.app and filter by the “GeoSpoof” category). Useful when reporting an issue. Errors and warnings are always recorded; the level controls how much detail is added.")
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
-
-                Divider().padding(.vertical, 8)
-
-                Text("Version \(AppInfo.version)")
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
+                Section {
+                    Text("Version \(AppInfo.version)")
+                        .foregroundColor(.secondary)
+                }
             }
-            .padding(24)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .groupedFormStyle()
+            .navigationTitle("Settings")
         }
     }
 }
