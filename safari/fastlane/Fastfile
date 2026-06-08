@@ -98,6 +98,12 @@ platform :mac do
           "com.moonloaf.geospoof.Extension" => ext_profile_uuid
         }
       },
+      # The "Run Script" build phase runs `npm run build:safari`, which writes
+      # dist/ at the repo root — outside Xcode's user-script sandbox. The
+      # project sets ENABLE_USER_SCRIPT_SANDBOXING=YES, so that write is denied
+      # and the archive fails. Disable sandboxing for the archive build. This is
+      # a uniform setting, so a global xcarg is the right tool here.
+      xcargs: "ENABLE_USER_SCRIPT_SANDBOXING=NO",
       output_directory: "./build",
       output_name: "GeoSpoof-macOS-DeveloperID"
     )
