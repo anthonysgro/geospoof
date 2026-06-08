@@ -18,9 +18,15 @@ const logger = createLogger("BG");
 // (using @latest risks a version mismatch between the two files if a new release
 // is published between when each CDN cache entry was populated).
 const GEO_TZ_VERSION = "8.1.5";
+// Use timezones.geojson (not timezones-1970.geojson) — the 1970 variant unions
+// zones with identical behavior since 1970 and uses the highest-population
+// identifier, which means coordinates near water bodies or zone boundaries
+// (e.g. coastal Chicago) can land in an Etc/GMT±N zone with no DST instead of
+// the correct named zone like America/Chicago. The full timezones.geojson has
+// complete land coverage and always returns the proper IANA identifier.
 const _geoTz = geoTzInit(
-  `https://cdn.jsdelivr.net/npm/geo-tz@${GEO_TZ_VERSION}/data/timezones-1970.geojson.geo.dat`,
-  `https://cdn.jsdelivr.net/npm/geo-tz@${GEO_TZ_VERSION}/data/timezones-1970.geojson.index.json`
+  `https://cdn.jsdelivr.net/npm/geo-tz@${GEO_TZ_VERSION}/data/timezones.geojson.geo.dat`,
+  `https://cdn.jsdelivr.net/npm/geo-tz@${GEO_TZ_VERSION}/data/timezones.geojson.index.json`
 );
 
 /**
@@ -128,7 +134,8 @@ export async function getTimezoneForCoordinates(
     if (results.length === 0) {
       const fallback = buildFallbackTimezone(longitude);
       logger.debug("Timezone lookup returned no results, using fallback:", fallback);
-      await sessionSet("timezone:" + cacheKey, fallback);
+      // Don't cache fallback results — a transient CDN failure should be retried
+      // on the next call rather than pinning the wrong Etc/GMT±N zone indefinitely.
       return fallback;
     }
 
@@ -137,7 +144,7 @@ export async function getTimezoneForCoordinates(
     if (!isValidIANATimezone(identifier)) {
       const fallback = buildFallbackTimezone(longitude);
       logger.warn("Invalid IANA timezone, using fallback:", { identifier, fallback });
-      await sessionSet("timezone:" + cacheKey, fallback);
+      // Don't cache fallback results — same reason as above.
       return fallback;
     }
 
@@ -152,7 +159,10 @@ export async function getTimezoneForCoordinates(
 
     const fallback = buildFallbackTimezone(longitude);
     logger.warn("Timezone lookup failed, using fallback:", { error, fallback });
-    await sessionSet("timezone:" + cacheKey, fallback);
+    // Don't cache fallback results — a transient CDN failure (network error,
+    // service worker suspension mid-fetch, CDN hiccup) should be retried on
+    // the next SET_LOCATION call. Caching Etc/GMT±N zones would pin the wrong
+    // no-DST offset for the entire browser session.
     return fallback;
   }
 }

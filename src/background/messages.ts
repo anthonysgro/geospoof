@@ -234,6 +234,12 @@ export async function handleSetLocation(
   const timezone = await getTimezoneForCoordinates(latitude, longitude);
   logger.debug("Timezone resolved:", timezone);
 
+  // Don't persist a fallback timezone to storage — it's a longitude estimate
+  // with no DST awareness (Etc/GMT±N), produced when the geo-tz data fetch
+  // fails transiently. Saving null means the next browser session will retry
+  // the real lookup rather than loading a wrong timezone from storage.
+  const timezoneToSave = timezone.fallback ? null : timezone;
+
   const currentSettings = await loadSettings();
 
   // If VPN sync was active and a manual location is being set,
@@ -249,7 +255,7 @@ export async function handleSetLocation(
   if (options?.locationName) {
     const settings = await updateSettings({
       location: { latitude, longitude, accuracy: 10 },
-      timezone,
+      timezone: timezoneToSave,
       locationName: options.locationName,
       ...vpnUpdates,
     });
@@ -269,7 +275,7 @@ export async function handleSetLocation(
 
   const settings = await updateSettings({
     location: { latitude, longitude, accuracy: 10 },
-    timezone,
+    timezone: timezoneToSave,
     locationName,
     ...vpnUpdates,
   });

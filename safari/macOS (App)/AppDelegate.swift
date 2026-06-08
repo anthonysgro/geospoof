@@ -15,17 +15,38 @@ import SwiftUI
 struct GeoSpoofApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
+    /// One shared controller backs both the main window and the menu bar item,
+    /// so VPN sync / bridge state stays identical whether the window is open or
+    /// the user has closed it and lives in the menu bar.
+    @StateObject private var controller = SpoofController()
+
     var body: some Scene {
-        WindowGroup("GeoSpoof") {
-            MacRootView()
+        WindowGroup("GeoSpoof", id: "main") {
+            MacRootView(controller: controller)
         }
+        .windowStyle(.hiddenTitleBar)
+
+        MenuBarExtra {
+            MenuBarContent(controller: controller)
+        } label: {
+            // Menu-bar template glyph (16pt, rendered as a template image so it
+            // tints for light/dark menu bars and the selected state). Dimmed when
+            // protection is off so the icon still signals state at a glance.
+            Image("MenuBarIcon")
+                .opacity(controller.enabled ? 1.0 : 0.5)
+        }
+        .menuBarExtraStyle(.window)
     }
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate {
 
+    // When all windows close, demote to an agent (no dock icon) so the app
+    // stays alive as a menu-bar item without cluttering the dock. The dock
+    // icon comes back when the user reopens the window from the menu bar.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        return true
+        NSApp.setActivationPolicy(.accessory)
+        return false
     }
 
 }
@@ -33,29 +54,141 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 // MARK: - SwiftUI
 
 struct MacRootView: View {
-    @StateObject private var controller = SpoofController()
+    @ObservedObject var controller: SpoofController
     @AppStorage("appearanceMode") private var appearance: AppearanceMode = .system
+    @State private var section: MacSection = .home
 
     var body: some View {
-        TabView {
-            MacHomeView(controller: controller)
-                .tabItem {
-                    Label("Home", systemImage: "location.circle")
-                }
+        HStack(spacing: 0) {
+            MacSidebar(selection: $section)
+                .frame(width: 216)
 
-            DetailsTab(controller: controller)
-                .tabItem {
-                    Label("Details", systemImage: "list.bullet.rectangle")
-                }
+            Divider()
 
-            MacSettingsView()
-                .tabItem {
-                    Label("Settings", systemImage: "gearshape")
+            // Detail pane for the selected section.
+            Group {
+                switch section {
+                case .home: MacHomeView(controller: controller)
+                case .details: DetailsTab(controller: controller)
+                case .settings: MacSettingsView()
                 }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(minWidth: 540, minHeight: 600)
+        .frame(minWidth: 760, minHeight: 600)
+        // Fills the title-bar zone (where the traffic lights sit) with brand
+        // green across the full width, so the whole top row is green and the
+        // content/sidebar start just beneath it.
+        .safeAreaInset(edge: .top, spacing: 0) {
+            Color.brandDeep
+                .frame(height: 44)
+                .frame(maxWidth: .infinity)
+                .ignoresSafeArea(edges: .top)
+        }
         .onAppear { applyAppearance(appearance) }
         .onChange(of: appearance) { newValue in applyAppearance(newValue) }
+    }
+}
+
+/// macOS navigation sections (sidebar items).
+enum MacSection: String, CaseIterable, Identifiable {
+    case home = "Home"
+    case details = "Details"
+    case settings = "Settings"
+
+    var id: String { rawValue }
+    var icon: String {
+        switch self {
+        case .home: return "location.circle"
+        case .details: return "list.bullet.rectangle"
+        case .settings: return "gearshape"
+        }
+    }
+}
+
+/// Green branded sidebar: GeoSpoof identity lockup at the top (below the
+/// traffic lights), nav items beneath, version pinned to the bottom. The whole
+/// column carries the brand gradient and extends under the hidden title bar.
+struct MacSidebar: View {
+    @Binding var selection: MacSection
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Brand lockup — sits just under the strip, near the top.
+            HStack(spacing: 12) {
+                Image("LargeIcon")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 34, height: 34)
+                    .padding(7)
+                    .background(
+                        RoundedRectangle(cornerRadius: 11, style: .continuous)
+                            .fill(.white.opacity(0.95))
+                    )
+                    .shadow(color: .black.opacity(0.12), radius: 2, y: 1)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("GeoSpoof")
+                        .font(.system(size: 19, weight: .bold))
+                        .foregroundStyle(.white)
+                    Text("Location Privacy")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.85))
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 18)
+
+            // Nav items
+            VStack(spacing: 3) {
+                ForEach(MacSection.allCases) { item in
+                    navRow(item)
+                }
+            }
+            .padding(.horizontal, 8)
+
+            Spacer()
+
+            Text(AppInfo.version)
+                .font(.system(size: 12))
+                .foregroundStyle(.white.opacity(0.7))
+                .padding(.horizontal, 18)
+                .padding(.bottom, 14)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(
+            LinearGradient(
+                colors: [Color.brandDeep, Color.brand],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        )
+    }
+
+    private func navRow(_ item: MacSection) -> some View {
+        let active = selection == item
+        return Button {
+            selection = item
+        } label: {
+            HStack(spacing: 11) {
+                Image(systemName: item.icon)
+                    .font(.system(size: 16))
+                    .frame(width: 22)
+                Text(item.rawValue)
+                    .font(.system(size: 15, weight: active ? .semibold : .regular))
+                Spacer()
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .background(
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(.white.opacity(active ? 0.22 : 0))
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -71,6 +204,213 @@ private func applyAppearance(_ mode: AppearanceMode) {
     }
 }
 
+// MARK: - Menu bar item content
+
+/// Popover shown from the macOS menu bar item. A calm, professional control
+/// surface: a quiet location summary up top, clean toggle rows, quick-activate
+/// favorites, and footer commands. Backed by the same shared `SpoofController`
+/// as the main window.
+struct MenuBarContent: View {
+    @ObservedObject var controller: SpoofController
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        VStack(spacing: 0) {
+            locationSummary
+            Divider()
+            VStack(spacing: 0) {
+                row(
+                    icon: "antenna.radiowaves.left.and.right",
+                    iconOn: controller.vpnSyncEnabled,
+                    title: "Sync with VPN",
+                    busy: controller.isSyncing,
+                    binding: Binding(get: { controller.vpnSyncEnabled }, set: { controller.setVPNSync($0) })
+                )
+                row(
+                    icon: "shield.lefthalf.filled",
+                    iconOn: controller.webrtcProtection,
+                    title: "Block WebRTC Leaks",
+                    binding: Binding(get: { controller.webrtcProtection }, set: { controller.setWebRTCProtection($0) })
+                )
+            }
+            .padding(.vertical, 4)
+
+            if !controller.favorites.isEmpty {
+                Divider()
+                favoritesSection
+            }
+
+            Divider()
+            footer
+        }
+        .frame(width: 300)
+    }
+
+    private var isActive: Bool { controller.enabled && controller.hasLocation }
+
+    // MARK: Location header — green + nude, full-wrapping location
+
+    private var locationSummary: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Eyebrow: state + master protection toggle.
+            HStack(spacing: 8) {
+                Image(systemName: isActive ? "location.fill" : "location.slash")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(isActive ? Color.brand : .secondary)
+                Text(stateLabel)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(isActive ? Color.brand : .secondary)
+                    .textCase(.uppercase)
+                    .kerning(0.4)
+                Spacer(minLength: 8)
+                Toggle("", isOn: Binding(
+                    get: { controller.enabled },
+                    set: { controller.setEnabled($0) }
+                ))
+                .toggleStyle(.switch)
+                .controlSize(.small)
+                .labelsHidden()
+            }
+
+            // Location — wraps to as many lines as needed, never truncates.
+            Text(primaryLine)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            if let secondary = secondaryLine {
+                Text(secondary)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(
+            LinearGradient(
+                colors: [Color.brand.opacity(0.12), Color.nude.opacity(0.16)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+    }
+
+    private var stateLabel: String {
+        controller.enabled ? "Location Protection" : "Protection Off"
+    }
+
+    private var primaryLine: String {
+        if !controller.enabled { return "Protection is off" }
+        if let name = controller.locationName?.displayName, !name.isEmpty { return name }
+        if controller.isSyncing { return "Detecting VPN location…" }
+        return "No location set"
+    }
+
+    private var secondaryLine: String? {
+        if !controller.enabled { return "Your real location is visible to sites" }
+        if controller.vpnSyncEnabled, controller.isSyncing { return "Syncing with VPN…" }
+        if let tz = controller.timezone { return "\(tz.utcOffsetText) · \(tz.identifier)" }
+        if controller.vpnSyncEnabled { return "VPN Sync on" }
+        return nil
+    }
+
+    // MARK: Toggle row
+
+    private func row(
+        icon: String,
+        iconOn: Bool,
+        title: String,
+        busy: Bool = false,
+        binding: Binding<Bool>
+    ) -> some View {
+        HStack(spacing: 11) {
+            Image(systemName: icon)
+                .font(.system(size: 14))
+                .foregroundStyle(iconOn ? Color.brand : .secondary)
+                .frame(width: 22)
+                .animation(.easeInOut(duration: 0.2), value: iconOn)
+            Text(title)
+                .font(.system(size: 13))
+            Spacer()
+            if busy {
+                ProgressView().controlSize(.small).scaleEffect(0.7)
+            }
+            Toggle("", isOn: binding)
+                .toggleStyle(.switch)
+                .controlSize(.small)
+                .labelsHidden()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 6)
+    }
+
+    // MARK: Favorites
+
+    private var favoritesSection: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text("Favorites")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 3)
+
+            ForEach(controller.favorites.prefix(6)) { fav in
+                let active = controller.activeFavorite?.id == fav.id
+                Button { controller.activate(fav) } label: {
+                    HStack(spacing: 11) {
+                        Image(systemName: active ? "checkmark.circle.fill" : "mappin.circle")
+                            .font(.system(size: 14))
+                            .foregroundStyle(active ? Color.brand : .secondary)
+                            .frame(width: 22)
+                        Text(fav.chipTitle)
+                            .font(.system(size: 13))
+                            .lineLimit(1)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 5)
+                    .background(active ? Color.brand.opacity(0.10) : Color.clear)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.bottom, 6)
+        }
+    }
+
+    // MARK: Footer
+
+    private var footer: some View {
+        HStack {
+            Button {
+                NSApp.setActivationPolicy(.regular)
+                NSApp.activate(ignoringOtherApps: true)
+                openWindow(id: "main")
+            } label: {
+                Text("Open GeoSpoof").font(.system(size: 12))
+            }
+            .buttonStyle(.borderless)
+            .keyboardShortcut("o", modifiers: .command)
+
+            Spacer()
+
+            Button {
+                NSApp.terminate(nil)
+            } label: {
+                Text("Quit").font(.system(size: 12)).foregroundStyle(.secondary)
+            }
+            .buttonStyle(.borderless)
+            .keyboardShortcut("q", modifiers: .command)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+    }
+}
+
 // MARK: - Home (native control panel — parity with the extension popup)
 
 struct MacHomeView: View {
@@ -81,20 +421,6 @@ struct MacHomeView: View {
     var body: some View {
         AdaptiveNavigationStack {
             VStack(spacing: 0) {
-                // Centered app identity header — standard HIG pattern for
-                // macOS utility/preference windows (cf. System Settings panels).
-                VStack(spacing: 6) {
-                    Image("LargeIcon")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 64, height: 64)
-                    Text("GeoSpoof")
-                        .font(.title2.weight(.semibold))
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.top, 20)
-                .padding(.bottom, 8)
-
                 if model.state != .on {
                     ExtensionStatusBanner(model: model)
                         .padding([.horizontal, .top])
@@ -156,6 +482,8 @@ struct ExtensionStatusBanner: View {
 
 struct MacSettingsView: View {
     @AppStorage("appearanceMode") private var appearance: AppearanceMode = .system
+    @AppStorage(LogSettingsKey.enabled) private var loggingEnabled = false
+    @AppStorage(LogSettingsKey.level) private var logLevelRaw = AppLogLevel.info.rawValue
 
     var body: some View {
         ScrollView {
@@ -166,6 +494,28 @@ struct MacSettingsView: View {
                 AppearancePickerView(selection: $appearance)
 
                 Text("Sets how this app looks. Doesn’t change websites or the Safari extension.")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+
+                Divider().padding(.vertical, 8)
+
+                Text("Advanced")
+                    .font(.headline)
+
+                Toggle(isOn: $loggingEnabled) {
+                    Label("Diagnostic Logging", systemImage: "ladybug")
+                }
+                if loggingEnabled {
+                    Picker("Log Level", selection: $logLevelRaw) {
+                        ForEach(AppLogLevel.allCases) { level in
+                            Text(level.label).tag(level.rawValue)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .fixedSize()
+                }
+
+                Text("Records diagnostic logs to the system console (open Console.app and filter by the “GeoSpoof” category). Useful when reporting an issue. Errors and warnings are always recorded; the level controls how much detail is added.")
                     .font(.footnote)
                     .foregroundColor(.secondary)
 

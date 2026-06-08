@@ -113,6 +113,8 @@ struct HomeView: View {
 struct SettingsView: View {
     @StateObject private var iconModel = AppIconModel()
     @AppStorage("appearanceMode") private var appearance: AppearanceMode = .system
+    @AppStorage(LogSettingsKey.enabled) private var loggingEnabled = false
+    @AppStorage(LogSettingsKey.level) private var logLevelRaw = AppLogLevel.info.rawValue
 
     var body: some View {
         NavigationView {
@@ -149,6 +151,25 @@ struct SettingsView: View {
                     Text("App Icon")
                 } footer: {
                     Text("Choose GeoSpoof’s Home Screen icon.")
+                }
+
+                Section {
+                    Toggle(isOn: $loggingEnabled) {
+                        Label("Diagnostic Logging", systemImage: "ladybug")
+                    }
+                    if loggingEnabled {
+                        Picker(selection: $logLevelRaw) {
+                            ForEach(AppLogLevel.allCases) { level in
+                                Text(level.label).tag(level.rawValue)
+                            }
+                        } label: {
+                            Label("Log Level", systemImage: "slider.horizontal.3")
+                        }
+                    }
+                } header: {
+                    Text("Advanced")
+                } footer: {
+                    Text("Records diagnostic logs to the system console (open Console.app and filter by the “GeoSpoof” category). Useful when reporting an issue. Errors and warnings are always recorded; the level controls how much detail is added.")
                 }
 
                 Section {
