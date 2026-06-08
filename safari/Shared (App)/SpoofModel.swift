@@ -30,6 +30,11 @@ import AppKit
 enum AppGroup {
     static let suite = "group.com.moonloaf.geospoof"
 
+    // Extension -> App: "last seen" heartbeat (Unix seconds). Written on every
+    // native-handler invocation, so the app can tell whether GeoSpoof is
+    // actually running in Safari.
+    static let extensionLastSeenAt = "extension_lastSeenAt"
+
     // Extension -> App (current active region, for display).
     static let regionEnabled     = "region_enabled"
     static let regionDisplayName = "region_displayName"
@@ -44,6 +49,7 @@ enum AppGroup {
     static let regionTzId        = "region_tzId"
     static let regionTzOffset    = "region_tzOffset"
     static let regionTzDst       = "region_tzDst"
+    static let regionFavorites   = "region_favorites"
 
     // App -> Extension (a full desired-state snapshot the extension adopts on
     // next launch / tab activity, last-writer-wins by `pending_updatedAt`).
@@ -56,6 +62,7 @@ enum AppGroup {
     static let pendingVpnSync     = "pending_vpnSync"
     static let pendingCleared     = "pending_cleared"
     static let pendingResync      = "pending_resync"
+    static let pendingFavorites   = "pending_favorites"
 }
 
 // MARK: - Domain models (mirror src/shared/types/settings.ts)
@@ -398,7 +405,14 @@ final class SpoofController: ObservableObject {
     @Published var timezone: SpoofTimezone?
     @Published var webrtcProtection = false
     @Published var vpnSyncEnabled = false
-    @Published var favorites: [SpoofFavorite] = [] { didSet { saveFavorites() } }
+    @Published var favorites: [SpoofFavorite] = [] {
+        didSet {
+            saveFavorites()
+            // Propagate favorite edits to the extension via the bridge, unless
+            // we're currently adopting the extension's own list.
+            if !isApplyingRemoteState { writePending() }
+        }
+    }
 
     // VPN sync UI state
     @Published var isSyncing = false
@@ -407,6 +421,19 @@ final class SpoofController: ObservableObject {
 
     /// Inline "list full" flag for the favorites star, auto-clears after a beat.
     @Published var atCapacity = false
+
+    /// When the extension last checked in via the App Group, or nil if we've
+    /// never heard from it. Drives the "running in Safari" status. Updated on
+    /// every refresh, independent of whether region state changed.
+    @Published var extensionLastSeen: Date?
+
+    /// Best-effort "GeoSpoof is running in Safari" signal: the extension has
+    /// checked in recently. Proves the extension is enabled and its background
+    /// is alive — not necessarily that it's been granted on the current site.
+    var isActiveInSafari: Bool {
+        guard let extensionLastSeen else { return false }
+        return Date().timeIntervalSince(extensionLastSeen) < 7 * 24 * 60 * 60
+    }
 
     let favoritesCapacity = 10
 
@@ -417,6 +444,11 @@ final class SpoofController: ObservableObject {
     /// state when the extension's region is newer than our last local change,
     /// so a change made here isn't clobbered before the extension adopts it.
     private var lastLocalChangeAt: TimeInterval = 0
+
+    /// Set while adopting state pushed from the extension, so the `favorites`
+    /// didSet doesn't echo that same list straight back into a pending write
+    /// (which would bump our local timestamp and cause needless churn).
+    private var isApplyingRemoteState = false
 
     private var foregroundObserver: NSObjectProtocol?
     private var backgroundObserver: NSObjectProtocol?
@@ -988,6 +1020,12 @@ final class SpoofController: ObservableObject {
         dict[AppGroup.pendingResync] = resync
         dict[AppGroup.pendingUpdatedAt] = now
 
+        // Favorites travel as a JSON string (passthrough via the native handler).
+        if let data = try? JSONEncoder().encode(favorites),
+           let json = String(data: data, encoding: .utf8) {
+            dict[AppGroup.pendingFavorites] = json
+        }
+
         if vpnSyncEnabled {
             dict[AppGroup.pendingCleared] = false
             if let location {
@@ -1019,7 +1057,17 @@ final class SpoofController: ObservableObject {
     /// Adopt the extension's last-written region state, but only when it's
     /// newer than our last local change (symmetric last-writer-wins).
     func refreshFromExtension() {
-        guard let dict = Self.readSharedPrefs(suite: suite),
+        let prefs = Self.readSharedPrefs(suite: suite)
+
+        // Heartbeat: update "last seen in Safari" regardless of the region gate
+        // below, so the status reflects the extension running even when no
+        // spoof state actually changed (e.g. a plain pending-settings poll).
+        if let seen = prefs?[AppGroup.extensionLastSeenAt] as? Double {
+            let date = Date(timeIntervalSince1970: seen)
+            if extensionLastSeen != date { extensionLastSeen = date }
+        }
+
+        guard let dict = prefs,
               let regionAt = dict[AppGroup.regionUpdatedAt] as? Double,
               regionAt > lastLocalChangeAt else {
             Log.bridge.trace("refreshFromExtension: no newer extension state to adopt")
@@ -1057,6 +1105,17 @@ final class SpoofController: ObservableObject {
 
         let ip = dict[AppGroup.regionIp] as? String ?? ""
         if !ip.isEmpty { lastSyncedIP = ip }
+
+        // Adopt the extension's favorites list (JSON string). Guarded so the
+        // resulting `favorites` didSet doesn't echo it back as a pending write.
+        if let favoritesJSON = dict[AppGroup.regionFavorites] as? String,
+           let data = favoritesJSON.data(using: .utf8),
+           let decoded = try? JSONDecoder().decode([SpoofFavorite].self, from: data),
+           decoded != favorites {
+            isApplyingRemoteState = true
+            favorites = decoded
+            isApplyingRemoteState = false
+        }
     }
 
     private static func readSharedPrefs(suite: String) -> [String: Any]? {

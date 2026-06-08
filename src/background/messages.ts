@@ -37,6 +37,7 @@ import {
   isRestrictedUrl,
 } from "./tabs";
 import { syncVpnLocation, clearIpGeoCache } from "./vpn-sync";
+import { adoptPendingSettingsFromApp } from "./app-bridge";
 import { allowlistWorkerUrl, isSameOriginWorker, tabPageUrlCache } from "./worker-request-filter";
 
 export async function handleMessage(
@@ -48,6 +49,15 @@ export async function handleMessage(
 
     switch (message.type) {
       case "GET_SETTINGS": {
+        // Safari: when the popup (no sender.tab) asks for settings, adopt the
+        // app's pending snapshot first so the popup reflects what the user set
+        // in the containing app — without it the popup can show stale "off"
+        // state until a tab event triggers adoption. Scoped to popup-originated
+        // messages so content scripts don't incur a native round-trip per page.
+        if (__SAFARI__ && _sender.tab == null) {
+          await adoptPendingSettingsFromApp();
+        }
+
         const settings = await loadSettings();
         logger.debug("Loaded settings:", settings);
 

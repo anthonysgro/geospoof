@@ -18,6 +18,12 @@ private let logger = Logger(
 enum RegionKey {
     static let suite       = "group.com.moonloaf.geospoof"
 
+    // Extension -> App: "last seen" heartbeat. Written on every handler
+    // invocation (the background polls GET_PENDING_SETTINGS on boot + tab
+    // activity), so the containing app can tell whether GeoSpoof is actually
+    // running in Safari — the one signal iOS otherwise can't surface.
+    static let lastSeenAt  = "extension_lastSeenAt"
+
     // Extension -> App: the currently active spoofed region (for display).
     static let enabled     = "region_enabled"
     static let displayName = "region_displayName"
@@ -32,6 +38,8 @@ enum RegionKey {
     static let tzId        = "region_tzId"
     static let tzOffset    = "region_tzOffset"
     static let tzDst       = "region_tzDst"
+    // Favorites synced as a JSON string (passthrough both ways).
+    static let favorites   = "region_favorites"
 
     // App -> Extension: a full desired-state snapshot the extension adopts on
     // next launch / tab activity (last-writer-wins by pending_updatedAt).
@@ -44,11 +52,14 @@ enum RegionKey {
     static let pVpnSync     = "pending_vpnSync"
     static let pCleared     = "pending_cleared"
     static let pResync      = "pending_resync"
+    static let pFavorites   = "pending_favorites"
 }
 
 class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
 
     func beginRequest(with context: NSExtensionContext) {
+        recordExtensionActivity()
+
         let request = context.inputItems.first as? NSExtensionItem
 
         let message: Any?
@@ -86,6 +97,15 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
     }
 
     // MARK: - Extension -> App (current active region, for display)
+
+    /// Record that the extension is alive in Safari right now. Called on every
+    /// handler invocation. This is the production heartbeat the host app reads
+    /// to show "running in Safari" status (distinct from the debug keys below).
+    private func recordExtensionActivity() {
+        guard let defaults = UserDefaults(suiteName: RegionKey.suite) else { return }
+        defaults.set(Date().timeIntervalSince1970, forKey: RegionKey.lastSeenAt)
+        defaults.synchronize()
+    }
 
     private func handleRegionUpdate(_ dict: [String: Any]) {
         guard let defaults = UserDefaults(suiteName: RegionKey.suite) else {
@@ -135,6 +155,11 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             defaults.removeObject(forKey: RegionKey.tzDst)
         }
 
+        // Favorites arrive as a JSON string; store verbatim for the app to decode.
+        if let favoritesJSON = dict["favorites"] as? String {
+            defaults.set(favoritesJSON, forKey: RegionKey.favorites)
+        }
+
         defaults.set(Date().timeIntervalSince1970, forKey: RegionKey.updatedAt)
         defaults.synchronize()
 
@@ -168,6 +193,9 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
            let lon = dict[RegionKey.pLongitude] as? Double {
             pending["latitude"] = lat
             pending["longitude"] = lon
+        }
+        if let favoritesJSON = dict[RegionKey.pFavorites] as? String {
+            pending["favorites"] = favoritesJSON
         }
         return ["pending": pending]
     }
