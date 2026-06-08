@@ -185,6 +185,23 @@ jobs:
         working-directory: safari
         run: bundle exec fastlane mac developer_id
 
+      # gym/xcbeautify hides the real compiler/build error behind generic
+      # boilerplate. On failure, surface the actual error lines from the raw
+      # xcodebuild log so we can diagnose without re-running.
+      - name: Dump xcodebuild error log on failure
+        if: failure()
+        run: |
+          LOG="$HOME/Library/Logs/gym/GeoSpoof-GeoSpoof-macOS.log"
+          if [ -f "$LOG" ]; then
+            echo "===== matching error/warning lines ====="
+            grep -nE "error:|note: Run script|The following build commands failed|ARCHIVE FAILED|Command .* failed|fatal error" "$LOG" || true
+            echo "===== last 200 lines of gym log ====="
+            tail -n 200 "$LOG"
+          else
+            echo "No gym log found at $LOG"
+            ls -la "$HOME/Library/Logs/gym" || true
+          fi
+
       - name: Rename DMG to release naming convention
         run: mv "safari/build/GeoSpoof.dmg" "safari/build/geospoof-macos-v${BASE_VERSION}.dmg"
 
