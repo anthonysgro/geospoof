@@ -114,7 +114,7 @@ jobs:
 
   release-macos:
     needs: release
-    runs-on: macos-15
+    runs-on: macos-26
     permissions:
       contents: write
     steps:
@@ -138,8 +138,17 @@ jobs:
           BASE_VERSION="${TAG#v}"
           echo "BASE_VERSION=${BASE_VERSION}" >> "$GITHUB_ENV"
 
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.app
+      # The app target uses macOS 26 SDK APIs (SwiftUI Liquid Glass:
+      # glassEffect / .glass / .glassProminent) and Swift 6.2 syntax
+      # (nonisolated on type declarations), so it requires Xcode 26+. Select the
+      # newest Xcode on the runner rather than hardcoding a path (a hardcoded
+      # Xcode_16.app previously pinned CI to an SDK too old to compile this).
+      - name: Select newest Xcode
+        run: |
+          LATEST=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          echo "Selecting $LATEST"
+          sudo xcode-select -s "$LATEST"
+          xcodebuild -version
 
       # ── Import Developer ID Application cert into a temporary keychain ──
       - name: Import Developer ID certificate
