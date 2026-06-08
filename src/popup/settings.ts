@@ -25,7 +25,10 @@ export async function loadSettings(): Promise<void> {
     const settings = (await browser.runtime.sendMessage({
       type: "GET_SETTINGS",
     })) as Settings;
-    if (!settings.onboardingCompleted) {
+    // On Safari the containing app owns onboarding (and on iOS the home-screen
+    // Setup card), so suppress the popup's duplicate overlay. Firefox/Chromium
+    // have no app, so the popup onboarding is the only first-run guidance.
+    if (!settings.onboardingCompleted && !__SAFARI__) {
       showOnboarding();
     }
 

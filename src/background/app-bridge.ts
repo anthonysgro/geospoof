@@ -11,6 +11,7 @@
  */
 
 import { createLogger } from "@/shared/utils/debug-logger";
+import type { Favorite } from "@/shared/types/settings";
 import { loadSettings, updateSettings } from "./settings";
 import {
   handleSetLocation,
@@ -32,6 +33,7 @@ interface PendingSettings {
   latitude?: number;
   longitude?: number;
   displayName?: string;
+  favorites?: string; // JSON-encoded Favorite[] from the app
 }
 
 interface PendingResponse {
@@ -169,6 +171,25 @@ export async function adoptPendingSettingsFromApp(): Promise<void> {
     const current = await loadSettings();
     if (typeof pending.enabled === "boolean" && current.enabled !== pending.enabled) {
       await handleSetProtectionStatus({ enabled: pending.enabled });
+    }
+
+    // 4. Favorites — adopt the app's list when it differs. The app and
+    // extension reconcile last-writer-wins by the pending/region timestamp,
+    // same as every other field. (Concurrent edits on both sides resolve to
+    // whichever wrote most recently — the whole list, not a per-item merge.)
+    if (typeof pending.favorites === "string") {
+      try {
+        const parsed = JSON.parse(pending.favorites) as Favorite[];
+        if (Array.isArray(parsed)) {
+          const latest = await loadSettings();
+          const next = parsed.slice(0, 10);
+          if (JSON.stringify(latest.favorites) !== JSON.stringify(next)) {
+            await updateSettings({ favorites: next });
+          }
+        }
+      } catch (error) {
+        logger.debug("adoptPendingSettingsFromApp: favorites parse failed:", error);
+      }
     }
 
     logger.info("Pending settings adopted and applied.");

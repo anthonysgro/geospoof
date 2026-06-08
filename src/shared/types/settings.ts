@@ -97,7 +97,13 @@ export const DEFAULT_SETTINGS: Settings = {
   webrtcProtection: false,
   onboardingCompleted: false,
   version: "1.0",
-  lastUpdated: Date.now(),
+  // Epoch 0 (not Date.now()): a never-saved settings object hasn't been
+  // "updated" yet. On Safari first run the app→extension adoption gate in
+  // app-bridge.ts compares the app's pending-write timestamp against this; a
+  // Date.now() default would make the freshly-booted extension look newer than
+  // the user's earlier in-app setup and silently discard it. saveSettings()
+  // always stamps Date.now() before persisting, so stored settings are real.
+  lastUpdated: 0,
   vpnSyncEnabled: false,
   debugLogging: false,
   verbosityLevel: "INFO",

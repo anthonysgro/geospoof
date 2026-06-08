@@ -231,6 +231,10 @@ async function pushRegionToNativeHost(settings: Settings): Promise<void> {
       webrtcProtection: settings.webrtcProtection,
       vpnSyncEnabled: settings.vpnSyncEnabled,
       ip,
+      // Favorites are synced through the bridge as a JSON string so the native
+      // handler stays a dumb passthrough (no nested-array bridging). The app
+      // decodes it; last-writer-wins by region/pending timestamp as usual.
+      favorites: JSON.stringify(settings.favorites ?? []),
     });
   } catch (error) {
     // Swallow — native messaging may not be available in all contexts

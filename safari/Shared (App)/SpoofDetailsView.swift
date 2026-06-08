@@ -244,64 +244,94 @@ struct OnboardingView: View {
     let onDone: () -> Void
 
     @State private var step = 0
-    private let stepCount = 4
+    @State private var showTrust = false
+    #if os(macOS)
+    @StateObject private var extState = ExtensionStateModel()
+    @Environment(\.scenePhase) private var scenePhase
+    #endif
+
+    /// The flow is modeled as an ordered list of steps rather than index-based
+    /// switches, because it diverges by platform: iOS has an extra "turn it on
+    /// for the page" step (the address-bar → Manage Extensions action) that
+    /// doesn't exist on macOS, where website access is granted right in Safari
+    /// Settings. Index math across a divergent flow is error-prone, so the
+    /// step list is the single source of truth for count, dots, and content.
+    private enum StepKind: Equatable {
+        case welcome
+        case enable
+        case permission
+        case done
+    }
+
+    private var steps: [StepKind] {
+        #if os(iOS)
+        // iOS modal covers only what we can't detect or guide from the home
+        // screen: the welcome and the Settings toggle. Activating it for a page
+        // (+ the permission prompt and trust info) is handled just-in-time by
+        // the state-driven Setup card on the home screen.
+        [.welcome, .enable]
+        #else
+        [.welcome, .enable, .permission, .done]
+        #endif
+    }
+
+    private var stepCount: Int { steps.count }
+    private var current: StepKind { steps[min(step, steps.count - 1)] }
     private var isLast: Bool { step == stepCount - 1 }
 
-    private var symbol: String {
-        switch step {
-        case 1: return "lock.shield.fill"
-        case 2: return "puzzlepiece.extension.fill"
-        default: return "checkmark.circle.fill"
+    private func symbol(_ kind: StepKind) -> String {
+        switch kind {
+        case .welcome: return "globe" // unused — welcome uses the app icon
+        case .enable: return "puzzlepiece.extension.fill"
+        case .permission: return "lock.shield.fill"
+        case .done: return "checkmark.circle.fill"
         }
     }
-    private var title: String {
-        switch step {
-        case 0: return "Welcome to GeoSpoof"
-        case 1: return "About That Permission"
-        case 2: return "Enable in Safari"
-        default: return "You're All Set"
+
+    private func title(_ kind: StepKind) -> String {
+        switch kind {
+        case .welcome: return "Welcome to GeoSpoof"
+        case .enable: return "Enable in Safari"
+        case .permission: return "When Safari Asks"
+        case .done: return "You're All Set"
         }
     }
-    private var subtitle: String {
-        switch step {
-        case 0:
+
+    private func subtitle(_ kind: StepKind) -> String {
+        switch kind {
+        case .welcome:
             return "Mask your browser's location and timezone with a tap -- and keep your real whereabouts private."
-        case 1:
-            return "Safari will show a permission warning. Here is why you can trust it."
-        case 2:
+        case .enable:
             #if os(iOS)
-            return "Turn on GeoSpoof in Safari's extensions, then allow access to all websites."
+            return "Turn GeoSpoof on in Safari's extension settings."
             #else
-            return "In Safari, choose Settings > Extensions, turn on GeoSpoof, then allow access to websites."
+            return "In Safari, choose Settings > Extensions and turn on GeoSpoof."
             #endif
-        default:
+        case .permission:
+            return "The first time you browse, Safari asks to allow access. Approving it is what lets GeoSpoof work -- here's what you'll see."
+        case .done:
             return "Pick a location and GeoSpoof keeps the real one hidden. You can change it anytime."
         }
     }
-
-    private static let trustPoints: [(symbol: String, text: String)] = [
-        ("lock.fill",           "Runs entirely on-device -- no backend, no servers."),
-        ("eye.slash.fill",      "Never reads, stores, or transmits your browsing."),
-        ("chevron.left.forwardslash.chevron.right", "Open source -- the code is public and auditable."),
-        ("hand.raised.fill",    "No account, no sign-up, no tracking of any kind."),
-    ]
 
     private var primaryTitle: String {
         isLast ? "Get Started" : "Continue"
     }
 
     var body: some View {
-        VStack(spacing: 20) {
-            Spacer(minLength: 0)
+        GeometryReader { geo in
+            ScrollView {
+                VStack(spacing: 20) {
+                    Spacer(minLength: 0)
 
             Group {
-                if step == 0 {
+                if current == .welcome {
                     Image("LargeIcon")
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 104, height: 104)
                 } else {
-                    Image(systemName: symbol)
+                    Image(systemName: symbol(current))
                         .font(.system(size: 68))
                         .symbolRenderingMode(.hierarchical)
                         .foregroundStyle(Color.brand)
@@ -311,10 +341,10 @@ struct OnboardingView: View {
             .id("symbol-\(step)")
 
             VStack(spacing: 10) {
-                Text(title)
+                Text(title(current))
                     .font(.largeTitle.bold())
                     .multilineTextAlignment(.center)
-                Text(subtitle)
+                Text(subtitle(current))
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -322,49 +352,76 @@ struct OnboardingView: View {
             .padding(.horizontal)
             .id("text-\(step)")
 
-            if step == 1 {
-                VStack(alignment: .leading, spacing: 12) {
-                    ForEach(Self.trustPoints, id: \.symbol) { point in
-                        HStack(spacing: 12) {
-                            Image(systemName: point.symbol)
-                                .frame(width: 22)
-                                .foregroundStyle(Color.brand)
-                            Text(point.text)
-                                .font(.subheadline)
-                                .foregroundStyle(.primary)
-                        }
+            if current == .enable {
+                #if os(macOS)
+                if extState.state == .on {
+                    Label("GeoSpoof is enabled in Safari", systemImage: "checkmark.circle.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.green)
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 16)
+                        .background(Color.green.opacity(0.12), in: Capsule())
+                        .padding(.top, 4)
+                        .transition(.opacity)
+                } else {
+                    Button {
+                        openSystemSettings()
+                    } label: {
+                        Label("Open Safari Settings", systemImage: "arrow.up.forward.app")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .glassButtonStyle()
+                    .controlSize(.large)
+                    .padding(.horizontal)
+                    .padding(.top, 4)
+
+                    if extState.state == .off {
+                        Text("GeoSpoof's extension is currently turned off.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
-                .padding()
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .padding(.horizontal)
-                .padding(.top, 4)
-            }
-
-            if step == 2 {
-                #if os(macOS)
+                #else
+                // iOS has no public deep link into Safari → Extensions, and no
+                // API to read the extension's enabled state. The only
+                // App-Store-safe jump is openSettingsURLString, which lands on
+                // the Settings app (this app's own page); from there the user
+                // navigates to Apps › Safari › Extensions. We avoid the private
+                // `prefs:root=SAFARI` scheme — it's undocumented, version-fragile,
+                // and a review-rejection risk.
                 Button {
-                    openSystemSettings()
+                    openAppSettings()
                 } label: {
-                    Label("Open Safari Settings", systemImage: "arrow.up.forward.app")
+                    Label("Open Settings", systemImage: "arrow.up.forward.app")
                         .frame(maxWidth: .infinity)
                 }
                 .glassButtonStyle()
                 .controlSize(.large)
                 .padding(.horizontal)
                 .padding(.top, 4)
-                #else
-                // iOS has no public deep link into Safari → Extensions, so we
-                // guide with the path instead of a button that would just open
-                // this app's (unrelated) Settings page.
-                Label("Settings › Apps › Safari › Extensions", systemImage: "gearshape")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Color.brand)
-                    .padding(.vertical, 10)
-                    .padding(.horizontal, 16)
-                    .background(Color.brand.opacity(0.12), in: Capsule())
-                    .padding(.top, 4)
+
+                Label("Apps › Safari › Extensions › GeoSpoof", systemImage: "gearshape")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 2)
                 #endif
+            }
+
+            if current == .permission {
+                PermissionPromptsView()
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+
+                Button {
+                    showTrust = true
+                } label: {
+                    Label("Why you can trust GeoSpoof", systemImage: "checkmark.shield")
+                        .font(.subheadline.weight(.medium))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.brand)
+                .padding(.top, 2)
+                .accessibilityHint("Opens details about privacy and how to verify GeoSpoof")
             }
 
             Spacer(minLength: 0)
@@ -392,11 +449,25 @@ struct OnboardingView: View {
             .font(.subheadline)
             .opacity(step > 0 ? 1 : 0)
             .disabled(step == 0)
+                }
+                .padding()
+                .padding(.bottom, 12)
+                .frame(maxWidth: .infinity, minHeight: geo.size.height)
+            }
         }
-        .padding()
-        .padding(.bottom, 12)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .sheet(isPresented: $showTrust) {
+            TrustSheet()
+        }
         .animation(.easeInOut(duration: 0.25), value: step)
+        #if os(macOS)
+        .animation(.easeInOut(duration: 0.2), value: extState.state)
+        .onAppear { extState.refresh() }
+        .onChange(of: scenePhase) { phase in
+            // Re-check when the user returns from Safari's settings.
+            if phase == .active { extState.refresh() }
+        }
+        .onChange(of: step) { _ in extState.refresh() }
+        #endif
         #if os(macOS)
         .frame(minWidth: 460, minHeight: 560)
         #endif
@@ -416,4 +487,332 @@ struct OnboardingView: View {
         SFSafariApplication.showPreferencesForExtension(withIdentifier: "com.moonloaf.geospoof.Extension")
         #endif
     }
+
+    #if os(iOS)
+    /// Opens the Settings app. iOS only permits deep-linking to this app's own
+    /// Settings page (openSettingsURLString); there is no public route straight
+    /// to Safari → Extensions, so the on-screen path label guides the rest.
+    private func openAppSettings() {
+        if let url = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(url)
+        }
+    }
+    #endif
 }
+
+// MARK: - Permission prompts illustration
+
+/// The two real Safari permission prompts the user is about to hit, so the
+/// warning looks familiar (not alarming) when it appears. Shared by the macOS
+/// onboarding slide and the iOS TrustSheet (opened from the home Setup card).
+struct PermissionPromptsView: View {
+    var body: some View {
+        VStack(spacing: 12) {
+            Text("The prompts you'll see")
+                .font(.subheadline.weight(.semibold))
+                .multilineTextAlignment(.center)
+
+            HStack(alignment: .top, spacing: 14) {
+                shot(image: "PermissionPrompt1", index: 1, caption: "Safari asks for access")
+                shot(image: "PermissionPrompt2", index: 2, caption: "Confirm for every site")
+            }
+
+            Text("Both are Safari's standard warnings. GeoSpoof only uses this access to spoof location and timezone -- it never reads, stores, or sends your browsing.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding()
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private func shot(image: String, index: Int, caption: String) -> some View {
+        VStack(spacing: 8) {
+            Image(image)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(height: 170)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.08))
+                )
+                .shadow(color: .black.opacity(0.18), radius: 6, y: 2)
+
+            HStack(spacing: 6) {
+                Text("\(index)")
+                    .font(.caption2.bold())
+                    .foregroundStyle(.white)
+                    .frame(width: 16, height: 16)
+                    .background(Color.brand, in: Circle())
+                Text(caption)
+                    .font(.caption)
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Step \(index): \(caption)")
+    }
+}
+
+// MARK: - Trust Sheet
+
+/// Progressive-disclosure sheet surfaced just-in-time when the user is about to
+/// enable GeoSpoof in Safari (from the home Setup card, or the macOS onboarding
+/// slide). Combines what Safari will ask, why it's safe, and links to verify.
+struct TrustSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    private let points: [(symbol: String, text: String)] = [
+        ("lock.fill",           "Runs entirely on-device -- no backend, no servers."),
+        ("eye.slash.fill",      "Never reads, stores, or transmits your browsing."),
+        ("chevron.left.forwardslash.chevron.right", "Open source -- the code is public and auditable."),
+        ("hand.raised.fill",    "No account, no sign-up, no tracking of any kind."),
+    ]
+
+    private struct TrustLink: Identifiable {
+        let id = UUID()
+        let title: String
+        let detail: String
+        let symbol: String
+        let url: URL
+    }
+
+    private let links: [TrustLink] = [
+        TrustLink(
+            title: "View the source on GitHub",
+            detail: "Every line is public and auditable.",
+            symbol: "chevron.left.forwardslash.chevron.right",
+            url: URL(string: "https://github.com/anthonysgro/geospoof")!
+        ),
+        TrustLink(
+            title: "Read the privacy policy",
+            detail: "No accounts, no tracking, no data collection.",
+            symbol: "hand.raised.fill",
+            url: URL(string: "https://github.com/anthonysgro/geospoof/blob/main/PRIVACY_POLICY.md")!
+        ),
+        TrustLink(
+            title: "Help & support",
+            detail: "Questions? We're happy to help.",
+            symbol: "questionmark.circle",
+            url: URL(string: "https://www.geospoof.com/support")!
+        ),
+    ]
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Image(systemName: "checkmark.shield.fill")
+                        .font(.system(size: 40))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(Color.brand)
+                    Text("Why you can trust GeoSpoof")
+                        .font(.title2.bold())
+                    Text("Safari's permission warning sounds broad, but GeoSpoof uses that access narrowly -- and you don't have to take our word for it.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                PermissionPromptsView()
+
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(points, id: \.symbol) { point in
+                        HStack(spacing: 12) {
+                            Image(systemName: point.symbol)
+                                .frame(width: 22)
+                                .foregroundStyle(Color.brand)
+                            Text(point.text)
+                                .font(.subheadline)
+                                .foregroundStyle(.primary)
+                            Spacer(minLength: 0)
+                        }
+                    }
+                }
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Verify for yourself")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                    ForEach(links) { link in
+                        Link(destination: link.url) {
+                            HStack(spacing: 12) {
+                                Image(systemName: link.symbol)
+                                    .frame(width: 22)
+                                    .foregroundStyle(Color.brand)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(link.title)
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundStyle(.primary)
+                                    Text(link.detail)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer(minLength: 0)
+                                Image(systemName: "arrow.up.forward")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                            }
+                            .contentShape(Rectangle())
+                            .padding(.vertical, 6)
+                        }
+                        .accessibilityHint("Opens in your browser")
+                    }
+                }
+
+                Button {
+                    dismiss()
+                } label: {
+                    Text("Done").frame(maxWidth: .infinity)
+                }
+                .glassButtonStyle(prominent: true)
+                .controlSize(.large)
+                .padding(.top, 4)
+            }
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .trustSheetPresentation()
+        #if os(macOS)
+        .frame(minWidth: 420, minHeight: 520)
+        #endif
+    }
+}
+
+private extension View {
+    /// Applies medium/large detents + a drag indicator where available
+    /// (iOS 16 / macOS 13+); a no-op full-height sheet on iOS 15.
+    @ViewBuilder
+    func trustSheetPresentation() -> some View {
+        if #available(iOS 16.0, macOS 13.0, *) {
+            self
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        } else {
+            self
+        }
+    }
+}
+
+#if os(iOS)
+// MARK: - Safari activation animation (iOS)
+
+/// A lightweight, looping illustration of the iOS Safari address bar with an
+/// animated tap on the page-menu button. iOS has no API to drive or
+/// deep-link this step, and users routinely miss it (the extension is enabled
+/// in Settings but never switched on for the page), so we show exactly where to
+/// tap and what to choose. Honors Reduce Motion by falling back to a static
+/// highlighted state.
+struct SafariActivationAnimation: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var pressed = false
+    @State private var ripple = false
+
+    var body: some View {
+        VStack(spacing: 16) {
+            // Mock Safari address bar with an animated tap on the page menu.
+            HStack(spacing: 10) {
+                ZStack {
+                    Circle()
+                        .stroke(Color.brand, lineWidth: 2)
+                        .frame(width: 40, height: 40)
+                        .scaleEffect(ripple ? 1.7 : 0.7)
+                        .opacity(ripple ? 0 : 0.7)
+
+                    // The page-menu glyph: a small page rectangle with text
+                    // lines beneath it (the current iOS Safari address-bar
+                    // button). Drawn directly so it matches regardless of the
+                    // SF Symbol set on the running iOS version.
+                    pageMenuGlyph
+                        .frame(width: 40, height: 30)
+                        .background(
+                            Color.primary.opacity(pressed ? 0.18 : 0.07),
+                            in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        )
+                        .scaleEffect(pressed ? 0.9 : 1)
+
+                    Image(systemName: "hand.tap.fill")
+                        .font(.system(size: 18))
+                        .foregroundStyle(Color.brand)
+                        .offset(x: 15, y: 17)
+                        .scaleEffect(pressed ? 0.88 : 1)
+                }
+
+                Text("example.com")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "arrow.clockwise")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(.regularMaterial, in: Capsule())
+            .overlay(Capsule().strokeBorder(Color.primary.opacity(0.08)))
+
+            VStack(alignment: .leading, spacing: 8) {
+                stepLine(1, "Tap the page menu")
+                stepLine(2, "Choose Manage Extensions")
+                stepLine(3, "Switch on GeoSpoof")
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding()
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.horizontal)
+        .padding(.top, 4)
+        .onAppear(perform: startAnimating)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("In Safari, tap the page menu button in the address bar, choose Manage Extensions, then switch on GeoSpoof.")
+    }
+
+    /// The iOS Safari page-menu button: a small page rectangle above three
+    /// left-aligned, decreasing-width text lines.
+    private var pageMenuGlyph: some View {
+        VStack(alignment: .leading, spacing: 2.5) {
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .stroke(Color.primary, lineWidth: 1.5)
+                .frame(width: 15, height: 10)
+            Capsule().fill(Color.primary).frame(width: 15, height: 1.6)
+            Capsule().fill(Color.primary).frame(width: 11, height: 1.6)
+            Capsule().fill(Color.primary).frame(width: 7, height: 1.6)
+        }
+    }
+
+    private func stepLine(_ n: Int, _ text: String) -> some View {
+        HStack(spacing: 8) {
+            Text("\(n)")
+                .font(.caption2.bold())
+                .foregroundStyle(.white)
+                .frame(width: 16, height: 16)
+                .background(Color.brand, in: Circle())
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(.primary)
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func startAnimating() {
+        guard !reduceMotion else {
+            pressed = true // static highlighted state, no looping motion
+            return
+        }
+        withAnimation(.easeInOut(duration: 0.7).repeatForever(autoreverses: true)) {
+            pressed = true
+        }
+        withAnimation(.easeOut(duration: 1.4).repeatForever(autoreverses: false)) {
+            ripple = true
+        }
+    }
+}
+#endif

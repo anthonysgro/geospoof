@@ -10,6 +10,9 @@
 
 import SwiftUI
 import MapKit
+#if canImport(UIKit)
+import UIKit
+#endif
 
 struct SpoofControlPanel: View {
     @ObservedObject var controller: SpoofController
@@ -21,10 +24,14 @@ struct SpoofControlPanel: View {
 
     @AppStorage("spoofOnboardingCompleted") private var onboardingCompleted = false
     @State private var showOnboarding = false
+    @State private var showTrustInfo = false
     @State private var renaming: SpoofFavorite?
 
     var body: some View {
         Form {
+            #if os(iOS)
+            setupSection
+            #endif
             protectionSection
             locationSection
             vpnSyncSection
@@ -73,12 +80,85 @@ struct SpoofControlPanel: View {
         } header: {
             Text("Protection")
         } footer: {
-            if controller.enabled && !controller.hasLocation {
-                Label("Protection is on, but no location is set yet.", systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 6) {
+                #if os(iOS)
+                safariStatusLine
+                #endif
+                if controller.enabled && !controller.hasLocation {
+                    Label("Protection is on, but no location is set yet.", systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                }
             }
         }
     }
+
+    #if os(iOS)
+    /// State-driven hand-holding card for the one thing the app can't convey on
+    /// its own: getting GeoSpoof running in Safari (the step users miss).
+    /// Disappears once the extension checks in. Setting a location is the app's
+    /// core UI — the Protection section already flags a missing location — so we
+    /// deliberately don't duplicate that here.
+    @ViewBuilder
+    private var setupSection: some View {
+        if !controller.isActiveInSafari {
+            Section {
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("GeoSpoof runs inside Safari. Switch it on for the page you're viewing to start spoofing.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    SafariActivationAnimation()
+
+                    Button {
+                        openSafari()
+                    } label: {
+                        Label("Open Safari", systemImage: "safari")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .glassButtonStyle(prominent: true)
+                    .controlSize(.large)
+
+                    Button {
+                        showTrustInfo = true
+                    } label: {
+                        Label("What will Safari ask? Is it safe?", systemImage: "questionmark.circle")
+                            .font(.subheadline)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Color.brand)
+                }
+                .padding(.vertical, 6)
+                .sheet(isPresented: $showTrustInfo) { TrustSheet() }
+            } header: {
+                Text("Finish Setup")
+            }
+        }
+    }
+
+    private func openSafari() {
+        // Opens a geolocation test page so the user can switch GeoSpoof on for
+        // the page (via the page menu) and immediately see it working — which
+        // also fires the activation heartbeat. Note: iOS has no public API to
+        // force Safari specifically; this opens the user's default browser,
+        // which is Safari for the vast majority.
+        if let url = URL(string: "https://webbrowsertools.com/geolocation/") {
+            UIApplication.shared.open(url)
+        }
+    }
+
+    /// Quiet "GeoSpoof is running in Safari" confirmation, shown once the
+    /// extension has checked in. The not-yet-detected nudge lives in the
+    /// Setup card above, so this only surfaces the positive state.
+    @ViewBuilder
+    private var safariStatusLine: some View {
+        if controller.isActiveInSafari {
+            Label("GeoSpoof is running in Safari.", systemImage: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+        }
+    }
+    #endif
 
     // MARK: Location (current)
 
