@@ -56,6 +56,34 @@ platform :mac do
     UI.message("App profile UUID: #{app_profile_uuid}")
     UI.message("Extension profile UUID: #{ext_profile_uuid}")
 
+    # Switch the whole archive build to manual Developer ID signing, with the
+    # correct profile per target. CI runners only have the Developer ID cert
+    # (no Mac Development cert), so automatic signing can't be used for the
+    # archive.
+    #
+    # We write the signing settings directly into the project per target rather
+    # than via xcargs/xcconfig: neither command-line xcargs nor a single
+    # -xcconfig can be scoped per target (the only build-setting conditionals
+    # are [sdk=], [arch=], [config=], [variant=] — there is no [target=]). A
+    # global PROVISIONING_PROFILE therefore gets applied to every target, which
+    # is exactly what produced the "profile app ID does not match bundle ID"
+    # archive failure. update_code_signing_settings edits the .pbxproj per
+    # target, which is unambiguous.
+    {
+      "GeoSpoof (macOS)" => app_profile_uuid,
+      "GeoSpoof Extension (macOS)" => ext_profile_uuid
+    }.each do |target_name, profile_uuid|
+      update_code_signing_settings(
+        path: "GeoSpoof.xcodeproj",
+        use_automatic_signing: false,
+        team_id: "9445Q654K8",
+        code_sign_identity: "Developer ID Application",
+        targets: [target_name],
+        build_configurations: ["Release"],
+        profile_uuid: profile_uuid
+      )
+    end
+
     gym(
       scheme: "GeoSpoof-macOS",
       project: "GeoSpoof.xcodeproj",
@@ -70,16 +98,6 @@ platform :mac do
           "com.moonloaf.geospoof.Extension" => ext_profile_uuid
         }
       },
-      # Override the project's automatic signing for the archive step.
-      # CI runners only have the Developer ID cert (no Mac Development cert),
-      # so we force-switch the whole archive build to manual Developer ID signing.
-      xcargs: [
-        "CODE_SIGN_STYLE=Manual",
-        "CODE_SIGN_IDENTITY=Developer\\ ID\\ Application",
-        "DEVELOPMENT_TEAM=9445Q654K8",
-        "PROVISIONING_PROFILE[com.moonloaf.geospoof]=#{app_profile_uuid}",
-        "PROVISIONING_PROFILE[com.moonloaf.geospoof.Extension]=#{ext_profile_uuid}",
-      ].join(" "),
       output_directory: "./build",
       output_name: "GeoSpoof-macOS-DeveloperID"
     )
