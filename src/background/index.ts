@@ -203,21 +203,48 @@ async function initialize(): Promise<void> {
     }
   }
 
-  // Install the proxy-change watcher so a browser-based VPN (e.g. the Proton
-  // VPN extension) switching exit nodes triggers an event-driven re-sync,
-  // instead of GeoSpoof staying pinned to whatever exit IP it saw at startup.
-  // Feature-detects the proxy API and no-ops where unavailable (Safari,
-  // Firefox Android). The handler self-gates on `vpnSyncEnabled` at fire time.
-  installProxyWatcher();
+  // NOTE: the proxy-change and activity-driven resync watchers are installed
+  // at the TOP LEVEL of this module (see installResyncWatchers() below), NOT
+  // here. initialize() only runs from onInstalled/onStartup, but on a
+  // non-persistent MV3 background (Firefox event page, Chromium service worker)
+  // the background is torn down when idle and respawned by ordinary events
+  // (e.g. an incoming message) without firing onStartup — so anything wired up
+  // only inside initialize() is lost on the first respawn. Persistent wake
+  // listeners must also be registered synchronously during the top-level run.
+  // Installing the watchers at top level satisfies both. The install functions
+  // are idempotent, so there's no harm if initialize() runs afterward.
+}
 
-  // Install the activity-driven watcher (tab navigation + idle→active). This
-  // covers the VPN classes the proxy watcher can't see — Firefox onRequest
-  // VPNs and OS/desktop VPNs — by re-checking the exit IP on real browser
-  // activity. Both watchers feed the same debounced, rate-limited, IP-diff
-  // gate, so they coalesce rather than double up. Also self-gates on
-  // `vpnSyncEnabled` at check time.
+/**
+ * Install the VPN-resync watchers. Called synchronously at the top level (not
+ * from initialize()) so the listeners survive MV3 background respawns and are
+ * registered as persistent wake listeners on every engine.
+ *
+ * - proxy-change watcher: a browser-based VPN (e.g. the Proton VPN extension)
+ *   switching exit nodes mutates `proxy.settings`, firing an event-driven
+ *   re-sync. Feature-detects the proxy API and no-ops where unavailable
+ *   (Safari, Firefox Android).
+ * - activity-driven watcher (tab navigation + idle→active): covers the VPN
+ *   classes the proxy watcher can't see — Firefox onRequest VPNs and OS/desktop
+ *   VPNs — by re-checking the exit IP on real browser activity.
+ *
+ * Both watchers feed the same debounced, rate-limited, IP-diff gate, so they
+ * coalesce rather than double up, and both self-gate on `vpnSyncEnabled` at
+ * fire time. Both install functions are idempotent.
+ */
+function installResyncWatchers(): void {
+  installProxyWatcher();
   installActivityWatcher();
 }
+
+export { installResyncWatchers };
+
+// Register the resync watchers synchronously at module load. This top-level
+// call runs on every background (re)spawn — including the message-driven
+// respawns where onStartup/onInstalled (and therefore initialize()) never
+// fire — which is what keeps the VPN auto-resync alive across the event-page /
+// service-worker lifecycle.
+installResyncWatchers();
 
 export { initialize };
 
@@ -322,20 +349,9 @@ browser.runtime.onStartup.addListener(() => {
 if (__SAFARI__) {
   void adoptPendingSettingsFromApp();
 
-  // Arm the extension's own VPN resync here, at top level, rather than relying
-  // on initialize() (which runs from onStartup/onInstalled — unreliable on iOS
-  // Safari, so the watcher installed inside it often never gets registered).
-  //
-  // This is what makes the iOS Safari extension keep the spoofed location in
-  // sync with a VPN switch *without* the container app: the container app is
-  // suspended in the background and can't detect the change, but the extension
-  // runs whenever the user is browsing — which is exactly when a stale location
-  // matters. installActivityWatcher() wires tabs.onUpdated → triggerResyncCheck,
-  // which detects the exit IP, and only re-geolocates + re-applies on a genuine
-  // change (self-gated on vpnSyncEnabled, debounced, min-interval floored, and
-  // IP-diffed in resync-core). It's idempotent, so a duplicate call from
-  // initialize() (if onStartup does fire) is a no-op.
-  installActivityWatcher();
+  // NOTE: the VPN resync watchers are armed unconditionally at the top level
+  // via installResyncWatchers() above, so they're alive on Safari too (where
+  // onStartup is unreliable). No Safari-specific install is needed here.
 
   if (browser.tabs?.onActivated) {
     browser.tabs.onActivated.addListener(() => {
