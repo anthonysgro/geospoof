@@ -14,7 +14,7 @@ const downloads: Array<DownloadOption> = [
   {
     name: "Firefox Add-ons",
     description: "Firefox 140+ on desktop and Android",
-    href: "https://addons.mozilla.org/firefox/addon/geo-spoof/",
+    href: "https://addons.mozilla.org/firefox/addon/geo-spoof/?utm_source=geospoof.com&utm_medium=website&utm_campaign=download",
     primary: true,
   },
   {
@@ -26,7 +26,7 @@ const downloads: Array<DownloadOption> = [
   {
     name: "App Store",
     description: "Safari on iOS and macOS",
-    href: "https://apps.apple.com/app/geospoof/id6765719745",
+    href: "https://apps.apple.com/app/apple-store/id6765719745?pt=128299974&ct=dotcom&mt=8",
     primary: true,
   },
 ]
