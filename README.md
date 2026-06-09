@@ -108,8 +108,8 @@ GeoSpoof is designed to work alongside a VPN, not replace one.
 - Does NOT spoof your IP address (use a VPN for that)
 - Does NOT change browser language or locale
 - Does NOT bypass server-side detection (IP, payment info, account history)
-- Does NOT track your browsing activity, collect telemetry, or store data on external servers. Some features (city search, VPN sync) call third-party APIs to function. See [External Services](#external-services) for exactly what's sent and to whom.
-- Does NOT provide forensic-level anti-fingerprinting. Web Workers run in an isolated thread that extensions cannot inject into, meaning timezone can leak through that channel. Engine-level API tampering is also detectable by dedicated tools. For extreme threat models, use [Tor Browser](https://www.torproject.org/) or [Mullvad Browser](https://mullvad.net/browser) instead. GeoSpoof's goal is to present a plausible, consistent location identity — not to defeat forensic fingerprinting.
+- Does NOT track your browsing activity, collect telemetry, or store data on external servers. Some features (city search, VPN sync) call third-party APIs to function. See the [Privacy Policy](PRIVACY_POLICY.md) for exactly what's sent and to whom.
+- Does NOT provide forensic-level anti-fingerprinting. Engine-level API tampering is also detectable by dedicated tools. For extreme threat models, use [Tor Browser](https://www.torproject.org/) or [Mullvad Browser](https://mullvad.net/browser) instead.
 
 ## Overridden APIs
 
@@ -126,19 +126,7 @@ For the full API reference, see [docs/API.md](docs/API.md).
 
 ## External Services
 
-| Service                                                            | When                           | What's sent                                                            | Source                                                                 |
-| ------------------------------------------------------------------ | ------------------------------ | ---------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| [Nominatim](https://nominatim.org/) (OpenStreetMap)                | City search, reverse geocoding | Search query or coordinates                                            | [GitHub](https://github.com/osm-search/Nominatim)                      |
-| [browser-geo-tz](https://www.npmjs.com/package/browser-geo-tz) CDN | Timezone resolution            | HTTPS range requests for boundary data chunks (coordinates stay local) | [GitHub](https://github.com/kevmo314/browser-geo-tz)                   |
-| [ipify](https://www.ipify.org/)                                    | VPN sync enabled               | HTTPS request to detect your public IP                                 | [GitHub](https://github.com/rdegges/ipify-api)                         |
-| [GeoJS](https://www.geojs.io/)                                     | VPN sync enabled               | Your public IP (to geolocate VPN exit region)                          | [GitHub](https://github.com/jloh/geojs)                                |
-| [FreeIPAPI](https://freeipapi.com/)                                | VPN sync fallback              | Your public IP (fallback geolocation service)                          | Closed source ([Privacy Policy](https://freeipapi.com/privacy-policy)) |
-| [ReallyFreeGeoIP](https://reallyfreegeoip.org/)                    | VPN sync fallback              | Your public IP (fallback geolocation service)                          | [GitHub](https://github.com/reallyfreegeoip/reallyfreegeoip)           |
-| [ipinfo.io](https://ipinfo.io/)                                    | VPN sync fallback              | Your public IP (fallback geolocation service)                          | Closed source ([Privacy Policy](https://ipinfo.io/privacy-policy))     |
-
-> **VPN Sync privacy note:** When you enable "Sync with VPN," your public IP is sent to `api.ipify.org` and up to four geolocation services (`get.geojs.io`, `free.freeipapi.com`, `reallyfreegeoip.org`, `ipinfo.io`) in parallel over HTTPS to determine your VPN exit region. Your IP is never saved to disk — it's held only in memory and cleared when you disable VPN sync. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for full details.
-
-No data is sent to the extension developer. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
+GeoSpoof sends nothing to the developer and runs no backend. Some features — city search, timezone resolution, and the optional "Sync with VPN" — make requests directly from your device to third-party services. Exactly what is sent, when, and to whom (for both the Safari extension and the companion apps) is documented in the [Privacy Policy](PRIVACY_POLICY.md).
 
 ## Development
 

@@ -1,6 +1,6 @@
 # Privacy Policy for GeoSpoof
 
-**Last Updated:** June 6, 2026
+**Last Updated:** June 8, 2026
 
 ## Overview
 
@@ -32,44 +32,81 @@ This data never leaves your device and is only accessible by the extension.
 
 ## Third-Party API Usage
 
-When you use certain features, the extension communicates with external services. The developer operates no server and receives none of this data.
+When you use certain features, GeoSpoof communicates with external services. Both
+the Safari extension and the companion app (iOS, iPadOS, macOS) may make these
+requests, depending on which surface you're using. The developer operates no
+server and receives none of this data. All HTTPS requests are direct from your
+device to the third party; the STUN requests below are direct UDP from your
+device.
 
-### 1. [Nominatim](https://nominatim.org/) (OpenStreetMap)
+### 1. Location / place name resolution
 
-**When:** When you search for a city or the extension performs reverse geocoding.
-**Data Sent:** Search query (city name) or coordinates, over HTTPS.
-**Purpose:** To find location coordinates or city names.
-**Privacy Policy:** [OpenStreetMap Privacy Policy](https://wiki.osmfoundation.org/wiki/Privacy_Policy)
+**[Nominatim](https://nominatim.org/) (OpenStreetMap)** — _Extension only._
+Used when you search for a city or the extension performs reverse geocoding.
+Sends your search query (city name) or coordinates over HTTPS.
+[OpenStreetMap Privacy Policy](https://wiki.osmfoundation.org/wiki/Privacy_Policy)
 
-### 2. VPN Sync Services
+**Apple geocoding (`CLGeocoder`)** — _Companion app only._ When you set a manual
+location in the app, it uses Apple's on-device geocoding service to resolve the
+precise IANA timezone for the chosen coordinates. This is an Apple system API; if
+it returns nothing (offline), the app falls back to bundled offline boundary data
+and never leaves the device. City search in the app is fully offline (a bundled
+catalog) and makes no network request.
 
-**When:** Only when you explicitly enable the "Sync with VPN" feature or tap the "Re-sync" button in the extension popup. This never happens automatically unless you have previously enabled VPN sync mode.
+### 2. Timezone boundary data
 
-**Data Sent:** Your public IP address is first detected via ipify, then sent in parallel over HTTPS to up to four public IP geolocation services. The first successful response is used; the rest are cancelled. Only your public IP is transmitted — no identifiers, account data, or browsing history:
+**[browser-geo-tz](https://github.com/kevmo314/browser-geo-tz) CDN** —
+_Extension only._ To resolve the correct IANA timezone (e.g. `America/New_York`)
+for a location, the extension makes HTTPS range requests to a public CDN
+(`cdn.jsdelivr.net`) to download small chunks of geographic boundary data. Your
+coordinates are never sent as a query — the extension downloads the map data and
+does the lookup locally. (The companion app instead ships this boundary data
+inside the app and resolves timezones entirely offline.)
 
-- **[ipify](https://www.ipify.org/)** (`api.ipify.org`): Detects your current public IP address. The request returns your public-facing IP.
-- **[GeoJS](https://www.geojs.io/)** (`get.geojs.io`): Primary geolocation service. Receives your public IP and returns approximate geographic coordinates, city, and country.
-- **[FreeIPAPI](https://freeipapi.com/)** (`free.freeipapi.com`): Fallback geolocation service. ([Privacy Policy](https://freeipapi.com/privacy-policy))
-- **[ReallyFreeGeoIP](https://reallyfreegeoip.org/)** (`reallyfreegeoip.org`): Fallback geolocation service.
-- **[ipinfo.io](https://ipinfo.io/)** (`ipinfo.io`): Fallback geolocation service. ([Privacy Policy](https://ipinfo.io/privacy-policy))
+### 3. VPN Sync (optional — only when you enable "Sync with VPN")
 
-**Purpose:** To determine the geographic location of your VPN exit server so the extension can set your spoofed location to match your VPN region.
+This feature never runs unless you have explicitly turned on "Sync with VPN" (or
+tap "Re-sync"). It works in two steps — detect your current public (VPN exit) IP,
+then look up the approximate region of that IP. **Only your public IP is
+transmitted — no identifiers, account data, or browsing history.**
 
-**Privacy Safeguards:**
+**Step 1 — public IP detection:**
 
-- All requests use HTTPS encryption.
-- Your IP address is **never persisted to disk**. It is only held in an in-memory cache for the duration of your browser session.
-- The in-memory geolocation cache is **cleared immediately** when you disable VPN sync mode or switch to a different location input method.
-- IP data only appears in transient message responses between the popup and background script and is discarded when the popup closes.
+- _Extension:_ tries, in order with failover, **AWS** (`checkip.amazonaws.com`),
+  **Cloudflare** (`www.cloudflare.com/cdn-cgi/trace`), **Akamai**
+  (`whatismyip.akamai.com`), and **[ipify](https://www.ipify.org/)**
+  (`api.ipify.org`). Each simply returns your public-facing IP.
+- _Companion app:_ uses **STUN** (a single UDP request) to **Cloudflare**
+  (`stun.cloudflare.com`) and **Google** (`stun.l.google.com`) to discover the
+  public IP, falling back to **ipify** (`api.ipify.org`) over HTTPS if STUN is
+  blocked. STUN servers receive only the network request needed to report your
+  public IP back to you.
 
-### 3. [browser-geo-tz](https://github.com/kevmo314/browser-geo-tz) (Timezone Boundary Data)
+**Step 2 — IP geolocation** (both extension and app), sent in parallel; first
+successful response wins, the rest are cancelled:
 
-**When:** Used to determine the correct Timezone ID (e.g., `America/New_York`) for a selected location.
-**Data Sent:** The extension makes HTTPS range requests to a CDN to fetch small chunks of geographic boundary data.
-**Purpose:** This allows the extension to resolve your timezone entirely within your browser's memory using high-precision boundary maps, without needing a centralized API account.
-**Note:** Your coordinates are never sent as a query or stored by a third-party API. The extension simply downloads the map data it needs to do the math locally on your machine.
+- **[GeoJS](https://www.geojs.io/)** (`get.geojs.io`) — primary.
+- **[FreeIPAPI](https://freeipapi.com/)** (`free.freeipapi.com`) — fallback.
+  ([Privacy Policy](https://freeipapi.com/privacy-policy))
+- **[ReallyFreeGeoIP](https://reallyfreegeoip.org/)** (`reallyfreegeoip.org`) — fallback.
+- **[ipinfo.io](https://ipinfo.io/)** (`ipinfo.io`) — fallback.
+  ([Privacy Policy](https://ipinfo.io/privacy-policy))
 
-**Important:** These data fetches are made directly from your browser to the CDN. The extension developer never receives, logs, or has access to your location or these requests.
+**Purpose:** to determine the geographic region of your VPN exit server so
+GeoSpoof can set your spoofed location to match your VPN.
+
+**Privacy safeguards:**
+
+- All HTTPS requests are encrypted; STUN is a direct UDP round-trip to discover
+  your IP.
+- Your IP address is **never persisted to disk**. It is held only in an
+  in-memory / session cache for the duration of your browser (or app) session.
+- That cache is **cleared** when you disable VPN sync or switch to a different
+  location input method.
+
+> The IP these services see is typically your **VPN exit IP** (a shared address),
+> not your home IP, because the whole point of the feature is that a VPN is
+> already active.
 
 ## Permissions Explained
 
@@ -140,7 +177,7 @@ If you are located in the EEA, UK, or Switzerland, the following applies to you 
 
 **Legal basis for processing:** The only personal data processed is your public IP address, and only when you explicitly enable the "Sync with VPN" feature. We rely on your consent (GDPR Art. 6(1)(a)), which you give by enabling the feature, and which you can withdraw at any time by disabling "Sync with VPN" in the extension popup. Withdrawing consent does not affect the lawfulness of processing based on consent before its withdrawal.
 
-**International transfers:** The third-party services listed above (ipify, GeoJS, FreeIPAPI, ReallyFreeGeoIP, ipinfo.io, Nominatim) are operated outside the EEA, including in the United States. When you use features that contact these services, your public IP is transferred to their infrastructure. Each service is an independent controller and determines its own transfer mechanisms. The extension developer operates no server and performs no cross-border transfer on its own.
+**International transfers:** The third-party services listed above (AWS, Cloudflare, Akamai, ipify, GeoJS, FreeIPAPI, ReallyFreeGeoIP, ipinfo.io, Google STUN, Nominatim, and the jsDelivr CDN) are operated outside the EEA, including in the United States. When you use features that contact these services, your public IP is transferred to their infrastructure. Each service is an independent controller and determines its own transfer mechanisms. The extension developer operates no server and performs no cross-border transfer on its own.
 
 **Your rights under GDPR / UK GDPR:** you have the right to access, rectify, erase, restrict, object to, and port your personal data, and to withdraw consent at any time. Because the extension stores no personal data on any server controlled by the developer, most of these rights are exercised directly by you within the extension: uninstalling the extension or disabling "Sync with VPN" fully erases everything the developer could ever access. You also have the right to lodge a complaint with your local data protection authority.
 
