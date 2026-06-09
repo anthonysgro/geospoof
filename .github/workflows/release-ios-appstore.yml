@@ -1,0 +1,110 @@
+name: Release iOS (App Store)
+
+# Manually triggered: builds the iOS app with the GM Xcode on a public-macOS
+# runner and uploads it to App Store Connect. Kept separate from the tag-push
+# `Release` workflow so it can't disturb the existing extension/DMG pipeline.
+#
+# Why this exists: when developing against an OS/Xcode beta locally, Apple
+# rejects beta-built binaries for App Store review. GitHub's macos-26 runner
+# has public (GM) Xcode, so archives produced here are submittable.
+#
+# Requires these repository secrets (in addition to the ones the macOS DMG job
+# already uses):
+#   IOS_DISTRIBUTION_P12           - base64 of the Apple Distribution cert .p12
+#   IOS_DISTRIBUTION_P12_PASSWORD  - password for that .p12
+#   IOS_PROFILE_APP                - base64 of the App Store profile for com.moonloaf.geospoof
+#   IOS_PROFILE_EXT                - base64 of the App Store profile for ...Extension
+#   IOS_PROFILE_WIDGET             - base64 of the App Store profile for ...GeoSpoof-Widget
+#   ASC_API_KEY_P8                 - (reused) base64 of the App Store Connect API key
+#   MACOS_KEYCHAIN_PASSWORD        - (reused) temp keychain password
+
+on:
+  workflow_dispatch:
+
+jobs:
+  release-ios:
+    runs-on: macos-26
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: "npm"
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+          working-directory: safari
+
+      - run: npm ci
+      - run: cp .env.example .env
+
+      # GM Xcode (this app needs Xcode 26+ for the macOS 26 SDK APIs / Swift 6.2).
+      - name: Select newest Xcode
+        run: |
+          LATEST=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          echo "Selecting $LATEST"
+          sudo xcode-select -s "$LATEST"
+          xcodebuild -version
+
+      - name: Import Apple Distribution certificate
+        env:
+          CERT_P12_BASE64: ${{ secrets.IOS_DISTRIBUTION_P12 }}
+          CERT_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_P12_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
+          echo "$CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$RUNNER_TEMP/cert.p12" -P "$CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/cert.p12"
+
+      - name: Place App Store Connect API key
+        env:
+          ASC_API_KEY_BASE64: ${{ secrets.ASC_API_KEY_P8 }}
+        run: |
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          echo "$ASC_API_KEY_BASE64" | base64 --decode > "$HOME/.appstoreconnect/private_keys/AuthKey_UZBN452J8D.p8"
+          chmod 600 "$HOME/.appstoreconnect/private_keys/AuthKey_UZBN452J8D.p8"
+
+      - name: Install App Store provisioning profiles
+        env:
+          PROFILE_APP_BASE64: ${{ secrets.IOS_PROFILE_APP }}
+          PROFILE_EXT_BASE64: ${{ secrets.IOS_PROFILE_EXT }}
+          PROFILE_WIDGET_BASE64: ${{ secrets.IOS_PROFILE_WIDGET }}
+        run: |
+          PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILES_DIR"
+          echo "$PROFILE_APP_BASE64" | base64 --decode > "$PROFILES_DIR/geospoof_ios_app.mobileprovision"
+          echo "$PROFILE_EXT_BASE64" | base64 --decode > "$PROFILES_DIR/geospoof_ios_ext.mobileprovision"
+          echo "$PROFILE_WIDGET_BASE64" | base64 --decode > "$PROFILES_DIR/geospoof_ios_widget.mobileprovision"
+
+      - name: Build and upload to App Store Connect
+        working-directory: safari
+        run: bundle exec fastlane ios app_store_ci
+
+      # gym/xcbeautify hides the real compiler/signing error behind boilerplate.
+      # On failure, surface the actual error lines from the raw xcodebuild log.
+      - name: Dump xcodebuild error log on failure
+        if: failure()
+        run: |
+          LOG="$HOME/Library/Logs/gym/GeoSpoof-GeoSpoof-iOS.log"
+          if [ -f "$LOG" ]; then
+            echo "===== matching error lines ====="
+            grep -nE "error:|The following build commands failed|ARCHIVE FAILED|Command .* failed|fatal error|provisioning|signing" "$LOG" || true
+            echo "===== last 200 lines of gym log ====="
+            tail -n 200 "$LOG"
+          else
+            echo "No gym log found at $LOG"
+            ls -la "$HOME/Library/Logs/gym" || true
+          fi
+
+      - name: Clean up keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/build.keychain-db" || true

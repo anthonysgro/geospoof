@@ -166,4 +166,78 @@ platform :ios do
       run_precheck_before_submit: false
     )
   end
+
+  desc "CI: build + upload iOS App Store build with manual Apple Distribution signing"
+  lane :app_store_ci do
+    # CI runners have no logged-in Apple account, so automatic signing can't be
+    # used for an App Store archive. Sign manually with the Apple Distribution
+    # cert + explicit App Store provisioning profiles per target — the same
+    # approach the macOS `developer_id` lane uses (which is proven on CI).
+    #
+    # Profiles are installed by the workflow into the standard directory. Read
+    # each one's UUID so we can pass explicit specifiers to xcodebuild (App
+    # Groups require an explicit profile even under manual signing).
+    profiles_dir = File.expand_path("~/Library/MobileDevice/Provisioning Profiles")
+    read_uuid = lambda do |file|
+      `/usr/libexec/PlistBuddy -c 'Print :UUID' /dev/stdin <<< $(security cms -D -i "#{file}")`.strip
+    end
+    app_uuid    = read_uuid.call("#{profiles_dir}/geospoof_ios_app.mobileprovision")
+    ext_uuid    = read_uuid.call("#{profiles_dir}/geospoof_ios_ext.mobileprovision")
+    widget_uuid = read_uuid.call("#{profiles_dir}/geospoof_ios_widget.mobileprovision")
+
+    UI.message("App profile UUID: #{app_uuid}")
+    UI.message("Extension profile UUID: #{ext_uuid}")
+    UI.message("Widget profile UUID: #{widget_uuid}")
+
+    # Write manual signing settings per target. Per-target (not a global xcarg)
+    # because each target has a distinct bundle ID + profile; a global
+    # PROVISIONING_PROFILE would be applied to all three and mismatch two of them.
+    {
+      "GeoSpoof (iOS)"           => app_uuid,
+      "GeoSpoof Extension (iOS)" => ext_uuid,
+      "GeoSpoof WidgetExtension" => widget_uuid
+    }.each do |target_name, profile_uuid|
+      update_code_signing_settings(
+        path: "GeoSpoof.xcodeproj",
+        use_automatic_signing: false,
+        team_id: "9445Q654K8",
+        code_sign_identity: "Apple Distribution",
+        targets: [target_name],
+        build_configurations: ["Release"],
+        profile_uuid: profile_uuid
+      )
+    end
+
+    build_number = next_build_number("ios")
+    increment_build_number(build_number: build_number)
+
+    gym(
+      scheme: "GeoSpoof-iOS",
+      project: "GeoSpoof.xcodeproj",
+      configuration: "Release",
+      destination: "generic/platform=iOS",
+      export_method: "app-store",
+      export_options: {
+        signingStyle: "manual",
+        teamID: "9445Q654K8",
+        provisioningProfiles: {
+          "com.moonloaf.geospoof"                => app_uuid,
+          "com.moonloaf.geospoof.Extension"      => ext_uuid,
+          "com.moonloaf.geospoof.GeoSpoof-Widget" => widget_uuid
+        }
+      },
+      # Same run-script sandbox issue as the macOS archive: the build phase runs
+      # `npm run build:safari`, which writes dist/ outside Xcode's script sandbox.
+      xcargs: "ENABLE_USER_SCRIPT_SANDBOXING=NO",
+      output_directory: "./build",
+      output_name: "GeoSpoof-iOS"
+    )
+
+    deliver(
+      platform: "ios",
+      skip_metadata: true,
+      skip_screenshots: true,
+      run_precheck_before_submit: false
+    )
+  end
 end
