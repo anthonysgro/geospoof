@@ -122,7 +122,7 @@ When protection is enabled, GeoSpoof overrides browser APIs synchronously at `do
 - **WebRTC** — via browser privacy API, no script injection needed
 - **Anti-fingerprinting** — `Function.prototype.toString` returns `[native code]` for all overrides; iframes patched on insertion
 
-For the full API reference, see [docs/API.md](docs/API.md).
+For the full API reference, see [docs/API.md](docs/API.md). For the VPN sync and auto-resync architecture, see [docs/VPN_SYNC.md](docs/VPN_SYNC.md).
 
 ## External Services
 
@@ -146,6 +146,7 @@ MIT — see [LICENSE](LICENSE).
 - [Verify your protection — geospoof.com/test](https://geospoof.com/test)
 - [User Guide](docs/USER_GUIDE.md)
 - [API Documentation](docs/API.md)
+- [VPN Sync & Auto-Resync](docs/VPN_SYNC.md)
 - [How Browsers Track Location](docs/BACKGROUND.md)
 - [Privacy Policy](PRIVACY_POLICY.md)
 - [Contributing](CONTRIBUTING.md)

@@ -115,6 +115,43 @@ tests/
 └── property/            # Property-based tests (fast-check)
 ```
 
+## Project Configuration
+
+### Path Aliases
+
+Configured in `tsconfig.json` (for TypeScript/IDE) and `vite.config.ts` (for bundling). Prefer these over deep relative imports.
+
+| Alias            | Maps to              |
+| ---------------- | -------------------- |
+| `@/*`            | `./src/*`            |
+| `@/background/*` | `./src/background/*` |
+| `@/content/*`    | `./src/content/*`    |
+| `@/popup/*`      | `./src/popup/*`      |
+| `@/shared/*`     | `./src/shared/*`     |
+
+### Config Files
+
+| File                 | Tool       | Purpose                                           |
+| -------------------- | ---------- | ------------------------------------------------- |
+| `tsconfig.json`      | TypeScript | Main config — strict mode, path aliases           |
+| `tsconfig.node.json` | TypeScript | Build scripts (`vite.config.ts`)                  |
+| `tsconfig.test.json` | TypeScript | Test files (includes `tests/`)                    |
+| `vite.config.ts`     | Vite       | Multi-entry WebExtension build                    |
+| `vitest.config.ts`   | Vitest     | Test config + coverage thresholds                 |
+| `eslint.config.js`   | ESLint     | Flat config (TypeScript + Prettier)               |
+| `.prettierrc`        | Prettier   | Formatting rules                                  |
+| `.husky/pre-commit`  | Husky      | Runs lint-staged on commit                        |
+| `.npmrc`             | npm        | Package manager settings (`audit-level=moderate`) |
+
+Coverage thresholds: 80% lines, 80% functions, 75% branches, 80% statements.
+
+## Dependency Policy
+
+- **Security patches**: immediately (high/critical within 24h, moderate within a week).
+- **Routine updates**: `npm outdated` → `npm update` → `npm run validate` → commit.
+- **Major versions**: read the changelog, update on a branch, validate, fix breakage, test in Firefox + Chromium, PR.
+- **Pinning**: TypeScript and Vite use tilde ranges (`~5.7`); other devDeps use caret ranges (`^x.y.z`). `package-lock.json` is committed for reproducibility.
+
 ## Building for Review
 
 **Firefox (AMO):**

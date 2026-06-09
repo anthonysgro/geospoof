@@ -462,6 +462,71 @@ Response: Complete settings object.
 }
 ```
 
+#### SYNC_VPN
+
+```typescript
+{ type: "SYNC_VPN", payload?: { forceRefresh?: boolean } }
+```
+
+Detects the public exit IP, geolocates it, applies the location (with timezone hint), and sets `vpnSyncEnabled: true`. Clears per-endpoint cooldowns first so every endpoint gets a fresh shot. `forceRefresh` bypasses caches and in-flight dedup (the Re-sync button).
+Response: `{ latitude, longitude, city, country, ip }` or `{ error: "IP_DETECTION_FAILED" | "GEOLOCATION_FAILED" | "IP_BLOCKED" | "NETWORK", message }`. See [VPN_SYNC.md](VPN_SYNC.md).
+
+#### DISABLE_VPN_SYNC
+
+```typescript
+{
+  type: "DISABLE_VPN_SYNC";
+}
+```
+
+Clears the IP-geo cache and `lastSyncedIp`, sets `vpnSyncEnabled: false`, and nulls `location` / `timezone` / `locationName`.
+
+#### CLEAR_LOCATION
+
+```typescript
+{
+  type: "CLEAR_LOCATION";
+}
+```
+
+Nulls `location` / `timezone` / `locationName` and broadcasts to content scripts.
+
+#### CHECK_TAB_INJECTION
+
+```typescript
+{ type: "CHECK_TAB_INJECTION", payload: { tabId: number } }
+```
+
+Response: `{ injected: boolean, error: string | null }`.
+
+#### SET_DEBUG_LOGGING / SET_VERBOSITY_LEVEL / SET_THEME
+
+```typescript
+{ type: "SET_DEBUG_LOGGING", payload: { enabled: boolean } }
+{ type: "SET_VERBOSITY_LEVEL", payload: { level: string } }
+{ type: "SET_THEME", payload: { theme: "system" | "light" | "dark" } }
+```
+
+#### SAVE_FAVORITE / REMOVE_FAVORITE / RENAME_FAVORITE
+
+```typescript
+{ type: "SAVE_FAVORITE", payload: { id, latitude, longitude, city, country, displayName, label } }
+{ type: "REMOVE_FAVORITE", payload: { id: string } }
+{ type: "RENAME_FAVORITE", payload: { id: string, label: string } }
+```
+
+Response: `{ success: true }` or `{ error: "AT_CAPACITY" | "STORAGE_ERROR" }`. Capacity is 10; saves dedupe by coordinates rounded to 4 decimal places.
+
+### Content Script → Background Messages
+
+#### ANNOUNCE_WORKER_FETCH
+
+```typescript
+{ type: "ANNOUNCE_WORKER_FETCH", payload: { url: string } }
+```
+
+Fire-and-forget. Sent by the content-script Worker wrapper just before handing off to the real constructor, so the Firefox `webRequest.filterResponseData` listener knows the next request for `url` is a worker script. Only same-origin worker URLs are allowlisted; cross-origin workers are never patched.
+
 ### Background → Content Script Messages
 
 #### UPDATE_SETTINGS
@@ -472,7 +537,10 @@ Response: Complete settings object.
   payload: {
     enabled: boolean,
     location: { latitude: number, longitude: number, accuracy: number } | null,
-    timezone: { identifier: string, offset: number, dstOffset: number } | null
+    timezone: { identifier: string, offset: number, dstOffset: number } | null,
+    debugLogging: boolean,
+    verbosityLevel: string,
+    webrtcProtection: boolean
   }
 }
 ```
@@ -495,13 +563,17 @@ Persisted in `browser.storage.local` under the key `"settings"`.
 {
   enabled: boolean,
   location: { latitude: number, longitude: number, accuracy: number } | null,
-  timezone: { identifier: string, offset: number, dstOffset: number } | null,
+  timezone: { identifier: string, offset: number, dstOffset: number, fallback?: boolean } | null,
   locationName: { city: string, country: string, displayName: string } | null,
   webrtcProtection: boolean,
   onboardingCompleted: boolean,
-  vpnSyncEnabled: boolean,
+  vpnSyncEnabled: boolean,          // VPN sync is the active location method
+  debugLogging: boolean,            // verbose logging toggle
+  verbosityLevel: string,           // debug logger threshold (e.g. "INFO")
+  theme: "system" | "light" | "dark",
+  favorites: Favorite[],            // up to 10 saved locations
   version: string,
-  lastUpdated: number
+  lastUpdated: number               // epoch ms; default 0 (never-saved sentinel — see app-bridge.ts)
 }
 ```
 
@@ -516,16 +588,31 @@ Persisted in `browser.storage.local` under the key `"settings"`.
 ### Timezone
 
 ```typescript
-{ identifier: string, offset: number, dstOffset: number }
+{ identifier: string, offset: number, dstOffset: number, fallback?: boolean }
 // identifier: IANA timezone ID (e.g. "America/Los_Angeles")
 // offset: Minutes from UTC (e.g. -480 for PST)
 // dstOffset: DST offset in minutes
+// fallback: true when estimated from longitude (Etc/GMT±N) rather than a real lookup — never persisted
 ```
 
 ### LocationName
 
 ```typescript
 { city: string, country: string, displayName: string }
+```
+
+### Favorite
+
+```typescript
+{
+  id: string,            // timestamp-based unique id
+  latitude: number,
+  longitude: number,
+  city: string,
+  country: string,
+  displayName: string,   // capped at 100 chars
+  label: string | null   // user-defined; overrides city when non-empty
+}
 ```
 
 ### GeolocationPosition (W3C)
@@ -556,18 +643,22 @@ Rate Limit: 1 req/sec | Auth: None | Timeout: 5s | Retry: 3x exponential backoff
 
 Uses `browser-geo-tz` npm package for offline coordinate-to-timezone resolution. No external API calls needed for timezone lookup.
 
+`getTimezoneForCoordinates(lat, lng, ianaHint?)` resolves in priority order: (1) the offline `browser-geo-tz` boundary lookup, (2) the optional `ianaHint` — an IANA identifier from the winning geo service on the VPN-sync path, used when the boundary lookup throws or returns nothing, and (3) the crude longitude estimate (`Etc/GMT±N`) as a last resort. The hint is validated by format and guarded with a `try/catch` around `Intl` (it's external/untrusted). Longitude-estimate fallbacks are never cached or persisted, so a transient CDN failure retries on the next call. See [VPN_SYNC.md](VPN_SYNC.md#timezone-hint-resolution) for details.
+
 ### VPN Sync IP Geolocation
 
-Public IP detected via `api.ipify.org`. Geolocation resolved in parallel across four services (first success wins):
+VPN Sync detects the public (exit) IP and geolocates it to align the spoofed location with the VPN region. The public IP is resolved via a **failover pool** of HTTP IP-echo endpoints (AWS → Cloudflare → Akamai → ipify, first success wins), and geolocation is resolved via a **parallel race** of geo services (first success wins):
 
-| Service                    | URL                                        |
-| -------------------------- | ------------------------------------------ |
-| GeoJS (primary)            | `https://get.geojs.io/v1/ip/geo/{ip}.json` |
-| FreeIPAPI (fallback)       | `https://free.freeipapi.com/api/json/{ip}` |
-| ReallyFreeGeoIP (fallback) | `https://reallyfreegeoip.org/json/{ip}`    |
-| ipinfo.io (fallback)       | `https://ipinfo.io/{ip}/json`              |
+| Geo service                   | URL                                        | Notes                                    |
+| ----------------------------- | ------------------------------------------ | ---------------------------------------- |
+| GeoJS (primary)               | `https://get.geojs.io/v1/ip/geo/{ip}.json` | CORS-friendly, no key; lat/lng strings   |
+| FreeIPAPI (fallback #1)       | `https://free.freeipapi.com/api/json/{ip}` |                                          |
+| ReallyFreeGeoIP (fallback #2) | `https://reallyfreegeoip.org/json/{ip}`    |                                          |
+| ipinfo.io (fallback #3)       | `https://ipinfo.io/{ip}/json`              | Google Cloud network; `loc` is `lat,lng` |
 
-Timeout: 5s per service | Retry: 2x exponential backoff | Results cached in memory and `browser.storage.local` (30 days).
+Timeout: 10s (IP detection), 5s per geo service | Retry: 2x exponential backoff | Results cached in `browser.storage.session` and `browser.storage.local` (30 days). Each endpoint pool has independent per-endpoint rate-limit cooldowns, and the spoofed location auto-resyncs when the exit IP changes.
+
+**See [VPN_SYNC.md](VPN_SYNC.md) for the full auto-resync architecture** — IP detection failover, per-endpoint cooldowns, the shared resync gate (debounce / min-interval / switch-settle / circuit breaker / IP-diff), the proxy-change and activity watchers, engine support, and timezone-hint resolution.
 
 ## Known Limitations
 
