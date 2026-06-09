@@ -11,6 +11,7 @@
 [![Chrome](https://img.shields.io/badge/Chrome-available-4285F4.svg?logo=googlechrome)](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje)
 [![Safari](https://img.shields.io/badge/Safari-available-006CFF.svg?logo=safari)](https://apps.apple.com/app/apple-store/id6765719745?pt=128299974&ct=github&mt=8)
 [![Version](https://img.shields.io/github/package-json/v/anthonysgro/geospoof?color=green)](https://github.com/anthonysgro/geospoof/releases)
+[![Reddit](https://img.shields.io/badge/Reddit-r%2FGeoSpoof-FF4500.svg?logo=reddit&logoColor=white)](https://www.reddit.com/r/geospoof)
 
   <p>
     <img src="assets/chrome-store/screenshot1.png" alt="GeoSpoof main view" width="960" />
@@ -144,6 +145,7 @@ MIT — see [LICENSE](LICENSE).
 
 - [Website — geospoof.com](https://geospoof.com/?utm_source=github&utm_medium=readme)
 - [Verify your protection — geospoof.com/test](https://geospoof.com/test?utm_source=github&utm_medium=readme)
+- [Community — r/GeoSpoof](https://www.reddit.com/r/geospoof)
 - [User Guide](docs/USER_GUIDE.md)
 - [API Documentation](docs/API.md)
 - [VPN Sync & Auto-Resync](docs/VPN_SYNC.md)
