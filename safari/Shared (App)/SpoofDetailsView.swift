@@ -455,7 +455,7 @@ struct OnboardingView: View {
                 .frame(maxWidth: .infinity, minHeight: geo.size.height)
             }
         }
-        .sheet(isPresented: $showTrust) {
+        .adaptiveModalCover(isPresented: $showTrust) {
             TrustSheet()
         }
         .animation(.easeInOut(duration: 0.25), value: step)
@@ -506,6 +506,10 @@ struct OnboardingView: View {
 /// warning looks familiar (not alarming) when it appears. Shared by the macOS
 /// onboarding slide and the iOS TrustSheet (opened from the home Setup card).
 struct PermissionPromptsView: View {
+    /// Screenshot height. Default matches the macOS onboarding slide; the iPad
+    /// TrustSheet passes a larger value.
+    var imageHeight: CGFloat = 170
+
     var body: some View {
         VStack(spacing: 12) {
             Text("The prompts you'll see")
@@ -531,7 +535,7 @@ struct PermissionPromptsView: View {
             Image(image)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(height: 170)
+                .frame(height: imageHeight)
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -565,9 +569,9 @@ struct TrustSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     private let points: [(symbol: String, text: String)] = [
-        ("lock.fill",           "Runs entirely on-device -- no backend, no servers."),
+        ("lock.fill",           "Runs entirely on-device — no backend, no servers."),
         ("eye.slash.fill",      "Never reads, stores, or transmits your browsing."),
-        ("chevron.left.forwardslash.chevron.right", "Open source -- the code is public and auditable."),
+        ("chevron.left.forwardslash.chevron.right", "Open source — the code is public and auditable."),
         ("hand.raised.fill",    "No account, no sign-up, no tracking of any kind."),
     ]
 
@@ -601,86 +605,132 @@ struct TrustSheet: View {
     ]
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Image(systemName: "checkmark.shield.fill")
-                        .font(.system(size: 40))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(Color.brand)
-                    Text("Why you can trust GeoSpoof")
-                        .font(.title2.bold())
-                    Text("Safari's permission warning sounds broad, but GeoSpoof uses that access narrowly -- and you don't have to take our word for it.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
+        AdaptiveNavigationStack {
+            ScrollView {
+                VStack(spacing: isPad ? 30 : 24) {
+                    hero
+                    PermissionPromptsView(imageHeight: isPad ? 260 : 170)
 
-                PermissionPromptsView()
-
-                VStack(alignment: .leading, spacing: 12) {
-                    ForEach(points, id: \.symbol) { point in
-                        HStack(spacing: 12) {
-                            Image(systemName: point.symbol)
-                                .frame(width: 22)
-                                .foregroundStyle(Color.brand)
-                            Text(point.text)
-                                .font(.subheadline)
-                                .foregroundStyle(.primary)
-                            Spacer(minLength: 0)
-                        }
-                    }
-                }
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Verify for yourself")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.secondary)
-
-                    ForEach(links) { link in
-                        Link(destination: link.url) {
-                            HStack(spacing: 12) {
-                                Image(systemName: link.symbol)
-                                    .frame(width: 22)
-                                    .foregroundStyle(Color.brand)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(link.title)
-                                        .font(.subheadline.weight(.medium))
+                    section("What GeoSpoof does — and doesn't") {
+                        VStack(alignment: .leading, spacing: isPad ? 18 : 14) {
+                            ForEach(points, id: \.symbol) { point in
+                                HStack(alignment: .top, spacing: 14) {
+                                    Image(systemName: point.symbol)
+                                        .font(isPad ? .title3 : .body)
+                                        .foregroundStyle(Color.brand)
+                                        .frame(width: isPad ? 30 : 24)
+                                    Text(point.text)
+                                        .font(isPad ? .body : .subheadline)
                                         .foregroundStyle(.primary)
-                                    Text(link.detail)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                    Spacer(minLength: 0)
                                 }
-                                Spacer(minLength: 0)
-                                Image(systemName: "arrow.up.forward")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.secondary)
                             }
-                            .contentShape(Rectangle())
-                            .padding(.vertical, 6)
                         }
-                        .accessibilityHint("Opens in your browser")
+                    }
+
+                    section("Verify for yourself") {
+                        VStack(spacing: 0) {
+                            ForEach(Array(links.enumerated()), id: \.element.id) { idx, link in
+                                Link(destination: link.url) { linkRow(link) }
+                                    .accessibilityHint("Opens in your browser")
+                                if idx < links.count - 1 {
+                                    Divider().padding(.leading, isPad ? 44 : 36)
+                                }
+                            }
+                        }
                     }
                 }
-
-                Button {
-                    dismiss()
-                } label: {
-                    Text("Done").frame(maxWidth: .infinity)
-                }
-                .glassButtonStyle(prominent: true)
-                .controlSize(.large)
-                .padding(.top, 4)
+                .frame(maxWidth: isPad ? 680 : 540)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, isPad ? 28 : 20)
+                .padding(.top, 8)
+                .padding(.bottom, 28)
             }
-            .padding()
-            .frame(maxWidth: .infinity, alignment: .leading)
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }.font(.body.weight(.semibold))
+                }
+            }
         }
         .trustSheetPresentation()
         #if os(macOS)
-        .frame(minWidth: 420, minHeight: 520)
+        .frame(minWidth: 460, minHeight: 600)
         #endif
+    }
+
+    /// iPad gets a larger, more spacious treatment; iPhone/macOS keep the
+    /// compact sizing. Scales one step up the existing semantic hierarchy
+    /// rather than introducing arbitrary sizes.
+    private var isPad: Bool {
+        #if os(iOS)
+        UIDevice.current.userInterfaceIdiom == .pad
+        #else
+        false
+        #endif
+    }
+
+    // MARK: Pieces
+
+    private var hero: some View {
+        VStack(spacing: isPad ? 16 : 12) {
+            Image(systemName: "checkmark.shield.fill")
+                .font(.system(size: isPad ? 76 : 52))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(Color.brand)
+            Text("Why you can trust GeoSpoof")
+                .font(isPad ? .largeTitle.bold() : .title2.bold())
+                .multilineTextAlignment(.center)
+            Text("Safari's permission warning sounds broad, but GeoSpoof uses that access narrowly — and you don't have to take our word for it.")
+                .font(isPad ? .title3 : .subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 8)
+    }
+
+    /// A titled group: uppercase section header above a material card.
+    @ViewBuilder
+    private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font((isPad ? Font.subheadline : .footnote).weight(.semibold))
+                .textCase(.uppercase)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            content()
+                .padding(isPad ? 20 : 16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+    }
+
+    private func linkRow(_ link: TrustLink) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: link.symbol)
+                .font(isPad ? .title3 : .body)
+                .foregroundStyle(Color.brand)
+                .frame(width: isPad ? 30 : 24)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(link.title)
+                    .font((isPad ? Font.body : .subheadline).weight(.medium))
+                    .foregroundStyle(.primary)
+                Text(link.detail)
+                    .font(isPad ? .subheadline : .caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+            Image(systemName: "arrow.up.forward")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
+        .contentShape(Rectangle())
+        .padding(.vertical, isPad ? 10 : 8)
     }
 }
 
@@ -816,3 +866,39 @@ struct SafariActivationAnimation: View {
     }
 }
 #endif
+
+// MARK: - Adaptive modal presentation
+
+extension View {
+    /// Presents content fullscreen on iPad (regular width) — where a sheet
+    /// renders as a centered card that looks like it's floating — while keeping
+    /// the normal sheet/bottom-sheet behavior on iPhone (compact) and macOS.
+    func adaptiveModalCover<C: View>(
+        isPresented: Binding<Bool>,
+        @ViewBuilder content: @escaping () -> C
+    ) -> some View {
+        modifier(AdaptiveModalCover(isPresented: isPresented, sheetContent: content))
+    }
+}
+
+private struct AdaptiveModalCover<C: View>: ViewModifier {
+    @Binding var isPresented: Bool
+    @ViewBuilder var sheetContent: () -> C
+
+    func body(content: Content) -> some View {
+        #if os(iOS)
+        // Use the device idiom rather than horizontalSizeClass: the size class
+        // varies with where the modifier sits in the hierarchy (inside a Form
+        // section, or nested in another cover) and can read .compact on iPad,
+        // which made the trust sheet fall back to a floating sheet. The idiom is
+        // stable. iPad → fullscreen (avoids the floating card); iPhone → sheet.
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            content.fullScreenCover(isPresented: $isPresented, content: sheetContent)
+        } else {
+            content.sheet(isPresented: $isPresented, content: sheetContent)
+        }
+        #else
+        content.sheet(isPresented: $isPresented, content: sheetContent)
+        #endif
+    }
+}

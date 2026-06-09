@@ -29,7 +29,7 @@ function mockVpnSyncFetch(ip: string, lat: number, lon: number, city: string, co
   vi.mocked(fetch)
     .mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({ ip }),
+      text: () => Promise.resolve(`${ip}\n`),
     } as Response)
     // geojs.io — lat/lng are strings
     .mockResolvedValueOnce({
@@ -293,7 +293,7 @@ describe("VPN Sync Integration Tests", () => {
       // Only mock IP detection (cache will serve geolocation)
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ ip: "203.0.113.42" }),
+        text: () => Promise.resolve("203.0.113.42\n"),
       } as Response);
 
       const result = await handleMessage(
@@ -373,7 +373,7 @@ describe("VPN Sync Integration Tests", () => {
       vi.mocked(fetch)
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve({ ip: "203.0.113.42" }),
+          text: () => Promise.resolve("203.0.113.42\n"),
         } as Response)
         .mockResolvedValueOnce({
           ok: false,
@@ -442,7 +442,7 @@ describe("VPN Sync Integration Tests", () => {
       vi.mocked(fetch)
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve({ ip: "203.0.113.42" }),
+          text: () => Promise.resolve("203.0.113.42\n"),
         } as Response)
         .mockResolvedValueOnce({
           ok: true,

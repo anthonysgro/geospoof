@@ -45,7 +45,7 @@ struct SpoofControlPanel: View {
         .groupedFormStyle()
         .tint(.brand)
         .refreshable { await controller.refreshFromExtensionInteractive() }
-        .sheet(isPresented: $showOnboarding) {
+        .adaptiveModalCover(isPresented: $showOnboarding) {
             OnboardingView { onboardingCompleted = true; showOnboarding = false }
         }
         .sheet(item: $renaming) { fav in
@@ -122,7 +122,7 @@ struct SpoofControlPanel: View {
                     Button {
                         showTrustInfo = true
                     } label: {
-                        Label("What will Safari ask? Is it safe?", systemImage: "questionmark.circle")
+                        Label("Is GeoSpoof safe?", systemImage: "checkmark.shield")
                             .font(.subheadline)
                             .frame(maxWidth: .infinity)
                     }
@@ -130,7 +130,7 @@ struct SpoofControlPanel: View {
                     .foregroundStyle(Color.brand)
                 }
                 .padding(.vertical, 6)
-                .sheet(isPresented: $showTrustInfo) { TrustSheet() }
+                .adaptiveModalCover(isPresented: $showTrustInfo) { TrustSheet() }
             } header: {
                 Text("Finish Setup")
             }

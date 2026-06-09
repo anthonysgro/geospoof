@@ -179,7 +179,13 @@ export function generateManifest(target: BrowserTarget, version: string): Record
     }
     const safariHostPermissions = [
       ...(shared.host_permissions as string[]),
+      // Public-IP (exit-IP) detection — hyperscale echo endpoints, tried in
+      // order with failover (see IP_ECHO_PROVIDERS in vpn-sync.ts).
+      "https://checkip.amazonaws.com/*",
+      "https://www.cloudflare.com/*",
+      "https://whatismyip.akamai.com/*",
       "https://api.ipify.org/*",
+      // IP geolocation providers.
       "https://get.geojs.io/*",
       "https://free.freeipapi.com/*",
       "https://ipapi.co/*",

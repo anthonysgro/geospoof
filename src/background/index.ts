@@ -321,6 +321,21 @@ browser.runtime.onStartup.addListener(() => {
 if (__SAFARI__) {
   void adoptPendingSettingsFromApp();
 
+  // Arm the extension's own VPN resync here, at top level, rather than relying
+  // on initialize() (which runs from onStartup/onInstalled — unreliable on iOS
+  // Safari, so the watcher installed inside it often never gets registered).
+  //
+  // This is what makes the iOS Safari extension keep the spoofed location in
+  // sync with a VPN switch *without* the container app: the container app is
+  // suspended in the background and can't detect the change, but the extension
+  // runs whenever the user is browsing — which is exactly when a stale location
+  // matters. installActivityWatcher() wires tabs.onUpdated → triggerResyncCheck,
+  // which detects the exit IP, and only re-geolocates + re-applies on a genuine
+  // change (self-gated on vpnSyncEnabled, debounced, min-interval floored, and
+  // IP-diffed in resync-core). It's idempotent, so a duplicate call from
+  // initialize() (if onStartup does fire) is a no-op.
+  installActivityWatcher();
+
   if (browser.tabs?.onActivated) {
     browser.tabs.onActivated.addListener(() => {
       void adoptPendingSettingsFromApp();

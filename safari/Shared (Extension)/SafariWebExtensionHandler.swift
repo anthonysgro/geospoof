@@ -13,8 +13,11 @@ private let logger = Logger(
     category: "SafariWebExtensionHandler"
 )
 
-/// Keys in the shared App Group UserDefaults suite. Must stay in sync with the
-/// reading side in the host apps and the writing side here.
+/// Keys in the shared App Group store. Read/written via the App Group
+/// preferences *file* directly (see `writeSharedPrefs` / `readSharedPrefsFile`),
+/// not `UserDefaults(suiteName:)`, so cross-process writes can't clobber each
+/// other through cfprefsd caching. Must stay in sync with the host app
+/// (`AppGroup` in SpoofModel.swift) and the widget.
 enum RegionKey {
     static let suite       = "group.com.moonloaf.geospoof"
 
@@ -96,74 +99,99 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         context.completeRequest(returningItems: [ response ], completionHandler: nil)
     }
 
+    // MARK: - Shared App Group storage (direct plist file, read-merge-write)
+
+    /// Mutate the shared App Group preferences file directly (read-merge-write,
+    /// atomic). ALL writers — this extension and the host app's
+    /// `SpoofController.writePending` — use this same mechanism. Mixing it with
+    /// `UserDefaults(suiteName:)` is unsafe: UserDefaults goes through cfprefsd,
+    /// which caches the whole suite in memory and rewrites the entire file on
+    /// `synchronize()`, so a UserDefaults write can clobber `pending_*` keys the
+    /// app wrote directly (and vice versa). Going file-direct everywhere removes
+    /// that hazard. Each write is atomic, so readers never see a torn file.
+    @discardableResult
+    private func writeSharedPrefs(_ mutate: (inout [String: Any]) -> Void) -> Bool {
+        guard let container = FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: RegionKey.suite) else {
+            logger.error("App Group container '\(RegionKey.suite)' unavailable — check entitlements")
+            return false
+        }
+        let plistURL = container.appendingPathComponent("Library/Preferences/\(RegionKey.suite).plist")
+        var dict: [String: Any] = (NSDictionary(contentsOf: plistURL) as? [String: Any]) ?? [:]
+        mutate(&dict)
+        let prefsDir = plistURL.deletingLastPathComponent()
+        try? FileManager.default.createDirectory(at: prefsDir, withIntermediateDirectories: true)
+        return (dict as NSDictionary).write(to: plistURL, atomically: true)
+    }
+
     // MARK: - Extension -> App (current active region, for display)
 
     /// Record that the extension is alive in Safari right now. Called on every
     /// handler invocation. This is the production heartbeat the host app reads
     /// to show "running in Safari" status (distinct from the debug keys below).
     private func recordExtensionActivity() {
-        guard let defaults = UserDefaults(suiteName: RegionKey.suite) else { return }
-        defaults.set(Date().timeIntervalSince1970, forKey: RegionKey.lastSeenAt)
-        defaults.synchronize()
+        writeSharedPrefs { dict in
+            dict[RegionKey.lastSeenAt] = Date().timeIntervalSince1970
+        }
     }
 
-    private func handleRegionUpdate(_ dict: [String: Any]) {
-        guard let defaults = UserDefaults(suiteName: RegionKey.suite) else {
-            logger.error("App Group suite '\(RegionKey.suite)' unavailable — check entitlements")
-            return
+    private func handleRegionUpdate(_ input: [String: Any]) {
+        let ok = writeSharedPrefs { dict in
+            let enabled = input["enabled"] as? Bool ?? false
+            dict[RegionKey.enabled] = enabled
+
+            if let locationName = input["locationName"] as? [String: Any] {
+                dict[RegionKey.displayName] = locationName["displayName"] as? String ?? ""
+                dict[RegionKey.city] = locationName["city"] as? String ?? ""
+                dict[RegionKey.country] = locationName["country"] as? String ?? ""
+            } else {
+                dict.removeValue(forKey: RegionKey.displayName)
+                dict.removeValue(forKey: RegionKey.city)
+                dict.removeValue(forKey: RegionKey.country)
+            }
+
+            if let location = input["location"] as? [String: Any],
+               let lat = location["latitude"] as? Double,
+               let lon = location["longitude"] as? Double {
+                dict[RegionKey.latitude] = lat
+                dict[RegionKey.longitude] = lon
+            } else {
+                dict.removeValue(forKey: RegionKey.latitude)
+                dict.removeValue(forKey: RegionKey.longitude)
+            }
+
+            dict[RegionKey.webrtc] = input["webrtcProtection"] as? Bool ?? false
+            dict[RegionKey.vpnSync] = input["vpnSyncEnabled"] as? Bool ?? false
+
+            if let ip = input["ip"] as? String, !ip.isEmpty {
+                dict[RegionKey.ip] = ip
+            } else {
+                dict.removeValue(forKey: RegionKey.ip)
+            }
+
+            if let tz = input["timezone"] as? [String: Any], let id = tz["identifier"] as? String {
+                dict[RegionKey.tzId] = id
+                dict[RegionKey.tzOffset] = tz["offset"] as? Double ?? 0
+                dict[RegionKey.tzDst] = tz["dstOffset"] as? Double ?? 0
+            } else {
+                dict.removeValue(forKey: RegionKey.tzId)
+                dict.removeValue(forKey: RegionKey.tzOffset)
+                dict.removeValue(forKey: RegionKey.tzDst)
+            }
+
+            // Favorites arrive as a JSON string; store verbatim for the app to decode.
+            if let favoritesJSON = input["favorites"] as? String {
+                dict[RegionKey.favorites] = favoritesJSON
+            }
+
+            dict[RegionKey.updatedAt] = Date().timeIntervalSince1970
         }
 
-        let enabled = dict["enabled"] as? Bool ?? false
-        defaults.set(enabled, forKey: RegionKey.enabled)
-
-        if let locationName = dict["locationName"] as? [String: Any] {
-            defaults.set(locationName["displayName"] as? String ?? "", forKey: RegionKey.displayName)
-            defaults.set(locationName["city"] as? String ?? "", forKey: RegionKey.city)
-            defaults.set(locationName["country"] as? String ?? "", forKey: RegionKey.country)
+        if ok {
+            logger.log("Region updated: enabled=\(input["enabled"] as? Bool ?? false)")
         } else {
-            defaults.removeObject(forKey: RegionKey.displayName)
-            defaults.removeObject(forKey: RegionKey.city)
-            defaults.removeObject(forKey: RegionKey.country)
+            logger.error("handleRegionUpdate: failed to write App Group plist")
         }
-
-        if let location = dict["location"] as? [String: Any],
-           let lat = location["latitude"] as? Double,
-           let lon = location["longitude"] as? Double {
-            defaults.set(lat, forKey: RegionKey.latitude)
-            defaults.set(lon, forKey: RegionKey.longitude)
-        } else {
-            defaults.removeObject(forKey: RegionKey.latitude)
-            defaults.removeObject(forKey: RegionKey.longitude)
-        }
-
-        defaults.set(dict["webrtcProtection"] as? Bool ?? false, forKey: RegionKey.webrtc)
-        defaults.set(dict["vpnSyncEnabled"] as? Bool ?? false, forKey: RegionKey.vpnSync)
-
-        if let ip = dict["ip"] as? String, !ip.isEmpty {
-            defaults.set(ip, forKey: RegionKey.ip)
-        } else {
-            defaults.removeObject(forKey: RegionKey.ip)
-        }
-
-        if let tz = dict["timezone"] as? [String: Any], let id = tz["identifier"] as? String {
-            defaults.set(id, forKey: RegionKey.tzId)
-            defaults.set(tz["offset"] as? Double ?? 0, forKey: RegionKey.tzOffset)
-            defaults.set(tz["dstOffset"] as? Double ?? 0, forKey: RegionKey.tzDst)
-        } else {
-            defaults.removeObject(forKey: RegionKey.tzId)
-            defaults.removeObject(forKey: RegionKey.tzOffset)
-            defaults.removeObject(forKey: RegionKey.tzDst)
-        }
-
-        // Favorites arrive as a JSON string; store verbatim for the app to decode.
-        if let favoritesJSON = dict["favorites"] as? String {
-            defaults.set(favoritesJSON, forKey: RegionKey.favorites)
-        }
-
-        defaults.set(Date().timeIntervalSince1970, forKey: RegionKey.updatedAt)
-        defaults.synchronize()
-
-        logger.log("Region updated: enabled=\(enabled)")
     }
 
     // MARK: - App -> Extension (pending location set in the app)
@@ -217,21 +245,21 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
     /// Records that the handler was invoked and with which message type, so the
     /// containing app can confirm the extension is actually talking to it.
     private func writeDebug(type: String) {
-        guard let defaults = UserDefaults(suiteName: RegionKey.suite) else { return }
-        defaults.set(type, forKey: "debug_messageType")
-        defaults.set(Date().timeIntervalSince1970, forKey: "debug_handlerInvokedAt")
-        defaults.synchronize()
+        writeSharedPrefs { dict in
+            dict["debug_messageType"] = type
+            dict["debug_handlerInvokedAt"] = Date().timeIntervalSince1970
+        }
     }
 
     /// Records what the handler returned for a GET_PENDING_SETTINGS call.
     private func writeDebugPending(_ payload: [String: Any]) {
-        guard let defaults = UserDefaults(suiteName: RegionKey.suite) else { return }
-        if let pending = payload["pending"] as? [String: Any] {
-            defaults.set(pending["displayName"] as? String ?? "(no name)", forKey: "debug_pendingSeen")
-        } else {
-            defaults.set("null", forKey: "debug_pendingSeen")
+        writeSharedPrefs { dict in
+            if let pending = payload["pending"] as? [String: Any] {
+                dict["debug_pendingSeen"] = pending["displayName"] as? String ?? "(no name)"
+            } else {
+                dict["debug_pendingSeen"] = "null"
+            }
         }
-        defaults.synchronize()
     }
 
 }

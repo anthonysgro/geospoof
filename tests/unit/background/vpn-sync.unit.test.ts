@@ -15,6 +15,10 @@ vi.mock("browser-geo-tz", () => ({
   })),
 }));
 
+/** Matches any of the public-IP (exit-IP) echo endpoints detectPublicIp() may hit. */
+const IP_ECHO_HOST_RE =
+  /checkip\.amazonaws\.com|cloudflare\.com\/cdn-cgi|whatismyip\.akamai\.com|api\.ipify\.org/;
+
 /**
  * Mock fetch for VPN sync flow:
  * 1. IP detection via ipify
@@ -27,7 +31,7 @@ function mockFetchForVpnSync(ip: string, lat: number, lon: number, city: string,
   vi.mocked(fetch)
     .mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({ ip }),
+      text: () => Promise.resolve(`${ip}\n`),
     } as Response)
     // geojs.io — lat/lng are strings
     .mockResolvedValueOnce({
@@ -159,7 +163,7 @@ describe("SYNC_VPN message handler", () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ ip: "203.0.113.42" }),
+        text: () => Promise.resolve("203.0.113.42\n"),
       } as Response)
       .mockResolvedValueOnce({
         ok: false,
@@ -307,7 +311,7 @@ describe("DISABLE_VPN_SYNC message handler", () => {
     // No VPN-related fetch calls should have been made
     const fetchCalls = vi.mocked(fetch).mock.calls;
     const vpnIpCalls = fetchCalls.filter(
-      (call) => typeof call[0] === "string" && call[0].includes("ipify")
+      (call) => typeof call[0] === "string" && IP_ECHO_HOST_RE.test(call[0])
     );
     expect(vpnIpCalls).toHaveLength(0);
   });
@@ -330,7 +334,7 @@ describe("Startup auto-sync", () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ ip: "203.0.113.42" }),
+        text: () => Promise.resolve("203.0.113.42\n"),
       } as Response)
       .mockResolvedValueOnce({
         ok: true,
@@ -392,7 +396,7 @@ describe("Startup auto-sync", () => {
     // The key assertion is that no VPN-related fetch calls were made
     const fetchCalls = vi.mocked(fetch).mock.calls;
     const vpnIpCalls = fetchCalls.filter(
-      (call) => typeof call[0] === "string" && call[0].includes("ipify")
+      (call) => typeof call[0] === "string" && IP_ECHO_HOST_RE.test(call[0])
     );
     expect(vpnIpCalls).toHaveLength(0);
   });
@@ -438,7 +442,7 @@ describe("Startup auto-sync", () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ ip: "10.0.0.1" }),
+        text: () => Promise.resolve("10.0.0.1\n"),
       } as Response)
       .mockResolvedValueOnce({
         ok: true,
