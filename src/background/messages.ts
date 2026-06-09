@@ -36,7 +36,7 @@ import {
   checkTabInjection,
   isRestrictedUrl,
 } from "./tabs";
-import { syncVpnLocation, clearIpGeoCache } from "./vpn-sync";
+import { syncVpnLocation, clearIpGeoCache, clearEndpointCooldowns } from "./vpn-sync";
 import { adoptPendingSettingsFromApp } from "./app-bridge";
 import { allowlistWorkerUrl, isSameOriginWorker, tabPageUrlCache } from "./worker-request-filter";
 
@@ -123,6 +123,9 @@ export async function handleMessage(
         const payload = message.payload as SyncVpnPayload | undefined;
         const syncMsgStart = Date.now();
         logger.info("[MSG] SYNC_VPN received, forceRefresh:", payload?.forceRefresh ?? false);
+        // User-initiated sync: give every endpoint a fresh shot by dropping any
+        // per-endpoint cooldowns parked by the automatic path.
+        clearEndpointCooldowns();
         const result = await syncVpnLocation(payload?.forceRefresh ?? false);
 
         if ("error" in result) {
@@ -137,6 +140,7 @@ export async function handleMessage(
           { latitude: result.latitude, longitude: result.longitude },
           {
             fromVpnSync: true,
+            timezoneHint: result.timezone,
             locationName: {
               city: result.city,
               country: result.country,
@@ -236,12 +240,12 @@ export async function handleMessage(
 
 export async function handleSetLocation(
   payload: SetLocationPayload,
-  options?: { fromVpnSync?: boolean; locationName?: LocationName }
+  options?: { fromVpnSync?: boolean; locationName?: LocationName; timezoneHint?: string }
 ): Promise<void> {
   const { latitude, longitude } = payload;
 
   logger.debug("Resolving timezone for coordinates:", { latitude, longitude });
-  const timezone = await getTimezoneForCoordinates(latitude, longitude);
+  const timezone = await getTimezoneForCoordinates(latitude, longitude, options?.timezoneHint);
   logger.debug("Timezone resolved:", timezone);
 
   // Don't persist a fallback timezone to storage — it's a longitude estimate

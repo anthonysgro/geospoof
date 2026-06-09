@@ -71,6 +71,7 @@ export {
   detectPublicIp,
   syncVpnLocation,
   clearIpGeoCache,
+  clearEndpointCooldowns,
   resetRateLimiter,
   getLastSyncedIp,
   setLastSyncedIp,
@@ -194,7 +195,7 @@ async function initialize(): Promise<void> {
       if (!("error" in result)) {
         await handleSetLocation(
           { latitude: result.latitude, longitude: result.longitude },
-          { fromVpnSync: true }
+          { fromVpnSync: true, timezoneHint: result.timezone }
         );
       }
     } catch (error) {
