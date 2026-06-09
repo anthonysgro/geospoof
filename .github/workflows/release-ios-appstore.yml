@@ -41,6 +41,13 @@ jobs:
       - run: npm ci
       - run: cp .env.example .env
 
+      # The iOS app/extension targets copy dist/shared + dist/popup as bundle
+      # resources, but (unlike the macOS target) the iOS targets don't have a
+      # run-script phase that builds dist/. Build it explicitly here so the
+      # archive's resource-copy step finds the files.
+      - name: Build Safari web extension bundle (dist/)
+        run: npm run build:safari
+
       # GM Xcode (this app needs Xcode 26+ for the macOS 26 SDK APIs / Swift 6.2).
       - name: Select newest Xcode
         run: |
