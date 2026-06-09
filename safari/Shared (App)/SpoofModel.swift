@@ -19,6 +19,11 @@ import Foundation
 import CoreLocation
 import Network
 import os
+import WidgetKit
+// DispatchWorkItem / DispatchQueue are pre-concurrency types; this suppresses
+// the Sendable-capture warnings they raise inside the @Sendable NWConnection
+// callbacks in StunClient.query.
+@preconcurrency import Dispatch
 #if os(iOS)
 import UIKit
 #else
@@ -55,6 +60,9 @@ enum AppGroup {
     // next launch / tab activity, last-writer-wins by `pending_updatedAt`).
     static let pendingEnabled     = "pending_enabled"
     static let pendingDisplayName = "pending_displayName"
+    static let pendingCity        = "pending_city"
+    static let pendingCountry     = "pending_country"
+    static let pendingTzId        = "pending_tzId"
     static let pendingLatitude    = "pending_latitude"
     static let pendingLongitude   = "pending_longitude"
     static let pendingUpdatedAt   = "pending_updatedAt"
@@ -63,6 +71,11 @@ enum AppGroup {
     static let pendingCleared     = "pending_cleared"
     static let pendingResync      = "pending_resync"
     static let pendingFavorites   = "pending_favorites"
+
+    // Widget-internal: timestamp of the last widget-initiated re-sync, so the
+    // widget button can show a spinner for a minimum window. Written by the
+    // resync App Intent.
+    static let widgetSyncingAt    = "widget_syncingAt"
 }
 
 // MARK: - Domain models (mirror src/shared/types/settings.ts)
@@ -499,26 +512,40 @@ final class SpoofController: ObservableObject {
                 guard let self else { return }
                 Log.app.debug("App foregrounded — refreshing from extension + VPN re-check")
                 self.refreshFromExtension()
-                // Network is already settled when the app is opened, so a single
-                // fresh sample is authoritative — no need to poll. A no-op when
-                // the exit IP hasn't moved.
-                self.scheduleVpnResync(initialDelay: 0, pollFor: 0)
+                // Resume the network watcher + heartbeat that were torn down on
+                // background, then take a single fresh sample (the network is
+                // already settled when the app is opened, so no need to poll —
+                // a no-op when the exit IP hasn't moved).
+                self.startNetworkWatcher()
                 self.startHeartbeat()
+                self.scheduleVpnResync(initialDelay: 0, pollFor: 0)
             }
         }
-        // iOS suspends background apps, so pause the heartbeat when backgrounded
-        // and resume on foreground. macOS keeps running when not frontmost, so
-        // the heartbeat there runs continuously (started in init) — that's what
-        // makes a VPN switch get picked up while the app isn't the active app.
+        // iOS suspends background apps, so pause the constant heartbeat poll
+        // when backgrounded and resume on foreground. The NWPathMonitor stays
+        // up (see pauseBackgroundActivity) so a VPN connect/switch is still
+        // caught while the app isn't foregrounded. macOS keeps running when not
+        // frontmost, so the heartbeat there runs continuously (started in init).
         #if os(iOS)
         backgroundObserver = NotificationCenter.default.addObserver(
             forName: UIApplication.didEnterBackgroundNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            Task { @MainActor [weak self] in self?.stopHeartbeat() }
+            Task { @MainActor [weak self] in self?.pauseBackgroundActivity() }
         }
         #endif
+    }
+
+    /// Pause only the constant 5s heartbeat poll while backgrounded. The
+    /// NWPathMonitor is deliberately left running: it's the event-driven signal
+    /// that catches a VPN connect/switch while the app isn't foregrounded (a VPN
+    /// change moves the network path), and it's near-free when idle — it fires
+    /// only on an actual network change, not on a timer. Any in-flight resync is
+    /// left to finish so a switch-then-lock still applies. The per-connection
+    /// STUN teardown (see StunClient.query) is what keeps this from leaking.
+    private func pauseBackgroundActivity() {
+        stopHeartbeat()
     }
 
     /// Start the foreground heartbeat: a light STUN exit-IP check every
@@ -550,6 +577,7 @@ final class SpoofController: ObservableObject {
     /// to pre-filter path updates (a server switch can reuse the same interface
     /// and would be wrongly suppressed by a description diff).
     private func startNetworkWatcher() {
+        guard pathMonitor == nil else { return }
         let monitor = NWPathMonitor()
         let queue = DispatchQueue(label: "com.moonloaf.geospoof.pathmonitor", qos: .utility)
         pathMonitor = monitor
@@ -752,6 +780,10 @@ final class SpoofController: ObservableObject {
             }
             Log.timezone.info("Timezone refined → \(tzid) for (\(latitude), \(longitude))")
             timezone = Self.resolveTimezone(latitude: latitude, longitude: longitude, identifier: tzid)
+            // Propagate the refined zone to the bridge so the widget (and the
+            // extension's adopted record) reflect the accurate IANA zone rather
+            // than the longitude estimate written synchronously above.
+            writePending(resync: vpnSyncEnabled)
         }
     }
 
@@ -1026,25 +1058,38 @@ final class SpoofController: ObservableObject {
             dict[AppGroup.pendingFavorites] = json
         }
 
-        if vpnSyncEnabled {
-            dict[AppGroup.pendingCleared] = false
-            if let location {
-                dict[AppGroup.pendingLatitude] = location.latitude
-                dict[AppGroup.pendingLongitude] = location.longitude
-                dict[AppGroup.pendingDisplayName] = locationName?.displayName ?? ""
-            } else {
-                dict.removeValue(forKey: AppGroup.pendingLatitude)
-                dict.removeValue(forKey: AppGroup.pendingLongitude)
-            }
-        } else if let location {
+        // Location + its derived display fields. The three cases collapse to:
+        //   • location present → publish coords + display fields, not cleared.
+        //   • no location, VPN-sync ON → mid-sync (e.g. detecting exit IP); keep
+        //     cleared=false so the extension doesn't wipe the location, but drop
+        //     all display fields so nothing stale lingers.
+        //   • no location, VPN-sync OFF → an explicit clear; cleared=true.
+        // `pendingCleared` semantics are unchanged from before (the extension's
+        // app-bridge depends on them); only the stale-display-field leak is fixed.
+        if let location {
             dict[AppGroup.pendingCleared] = false
             dict[AppGroup.pendingLatitude] = location.latitude
             dict[AppGroup.pendingLongitude] = location.longitude
             dict[AppGroup.pendingDisplayName] = locationName?.displayName ?? ""
+            dict[AppGroup.pendingCity] = locationName?.city ?? ""
+            dict[AppGroup.pendingCountry] = locationName?.country ?? ""
         } else {
-            dict[AppGroup.pendingCleared] = true
+            dict[AppGroup.pendingCleared] = !vpnSyncEnabled
             dict.removeValue(forKey: AppGroup.pendingLatitude)
             dict.removeValue(forKey: AppGroup.pendingLongitude)
+            dict.removeValue(forKey: AppGroup.pendingDisplayName)
+            dict.removeValue(forKey: AppGroup.pendingCity)
+            dict.removeValue(forKey: AppGroup.pendingCountry)
+        }
+
+        // Timezone identifier travels with the pending record so the widget can
+        // show the correct zone immediately (the extension recomputes its own
+        // zone from coords; this key is for app/widget display only). Present
+        // only alongside a location.
+        if location != nil, let tzId = timezone?.identifier, !tzId.isEmpty {
+            dict[AppGroup.pendingTzId] = tzId
+        } else {
+            dict.removeValue(forKey: AppGroup.pendingTzId)
         }
 
         // Ensure parent directory exists, then write atomically.
@@ -1052,6 +1097,24 @@ final class SpoofController: ObservableObject {
         try? FileManager.default.createDirectory(at: prefsDir, withIntermediateDirectories: true)
         (dict as NSDictionary).write(to: plistURL, atomically: true)
         Log.bridge.debug("writePending → enabled=\(enabled) vpnSync=\(vpnSyncEnabled) resync=\(resync) loc=\(location.map { "\($0.latitude),\($0.longitude)" } ?? "nil")")
+
+        // Reload widgets. Debounced so rapid successive writePending calls
+        // (e.g. enable + setLocation + timezone resolve all firing together)
+        // coalesce into one reload instead of hammering WidgetKit's rate limit.
+        Self.scheduleWidgetReload()
+    }
+
+    /// Debounce token for widget reloads — ensures at most one reload fires
+    /// per 0.5s window regardless of how many writePending calls occur.
+    private static var widgetReloadTask: Task<Void, Never>?
+
+    private static func scheduleWidgetReload() {
+        widgetReloadTask?.cancel()
+        widgetReloadTask = Task {
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s
+            guard !Task.isCancelled else { return }
+            WidgetCenter.shared.reloadAllTimelines()
+        }
     }
 
     /// Adopt the extension's last-written region state, but only when it's
@@ -1064,7 +1127,14 @@ final class SpoofController: ObservableObject {
         // spoof state actually changed (e.g. a plain pending-settings poll).
         if let seen = prefs?[AppGroup.extensionLastSeenAt] as? Double {
             let date = Date(timeIntervalSince1970: seen)
-            if extensionLastSeen != date { extensionLastSeen = date }
+            if extensionLastSeen != date {
+                extensionLastSeen = date
+                // The extension can't reload widgets itself, so when the app
+                // notices a changed heartbeat (e.g. the user just granted Safari
+                // access), refresh widgets so the "Running in Safari" status
+                // isn't stuck until WidgetKit's slow periodic refresh.
+                Self.scheduleWidgetReload()
+            }
         }
 
         guard let dict = prefs,
@@ -1130,19 +1200,24 @@ final class SpoofController: ObservableObject {
         return NSDictionary(contentsOf: url) as? [String: Any]
     }
 
-    // MARK: Timezone resolution (MOCK-ish: IANA id when known, else longitude estimate)
+    // MARK: Timezone resolution (IANA id when known, else offline lookup, else longitude estimate)
 
     static func resolveTimezone(latitude: Double, longitude: Double, identifier: String?) -> SpoofTimezone {
-        if let identifier, let tz = TimeZone(identifier: identifier) {
+        if let identifier, !identifier.isEmpty, let tz = TimeZone(identifier: identifier) {
             let offset = tz.secondsFromGMT() / 60
             let dst = Int(tz.daylightSavingTimeOffset()) / 60
             return SpoofTimezone(identifier: identifier, offsetMinutes: offset, dstOffsetMinutes: dst)
         }
-        // Estimate from longitude (15° per hour). Marked as a fallback.
+        // Estimate from longitude (15° per hour). Marked as a fallback so the UI
+        // can show a warning. Use a fixed-offset zone for the offset calculation
+        // but keep the identifier human-readable (UTC±HH:MM) rather than the
+        // confusing POSIX-inverted Etc/GMT±N that TimeZone(secondsFromGMT:) returns.
         let estOffsetHours = Int((longitude / 15).rounded())
-        let estID = TimeZone(secondsFromGMT: estOffsetHours * 3600)?.identifier ?? "UTC"
+        let estOffsetMinutes = estOffsetHours * 60
+        let sign = estOffsetHours >= 0 ? "+" : "-"
+        let estID = String(format: "UTC%@%02d:00", sign, abs(estOffsetHours))
         Log.timezone.warn("Timezone fallback to longitude estimate \(estID) (requested id: \(identifier ?? "none"))")
-        return SpoofTimezone(identifier: estID, offsetMinutes: estOffsetHours * 60, dstOffsetMinutes: 0, fallback: true)
+        return SpoofTimezone(identifier: estID, offsetMinutes: estOffsetMinutes, dstOffsetMinutes: 0, fallback: true)
     }
 }
 
@@ -1211,23 +1286,35 @@ enum StunClient {
         let once = ResumeOnce()
 
         return try await withCheckedThrowingContinuation { (cont: CheckedContinuation<String, Error>) in
-            DispatchQueue.global().asyncAfter(deadline: .now() + timeoutSeconds) {
-                if once.claim() { connection.cancel(); cont.resume(throwing: StunError.timeout) }
+            // Single terminal path: cancel the timeout, drop the state handler
+            // (breaking the connection<->handler retain cycle so the NWConnection
+            // is reclaimed promptly rather than lingering), tear down the socket,
+            // and resume exactly once.
+            func finish(_ result: Swift.Result<String, Error>) {
+                guard once.claim() else { return }
+                connection.stateUpdateHandler = nil
+                connection.cancel()
+                cont.resume(with: result)
             }
+
+            let timeout = DispatchWorkItem { finish(.failure(StunError.timeout)) }
+            DispatchQueue.global().asyncAfter(deadline: .now() + timeoutSeconds, execute: timeout)
 
             connection.stateUpdateHandler = { state in
                 switch state {
                 case .ready:
                     connection.send(content: request, completion: .contentProcessed { _ in })
                     connection.receiveMessage { data, _, _, _ in
+                        timeout.cancel()
                         guard let data, let ip = parseMappedAddress(data, txid: txid) else {
-                            if once.claim() { connection.cancel(); cont.resume(throwing: StunError.parse) }
+                            finish(.failure(StunError.parse))
                             return
                         }
-                        if once.claim() { connection.cancel(); cont.resume(returning: ip) }
+                        finish(.success(ip))
                     }
                 case .failed, .cancelled:
-                    if once.claim() { connection.cancel(); cont.resume(throwing: StunError.connection) }
+                    timeout.cancel()
+                    finish(.failure(StunError.connection))
                 default:
                     break
                 }
@@ -1282,6 +1369,7 @@ enum StunClient {
 private final class ResumeOnce: @unchecked Sendable {
     private let lock = NSLock()
     nonisolated(unsafe) private var done = false
+    nonisolated init() {}
     nonisolated func claim() -> Bool {
         lock.lock(); defer { lock.unlock() }
         if done { return false }
@@ -1366,9 +1454,9 @@ enum VpnLookup {
         // geojs is the most accurate/consistent of the providers (and the
         // extension's designated primary), so give it a head start: the
         // fallbacks only fire if geojs hasn't already won after `headStart`.
-        // First valid result wins; the rest are cancelled. This keeps results
-        // consistent (and aligned with the extension) while still failing over
-        // to the other networks (Cloudflare vs Google Cloud) if geojs is down.
+        // First valid result WITH a timezone wins outright; a result without
+        // a timezone (freeipapi) is held as a partial and only used if every
+        // provider with a timezone has already failed.
         let headStart: UInt64 = 900_000_000 // 0.9s
         return try await withThrowingTaskGroup(of: Result?.self) { group in
             group.addTask { try? await geolocateGeoJs(ip) }
@@ -1388,12 +1476,26 @@ enum VpnLookup {
                 return try? await geolocateIpInfo(ip)
             }
 
+            var partial: Result? // best result so far with no timezone
             for try await result in group {
-                if let result {
+                guard let result else { continue }
+                if !result.timezoneID.isEmpty {
+                    // Timezone-aware result — this is what we want, accept it.
                     group.cancelAll()
-                    Log.vpn.info("[geo] winner \(result.source): \(result.city.isEmpty ? "?" : result.city), \(result.country) (\(result.latitude), \(result.longitude)) tz=\(result.timezoneID.isEmpty ? "?" : result.timezoneID)")
+                    Log.vpn.info("[geo] winner \(result.source): \(result.city.isEmpty ? "?" : result.city), \(result.country) (\(result.latitude), \(result.longitude)) tz=\(result.timezoneID)")
                     return result
                 }
+                // Timezone-blind result (freeipapi) — keep as fallback and let
+                // the other providers finish in case they have a timezone.
+                if partial == nil {
+                    Log.vpn.debug("[geo] partial (no timezone) from \(result.source): \(result.city.isEmpty ? "?" : result.city), \(result.country) — waiting for timezone-aware provider")
+                    partial = result
+                }
+            }
+            // All providers finished; use the partial if we have one.
+            if let partial {
+                Log.vpn.info("[geo] winner \(partial.source) (no timezone — resolveExactTimezone will refine): \(partial.city.isEmpty ? "?" : partial.city), \(partial.country) (\(partial.latitude), \(partial.longitude))")
+                return partial
             }
             Log.vpn.error("All geolocation providers failed for \(ip)")
             throw LookupError.geo

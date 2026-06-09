@@ -32,7 +32,6 @@ function logGeoError(tag: string, err: Error & { code?: string; blocked?: boolea
 }
 
 // --- Constants ---
-const PUBLIC_IP_URL = "https://api.ipify.org?format=json";
 const GEOJS_URL = "https://get.geojs.io/v1/ip/geo/"; // Primary — CORS-friendly, no key, no rate limits
 const FREEIPAPI_URL = "https://free.freeipapi.com/api/json/"; // Fallback #1
 const REALLYFREEGEOIP_URL = "https://reallyfreegeoip.org/json/"; // Fallback #2
@@ -221,59 +220,141 @@ export function isValidIpAddress(ip: string): boolean {
 // --- Public IP Detection ---
 
 /**
- * Detect the user's public IP address via external API.
- * @throws Error with code IP_DETECTION_FAILED
+ * An IP-echo endpoint: returns the requester's public (exit) IP. We deliberately
+ * favor hyperscale CDN / cloud endpoints over small single-purpose services
+ * (e.g. ipify), because the real rate-limit risk here isn't per-user volume —
+ * it's *many users sharing one VPN exit IP* all hitting the same endpoint, so
+ * the endpoint sees high volume from a single IP and may throttle it. Hyperscale
+ * endpoints have the capacity to absorb that; ipify is kept only as a final,
+ * independent fallback so we're never reliant on a single operator.
+ *
+ * Browsers can't do raw-UDP STUN (the native app's trick), so an HTTP echo is
+ * the only option in the extension — but spreading across diverse operators
+ * plus failover gets us the resilience STUN gives the app.
  */
-export async function detectPublicIp(): Promise<string> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => {
-    logger.warn("[IP-DETECT] Timeout triggered after", REQUEST_TIMEOUT, "ms");
-    controller.abort();
-  }, REQUEST_TIMEOUT);
+interface IpEchoProvider {
+  /** Short id for logs (the "winner"). */
+  name: string;
+  url: string;
+  /** Extract the IP from the (plaintext) response body, or undefined if absent. */
+  parse: (body: string) => string | undefined;
+}
 
+/**
+ * Tried in order, first success wins (sequential failover, not a parallel race:
+ * the happy path is a single request to the primary, which keeps total volume
+ * minimal — only a failing/throttled provider costs an extra request). Ordered
+ * by rate-limit resilience: AWS → Cloudflare → Akamai are all built for volume
+ * and span three independent operators, so a throttle/outage at one doesn't
+ * imply the others; ipify is the last-resort independent fallback.
+ *
+ * All return the IP as plaintext except Cloudflare's trace endpoint, which
+ * returns `key=value` lines (we pull the `ip=` line).
+ */
+const IP_ECHO_PROVIDERS: IpEchoProvider[] = [
+  {
+    name: "aws",
+    url: "https://checkip.amazonaws.com/",
+    parse: (body) => body.trim(),
+  },
+  {
+    name: "cloudflare",
+    url: "https://www.cloudflare.com/cdn-cgi/trace",
+    parse: (body) => {
+      const line = body.split("\n").find((l) => l.startsWith("ip="));
+      return line ? line.slice(3).trim() : undefined;
+    },
+  },
+  {
+    name: "akamai",
+    url: "https://whatismyip.akamai.com/",
+    parse: (body) => body.trim(),
+  },
+  {
+    name: "ipify",
+    url: "https://api.ipify.org/",
+    parse: (body) => body.trim(),
+  },
+];
+
+/**
+ * Fetch one IP-echo provider with a per-attempt timeout. Resolves to the parsed,
+ * validated IP, or throws (so the caller can fail over to the next provider).
+ * The thrown error preserves HTTP 403/429 in its message so the resync gate's
+ * rate-limit detector (`looksRateLimited`) can back off if *every* provider is
+ * throttled.
+ */
+async function fetchPublicIpFrom(provider: IpEchoProvider): Promise<string> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+  const start = Date.now();
   try {
-    logger.debug("[IP-DETECT] Fetching from:", PUBLIC_IP_URL);
-    const fetchStart = Date.now();
-    const response = await fetch(PUBLIC_IP_URL, {
+    const response = await fetch(provider.url, {
       signal: controller.signal,
       cache: "no-store",
-      mode: "cors",
       credentials: "omit",
-      headers: { Connection: "close" },
     });
-    logger.debug(
-      "[IP-DETECT] Fetch response received in",
-      Date.now() - fetchStart,
-      "ms, status:",
-      response.status
-    );
     clearTimeout(timeoutId);
-
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
-
-    const jsonStart = Date.now();
-    const data = (await response.json()) as { ip?: string };
-    logger.debug("[IP-DETECT] JSON parsed in", Date.now() - jsonStart, "ms");
-    const ip = data.ip;
-
+    const body = await response.text();
+    const ip = provider.parse(body)?.trim();
     if (!ip || !isValidIpAddress(ip)) {
       throw new Error("Invalid IP address in response");
     }
-
-    logger.debug("[IP-DETECT] Public IP detected:", ip);
+    logger.debug(`[IP-DETECT] ${provider.name} → ${ip} (${Date.now() - start}ms)`);
     return ip;
   } catch (error) {
     clearTimeout(timeoutId);
     const err = error instanceof Error ? error : new Error(String(error));
-    logger.error("[IP-DETECT] Error:", { name: err.name, message: err.message });
-    const message =
-      err.name === "AbortError"
-        ? "IP detection request timed out"
-        : err.message || "Unknown error during IP detection";
-    throw Object.assign(new Error(message), { code: "IP_DETECTION_FAILED" });
+    const reason = err.name === "AbortError" ? "timeout" : err.message;
+    throw new Error(reason);
   }
+}
+
+/**
+ * Detect the user's public (exit) IP, trying each provider in order until one
+ * answers. Logs the winning provider and how many failovers it took — mirroring
+ * the "winner" logging on the geolocation race.
+ * @throws Error with code IP_DETECTION_FAILED when every provider fails
+ */
+export async function detectPublicIp(): Promise<string> {
+  const overallStart = Date.now();
+  const failures: string[] = [];
+
+  for (const provider of IP_ECHO_PROVIDERS) {
+    try {
+      const ip = await fetchPublicIpFrom(provider);
+      if (failures.length === 0) {
+        logger.info(
+          `[IP-DETECT] Winner: ${provider.name} → ${ip} (${Date.now() - overallStart}ms)`
+        );
+      } else {
+        logger.info(
+          `[IP-DETECT] Winner: ${provider.name} → ${ip} (${Date.now() - overallStart}ms` +
+            `, after ${failures.length} failover(s): ${failures.join(", ")})`
+        );
+      }
+      return ip;
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      failures.push(`${provider.name}: ${reason}`);
+      logger.warn(`[IP-DETECT] ${provider.name} failed: ${reason}`);
+    }
+  }
+
+  // Every provider failed. Preserve the per-provider reasons (including any
+  // "HTTP 429"/"HTTP 403") so the resync gate can recognize a rate-limit and
+  // back off the automatic path.
+  const detail = failures.join("; ");
+  logger.error(
+    `[IP-DETECT] All ${IP_ECHO_PROVIDERS.length} providers failed in ${Date.now() - overallStart}ms:`,
+    detail
+  );
+  throw Object.assign(new Error(`IP detection failed (${detail})`), {
+    code: "IP_DETECTION_FAILED",
+  });
 }
 
 // --- IP Geolocation ---
