@@ -28,6 +28,7 @@ struct SpoofControlPanel: View {
     @State private var showOnboarding = false
     @State private var showTrustInfo = false
     @State private var renaming: SpoofFavorite?
+    @State private var reviewToken = 0
 
     var body: some View {
         Form {
@@ -56,9 +57,20 @@ struct SpoofControlPanel: View {
                 renaming = nil
             }
         }
+        .requestReview(on: reviewToken)
         .onAppear {
             controller.refreshFromExtension()
             if !onboardingCompleted { showOnboarding = true }
+            if onboardingCompleted && controller.isActiveInSafari && controller.hasLocation,
+                ReviewPrompt.shouldRequestReview() {
+                reviewToken += 1
+            }
+        }
+        .onChange(of: controller.isActiveInSafari) { active in
+            if onboardingCompleted && active && controller.hasLocation,
+                ReviewPrompt.shouldRequestReview() {
+                reviewToken += 1
+            }
         }
     }
 
@@ -1061,6 +1073,97 @@ struct TipJarView: View {
         .task {
             await store.loadProducts()
             await store.observeTransactions()
+        }
+    }
+}
+
+// MARK: - Review Prompt
+
+/// Gating logic for the App Store review prompt. Presentation is done by the
+/// view via the recommended SwiftUI `requestReview` environment action — see
+/// the `requestReview(on:)` view modifier below — so this type holds no UI.
+///
+/// Asks at a genuinely positive moment (GeoSpoof confirmed running in Safari
+/// with a location set), heavily throttled: at most one counted event per app
+/// launch, only after a few qualifying sessions, and never more than once per
+/// app version (Apple also caps its own prompt at 3×/year).
+enum ReviewPrompt {
+    private static let eventCountKey = "reviewSignificantEventCount"
+    private static let lastPromptedVersionKey = "reviewLastPromptedVersion"
+    /// Qualifying sessions before we ask. Small, since the trigger is already a
+    /// strong "it's working" signal.
+    private static let threshold = 3
+
+    /// Only count one significant event per process launch, so navigating back
+    /// to the panel within a session can't inflate the counter.
+    private static var countedThisLaunch = false
+
+    /// Call when the user is in a clearly positive state. Returns `true` at most
+    /// once per launch — after `threshold` qualifying sessions and only once per
+    /// app version — meaning the caller should present the review prompt now.
+    @MainActor
+    static func shouldRequestReview() -> Bool {
+        guard !countedThisLaunch else { return false }
+        countedThisLaunch = true
+
+        let defaults = UserDefaults.standard
+        let count = defaults.integer(forKey: eventCountKey) + 1
+        defaults.set(count, forKey: eventCountKey)
+        guard count >= threshold else { return false }
+
+        let currentVersion =
+            Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+        guard defaults.string(forKey: lastPromptedVersionKey) != currentVersion else { return false }
+
+        defaults.set(currentVersion, forKey: lastPromptedVersionKey)
+        return true
+    }
+
+    #if os(iOS)
+    /// Fallback for iOS 15, where the SwiftUI `requestReview` action (iOS 16+)
+    /// isn't available.
+    @MainActor
+    static func legacyRequest() {
+        let scene =
+            UIApplication.shared.connectedScenes
+            .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene
+            ?? UIApplication.shared.connectedScenes.first as? UIWindowScene
+        guard let scene else { return }
+        SKStoreReviewController.requestReview(in: scene)
+    }
+    #endif
+}
+
+extension View {
+    /// Presents the system review prompt whenever `token` changes to a new
+    /// non-zero value, using Apple's recommended SwiftUI `requestReview`
+    /// environment action on iOS 16+/macOS 13+, falling back to StoreKit on
+    /// iOS 15. Bump an `@State` token to trigger.
+    @ViewBuilder
+    func requestReview(on token: Int) -> some View {
+        if #available(iOS 16.0, macOS 13.0, *) {
+            modifier(EnvironmentReviewModifier(token: token))
+        } else {
+            onChange(of: token) { newValue in
+                #if os(iOS)
+                if newValue > 0 { ReviewPrompt.legacyRequest() }
+                #endif
+            }
+        }
+    }
+}
+
+/// Reads the `requestReview` environment action and fires it when `token`
+/// changes. Isolated in its own `@available` type because the action is iOS 16+
+/// / macOS 13+ and the app targets iOS 15.
+@available(iOS 16.0, macOS 13.0, *)
+private struct EnvironmentReviewModifier: ViewModifier {
+    @Environment(\.requestReview) private var requestReview
+    let token: Int
+
+    func body(content: Content) -> some View {
+        content.onChange(of: token) { newValue in
+            if newValue > 0 { requestReview() }
         }
     }
 }
