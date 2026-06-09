@@ -88,6 +88,28 @@ export function computeOffsets(identifier: string): { offset: number; dstOffset:
 }
 
 /**
+ * Build a Timezone from a geo-service-supplied IANA identifier hint, or null if
+ * the hint is absent/invalid. Used as a high-quality fallback when the offline
+ * browser-geo-tz boundary lookup fails or yields nothing — far better than the
+ * crude longitude estimate, and crucially returns a real named zone (with DST)
+ * rather than a fingerprintable Etc/GMT±N.
+ */
+function buildTimezoneFromHint(ianaHint: string | undefined): Timezone | null {
+  if (!ianaHint || !isValidIANATimezone(ianaHint)) {
+    return null;
+  }
+  // isValidIANATimezone is a format check only; the hint is external (geo
+  // service), so a format-valid but non-existent zone (e.g. "Not/AZone") can
+  // still make Intl throw. Treat any such failure as an unusable hint.
+  try {
+    const { offset, dstOffset } = computeOffsets(ianaHint);
+    return { identifier: ianaHint, offset, dstOffset };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Build a longitude-based fallback timezone (Etc/GMT±N).
  */
 function buildFallbackTimezone(longitude: number): Timezone {
@@ -114,10 +136,16 @@ function buildFallbackTimezone(longitude: number): Timezone {
 
 /**
  * Get timezone for coordinates using browser-geo-tz boundary data with fallback.
+ *
+ * @param ianaHint - Optional IANA timezone identifier from a geo service (VPN
+ *   sync path). Used as a high-quality fallback ahead of the longitude estimate
+ *   when the offline boundary lookup fails or returns nothing. Ignored for
+ *   manual locations that don't carry one.
  */
 export async function getTimezoneForCoordinates(
   latitude: number,
-  longitude: number
+  longitude: number,
+  ianaHint?: string
 ): Promise<Timezone> {
   const cacheKey = getCacheKey(latitude, longitude);
   const cached = await sessionGet<Timezone>("timezone:" + cacheKey);
@@ -132,6 +160,12 @@ export async function getTimezoneForCoordinates(
     const results = await _geoTz.find(latitude, longitude);
 
     if (results.length === 0) {
+      const hinted = buildTimezoneFromHint(ianaHint);
+      if (hinted) {
+        logger.debug("Timezone lookup returned no results, using geo-service hint:", hinted);
+        await sessionSet("timezone:" + cacheKey, hinted);
+        return hinted;
+      }
       const fallback = buildFallbackTimezone(longitude);
       logger.debug("Timezone lookup returned no results, using fallback:", fallback);
       // Don't cache fallback results — a transient CDN failure should be retried
@@ -142,6 +176,15 @@ export async function getTimezoneForCoordinates(
     const identifier = results[0];
 
     if (!isValidIANATimezone(identifier)) {
+      const hinted = buildTimezoneFromHint(ianaHint);
+      if (hinted) {
+        logger.warn("Invalid IANA timezone from boundary data, using geo-service hint:", {
+          identifier,
+          hinted,
+        });
+        await sessionSet("timezone:" + cacheKey, hinted);
+        return hinted;
+      }
       const fallback = buildFallbackTimezone(longitude);
       logger.warn("Invalid IANA timezone, using fallback:", { identifier, fallback });
       // Don't cache fallback results — same reason as above.
@@ -155,6 +198,17 @@ export async function getTimezoneForCoordinates(
     await sessionSet("timezone:" + cacheKey, timezone);
     return timezone;
   } catch (error) {
+    // Boundary lookup failed (network error, CDN range-request hiccup, service
+    // worker suspension mid-fetch). Prefer the geo-service IANA hint — it's a
+    // real named zone with DST — over the crude longitude estimate.
+    const hinted = buildTimezoneFromHint(ianaHint);
+    if (hinted) {
+      logger.warn("Timezone lookup failed, using geo-service hint:", { error, hinted });
+      // The hint is authoritative and stable, so it's safe to cache for the session.
+      await sessionSet("timezone:" + cacheKey, hinted);
+      return hinted;
+    }
+
     logger.warn("Timezone lookup failed, using fallback:", error);
 
     const fallback = buildFallbackTimezone(longitude);

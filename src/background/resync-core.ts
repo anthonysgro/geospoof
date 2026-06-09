@@ -28,6 +28,7 @@ import { createLogger } from "@/shared/utils/debug-logger";
 import { loadSettings } from "./settings";
 import { syncVpnLocation, detectPublicIp, getLastSyncedIp } from "./vpn-sync";
 import { handleSetLocation } from "./messages";
+import { looksRateLimited } from "./endpoint-cooldown";
 
 const logger = createLogger("BG");
 
@@ -64,15 +65,19 @@ const MIN_CHECK_INTERVAL_MS = 10000;
 const SWITCH_SETTLE_MS = 2500;
 
 /**
- * Circuit breaker. If the IP-detection / geolocation dependency tells us we're
- * being rate-limited or blocked (HTTP 429/403, or a sync IP_BLOCKED result), we
- * stop making automatic checks for this long. The activity / proxy triggers can
- * fire often, so a service pushing back must back off the *automatic* path
- * rather than retry on the next navigation. (Manual "Sync with VPN" and startup
- * sync go through vpn-sync directly and are unaffected — they're user-initiated
- * and low-frequency.)
+ * Circuit breaker. The per-endpoint cooldowns in vpn-sync.ts already absorb a
+ * single IP-echo provider or geo service throttling us (they're dropped from
+ * the failover/race for a minute and the siblings carry the sync). This breaker
+ * is the last line: it only trips on a *total* failure — every IP-echo provider
+ * rate-limited (429/403), or a sync that comes back `IP_BLOCKED` (every geo
+ * service rejecting this exit IP). In that case we pause the *automatic* path
+ * briefly so chatty activity/proxy triggers don't keep re-running the full
+ * detect+geo cycle. Kept short (1 min) because it's IP-specific: a VPN switch
+ * to a fresh exit IP should resume syncing quickly. (Manual "Sync with VPN" and
+ * startup sync go through vpn-sync directly and bypass this gate entirely —
+ * they're user-initiated and low-frequency.)
  */
-const RATE_LIMIT_BACKOFF_MS = 5 * 60 * 1000; // 5 minutes
+const RATE_LIMIT_BACKOFF_MS = 60 * 1000; // 1 minute
 
 let _debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let _lastCheckAt = 0;
@@ -80,11 +85,6 @@ let _lastCheckAt = 0;
 let _backoffUntil = 0;
 /** Serializes overlapping checks so a second trigger mid-check can't race. */
 let _checkInFlight: Promise<void> | null = null;
-
-/** Heuristic: does this error/result look like the IP service rate-limiting us? */
-function looksRateLimited(message: string): boolean {
-  return /\b429\b|\b403\b/.test(message);
-}
 
 /**
  * Request a re-sync check. Safe to call as often as you like — calls are
@@ -222,6 +222,7 @@ async function doCheck(): Promise<void> {
     { latitude: result.latitude, longitude: result.longitude },
     {
       fromVpnSync: true,
+      timezoneHint: result.timezone,
       locationName: {
         city: result.city,
         country: result.country,

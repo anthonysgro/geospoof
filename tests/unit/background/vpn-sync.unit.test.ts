@@ -487,3 +487,125 @@ describe("Startup auto-sync", () => {
     expect(settings.location!.longitude).toBe(13.405);
   });
 });
+
+// --- Per-endpoint geo-service cooldown ---------------------------------------
+
+const GEOJS_HOST = "get.geojs.io";
+const FREEIPAPI_HOST = "free.freeipapi.com";
+
+/** A geo-service JSON success body in geojs's shape (lat/lng as strings). */
+function geojsOk(ip: string, lat: number, lon: number, city: string, country: string) {
+  return {
+    ok: true,
+    json: () =>
+      Promise.resolve({ ip, city, country, latitude: String(lat), longitude: String(lon) }),
+  } as Response;
+}
+
+/** A freeipapi JSON success body. */
+function freeIpApiOk(ip: string, lat: number, lon: number, city: string, country: string) {
+  return {
+    ok: true,
+    json: () =>
+      Promise.resolve({
+        ipAddress: ip,
+        cityName: city,
+        countryName: country,
+        latitude: lat,
+        longitude: lon,
+      }),
+  } as Response;
+}
+
+/**
+ * Route fetch by URL substring instead of call order, so parallel geo requests
+ * (raced via Promise.any) can each be answered deterministically and we can
+ * assert which endpoints were actually hit.
+ */
+function routeFetch(handler: (url: string) => Response | undefined) {
+  vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : "";
+    const res = handler(url);
+    if (res) return Promise.resolve(res);
+    return Promise.reject(new Error(`unexpected fetch: ${url}`));
+  });
+}
+
+/** True if any fetch call targeted a URL containing `host`. */
+function fetchedHost(host: string): boolean {
+  return vi.mocked(fetch).mock.calls.some((c) => typeof c[0] === "string" && c[0].includes(host));
+}
+
+describe("Per-endpoint geo-service cooldown", () => {
+  test("a geo service that returns 429 is parked and skipped on the next sync", async () => {
+    const { syncVpnLocation, clearIpGeoCache, resetRateLimiter } = await importBackground();
+    await clearIpGeoCache();
+    await resetRateLimiter();
+
+    const ip = "203.0.113.42";
+    // First sync: geojs 429s, freeipapi wins.
+    routeFetch((url) => {
+      if (IP_ECHO_HOST_RE.test(url))
+        return { ok: true, text: () => Promise.resolve(`${ip}\n`) } as Response;
+      if (url.includes(GEOJS_HOST))
+        return { ok: false, status: 429, json: () => Promise.resolve({}) } as Response;
+      if (url.includes(FREEIPAPI_HOST)) return freeIpApiOk(ip, 51.5074, -0.1278, "London", "UK");
+      // other geo services: fail so freeipapi is unambiguously the winner
+      return { ok: false, status: 500, json: () => Promise.resolve({}) } as Response;
+    });
+
+    const first = await syncVpnLocation(true);
+    expect("error" in first).toBe(false);
+
+    // Second sync (force, to bypass cache + dedup): geojs is parked, so it must
+    // not be fetched again; freeipapi serves the result.
+    vi.mocked(fetch).mockClear();
+    routeFetch((url) => {
+      if (IP_ECHO_HOST_RE.test(url))
+        return { ok: true, text: () => Promise.resolve(`${ip}\n`) } as Response;
+      if (url.includes(FREEIPAPI_HOST)) return freeIpApiOk(ip, 51.5074, -0.1278, "London", "UK");
+      if (url.includes(GEOJS_HOST))
+        return { ok: false, status: 429, json: () => Promise.resolve({}) } as Response;
+      return { ok: false, status: 500, json: () => Promise.resolve({}) } as Response;
+    });
+
+    const second = await syncVpnLocation(true);
+    expect("error" in second).toBe(false);
+
+    expect(fetchedHost(GEOJS_HOST)).toBe(false);
+  });
+
+  test("clearEndpointCooldowns un-parks a service so it is tried again", async () => {
+    const { syncVpnLocation, clearIpGeoCache, clearEndpointCooldowns, resetRateLimiter } =
+      await importBackground();
+    await clearIpGeoCache();
+    await resetRateLimiter();
+
+    const ip = "198.51.100.7";
+    routeFetch((url) => {
+      if (IP_ECHO_HOST_RE.test(url))
+        return { ok: true, text: () => Promise.resolve(`${ip}\n`) } as Response;
+      if (url.includes(GEOJS_HOST))
+        return { ok: false, status: 429, json: () => Promise.resolve({}) } as Response;
+      if (url.includes(FREEIPAPI_HOST)) return freeIpApiOk(ip, 35.6762, 139.6503, "Tokyo", "Japan");
+      return { ok: false, status: 500, json: () => Promise.resolve({}) } as Response;
+    });
+
+    await syncVpnLocation(true); // parks geojs
+
+    // A manual sync clears cooldowns — geojs should get a fresh shot.
+    clearEndpointCooldowns();
+    vi.mocked(fetch).mockClear();
+    routeFetch((url) => {
+      if (IP_ECHO_HOST_RE.test(url))
+        return { ok: true, text: () => Promise.resolve(`${ip}\n`) } as Response;
+      if (url.includes(GEOJS_HOST)) return geojsOk(ip, 35.6762, 139.6503, "Tokyo", "Japan");
+      if (url.includes(FREEIPAPI_HOST)) return freeIpApiOk(ip, 35.6762, 139.6503, "Tokyo", "Japan");
+      return { ok: false, status: 500, json: () => Promise.resolve({}) } as Response;
+    });
+
+    await syncVpnLocation(true);
+
+    expect(fetchedHost(GEOJS_HOST)).toBe(true);
+  });
+});

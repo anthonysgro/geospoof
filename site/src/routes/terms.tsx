@@ -64,7 +64,7 @@ function TermsPage() {
               Terms of Service
             </h1>
             <p className="text-body-base text-(--color-canvas-muted)">
-              Last Updated: May 6, 2026
+              Last Updated: June 8, 2026
             </p>
           </div>
 
@@ -149,15 +149,18 @@ function TermsPage() {
 
             <TermsSection title="4. Third-Party Services">
               <p>
-                The Extension communicates with third-party services to provide
-                certain features. These services include Nominatim
-                (OpenStreetMap), ipify, GeoJS, FreeIPAPI, ReallyFreeGeoIP,
-                ipinfo.io, and the browser-geo-tz CDN. Your use of those
-                services is subject to their respective terms and privacy
-                policies. We are not responsible for the availability, accuracy,
-                or conduct of any third-party service. The specific data sent to
-                each service and the conditions under which it is sent are
-                described in our <a href="/privacy">Privacy Policy</a>.
+                GeoSpoof (the Extension and the companion apps) communicates with
+                third-party services to provide certain features. These services
+                include Nominatim (OpenStreetMap), the browser-geo-tz CDN, Apple
+                geocoding, public-IP detection services (AWS, Cloudflare, Akamai,
+                ipify, and the Cloudflare and Google STUN servers), and IP
+                geolocation services (GeoJS, FreeIPAPI, ReallyFreeGeoIP,
+                ipinfo.io). Your use of those services is subject to their
+                respective terms and privacy policies. We are not responsible for
+                the availability, accuracy, or conduct of any third-party service.
+                The specific data sent to each service and the conditions under
+                which it is sent are described in our{" "}
+                <a href="/privacy">Privacy Policy</a>.
               </p>
             </TermsSection>
 

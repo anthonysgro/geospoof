@@ -6,6 +6,7 @@
 
 import { createLogger } from "@/shared/utils/debug-logger";
 import { sessionGet, sessionSet, sessionDelete, sessionClearNamespace } from "./session-cache";
+import { EndpointCooldown, ENDPOINT_COOLDOWN_MS, looksRateLimited } from "./endpoint-cooldown";
 
 const logger = createLogger("BG");
 
@@ -125,6 +126,14 @@ export interface IpGeolocationResult {
   city: string;
   country: string;
   ip: string;
+  /**
+   * IANA timezone identifier reported by the geo service (e.g. "Asia/Singapore"),
+   * when present and well-formed. Used as a high-quality fallback for timezone
+   * resolution when the offline browser-geo-tz boundary lookup fails (e.g. a CDN
+   * range-request hiccup), ahead of the crude longitude estimate. Optional —
+   * not every provider/response includes it.
+   */
+  timezone?: string;
 }
 
 export interface VpnSyncError {
@@ -147,6 +156,7 @@ interface FreeIpApiResponse {
   continent: string;
   continentCode: string;
   isProxy: boolean;
+  timeZone: string;
 }
 
 // --- geojs.io Response Shape (internal) ---
@@ -157,6 +167,7 @@ interface GeoJsResponse {
   country: string;
   latitude: string;
   longitude: string;
+  timezone: string;
 }
 
 // --- reallyfreegeoip.org Response Shape (internal) ---
@@ -166,6 +177,7 @@ interface ReallyFreeGeoIpResponse {
   country_name: string;
   latitude: number;
   longitude: number;
+  time_zone: string;
 }
 
 // --- ipinfo.io Response Shape (internal) ---
@@ -175,6 +187,7 @@ interface IpInfoResponse {
   city: string;
   country: string;
   loc: string;
+  timezone: string;
 }
 // --- Rate Limiting ---
 
@@ -278,6 +291,14 @@ const IP_ECHO_PROVIDERS: IpEchoProvider[] = [
 ];
 
 /**
+ * Per-provider cooldown for the IP-echo endpoints. When a provider rate-limits
+ * us (429/403 — most likely because many users share one VPN exit IP all
+ * hitting the same endpoint), park it briefly and fail over to its siblings on
+ * subsequent calls instead of re-hitting it every time.
+ */
+const ipEchoCooldown = new EndpointCooldown(ENDPOINT_COOLDOWN_MS, "IP-ECHO");
+
+/**
  * Fetch one IP-echo provider with a per-attempt timeout. Resolves to the parsed,
  * validated IP, or throws (so the caller can fail over to the next provider).
  * The thrown error preserves HTTP 403/429 in its message so the resync gate's
@@ -322,8 +343,9 @@ async function fetchPublicIpFrom(provider: IpEchoProvider): Promise<string> {
 export async function detectPublicIp(): Promise<string> {
   const overallStart = Date.now();
   const failures: string[] = [];
+  const providers = ipEchoCooldown.filterAvailable(IP_ECHO_PROVIDERS, (p) => p.name);
 
-  for (const provider of IP_ECHO_PROVIDERS) {
+  for (const provider of providers) {
     try {
       const ip = await fetchPublicIpFrom(provider);
       if (failures.length === 0) {
@@ -339,6 +361,11 @@ export async function detectPublicIp(): Promise<string> {
       return ip;
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
+      // Park a provider that's actively throttling us so the next call fails
+      // over to a sibling instead of re-hitting it.
+      if (looksRateLimited(reason)) {
+        ipEchoCooldown.markCoolingDown(provider.name);
+      }
       failures.push(`${provider.name}: ${reason}`);
       logger.warn(`[IP-DETECT] ${provider.name} failed: ${reason}`);
     }
@@ -349,7 +376,7 @@ export async function detectPublicIp(): Promise<string> {
   // back off the automatic path.
   const detail = failures.join("; ");
   logger.error(
-    `[IP-DETECT] All ${IP_ECHO_PROVIDERS.length} providers failed in ${Date.now() - overallStart}ms:`,
+    `[IP-DETECT] All ${providers.length} providers failed in ${Date.now() - overallStart}ms:`,
     detail
   );
   throw Object.assign(new Error(`IP detection failed (${detail})`), {
@@ -358,6 +385,17 @@ export async function detectPublicIp(): Promise<string> {
 }
 
 // --- IP Geolocation ---
+
+/**
+ * Normalize a geo-service-supplied timezone field to a trimmed non-empty string,
+ * or undefined. Full IANA validation happens later (at the resolution site) via
+ * `isValidIANATimezone`; here we only reject obviously absent/blank values.
+ */
+function normalizeTimezone(tz: unknown): string | undefined {
+  if (typeof tz !== "string") return undefined;
+  const trimmed = tz.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
 
 /**
  * Fetch a geo service URL with custom User-Agent, timeout, and exponential backoff retry.
@@ -487,6 +525,7 @@ async function geolocateWithFreeIpApi(
       city: typeof data.cityName === "string" ? data.cityName : "",
       country: typeof data.countryName === "string" ? data.countryName : "",
       ip: data.ipAddress,
+      timezone: normalizeTimezone(data.timeZone),
     };
   } catch (error) {
     const err = error as Error & { code?: string; blocked?: boolean };
@@ -576,6 +615,7 @@ async function geolocateWithGeoJs(
       city: typeof data.city === "string" ? data.city : "",
       country: typeof data.country === "string" ? data.country : "",
       ip: data.ip,
+      timezone: normalizeTimezone(data.timezone),
     };
   } catch (error) {
     const err = error as Error & { code?: string; blocked?: boolean };
@@ -658,6 +698,7 @@ async function geolocateWithReallyFreeGeoIp(
       city: typeof data.city === "string" ? data.city : "",
       country: typeof data.country_name === "string" ? data.country_name : "",
       ip: data.ip,
+      timezone: normalizeTimezone(data.time_zone),
     };
   } catch (error) {
     const err = error as Error & { code?: string; blocked?: boolean };
@@ -743,6 +784,7 @@ async function geolocateWithIpInfo(
       city: typeof data.city === "string" ? data.city : "",
       country: typeof data.country === "string" ? data.country : "",
       ip: data.ip,
+      timezone: normalizeTimezone(data.timezone),
     };
   } catch (error) {
     const err = error as Error & { code?: string; blocked?: boolean };
@@ -761,6 +803,56 @@ async function geolocateWithIpInfo(
 }
 
 // --- Orchestrator ---
+
+/**
+ * The IP-geolocation services, raced in parallel (first success wins). Each is
+ * an independent third-party endpoint with its own rate-limit behavior, so each
+ * gets its own cooldown: when one returns 429/403 (or otherwise signals it's
+ * blocking the IP), it's dropped from the next race rather than poisoning the
+ * whole sync path.
+ */
+interface GeoService {
+  name: string;
+  fn: (ip: string, signal: AbortSignal) => Promise<IpGeolocationResult>;
+}
+
+const GEO_SERVICES: GeoService[] = [
+  { name: "geojs", fn: geolocateWithGeoJs },
+  { name: "freeipapi", fn: geolocateWithFreeIpApi },
+  { name: "reallyfreegeoip", fn: geolocateWithReallyFreeGeoIp },
+  { name: "ipinfo", fn: geolocateWithIpInfo },
+];
+
+const geoCooldown = new EndpointCooldown(ENDPOINT_COOLDOWN_MS, "IP-GEO");
+
+/**
+ * Run one geo service, marking it as cooling down if it rate-limits / blocks
+ * us before re-throwing so the failure still propagates into the Promise.any
+ * aggregate.
+ */
+function runGeoService(
+  svc: GeoService,
+  ip: string,
+  signal: AbortSignal
+): Promise<IpGeolocationResult> {
+  return svc.fn(ip, signal).catch((error: unknown) => {
+    const err = error as Error & { blocked?: boolean };
+    if (err.blocked === true || looksRateLimited(err.message ?? "")) {
+      geoCooldown.markCoolingDown(svc.name);
+    }
+    throw error;
+  });
+}
+
+/**
+ * Clear all per-endpoint cooldowns (IP-echo + geo services). Called on a
+ * user-initiated manual sync — the user is explicitly asking us to try now, so
+ * we drop any "park this endpoint" state and give every endpoint a fresh shot.
+ */
+export function clearEndpointCooldowns(): void {
+  ipEchoCooldown.clear();
+  geoCooldown.clear();
+}
 
 // In-flight sync promise — deduplicates concurrent calls so multiple rapid button presses
 // don't saturate the browser's per-host connection pool with redundant parallel fetches.
@@ -853,20 +945,20 @@ async function _doSyncVpnLocation(
     }
 
     const geoStart = Date.now();
-    logger.info("[VPN-SYNC] Geolocating IP:", ip, "(running all 3 services in parallel)");
+    const services = geoCooldown.filterAvailable(GEO_SERVICES, (s) => s.name);
+    logger.info(
+      "[VPN-SYNC] Geolocating IP:",
+      ip,
+      `(racing ${services.length} service(s) in parallel: ${services.map((s) => s.name).join(", ")})`
+    );
 
     let result: IpGeolocationResult;
     try {
-      result = await Promise.any([
-        geolocateWithGeoJs(ip, geoAbortSignal),
-        geolocateWithFreeIpApi(ip, geoAbortSignal),
-        geolocateWithReallyFreeGeoIp(ip, geoAbortSignal),
-        geolocateWithIpInfo(ip, geoAbortSignal),
-      ]);
-      // One service succeeded — abort the other two so they don't keep retrying in the background
+      result = await Promise.any(services.map((svc) => runGeoService(svc, ip, geoAbortSignal)));
+      // One service succeeded — abort the others so they don't keep retrying in the background
       geoAbort.abort();
     } catch (aggregateErr) {
-      // All three failed — AggregateError contains each individual error
+      // All services failed — AggregateError contains each individual error
       const errors: Array<Error & { blocked?: boolean }> =
         aggregateErr instanceof AggregateError
           ? (aggregateErr.errors as Array<Error & { blocked?: boolean }>)

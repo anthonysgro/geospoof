@@ -97,3 +97,60 @@ describe("Timezone Edge Cases", () => {
     expect(endTime - startTime).toBeLessThan(100);
   });
 });
+
+describe("Geo-service timezone hint", () => {
+  let mockedFind: Awaited<ReturnType<typeof getMockedFind>>;
+
+  beforeEach(async () => {
+    mockedFind = await getMockedFind();
+    mockedFind.mockReset();
+  });
+
+  test("uses the IANA hint when the boundary lookup throws (Singapore CDN 416 case)", async () => {
+    const { getTimezoneForCoordinates, clearTimezoneCache } = await importBackground();
+    await clearTimezoneCache();
+
+    // Reproduces the field 416: browser-geo-tz fetch fails for Singapore coords.
+    mockedFind.mockRejectedValue(new Error("HTTP 416 Range Not Satisfiable"));
+
+    const tz = await getTimezoneForCoordinates(1.3778, 103.9594, "Asia/Singapore");
+
+    // Correct named zone (UTC+8), not the Etc/GMT-7 longitude estimate.
+    expect(tz.identifier).toBe("Asia/Singapore");
+    expect(tz.offset).toBe(480);
+    expect(tz.fallback).toBeUndefined();
+  });
+
+  test("uses the IANA hint when the boundary lookup returns no results", async () => {
+    const { getTimezoneForCoordinates, clearTimezoneCache } = await importBackground();
+    await clearTimezoneCache();
+
+    mockedFind.mockResolvedValue([]);
+
+    const tz = await getTimezoneForCoordinates(1.3778, 103.9594, "Asia/Singapore");
+    expect(tz.identifier).toBe("Asia/Singapore");
+    expect(tz.fallback).toBeUndefined();
+  });
+
+  test("falls back to the longitude estimate when the hint is invalid", async () => {
+    const { getTimezoneForCoordinates, clearTimezoneCache } = await importBackground();
+    await clearTimezoneCache();
+
+    mockedFind.mockRejectedValue(new Error("CDN unavailable"));
+
+    const tz = await getTimezoneForCoordinates(1.3778, 103.9594, "Not/AZone");
+    expect(tz.fallback).toBe(true);
+    expect(tz.identifier).toBe("Etc/GMT-7"); // longitude/15 → +7, inverted sign
+  });
+
+  test("prefers the boundary-data result over the hint when the lookup succeeds", async () => {
+    const { getTimezoneForCoordinates, clearTimezoneCache } = await importBackground();
+    await clearTimezoneCache();
+
+    // Boundary lookup succeeds with a precise zone; hint is a coarser one.
+    mockedFind.mockResolvedValue(["America/Los_Angeles"]);
+
+    const tz = await getTimezoneForCoordinates(37.7749, -122.4194, "America/New_York");
+    expect(tz.identifier).toBe("America/Los_Angeles");
+  });
+});

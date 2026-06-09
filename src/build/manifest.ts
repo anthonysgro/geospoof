@@ -188,7 +188,6 @@ export function generateManifest(target: BrowserTarget, version: string): Record
       // IP geolocation providers.
       "https://get.geojs.io/*",
       "https://free.freeipapi.com/*",
-      "https://ipapi.co/*",
       "https://reallyfreegeoip.org/*",
       "https://ipinfo.io/*",
       "https://nominatim.openstreetmap.org/*",
