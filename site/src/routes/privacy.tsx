@@ -64,7 +64,7 @@ function PrivacyPage() {
               Privacy Policy
             </h1>
             <p className="text-body-base text-(--color-canvas-muted)">
-              Last Updated: June 8, 2026
+              Last Updated: June 9, 2026
             </p>
           </div>
 
@@ -182,10 +182,10 @@ function PrivacyPage() {
                   stun.l.google.com
                 </code>
                 ) with ipify as a fallback. The detected IP is then sent in
-                parallel over HTTPS to up to four geolocation services; the first
-                successful response is used and the rest are cancelled. Only your
-                public IP is transmitted — no identifiers, account data, or
-                browsing history:
+                parallel over HTTPS to up to four geolocation services; the
+                first successful response is used and the rest are cancelled.
+                Only your public IP is transmitted — no identifiers, account
+                data, or browsing history:
               </p>
               <ul>
                 <li>
@@ -269,10 +269,26 @@ function PrivacyPage() {
               <p>
                 <strong>Apple geocoding</strong> (companion app only) — When you
                 set a manual location in the app, it uses Apple's on-device
-                geocoding (<code className="rounded bg-(--color-canvas-border) px-1 text-sm">CLGeocoder</code>)
-                to resolve the precise timezone for the chosen coordinates,
+                geocoding (
+                <code className="rounded bg-(--color-canvas-border) px-1 text-sm">
+                  CLGeocoder
+                </code>
+                ) to resolve the precise timezone for the chosen coordinates,
                 falling back to bundled offline boundary data when offline. City
                 search in the app is fully offline and sends nothing.
+              </p>
+            </PolicySection>
+
+            <PolicySection title="In-App Purchases (Tips)">
+              <p>
+                The iOS, iPadOS, and macOS app offers optional "tips" as
+                one-time in-app purchases, letting you support development if
+                you choose. Tips are entirely voluntary and unlock no features
+                or functionality. All purchases are processed by{" "}
+                <strong>Apple</strong> via In-App Purchase — the developer never
+                receives your payment details, card information, or any personal
+                data from a tip. Billing, receipts, and refunds are handled by
+                Apple under its terms.
               </p>
             </PolicySection>
 
@@ -309,8 +325,9 @@ function PrivacyPage() {
                 <li>
                   <strong>proxy</strong> (Firefox/Chromium only): To detect when
                   a browser-based VPN switches exit nodes so VPN Sync can
-                  re-align your spoofed location. GeoSpoof only <em>observes</em>{" "}
-                  proxy changes — it never sets or routes a proxy.
+                  re-align your spoofed location. GeoSpoof only{" "}
+                  <em>observes</em> proxy changes — it never sets or routes a
+                  proxy.
                 </li>
                 <li>
                   <strong>scripting:</strong> To inject the location-spoofing
@@ -353,8 +370,8 @@ function PrivacyPage() {
                 <strong>
                   This warning is standard for any extension that runs on every
                   site, and the specific websites Safari names are simply the
-                  tabs you happen to have open at that moment — GeoSpoof does not
-                  single them out and has no special interest in them.
+                  tabs you happen to have open at that moment — GeoSpoof does
+                  not single them out and has no special interest in them.
                 </strong>{" "}
                 Safari shows this same wording for ad blockers, password
                 managers, and dark-mode extensions.
@@ -362,14 +379,16 @@ function PrivacyPage() {
               <p>
                 GeoSpoof needs broad website access because its only job is to
                 make every site you visit see your chosen location instead of
-                your real one. To do that it must run a small script on each page
-                that overrides the browser's location, timezone, and date APIs{" "}
-                <em>before</em> the page's own code runs. There is no narrower
-                permission that would let it spoof location site-wide.
+                your real one. To do that it must run a small script on each
+                page that overrides the browser's location, timezone, and date
+                APIs <em>before</em> the page's own code runs. There is no
+                narrower permission that would let it spoof location site-wide.
               </p>
               <p>
-                <strong>What "read and alter webpages" technically allows vs.
-                what GeoSpoof actually does:</strong>
+                <strong>
+                  What "read and alter webpages" technically allows vs. what
+                  GeoSpoof actually does:
+                </strong>
               </p>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-left text-sm [&_td]:border [&_td]:border-(--color-canvas-border) [&_td]:p-2 [&_td]:align-top [&_th]:border [&_th]:border-(--color-canvas-border) [&_th]:p-2 [&_th]:font-semibold [&_th]:text-(--color-canvas-foreground)">
@@ -402,8 +421,8 @@ function PrivacyPage() {
                         <code className="rounded bg-(--color-canvas-border) px-1 text-sm">
                           Intl
                         </code>
-                        , and Temporal APIs. It does not modify page text, inject
-                        ads, or rewrite content.
+                        , and Temporal APIs. It does not modify page text,
+                        inject ads, or rewrite content.
                       </td>
                     </tr>
                     <tr>
@@ -444,8 +463,8 @@ function PrivacyPage() {
               <ul>
                 <li>
                   <strong>Allow for One Day</strong> — best for trying GeoSpoof
-                  out. Access expires automatically, so it's the lowest-commitment
-                  option.
+                  out. Access expires automatically, so it's the
+                  lowest-commitment option.
                 </li>
                 <li>
                   <strong>Always Allow on Every Website</strong> — most
@@ -453,9 +472,9 @@ function PrivacyPage() {
                   re-granting access.
                 </li>
                 <li>
-                  <strong>Allow / Always Allow on specific websites</strong> — if
-                  you only want spoofing on certain sites, grant access per-site
-                  and leave the rest unprotected.
+                  <strong>Allow / Always Allow on specific websites</strong> —
+                  if you only want spoofing on certain sites, grant access
+                  per-site and leave the rest unprotected.
                 </li>
                 <li>
                   <strong>Deny</strong> — GeoSpoof will not run on that site (it
@@ -496,10 +515,12 @@ function PrivacyPage() {
                   NetworkExtension, no tunneling, no traffic interception
                 </li>
                 <li>
-                  <strong>Does NOT change browser language or locale
-                  settings</strong> — your browser's language preferences remain
-                  unchanged, which may create detectable inconsistencies with
-                  your spoofed location
+                  <strong>
+                    Does NOT change browser language or locale settings
+                  </strong>{" "}
+                  — your browser's language preferences remain unchanged, which
+                  may create detectable inconsistencies with your spoofed
+                  location
                 </li>
                 <li>
                   <strong>Does NOT spoof IP address</strong> — your real IP

@@ -10,6 +10,8 @@
 
 import SwiftUI
 import MapKit
+import StoreKit
+import Combine
 #if canImport(UIKit)
 import UIKit
 #endif
@@ -918,5 +920,147 @@ struct RenameFavoriteSheet: View {
         #if os(macOS)
         .frame(minWidth: 360, minHeight: 200)
         #endif
+    }
+}
+
+// MARK: - Tip Jar (StoreKit 2)
+
+/// StoreKit 2 store for the optional "tip jar". These are **consumable** IAPs:
+/// there is nothing to unlock, restore, or persist — a tip is purely a thank-you,
+/// so we just finish the transaction. No third-party SDK (e.g. RevenueCat) is
+/// used: consumables need no entitlement syncing, and a privacy-first app should
+/// avoid bundling an analytics SDK for this.
+///
+/// Prices and display names are configured in App Store Connect (and the local
+/// `GeoSpoof.storekit` test file) — the code only references the product IDs and
+/// renders `displayName` / `displayPrice` dynamically, so prices can change
+/// without a code update.
+@MainActor
+final class TipStore: ObservableObject {
+    /// Consumable tip product IDs. Must match App Store Connect + `GeoSpoof.storekit`.
+    static let productIDs = [
+        "com.moonloaf.geospoof.tip.small",
+        "com.moonloaf.geospoof.tip.medium",
+        "com.moonloaf.geospoof.tip.large",
+    ]
+
+    @Published private(set) var products: [Product] = []
+    @Published private(set) var isLoading = false
+    /// The product currently being purchased (drives a per-row spinner).
+    @Published private(set) var purchasing: Product.ID?
+    /// Set true after any successful tip, to show a thank-you state.
+    @Published var didTip = false
+    @Published var errorMessage: String?
+
+    /// Fetch the products, sorted cheapest-first so tiers render low → high.
+    func loadProducts() async {
+        guard products.isEmpty else { return }
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            let fetched = try await Product.products(for: Self.productIDs)
+            products = fetched.sorted { $0.price < $1.price }
+            errorMessage = nil
+        } catch {
+            errorMessage = "Couldn’t load tip options. Check your connection and try again."
+        }
+    }
+
+    func purchase(_ product: Product) async {
+        purchasing = product.id
+        defer { purchasing = nil }
+        do {
+            let result = try await product.purchase()
+            switch result {
+            case .success(let verification):
+                if case .verified(let transaction) = verification {
+                    // Consumable: nothing to unlock — just finish it.
+                    await transaction.finish()
+                    didTip = true
+                    errorMessage = nil
+                } else {
+                    errorMessage = "That purchase couldn’t be verified."
+                }
+            case .userCancelled:
+                break
+            case .pending:
+                // e.g. Ask to Buy — resolves later via `observeTransactions()`.
+                break
+            @unknown default:
+                break
+            }
+        } catch {
+            errorMessage = "Something went wrong — you weren’t charged."
+        }
+    }
+
+    /// Finish any transactions that arrive outside the direct purchase flow
+    /// (Ask to Buy approvals, interrupted purchases). Runs for the lifetime of
+    /// the view's `.task`.
+    func observeTransactions() async {
+        for await update in Transaction.updates {
+            if case .verified(let transaction) = update {
+                await transaction.finish()
+                didTip = true
+            }
+        }
+    }
+}
+
+/// The "Support GeoSpoof" tip-jar section, shown on the Settings screen of both
+/// the iOS and macOS apps. Renders one row per tier, reading the localized name
+/// and price straight from StoreKit.
+struct TipJarView: View {
+    @StateObject private var store = TipStore()
+
+    var body: some View {
+        Section {
+            if store.didTip {
+                HStack(spacing: 12) {
+                    Image(systemName: "heart.fill").foregroundStyle(.pink)
+                    Text("Thank you so much for supporting GeoSpoof!")
+                }
+            } else if store.isLoading {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("Loading…").foregroundStyle(.secondary)
+                }
+            } else if store.products.isEmpty {
+                Text("Tip options are unavailable right now.")
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(store.products) { product in
+                    Button {
+                        Task { await store.purchase(product) }
+                    } label: {
+                        HStack {
+                            Label(product.displayName, systemImage: "cup.and.saucer.fill")
+                            Spacer()
+                            if store.purchasing == product.id {
+                                ProgressView().controlSize(.small)
+                            } else {
+                                Text(product.displayPrice).foregroundStyle(.secondary)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(store.purchasing != nil)
+                }
+            }
+        } header: {
+            Text("Support GeoSpoof")
+        } footer: {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("GeoSpoof is free and open source. Tips are completely optional and go straight to development. Thank you!")
+                if let err = store.errorMessage {
+                    Text(err).foregroundStyle(.red)
+                }
+            }
+        }
+        .task {
+            await store.loadProducts()
+            await store.observeTransactions()
+        }
     }
 }

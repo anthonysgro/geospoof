@@ -126,6 +126,7 @@
 		923A6B102FD78C6100D06B19 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		923A6B342FD78D7A00D06B19 /* GeoSpoof WidgetExtensionDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "GeoSpoof WidgetExtensionDebug.entitlements"; sourceTree = "<group>"; };
 		923A6B352FD78D9200D06B19 /* GeoSpoof WidgetExtensionRelease.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "GeoSpoof WidgetExtensionRelease.entitlements"; sourceTree = "<group>"; };
+		926B422D2FD88B9C001F305B /* GeoSpoof.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = GeoSpoof.storekit; sourceTree = "<group>"; };
 		9281AA7F2FA50690007C77A7 /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = Base; path = Base.lproj/Main.html; sourceTree = "<group>"; };
 		9281AA802FA50690007C77A7 /* Icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Icon.png; sourceTree = "<group>"; };
 		9281AA812FA50690007C77A7 /* Style.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = Style.css; sourceTree = "<group>"; };
@@ -235,6 +236,7 @@
 		923A6B0D2FD78C6100D06B19 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				926B422D2FD88B9C001F305B /* GeoSpoof.storekit */,
 				923A6B0E2FD78C6100D06B19 /* WidgetKit.framework */,
 				923A6B102FD78C6100D06B19 /* SwiftUI.framework */,
 			);

@@ -461,6 +461,22 @@ struct MacSettingsView: View {
                 } header: {
                     Text("Advanced")
                 }
+                TipJarView()
+
+                Section {
+                    Link(destination: URL(string: "https://www.geospoof.com/support")!) {
+                        Label("Help & Support", systemImage: "questionmark.circle")
+                    }
+                    Link(destination: URL(string: "https://www.geospoof.com/privacy")!) {
+                        Label("Privacy Policy", systemImage: "hand.raised")
+                    }
+                    Link(destination: URL(string: "https://www.geospoof.com/terms")!) {
+                        Label("Terms of Service", systemImage: "doc.text")
+                    }
+                } header: {
+                    Text("Help & Legal")
+                }
+
                 Section {
                     Text("Version \(AppInfo.version)")
                         .foregroundColor(.secondary)
