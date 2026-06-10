@@ -1261,16 +1261,27 @@ enum StunClient {
     enum StunError: Error { case timeout, connection, parse, allFailed }
 
     /// Resolve the public IP, trying each server until one answers.
+    ///
+    /// IPv4 is strongly preferred: geolocation databases resolve an IPv4 address
+    /// to a city far more reliably than IPv6. Many residential IPv6 blocks only
+    /// resolve to the country centroid (e.g. a Verizon IPv6 geolocating to the US
+    /// geographic center in Kansas instead of the user's actual city), whereas
+    /// the same connection's IPv4 resolves correctly. NWConnection's default
+    /// Happy-Eyeballs behavior prefers IPv6 on a dual-stack network, so we pin
+    /// the family explicitly: try every server over IPv4 first, and only fall
+    /// back to IPv6 if all IPv4 attempts fail (e.g. an IPv6-only network).
     nonisolated static func publicIP() async throws -> String {
         var lastError: Error = StunError.allFailed
-        for server in servers {
-            do { return try await query(server) } catch { lastError = error }
+        for ipVersion in [NWProtocolIP.Options.Version.v4, .v6] {
+            for server in servers {
+                do { return try await query(server, ipVersion: ipVersion) } catch { lastError = error }
+            }
         }
         throw lastError
     }
 
-    /// Single binding request to one server.
-    nonisolated private static func query(_ server: Server, timeoutSeconds: Double = 2.5) async throws -> String {
+    /// Single binding request to one server over a specific IP version.
+    nonisolated private static func query(_ server: Server, ipVersion: NWProtocolIP.Options.Version, timeoutSeconds: Double = 2.5) async throws -> String {
         // 20-byte binding request: type(0x0001) + length(0) + magic cookie + 96-bit txid.
         let cookie: [UInt8] = [0x21, 0x12, 0xA4, 0x42]
         var txidBuilder = [UInt8]()
@@ -1282,7 +1293,14 @@ enum StunClient {
         let request = requestBuilder
 
         guard let port = NWEndpoint.Port(rawValue: server.port) else { throw StunError.connection }
-        let connection = NWConnection(host: NWEndpoint.Host(server.host), port: port, using: .udp)
+        // Pin the connection to the requested IP family. Without this, NWConnection's
+        // Happy-Eyeballs prefers IPv6 on a dual-stack network, which makes the STUN
+        // server reflect the (poorly-geolocating) IPv6 exit address.
+        let params = NWParameters.udp
+        if let ipOptions = params.defaultProtocolStack.internetProtocol as? NWProtocolIP.Options {
+            ipOptions.version = ipVersion
+        }
+        let connection = NWConnection(host: NWEndpoint.Host(server.host), port: port, using: params)
         let once = ResumeOnce()
 
         return try await withCheckedThrowingContinuation { (cont: CheckedContinuation<String, Error>) in
@@ -1454,9 +1472,17 @@ enum VpnLookup {
         // geojs is the most accurate/consistent of the providers (and the
         // extension's designated primary), so give it a head start: the
         // fallbacks only fire if geojs hasn't already won after `headStart`.
-        // First valid result WITH a timezone wins outright; a result without
-        // a timezone (freeipapi) is held as a partial and only used if every
-        // provider with a timezone has already failed.
+        //
+        // Selection is quality-aware but still fastest-wins: the FIRST result
+        // that resolved to a city wins immediately (its timezone, if missing, is
+        // refined downstream by resolveExactTimezone). A city-less result is NOT
+        // accepted while others are still in flight — for IP ranges a provider
+        // can't place (e.g. geojs on many IPv6 blocks) it still returns a
+        // timezone but an empty city and the country-centroid coords (the US
+        // geographic center, 37.751/-97.822); accepting that would pin the user
+        // to the middle of Kansas while another provider knows their real city.
+        // City-less results are held only as a last resort and used solely if
+        // every provider comes back without a city.
         let headStart: UInt64 = 900_000_000 // 0.9s
         return try await withThrowingTaskGroup(of: Result?.self) { group in
             group.addTask { try? await geolocateGeoJs(ip) }
@@ -1476,26 +1502,28 @@ enum VpnLookup {
                 return try? await geolocateIpInfo(ip)
             }
 
-            var partial: Result? // best result so far with no timezone
+            var cityless: Result? // best result with no city — country centroid, last resort
             for try await result in group {
                 guard let result else { continue }
-                if !result.timezoneID.isEmpty {
-                    // Timezone-aware result — this is what we want, accept it.
+                if !result.city.isEmpty {
+                    // Pinpointed to a city — accept the first one to arrive
+                    // (fastest-wins). A missing timezone is refined downstream by
+                    // resolveExactTimezone, so we don't wait for a tz-bearing one.
                     group.cancelAll()
-                    Log.vpn.info("[geo] winner \(result.source): \(result.city.isEmpty ? "?" : result.city), \(result.country) (\(result.latitude), \(result.longitude)) tz=\(result.timezoneID)")
+                    Log.vpn.info("[geo] winner \(result.source): \(result.city), \(result.country) (\(result.latitude), \(result.longitude)) tz=\(result.timezoneID.isEmpty ? "?" : result.timezoneID)")
                     return result
                 }
-                // Timezone-blind result (freeipapi) — keep as fallback and let
-                // the other providers finish in case they have a timezone.
-                if partial == nil {
-                    Log.vpn.debug("[geo] partial (no timezone) from \(result.source): \(result.city.isEmpty ? "?" : result.city), \(result.country) — waiting for timezone-aware provider")
-                    partial = result
+                // City-less (country centroid). Hold one as a last resort,
+                // preferring a provider that at least supplied a timezone.
+                if cityless == nil || (cityless!.timezoneID.isEmpty && !result.timezoneID.isEmpty) {
+                    Log.vpn.debug("[geo] city-less result from \(result.source): \(result.country) (\(result.latitude), \(result.longitude)) — holding as last resort, waiting for a city-level provider")
+                    cityless = result
                 }
             }
-            // All providers finished; use the partial if we have one.
-            if let partial {
-                Log.vpn.info("[geo] winner \(partial.source) (no timezone — resolveExactTimezone will refine): \(partial.city.isEmpty ? "?" : partial.city), \(partial.country) (\(partial.latitude), \(partial.longitude))")
-                return partial
+            // No provider returned a city; fall back to the best city-less result.
+            if let cityless {
+                Log.vpn.info("[geo] winner \(cityless.source) (country-only, no city-level result): \(cityless.country) (\(cityless.latitude), \(cityless.longitude)) tz=\(cityless.timezoneID.isEmpty ? "?" : cityless.timezoneID)")
+                return cityless
             }
             Log.vpn.error("All geolocation providers failed for \(ip)")
             throw LookupError.geo

@@ -845,6 +845,84 @@ function runGeoService(
 }
 
 /**
+ * Does this result carry a usable city? An empty city is the tell-tale sign of
+ * a country-only resolution — the provider couldn't place the IP and fell back
+ * to the country centroid (e.g. geojs returns the US geographic center,
+ * 37.751/-97.822, with `accuracy: 1000` km and no city for IPv6 ranges it can't
+ * resolve). We treat a result with a city as strictly better than one without.
+ */
+function hasCity(result: IpGeolocationResult): boolean {
+  return typeof result.city === "string" && result.city.trim().length > 0;
+}
+
+/**
+ * Quality-aware geolocation race. Unlike a plain `Promise.any` (first *success*
+ * wins, regardless of quality), this prefers a result that actually resolved to
+ * a city over a country-only centroid:
+ *
+ *   - The first service to return a result WITH a city wins immediately — the
+ *     common case stays as fast as the old race.
+ *   - A city-less (country-centroid) result is held as a fallback; we keep
+ *     waiting for a better answer instead of accepting it.
+ *   - Only if every service finishes without a city do we return the held
+ *     fallback. If every service *failed*, we reject with an AggregateError of
+ *     their errors (matching the old `Promise.any` failure shape so the caller's
+ *     IP_BLOCKED / timeout handling still works).
+ *
+ * The wait is bounded by each service's own GEO_TIMEOUT, so the worst case is no
+ * slower than before.
+ */
+function raceGeoForBestResult(
+  services: GeoService[],
+  ip: string,
+  signal: AbortSignal
+): Promise<IpGeolocationResult> {
+  return new Promise<IpGeolocationResult>((resolve, reject) => {
+    const errors: Array<Error & { blocked?: boolean }> = [];
+    let fallback: IpGeolocationResult | undefined;
+    let remaining = services.length;
+    let settled = false;
+
+    const finishIfDone = () => {
+      if (settled || remaining > 0) return;
+      settled = true;
+      if (fallback !== undefined) {
+        logger.debug("[VPN-SYNC] No city-level result; using country-only fallback");
+        resolve(fallback);
+      } else {
+        reject(new AggregateError(errors));
+      }
+    };
+
+    for (const svc of services) {
+      runGeoService(svc, ip, signal).then(
+        (result) => {
+          remaining--;
+          if (settled) return;
+          if (hasCity(result)) {
+            settled = true;
+            resolve(result);
+            return;
+          }
+          // Country-only centroid — keep it only as a last resort and wait for
+          // a service that can actually pinpoint a city.
+          logger.debug(
+            `[VPN-SYNC] ${svc.name} returned a country-only result; holding as fallback`
+          );
+          if (fallback === undefined) fallback = result;
+          finishIfDone();
+        },
+        (error: unknown) => {
+          remaining--;
+          errors.push(error as Error & { blocked?: boolean });
+          finishIfDone();
+        }
+      );
+    }
+  });
+}
+
+/**
  * Clear all per-endpoint cooldowns (IP-echo + geo services). Called on a
  * user-initiated manual sync — the user is explicitly asking us to try now, so
  * we drop any "park this endpoint" state and give every endpoint a fresh shot.
@@ -954,8 +1032,9 @@ async function _doSyncVpnLocation(
 
     let result: IpGeolocationResult;
     try {
-      result = await Promise.any(services.map((svc) => runGeoService(svc, ip, geoAbortSignal)));
-      // One service succeeded — abort the others so they don't keep retrying in the background
+      result = await raceGeoForBestResult(services, ip, geoAbortSignal);
+      // We have our answer — abort any still-running services so they don't keep
+      // retrying in the background.
       geoAbort.abort();
     } catch (aggregateErr) {
       // All services failed — AggregateError contains each individual error
