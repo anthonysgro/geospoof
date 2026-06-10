@@ -135,6 +135,9 @@ struct SettingsView: View {
     @AppStorage("appearanceMode") private var appearance: AppearanceMode = .system
     @AppStorage(LogSettingsKey.enabled) private var loggingEnabled = false
     @AppStorage(LogSettingsKey.level) private var logLevelRaw = AppLogLevel.info.rawValue
+    #if DEBUG
+    @State private var debugReviewToken = 0
+    #endif
 
     var body: some View {
         NavigationView {
@@ -181,11 +184,42 @@ struct SettingsView: View {
                     Text("Advanced")
                 }
 
+                TipJarView()
+
+                Section {
+                    Link(destination: URL(string: "https://www.geospoof.com/support")!) {
+                        Label("Help & Support", systemImage: "questionmark.circle")
+                    }
+                    Link(destination: URL(string: "https://www.geospoof.com/privacy")!) {
+                        Label("Privacy Policy", systemImage: "hand.raised")
+                    }
+                    Link(destination: URL(string: "https://www.geospoof.com/terms")!) {
+                        Label("Terms of Service", systemImage: "doc.text")
+                    }
+                } header: {
+                    Text("Help & Legal")
+                }
+
+                #if DEBUG
+                Section {
+                    Button {
+                        debugReviewToken += 1
+                    } label: {
+                        Label("Request Review (debug)", systemImage: "star.bubble")
+                    }
+                } header: {
+                    Text("Debug")
+                }
+                #endif
+
                 Section {
                     LabeledRow(label: "Version", value: AppInfo.version)
                 }
             }
             .navigationTitle("Settings")
+            #if DEBUG
+            .requestReview(on: debugReviewToken)
+            #endif
         }
         .navigationViewStyle(.stack)
     }

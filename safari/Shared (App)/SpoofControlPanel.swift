@@ -10,6 +10,8 @@
 
 import SwiftUI
 import MapKit
+import StoreKit
+import Combine
 #if canImport(UIKit)
 import UIKit
 #endif
@@ -26,6 +28,7 @@ struct SpoofControlPanel: View {
     @State private var showOnboarding = false
     @State private var showTrustInfo = false
     @State private var renaming: SpoofFavorite?
+    @State private var reviewToken = 0
 
     var body: some View {
         Form {
@@ -54,9 +57,20 @@ struct SpoofControlPanel: View {
                 renaming = nil
             }
         }
+        .requestReview(on: reviewToken)
         .onAppear {
             controller.refreshFromExtension()
             if !onboardingCompleted { showOnboarding = true }
+            if onboardingCompleted && controller.isActiveInSafari && controller.hasLocation,
+                ReviewPrompt.shouldRequestReview() {
+                reviewToken += 1
+            }
+        }
+        .onChange(of: controller.isActiveInSafari) { active in
+            if onboardingCompleted && active && controller.hasLocation,
+                ReviewPrompt.shouldRequestReview() {
+                reviewToken += 1
+            }
         }
     }
 
@@ -918,5 +932,238 @@ struct RenameFavoriteSheet: View {
         #if os(macOS)
         .frame(minWidth: 360, minHeight: 200)
         #endif
+    }
+}
+
+// MARK: - Tip Jar (StoreKit 2)
+
+/// StoreKit 2 store for the optional "tip jar". These are **consumable** IAPs:
+/// there is nothing to unlock, restore, or persist — a tip is purely a thank-you,
+/// so we just finish the transaction. No third-party SDK (e.g. RevenueCat) is
+/// used: consumables need no entitlement syncing, and a privacy-first app should
+/// avoid bundling an analytics SDK for this.
+///
+/// Prices and display names are configured in App Store Connect (and the local
+/// `GeoSpoof.storekit` test file) — the code only references the product IDs and
+/// renders `displayName` / `displayPrice` dynamically, so prices can change
+/// without a code update.
+@MainActor
+final class TipStore: ObservableObject {
+    /// Consumable tip product IDs. Must match App Store Connect + `GeoSpoof.storekit`.
+    static let productIDs = [
+        "com.moonloaf.geospoof.tip.small",
+        "com.moonloaf.geospoof.tip.medium",
+        "com.moonloaf.geospoof.tip.large",
+    ]
+
+    @Published private(set) var products: [Product] = []
+    @Published private(set) var isLoading = false
+    /// The product currently being purchased (drives a per-row spinner).
+    @Published private(set) var purchasing: Product.ID?
+    /// Set true after any successful tip, to show a thank-you state.
+    @Published var didTip = false
+    @Published var errorMessage: String?
+
+    /// Fetch the products, sorted cheapest-first so tiers render low → high.
+    func loadProducts() async {
+        guard products.isEmpty else { return }
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            let fetched = try await Product.products(for: Self.productIDs)
+            products = fetched.sorted { $0.price < $1.price }
+            errorMessage = nil
+        } catch {
+            errorMessage = "Couldn’t load tip options. Check your connection and try again."
+        }
+    }
+
+    func purchase(_ product: Product) async {
+        purchasing = product.id
+        defer { purchasing = nil }
+        do {
+            let result = try await product.purchase()
+            switch result {
+            case .success(let verification):
+                if case .verified(let transaction) = verification {
+                    // Consumable: nothing to unlock — just finish it.
+                    await transaction.finish()
+                    didTip = true
+                    errorMessage = nil
+                } else {
+                    errorMessage = "That purchase couldn’t be verified."
+                }
+            case .userCancelled:
+                break
+            case .pending:
+                // e.g. Ask to Buy — resolves later via `observeTransactions()`.
+                break
+            @unknown default:
+                break
+            }
+        } catch {
+            errorMessage = "Something went wrong — you weren’t charged."
+        }
+    }
+
+    /// Finish any transactions that arrive outside the direct purchase flow
+    /// (Ask to Buy approvals, interrupted purchases). Runs for the lifetime of
+    /// the view's `.task`.
+    func observeTransactions() async {
+        for await update in Transaction.updates {
+            if case .verified(let transaction) = update {
+                await transaction.finish()
+                didTip = true
+            }
+        }
+    }
+}
+
+/// The "Support GeoSpoof" tip-jar section, shown on the Settings screen of both
+/// the iOS and macOS apps. Renders one row per tier, reading the localized name
+/// and price straight from StoreKit.
+struct TipJarView: View {
+    @StateObject private var store = TipStore()
+
+    var body: some View {
+        Section {
+            if store.didTip {
+                HStack(spacing: 12) {
+                    Image(systemName: "heart.fill").foregroundStyle(.pink)
+                    Text("Thank you so much for supporting GeoSpoof!")
+                }
+            } else if store.isLoading {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("Loading…").foregroundStyle(.secondary)
+                }
+            } else if store.products.isEmpty {
+                Text("Tip options are unavailable right now.")
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(store.products) { product in
+                    Button {
+                        Task { await store.purchase(product) }
+                    } label: {
+                        HStack {
+                            Label(product.displayName, systemImage: "cup.and.saucer.fill")
+                            Spacer()
+                            if store.purchasing == product.id {
+                                ProgressView().controlSize(.small)
+                            } else {
+                                Text(product.displayPrice).foregroundStyle(.secondary)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(store.purchasing != nil)
+                }
+            }
+        } header: {
+            Text("Support GeoSpoof")
+        } footer: {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("GeoSpoof is free and open source. Tips are completely optional and go straight to development. Thank you!")
+                if let err = store.errorMessage {
+                    Text(err).foregroundStyle(.red)
+                }
+            }
+        }
+        .task {
+            await store.loadProducts()
+            await store.observeTransactions()
+        }
+    }
+}
+
+// MARK: - Review Prompt
+
+/// Gating logic for the App Store review prompt. Presentation is done by the
+/// view via the recommended SwiftUI `requestReview` environment action — see
+/// the `requestReview(on:)` view modifier below — so this type holds no UI.
+///
+/// Asks at a genuinely positive moment (GeoSpoof confirmed running in Safari
+/// with a location set), heavily throttled: at most one counted event per app
+/// launch, only after a few qualifying sessions, and never more than once per
+/// app version (Apple also caps its own prompt at 3×/year).
+enum ReviewPrompt {
+    private static let eventCountKey = "reviewSignificantEventCount"
+    private static let lastPromptedVersionKey = "reviewLastPromptedVersion"
+    /// Qualifying sessions before we ask. Small, since the trigger is already a
+    /// strong "it's working" signal.
+    private static let threshold = 3
+
+    /// Only count one significant event per process launch, so navigating back
+    /// to the panel within a session can't inflate the counter.
+    private static var countedThisLaunch = false
+
+    /// Call when the user is in a clearly positive state. Returns `true` at most
+    /// once per launch — after `threshold` qualifying sessions and only once per
+    /// app version — meaning the caller should present the review prompt now.
+    @MainActor
+    static func shouldRequestReview() -> Bool {
+        guard !countedThisLaunch else { return false }
+        countedThisLaunch = true
+
+        let defaults = UserDefaults.standard
+        let count = defaults.integer(forKey: eventCountKey) + 1
+        defaults.set(count, forKey: eventCountKey)
+        guard count >= threshold else { return false }
+
+        let currentVersion =
+            Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+        guard defaults.string(forKey: lastPromptedVersionKey) != currentVersion else { return false }
+
+        defaults.set(currentVersion, forKey: lastPromptedVersionKey)
+        return true
+    }
+
+    #if os(iOS)
+    /// Fallback for iOS 15, where the SwiftUI `requestReview` action (iOS 16+)
+    /// isn't available.
+    @MainActor
+    static func legacyRequest() {
+        let scene =
+            UIApplication.shared.connectedScenes
+            .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene
+            ?? UIApplication.shared.connectedScenes.first as? UIWindowScene
+        guard let scene else { return }
+        SKStoreReviewController.requestReview(in: scene)
+    }
+    #endif
+}
+
+extension View {
+    /// Presents the system review prompt whenever `token` changes to a new
+    /// non-zero value, using Apple's recommended SwiftUI `requestReview`
+    /// environment action on iOS 16+/macOS 13+, falling back to StoreKit on
+    /// iOS 15. Bump an `@State` token to trigger.
+    @ViewBuilder
+    func requestReview(on token: Int) -> some View {
+        if #available(iOS 16.0, macOS 13.0, *) {
+            modifier(EnvironmentReviewModifier(token: token))
+        } else {
+            onChange(of: token) { newValue in
+                #if os(iOS)
+                if newValue > 0 { ReviewPrompt.legacyRequest() }
+                #endif
+            }
+        }
+    }
+}
+
+/// Reads the `requestReview` environment action and fires it when `token`
+/// changes. Isolated in its own `@available` type because the action is iOS 16+
+/// / macOS 13+ and the app targets iOS 15.
+@available(iOS 16.0, macOS 13.0, *)
+private struct EnvironmentReviewModifier: ViewModifier {
+    @Environment(\.requestReview) private var requestReview
+    let token: Int
+
+    func body(content: Content) -> some View {
+        content.onChange(of: token) { newValue in
+            if newValue > 0 { requestReview() }
+        }
     }
 }

@@ -1,0 +1,58 @@
+{
+  "identifier" : "GEOSPOOF_TIPS",
+  "nonRenewingSubscriptions" : [],
+  "products" : [
+    {
+      "displayPrice" : "1.99",
+      "familyShareable" : false,
+      "internalID" : "1000000001",
+      "localizations" : [
+        {
+          "description" : "Buy the developer a coffee and support GeoSpoof.",
+          "displayName" : "Coffee",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.moonloaf.geospoof.tip.small",
+      "referenceName" : "Small Tip",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "4.99",
+      "familyShareable" : false,
+      "internalID" : "1000000002",
+      "localizations" : [
+        {
+          "description" : "Buy the developer lunch and support GeoSpoof.",
+          "displayName" : "Lunch",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.moonloaf.geospoof.tip.medium",
+      "referenceName" : "Medium Tip",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "internalID" : "1000000003",
+      "localizations" : [
+        {
+          "description" : "Treat the developer to dinner and support GeoSpoof.",
+          "displayName" : "Dinner",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.moonloaf.geospoof.tip.large",
+      "referenceName" : "Large Tip",
+      "type" : "Consumable"
+    }
+  ],
+  "settings" : {
+  },
+  "subscriptionGroups" : [],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

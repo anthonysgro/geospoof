@@ -64,7 +64,7 @@ function TermsPage() {
               Terms of Service
             </h1>
             <p className="text-body-base text-(--color-canvas-muted)">
-              Last Updated: June 8, 2026
+              Last Updated: June 9, 2026
             </p>
           </div>
 
@@ -96,6 +96,14 @@ function TermsPage() {
               <p>
                 GeoSpoof does not change your IP address. It does not provide
                 anonymity or circumvent server-side detection methods.
+              </p>
+              <p>
+                GeoSpoof is free to use. The iOS, iPadOS, and macOS app may
+                offer optional "tips" as one-time in-app purchases that let you
+                support development. Tips are entirely voluntary and unlock no
+                features or functionality. All in-app purchases are processed by
+                Apple under its terms; billing, receipts, and any refund
+                requests are handled by Apple, not by the developer.
               </p>
             </TermsSection>
 
@@ -149,17 +157,17 @@ function TermsPage() {
 
             <TermsSection title="4. Third-Party Services">
               <p>
-                GeoSpoof (the Extension and the companion apps) communicates with
-                third-party services to provide certain features. These services
-                include Nominatim (OpenStreetMap), the browser-geo-tz CDN, Apple
-                geocoding, public-IP detection services (AWS, Cloudflare, Akamai,
-                ipify, and the Cloudflare and Google STUN servers), and IP
-                geolocation services (GeoJS, FreeIPAPI, ReallyFreeGeoIP,
-                ipinfo.io). Your use of those services is subject to their
-                respective terms and privacy policies. We are not responsible for
-                the availability, accuracy, or conduct of any third-party service.
-                The specific data sent to each service and the conditions under
-                which it is sent are described in our{" "}
+                GeoSpoof (the Extension and the companion apps) communicates
+                with third-party services to provide certain features. These
+                services include Nominatim (OpenStreetMap), the browser-geo-tz
+                CDN, Apple geocoding, public-IP detection services (AWS,
+                Cloudflare, Akamai, ipify, and the Cloudflare and Google STUN
+                servers), and IP geolocation services (GeoJS, FreeIPAPI,
+                ReallyFreeGeoIP, ipinfo.io). Your use of those services is
+                subject to their respective terms and privacy policies. We are
+                not responsible for the availability, accuracy, or conduct of
+                any third-party service. The specific data sent to each service
+                and the conditions under which it is sent are described in our{" "}
                 <a href="/privacy">Privacy Policy</a>.
               </p>
             </TermsSection>
@@ -245,7 +253,7 @@ function TermsPage() {
               </ul>
               <p>
                 In no event shall the developer's total liability exceed the
-                amount paid by you, if any, for the Extension (which is free).
+                amount paid by you, if any, for the Extension.
               </p>
             </TermsSection>
 

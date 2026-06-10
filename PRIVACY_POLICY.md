@@ -1,6 +1,6 @@
 # Privacy Policy for GeoSpoof
 
-**Last Updated:** June 8, 2026
+**Last Updated:** June 9, 2026
 
 ## Overview
 
@@ -107,6 +107,10 @@ GeoSpoof can set your spoofed location to match your VPN.
 > The IP these services see is typically your **VPN exit IP** (a shared address),
 > not your home IP, because the whole point of the feature is that a VPN is
 > already active.
+
+## In-App Purchases (Tips)
+
+The iOS, iPadOS, and macOS app offers optional "tips" as one-time in-app purchases, letting you support development if you choose. Tips are entirely voluntary and unlock no features or functionality. All purchases are processed by **Apple** via In-App Purchase — the developer never receives your payment details, card information, or any personal data from a tip. Billing, receipts, and refunds are handled by Apple under its terms.
 
 ## Permissions Explained
 
