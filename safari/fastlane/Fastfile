@@ -1,7 +1,7 @@
 app_store_connect_api_key(
-  key_id: "UZBN452J8D",
+  key_id: "BXMZW4LMSP",
   issuer_id: "2a0c5baa-92b0-489c-b4c7-b1771b5e6df8",
-  key_filepath: "~/.appstoreconnect/private_keys/AuthKey_UZBN452J8D.p8"
+  key_filepath: "~/.appstoreconnect/private_keys/AuthKey_BXMZW4LMSP.p8"
 )
 
 default_platform(:mac)
@@ -233,16 +233,16 @@ platform :ios do
       output_name: "GeoSpoof-iOS"
     )
 
-    # Upload the build to TestFlight only. We deliberately do NOT use `deliver`
-    # here: deliver manages the App Store *version* record, and creating a new
-    # version (e.g. on a marketing-version bump) is a write the CI App Store
-    # Connect API key (Developer role) isn't permitted to make — it returns
-    # "This request is forbidden ... The API key in use does not allow this
-    # request". Uploading a build to TestFlight is within a Developer key's
-    # rights, so upload_to_testflight succeeds regardless of the version bump.
-    upload_to_testflight(
-      app_identifier: "com.moonloaf.geospoof",
-      skip_waiting_for_build_processing: true
+    # The CI App Store Connect API key (BXMZW4LMSP) has the App Manager role, so
+    # it can create/update the App Store version record — use deliver to upload
+    # the build and manage the version. (skip_metadata/skip_screenshots: we don't
+    # manage store listing copy from CI; run_precheck_before_submit off since we
+    # don't auto-submit for review here.)
+    deliver(
+      platform: "ios",
+      skip_metadata: true,
+      skip_screenshots: true,
+      run_precheck_before_submit: false
     )
   end
 end

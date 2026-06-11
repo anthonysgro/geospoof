@@ -70,4 +70,21 @@ if [[ "$CHANNEL" == "listed" && -n "$SOURCE" ]]; then
   SIGN_CMD+=(--upload-source-code "$SOURCE")
 fi
 
-"${SIGN_CMD[@]}"
+# Retry the signing upload: AMO intermittently returns 500 Internal Server Error
+# on the upload step (a server-side hiccup, distinct from a 4xx like a duplicate
+# version). A few spaced retries ride out the transient failures instead of
+# failing the whole release. Genuine errors (bad credentials, duplicate version)
+# fail fast on every attempt and still surface after the retries are exhausted.
+MAX_ATTEMPTS=3
+attempt=1
+until "${SIGN_CMD[@]}"; do
+  status=$?
+  if (( attempt >= MAX_ATTEMPTS )); then
+    echo "Error: web-ext sign failed after ${attempt} attempt(s) (exit ${status})." >&2
+    exit "$status"
+  fi
+  delay=$((attempt * 30))
+  echo "web-ext sign failed (attempt ${attempt}/${MAX_ATTEMPTS}, exit ${status}). Retrying in ${delay}s..." >&2
+  sleep "$delay"
+  attempt=$((attempt + 1))
+done

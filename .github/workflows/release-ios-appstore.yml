@@ -77,8 +77,8 @@ jobs:
           ASC_API_KEY_BASE64: ${{ secrets.ASC_API_KEY_P8 }}
         run: |
           mkdir -p "$HOME/.appstoreconnect/private_keys"
-          echo "$ASC_API_KEY_BASE64" | base64 --decode > "$HOME/.appstoreconnect/private_keys/AuthKey_UZBN452J8D.p8"
-          chmod 600 "$HOME/.appstoreconnect/private_keys/AuthKey_UZBN452J8D.p8"
+          echo "$ASC_API_KEY_BASE64" | base64 --decode > "$HOME/.appstoreconnect/private_keys/AuthKey_BXMZW4LMSP.p8"
+          chmod 600 "$HOME/.appstoreconnect/private_keys/AuthKey_BXMZW4LMSP.p8"
 
       - name: Install App Store provisioning profiles
         env:
