@@ -233,11 +233,16 @@ platform :ios do
       output_name: "GeoSpoof-iOS"
     )
 
-    deliver(
-      platform: "ios",
-      skip_metadata: true,
-      skip_screenshots: true,
-      run_precheck_before_submit: false
+    # Upload the build to TestFlight only. We deliberately do NOT use `deliver`
+    # here: deliver manages the App Store *version* record, and creating a new
+    # version (e.g. on a marketing-version bump) is a write the CI App Store
+    # Connect API key (Developer role) isn't permitted to make — it returns
+    # "This request is forbidden ... The API key in use does not allow this
+    # request". Uploading a build to TestFlight is within a Developer key's
+    # rights, so upload_to_testflight succeeds regardless of the version bump.
+    upload_to_testflight(
+      app_identifier: "com.moonloaf.geospoof",
+      skip_waiting_for_build_processing: true
     )
   end
 end
