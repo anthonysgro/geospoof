@@ -122,6 +122,32 @@ struct SpoofFavorite: Identifiable, Equatable, Codable {
         if displayName.count > 20 { return String(displayName.prefix(20)) + "…" }
         return displayName
     }
+
+    enum CodingKeys: String, CodingKey {
+        case id, latitude, longitude, city, country, displayName, label
+    }
+
+    /// Encode `label` explicitly as JSON `null` when nil. Swift's synthesized
+    /// Codable omits the key for nil optionals, but the extension validates
+    /// favorites against the contract `label: string | null` and rejects a
+    /// missing key (`undefined`) — silently dropping every app-created favorite
+    /// (which start with `label: nil`) on sync. Emitting `null` honors the
+    /// contract so the extension accepts them. (Decoding stays synthesized and
+    /// tolerant — a missing key still decodes to nil.)
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(latitude, forKey: .latitude)
+        try c.encode(longitude, forKey: .longitude)
+        try c.encode(city, forKey: .city)
+        try c.encode(country, forKey: .country)
+        try c.encode(displayName, forKey: .displayName)
+        if let label {
+            try c.encode(label, forKey: .label)
+        } else {
+            try c.encodeNil(forKey: .label)
+        }
+    }
 }
 
 enum AppLogLevel: Int, CaseIterable, Identifiable {
@@ -483,6 +509,12 @@ final class SpoofController: ObservableObject {
     init() {
         Log.app.info("SpoofController init")
         loadFavorites()
+        // Restore our own last-written desired state BEFORE reconciling with the
+        // extension. The app keeps no other durable copy of its toggle/location
+        // state, so on a cold launch (iOS terminating the backgrounded app, or
+        // the user swiping it away) this is what prevents it from forgetting what
+        // the user set and falling back to defaults ("everything off").
+        restoreLocalPending()
         refreshFromExtension()
         CityStore.shared.preload()
         startForegroundObserver()
@@ -1017,7 +1049,13 @@ final class SpoofController: ObservableObject {
     private func loadFavorites() {
         guard let data = UserDefaults.standard.data(forKey: Self.favoritesKey),
               let decoded = try? JSONDecoder().decode([SpoofFavorite].self, from: data) else { return }
+        // Guard the assignment so the `favorites` didSet doesn't fire writePending
+        // during launch — that would stamp the current (still-default, off) state
+        // over the persisted pending_* snapshot before restoreLocalPending can
+        // read it, wiping the user's saved location/toggles on every cold launch.
+        isApplyingRemoteState = true
         favorites = decoded
+        isApplyingRemoteState = false
     }
 
     private func saveFavorites() {
@@ -1115,6 +1153,57 @@ final class SpoofController: ObservableObject {
             guard !Task.isCancelled else { return }
             WidgetCenter.shared.reloadAllTimelines()
         }
+    }
+
+    /// Restore the app's own last-written desired state from the `pending_*`
+    /// keys it persisted via `writePending`. Called once at launch, before
+    /// `refreshFromExtension`.
+    ///
+    /// This is the durable local copy of the app's state. Without it a cold
+    /// launch loses everything the user set in the app: the in-memory
+    /// `lastLocalChangeAt` resets to 0, so `refreshFromExtension` would adopt
+    /// whatever `region_*` snapshot exists — even a stale one older than the
+    /// user's most recent app change, or fall back to defaults if the extension
+    /// hadn't pushed a `region_*` snapshot at all. Restoring `pending_updatedAt`
+    /// into `lastLocalChangeAt` also repairs the last-writer-wins comparison, so
+    /// the extension's region only wins when it's genuinely newer.
+    private func restoreLocalPending() {
+        guard let dict = Self.readSharedPrefs(suite: suite),
+              let pendingAt = dict[AppGroup.pendingUpdatedAt] as? Double else {
+            Log.bridge.trace("restoreLocalPending: no pending snapshot to restore")
+            return
+        }
+
+        lastLocalChangeAt = pendingAt
+
+        enabled = (dict[AppGroup.pendingEnabled] as? Bool) ?? enabled
+        webrtcProtection = (dict[AppGroup.pendingWebrtc] as? Bool) ?? webrtcProtection
+        vpnSyncEnabled = (dict[AppGroup.pendingVpnSync] as? Bool) ?? vpnSyncEnabled
+
+        if let lat = dict[AppGroup.pendingLatitude] as? Double,
+           let lon = dict[AppGroup.pendingLongitude] as? Double {
+            location = SpoofLocation(latitude: lat, longitude: lon)
+            let display = dict[AppGroup.pendingDisplayName] as? String ?? ""
+            locationName = display.isEmpty ? nil : SpoofLocationName(
+                city: dict[AppGroup.pendingCity] as? String ?? "",
+                country: dict[AppGroup.pendingCountry] as? String ?? "",
+                displayName: display
+            )
+            // pending only carries the IANA id; rebuild the full zone (offset/DST)
+            // from it, falling back to the longitude estimate if it's absent.
+            let tzId = dict[AppGroup.pendingTzId] as? String
+            timezone = Self.resolveTimezone(
+                latitude: lat,
+                longitude: lon,
+                identifier: (tzId?.isEmpty == false) ? tzId : nil
+            )
+        } else {
+            location = nil
+            locationName = nil
+            timezone = nil
+        }
+
+        Log.bridge.debug("restoreLocalPending: restored enabled=\(self.enabled) vpnSync=\(self.vpnSyncEnabled) loc=\(self.location.map { "\($0.latitude),\($0.longitude)" } ?? "nil") (updatedAt \(pendingAt))")
     }
 
     /// Adopt the extension's last-written region state, but only when it's

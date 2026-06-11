@@ -138,7 +138,7 @@ export function validateSettings(settings: Partial<Settings>): Settings {
         typeof entry.city === "string" &&
         typeof entry.country === "string" &&
         typeof entry.displayName === "string" &&
-        (entry.label === null || typeof entry.label === "string")
+        (entry.label == null || typeof entry.label === "string")
       ) {
         validatedFavorites.push({
           id: entry.id,
@@ -147,7 +147,10 @@ export function validateSettings(settings: Partial<Settings>): Settings {
           city: entry.city,
           country: entry.country,
           displayName: entry.displayName.slice(0, 100),
-          label: entry.label,
+          // Normalize a missing/undefined label to null so the stored shape
+          // always matches the `string | null` contract (some producers omit
+          // the key for null).
+          label: entry.label ?? null,
         });
       }
     }
