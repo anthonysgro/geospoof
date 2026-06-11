@@ -1,0 +1,30 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="How to change your browser's location">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0c1410"/>
+      <stop offset="1" stop-color="#0a0a0a"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(900 200) rotate(120) scale(420)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4caf50" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#4caf50" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+  <g stroke="#1f2a22" stroke-width="1.5">
+    <path d="M0 130H1200M0 250H1200M0 380H1200M0 500H1200"/>
+    <path d="M150 0V630M340 0V630M530 0V630M720 0V630M910 0V630M1090 0V630"/>
+  </g>
+  <g transform="translate(70 70)">
+    <circle cx="14" cy="14" r="14" fill="#4caf50"/>
+    <text x="42" y="22" font-family="Nunito, system-ui, sans-serif" font-size="26" font-weight="800" fill="#fafafa">GeoSpoof</text>
+  </g>
+  <text x="70" y="300" font-family="Nunito, system-ui, sans-serif" font-size="72" font-weight="800" fill="#fafafa">How to Change</text>
+  <text x="70" y="384" font-family="Nunito, system-ui, sans-serif" font-size="72" font-weight="800" fill="#fafafa">Your Browser's</text>
+  <text x="70" y="468" font-family="Nunito, system-ui, sans-serif" font-size="72" font-weight="800" fill="#4caf50">Location</text>
+  <g transform="translate(905 250)">
+    <circle cx="0" cy="0" r="150" fill="#4caf50" fill-opacity="0.08" stroke="#4caf50" stroke-opacity="0.3" stroke-width="2"/>
+    <path d="M0 -92c-39 0-70 31-70 70 0 52 70 132 70 132s70-80 70-132c0-39-31-70-70-70z" fill="#4caf50"/>
+    <circle cx="0" cy="-22" r="26" fill="#0a0a0a"/>
+  </g>
+</svg>

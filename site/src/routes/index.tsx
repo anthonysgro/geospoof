@@ -5,6 +5,7 @@ import { FeaturesSection } from "@/components/landing/FeaturesSection"
 import { ScreenshotsSection } from "@/components/landing/ScreenshotsSection"
 import { TestimonialsSection } from "@/components/landing/TestimonialsSection"
 import { CompatibilitySection } from "@/components/landing/CompatibilitySection"
+import { FeaturedPostSection } from "@/components/landing/FeaturedPostSection"
 import { DownloadSection } from "@/components/landing/DownloadSection"
 import { Footer } from "@/components/landing/Footer"
 import { SkipLink } from "@/components/landing/SkipLink"
@@ -24,6 +25,7 @@ function App() {
         <FeaturesSection />
         <TestimonialsSection />
         <CompatibilitySection />
+        <FeaturedPostSection />
         <DownloadSection />
       </main>
       <Footer />

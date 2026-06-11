@@ -13,5 +13,11 @@ count.txt
 __unconfig*
 todos.json
 
+# Content Collections generated output (regenerated on every build)
+.content-collections
+
+# Generated at build time by scripts/generate-sitemap.mjs
+public/sitemap.xml
+
 # Local dev HTTPS certs (mkcert-generated, per-machine)
 certs/

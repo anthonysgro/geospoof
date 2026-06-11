@@ -7,6 +7,7 @@ import viteReact from "@vitejs/plugin-react"
 import viteTsConfigPaths from "vite-tsconfig-paths"
 import tailwindcss from "@tailwindcss/vite"
 import { nitro } from "nitro/vite"
+import contentCollections from "@content-collections/vite"
 
 /**
  * Resolve the mkcert-generated HTTPS cert pair for the dev server if it
@@ -64,6 +65,7 @@ const config = defineConfig({
     https: devHttps,
   },
   plugins: [
+    contentCollections(),
     devtools(),
     nitro(),
     viteTsConfigPaths({

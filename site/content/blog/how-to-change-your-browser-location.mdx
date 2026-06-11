@@ -1,0 +1,64 @@
+---
+title: "How to Change Your Browser's Location"
+description: "A step-by-step guide to changing or spoofing your browser's location in Chrome, Firefox, Safari, Edge, and Brave — and what spoofing does and doesn't hide."
+date: "2026-06-11"
+author: "Anthony Sgro"
+tags: ["Guides", "Geolocation"]
+cover: "/images/blog/how-to-change-your-browser-location.svg"
+coverAlt: "Map grid with a location pin, titled How to Change Your Browser's Location"
+keywords:
+  - "change browser location"
+  - "spoof browser location"
+  - "fake geolocation"
+  - "change location chrome"
+  - "spoof location firefox safari"
+answer: "You can change your browser's location by overriding the JavaScript Geolocation API. Chrome and Edge have a built-in override in DevTools for one-off testing, while an extension like GeoSpoof changes it persistently across every site on Chrome, Firefox, Brave, Edge, and Safari. Note that this changes only the browser location signal — it does not change your IP address."
+---
+
+Websites figure out where you are in two very different ways, and knowing which
+is which is the key to changing your location successfully.
+
+## The two ways sites detect your location
+
+- **Browser Geolocation API** — a JavaScript call (`navigator.geolocation`)
+  that asks the browser for GPS-style coordinates. This is what shows the "allow
+  location?" prompt.
+- **IP address lookup** — the site reads the public IP of your connection and
+  maps it to an approximate region. This happens silently, server-side.
+
+Changing your browser location overrides the **first** signal. It does not touch
+your IP address. For a fully consistent location you pair browser spoofing with a
+VPN pointed at the same region.
+
+![Meme about apps demanding location access](/images/blog/only-gps-needs-location.webp "Plenty of things ask for your location besides the GPS prompt.")
+
+## Option 1: Chrome / Edge DevTools (one-off testing)
+
+Best for developers testing a single page:
+
+1. Open DevTools (`Cmd/Ctrl + Shift + I`).
+2. Open the command menu (`Cmd/Ctrl + Shift + P`) and run **Show Sensors**.
+3. Under **Location**, pick a preset or enter custom coordinates.
+
+This override only lasts while DevTools is open and applies to the current tab
+only.
+
+## Option 2: A location extension (persistent)
+
+For everyday use across every site, an extension overrides the Geolocation API
+before page scripts run. [GeoSpoof](/) does this on Chrome, Firefox, Brave, Edge,
+and Safari, and also corrects your **timezone** and patches **WebRTC** leaks that
+can otherwise expose your real location.
+
+> Refresh any tabs that were already open when you enabled the extension —
+> overrides are injected at page load.
+
+## What location spoofing does not do
+
+- It does **not** change your IP address.
+- It does **not** bypass server-side checks tied to your account, payment
+  method, or login history.
+- It may violate the terms of service of some sites — use it responsibly.
+
+For the full breakdown of what's covered, see the
+[GeoSpoof privacy policy](/privacy).
