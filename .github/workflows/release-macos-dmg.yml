@@ -1,0 +1,114 @@
+name: Release macOS DMG (manual)
+
+# Manually-triggered macOS DMG build + notarize + attach-to-release. This exists
+# so the macOS DMG can be (re)built and attached to an existing GitHub Release
+# WITHOUT re-running the tag-triggered `Release` workflow's extension job — that
+# job re-signs/uploads the Firefox (AMO) + Chromium artifacts, which fail on a
+# version that already shipped. Run this from the branch that has the fix you
+# need; it checks out that ref, so it always uses current code.
+#
+# Requires the same secrets as the macOS job in release.yml:
+#   MACOS_DEVELOPER_ID_P12 / _PASSWORD, MACOS_KEYCHAIN_PASSWORD,
+#   MACOS_DEVELOPER_ID_PROFILE_APP / _EXT, ASC_API_KEY_P8
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version WITHOUT the v prefix (e.g. 1.20.12). The DMG is attached to the existing release tagged v<version>."
+        required: true
+
+jobs:
+  release-macos:
+    runs-on: macos-26
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: "npm"
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+          working-directory: safari
+
+      - run: npm ci
+      - run: cp .env.example .env
+
+      - name: Set version from input
+        run: echo "BASE_VERSION=${{ inputs.version }}" >> "$GITHUB_ENV"
+
+      - name: Select newest Xcode
+        run: |
+          LATEST=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          echo "Selecting $LATEST"
+          sudo xcode-select -s "$LATEST"
+          xcodebuild -version
+
+      - name: Import Developer ID certificate
+        env:
+          CERT_P12_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_P12 }}
+          CERT_PASSWORD: ${{ secrets.MACOS_DEVELOPER_ID_P12_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
+          echo "$CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$RUNNER_TEMP/cert.p12" -P "$CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/cert.p12"
+
+      - name: Place App Store Connect API key
+        env:
+          ASC_API_KEY_BASE64: ${{ secrets.ASC_API_KEY_P8 }}
+        run: |
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          echo "$ASC_API_KEY_BASE64" | base64 --decode > "$HOME/.appstoreconnect/private_keys/AuthKey_BXMZW4LMSP.p8"
+          chmod 600 "$HOME/.appstoreconnect/private_keys/AuthKey_BXMZW4LMSP.p8"
+
+      - name: Install Developer ID provisioning profiles
+        env:
+          PROFILE_APP_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_PROFILE_APP }}
+          PROFILE_EXT_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_PROFILE_EXT }}
+        run: |
+          PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILES_DIR"
+          echo "$PROFILE_APP_BASE64" | base64 --decode > "$PROFILES_DIR/geospoof_macos_app.provisionprofile"
+          echo "$PROFILE_EXT_BASE64" | base64 --decode > "$PROFILES_DIR/geospoof_macos_ext.provisionprofile"
+
+      - name: Build, notarize, and package DMG
+        working-directory: safari
+        run: bundle exec fastlane mac developer_id
+
+      - name: Dump xcodebuild error log on failure
+        if: failure()
+        run: |
+          LOG="$HOME/Library/Logs/gym/GeoSpoof-GeoSpoof-macOS.log"
+          if [ -f "$LOG" ]; then
+            echo "===== matching error/warning lines ====="
+            grep -nE "error:|note: Run script|The following build commands failed|ARCHIVE FAILED|Command .* failed|fatal error" "$LOG" || true
+            echo "===== last 200 lines of gym log ====="
+            tail -n 200 "$LOG"
+          else
+            echo "No gym log found at $LOG"
+            ls -la "$HOME/Library/Logs/gym" || true
+          fi
+
+      - name: Rename DMG to release naming convention
+        run: mv "safari/build/GeoSpoof.dmg" "safari/build/geospoof-macos-v${BASE_VERSION}.dmg"
+
+      - name: Attach DMG to existing release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          files: safari/build/geospoof-macos-v${{ env.BASE_VERSION }}.dmg
+
+      - name: Clean up keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/build.keychain-db" || true
