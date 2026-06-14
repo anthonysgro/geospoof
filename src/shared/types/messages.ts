@@ -1,4 +1,4 @@
-import type { Location, Timezone, Settings } from "./settings";
+import type { Location, Timezone, Settings, ScopeMode } from "./settings";
 
 /**
  * All supported message types for inter-component communication.
@@ -22,7 +22,10 @@ export type MessageType =
   | "SET_THEME"
   | "SAVE_FAVORITE"
   | "REMOVE_FAVORITE"
-  | "RENAME_FAVORITE";
+  | "RENAME_FAVORITE"
+  | "SET_SCOPE_MODE"
+  | "ADD_SCOPE_SITE"
+  | "REMOVE_SCOPE_SITE";
 
 /**
  * Generic message structure for runtime messaging.
@@ -190,3 +193,26 @@ export interface FavoriteErrorResponse {
 }
 
 export type FavoriteResponse = FavoriteSuccessResponse | FavoriteErrorResponse;
+
+// --- Site-scoping payload types ---
+
+export interface SetScopeModePayload {
+  scopeMode: ScopeMode;
+}
+
+export interface ScopeSitePayload {
+  list: "allowlist" | "denylist";
+  domain: string;
+}
+
+// --- Site-scoping response types ---
+
+export interface ScopeSuccessResponse {
+  success: true;
+}
+
+export interface ScopeErrorResponse {
+  error: "INVALID_DOMAIN" | "STORAGE_ERROR";
+}
+
+export type ScopeResponse = ScopeSuccessResponse | ScopeErrorResponse;
