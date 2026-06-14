@@ -14,6 +14,7 @@ import { setDebugEnabled, setVerbosityLevel, createLogger } from "@/shared/utils
 import { setWebRTCProtection } from "./webrtc";
 import { updateBadge } from "./badge";
 import { broadcastSettingsToTabs, isRestrictedUrl, checkTabInjection } from "./tabs";
+import { computeEffectiveEnabled } from "@/shared/utils/scope";
 import { handleMessage, handleSetLocation } from "./messages";
 import { syncVpnLocation } from "./vpn-sync";
 import { installProxyWatcher } from "./proxy-watcher";
@@ -286,21 +287,42 @@ async function onAlarm(alarm: Alarms.Alarm): Promise<void> {
   const { tabId, attempt } = parsed;
 
   const settings = await loadSettings();
-  const { enabled, location, timezone, debugLogging, verbosityLevel, webrtcProtection } = settings;
-  const scopedPayload: UpdateSettingsPayload = {
-    enabled,
-    location,
-    timezone,
-    debugLogging,
-    verbosityLevel,
-    webrtcProtection,
-  };
+  const { location, timezone, debugLogging, verbosityLevel, webrtcProtection } = settings;
 
   try {
     const result = await checkTabInjection(tabId);
     if (result.injected) {
       // Clear remaining alarms for this tab
       await clearAlarmsForTab(tabId);
+
+      // Resolve the per-tab Effective_Enabled for this late-injected tab from
+      // its top-level URL via the shared source of truth (Req 7.5, 8.4, 9.3),
+      // instead of delivering the global `enabled`. The alarm carries only the
+      // tab id, so look up the tab's current URL; if the tab can't be resolved
+      // the URL is undefined and computeEffectiveEnabled returns false.
+      let tabUrl: string | undefined;
+      try {
+        const tab = await browser.tabs.get(tabId);
+        tabUrl = tab.url;
+      } catch {
+        tabUrl = undefined;
+      }
+      const enabled = computeEffectiveEnabled({
+        masterEnabled: settings.enabled,
+        scopeMode: settings.scopeMode,
+        allowlist: settings.allowlist,
+        denylist: settings.denylist,
+        topLevelUrl: tabUrl,
+        isRestricted: isRestrictedUrl,
+      });
+      const scopedPayload: UpdateSettingsPayload = {
+        enabled,
+        location,
+        timezone,
+        debugLogging,
+        verbosityLevel,
+        webrtcProtection,
+      };
 
       try {
         await browser.tabs.sendMessage(tabId, {
@@ -407,8 +429,19 @@ if (browser.tabs && browser.tabs.onCreated) {
   browser.tabs.onCreated.addListener((tab: Tabs.Tab) => {
     void (async () => {
       const settings = await loadSettings();
-      const { enabled, location, timezone, debugLogging, verbosityLevel, webrtcProtection } =
-        settings;
+      const { location, timezone, debugLogging, verbosityLevel, webrtcProtection } = settings;
+
+      // Resolve Effective_Enabled for the newly created tab from its top-level
+      // URL via the shared source of truth (Req 8.4, 9.3) rather than sending
+      // the global `enabled`. A missing/undeterminable URL resolves to false.
+      const enabled = computeEffectiveEnabled({
+        masterEnabled: settings.enabled,
+        scopeMode: settings.scopeMode,
+        allowlist: settings.allowlist,
+        denylist: settings.denylist,
+        topLevelUrl: tab.url,
+        isRestricted: isRestrictedUrl,
+      });
       const scopedPayload: UpdateSettingsPayload = {
         enabled,
         location,

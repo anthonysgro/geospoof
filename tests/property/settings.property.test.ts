@@ -12,6 +12,7 @@ import {
   tabsSendMessageCallCount,
 } from "../helpers/mock-types";
 import { importBackground } from "../helpers/import-background";
+import { computeEffectiveEnabled } from "@/shared/utils/scope";
 
 /** Arbitrary for a full Settings object with all internal fields populated. */
 const settingsArb: fc.Arbitrary<Settings> = fc.record({
@@ -131,8 +132,18 @@ test("Property 4: Broadcast Payload Contains Only Scoped Fields", async () => {
       // Payload must have exactly 6 scoped keys.
       expect(Object.keys(payload)).toHaveLength(6);
 
-      // Values must match the original settings
-      expect(payload.enabled).toBe(settings.enabled);
+      // `enabled` is now resolved per tab via the shared source of truth
+      // (background-authoritative per-tab scoping), not the raw master flag.
+      const { isRestrictedUrl } = bg;
+      const expectedEnabled = computeEffectiveEnabled({
+        masterEnabled: settings.enabled,
+        scopeMode: settings.scopeMode,
+        allowlist: settings.allowlist,
+        denylist: settings.denylist,
+        topLevelUrl: "https://example.com",
+        isRestricted: isRestrictedUrl,
+      });
+      expect(payload.enabled).toBe(expectedEnabled);
       expect(payload.location).toEqual(settings.location);
       expect(payload.timezone).toEqual(settings.timezone);
       expect(payload.debugLogging).toBe(settings.debugLogging);
