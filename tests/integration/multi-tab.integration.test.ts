@@ -105,8 +105,8 @@ describe("Multi-Tab Integration Tests", () => {
         theme: "system" as const,
         favorites: [],
         scopeMode: "all" as const,
-        whitelist: [],
-        blacklist: [],
+        allowlist: [],
+        denylist: [],
       };
 
       // Act: Should not throw even if some tabs fail
@@ -253,8 +253,8 @@ describe("Multi-Tab Integration Tests", () => {
         theme: "system" as const,
         favorites: [],
         scopeMode: "all" as const,
-        whitelist: [],
-        blacklist: [],
+        allowlist: [],
+        denylist: [],
       };
 
       storageGet.mockResolvedValue({ settings });
@@ -368,8 +368,8 @@ describe("Multi-Tab Integration Tests", () => {
         theme: "system" as const,
         favorites: [],
         scopeMode: "all" as const,
-        whitelist: [],
-        blacklist: [],
+        allowlist: [],
+        denylist: [],
       };
 
       storageGet.mockResolvedValue({ settings });

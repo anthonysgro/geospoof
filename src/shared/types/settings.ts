@@ -57,7 +57,7 @@ export interface Favorite {
 /**
  * Site-scoping mode. "all" preserves the pre-1.1 global behavior.
  */
-export type ScopeMode = "all" | "whitelist" | "blacklist";
+export type ScopeMode = "all" | "allowlist" | "denylist";
 
 /**
  * Complete extension settings persisted in browser.storage.local.
@@ -91,10 +91,10 @@ export interface Settings {
   favorites: Favorite[];
   /** Which sites are spoofed when `enabled` is true */
   scopeMode: ScopeMode;
-  /** Normalized domain strings spoofed in whitelist mode */
-  whitelist: string[];
-  /** Normalized domain strings excluded in blacklist mode */
-  blacklist: string[];
+  /** Normalized domain strings spoofed in allowlist mode */
+  allowlist: string[];
+  /** Normalized domain strings excluded in denylist mode */
+  denylist: string[];
 }
 
 /**
@@ -121,6 +121,6 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: "system",
   favorites: [],
   scopeMode: "all",
-  whitelist: [],
-  blacklist: [],
+  allowlist: [],
+  denylist: [],
 };

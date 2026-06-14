@@ -29,8 +29,8 @@ function makeSettings(overrides?: Partial<Settings>): Settings {
     theme: "system",
     favorites: [],
     scopeMode: "all",
-    whitelist: [],
-    blacklist: [],
+    allowlist: [],
+    denylist: [],
     ...overrides,
   };
 }

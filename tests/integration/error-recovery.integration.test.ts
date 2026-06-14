@@ -457,8 +457,8 @@ describe("Error Recovery Integration Tests", () => {
         theme: "system" as const,
         favorites: [],
         scopeMode: "all" as const,
-        whitelist: [],
-        blacklist: [],
+        allowlist: [],
+        denylist: [],
       };
 
       // Act: Broadcast settings (should not throw)

@@ -112,18 +112,18 @@ export function matchesDomainList(hostname: string, list: string[]): boolean {
  * Effective_Enabled resolver (Req 6, design §2). The single source of truth for
  * the per-tab spoofing decision. Pure: it derives the hostname from the tab's
  * top-level URL and combines the master switch, scope mode, and lists into one
- * boolean. The whitelist/blacklist arrays never leave the background, so this
+ * boolean. The allowlist/denylist arrays never leave the background, so this
  * function is the only place that consults them for a given tab.
  */
 export function computeEffectiveEnabled(args: {
   masterEnabled: boolean;
   scopeMode: ScopeMode;
-  whitelist: string[];
-  blacklist: string[];
+  allowlist: string[];
+  denylist: string[];
   topLevelUrl: string | undefined;
   isRestricted: (url: string) => boolean;
 }): boolean {
-  const { masterEnabled, scopeMode, whitelist, blacklist, topLevelUrl, isRestricted } = args;
+  const { masterEnabled, scopeMode, allowlist, denylist, topLevelUrl, isRestricted } = args;
 
   // Req 6.2: master switch off ⇒ never spoof, regardless of mode or lists.
   if (!masterEnabled) {
@@ -156,9 +156,9 @@ export function computeEffectiveEnabled(args: {
   switch (scopeMode) {
     case "all":
       return true;
-    case "whitelist":
-      return matchesDomainList(host, whitelist);
-    case "blacklist":
-      return !matchesDomainList(host, blacklist);
+    case "allowlist":
+      return matchesDomainList(host, allowlist);
+    case "denylist":
+      return !matchesDomainList(host, denylist);
   }
 }

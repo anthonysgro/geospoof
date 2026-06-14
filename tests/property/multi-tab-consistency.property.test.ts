@@ -34,8 +34,8 @@ function makeSettings(partial: Partial<Settings>): Settings {
     theme: "system" as const,
     favorites: [],
     scopeMode: "all" as const,
-    whitelist: [],
-    blacklist: [],
+    allowlist: [],
+    denylist: [],
     ...partial,
   };
 }

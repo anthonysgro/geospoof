@@ -55,9 +55,9 @@ const settingsArb: fc.Arbitrary<Settings> = fc.record({
   verbosityLevel: fc.constantFrom("ERROR", "WARN", "INFO", "DEBUG", "TRACE"),
   theme: fc.constantFrom("system", "light", "dark"),
   favorites: fc.constant([]),
-  scopeMode: fc.constantFrom("all", "whitelist", "blacklist"),
-  whitelist: fc.constant([]),
-  blacklist: fc.constant([]),
+  scopeMode: fc.constantFrom("all", "allowlist", "denylist"),
+  allowlist: fc.constant([]),
+  denylist: fc.constant([]),
 });
 
 /** The keys that MUST NOT appear in the broadcast payload. */
