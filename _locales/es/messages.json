@@ -131,6 +131,14 @@
     "message": "Este sitio no se puede agregar",
     "description": "Inline message shown when the current tab's hostname cannot be added to a list."
   },
+  "filters_allowedSites": {
+    "message": "Sitios permitidos",
+    "description": "Header above the list of allowlisted sites."
+  },
+  "filters_blockedSites": {
+    "message": "Sitios bloqueados",
+    "description": "Header above the list of denylisted sites."
+  },
   "toggle_locationProtection": {
     "message": "Protección de ubicación",
     "description": "Label for the toggle that enables location spoofing."

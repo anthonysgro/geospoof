@@ -1511,6 +1511,34 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   margin-top: 4px;
 }
 
+/* Slim list header: uppercase purpose label (mirrors .detail-label) + a
+   count chip using the status-badge surface. */
+.scope-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.scope-list-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.scope-list-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--badge-bg);
+  border-radius: 10px;
+  padding: 1px 8px;
+  min-width: 20px;
+  text-align: center;
+}
+
 .scope-add-row {
   display: flex;
   gap: 8px;
@@ -1582,13 +1610,26 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   color: var(--text-subtle);
   font-size: 13px;
   text-align: center;
-  padding: 16px 8px;
+  padding: 20px 12px;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
 }
 
+/* Single contained card holding the listed sites as divided rows, mirroring
+   the .detail-section card surface and the .status-item divider idiom. */
 .scope-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow-y: auto;
+  max-height: 240px;
+}
+
+/* Collapse the container when it has no rows so the empty-state card is the
+   only thing shown (the empty indicator is rendered as a sibling). */
+.scope-list:empty {
+  display: none;
 }
 
 .scope-site-row {
@@ -1596,10 +1637,17 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 8px 10px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 0.15s;
+}
+
+.scope-site-row:last-child {
+  border-bottom: none;
+}
+
+.scope-site-row:hover {
+  background: var(--surface-hover);
 }
 
 .scope-site-domain {

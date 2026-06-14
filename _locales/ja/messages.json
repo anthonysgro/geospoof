@@ -131,6 +131,14 @@
     "message": "このサイトは追加できません",
     "description": "Inline message shown when the current tab's hostname cannot be added to a list."
   },
+  "filters_allowedSites": {
+    "message": "許可サイト",
+    "description": "Header above the list of allowlisted sites."
+  },
+  "filters_blockedSites": {
+    "message": "ブロックサイト",
+    "description": "Header above the list of denylisted sites."
+  },
   "toggle_locationProtection": {
     "message": "位置情報保護",
     "description": "Label for the toggle that enables location spoofing."

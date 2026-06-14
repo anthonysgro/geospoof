@@ -131,6 +131,14 @@
     "message": "无法添加此网站",
     "description": "Inline message shown when the current tab's hostname cannot be added to a list."
   },
+  "filters_allowedSites": {
+    "message": "允许的网站",
+    "description": "Header above the list of allowlisted sites."
+  },
+  "filters_blockedSites": {
+    "message": "已屏蔽的网站",
+    "description": "Header above the list of denylisted sites."
+  },
   "toggle_locationProtection": {
     "message": "位置保护",
     "description": "Label for the toggle that enables location spoofing."

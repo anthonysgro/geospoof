@@ -53,6 +53,20 @@ function modeDescription(mode: ScopeMode): string {
   }
 }
 
+/** Localized header label for the active list. */
+function listTitle(listKey: "allowlist" | "denylist"): string {
+  return listKey === "denylist"
+    ? t("filters_blockedSites") || "Blocked sites"
+    : t("filters_allowedSites") || "Allowed sites";
+}
+
+/** Sync the header count chip to the number of rows currently in the DOM. */
+function updateListCountFromDom(): void {
+  const listEl = document.getElementById("scopeList");
+  const countEl = document.getElementById("scopeListCount");
+  if (listEl && countEl) countEl.textContent = String(listEl.children.length);
+}
+
 /**
  * Show the "settings could not be loaded" state: default the selector to "all"
  * and surface the inline message (Req 13.3). Called from loadSettings() on a
@@ -211,6 +225,12 @@ function renderSiteList(listKey: "allowlist" | "denylist", entries: string[]): v
   if (!listEl) return;
 
   while (listEl.firstChild) listEl.removeChild(listEl.firstChild);
+
+  // Keep the slim header label + count in sync on every render.
+  const titleEl = document.getElementById("scopeListTitle");
+  if (titleEl) titleEl.textContent = listTitle(listKey);
+  const countEl = document.getElementById("scopeListCount");
+  if (countEl) countEl.textContent = String(entries.length);
 
   if (entries.length === 0) {
     if (emptyEl) emptyEl.style.display = "block";
@@ -420,6 +440,7 @@ async function handleRemove(
   if (listEl && emptyEl && listEl.children.length === 0) {
     emptyEl.style.display = "block";
   }
+  updateListCountFromDom();
 
   const payload: ScopeSitePayload = { list: listKey, domain };
 
@@ -455,6 +476,7 @@ function restoreRow(
     parent.insertBefore(row, nextSibling);
   }
   if (emptyEl) emptyEl.style.display = "none";
+  updateListCountFromDom();
 }
 
 // ── Inline messages ────────────────────────────────────────────────────────
