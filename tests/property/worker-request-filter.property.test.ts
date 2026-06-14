@@ -15,8 +15,29 @@ import fc from "fast-check";
 import {
   getRegistrableDomain,
   tabPageUrlCache,
+  updateWorkerFilterSettings,
   _classifyRequestForTest,
 } from "@/background/worker-request-filter";
+import { DEFAULT_SETTINGS, type Settings } from "@/shared/types/settings";
+
+// ── Shared settings seeding ───────────────────────────────────────────
+
+/**
+ * Build a Settings snapshot for seeding `cachedSettings` via
+ * `updateWorkerFilterSettings`. Defaults to master-on + scopeMode "all"
+ * (in-scope everywhere) so the scope gate passes through to the existing
+ * same-origin gate, isolating whichever scope dimension a test exercises.
+ */
+function makeSettings(overrides: Partial<Settings> = {}): Settings {
+  return {
+    ...DEFAULT_SETTINGS,
+    enabled: true,
+    scopeMode: "all",
+    allowlist: [],
+    denylist: [],
+    ...overrides,
+  };
+}
 
 // ── Arbitraries ───────────────────────────────────────────────────────
 
@@ -60,7 +81,10 @@ const workerDestArb = fc.constantFrom("worker", "sharedworker", "serviceworker")
 // ── Property 1: Fix Checking ──────────────────────────────────────────
 
 describe("Property 1 — Fix Checking: cross-origin workers always classified as pass", () => {
-  beforeEach(() => tabPageUrlCache.clear());
+  beforeEach(() => {
+    tabPageUrlCache.clear();
+    updateWorkerFilterSettings(makeSettings());
+  });
 
   test("for all cross-origin (workerUrl, tabPageUrl) pairs with worker Sec-Fetch-Dest → pass", () => {
     fc.assert(
@@ -86,7 +110,10 @@ describe("Property 1 — Fix Checking: cross-origin workers always classified as
 // ── Property 2: Preservation ──────────────────────────────────────────
 
 describe("Property 2 — Preservation: same-origin workers with worker dest still classified as patch", () => {
-  beforeEach(() => tabPageUrlCache.clear());
+  beforeEach(() => {
+    tabPageUrlCache.clear();
+    updateWorkerFilterSettings(makeSettings());
+  });
 
   test("for all same-origin (workerUrl, tabPageUrl) pairs with worker Sec-Fetch-Dest → patch", () => {
     fc.assert(
@@ -145,6 +172,173 @@ describe("Property 3 — eTLD+1 symmetry: same hostname always yields same regis
         return getRegistrableDomain(urlA) === getRegistrableDomain(urlB);
       }),
       { numRuns: 200 }
+    );
+  });
+});
+
+// ── Property 4: Scope gating (Req 11) ─────────────────────────────────
+//
+// A candidate "patch" (worker Sec-Fetch-Dest, same-origin page) is gated on
+// the shared `computeEffectiveEnabled` decision. Out-of-scope tabs (allowlist
+// miss, denylist hit, restricted URL, master off) and unknown tabs
+// (`tabId === -1`, no cached URL) classify as "pass"; in-scope same-origin
+// workers classify as "patch".
+//
+// **Validates: Requirements 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7, 11.8**
+
+describe("Property 4 — Scope gating: out-of-scope tabs are never patched", () => {
+  beforeEach(() => {
+    tabPageUrlCache.clear();
+    updateWorkerFilterSettings(makeSettings());
+  });
+
+  test("allowlist miss (mode=allowlist, host not listed) → pass", () => {
+    fc.assert(
+      fc.property(sameOriginPairArb, workerDestArb, ([workerUrl, tabPageUrl], dest) => {
+        const wd = getRegistrableDomain(workerUrl);
+        const pd = getRegistrableDomain(tabPageUrl);
+        if (!wd || !pd || wd !== pd) return true; // skip degenerate cases
+
+        // allowlist contains an unrelated domain → the page host is not in scope
+        updateWorkerFilterSettings(
+          makeSettings({ scopeMode: "allowlist", allowlist: ["unrelated-domain.example"] })
+        );
+        tabPageUrlCache.set(99, tabPageUrl);
+        const result = _classifyRequestForTest({
+          requestId: "prop-scope-allow-miss",
+          url: workerUrl,
+          type: "script",
+          method: "GET",
+          tabId: 99,
+          frameId: 0,
+          requestHeaders: [{ name: "Sec-Fetch-Dest", value: dest }],
+        });
+        tabPageUrlCache.clear();
+        return result === "pass";
+      }),
+      { numRuns: 200 }
+    );
+  });
+
+  test("denylist hit (mode=denylist, page host listed) → pass", () => {
+    fc.assert(
+      fc.property(sameOriginPairArb, workerDestArb, ([workerUrl, tabPageUrl], dest) => {
+        const wd = getRegistrableDomain(workerUrl);
+        const pd = getRegistrableDomain(tabPageUrl);
+        if (!wd || !pd || wd !== pd) return true; // skip degenerate cases
+
+        const pageHost = new URL(tabPageUrl).hostname;
+        // denylist the exact page host → out of scope
+        updateWorkerFilterSettings(makeSettings({ scopeMode: "denylist", denylist: [pageHost] }));
+        tabPageUrlCache.set(99, tabPageUrl);
+        const result = _classifyRequestForTest({
+          requestId: "prop-scope-deny-hit",
+          url: workerUrl,
+          type: "script",
+          method: "GET",
+          tabId: 99,
+          frameId: 0,
+          requestHeaders: [{ name: "Sec-Fetch-Dest", value: dest }],
+        });
+        tabPageUrlCache.clear();
+        return result === "pass";
+      }),
+      { numRuns: 200 }
+    );
+  });
+
+  test("restricted top-level URL → pass", () => {
+    fc.assert(
+      fc.property(workerDestArb, (dest) => {
+        // addons.mozilla.org is a Restricted_URL per isRestrictedUrl.
+        const tabPageUrl = "https://addons.mozilla.org/";
+        updateWorkerFilterSettings(makeSettings({ scopeMode: "all" }));
+        tabPageUrlCache.set(99, tabPageUrl);
+        const result = _classifyRequestForTest({
+          requestId: "prop-scope-restricted",
+          url: "https://addons.mozilla.org/worker.js",
+          type: "script",
+          method: "GET",
+          tabId: 99,
+          frameId: 0,
+          requestHeaders: [{ name: "Sec-Fetch-Dest", value: dest }],
+        });
+        tabPageUrlCache.clear();
+        return result === "pass";
+      }),
+      { numRuns: 50 }
+    );
+  });
+
+  test("master switch off → pass", () => {
+    fc.assert(
+      fc.property(sameOriginPairArb, workerDestArb, ([workerUrl, tabPageUrl], dest) => {
+        const wd = getRegistrableDomain(workerUrl);
+        const pd = getRegistrableDomain(tabPageUrl);
+        if (!wd || !pd || wd !== pd) return true; // skip degenerate cases
+
+        updateWorkerFilterSettings(makeSettings({ enabled: false, scopeMode: "all" }));
+        tabPageUrlCache.set(99, tabPageUrl);
+        const result = _classifyRequestForTest({
+          requestId: "prop-scope-master-off",
+          url: workerUrl,
+          type: "script",
+          method: "GET",
+          tabId: 99,
+          frameId: 0,
+          requestHeaders: [{ name: "Sec-Fetch-Dest", value: dest }],
+        });
+        tabPageUrlCache.clear();
+        return result === "pass";
+      }),
+      { numRuns: 200 }
+    );
+  });
+
+  test("in-scope same-origin worker → patch", () => {
+    fc.assert(
+      fc.property(sameOriginPairArb, workerDestArb, ([workerUrl, tabPageUrl], dest) => {
+        const wd = getRegistrableDomain(workerUrl);
+        const pd = getRegistrableDomain(tabPageUrl);
+        if (!wd || !pd || wd !== pd) return true; // skip degenerate cases
+
+        const pageHost = new URL(tabPageUrl).hostname;
+        // mode=allowlist with the page host listed → in scope
+        updateWorkerFilterSettings(makeSettings({ scopeMode: "allowlist", allowlist: [pageHost] }));
+        tabPageUrlCache.set(99, tabPageUrl);
+        const result = _classifyRequestForTest({
+          requestId: "prop-scope-in-scope",
+          url: workerUrl,
+          type: "script",
+          method: "GET",
+          tabId: 99,
+          frameId: 0,
+          requestHeaders: [{ name: "Sec-Fetch-Dest", value: dest }],
+        });
+        tabPageUrlCache.clear();
+        return result === "patch";
+      }),
+      { numRuns: 200 }
+    );
+  });
+
+  test("tabId === -1 (no cached page URL) → pass", () => {
+    fc.assert(
+      fc.property(hostnameArb, workerDestArb, (hostname, dest) => {
+        updateWorkerFilterSettings(makeSettings({ scopeMode: "all" }));
+        // No tabPageUrlCache entry for tabId -1.
+        const result = _classifyRequestForTest({
+          requestId: "prop-scope-no-tab",
+          url: `https://${hostname}/worker.js`,
+          type: "script",
+          method: "GET",
+          tabId: -1,
+          frameId: 0,
+          requestHeaders: [{ name: "Sec-Fetch-Dest", value: dest }],
+        });
+        return result === "pass";
+      }),
+      { numRuns: 100 }
     );
   });
 });

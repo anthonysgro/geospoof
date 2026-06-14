@@ -12,7 +12,12 @@ import {
   getRegistrableDomain,
   isSameOriginWorker,
   tabPageUrlCache,
+  updateWorkerFilterSettings,
 } from "@/background/worker-request-filter";
+import { DEFAULT_SETTINGS } from "@/shared/types/settings";
+
+/** In-scope settings snapshot so the scope gate passes through to the same-origin gate. */
+const IN_SCOPE_SETTINGS = { ...DEFAULT_SETTINGS, enabled: true, scopeMode: "all" as const };
 
 /** Helper to build a minimal WebRequestDetailsWithHeaders object. */
 function makeDetails(opts: {
@@ -154,6 +159,9 @@ describe("isSameOriginWorker", () => {
 describe("classifyRequest — fix checking (same-origin gate)", () => {
   beforeEach(() => {
     tabPageUrlCache.clear();
+    // Seed in-scope settings (master on, scopeMode "all") so the scope gate
+    // passes through to the same-origin gate under test.
+    updateWorkerFilterSettings(IN_SCOPE_SETTINGS);
   });
 
   test("same-origin worker with Sec-Fetch-Dest: worker is patch", () => {
