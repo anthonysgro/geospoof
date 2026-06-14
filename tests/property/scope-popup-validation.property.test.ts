@@ -268,3 +268,85 @@ describe("Popup Filters tab — site list manager (Req 14)", () => {
     expect(modeError.style.display).toBe("block");
   });
 });
+
+describe("Popup Filters tab — add current site (Req 14.3, 14.7, 14.9)", () => {
+  beforeEach(() => {
+    loadPopupDom();
+    vi.mocked(browser.tabs.query).mockResolvedValue([]);
+    vi.mocked(browser.runtime.sendMessage).mockReset();
+  });
+
+  test("restricted current URL shows an inline message and sends nothing (Req 14.7)", async () => {
+    renderScope(makeSettings({ scopeMode: "allowlist", allowlist: [] }));
+
+    // Active tab is a restricted page (chrome:// is in isRestrictedUrl's prefixes).
+    vi.mocked(browser.tabs.query).mockResolvedValue([
+      { url: "chrome://settings/", id: 1 },
+    ] as unknown as never);
+
+    const currentBtn = document.getElementById("scopeAddCurrentButton") as HTMLButtonElement;
+    currentBtn.click();
+    await flush();
+
+    const msg = document.getElementById("scopeCurrentMsg")!;
+    expect(msg.style.display).toBe("block");
+
+    const sentAdd = vi
+      .mocked(browser.runtime.sendMessage)
+      .mock.calls.some((c) => (c[0] as { type?: string })?.type === "ADD_SCOPE_SITE");
+    expect(sentAdd).toBe(false);
+  });
+
+  test("non-restricted URL with an un-normalizable hostname shows a message and sends nothing (Req 14.9)", async () => {
+    renderScope(makeSettings({ scopeMode: "allowlist", allowlist: [] }));
+
+    // localhost is not restricted, but has no dot → normalizeDomain returns null.
+    expect(normalizeDomain("localhost")).toBeNull();
+    vi.mocked(browser.tabs.query).mockResolvedValue([
+      { url: "http://localhost:3000/app", id: 2 },
+    ] as unknown as never);
+
+    const currentBtn = document.getElementById("scopeAddCurrentButton") as HTMLButtonElement;
+    currentBtn.click();
+    await flush();
+
+    const msg = document.getElementById("scopeCurrentMsg")!;
+    expect(msg.style.display).toBe("block");
+
+    const sentAdd = vi
+      .mocked(browser.runtime.sendMessage)
+      .mock.calls.some((c) => (c[0] as { type?: string })?.type === "ADD_SCOPE_SITE");
+    expect(sentAdd).toBe(false);
+  });
+
+  test("valid current URL sends ADD_SCOPE_SITE with the normalized hostname (Req 14.3)", async () => {
+    renderScope(makeSettings({ scopeMode: "denylist", denylist: [] }));
+
+    vi.mocked(browser.tabs.query).mockResolvedValue([
+      { url: "https://www.Example.com:8443/some/path?q=1#h", id: 3 },
+    ] as unknown as never);
+
+    vi.mocked(browser.runtime.sendMessage).mockImplementation((msg: unknown) => {
+      const m = msg as { type: string };
+      if (m.type === "ADD_SCOPE_SITE") return Promise.resolve({ success: true });
+      if (m.type === "GET_SETTINGS")
+        return Promise.resolve(makeSettings({ scopeMode: "denylist", denylist: ["example.com"] }));
+      return Promise.resolve(undefined);
+    });
+
+    const currentBtn = document.getElementById("scopeAddCurrentButton") as HTMLButtonElement;
+    currentBtn.click();
+    await flush();
+
+    expect(browser.runtime.sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "ADD_SCOPE_SITE",
+        payload: { list: "denylist", domain: "example.com" },
+      })
+    );
+
+    // No inline error is surfaced on the success path.
+    const msg = document.getElementById("scopeCurrentMsg")!;
+    expect(msg.style.display).toBe("none");
+  });
+});

@@ -7,16 +7,17 @@
  * cross into a content/injected script). All list mutations follow the same
  * optimistic-update + revert-on-failure pattern as the protection toggle.
  *
- * Manual domain entry is the only add path here; the "add current site"
- * convenience is a deferred follow-up.
+ * Manual domain entry and the "add current site" convenience are both add
+ * paths here; both run the typed/derived value through the Domain_Normalizer
+ * before sending to the background.
  *
- * Requirements: 9.5, 13.1–13.8, 14.1, 14.2, 14.4, 14.5, 14.6, 14.8
+ * Requirements: 9.5, 13.1–13.8, 14.1, 14.2, 14.3, 14.4, 14.5, 14.6, 14.7, 14.8, 14.9
  */
 
 import type { ScopeMode, Settings } from "@/shared/types/settings";
 import type { ScopeResponse, ScopeSitePayload, SetScopeModePayload } from "@/shared/types/messages";
 import { normalizeDomain } from "@/shared/utils/scope";
-import { loadSettings } from "./settings";
+import { loadSettings, isRestrictedUrl } from "./settings";
 import { t } from "./i18n";
 
 /** Modes that show the list manager. */
@@ -79,6 +80,7 @@ export function renderScope(settings: Settings): void {
 
   hideModeError();
   hideAddError();
+  hideCurrentMsg();
 
   const mode = resolveScopeMode(settings.scopeMode);
   lastPersistedMode = mode;
@@ -283,6 +285,80 @@ function wireAddControls(mode: ScopeMode): void {
   freshInput.addEventListener("input", () => {
     hideAddError();
   });
+
+  // "Add current site" convenience: reads the active tab's top-level URL,
+  // normalizes its hostname, and adds it to the active list (Req 14.3, 14.7,
+  // 14.9). Clone the button to drop listeners from a prior render/mode.
+  const currentBtn = document.getElementById("scopeAddCurrentButton") as HTMLButtonElement | null;
+  if (currentBtn) {
+    const freshCurrentBtn = currentBtn.cloneNode(true) as HTMLButtonElement;
+    currentBtn.parentNode?.replaceChild(freshCurrentBtn, currentBtn);
+    freshCurrentBtn.addEventListener("click", () => {
+      void handleAddCurrent(listKey);
+    });
+  }
+}
+
+/**
+ * Add the current tab's site to the active list.
+ *
+ * Reads the active tab's top-level URL, then short-circuits with an inline
+ * message and sends nothing when the page is a Restricted_URL (Req 14.7) or
+ * when the derived hostname normalizes to null (Req 14.9). Otherwise sends
+ * ADD_SCOPE_SITE with the normalized domain (Req 14.3).
+ */
+async function handleAddCurrent(listKey: "allowlist" | "denylist"): Promise<void> {
+  hideAddError();
+  hideCurrentMsg();
+
+  let url: string | undefined;
+  try {
+    const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+    url = tabs[0]?.url;
+  } catch (error: unknown) {
+    console.error("Failed to read the current tab:", error);
+    showCurrentMsg(t("filters_currentPageInvalid") || "This site cannot be added");
+    return;
+  }
+
+  // Restricted pages (about:, chrome:, store pages, …) cannot be added (Req 14.7).
+  if (isRestrictedUrl(url)) {
+    showCurrentMsg(t("filters_currentPageRestricted") || "This page cannot be added");
+    return;
+  }
+
+  // Derive the top-level hostname, then normalize it (Req 14.3 / 14.9).
+  let hostname = "";
+  try {
+    hostname = new URL(url as string).hostname;
+  } catch {
+    hostname = "";
+  }
+  const normalized = normalizeDomain(hostname);
+  if (normalized === null) {
+    showCurrentMsg(t("filters_currentPageInvalid") || "This site cannot be added");
+    return;
+  }
+
+  const payload: ScopeSitePayload = { list: listKey, domain: normalized };
+
+  try {
+    const result = (await browser.runtime.sendMessage({
+      type: "ADD_SCOPE_SITE",
+      payload,
+    })) as ScopeResponse;
+
+    if (result && "success" in result && result.success) {
+      await loadSettings();
+      return;
+    }
+
+    // Defensive: background reported INVALID_DOMAIN / STORAGE_ERROR.
+    showCurrentMsg(t("filters_currentPageInvalid") || "This site cannot be added");
+  } catch (error: unknown) {
+    console.error("Failed to add current site:", error);
+    showCurrentMsg(t("filters_currentPageInvalid") || "This site cannot be added");
+  }
 }
 
 /**
@@ -390,6 +466,20 @@ function showAddError(): void {
 
 function hideAddError(): void {
   const el = document.getElementById("scopeAddError");
+  if (el) el.style.display = "none";
+}
+
+/** Show the add-current-site inline status with the given text. */
+function showCurrentMsg(text: string): void {
+  const el = document.getElementById("scopeCurrentMsg");
+  if (el) {
+    el.textContent = text;
+    el.style.display = "block";
+  }
+}
+
+function hideCurrentMsg(): void {
+  const el = document.getElementById("scopeCurrentMsg");
   if (el) el.style.display = "none";
 }
 

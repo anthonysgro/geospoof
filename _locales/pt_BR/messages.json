@@ -119,6 +119,18 @@
     "message": "Remover site",
     "description": "Accessible label prefix on a site's remove button."
   },
+  "filters_addCurrentButton": {
+    "message": "Adicionar site atual",
+    "description": "Button that adds the active tab's site to the active list."
+  },
+  "filters_currentPageRestricted": {
+    "message": "Esta página não pode ser adicionada",
+    "description": "Inline message shown when the current page is a restricted URL that cannot be added."
+  },
+  "filters_currentPageInvalid": {
+    "message": "Este site não pode ser adicionado",
+    "description": "Inline message shown when the current tab's hostname cannot be added to a list."
+  },
   "toggle_locationProtection": {
     "message": "Proteção de localização",
     "description": "Label for the toggle that enables location spoofing."

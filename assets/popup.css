@@ -997,7 +997,8 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   white-space: pre-wrap;
 }
 
-#detailsView h3 {
+#detailsView h3,
+#filtersView h3 {
   font-size: 16px;
   font-weight: 600;
   color: var(--text-strong);
@@ -1477,15 +1478,15 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 
 .scope-mode-btn {
   flex: 1;
-  padding: 8px 6px;
+  padding: 10px 6px;
   background: var(--surface);
   border: 2px solid var(--border);
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s;
 }
 
 .scope-mode-btn:hover {
@@ -1500,7 +1501,7 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 }
 
 .scope-mode-desc {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
   margin-bottom: 12px;
   line-height: 1.4;
@@ -1519,27 +1520,56 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 .scope-add-row input {
   flex: 1;
   min-width: 0;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
+  padding: 10px;
+  border: 1px solid var(--border-input);
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 14px;
+}
+
+.scope-add-row input:focus {
+  outline: none;
+  border-color: var(--brand);
 }
 
 .scope-add-row button {
   flex-shrink: 0;
-  padding: 8px 14px;
+  padding: 10px 14px;
   background: var(--brand);
   border: none;
   border-radius: 8px;
   color: var(--text-on-brand);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: background 0.3s;
 }
 
 .scope-add-row button:hover {
-  opacity: 0.9;
+  background: var(--brand-hover);
+}
+
+.scope-add-current-row {
+  margin-bottom: 8px;
+}
+
+.scope-add-current {
+  width: 100%;
+  padding: 8px 14px;
+  background: transparent;
+  border: 1px solid var(--brand);
+  border-radius: 8px;
+  color: var(--brand);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.3s,
+    color 0.3s;
+}
+
+.scope-add-current:hover {
+  background: var(--brand);
+  color: var(--text-on-brand);
 }
 
 .scope-inline-msg {

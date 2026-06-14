@@ -119,6 +119,18 @@
     "message": "サイトを削除",
     "description": "Accessible label prefix on a site's remove button."
   },
+  "filters_addCurrentButton": {
+    "message": "現在のサイトを追加",
+    "description": "Button that adds the active tab's site to the active list."
+  },
+  "filters_currentPageRestricted": {
+    "message": "このページは追加できません",
+    "description": "Inline message shown when the current page is a restricted URL that cannot be added."
+  },
+  "filters_currentPageInvalid": {
+    "message": "このサイトは追加できません",
+    "description": "Inline message shown when the current tab's hostname cannot be added to a list."
+  },
   "toggle_locationProtection": {
     "message": "位置情報保護",
     "description": "Label for the toggle that enables location spoofing."

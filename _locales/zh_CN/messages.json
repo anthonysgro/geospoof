@@ -119,6 +119,18 @@
     "message": "移除网站",
     "description": "Accessible label prefix on a site's remove button."
   },
+  "filters_addCurrentButton": {
+    "message": "添加当前网站",
+    "description": "Button that adds the active tab's site to the active list."
+  },
+  "filters_currentPageRestricted": {
+    "message": "无法添加此页面",
+    "description": "Inline message shown when the current page is a restricted URL that cannot be added."
+  },
+  "filters_currentPageInvalid": {
+    "message": "无法添加此网站",
+    "description": "Inline message shown when the current tab's hostname cannot be added to a list."
+  },
   "toggle_locationProtection": {
     "message": "位置保护",
     "description": "Label for the toggle that enables location spoofing."

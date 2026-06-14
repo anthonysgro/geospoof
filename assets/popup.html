@@ -411,6 +411,18 @@
             <button id="scopeAddButton" data-i18n="filters_addButton">Add</button>
           </div>
 
+          <!-- Add the current tab's site with one click -->
+          <div class="scope-add-current-row">
+            <button
+              id="scopeAddCurrentButton"
+              class="scope-add-current"
+              type="button"
+              data-i18n="filters_addCurrentButton"
+            >
+              Add current site
+            </button>
+          </div>
+
           <div
             class="scope-inline-msg"
             id="scopeAddError"
@@ -418,6 +430,12 @@
             data-i18n="filters_invalidDomain"
           >
             Not a valid domain
+          </div>
+
+          <!-- Inline status for the add-current-site action (restricted page
+               or an un-addable hostname) -->
+          <div class="scope-inline-msg" id="scopeCurrentMsg" style="display: none">
+            This page cannot be added
           </div>
 
           <div
