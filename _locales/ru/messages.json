@@ -55,6 +55,70 @@
     "message": "Подробности",
     "description": "Tab label for the protection details view."
   },
+  "tab_filters": {
+    "message": "Фильтры",
+    "description": "Tab label for the site-scoping filters view."
+  },
+  "filters_heading": {
+    "message": "Фильтры сайтов",
+    "description": "Heading for the site-scoping filters panel."
+  },
+  "filters_modeGroupAriaLabel": {
+    "message": "Режим области",
+    "description": "Accessible label for the scope-mode selector group."
+  },
+  "filters_modeAll": {
+    "message": "Все",
+    "description": "Scope mode option: spoof on every site."
+  },
+  "filters_modeAllowlist": {
+    "message": "Белый список",
+    "description": "Scope mode option: spoof only on listed sites."
+  },
+  "filters_modeDenylist": {
+    "message": "Чёрный список",
+    "description": "Scope mode option: spoof on every site except listed ones."
+  },
+  "filters_modeAllDesc": {
+    "message": "Подмена применяется ко всем сайтам.",
+    "description": "Description shown under the selector when 'All' mode is active."
+  },
+  "filters_modeAllowlistDesc": {
+    "message": "Подмена применяется только к перечисленным сайтам.",
+    "description": "Description shown under the selector when 'Allowlist' mode is active."
+  },
+  "filters_modeDenylistDesc": {
+    "message": "Подмена применяется ко всем сайтам, кроме перечисленных.",
+    "description": "Description shown under the selector when 'Denylist' mode is active."
+  },
+  "filters_addPlaceholder": {
+    "message": "example.com",
+    "description": "Placeholder text in the add-site input."
+  },
+  "filters_addButton": {
+    "message": "Добавить",
+    "description": "Button that adds the typed domain to the active list."
+  },
+  "filters_invalidDomain": {
+    "message": "Недопустимый домен",
+    "description": "Inline message shown when the typed domain is invalid."
+  },
+  "filters_emptyList": {
+    "message": "Сайты ещё не добавлены",
+    "description": "Indicator shown when the active site list is empty."
+  },
+  "filters_notSaved": {
+    "message": "⚠️ Изменение не сохранено",
+    "description": "Inline message shown when a scope change could not be saved."
+  },
+  "filters_loadError": {
+    "message": "⚠️ Не удалось загрузить настройки",
+    "description": "Inline message shown when the popup cannot load settings."
+  },
+  "filters_removeAriaLabel": {
+    "message": "Удалить сайт",
+    "description": "Accessible label prefix on a site's remove button."
+  },
   "toggle_locationProtection": {
     "message": "Защита геолокации",
     "description": "Label for the toggle that enables location spoofing."

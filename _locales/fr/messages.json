@@ -55,6 +55,70 @@
     "message": "Détails",
     "description": "Tab label for the protection details view."
   },
+  "tab_filters": {
+    "message": "Filtres",
+    "description": "Tab label for the site-scoping filters view."
+  },
+  "filters_heading": {
+    "message": "Filtres de sites",
+    "description": "Heading for the site-scoping filters panel."
+  },
+  "filters_modeGroupAriaLabel": {
+    "message": "Mode de portée",
+    "description": "Accessible label for the scope-mode selector group."
+  },
+  "filters_modeAll": {
+    "message": "Tous",
+    "description": "Scope mode option: spoof on every site."
+  },
+  "filters_modeAllowlist": {
+    "message": "Liste d'autorisation",
+    "description": "Scope mode option: spoof only on listed sites."
+  },
+  "filters_modeDenylist": {
+    "message": "Liste de blocage",
+    "description": "Scope mode option: spoof on every site except listed ones."
+  },
+  "filters_modeAllDesc": {
+    "message": "L'usurpation s'applique à tous les sites.",
+    "description": "Description shown under the selector when 'All' mode is active."
+  },
+  "filters_modeAllowlistDesc": {
+    "message": "L'usurpation s'applique uniquement aux sites listés.",
+    "description": "Description shown under the selector when 'Allowlist' mode is active."
+  },
+  "filters_modeDenylistDesc": {
+    "message": "L'usurpation s'applique à tous les sites sauf ceux listés.",
+    "description": "Description shown under the selector when 'Denylist' mode is active."
+  },
+  "filters_addPlaceholder": {
+    "message": "example.com",
+    "description": "Placeholder text in the add-site input."
+  },
+  "filters_addButton": {
+    "message": "Ajouter",
+    "description": "Button that adds the typed domain to the active list."
+  },
+  "filters_invalidDomain": {
+    "message": "Domaine non valide",
+    "description": "Inline message shown when the typed domain is invalid."
+  },
+  "filters_emptyList": {
+    "message": "Aucun site ajouté pour le moment",
+    "description": "Indicator shown when the active site list is empty."
+  },
+  "filters_notSaved": {
+    "message": "⚠️ Modification non enregistrée",
+    "description": "Inline message shown when a scope change could not be saved."
+  },
+  "filters_loadError": {
+    "message": "⚠️ Impossible de charger les paramètres",
+    "description": "Inline message shown when the popup cannot load settings."
+  },
+  "filters_removeAriaLabel": {
+    "message": "Supprimer le site",
+    "description": "Accessible label prefix on a site's remove button."
+  },
   "toggle_locationProtection": {
     "message": "Protection de localisation",
     "description": "Label for the toggle that enables location spoofing."

@@ -1464,3 +1464,140 @@ input[type="checkbox"]:checked + .toggle-slider:before {
     padding: 0 3px !important;
   }
 }
+
+/* ───────────────────────────────────────────────────────────────────────────
+   Filters tab — scope mode selector + site-list manager
+   ────────────────────────────────────────────────────────────────────── */
+
+.scope-mode-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.scope-mode-btn {
+  flex: 1;
+  padding: 8px 6px;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.scope-mode-btn:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.scope-mode-btn.active {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--text-on-brand);
+}
+
+.scope-mode-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.scope-list-manager {
+  margin-top: 4px;
+}
+
+.scope-add-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.scope-add-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.scope-add-row button {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  background: var(--brand);
+  border: none;
+  border-radius: 8px;
+  color: var(--text-on-brand);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.scope-add-row button:hover {
+  opacity: 0.9;
+}
+
+.scope-inline-msg {
+  color: var(--danger);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.scope-empty {
+  color: var(--text-subtle);
+  font-size: 13px;
+  text-align: center;
+  padding: 16px 8px;
+}
+
+.scope-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.scope-site-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.scope-site-domain {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.scope-site-remove {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--text-subtle);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition:
+    color 0.2s,
+    background 0.2s;
+}
+
+.scope-site-remove:hover {
+  color: var(--danger);
+  background: var(--surface-hover);
+}

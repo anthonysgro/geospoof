@@ -55,6 +55,70 @@
     "message": "详情",
     "description": "Tab label for the protection details view."
   },
+  "tab_filters": {
+    "message": "筛选",
+    "description": "Tab label for the site-scoping filters view."
+  },
+  "filters_heading": {
+    "message": "网站筛选",
+    "description": "Heading for the site-scoping filters panel."
+  },
+  "filters_modeGroupAriaLabel": {
+    "message": "范围模式",
+    "description": "Accessible label for the scope-mode selector group."
+  },
+  "filters_modeAll": {
+    "message": "全部",
+    "description": "Scope mode option: spoof on every site."
+  },
+  "filters_modeAllowlist": {
+    "message": "允许列表",
+    "description": "Scope mode option: spoof only on listed sites."
+  },
+  "filters_modeDenylist": {
+    "message": "拒绝列表",
+    "description": "Scope mode option: spoof on every site except listed ones."
+  },
+  "filters_modeAllDesc": {
+    "message": "伪装适用于所有网站。",
+    "description": "Description shown under the selector when 'All' mode is active."
+  },
+  "filters_modeAllowlistDesc": {
+    "message": "伪装仅适用于列出的网站。",
+    "description": "Description shown under the selector when 'Allowlist' mode is active."
+  },
+  "filters_modeDenylistDesc": {
+    "message": "伪装适用于除列出网站之外的所有网站。",
+    "description": "Description shown under the selector when 'Denylist' mode is active."
+  },
+  "filters_addPlaceholder": {
+    "message": "example.com",
+    "description": "Placeholder text in the add-site input."
+  },
+  "filters_addButton": {
+    "message": "添加",
+    "description": "Button that adds the typed domain to the active list."
+  },
+  "filters_invalidDomain": {
+    "message": "不是有效的域名",
+    "description": "Inline message shown when the typed domain is invalid."
+  },
+  "filters_emptyList": {
+    "message": "尚未添加网站",
+    "description": "Indicator shown when the active site list is empty."
+  },
+  "filters_notSaved": {
+    "message": "⚠️ 更改未保存",
+    "description": "Inline message shown when a scope change could not be saved."
+  },
+  "filters_loadError": {
+    "message": "⚠️ 无法加载设置",
+    "description": "Inline message shown when the popup cannot load settings."
+  },
+  "filters_removeAriaLabel": {
+    "message": "移除网站",
+    "description": "Accessible label prefix on a site's remove button."
+  },
   "toggle_locationProtection": {
     "message": "位置保护",
     "description": "Label for the toggle that enables location spoofing."

@@ -59,6 +59,7 @@
       <!-- Tab Navigation -->
       <div class="tab-navigation">
         <button class="nav-tab active" id="mainTab" data-i18n="tab_main">Main</button>
+        <button class="nav-tab" id="filtersTab" data-i18n="tab_filters">Filters</button>
         <button class="nav-tab" id="detailsTab" data-i18n="tab_details">Details</button>
       </div>
 
@@ -330,6 +331,108 @@
         </div>
       </div>
       <!-- End Main View -->
+
+      <!-- Filters View -->
+      <div class="tab-content" id="filtersView" style="display: none">
+        <h3 data-i18n="filters_heading">Site Filters</h3>
+
+        <!-- Settings load error -->
+        <div
+          class="warning"
+          id="scopeLoadError"
+          style="display: none"
+          data-i18n="filters_loadError"
+        >
+          ⚠️ Settings could not be loaded
+        </div>
+
+        <!-- Scope mode selector -->
+        <div
+          class="scope-mode-tabs"
+          id="scopeModeTabs"
+          role="radiogroup"
+          aria-label="Scope mode"
+          data-i18n-aria-label="filters_modeGroupAriaLabel"
+        >
+          <button
+            class="scope-mode-btn active"
+            id="scopeModeAll"
+            data-scope-mode="all"
+            role="radio"
+            aria-checked="true"
+            data-i18n="filters_modeAll"
+          >
+            All
+          </button>
+          <button
+            class="scope-mode-btn"
+            id="scopeModeAllowlist"
+            data-scope-mode="allowlist"
+            role="radio"
+            aria-checked="false"
+            data-i18n="filters_modeAllowlist"
+          >
+            Allowlist
+          </button>
+          <button
+            class="scope-mode-btn"
+            id="scopeModeDenylist"
+            data-scope-mode="denylist"
+            role="radio"
+            aria-checked="false"
+            data-i18n="filters_modeDenylist"
+          >
+            Denylist
+          </button>
+        </div>
+
+        <!-- Mode description -->
+        <div class="scope-mode-desc" id="scopeModeDesc" data-i18n="filters_modeAllDesc">
+          Spoofing applies to every site.
+        </div>
+
+        <!-- Mode change error -->
+        <div class="warning" id="scopeModeError" style="display: none" data-i18n="filters_notSaved">
+          ⚠️ Change not saved
+        </div>
+
+        <!-- Site list manager (shown in list modes only) -->
+        <div class="scope-list-manager" id="scopeListManager" style="display: none">
+          <div class="scope-add-row">
+            <input
+              type="text"
+              id="scopeAddInput"
+              placeholder="example.com"
+              autocomplete="off"
+              spellcheck="false"
+              maxlength="253"
+              data-i18n-placeholder="filters_addPlaceholder"
+            />
+            <button id="scopeAddButton" data-i18n="filters_addButton">Add</button>
+          </div>
+
+          <div
+            class="scope-inline-msg"
+            id="scopeAddError"
+            style="display: none"
+            data-i18n="filters_invalidDomain"
+          >
+            Not a valid domain
+          </div>
+
+          <div
+            class="scope-empty"
+            id="scopeEmptyIndicator"
+            style="display: none"
+            data-i18n="filters_emptyList"
+          >
+            No sites added yet
+          </div>
+
+          <div class="scope-list" id="scopeList" role="list" aria-label="Scoped sites"></div>
+        </div>
+      </div>
+      <!-- End Filters View -->
 
       <!-- Details View -->
       <div class="tab-content" id="detailsView" style="display: none">
