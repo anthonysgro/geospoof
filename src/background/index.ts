@@ -66,6 +66,9 @@ export {
   handleSetProtectionStatus,
   handleSetWebRTCProtection,
   handleCompleteOnboarding,
+  handleSetScopeMode,
+  handleAddScopeSite,
+  handleRemoveScopeSite,
 } from "./messages";
 export {
   isValidIpAddress,

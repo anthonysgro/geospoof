@@ -20,10 +20,13 @@ import type {
   RenameFavoritePayload,
   FavoriteResponse,
   UpdateSettingsPayload,
+  SetScopeModePayload,
+  ScopeSitePayload,
+  ScopeResponse,
 } from "@/shared/types/messages";
 import type { LocationName } from "@/shared/types/settings";
 import { setDebugEnabled, setVerbosityLevel, createLogger } from "@/shared/utils/debug-logger";
-import { computeEffectiveEnabled } from "@/shared/utils/scope";
+import { computeEffectiveEnabled, normalizeDomain } from "@/shared/utils/scope";
 import { loadSettings, updateSettings } from "./settings";
 
 const logger = createLogger("BG");
@@ -264,6 +267,15 @@ export async function handleMessage(
       case "RENAME_FAVORITE":
         return await handleRenameFavorite(message.payload as RenameFavoritePayload);
 
+      case "SET_SCOPE_MODE":
+        return await handleSetScopeMode(message.payload as SetScopeModePayload);
+
+      case "ADD_SCOPE_SITE":
+        return await handleAddScopeSite(message.payload as ScopeSitePayload);
+
+      case "REMOVE_SCOPE_SITE":
+        return await handleRemoveScopeSite(message.payload as ScopeSitePayload);
+
       default:
         logger.warn("Unknown message type:", message.type);
         return { error: "Unknown message type" };
@@ -453,5 +465,81 @@ export async function handleRenameFavorite(
     return { error: "STORAGE_ERROR" };
   }
 
+  return { success: true };
+}
+
+/**
+ * SET_SCOPE_MODE handler (Req 9.1, 9.5). Persist the new scope mode, then
+ * re-evaluate and re-deliver per-tab Effective_Enabled and re-badge every tab.
+ * On storage failure the persisted mode is left unchanged, no re-broadcast or
+ * badge refresh occurs, and STORAGE_ERROR is returned (Req 9.5).
+ */
+export async function handleSetScopeMode(payload: SetScopeModePayload): Promise<ScopeResponse> {
+  let settings;
+  try {
+    settings = await updateSettings({ scopeMode: payload.scopeMode });
+  } catch {
+    return { error: "STORAGE_ERROR" };
+  }
+
+  await broadcastSettingsToTabs(settings);
+  await updateBadge(settings.enabled);
+  return { success: true };
+}
+
+/**
+ * ADD_SCOPE_SITE handler (Req 14.5, 15.1–15.6). Normalize the entered domain,
+ * append it to the target list (idempotent against existing normalized
+ * entries), persist, then re-broadcast and re-badge. Returns INVALID_DOMAIN for
+ * unparseable input and STORAGE_ERROR on persistence failure.
+ */
+export async function handleAddScopeSite(payload: ScopeSitePayload): Promise<ScopeResponse> {
+  const normalized = normalizeDomain(payload.domain);
+  if (normalized === null) {
+    return { error: "INVALID_DOMAIN" };
+  }
+
+  const settings = await loadSettings();
+  const list = settings[payload.list];
+
+  // Idempotent: a duplicate add reports success without re-persisting (Req
+  // 14.5, 15.2).
+  if (list.includes(normalized)) {
+    return { success: true };
+  }
+
+  let updated;
+  try {
+    updated = await updateSettings({ [payload.list]: [...list, normalized] });
+  } catch {
+    return { error: "STORAGE_ERROR" };
+  }
+
+  await broadcastSettingsToTabs(updated);
+  await updateBadge(updated.enabled);
+  return { success: true };
+}
+
+/**
+ * REMOVE_SCOPE_SITE handler (Req 9.2). Remove the matching normalized domain
+ * from the target list, persist, then re-broadcast and re-badge. Falls back to
+ * the raw domain when normalization fails so legacy/odd entries can still be
+ * removed. Returns STORAGE_ERROR on persistence failure.
+ */
+export async function handleRemoveScopeSite(payload: ScopeSitePayload): Promise<ScopeResponse> {
+  const normalized = normalizeDomain(payload.domain) ?? payload.domain;
+
+  const settings = await loadSettings();
+  const filtered = settings[payload.list].filter((d) => d !== normalized);
+
+  let updated;
+  try {
+    updated = await updateSettings({ [payload.list]: filtered });
+  } catch {
+    return { error: "STORAGE_ERROR" };
+  }
+
+  await broadcastSettingsToTabs(updated);
+  await updateBadge(updated.enabled);
   return { success: true };
 }
