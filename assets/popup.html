@@ -65,6 +65,8 @@
 
       <!-- Main View -->
       <div class="tab-content" id="mainView">
+        <div class="section-heading" data-i18n="heading_protection">Protection</div>
+
         <!-- Protection Toggle -->
         <div class="toggle-section">
           <label class="toggle-label">
@@ -334,8 +336,6 @@
 
       <!-- Filters View -->
       <div class="tab-content" id="filtersView" style="display: none">
-        <h3 data-i18n="filters_heading">Site Filters</h3>
-
         <!-- Settings load error -->
         <div
           class="warning"
@@ -345,6 +345,8 @@
         >
           ⚠️ Settings could not be loaded
         </div>
+
+        <div class="section-heading" data-i18n="heading_mode">Mode</div>
 
         <!-- Scope mode selector -->
         <div
@@ -392,12 +394,28 @@
         </div>
 
         <!-- Mode change error -->
-        <div class="warning" id="scopeModeError" style="display: none" data-i18n="filters_notSaved">
+        <div
+          class="warning"
+          id="scopeModeError"
+          role="alert"
+          style="display: none"
+          data-i18n="filters_notSaved"
+        >
           ⚠️ Change not saved
         </div>
 
         <!-- Site list manager (shown in list modes only) -->
         <div class="scope-list-manager" id="scopeListManager" style="display: none">
+          <hr class="section-divider" />
+
+          <!-- List section heading: dynamic label (Allowed/Blocked sites) + count -->
+          <div class="scope-list-header" id="scopeListHeader">
+            <span class="scope-list-title" id="scopeListTitle" data-i18n="filters_allowedSites"
+              >Allowed sites</span
+            >
+            <span class="scope-list-count" id="scopeListCount">0</span>
+          </div>
+
           <div class="scope-add-row">
             <input
               type="text"
@@ -426,6 +444,7 @@
           <div
             class="scope-inline-msg"
             id="scopeAddError"
+            role="alert"
             style="display: none"
             data-i18n="filters_invalidDomain"
           >
@@ -434,16 +453,8 @@
 
           <!-- Inline status for the add-current-site action (restricted page
                or an un-addable hostname) -->
-          <div class="scope-inline-msg" id="scopeCurrentMsg" style="display: none">
+          <div class="scope-inline-msg" id="scopeCurrentMsg" role="alert" style="display: none">
             This page cannot be added
-          </div>
-
-          <!-- Slim list header: purpose label + live count -->
-          <div class="scope-list-header" id="scopeListHeader">
-            <span class="scope-list-title" id="scopeListTitle" data-i18n="filters_allowedSites"
-              >Allowed sites</span
-            >
-            <span class="scope-list-count" id="scopeListCount">0</span>
           </div>
 
           <div
@@ -462,8 +473,6 @@
 
       <!-- Details View -->
       <div class="tab-content" id="detailsView" style="display: none">
-        <h3 data-i18n="details_heading">Protection Details</h3>
-
         <!-- Location Details -->
         <div class="detail-section">
           <div class="detail-label" data-i18n="details_spoofedLocation">Spoofed Location</div>

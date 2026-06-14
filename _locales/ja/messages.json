@@ -151,6 +151,14 @@
     "message": "位置",
     "description": "Section heading above the spoofed location display."
   },
+  "heading_protection": {
+    "message": "保護",
+    "description": "Section heading above the protection toggles in the Main tab."
+  },
+  "heading_mode": {
+    "message": "モード",
+    "description": "Section heading above the scope-mode selector in the Filters tab."
+  },
   "location_none": {
     "message": "位置が設定されていません",
     "description": "Shown when no spoofed location has been configured."

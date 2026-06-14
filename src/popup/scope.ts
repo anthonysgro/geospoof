@@ -243,11 +243,43 @@ function renderSiteList(listKey: "allowlist" | "denylist", entries: string[]): v
   }
 }
 
+/**
+ * Deterministic hue (0–359) derived from the domain string, so each site keeps
+ * a stable colour across renders without any stored state.
+ */
+function monogramHue(domain: string): number {
+  let hash = 0;
+  for (let i = 0; i < domain.length; i++) {
+    hash = (hash * 31 + domain.charCodeAt(i)) % 360;
+  }
+  return hash;
+}
+
+/**
+ * Build a decorative monogram tile for a domain: the first character on a
+ * deterministic coloured background. Generated entirely locally — we never
+ * fetch a favicon, so the user's site list never leaves the device (a network
+ * request, even for a public icon, would reveal the list to that host or a
+ * third-party favicon service).
+ */
+function buildMonogram(domain: string): HTMLElement {
+  const tile = document.createElement("span");
+  tile.className = "scope-site-icon";
+  tile.setAttribute("aria-hidden", "true");
+  tile.textContent = (domain.charAt(0) || "?").toUpperCase();
+  tile.style.backgroundColor = `hsl(${monogramHue(domain)}, 52%, 38%)`;
+  return tile;
+}
+
 /** Build a single list row: the domain label + its remove button. */
 function buildSiteRow(listKey: "allowlist" | "denylist", domain: string): HTMLElement {
   const row = document.createElement("div");
   row.className = "scope-site-row";
   row.setAttribute("role", "listitem");
+
+  // Decorative monogram tile: deterministic colour from the domain, generated
+  // locally — no favicon fetch, so the list never leaves the device.
+  row.appendChild(buildMonogram(domain));
 
   const label = document.createElement("span");
   label.className = "scope-site-domain";

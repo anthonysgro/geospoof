@@ -12,6 +12,13 @@
   --brand-hover: #45a049;
   --accent: #f5a623; /* favorite star */
 
+  /* Neutral secondary button (medium emphasis) — grey, so brand green stays
+     reserved for the single primary action. Theme-variant (dark overrides
+     below); text/fill keep WCAG-AA contrast on both themes. */
+  --btn-secondary: #e8e8e8;
+  --btn-secondary-hover: #dcdcdc;
+  --btn-secondary-text: #444444;
+
   /* Surfaces (light defaults) */
   --bg: #f5f5f5;
   --surface: #ffffff;
@@ -77,6 +84,10 @@
     --surface-hover: #3b3a41;
     --badge-bg: #23222b;
 
+    --btn-secondary: #3b3a41;
+    --btn-secondary-hover: #45444c;
+    --btn-secondary-text: #fbfbfe;
+
     --text: #fbfbfe;
     --text-muted: #fbfbfe;
     --text-strong: #fbfbfe;
@@ -106,6 +117,9 @@ body.theme-light {
   --surface-alt: #f5f5f5;
   --surface-hover: #f5f5f5;
   --badge-bg: #e0e0e0;
+  --btn-secondary: #e8e8e8;
+  --btn-secondary-hover: #dcdcdc;
+  --btn-secondary-text: #444444;
   --text: #333;
   --text-muted: #666;
   --text-strong: #2c3e50;
@@ -130,6 +144,9 @@ body.theme-dark {
   --surface-alt: #2b2a33;
   --surface-hover: #3b3a41;
   --badge-bg: #23222b;
+  --btn-secondary: #3b3a41;
+  --btn-secondary-hover: #45444c;
+  --btn-secondary-text: #fbfbfe;
   --text: #fbfbfe;
   --text-muted: #fbfbfe;
   --text-strong: #fbfbfe;
@@ -259,6 +276,11 @@ input {
 .nav-tab:hover {
   color: var(--text);
   background: var(--surface-hover);
+  /* Keep the baseline underline visible under the hovered tab — without this
+     the hover background (== page bg in light theme) paints over it and it
+     reads as white. The .active brand underline below still wins on the
+     active tab (equal specificity, later rule). */
+  border-bottom-color: var(--text-subtle);
 }
 
 .nav-tab.active {
@@ -997,14 +1019,6 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   white-space: pre-wrap;
 }
 
-#detailsView h3,
-#filtersView h3 {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-strong);
-  margin-bottom: 16px;
-}
-
 /* ───────────────────────────────────────────────────────────────────────────
    Advanced section
    ────────────────────────────────────────────────────────────────────── */
@@ -1517,13 +1531,16 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-top: 0;
   margin-bottom: 8px;
 }
 
+/* Section-heading tier — brand green, peer of .section-heading ("LOCATION").
+   Heads the list section in the Filters tab. */
 .scope-list-title {
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--brand);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -1563,7 +1580,7 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   flex-shrink: 0;
   padding: 10px 14px;
   background: var(--brand);
-  border: none;
+  border: 1px solid transparent;
   border-radius: 8px;
   color: var(--text-on-brand);
   font-size: 14px;
@@ -1581,23 +1598,32 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 }
 
 .scope-add-current {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   width: 100%;
-  padding: 8px 14px;
-  background: transparent;
-  border: 1px solid var(--brand);
+  padding: 10px 14px;
+  background: var(--btn-secondary);
+  border: none;
   border-radius: 8px;
-  color: var(--brand);
-  font-size: 13px;
+  color: var(--btn-secondary-text);
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition:
-    background 0.3s,
-    color 0.3s;
+  transition: background 0.3s;
+}
+
+/* Leading "+" affordance so the secondary action reads as "add". */
+.scope-add-current::before {
+  content: "+";
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .scope-add-current:hover {
-  background: var(--brand);
-  color: var(--text-on-brand);
+  background: var(--btn-secondary-hover);
 }
 
 .scope-inline-msg {
@@ -1650,6 +1676,21 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   background: var(--surface-hover);
 }
 
+.scope-site-icon {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1;
+  user-select: none;
+}
+
 .scope-site-domain {
   flex: 1;
   min-width: 0;
@@ -1678,4 +1719,14 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 .scope-site-remove:hover {
   color: var(--danger);
   background: var(--surface-hover);
+}
+
+/* Keyboard focus rings, consistent with .favorite-chip:focus-visible. */
+.scope-mode-btn:focus-visible,
+.scope-add-row input:focus-visible,
+.scope-add-row button:focus-visible,
+.scope-add-current:focus-visible,
+.scope-site-remove:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
 }
