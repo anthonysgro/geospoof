@@ -19,9 +19,11 @@ import type {
   RemoveFavoritePayload,
   RenameFavoritePayload,
   FavoriteResponse,
+  UpdateSettingsPayload,
 } from "@/shared/types/messages";
 import type { LocationName } from "@/shared/types/settings";
 import { setDebugEnabled, setVerbosityLevel, createLogger } from "@/shared/utils/debug-logger";
+import { computeEffectiveEnabled } from "@/shared/utils/scope";
 import { loadSettings, updateSettings } from "./settings";
 
 const logger = createLogger("BG");
@@ -49,24 +51,50 @@ export async function handleMessage(
 
     switch (message.type) {
       case "GET_SETTINGS": {
-        // Safari: when the popup (no sender.tab) asks for settings, adopt the
-        // app's pending snapshot first so the popup reflects what the user set
-        // in the containing app — without it the popup can show stale "off"
-        // state until a tab event triggers adoption. Scoped to popup-originated
-        // messages so content scripts don't incur a native round-trip per page.
-        if (__SAFARI__ && _sender.tab == null) {
-          await adoptPendingSettingsFromApp();
+        // Popup branch (no sender.tab): return the full Settings object so the
+        // popup can render the selected scope mode and both site lists
+        // (Req 13.2). Content-script branch returns a scoped, list-free payload.
+        if (_sender.tab == null) {
+          // Safari: adopt the app's pending snapshot first so the popup
+          // reflects what the user set in the containing app — without it the
+          // popup can show stale "off" state until a tab event triggers
+          // adoption. Scoped to popup-originated messages so content scripts
+          // don't incur a native round-trip per page.
+          if (__SAFARI__) {
+            await adoptPendingSettingsFromApp();
+          }
+
+          const settings = await loadSettings();
+          logger.debug("Loaded settings (popup):", settings);
+          return settings;
         }
 
+        // Content-script branch: the Background is the sole gatekeeper. It
+        // resolves Effective_Enabled for the requesting tab's top-level URL via
+        // the shared source of truth and returns a payload typed as
+        // UpdateSettingsPayload, which structurally has NO allowlist/denylist
+        // keys — the lists cannot leak into a page (Req 6.6, 6.7, 8.5, 8.7).
         const settings = await loadSettings();
-        logger.debug("Loaded settings:", settings);
+        logger.debug("Loaded settings (content script):", settings);
 
-        // Badge recovery: when a content script sends GET_SETTINGS, it confirms
-        // it is alive. Update the badge to green if protection is enabled and
-        // the tab URL is not restricted.
-        const senderTabId = _sender.tab?.id;
-        const senderTabUrl = _sender.tab?.url;
-        if (senderTabId != null && settings.enabled && !isRestrictedUrl(senderTabUrl ?? "")) {
+        const senderTabId = _sender.tab.id;
+        const senderTabUrl = _sender.tab.url;
+
+        // Effective_Enabled resolves to false when the URL is missing,
+        // unparseable, restricted, or out of scope (Req 8.7).
+        const effectiveEnabled = computeEffectiveEnabled({
+          masterEnabled: settings.enabled,
+          scopeMode: settings.scopeMode,
+          allowlist: settings.allowlist,
+          denylist: settings.denylist,
+          topLevelUrl: senderTabUrl,
+          isRestricted: isRestrictedUrl,
+        });
+
+        // Badge recovery: a content-script GET_SETTINGS confirms the script is
+        // alive. Reflect the per-tab decision — green when spoofing is
+        // effectively enabled for this tab.
+        if (senderTabId != null && effectiveEnabled) {
           void browser.action.setBadgeBackgroundColor({
             color: "green",
             tabId: senderTabId,
@@ -74,7 +102,15 @@ export async function handleMessage(
           void browser.action.setBadgeText({ text: "✓", tabId: senderTabId });
         }
 
-        return settings;
+        const scoped: UpdateSettingsPayload = {
+          enabled: effectiveEnabled,
+          location: settings.location,
+          timezone: settings.timezone,
+          debugLogging: settings.debugLogging,
+          verbosityLevel: settings.verbosityLevel,
+          webrtcProtection: settings.webrtcProtection,
+        };
+        return scoped;
       }
 
       case "SET_LOCATION":
