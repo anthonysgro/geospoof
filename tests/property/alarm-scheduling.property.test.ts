@@ -27,6 +27,9 @@ function makeSettings(overrides?: Partial<Settings>): Settings {
     verbosityLevel: "INFO",
     theme: "system",
     favorites: [],
+    scopeMode: "all",
+    whitelist: [],
+    blacklist: [],
     ...overrides,
   };
 }
@@ -55,7 +58,15 @@ async function captureOnUpdatedListener(settings: Settings): Promise<Listener> {
   await import("@/background");
   const mock = browser.tabs.onUpdated as unknown as Record<string, ReturnType<typeof vi.fn>>;
   expect(mock["addListener"]).toHaveBeenCalled();
-  return mock["addListener"].mock.calls[0][0] as Listener;
+  // The background registers multiple tabs.onUpdated listeners (activity-watcher
+  // resync trigger, worker-filter URL cache, and the badge/injection-alarm
+  // handler). The browser fires all of them on a navigation, so invoke every
+  // captured listener — matching real behavior and staying robust to the order
+  // in which the modules happen to register.
+  const listeners = mock["addListener"].mock.calls.map((c) => c[0] as Listener);
+  return (tabId, changeInfo, tab) => {
+    for (const l of listeners) l(tabId, changeInfo, tab);
+  };
 }
 
 async function flushMicrotasks(): Promise<void> {

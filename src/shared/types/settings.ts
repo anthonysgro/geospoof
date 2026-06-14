@@ -55,6 +55,11 @@ export interface Favorite {
 }
 
 /**
+ * Site-scoping mode. "all" preserves the pre-1.1 global behavior.
+ */
+export type ScopeMode = "all" | "whitelist" | "blacklist";
+
+/**
  * Complete extension settings persisted in browser.storage.local.
  */
 export interface Settings {
@@ -84,6 +89,12 @@ export interface Settings {
   theme: "system" | "light" | "dark";
   /** Saved favorite locations */
   favorites: Favorite[];
+  /** Which sites are spoofed when `enabled` is true */
+  scopeMode: ScopeMode;
+  /** Normalized domain strings spoofed in whitelist mode */
+  whitelist: string[];
+  /** Normalized domain strings excluded in blacklist mode */
+  blacklist: string[];
 }
 
 /**
@@ -96,7 +107,7 @@ export const DEFAULT_SETTINGS: Settings = {
   locationName: null,
   webrtcProtection: false,
   onboardingCompleted: false,
-  version: "1.0",
+  version: "1.1",
   // Epoch 0 (not Date.now()): a never-saved settings object hasn't been
   // "updated" yet. On Safari first run the app→extension adoption gate in
   // app-bridge.ts compares the app's pending-write timestamp against this; a
@@ -109,4 +120,7 @@ export const DEFAULT_SETTINGS: Settings = {
   verbosityLevel: "INFO",
   theme: "system",
   favorites: [],
+  scopeMode: "all",
+  whitelist: [],
+  blacklist: [],
 };

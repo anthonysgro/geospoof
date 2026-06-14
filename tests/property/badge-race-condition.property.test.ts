@@ -28,6 +28,9 @@ function makeSettings(overrides?: Partial<Settings>): Settings {
     verbosityLevel: "INFO",
     theme: "system",
     favorites: [],
+    scopeMode: "all",
+    whitelist: [],
+    blacklist: [],
     ...overrides,
   };
 }
@@ -63,7 +66,15 @@ async function captureHandlers(s: Settings): Promise<CapturedHandlers> {
 
   const updatedMock = browser.tabs.onUpdated as unknown as Record<string, ReturnType<typeof vi.fn>>;
   expect(updatedMock["addListener"]).toHaveBeenCalled();
-  const onUpdated = updatedMock["addListener"].mock.calls[0][0] as Listener;
+  // The background registers multiple tabs.onUpdated listeners (activity-watcher
+  // resync trigger, worker-filter URL cache, and the badge/injection-alarm
+  // handler). The browser fires all of them on a navigation, so invoke every
+  // captured listener — matching real behavior and staying robust to the order
+  // in which the modules happen to register.
+  const updatedListeners = updatedMock["addListener"].mock.calls.map((c) => c[0] as Listener);
+  const onUpdated: Listener = (tabId, changeInfo, tab) => {
+    for (const l of updatedListeners) l(tabId, changeInfo, tab);
+  };
 
   const alarmMock = browser.alarms.onAlarm as unknown as Record<string, ReturnType<typeof vi.fn>>;
   expect(alarmMock["addListener"]).toHaveBeenCalled();
