@@ -34,7 +34,7 @@ const logger = createLogger("BG");
 import { geocodeQuery, reverseGeocode } from "./geocoding";
 import { getTimezoneForCoordinates } from "./timezone";
 import { setWebRTCProtection } from "./webrtc";
-import { updateBadge } from "./badge";
+import { updateBadge, setBadgeForTab, badgeStateFor } from "./badge";
 import {
   broadcastSettingsToTabs,
   injectContentScriptIntoExistingTabs,
@@ -95,14 +95,10 @@ export async function handleMessage(
         });
 
         // Badge recovery: a content-script GET_SETTINGS confirms the script is
-        // alive. Reflect the per-tab decision — green when spoofing is
-        // effectively enabled for this tab.
-        if (senderTabId != null && effectiveEnabled) {
-          void browser.action.setBadgeBackgroundColor({
-            color: "green",
-            tabId: senderTabId,
-          });
-          void browser.action.setBadgeText({ text: "✓", tabId: senderTabId });
+        // alive. Reflect the per-tab decision via the shared three-state badge
+        // mapping using the already-computed Effective_Enabled (Req 12.1–12.3).
+        if (senderTabId != null) {
+          setBadgeForTab(senderTabId, badgeStateFor(settings.enabled, effectiveEnabled));
         }
 
         const scoped: UpdateSettingsPayload = {
@@ -354,17 +350,11 @@ export async function handleSetProtectionStatus(
   const settings = await updateSettings({ enabled });
   logger.info("Protection status updated:", { enabled });
 
-  await updateBadge(enabled);
-
   if (enabled) {
     await injectContentScriptIntoExistingTabs();
-  } else {
-    const tabs = await browser.tabs.query({});
-    for (const tab of tabs) {
-      void browser.action.setBadgeBackgroundColor({ color: "gray", tabId: tab.id });
-      void browser.action.setBadgeText({ text: "", tabId: tab.id });
-    }
   }
+
+  await updateBadge();
 
   await broadcastSettingsToTabs(settings);
 }
@@ -483,7 +473,7 @@ export async function handleSetScopeMode(payload: SetScopeModePayload): Promise<
   }
 
   await broadcastSettingsToTabs(settings);
-  await updateBadge(settings.enabled);
+  await updateBadge();
   return { success: true };
 }
 
@@ -516,7 +506,7 @@ export async function handleAddScopeSite(payload: ScopeSitePayload): Promise<Sco
   }
 
   await broadcastSettingsToTabs(updated);
-  await updateBadge(updated.enabled);
+  await updateBadge();
   return { success: true };
 }
 
@@ -540,6 +530,6 @@ export async function handleRemoveScopeSite(payload: ScopeSitePayload): Promise<
   }
 
   await broadcastSettingsToTabs(updated);
-  await updateBadge(updated.enabled);
+  await updateBadge();
   return { success: true };
 }

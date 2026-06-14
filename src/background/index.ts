@@ -12,7 +12,7 @@ import type { Message, UpdateSettingsPayload } from "@/shared/types/messages";
 import { loadSettings, saveSettings } from "./settings";
 import { setDebugEnabled, setVerbosityLevel, createLogger } from "@/shared/utils/debug-logger";
 import { setWebRTCProtection } from "./webrtc";
-import { updateBadge } from "./badge";
+import { updateBadge, setBadgeForTab, badgeStateFor } from "./badge";
 import { broadcastSettingsToTabs, isRestrictedUrl, checkTabInjection } from "./tabs";
 import { computeEffectiveEnabled } from "@/shared/utils/scope";
 import { handleMessage, handleSetLocation } from "./messages";
@@ -58,7 +58,8 @@ export {
 } from "./geocoding";
 export { getTimezoneForCoordinates, clearTimezoneCache, computeOffsets } from "./timezone";
 export { setWebRTCProtection } from "./webrtc";
-export { updateBadge } from "./badge";
+export { updateBadge, setBadgeForTab, badgeStateFor } from "./badge";
+export type { BadgeState } from "./badge";
 export { broadcastSettingsToTabs, isRestrictedUrl, checkTabInjection } from "./tabs";
 export {
   handleMessage,
@@ -219,7 +220,7 @@ async function initialize(): Promise<void> {
     await broadcastSettingsToTabs(settings);
   }
 
-  await updateBadge(settings.enabled);
+  await updateBadge();
 
   // Auto-sync VPN location on startup if enabled
   if (settings.vpnSyncEnabled) {
@@ -477,16 +478,26 @@ if (browser.tabs && browser.tabs.onUpdated) {
         void (async () => {
           const settings = await loadSettings();
 
-          if (!settings.enabled) {
-            void browser.action.setBadgeBackgroundColor({ color: "gray", tabId });
-            void browser.action.setBadgeText({ text: "", tabId });
-            return;
-          }
+          // Resolve the tab's Effective_Enabled from its top-level URL via the
+          // shared source of truth, then map to the three-state badge (Req
+          // 12.1–12.5). Restricted/out-of-scope URLs resolve to false inside
+          // computeEffectiveEnabled and therefore show the out-of-scope badge.
+          const effectiveEnabled = computeEffectiveEnabled({
+            masterEnabled: settings.enabled,
+            scopeMode: settings.scopeMode,
+            allowlist: settings.allowlist,
+            denylist: settings.denylist,
+            topLevelUrl: tab.url,
+            isRestricted: isRestrictedUrl,
+          });
 
-          const isRestricted = isRestrictedUrl(tab.url!);
-          if (isRestricted) {
-            void browser.action.setBadgeBackgroundColor({ color: "gray", tabId });
-            void browser.action.setBadgeText({ text: "", tabId });
+          setBadgeForTab(tabId, badgeStateFor(settings.enabled, effectiveEnabled));
+
+          // Nothing to verify when spoofing isn't effectively enabled for this
+          // tab (master off, restricted, or out of scope), so skip scheduling
+          // injection checks — this also avoids the alarm path overwriting the
+          // out-of-scope/master-off badge with the active state.
+          if (!effectiveEnabled) {
             return;
           }
 
