@@ -196,7 +196,7 @@ export function HeroSection({ className }: { className?: string }) {
                 <span className="font-semibold text-(--color-canvas-foreground)">
                   5.0
                 </span>{" "}
-                Chrome
+                Firefox
               </span>
             </span>
             <span
@@ -214,7 +214,7 @@ export function HeroSection({ className }: { className?: string }) {
                 <span className="font-semibold text-(--color-canvas-foreground)">
                   4.0
                 </span>{" "}
-                Firefox
+                Chrome
               </span>
             </span>
           </div>
