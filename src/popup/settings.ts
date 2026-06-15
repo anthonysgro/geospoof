@@ -8,6 +8,7 @@ import { updateDetailsView, updateStatusBadge, displayLocation } from "./ui";
 import { showOnboarding } from "./onboarding";
 import { t } from "./i18n";
 import { renderFavorites } from "./favorites";
+import { renderScope, renderScopeLoadError } from "./scope";
 
 /**
  * Apply a theme class to the document body.
@@ -68,6 +69,8 @@ export async function loadSettings(): Promise<void> {
     }
 
     renderFavorites(settings);
+
+    renderScope(settings);
 
     updateDetailsView(settings);
 
@@ -144,6 +147,9 @@ export async function loadSettings(): Promise<void> {
     });
   } catch (error: unknown) {
     console.error("Failed to load settings:", error);
+    // Surface the scope-load error state: default selector to "all" with an
+    // inline "settings could not be loaded" message (Req 13.3).
+    renderScopeLoadError();
   }
 }
 

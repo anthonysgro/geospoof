@@ -2,8 +2,10 @@
  * Property-Based Tests for VPN Sync
  * Feature: vpn-region-sync
  *
- * Tests use the three-service parallel architecture:
- *   ipify.org (IP detection) → geojs.io + freeipapi + reallyfreegeoip (parallel, first wins)
+ * Tests use a tiered geo architecture:
+ *   IP detection (ip-echo) → primary tier raced in parallel (ipinfo, freeipapi,
+ *   geojs); reallyfreegeoip is a fallback tier, consulted only if every primary
+ *   service fails. Happy path = 1 ip-echo + 3 primary fetches.
  *
  * Mock shapes:
  *   geojs:          { ip, city, country, latitude: string, longitude: string }
@@ -31,10 +33,97 @@ function ipv4Arb(): fc.Arbitrary<string> {
     .map(([a, b, c, d]) => `${a}.${b}.${c}.${d}`);
 }
 
+/** Extract a string URL from a fetch() first-argument (string | URL | Request). */
+function urlOf(input: unknown): string {
+  if (typeof input === "string") return input;
+  if (input instanceof URL) return input.href;
+  if (input && typeof input === "object" && "url" in input) return String((input as Request).url);
+  return String(input);
+}
+
 /**
- * Mock a successful 5-fetch sync: ipify → geojs + freeipapi + reallyfreegeoip + ipinfo (parallel).
- * geojs returns lat/lng as strings; the others as numbers.
- * ipinfo returns loc as "lat,lng" string.
+ * URL-aware fetch mock. Routes by destination host rather than call order, so it
+ * is independent of how many geo services are raced or in what order:
+ *   - IP-echo endpoints (anything that isn't a known geo host) → plaintext IP.
+ *   - geojs   → { ip, city, country, latitude/longitude as strings }
+ *   - freeipapi → { ipAddress, cityName, countryName, latitude/longitude }
+ *   - reallyfreegeoip → { ip, city, country_name, latitude/longitude }
+ *   - ipinfo  → { ip, city, country, loc: "lat,lng" }
+ *
+ * Field values are passed through verbatim (no defaulting) so edge-case tests
+ * can inject missing/non-numeric/invalid values. Because it uses
+ * mockImplementation (not a one-shot queue), it never leaves a stray queued
+ * response to desync the next sync or the next test.
+ */
+function mockGeoRaw(opts: {
+  echoIp: string;
+  geoIp?: unknown;
+  lat: unknown;
+  lon: unknown;
+  city?: unknown;
+  country?: unknown;
+}) {
+  const geoIp = "geoIp" in opts ? opts.geoIp : opts.echoIp;
+  const { lat, lon, city, country } = opts;
+  vi.mocked(fetch).mockImplementation((input: RequestInfo | URL) => {
+    const url = urlOf(input);
+    if (url.includes("get.geojs.io")) {
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            ip: geoIp,
+            city,
+            country,
+            latitude: typeof lat === "number" ? String(lat) : lat,
+            longitude: typeof lon === "number" ? String(lon) : lon,
+          }),
+      } as Response);
+    }
+    if (url.includes("freeipapi.com")) {
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            ipAddress: geoIp,
+            cityName: city,
+            countryName: country,
+            latitude: lat,
+            longitude: lon,
+          }),
+      } as Response);
+    }
+    if (url.includes("reallyfreegeoip.org")) {
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            ip: geoIp,
+            city,
+            country_name: country,
+            latitude: lat,
+            longitude: lon,
+          }),
+      } as Response);
+    }
+    if (url.includes("ipinfo.io")) {
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({ ip: geoIp, city, country, loc: `${String(lat)},${String(lon)}` }),
+      } as Response);
+    }
+    // IP-echo endpoint (e.g. checkip.amazonaws.com) — plaintext IP.
+    return Promise.resolve({
+      ok: true,
+      text: () => Promise.resolve(`${opts.echoIp}\n`),
+    } as Response);
+  });
+}
+
+/**
+ * Mock a successful sync with sensible defaults. ip is used for both the IP-echo
+ * and the geo response; city/country default when not supplied.
  */
 function mockFourFetchSync(
   ip: string,
@@ -49,63 +138,10 @@ function mockFourFetchSync(
 ) {
   const city = geo.city ?? geo.cityName ?? "TestCity";
   const country = geo.country ?? geo.countryName ?? "TestCountry";
-  vi.mocked(fetch)
-    // ip echo (plaintext, e.g. AWS checkip)
-    .mockResolvedValueOnce({
-      ok: true,
-      text: () => Promise.resolve(`${ip}\n`),
-    } as Response)
-    // geojs — lat/lng as strings
-    .mockResolvedValueOnce({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          ip,
-          city,
-          country,
-          latitude: String(geo.latitude),
-          longitude: String(geo.longitude),
-        }),
-    } as Response)
-    // freeipapi
-    .mockResolvedValueOnce({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          ipAddress: ip,
-          cityName: city,
-          countryName: country,
-          latitude: geo.latitude,
-          longitude: geo.longitude,
-        }),
-    } as Response)
-    // reallyfreegeoip
-    .mockResolvedValueOnce({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          ip,
-          city,
-          country_name: country,
-          latitude: geo.latitude,
-          longitude: geo.longitude,
-        }),
-    } as Response)
-    // ipinfo — loc is "lat,lng" string
-    .mockResolvedValueOnce({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          ip,
-          city,
-          country,
-          loc: `${geo.latitude},${geo.longitude}`,
-        }),
-    } as Response);
+  mockGeoRaw({ echoIp: ip, lat: geo.latitude, lon: geo.longitude, city, country });
 }
 
-// Alias for tests that reference mockTwoStepFetch — updated to use the current 4-geo-service setup.
-// The "two step" concept (ipify + geo) still applies; we just have 4 parallel geo services now.
+// Alias for tests that reference mockTwoStepFetch.
 function mockTwoStepFetch(
   ip: string,
   geo: {
@@ -123,6 +159,15 @@ function mockTwoStepFetch(
 // ============================================================
 // Preserved: vpn-region-sync properties (updated for FreeIPAPI)
 // ============================================================
+
+// Fully reset the fetch mock (implementation + any queued one-shot responses)
+// before each test. The global setup only does clearAllMocks(), which leaves
+// implementations/queues intact — and the tiered geo race can consume a
+// different number of responses per sync, so a stale queue would otherwise
+// desync later tests.
+beforeEach(() => {
+  vi.mocked(fetch).mockReset();
+});
 
 /**
  * Feature: vpn-region-sync, Property 6: VPN settings validation round-trip
@@ -455,23 +500,7 @@ describe("Feature: vpn-region-sync, Property 3: Sync coordinates flow-through", 
           await resetRateLimiter();
 
           const testIp = "203.0.113.42";
-          vi.mocked(fetch)
-            .mockResolvedValueOnce({
-              ok: true,
-              text: () => Promise.resolve(testIp),
-            } as Response)
-            .mockResolvedValueOnce({
-              ok: true,
-              json: () =>
-                Promise.resolve({
-                  ip: testIp,
-                  success: true,
-                  city,
-                  country,
-                  latitude: lat,
-                  longitude: lon,
-                }),
-            } as Response);
+          mockGeoRaw({ echoIp: testIp, lat, lon, city, country });
 
           const result = await syncVpnLocation(true);
           expect("error" in result).toBe(false);
@@ -508,23 +537,7 @@ describe("Feature: vpn-region-sync, Property 4: Success response completeness", 
           await resetRateLimiter();
 
           const testIp = "198.51.100.1";
-          vi.mocked(fetch)
-            .mockResolvedValueOnce({
-              ok: true,
-              text: () => Promise.resolve(testIp),
-            } as Response)
-            .mockResolvedValueOnce({
-              ok: true,
-              json: () =>
-                Promise.resolve({
-                  ip: testIp,
-                  success: true,
-                  city,
-                  country,
-                  latitude: lat,
-                  longitude: lon,
-                }),
-            } as Response);
+          mockGeoRaw({ echoIp: testIp, lat, lon, city, country });
 
           const result = await syncVpnLocation(true);
           expect("error" in result).toBe(false);
@@ -722,24 +735,8 @@ describe("Feature: vpn-region-sync, Property 7: Cache hit returns cached result"
 
           const testIp = "203.0.113.42";
 
-          // First call: populate cache with ipwho.is shape
-          vi.mocked(fetch)
-            .mockResolvedValueOnce({
-              ok: true,
-              text: () => Promise.resolve(testIp),
-            } as Response)
-            .mockResolvedValueOnce({
-              ok: true,
-              json: () =>
-                Promise.resolve({
-                  ip: testIp,
-                  success: true,
-                  city: "Cached",
-                  country: "Test",
-                  latitude: lat,
-                  longitude: lon,
-                }),
-            } as Response);
+          // First call: populate cache
+          mockGeoRaw({ echoIp: testIp, lat, lon, city: "Cached", country: "Test" });
 
           const firstResult = await syncVpnLocation(true);
           expect("error" in firstResult).toBe(false);
@@ -789,45 +786,12 @@ describe("Feature: vpn-region-sync, Property 8: Force refresh bypasses cache", (
           const testIp = "203.0.113.42";
 
           // First call: populate cache
-          vi.mocked(fetch)
-            .mockResolvedValueOnce({
-              ok: true,
-              text: () => Promise.resolve(testIp),
-            } as Response)
-            .mockResolvedValueOnce({
-              ok: true,
-              json: () =>
-                Promise.resolve({
-                  ip: testIp,
-                  success: true,
-                  city: "First",
-                  country: "Test",
-                  latitude: lat1,
-                  longitude: lon1,
-                }),
-            } as Response);
-
+          mockGeoRaw({ echoIp: testIp, lat: lat1, lon: lon1, city: "First", country: "Test" });
           await syncVpnLocation(true);
           await resetRateLimiter();
 
           // Second call with forceRefresh=true
-          vi.mocked(fetch)
-            .mockResolvedValueOnce({
-              ok: true,
-              text: () => Promise.resolve(testIp),
-            } as Response)
-            .mockResolvedValueOnce({
-              ok: true,
-              json: () =>
-                Promise.resolve({
-                  ip: testIp,
-                  success: true,
-                  city: "Second",
-                  country: "Test",
-                  latitude: lat2,
-                  longitude: lon2,
-                }),
-            } as Response);
+          mockGeoRaw({ echoIp: testIp, lat: lat2, lon: lon2, city: "Second", country: "Test" });
 
           const refreshResult = await syncVpnLocation(true);
           expect("error" in refreshResult).toBe(false);
@@ -845,7 +809,7 @@ describe("Feature: vpn-region-sync, Property 8: Force refresh bypasses cache", (
 
 /**
  * Feature: vpn-region-sync, Property 9: Rate limiting enforces minimum interval
- * Updated for 4-service setup: 1 ipify + 4 parallel geo services = 5 fetches per sync.
+ * Tiered setup: 1 ip-echo + 3 primary geo services = 4 fetches per sync.
  * Validates: Requirements 8.4
  */
 describe("Feature: vpn-region-sync, Property 9: Rate limiting enforces minimum interval", () => {
@@ -865,18 +829,19 @@ describe("Feature: vpn-region-sync, Property 9: Rate limiting enforces minimum i
 
         vi.mocked(fetch).mockImplementation(() => {
           const callIdx = fetchCallIndex++;
-          // Every 5th fetch (0, 5, 10...) is ipify; the rest are geo services
-          const positionInSync = callIdx % 5;
+          // Each sync = 1 ip-echo + 3 primary geo services = 4 fetches.
+          // Position 0 of every 4-block is the ip-echo (first fetch of the sync).
+          const positionInSync = callIdx % 4;
           if (positionInSync === 0) {
             ipifyTimestamps.push(Date.now());
-            const syncNum = Math.floor(callIdx / 5);
+            const syncNum = Math.floor(callIdx / 4);
             return Promise.resolve({
               ok: true,
               text: () => Promise.resolve(`1.2.3.${syncNum + 1}\n`),
             } as Response);
           }
-          // Geo service responses (geojs, freeipapi, reallyfreegeoip, ipinfo)
-          const syncNum = Math.floor(callIdx / 5);
+          // Geo service responses (ipinfo, freeipapi, geojs primary tier)
+          const syncNum = Math.floor(callIdx / 4);
           const ip = `1.2.3.${syncNum + 1}`;
           return Promise.resolve({
             ok: true,
@@ -943,15 +908,16 @@ describe("Feature: ipwhois-migration, Property 1: Two HTTPS requests per sync", 
         const result = await syncVpnLocation(true);
         expect("error" in result).toBe(false);
 
-        // 1 ip-echo + 4 parallel geo services = 5 total
-        expect(fetch).toHaveBeenCalledTimes(5);
+        // 1 ip-echo + 3 primary geo services = 4 total. reallyfreegeoip is a
+        // fallback tier, only hit if every primary service fails.
+        expect(fetch).toHaveBeenCalledTimes(4);
 
         // First call is the primary IP-echo endpoint (AWS checkip).
         const firstUrl = vi.mocked(fetch).mock.calls[0][0] as string;
         expect(firstUrl).toBe("https://checkip.amazonaws.com/");
 
         // All geo service URLs use HTTPS
-        for (let i = 1; i < 5; i++) {
+        for (let i = 1; i < 4; i++) {
           const url = vi.mocked(fetch).mock.calls[i][0] as string;
           expect(url.startsWith("https://")).toBe(true);
         }
@@ -1310,23 +1276,7 @@ describe("Feature: ipwhois-migration, Property 4: Missing city/country defaults 
           await resetRateLimiter();
 
           const testIp = "203.0.113.42";
-          vi.mocked(fetch)
-            .mockResolvedValueOnce({
-              ok: true,
-              text: () => Promise.resolve(testIp),
-            } as Response)
-            .mockResolvedValueOnce({
-              ok: true,
-              json: () =>
-                Promise.resolve({
-                  ip: testIp,
-                  success: true,
-                  city,
-                  country,
-                  latitude: 40.7128,
-                  longitude: -74.006,
-                }),
-            } as Response);
+          mockGeoRaw({ echoIp: testIp, lat: 40.7128, lon: -74.006, city, country });
 
           const result = await syncVpnLocation(true);
           expect("error" in result).toBe(false);
@@ -1772,8 +1722,8 @@ describe("Feature: ipwhois-migration, Property 9: Force refresh bypasses cache",
             expect(result.longitude).toBeCloseTo(lon2, 10);
             expect(result.city).toBe("Second");
           }
-          // 1 ipify + 4 parallel geo services = 5 total
-          expect(fetch).toHaveBeenCalledTimes(5);
+          // 1 ip-echo + 3 primary geo services = 4 total (fallback tier unused).
+          expect(fetch).toHaveBeenCalledTimes(4);
         }
       ),
       { numRuns: 100 }
@@ -1805,17 +1755,18 @@ describe("Feature: ipwhois-migration, Property 10: Rate limiting enforces minimu
 
         vi.mocked(fetch).mockImplementation(() => {
           const callIdx = fetchCallIndex++;
-          // Every 5th fetch (0, 5, 10...) is ipify; the rest are geo services
-          const positionInSync = callIdx % 5;
+          // Each sync = 1 ip-echo + 3 primary geo services = 4 fetches.
+          // Position 0 of every 4-block is the ip-echo (first fetch of the sync).
+          const positionInSync = callIdx % 4;
           if (positionInSync === 0) {
             ipifyTimestamps.push(Date.now());
-            const syncNum = Math.floor(callIdx / 5);
+            const syncNum = Math.floor(callIdx / 4);
             return Promise.resolve({
               ok: true,
               text: () => Promise.resolve(`1.2.3.${syncNum + 1}\n`),
             } as Response);
           }
-          const syncNum = Math.floor(callIdx / 5);
+          const syncNum = Math.floor(callIdx / 4);
           const ip = `1.2.3.${syncNum + 1}`;
           return Promise.resolve({
             ok: true,

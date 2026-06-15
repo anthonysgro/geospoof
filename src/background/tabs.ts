@@ -6,12 +6,23 @@
 import type { Settings } from "@/shared/types/settings";
 import type { UpdateSettingsPayload, InjectionStatus } from "@/shared/types/messages";
 import { createLogger } from "@/shared/utils/debug-logger";
+import { computeEffectiveEnabled } from "@/shared/utils/scope";
 import { updateWorkerFilterSettings } from "./worker-request-filter";
 
 const logger = createLogger("BG");
 
 /**
  * Broadcast settings to all tabs via content scripts.
+ *
+ * The background is the sole gatekeeper for the per-tab spoofing decision: the
+ * `enabled` field delivered to a tab is that tab's `Effective_Enabled` value,
+ * computed from its top-level URL via the shared `computeEffectiveEnabled`
+ * source of truth (Req 8.1, 8.2). The non-scope fields (location, timezone,
+ * debug logging, verbosity, WebRTC protection) are identical across tabs and
+ * equal to the persisted Settings (Req 8.3). The allowlist/denylist arrays are
+ * never included in any page-bound payload — the payload type structurally has
+ * no list keys, so the lists cannot leak (privacy invariant). A single value
+ * per tab is sent; `tabs.sendMessage` fans it out to every frame (Req 7.2).
  */
 export async function broadcastSettingsToTabs(settings: Settings): Promise<void> {
   // Refresh the webRequest listener's cached settings snapshot. The
@@ -21,22 +32,35 @@ export async function broadcastSettingsToTabs(settings: Settings): Promise<void>
   // every mutation flows through broadcastSettingsToTabs.
   updateWorkerFilterSettings(settings);
 
-  const { enabled, location, timezone, debugLogging, verbosityLevel, webrtcProtection } = settings;
-  const payload: UpdateSettingsPayload = {
-    enabled,
-    location,
-    timezone,
-    debugLogging,
-    verbosityLevel,
-    webrtcProtection,
-  };
+  const { location, timezone, debugLogging, verbosityLevel, webrtcProtection } = settings;
   const tabs = await browser.tabs.query({});
 
-  logger.info("Broadcasting settings to tabs:", { tabCount: tabs.length, payload });
+  logger.info("Broadcasting settings to tabs:", { tabCount: tabs.length });
 
   let failCount = 0;
   const promises: Promise<void>[] = [];
   for (const tab of tabs) {
+    // Resolve Effective_Enabled separately for each open tab against that
+    // tab's top-level URL (Req 8.1, 8.2). Restricted or undeterminable URLs
+    // resolve to false inside computeEffectiveEnabled (Req 8.6).
+    const enabled = computeEffectiveEnabled({
+      masterEnabled: settings.enabled,
+      scopeMode: settings.scopeMode,
+      allowlist: settings.allowlist,
+      denylist: settings.denylist,
+      topLevelUrl: tab.url,
+      isRestricted: isRestrictedUrl,
+    });
+
+    const payload: UpdateSettingsPayload = {
+      enabled,
+      location,
+      timezone,
+      debugLogging,
+      verbosityLevel,
+      webrtcProtection,
+    };
+
     const promise = browser.tabs
       .sendMessage(tab.id!, {
         type: "UPDATE_SETTINGS",

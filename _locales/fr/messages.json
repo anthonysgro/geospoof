@@ -1,6 +1,6 @@
 {
   "extensionName": {
-    "message": "GeoSpoof",
+    "message": "GeoSpoof: Spoof Geolocation",
     "description": "⚠️ MACHINE-TRANSLATED — needs native-speaker review. 'GeoSpoof' is a brand name; do not translate."
   },
   "extensionDescription": {
@@ -55,6 +55,90 @@
     "message": "Détails",
     "description": "Tab label for the protection details view."
   },
+  "tab_filters": {
+    "message": "Filtres",
+    "description": "Tab label for the site-scoping filters view."
+  },
+  "filters_heading": {
+    "message": "Filtres de sites",
+    "description": "Heading for the site-scoping filters panel."
+  },
+  "filters_modeGroupAriaLabel": {
+    "message": "Mode de portée",
+    "description": "Accessible label for the scope-mode selector group."
+  },
+  "filters_modeAll": {
+    "message": "Tous",
+    "description": "Scope mode option: spoof on every site."
+  },
+  "filters_modeAllowlist": {
+    "message": "Liste d'autorisation",
+    "description": "Scope mode option: spoof only on listed sites."
+  },
+  "filters_modeDenylist": {
+    "message": "Liste de blocage",
+    "description": "Scope mode option: spoof on every site except listed ones."
+  },
+  "filters_modeAllDesc": {
+    "message": "L'usurpation s'applique à tous les sites.",
+    "description": "Description shown under the selector when 'All' mode is active."
+  },
+  "filters_modeAllowlistDesc": {
+    "message": "L'usurpation s'applique uniquement aux sites listés.",
+    "description": "Description shown under the selector when 'Allowlist' mode is active."
+  },
+  "filters_modeDenylistDesc": {
+    "message": "L'usurpation s'applique à tous les sites sauf ceux listés.",
+    "description": "Description shown under the selector when 'Denylist' mode is active."
+  },
+  "filters_addPlaceholder": {
+    "message": "example.com",
+    "description": "Placeholder text in the add-site input."
+  },
+  "filters_addButton": {
+    "message": "Ajouter",
+    "description": "Button that adds the typed domain to the active list."
+  },
+  "filters_invalidDomain": {
+    "message": "Domaine non valide",
+    "description": "Inline message shown when the typed domain is invalid."
+  },
+  "filters_emptyList": {
+    "message": "Aucun site ajouté pour le moment",
+    "description": "Indicator shown when the active site list is empty."
+  },
+  "filters_notSaved": {
+    "message": "⚠️ Modification non enregistrée",
+    "description": "Inline message shown when a scope change could not be saved."
+  },
+  "filters_loadError": {
+    "message": "⚠️ Impossible de charger les paramètres",
+    "description": "Inline message shown when the popup cannot load settings."
+  },
+  "filters_removeAriaLabel": {
+    "message": "Supprimer le site",
+    "description": "Accessible label prefix on a site's remove button."
+  },
+  "filters_addCurrentButton": {
+    "message": "Ajouter le site actuel",
+    "description": "Button that adds the active tab's site to the active list."
+  },
+  "filters_currentPageRestricted": {
+    "message": "Cette page ne peut pas être ajoutée",
+    "description": "Inline message shown when the current page is a restricted URL that cannot be added."
+  },
+  "filters_currentPageInvalid": {
+    "message": "Ce site ne peut pas être ajouté",
+    "description": "Inline message shown when the current tab's hostname cannot be added to a list."
+  },
+  "filters_allowedSites": {
+    "message": "Sites autorisés",
+    "description": "Header above the list of allowlisted sites."
+  },
+  "filters_blockedSites": {
+    "message": "Sites bloqués",
+    "description": "Header above the list of denylisted sites."
+  },
   "toggle_locationProtection": {
     "message": "Protection de localisation",
     "description": "Label for the toggle that enables location spoofing."
@@ -66,6 +150,14 @@
   "heading_location": {
     "message": "Localisation",
     "description": "Section heading above the spoofed location display."
+  },
+  "heading_protection": {
+    "message": "Protection",
+    "description": "Section heading above the protection toggles in the Main tab."
+  },
+  "heading_mode": {
+    "message": "Mode",
+    "description": "Section heading above the scope-mode selector in the Filters tab."
   },
   "location_none": {
     "message": "Aucune localisation définie",

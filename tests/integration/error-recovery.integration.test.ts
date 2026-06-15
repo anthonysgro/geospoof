@@ -456,6 +456,9 @@ describe("Error Recovery Integration Tests", () => {
         verbosityLevel: "INFO",
         theme: "system" as const,
         favorites: [],
+        scopeMode: "all" as const,
+        allowlist: [],
+        denylist: [],
       };
 
       // Act: Broadcast settings (should not throw)
@@ -694,12 +697,22 @@ describe("Error Recovery Integration Tests", () => {
       await background.handleSetLocation(location);
 
       // Step 4: Enable protection
-      // Mock storage to return settings with location set
-      browser.storage.local.get.mockResolvedValueOnce({
-        settings: {
-          ...getSavedSettings(),
-          enabled: false,
-        },
+      // updateBadge() (invoked by handleSetProtectionStatus) independently
+      // re-reads settings via loadSettings(). Make storage reads reflect the
+      // latest persisted settings (read-after-write) so the re-read sees
+      // enabled:true and the badge resolves to the active "green" state for a
+      // normal (in-scope, non-restricted) tab.
+      const persistedBase = { ...getLastSavedSettings(), enabled: false };
+      browser.storage.local.get.mockImplementation(() => {
+        // Access via index signature to avoid unbound-method on the mock.
+        const setMock = (
+          browser.storage.local as unknown as Record<string, { mock: { calls: unknown[][] } }>
+        )["set"];
+        const calls = setMock.mock.calls;
+        const latest = calls.length
+          ? (calls[calls.length - 1][0] as { settings: typeof persistedBase }).settings
+          : persistedBase;
+        return Promise.resolve({ settings: latest });
       });
 
       await background.handleSetProtectionStatus({ enabled: true });

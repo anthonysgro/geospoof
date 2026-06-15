@@ -118,6 +118,8 @@
 import type { Settings } from "@/shared/types/settings";
 import { buildStandaloneWorkerPayload } from "@/shared/worker-payload";
 import { loadSettings } from "./settings";
+import { isRestrictedUrl } from "./tabs";
+import { computeEffectiveEnabled } from "@/shared/utils/scope";
 import { createLogger } from "@/shared/utils/debug-logger";
 
 const logger = createLogger("BG");
@@ -436,6 +438,12 @@ function readSecFetchDest(headers: HttpHeader[] | undefined): string | null {
  * (e.g. Cloudflare Turnstile, Stripe) are classified as "pass"
  * and left completely unmodified. When the tab's page URL is
  * unknown, defaults to "pass" (safe fallback).
+ *
+ * Scope gate (Req 11): a candidate "patch" is additionally gated on
+ * `computeEffectiveEnabled` for the tab's top-level URL so the filter
+ * agrees with the background's per-tab decision. Out-of-scope tabs
+ * (allowlist miss, denylist hit, restricted URL, or master off) and
+ * unknown tabs (`tabId === -1`, no cached URL) classify as "pass".
  */
 function classifyRequest(details: WebRequestDetailsWithHeaders): Decision {
   const dest = readSecFetchDest(details.requestHeaders);
@@ -453,7 +461,23 @@ function classifyRequest(details: WebRequestDetailsWithHeaders): Decision {
 
   // Origin gate: only patch same-registrable-domain workers.
   const tabPageUrl = tabPageUrlCache.get(details.tabId);
-  if (!tabPageUrl) return "pass"; // unknown tab → safe fallback
+  if (!tabPageUrl) return "pass"; // no cached URL / tabId === -1 / unknown tab → safe fallback
+
+  // Scope gate (Req 11): consult the single source of truth so the worker
+  // filter agrees with the background's per-tab decision for this top-level
+  // URL. Out-of-scope (allowlist miss / denylist hit / restricted / master
+  // off) ⇒ leave the worker script unmodified. When settings haven't loaded
+  // yet, fall back to "pass".
+  if (!cachedSettings) return "pass";
+  const effective = computeEffectiveEnabled({
+    masterEnabled: cachedSettings.enabled,
+    scopeMode: cachedSettings.scopeMode,
+    allowlist: cachedSettings.allowlist,
+    denylist: cachedSettings.denylist,
+    topLevelUrl: tabPageUrl,
+    isRestricted: isRestrictedUrl,
+  });
+  if (!effective) return "pass"; // out-of-scope → unmodified
 
   const workerDomain = getRegistrableDomain(details.url);
   const pageDomain = getRegistrableDomain(tabPageUrl);

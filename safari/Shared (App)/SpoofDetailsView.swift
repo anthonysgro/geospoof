@@ -16,20 +16,28 @@ import SafariServices
 /// Wraps the Details screen in a navigation container for use as a tab root.
 struct DetailsTab: View {
     @ObservedObject var controller: SpoofController
+    /// iOS folds the "Test Your Protection" links into Details (it has no
+    /// separate Test tab); macOS keeps its dedicated Test sidebar section, so
+    /// it leaves this off to avoid duplicating them.
+    var includeTestLinks: Bool = false
 
     var body: some View {
         AdaptiveNavigationStack {
-            SpoofDetailsView(controller: controller)
+            SpoofDetailsView(controller: controller, includeTestLinks: includeTestLinks)
         }
     }
 }
 
 struct SpoofDetailsView: View {
     @ObservedObject var controller: SpoofController
+    var includeTestLinks: Bool = false
     @State private var expandedGroups: Set<String> = []
 
     var body: some View {
         Form {
+            if includeTestLinks {
+                ProtectionTestLinks()
+            }
             locationSection
             timezoneSection
             webrtcSection

@@ -1,6 +1,6 @@
 {
   "extensionName": {
-    "message": "GeoSpoof",
+    "message": "GeoSpoof: Spoof Geolocation",
     "description": "⚠️ MACHINE-TRANSLATED — needs native-speaker review. 'GeoSpoof' is a brand name; do not translate."
   },
   "extensionDescription": {
@@ -55,6 +55,90 @@
     "message": "详情",
     "description": "Tab label for the protection details view."
   },
+  "tab_filters": {
+    "message": "筛选",
+    "description": "Tab label for the site-scoping filters view."
+  },
+  "filters_heading": {
+    "message": "网站筛选",
+    "description": "Heading for the site-scoping filters panel."
+  },
+  "filters_modeGroupAriaLabel": {
+    "message": "范围模式",
+    "description": "Accessible label for the scope-mode selector group."
+  },
+  "filters_modeAll": {
+    "message": "全部",
+    "description": "Scope mode option: spoof on every site."
+  },
+  "filters_modeAllowlist": {
+    "message": "允许列表",
+    "description": "Scope mode option: spoof only on listed sites."
+  },
+  "filters_modeDenylist": {
+    "message": "拒绝列表",
+    "description": "Scope mode option: spoof on every site except listed ones."
+  },
+  "filters_modeAllDesc": {
+    "message": "伪装适用于所有网站。",
+    "description": "Description shown under the selector when 'All' mode is active."
+  },
+  "filters_modeAllowlistDesc": {
+    "message": "伪装仅适用于列出的网站。",
+    "description": "Description shown under the selector when 'Allowlist' mode is active."
+  },
+  "filters_modeDenylistDesc": {
+    "message": "伪装适用于除列出网站之外的所有网站。",
+    "description": "Description shown under the selector when 'Denylist' mode is active."
+  },
+  "filters_addPlaceholder": {
+    "message": "example.com",
+    "description": "Placeholder text in the add-site input."
+  },
+  "filters_addButton": {
+    "message": "添加",
+    "description": "Button that adds the typed domain to the active list."
+  },
+  "filters_invalidDomain": {
+    "message": "不是有效的域名",
+    "description": "Inline message shown when the typed domain is invalid."
+  },
+  "filters_emptyList": {
+    "message": "尚未添加网站",
+    "description": "Indicator shown when the active site list is empty."
+  },
+  "filters_notSaved": {
+    "message": "⚠️ 更改未保存",
+    "description": "Inline message shown when a scope change could not be saved."
+  },
+  "filters_loadError": {
+    "message": "⚠️ 无法加载设置",
+    "description": "Inline message shown when the popup cannot load settings."
+  },
+  "filters_removeAriaLabel": {
+    "message": "移除网站",
+    "description": "Accessible label prefix on a site's remove button."
+  },
+  "filters_addCurrentButton": {
+    "message": "添加当前网站",
+    "description": "Button that adds the active tab's site to the active list."
+  },
+  "filters_currentPageRestricted": {
+    "message": "无法添加此页面",
+    "description": "Inline message shown when the current page is a restricted URL that cannot be added."
+  },
+  "filters_currentPageInvalid": {
+    "message": "无法添加此网站",
+    "description": "Inline message shown when the current tab's hostname cannot be added to a list."
+  },
+  "filters_allowedSites": {
+    "message": "允许的网站",
+    "description": "Header above the list of allowlisted sites."
+  },
+  "filters_blockedSites": {
+    "message": "已屏蔽的网站",
+    "description": "Header above the list of denylisted sites."
+  },
   "toggle_locationProtection": {
     "message": "位置保护",
     "description": "Label for the toggle that enables location spoofing."
@@ -66,6 +150,14 @@
   "heading_location": {
     "message": "位置",
     "description": "Section heading above the spoofed location display."
+  },
+  "heading_protection": {
+    "message": "保护",
+    "description": "Section heading above the protection toggles in the Main tab."
+  },
+  "heading_mode": {
+    "message": "模式",
+    "description": "Section heading above the scope-mode selector in the Filters tab."
   },
   "location_none": {
     "message": "未设置位置",

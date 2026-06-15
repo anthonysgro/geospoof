@@ -12,6 +12,7 @@ import {
   tabsSendMessageCallCount,
 } from "../helpers/mock-types";
 import { importBackground } from "../helpers/import-background";
+import { computeEffectiveEnabled } from "@/shared/utils/scope";
 
 /** Arbitrary for a full Settings object with all internal fields populated. */
 const settingsArb: fc.Arbitrary<Settings> = fc.record({
@@ -55,6 +56,9 @@ const settingsArb: fc.Arbitrary<Settings> = fc.record({
   verbosityLevel: fc.constantFrom("ERROR", "WARN", "INFO", "DEBUG", "TRACE"),
   theme: fc.constantFrom("system", "light", "dark"),
   favorites: fc.constant([]),
+  scopeMode: fc.constantFrom("all", "allowlist", "denylist"),
+  allowlist: fc.constant([]),
+  denylist: fc.constant([]),
 });
 
 /** The keys that MUST NOT appear in the broadcast payload. */
@@ -128,8 +132,18 @@ test("Property 4: Broadcast Payload Contains Only Scoped Fields", async () => {
       // Payload must have exactly 6 scoped keys.
       expect(Object.keys(payload)).toHaveLength(6);
 
-      // Values must match the original settings
-      expect(payload.enabled).toBe(settings.enabled);
+      // `enabled` is now resolved per tab via the shared source of truth
+      // (background-authoritative per-tab scoping), not the raw master flag.
+      const { isRestrictedUrl } = bg;
+      const expectedEnabled = computeEffectiveEnabled({
+        masterEnabled: settings.enabled,
+        scopeMode: settings.scopeMode,
+        allowlist: settings.allowlist,
+        denylist: settings.denylist,
+        topLevelUrl: "https://example.com",
+        isRestricted: isRestrictedUrl,
+      });
+      expect(payload.enabled).toBe(expectedEnabled);
       expect(payload.location).toEqual(settings.location);
       expect(payload.timezone).toEqual(settings.timezone);
       expect(payload.debugLogging).toBe(settings.debugLogging);
@@ -456,4 +470,75 @@ describe("Property 20: Settings Initialization Responsiveness", () => {
       { numRuns: 50 }
     );
   });
+});
+
+/**
+ * Property: List Sanitization Invariants
+ *
+ * Validates: Requirements 2.3, 2.5, 2.6, 15.4
+ *
+ * For any array of arbitrary entries (strings, non-strings, URLs, mixed case),
+ * validateSettings must produce an allowlist/denylist where:
+ *   - every entry is the normalized output of normalizeDomain (idempotent),
+ *   - no duplicate normalized domains exist,
+ *   - entries appear in first-occurrence order of their normalized form,
+ *   - all retained entries derive from a valid input entry.
+ */
+test("Property: list sanitization normalizes, dedupes keep-first, and is deterministic", async () => {
+  const { validateSettings } = await importBackground();
+  const { normalizeDomain } = await import("@/shared/utils/scope");
+
+  // A generator that yields a mix of valid-ish domain strings, URL-ish strings,
+  // invalid strings, and non-string junk so the sanitizer is exercised broadly.
+  const entryArb = fc.oneof(
+    fc.constantFrom(
+      "example.com",
+      "WWW.Example.COM",
+      "https://test.org/path?q=1",
+      "  sub.domain.io  ",
+      "HTTP://WWW.Site.NET:8080/x#frag"
+    ),
+    fc.constantFrom("localhost", "bad_domain.com", "*.example.com", "", "no-dot"),
+    fc.string(),
+    fc.integer(),
+    fc.constant(null),
+    fc.constant(undefined),
+    fc.record({ foo: fc.string() })
+  );
+
+  fc.assert(
+    fc.property(fc.array(entryArb, { maxLength: 30 }), (rawList: unknown[]) => {
+      const validated = validateSettings({
+        allowlist: rawList as unknown as string[],
+      });
+
+      const list = validated.allowlist;
+
+      // Compute the expected sanitized list independently.
+      const expected: string[] = [];
+      const seen = new Set<string>();
+      for (const entry of rawList) {
+        if (typeof entry !== "string") continue;
+        const normalized = normalizeDomain(entry);
+        if (normalized === null) continue;
+        if (seen.has(normalized)) continue;
+        seen.add(normalized);
+        expected.push(normalized);
+      }
+
+      // Deterministic, normalized, deduped, first-occurrence order.
+      expect(list).toEqual(expected);
+
+      // Each retained entry is idempotent under normalizeDomain.
+      for (const entry of list) {
+        expect(normalizeDomain(entry)).toBe(entry);
+      }
+
+      // No duplicates remain.
+      expect(new Set(list).size).toBe(list.length);
+
+      return true;
+    }),
+    { numRuns: 100 }
+  );
 });

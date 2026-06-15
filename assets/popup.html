@@ -59,11 +59,14 @@
       <!-- Tab Navigation -->
       <div class="tab-navigation">
         <button class="nav-tab active" id="mainTab" data-i18n="tab_main">Main</button>
+        <button class="nav-tab" id="filtersTab" data-i18n="tab_filters">Filters</button>
         <button class="nav-tab" id="detailsTab" data-i18n="tab_details">Details</button>
       </div>
 
       <!-- Main View -->
       <div class="tab-content" id="mainView">
+        <div class="section-heading" data-i18n="heading_protection">Protection</div>
+
         <!-- Protection Toggle -->
         <div class="toggle-section">
           <label class="toggle-label">
@@ -331,10 +334,145 @@
       </div>
       <!-- End Main View -->
 
+      <!-- Filters View -->
+      <div class="tab-content" id="filtersView" style="display: none">
+        <!-- Settings load error -->
+        <div
+          class="warning"
+          id="scopeLoadError"
+          style="display: none"
+          data-i18n="filters_loadError"
+        >
+          ⚠️ Settings could not be loaded
+        </div>
+
+        <div class="section-heading" data-i18n="heading_mode">Mode</div>
+
+        <!-- Scope mode selector -->
+        <div
+          class="scope-mode-tabs"
+          id="scopeModeTabs"
+          role="radiogroup"
+          aria-label="Scope mode"
+          data-i18n-aria-label="filters_modeGroupAriaLabel"
+        >
+          <button
+            class="scope-mode-btn active"
+            id="scopeModeAll"
+            data-scope-mode="all"
+            role="radio"
+            aria-checked="true"
+            data-i18n="filters_modeAll"
+          >
+            All
+          </button>
+          <button
+            class="scope-mode-btn"
+            id="scopeModeAllowlist"
+            data-scope-mode="allowlist"
+            role="radio"
+            aria-checked="false"
+            data-i18n="filters_modeAllowlist"
+          >
+            Allowlist
+          </button>
+          <button
+            class="scope-mode-btn"
+            id="scopeModeDenylist"
+            data-scope-mode="denylist"
+            role="radio"
+            aria-checked="false"
+            data-i18n="filters_modeDenylist"
+          >
+            Denylist
+          </button>
+        </div>
+
+        <!-- Mode description -->
+        <div class="scope-mode-desc" id="scopeModeDesc" data-i18n="filters_modeAllDesc">
+          Spoofing applies to every site.
+        </div>
+
+        <!-- Mode change error -->
+        <div
+          class="warning"
+          id="scopeModeError"
+          role="alert"
+          style="display: none"
+          data-i18n="filters_notSaved"
+        >
+          ⚠️ Change not saved
+        </div>
+
+        <!-- Site list manager (shown in list modes only) -->
+        <div class="scope-list-manager" id="scopeListManager" style="display: none">
+          <hr class="section-divider" />
+
+          <!-- List section heading: dynamic label (Allowed/Blocked sites) + count -->
+          <div class="scope-list-header" id="scopeListHeader">
+            <span class="scope-list-title" id="scopeListTitle" data-i18n="filters_allowedSites"
+              >Allowed sites</span
+            >
+            <span class="scope-list-count" id="scopeListCount">0</span>
+          </div>
+
+          <div class="scope-add-row">
+            <input
+              type="text"
+              id="scopeAddInput"
+              placeholder="example.com"
+              autocomplete="off"
+              spellcheck="false"
+              maxlength="253"
+              data-i18n-placeholder="filters_addPlaceholder"
+            />
+            <button id="scopeAddButton" data-i18n="filters_addButton">Add</button>
+          </div>
+
+          <!-- Add the current tab's site with one click -->
+          <div class="scope-add-current-row">
+            <button
+              id="scopeAddCurrentButton"
+              class="scope-add-current"
+              type="button"
+              data-i18n="filters_addCurrentButton"
+            >
+              Add current site
+            </button>
+          </div>
+
+          <div
+            class="scope-inline-msg"
+            id="scopeAddError"
+            role="alert"
+            style="display: none"
+            data-i18n="filters_invalidDomain"
+          >
+            Not a valid domain
+          </div>
+
+          <!-- Inline status for the add-current-site action (restricted page
+               or an un-addable hostname) -->
+          <div class="scope-inline-msg" id="scopeCurrentMsg" role="alert" style="display: none">
+            This page cannot be added
+          </div>
+
+          <div
+            class="scope-empty"
+            id="scopeEmptyIndicator"
+            style="display: none"
+            data-i18n="filters_emptyList"
+          >
+            No sites added yet
+          </div>
+
+          <div class="scope-list" id="scopeList" role="list" aria-label="Scoped sites"></div>
+        </div>
+      </div>
+      <!-- End Filters View -->
+
       <!-- Details View -->
       <div class="tab-content" id="detailsView" style="display: none">
-        <h3 data-i18n="details_heading">Protection Details</h3>
-
         <!-- Location Details -->
         <div class="detail-section">
           <div class="detail-label" data-i18n="details_spoofedLocation">Spoofed Location</div>

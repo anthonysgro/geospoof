@@ -310,23 +310,38 @@ async function deactivateVpnSyncMode(): Promise<void> {
   await loadSettings();
 }
 
-// Tab switching: main / details view
+// Tab switching: main / filters / details view
+function showPopupView(view: "main" | "filters" | "details"): void {
+  const tabs: Record<typeof view, string> = {
+    main: "mainTab",
+    filters: "filtersTab",
+    details: "detailsTab",
+  };
+  const views: Record<typeof view, string> = {
+    main: "mainView",
+    filters: "filtersView",
+    details: "detailsView",
+  };
+
+  for (const key of ["main", "filters", "details"] as const) {
+    const tabEl = document.getElementById(tabs[key]);
+    const viewEl = document.getElementById(views[key]);
+    const isActive = key === view;
+    if (tabEl) tabEl.classList.toggle("active", isActive);
+    if (viewEl) viewEl.style.display = isActive ? "block" : "none";
+  }
+}
+
 document.getElementById("mainTab")?.addEventListener("click", () => {
-  document.getElementById("mainTab")?.classList.add("active");
-  document.getElementById("detailsTab")?.classList.remove("active");
-  const mainView = document.getElementById("mainView");
-  const detailsView = document.getElementById("detailsView");
-  if (mainView) mainView.style.display = "block";
-  if (detailsView) detailsView.style.display = "none";
+  showPopupView("main");
+});
+
+document.getElementById("filtersTab")?.addEventListener("click", () => {
+  showPopupView("filters");
 });
 
 document.getElementById("detailsTab")?.addEventListener("click", () => {
-  document.getElementById("detailsTab")?.classList.add("active");
-  document.getElementById("mainTab")?.classList.remove("active");
-  const detailsView = document.getElementById("detailsView");
-  const mainView = document.getElementById("mainView");
-  if (detailsView) detailsView.style.display = "block";
-  if (mainView) mainView.style.display = "none";
+  showPopupView("details");
 });
 
 // Advanced section expand/collapse

@@ -33,6 +33,9 @@ function makeSettings(partial: Partial<Settings>): Settings {
     verbosityLevel: "INFO",
     theme: "system" as const,
     favorites: [],
+    scopeMode: "all" as const,
+    allowlist: [],
+    denylist: [],
     ...partial,
   };
 }

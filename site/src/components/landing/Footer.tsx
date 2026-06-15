@@ -9,6 +9,7 @@ interface FooterLink {
 }
 
 const footerLinks: Array<FooterLink> = [
+  { label: "Blog", href: "/blog", internal: true },
   { label: "Privacy Policy", href: "/privacy", internal: true },
   { label: "Terms of Service", href: "/terms", internal: true },
   { label: "Support", href: "/support", internal: true },

@@ -805,7 +805,8 @@ async function geolocateWithIpInfo(
 // --- Orchestrator ---
 
 /**
- * The IP-geolocation services, raced in parallel (first success wins). Each is
+ * An IP-geolocation service. Services are grouped into tiers (see
+ * GEO_SERVICES_PRIMARY / GEO_SERVICES_FALLBACK) and raced within a tier. Each is
  * an independent third-party endpoint with its own rate-limit behavior, so each
  * gets its own cooldown: when one returns 429/403 (or otherwise signals it's
  * blocking the IP), it's dropped from the next race rather than poisoning the
@@ -816,11 +817,26 @@ interface GeoService {
   fn: (ip: string, signal: AbortSignal) => Promise<IpGeolocationResult>;
 }
 
-const GEO_SERVICES: GeoService[] = [
-  { name: "geojs", fn: geolocateWithGeoJs },
-  { name: "freeipapi", fn: geolocateWithFreeIpApi },
-  { name: "reallyfreegeoip", fn: geolocateWithReallyFreeGeoIp },
+/**
+ * Primary tier — accurate, frequently-updated providers, raced in parallel.
+ * ipinfo uses a probe network with daily updates (strong on VPN/hosting
+ * ranges); freeipapi and geojs are current, MaxMind/GeoLite2-class sources.
+ */
+const GEO_SERVICES_PRIMARY: GeoService[] = [
   { name: "ipinfo", fn: geolocateWithIpInfo },
+  { name: "freeipapi", fn: geolocateWithFreeIpApi },
+  { name: "geojs", fn: geolocateWithGeoJs },
+];
+
+/**
+ * Fallback tier — only consulted if every primary service fails. reallyfreegeoip
+ * is a public freegeoip/GeoLite2-derived mirror that's prone to stale data on
+ * reassigned VPN exit ranges (it reports the registration country, not the
+ * deployment country). Keeping it here means it can never win on latency alone
+ * and override a more accurate primary result.
+ */
+const GEO_SERVICES_FALLBACK: GeoService[] = [
+  { name: "reallyfreegeoip", fn: geolocateWithReallyFreeGeoIp },
 ];
 
 const geoCooldown = new EndpointCooldown(ENDPOINT_COOLDOWN_MS, "IP-GEO");
@@ -920,6 +936,53 @@ function raceGeoForBestResult(
       );
     }
   });
+}
+
+/**
+ * Tiered geolocation. The primary tier (accurate, frequently-updated providers)
+ * is raced for the best result. The fallback tier (GeoLite2-derived mirrors that
+ * can report stale registration-country data on reassigned VPN exit ranges) is
+ * consulted ONLY if every primary service fails — so a stale provider can never
+ * win on latency alone and override a more accurate answer.
+ *
+ * Failures from both tiers are merged into a single AggregateError so the
+ * caller's existing IP_BLOCKED / GEOLOCATION_FAILED handling is unchanged.
+ */
+async function geolocateTiered(ip: string, signal: AbortSignal): Promise<IpGeolocationResult> {
+  const primary = geoCooldown.filterAvailable(GEO_SERVICES_PRIMARY, (s) => s.name);
+  logger.info(
+    "[VPN-SYNC] Geolocating IP:",
+    ip,
+    `(racing ${primary.length} primary service(s) in parallel: ${primary
+      .map((s) => s.name)
+      .join(", ")})`
+  );
+
+  try {
+    return await raceGeoForBestResult(primary, ip, signal);
+  } catch (primaryErr) {
+    // If the batch was aborted (e.g. a newer sync started), don't burn the
+    // fallback tier — just propagate.
+    if (signal.aborted) throw primaryErr;
+
+    const fallback = geoCooldown.filterAvailable(GEO_SERVICES_FALLBACK, (s) => s.name);
+    logger.warn(
+      `[VPN-SYNC] All primary geo services failed; falling back to: ${fallback
+        .map((s) => s.name)
+        .join(", ")}`
+    );
+
+    try {
+      return await raceGeoForBestResult(fallback, ip, signal);
+    } catch (fallbackErr) {
+      throw new AggregateError([...flattenAggregate(primaryErr), ...flattenAggregate(fallbackErr)]);
+    }
+  }
+}
+
+/** Expand an AggregateError into its constituent errors; pass anything else through as a singleton. */
+function flattenAggregate(error: unknown): unknown[] {
+  return error instanceof AggregateError ? (error.errors as unknown[]) : [error];
 }
 
 /**
@@ -1023,16 +1086,10 @@ async function _doSyncVpnLocation(
     }
 
     const geoStart = Date.now();
-    const services = geoCooldown.filterAvailable(GEO_SERVICES, (s) => s.name);
-    logger.info(
-      "[VPN-SYNC] Geolocating IP:",
-      ip,
-      `(racing ${services.length} service(s) in parallel: ${services.map((s) => s.name).join(", ")})`
-    );
 
     let result: IpGeolocationResult;
     try {
-      result = await raceGeoForBestResult(services, ip, geoAbortSignal);
+      result = await geolocateTiered(ip, geoAbortSignal);
       // We have our answer — abort any still-running services so they don't keep
       // retrying in the background.
       geoAbort.abort();

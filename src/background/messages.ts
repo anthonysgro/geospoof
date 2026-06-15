@@ -19,9 +19,14 @@ import type {
   RemoveFavoritePayload,
   RenameFavoritePayload,
   FavoriteResponse,
+  UpdateSettingsPayload,
+  SetScopeModePayload,
+  ScopeSitePayload,
+  ScopeResponse,
 } from "@/shared/types/messages";
 import type { LocationName } from "@/shared/types/settings";
 import { setDebugEnabled, setVerbosityLevel, createLogger } from "@/shared/utils/debug-logger";
+import { computeEffectiveEnabled, normalizeDomain } from "@/shared/utils/scope";
 import { loadSettings, updateSettings } from "./settings";
 
 const logger = createLogger("BG");
@@ -29,7 +34,7 @@ const logger = createLogger("BG");
 import { geocodeQuery, reverseGeocode } from "./geocoding";
 import { getTimezoneForCoordinates } from "./timezone";
 import { setWebRTCProtection } from "./webrtc";
-import { updateBadge } from "./badge";
+import { updateBadge, setBadgeForTab, badgeStateFor } from "./badge";
 import {
   broadcastSettingsToTabs,
   injectContentScriptIntoExistingTabs,
@@ -49,32 +54,62 @@ export async function handleMessage(
 
     switch (message.type) {
       case "GET_SETTINGS": {
-        // Safari: when the popup (no sender.tab) asks for settings, adopt the
-        // app's pending snapshot first so the popup reflects what the user set
-        // in the containing app — without it the popup can show stale "off"
-        // state until a tab event triggers adoption. Scoped to popup-originated
-        // messages so content scripts don't incur a native round-trip per page.
-        if (__SAFARI__ && _sender.tab == null) {
-          await adoptPendingSettingsFromApp();
+        // Popup branch (no sender.tab): return the full Settings object so the
+        // popup can render the selected scope mode and both site lists
+        // (Req 13.2). Content-script branch returns a scoped, list-free payload.
+        if (_sender.tab == null) {
+          // Safari: adopt the app's pending snapshot first so the popup
+          // reflects what the user set in the containing app — without it the
+          // popup can show stale "off" state until a tab event triggers
+          // adoption. Scoped to popup-originated messages so content scripts
+          // don't incur a native round-trip per page.
+          if (__SAFARI__) {
+            await adoptPendingSettingsFromApp();
+          }
+
+          const settings = await loadSettings();
+          logger.debug("Loaded settings (popup):", settings);
+          return settings;
         }
 
+        // Content-script branch: the Background is the sole gatekeeper. It
+        // resolves Effective_Enabled for the requesting tab's top-level URL via
+        // the shared source of truth and returns a payload typed as
+        // UpdateSettingsPayload, which structurally has NO allowlist/denylist
+        // keys — the lists cannot leak into a page (Req 6.6, 6.7, 8.5, 8.7).
         const settings = await loadSettings();
-        logger.debug("Loaded settings:", settings);
+        logger.debug("Loaded settings (content script):", settings);
 
-        // Badge recovery: when a content script sends GET_SETTINGS, it confirms
-        // it is alive. Update the badge to green if protection is enabled and
-        // the tab URL is not restricted.
-        const senderTabId = _sender.tab?.id;
-        const senderTabUrl = _sender.tab?.url;
-        if (senderTabId != null && settings.enabled && !isRestrictedUrl(senderTabUrl ?? "")) {
-          void browser.action.setBadgeBackgroundColor({
-            color: "green",
-            tabId: senderTabId,
-          });
-          void browser.action.setBadgeText({ text: "✓", tabId: senderTabId });
+        const senderTabId = _sender.tab.id;
+        const senderTabUrl = _sender.tab.url;
+
+        // Effective_Enabled resolves to false when the URL is missing,
+        // unparseable, restricted, or out of scope (Req 8.7).
+        const effectiveEnabled = computeEffectiveEnabled({
+          masterEnabled: settings.enabled,
+          scopeMode: settings.scopeMode,
+          allowlist: settings.allowlist,
+          denylist: settings.denylist,
+          topLevelUrl: senderTabUrl,
+          isRestricted: isRestrictedUrl,
+        });
+
+        // Badge recovery: a content-script GET_SETTINGS confirms the script is
+        // alive. Reflect the per-tab decision via the shared three-state badge
+        // mapping using the already-computed Effective_Enabled (Req 12.1–12.3).
+        if (senderTabId != null) {
+          setBadgeForTab(senderTabId, badgeStateFor(settings.enabled, effectiveEnabled));
         }
 
-        return settings;
+        const scoped: UpdateSettingsPayload = {
+          enabled: effectiveEnabled,
+          location: settings.location,
+          timezone: settings.timezone,
+          debugLogging: settings.debugLogging,
+          verbosityLevel: settings.verbosityLevel,
+          webrtcProtection: settings.webrtcProtection,
+        };
+        return scoped;
       }
 
       case "SET_LOCATION":
@@ -228,6 +263,15 @@ export async function handleMessage(
       case "RENAME_FAVORITE":
         return await handleRenameFavorite(message.payload as RenameFavoritePayload);
 
+      case "SET_SCOPE_MODE":
+        return await handleSetScopeMode(message.payload as SetScopeModePayload);
+
+      case "ADD_SCOPE_SITE":
+        return await handleAddScopeSite(message.payload as ScopeSitePayload);
+
+      case "REMOVE_SCOPE_SITE":
+        return await handleRemoveScopeSite(message.payload as ScopeSitePayload);
+
       default:
         logger.warn("Unknown message type:", message.type);
         return { error: "Unknown message type" };
@@ -306,17 +350,11 @@ export async function handleSetProtectionStatus(
   const settings = await updateSettings({ enabled });
   logger.info("Protection status updated:", { enabled });
 
-  await updateBadge(enabled);
-
   if (enabled) {
     await injectContentScriptIntoExistingTabs();
-  } else {
-    const tabs = await browser.tabs.query({});
-    for (const tab of tabs) {
-      void browser.action.setBadgeBackgroundColor({ color: "gray", tabId: tab.id });
-      void browser.action.setBadgeText({ text: "", tabId: tab.id });
-    }
   }
+
+  await updateBadge();
 
   await broadcastSettingsToTabs(settings);
 }
@@ -417,5 +455,81 @@ export async function handleRenameFavorite(
     return { error: "STORAGE_ERROR" };
   }
 
+  return { success: true };
+}
+
+/**
+ * SET_SCOPE_MODE handler (Req 9.1, 9.5). Persist the new scope mode, then
+ * re-evaluate and re-deliver per-tab Effective_Enabled and re-badge every tab.
+ * On storage failure the persisted mode is left unchanged, no re-broadcast or
+ * badge refresh occurs, and STORAGE_ERROR is returned (Req 9.5).
+ */
+export async function handleSetScopeMode(payload: SetScopeModePayload): Promise<ScopeResponse> {
+  let settings;
+  try {
+    settings = await updateSettings({ scopeMode: payload.scopeMode });
+  } catch {
+    return { error: "STORAGE_ERROR" };
+  }
+
+  await broadcastSettingsToTabs(settings);
+  await updateBadge();
+  return { success: true };
+}
+
+/**
+ * ADD_SCOPE_SITE handler (Req 14.5, 15.1–15.6). Normalize the entered domain,
+ * append it to the target list (idempotent against existing normalized
+ * entries), persist, then re-broadcast and re-badge. Returns INVALID_DOMAIN for
+ * unparseable input and STORAGE_ERROR on persistence failure.
+ */
+export async function handleAddScopeSite(payload: ScopeSitePayload): Promise<ScopeResponse> {
+  const normalized = normalizeDomain(payload.domain);
+  if (normalized === null) {
+    return { error: "INVALID_DOMAIN" };
+  }
+
+  const settings = await loadSettings();
+  const list = settings[payload.list];
+
+  // Idempotent: a duplicate add reports success without re-persisting (Req
+  // 14.5, 15.2).
+  if (list.includes(normalized)) {
+    return { success: true };
+  }
+
+  let updated;
+  try {
+    updated = await updateSettings({ [payload.list]: [...list, normalized] });
+  } catch {
+    return { error: "STORAGE_ERROR" };
+  }
+
+  await broadcastSettingsToTabs(updated);
+  await updateBadge();
+  return { success: true };
+}
+
+/**
+ * REMOVE_SCOPE_SITE handler (Req 9.2). Remove the matching normalized domain
+ * from the target list, persist, then re-broadcast and re-badge. Falls back to
+ * the raw domain when normalization fails so legacy/odd entries can still be
+ * removed. Returns STORAGE_ERROR on persistence failure.
+ */
+export async function handleRemoveScopeSite(payload: ScopeSitePayload): Promise<ScopeResponse> {
+  const normalized = normalizeDomain(payload.domain) ?? payload.domain;
+
+  const settings = await loadSettings();
+  const filtered = settings[payload.list].filter((d) => d !== normalized);
+
+  let updated;
+  try {
+    updated = await updateSettings({ [payload.list]: filtered });
+  } catch {
+    return { error: "STORAGE_ERROR" };
+  }
+
+  await broadcastSettingsToTabs(updated);
+  await updateBadge();
   return { success: true };
 }

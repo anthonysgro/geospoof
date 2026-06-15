@@ -3,12 +3,46 @@
  * Load, save, validate, and update extension settings in browser.storage.local.
  */
 
-import type { Favorite, Settings } from "@/shared/types/settings";
+import type { Favorite, ScopeMode, Settings } from "@/shared/types/settings";
 import { DEFAULT_SETTINGS } from "@/shared/types/settings";
 import { createLogger } from "@/shared/utils/debug-logger";
+import { normalizeDomain } from "@/shared/utils/scope";
 import { getLastSyncedIp } from "./vpn-sync";
 
 const logger = createLogger("BG");
+
+/** Permitted Scope_Mode values (Req 2.1, 2.2, 3.8). */
+const VALID_SCOPE_MODES = new Set<ScopeMode>(["all", "allowlist", "denylist"]);
+
+/**
+ * Sanitize a stored allowlist/denylist value into a clean string[] (Req 2.3–2.6,
+ * 3.4, 3.7, 15.4). Drops non-array inputs, non-string entries, and entries the
+ * Domain_Normalizer reports as invalid; replaces each retained entry with its
+ * normalized form; removes duplicate normalized domains keeping the first
+ * occurrence, producing a deterministically ordered list.
+ */
+function sanitizeDomainList(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const entry of value) {
+    if (typeof entry !== "string") {
+      continue;
+    }
+    const normalized = normalizeDomain(entry);
+    if (normalized === null) {
+      continue;
+    }
+    if (seen.has(normalized)) {
+      continue;
+    }
+    seen.add(normalized);
+    out.push(normalized);
+  }
+  return out;
+}
 
 /**
  * Load settings from storage with validation and corruption handling
@@ -96,6 +130,24 @@ export function validateSettings(settings: Partial<Settings>): Settings {
   if (typeof settings.version === "string") {
     validated.version = settings.version;
   }
+
+  // Schema migration (Req 3.1, 3.2): stamp "1.1" when the stored version is
+  // "1.0" or absent, leaving other valid version strings untouched. All other
+  // copied-through fields (enabled, location, etc.) are preserved (Req 3.5).
+  if (validated.version === "1.0" || typeof settings.version !== "string") {
+    validated.version = "1.1";
+  }
+
+  // scopeMode (Req 2.1, 2.2, 1.6, 3.8): preserve a permitted value, otherwise
+  // fall back to "all".
+  validated.scopeMode =
+    typeof settings.scopeMode === "string" && VALID_SCOPE_MODES.has(settings.scopeMode)
+      ? settings.scopeMode
+      : "all";
+
+  // allowlist + denylist (Req 2.3–2.6, 1.7, 3.4, 3.7): sanitize each list.
+  validated.allowlist = sanitizeDomainList(settings.allowlist);
+  validated.denylist = sanitizeDomainList(settings.denylist);
 
   if (typeof settings.lastUpdated === "number") {
     validated.lastUpdated = settings.lastUpdated;
@@ -238,6 +290,11 @@ async function pushRegionToNativeHost(settings: Settings): Promise<void> {
       // handler stays a dumb passthrough (no nested-array bridging). The app
       // decodes it; last-writer-wins by region/pending timestamp as usual.
       favorites: JSON.stringify(settings.favorites ?? []),
+      // Site-scoping: the mode is a scalar; the allow/deny lists ride as JSON
+      // strings exactly like favorites (passthrough both ways).
+      scopeMode: settings.scopeMode,
+      allowlist: JSON.stringify(settings.allowlist ?? []),
+      denylist: JSON.stringify(settings.denylist ?? []),
     });
   } catch (error) {
     // Swallow — native messaging may not be available in all contexts

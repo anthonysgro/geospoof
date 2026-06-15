@@ -188,6 +188,7 @@ struct SpoofControlPanel: View {
                             } label: {
                                 Label("Clear", systemImage: "xmark")
                             }
+                            .tint(.red)
                         }
                     }
             } else {
@@ -285,6 +286,7 @@ struct SpoofControlPanel: View {
                     } label: {
                         Label("Delete", systemImage: "trash")
                     }
+                    .tint(.red)
                 }
                 .contextMenu {
                     Button { renaming = fav } label: { Label("Rename", systemImage: "pencil") }
@@ -308,31 +310,25 @@ struct SpoofControlPanel: View {
     // MARK: Test links — see ProtectionTestLinks (shared with the macOS Test tab)
 }
 
-/// The external "Test Your Protection" links plus Help & Support, as Form
-/// sections. Used inline on iOS and in the dedicated Test sidebar tab on macOS.
+/// A single "Verify Your Protection" link to the hosted geospoof.com/verify
+/// page, which runs the location / timezone / IP checks and explains the
+/// results in plain language — friendlier than sending users to raw third-party
+/// test sites. Used inline in the iOS Details tab and the macOS Test sidebar
+/// section. (Help & Support lives in Settings on both platforms.)
 struct ProtectionTestLinks: View {
     var body: some View {
-        Group {
-            Section("Test Your Protection") {
-                testLink("Geolocation", "https://webbrowsertools.com/geolocation/", symbol: "location.magnifyingglass")
-                testLink("Timezone", "https://webbrowsertools.com/timezone/", symbol: "clock")
-                testLink("IP Leak", "https://browserleaks.com/webrtc", symbol: "wifi.exclamationmark")
+        Section {
+            Link(destination: URL(string: "https://www.geospoof.com/verify")!) {
+                HStack {
+                    Label("Verify Your Protection", systemImage: "checkmark.shield")
+                    Spacer()
+                    Image(systemName: "arrow.up.right")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
-            Section {
-                testLink("Help & Support", "https://www.geospoof.com/support", symbol: "questionmark.circle")
-            }
-        }
-    }
-
-    private func testLink(_ title: String, _ urlString: String, symbol: String) -> some View {
-        Link(destination: URL(string: urlString)!) {
-            HStack {
-                Label(title, systemImage: symbol)
-                Spacer()
-                Image(systemName: "arrow.up.right")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+        } footer: {
+            Text("Opens a quick check that confirms your location, timezone, and IP address are masked.")
         }
     }
 }
@@ -1165,5 +1161,298 @@ private struct EnvironmentReviewModifier: ViewModifier {
         content.onChange(of: token) { newValue in
             if newValue > 0 { requestReview() }
         }
+    }
+}
+
+// MARK: - Site Filters (scope)
+
+/// Native counterpart to the extension popup's Filters tab: a scope-mode picker
+/// plus the active allow/deny list. Backed by the shared `SpoofController`,
+/// which syncs scope to the extension through the App Group bridge (mode +
+/// lists), exactly like location, toggles, and favorites.
+///
+/// Layout follows Apple's editable-list convention (Mail VIPs, Screen Time
+/// allowed sites): rows live in a grouped section with an in-card "Add …" row
+/// that presents a focused entry sheet, rather than a persistent inline field.
+///
+/// Note: there's no "Add current site" here — the app isn't sitting on a web
+/// page, so manual entry is the only add path (parity with the popup minus that
+/// page-context convenience).
+struct SiteFiltersView: View {
+    @ObservedObject var controller: SpoofController
+    @State private var showingAdd = false
+
+    var body: some View {
+        AdaptiveNavigationStack {
+            Form {
+                Section {
+                    Picker("Mode", selection: Binding(
+                        get: { controller.scopeMode },
+                        set: { controller.setScopeMode($0) }
+                    )) {
+                        ForEach(ScopeMode.allCases) { mode in
+                            Text(mode.label).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                } header: {
+                    Text("Mode")
+                } footer: {
+                    if controller.scopeMode == .all {
+                        Text("\(controller.scopeMode.detail) Choose Allowlist or Denylist to limit spoofing to specific sites.")
+                    } else {
+                        Text(controller.scopeMode.detail)
+                    }
+                }
+
+                if controller.scopeMode != .all {
+                    sitesSection
+                }
+            }
+            .groupedFormStyle()
+            .tint(.brand)
+            .navigationTitle("Filters")
+            .sheet(isPresented: $showingAdd) {
+                AddSiteSheet(
+                    mode: controller.scopeMode,
+                    onAdd: { controller.addScopeSite($0, to: controller.scopeMode) },
+                    onRemove: { controller.removeScopeSite($0, from: controller.scopeMode) }
+                )
+            }
+        }
+    }
+
+    private var sitesSection: some View {
+        Section {
+            ForEach(controller.activeScopeList, id: \.self) { domain in
+                HStack(spacing: 10) {
+                    ScopeMonogram(domain: domain)
+                    Text(domain)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Spacer()
+                }
+                .swipeActions(edge: .trailing) {
+                    Button(role: .destructive) {
+                        controller.removeScopeSite(domain, from: controller.scopeMode)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                    .tint(.red)
+                }
+                .contextMenu {
+                    Button(role: .destructive) {
+                        controller.removeScopeSite(domain, from: controller.scopeMode)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
+            }
+
+            // The in-card add affordance keeps the grouped section intact (no
+            // floating empty-state breaking the card) and doubles as the empty
+            // state — when the list is empty this accent row is all that shows,
+            // inviting the first add, exactly like Apple's "Add VIP…" lists.
+            Button {
+                showingAdd = true
+            } label: {
+                Label(addRowTitle, systemImage: "plus.circle.fill")
+            }
+        } header: {
+            HStack {
+                Text(controller.scopeMode.listTitle)
+                Spacer()
+                Text("\(controller.activeScopeList.count)")
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
+        } footer: {
+            // The "spoofing nowhere" warning lives in the section footer — the
+            // HIG-standard home for a contextual caution — so it reads as part
+            // of the list rather than crammed under the mode picker.
+            if showsEmptyAllowlistWarning {
+                Label("Allowlist is empty, so spoofing is currently inactive on every site. Add a site to start spoofing there.",
+                      systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+            }
+        }
+    }
+
+    private var addRowTitle: String {
+        controller.scopeMode == .denylist ? "Add Blocked Site" : "Add Allowed Site"
+    }
+
+    /// True when allowlist mode is active with an empty list while protection is
+    /// on — the silent "spoofing nowhere" state the user should be warned about.
+    /// (An empty denylist is harmless: spoofing simply applies everywhere.)
+    private var showsEmptyAllowlistWarning: Bool {
+        controller.enabled && controller.scopeMode == .allowlist && controller.allowlist.isEmpty
+    }
+}
+
+/// Focused entry sheet for adding sites, built for rapid multi-add: each commit
+/// (return key or the inline Add button) appends to the list, clears the field,
+/// and keeps focus so several sites can be entered in one sitting. Committed
+/// sites appear in a live "Added" list with swipe-to-undo. Adds are written to
+/// the model immediately, so there's nothing to cancel — a single "Done" closes.
+private struct AddSiteSheet: View {
+    let mode: ScopeMode
+    /// Returns the add outcome so the sheet can surface an accurate hint and
+    /// only record the entry on success.
+    let onAdd: (String) -> ScopeAddResult
+    /// Removes a site (used by swipe-to-undo on the session list).
+    let onRemove: (String) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var text = ""
+    @State private var hint: String?
+    /// Sites added during this sheet session, newest first — live confirmation
+    /// of what's been entered without duplicating the full list behind it.
+    @State private var added: [String] = []
+    @FocusState private var focused: Bool
+
+    private var navTitle: String {
+        mode == .denylist ? "Add Blocked Sites" : "Add Allowed Sites"
+    }
+
+    private var helpText: String {
+        mode == .denylist
+            ? "Spoofing is skipped on the sites you add here."
+            : "Spoofing applies only to the sites you add here."
+    }
+
+    private var canAdd: Bool {
+        !text.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    var body: some View {
+        AdaptiveNavigationStack {
+            Form {
+                Section {
+                    HStack(spacing: 8) {
+                        TextField("example.com", text: $text)
+                            .focused($focused)
+                            .autocorrectionDisabled(true)
+                            #if os(iOS)
+                            .textInputAutocapitalization(.never)
+                            .keyboardType(.URL)
+                            #endif
+                            .submitLabel(.continue)
+                            .onSubmit(add)
+                            .onChange(of: text) { _ in if hint != nil { hint = nil } }
+                        if canAdd {
+                            Button("Add", action: add)
+                                .buttonStyle(.borderless)
+                                .transition(.opacity)
+                        }
+                    }
+                } footer: {
+                    if let hint {
+                        Text(hint).foregroundStyle(.red)
+                    } else {
+                        Text(helpText)
+                    }
+                }
+
+                if !added.isEmpty {
+                    Section {
+                        ForEach(added, id: \.self) { domain in
+                            HStack(spacing: 10) {
+                                ScopeMonogram(domain: domain)
+                                Text(domain)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                                Spacer()
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(.green)
+                                    .accessibilityHidden(true)
+                            }
+                            .swipeActions(edge: .trailing) {
+                                Button(role: .destructive) {
+                                    remove(domain)
+                                } label: {
+                                    Label("Remove", systemImage: "trash")
+                                }
+                                .tint(.red)
+                            }
+                        }
+                    } header: {
+                        Text(added.count == 1 ? "Added" : "Added · \(added.count)")
+                    }
+                }
+            }
+            .groupedFormStyle()
+            .tint(.brand)
+            .navigationTitle(navTitle)
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+            .onAppear { focused = true }
+        }
+        #if os(macOS)
+        .frame(minWidth: 380, minHeight: 320)
+        #endif
+    }
+
+    private func add() {
+        switch onAdd(text) {
+        case .added:
+            let domain = SpoofController.normalizeDomainInput(text) ?? text
+            withAnimation(.easeInOut(duration: 0.2)) {
+                added.removeAll { $0 == domain }
+                added.insert(domain, at: 0)
+            }
+            text = ""
+            hint = nil
+        case .duplicate:
+            hint = "Already added"
+        case .invalid:
+            hint = "Not a valid domain"
+        }
+        // Keep the keyboard up for the next entry (and up after a correction).
+        focused = true
+    }
+
+    private func remove(_ domain: String) {
+        onRemove(domain)
+        withAnimation(.easeInOut(duration: 0.2)) {
+            added.removeAll { $0 == domain }
+        }
+    }
+}
+
+/// Deterministic monogram tile mirroring the popup's list avatars: the domain's
+/// first character on a stable hue derived from the domain string. Generated
+/// locally — no favicon fetch, so the user's site list never leaves the device.
+struct ScopeMonogram: View {
+    let domain: String
+
+    var body: some View {
+        Text(initial)
+            .font(.system(size: 11, weight: .bold))
+            .foregroundStyle(.white)
+            .frame(width: 22, height: 22)
+            .background(color, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .accessibilityHidden(true)
+    }
+
+    private var initial: String {
+        guard let first = domain.first else { return "?" }
+        return String(first).uppercased()
+    }
+
+    /// Stable hue 0–359 from the domain string (matches the popup's hashing
+    /// intent), rendered at a saturation/brightness that keeps white legible.
+    private var color: Color {
+        var hash = 0
+        for scalar in domain.unicodeScalars {
+            hash = (hash &* 31 &+ Int(scalar.value)) % 360
+        }
+        return Color(hue: Double(hash) / 360.0, saturation: 0.55, brightness: 0.55)
     }
 }

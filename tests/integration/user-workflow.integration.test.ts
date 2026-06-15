@@ -48,6 +48,34 @@ function getMockedFind() {
 }
 const mockedFind = getMockedFind();
 
+/**
+ * Wire `browser.storage.local.get` to reflect the most recently persisted
+ * settings (read-after-write semantics).
+ *
+ * `updateBadge()` — invoked by `handleSetProtectionStatus` — now independently
+ * re-reads settings via `loadSettings()` and queries all tabs to compute each
+ * tab's Effective_Enabled. A one-shot `mockResolvedValueOnce` is consumed by
+ * the handler's own internal load, so the badge's re-read would otherwise fall
+ * back to the default (disabled) mock and resolve to the gray "master-off"
+ * state. Reflecting the last `set` here lets the re-read observe enabled:true,
+ * so a normal (in-scope, non-restricted) tab resolves to the active "green"
+ * badge.
+ */
+function wireReadAfterWriteStorage(): void {
+  browser.storage.local.get.mockImplementation(() => {
+    // Access via index signature to avoid unbound-method on the mock.
+    const setMock = (
+      browser.storage.local as unknown as Record<string, { mock: { calls: unknown[][] } }>
+    )["set"];
+    const calls = setMock.mock.calls;
+    if (calls.length === 0) {
+      return Promise.resolve({ settings: undefined });
+    }
+    const latest = (calls[calls.length - 1][0] as { settings: unknown }).settings;
+    return Promise.resolve({ settings: latest });
+  });
+}
+
 describe("User Workflow Integration Tests", () => {
   beforeEach(async () => {
     await background.clearTimezoneCache();
@@ -151,13 +179,9 @@ describe("User Workflow Integration Tests", () => {
       expectTabsSendMessage().toHaveBeenCalled();
 
       // Step 3: User enables protection
-      // Mock storage to return settings with location set
-      browser.storage.local.get.mockResolvedValueOnce({
-        settings: {
-          ...getSavedSettings(),
-          enabled: false, // Current state before enabling
-        },
-      });
+      // Reflect the persisted settings on re-read so updateBadge() sees the
+      // freshly enabled state and resolves the active "green" badge.
+      wireReadAfterWriteStorage();
 
       await background.handleSetProtectionStatus({ enabled: true });
 
@@ -289,13 +313,9 @@ describe("User Workflow Integration Tests", () => {
       expect(savedSettings.locationName!.city).toBe("Tokyo");
 
       // Step 2: User enables protection
-      // Mock storage to return settings with location set
-      browser.storage.local.get.mockResolvedValueOnce({
-        settings: {
-          ...getSavedSettings(),
-          enabled: false, // Current state before enabling
-        },
-      });
+      // Reflect the persisted settings on re-read so updateBadge() sees the
+      // freshly enabled state and resolves the active "green" badge.
+      wireReadAfterWriteStorage();
 
       await background.handleSetProtectionStatus({ enabled: true });
 
@@ -447,13 +467,9 @@ describe("User Workflow Integration Tests", () => {
       await background.handleSetLocation(location);
 
       // Step 2: Enable protection
-      // Mock storage to return settings with location set
-      browser.storage.local.get.mockResolvedValueOnce({
-        settings: {
-          ...getSavedSettings(),
-          enabled: false,
-        },
-      });
+      // Reflect the persisted settings on re-read so updateBadge() sees the
+      // freshly enabled state and resolves the active "green" badge.
+      wireReadAfterWriteStorage();
 
       await background.handleSetProtectionStatus({ enabled: true });
 
@@ -531,13 +547,9 @@ describe("User Workflow Integration Tests", () => {
       await background.handleSetLocation(selectedLocation);
 
       // Step 3: Enable geolocation protection
-      // Mock storage to return settings with location set
-      browser.storage.local.get.mockResolvedValueOnce({
-        settings: {
-          ...getSavedSettings(),
-          enabled: false,
-        },
-      });
+      // Reflect the persisted settings on re-read so updateBadge() sees the
+      // freshly enabled state and resolves the active "green" badge.
+      wireReadAfterWriteStorage();
 
       await background.handleSetProtectionStatus({ enabled: true });
 

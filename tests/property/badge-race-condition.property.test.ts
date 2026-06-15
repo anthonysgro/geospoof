@@ -28,6 +28,9 @@ function makeSettings(overrides?: Partial<Settings>): Settings {
     verbosityLevel: "INFO",
     theme: "system",
     favorites: [],
+    scopeMode: "all",
+    allowlist: [],
+    denylist: [],
     ...overrides,
   };
 }
@@ -63,7 +66,15 @@ async function captureHandlers(s: Settings): Promise<CapturedHandlers> {
 
   const updatedMock = browser.tabs.onUpdated as unknown as Record<string, ReturnType<typeof vi.fn>>;
   expect(updatedMock["addListener"]).toHaveBeenCalled();
-  const onUpdated = updatedMock["addListener"].mock.calls[0][0] as Listener;
+  // The background registers multiple tabs.onUpdated listeners (activity-watcher
+  // resync trigger, worker-filter URL cache, and the badge/injection-alarm
+  // handler). The browser fires all of them on a navigation, so invoke every
+  // captured listener — matching real behavior and staying robust to the order
+  // in which the modules happen to register.
+  const updatedListeners = updatedMock["addListener"].mock.calls.map((c) => c[0] as Listener);
+  const onUpdated: Listener = (tabId, changeInfo, tab) => {
+    for (const l of updatedListeners) l(tabId, changeInfo, tab);
+  };
 
   const alarmMock = browser.alarms.onAlarm as unknown as Record<string, ReturnType<typeof vi.fn>>;
   expect(alarmMock["addListener"]).toHaveBeenCalled();
@@ -242,8 +253,11 @@ describe("Property 2: Preservation", () => {
     );
   });
 
-  // 2b. Restricted URL -> badge is gray with no text regardless of protection
-  test("restricted URL: badge is always gray/empty regardless of protection", async () => {
+  // 2b. Restricted URL three-state badge (Req 12.3, 12.5):
+  //   - master OFF      -> gray / empty   (master-off state)
+  //   - master ON       -> "#5b7083" / "•" (out-of-scope state; a Restricted_URL
+  //                         has Effective_Enabled false but master is on)
+  test("restricted URL: master-off is gray/empty, master-on is out-of-scope", async () => {
     const enabled = makeSettings({ enabled: true });
     const handlers = await captureHandlers(enabled);
 
@@ -265,9 +279,16 @@ describe("Property 2: Preservation", () => {
         const lastColor = [...colorCalls].reverse().find((c) => c[0].tabId === tabId);
 
         expect(lastText).toBeDefined();
-        expect(lastText![0].text).toBe("");
         expect(lastColor).toBeDefined();
-        expect(lastColor![0].color).toBe("gray");
+        if (prot) {
+          // master ON + Restricted_URL -> out-of-scope badge (Req 12.5)
+          expect(lastText![0].text).toBe("\u2022");
+          expect(lastColor![0].color).toBe("#5b7083");
+        } else {
+          // master OFF -> master-off badge regardless of URL (Req 12.3)
+          expect(lastText![0].text).toBe("");
+          expect(lastColor![0].color).toBe("gray");
+        }
       }),
       { numRuns: 30 }
     );

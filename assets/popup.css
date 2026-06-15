@@ -12,6 +12,13 @@
   --brand-hover: #45a049;
   --accent: #f5a623; /* favorite star */
 
+  /* Neutral secondary button (medium emphasis) — grey, so brand green stays
+     reserved for the single primary action. Theme-variant (dark overrides
+     below); text/fill keep WCAG-AA contrast on both themes. */
+  --btn-secondary: #e8e8e8;
+  --btn-secondary-hover: #dcdcdc;
+  --btn-secondary-text: #444444;
+
   /* Surfaces (light defaults) */
   --bg: #f5f5f5;
   --surface: #ffffff;
@@ -77,6 +84,10 @@
     --surface-hover: #3b3a41;
     --badge-bg: #23222b;
 
+    --btn-secondary: #3b3a41;
+    --btn-secondary-hover: #45444c;
+    --btn-secondary-text: #fbfbfe;
+
     --text: #fbfbfe;
     --text-muted: #fbfbfe;
     --text-strong: #fbfbfe;
@@ -106,6 +117,9 @@ body.theme-light {
   --surface-alt: #f5f5f5;
   --surface-hover: #f5f5f5;
   --badge-bg: #e0e0e0;
+  --btn-secondary: #e8e8e8;
+  --btn-secondary-hover: #dcdcdc;
+  --btn-secondary-text: #444444;
   --text: #333;
   --text-muted: #666;
   --text-strong: #2c3e50;
@@ -130,6 +144,9 @@ body.theme-dark {
   --surface-alt: #2b2a33;
   --surface-hover: #3b3a41;
   --badge-bg: #23222b;
+  --btn-secondary: #3b3a41;
+  --btn-secondary-hover: #45444c;
+  --btn-secondary-text: #fbfbfe;
   --text: #fbfbfe;
   --text-muted: #fbfbfe;
   --text-strong: #fbfbfe;
@@ -259,6 +276,11 @@ input {
 .nav-tab:hover {
   color: var(--text);
   background: var(--surface-hover);
+  /* Keep the baseline underline visible under the hovered tab — without this
+     the hover background (== page bg in light theme) paints over it and it
+     reads as white. The .active brand underline below still wins on the
+     active tab (equal specificity, later rule). */
+  border-bottom-color: var(--text-subtle);
 }
 
 .nav-tab.active {
@@ -997,13 +1019,6 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   white-space: pre-wrap;
 }
 
-#detailsView h3 {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-strong);
-  margin-bottom: 16px;
-}
-
 /* ───────────────────────────────────────────────────────────────────────────
    Advanced section
    ────────────────────────────────────────────────────────────────────── */
@@ -1463,4 +1478,255 @@ input[type="checkbox"]:checked + .toggle-slider:before {
     max-width: 28px !important;
     padding: 0 3px !important;
   }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   Filters tab — scope mode selector + site-list manager
+   ────────────────────────────────────────────────────────────────────── */
+
+.scope-mode-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.scope-mode-btn {
+  flex: 1;
+  padding: 10px 6px;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.scope-mode-btn:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.scope-mode-btn.active {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--text-on-brand);
+}
+
+.scope-mode-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.scope-list-manager {
+  margin-top: 4px;
+}
+
+/* Slim list header: uppercase purpose label (mirrors .detail-label) + a
+   count chip using the status-badge surface. */
+.scope-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+/* Section-heading tier — brand green, peer of .section-heading ("LOCATION").
+   Heads the list section in the Filters tab. */
+.scope-list-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--brand);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.scope-list-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--badge-bg);
+  border-radius: 10px;
+  padding: 1px 8px;
+  min-width: 20px;
+  text-align: center;
+}
+
+.scope-add-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.scope-add-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border-input);
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.scope-add-row input:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+
+.scope-add-row button {
+  flex-shrink: 0;
+  padding: 10px 14px;
+  background: var(--brand);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--text-on-brand);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.scope-add-row button:hover {
+  background: var(--brand-hover);
+}
+
+.scope-add-current-row {
+  margin-bottom: 8px;
+}
+
+.scope-add-current {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--btn-secondary);
+  border: none;
+  border-radius: 8px;
+  color: var(--btn-secondary-text);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+/* Leading "+" affordance so the secondary action reads as "add". */
+.scope-add-current::before {
+  content: "+";
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.scope-add-current:hover {
+  background: var(--btn-secondary-hover);
+}
+
+.scope-inline-msg {
+  color: var(--danger);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.scope-empty {
+  color: var(--text-subtle);
+  font-size: 13px;
+  text-align: center;
+  padding: 20px 12px;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+}
+
+/* Single contained card holding the listed sites as divided rows, mirroring
+   the .detail-section card surface and the .status-item divider idiom. */
+.scope-list {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow-y: auto;
+  max-height: 240px;
+}
+
+/* Collapse the container when it has no rows so the empty-state card is the
+   only thing shown (the empty indicator is rendered as a sibling). */
+.scope-list:empty {
+  display: none;
+}
+
+.scope-site-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 0.15s;
+}
+
+.scope-site-row:last-child {
+  border-bottom: none;
+}
+
+.scope-site-row:hover {
+  background: var(--surface-hover);
+}
+
+.scope-site-icon {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1;
+  user-select: none;
+}
+
+.scope-site-domain {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.scope-site-remove {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--text-subtle);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition:
+    color 0.2s,
+    background 0.2s;
+}
+
+.scope-site-remove:hover {
+  color: var(--danger);
+  background: var(--surface-hover);
+}
+
+/* Keyboard focus rings, consistent with .favorite-chip:focus-visible. */
+.scope-mode-btn:focus-visible,
+.scope-add-row input:focus-visible,
+.scope-add-row button:focus-visible,
+.scope-add-current:focus-visible,
+.scope-site-remove:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
 }

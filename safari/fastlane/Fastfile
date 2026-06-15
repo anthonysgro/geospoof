@@ -1,7 +1,7 @@
 app_store_connect_api_key(
-  key_id: "UZBN452J8D",
+  key_id: "BXMZW4LMSP",
   issuer_id: "2a0c5baa-92b0-489c-b4c7-b1771b5e6df8",
-  key_filepath: "~/.appstoreconnect/private_keys/AuthKey_UZBN452J8D.p8"
+  key_filepath: "~/.appstoreconnect/private_keys/AuthKey_BXMZW4LMSP.p8"
 )
 
 default_platform(:mac)
@@ -233,6 +233,11 @@ platform :ios do
       output_name: "GeoSpoof-iOS"
     )
 
+    # The CI App Store Connect API key (BXMZW4LMSP) has the App Manager role, so
+    # it can create/update the App Store version record — use deliver to upload
+    # the build and manage the version. (skip_metadata/skip_screenshots: we don't
+    # manage store listing copy from CI; run_precheck_before_submit off since we
+    # don't auto-submit for review here.)
     deliver(
       platform: "ios",
       skip_metadata: true,

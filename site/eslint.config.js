@@ -4,7 +4,7 @@ import { tanstackConfig } from "@tanstack/eslint-config"
 
 export default [
   {
-    ignores: [".output/**", "node_modules/**", "public/**"],
+    ignores: [".output/**", "node_modules/**", "public/**", ".content-collections/**"],
   },
   ...tanstackConfig,
   // Disable rules that don't apply or have missing plugins

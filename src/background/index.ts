@@ -9,11 +9,12 @@
 
 import type { Runtime, Tabs, Alarms } from "webextension-polyfill";
 import type { Message, UpdateSettingsPayload } from "@/shared/types/messages";
-import { loadSettings } from "./settings";
+import { loadSettings, saveSettings } from "./settings";
 import { setDebugEnabled, setVerbosityLevel, createLogger } from "@/shared/utils/debug-logger";
 import { setWebRTCProtection } from "./webrtc";
-import { updateBadge } from "./badge";
+import { updateBadge, setBadgeForTab, badgeStateFor } from "./badge";
 import { broadcastSettingsToTabs, isRestrictedUrl, checkTabInjection } from "./tabs";
+import { computeEffectiveEnabled } from "@/shared/utils/scope";
 import { handleMessage, handleSetLocation } from "./messages";
 import { syncVpnLocation } from "./vpn-sync";
 import { installProxyWatcher } from "./proxy-watcher";
@@ -57,7 +58,8 @@ export {
 } from "./geocoding";
 export { getTimezoneForCoordinates, clearTimezoneCache, computeOffsets } from "./timezone";
 export { setWebRTCProtection } from "./webrtc";
-export { updateBadge } from "./badge";
+export { updateBadge, setBadgeForTab, badgeStateFor } from "./badge";
+export type { BadgeState } from "./badge";
 export { broadcastSettingsToTabs, isRestrictedUrl, checkTabInjection } from "./tabs";
 export {
   handleMessage,
@@ -65,6 +67,9 @@ export {
   handleSetProtectionStatus,
   handleSetWebRTCProtection,
   handleCompleteOnboarding,
+  handleSetScopeMode,
+  handleAddScopeSite,
+  handleRemoveScopeSite,
 } from "./messages";
 export {
   isValidIpAddress,
@@ -161,6 +166,35 @@ async function initialize(): Promise<void> {
 
   const settings = await loadSettings();
 
+  // One-time migration persistence (Req 3.6, 3.9). loadSettings() returns the
+  // validated/upgraded in-memory Settings but does not itself write. To satisfy
+  // Req 3.6 we detect whether the stored object was on an older/absent schema
+  // by reading the raw stored `version` (the value before validation): a
+  // present settings object whose version is not "1.1" was migrated to "1.1"
+  // by validateSettings(). When that is the case we persist the upgraded object
+  // exactly once. A fresh install with no stored settings object is skipped, so
+  // we never needlessly write on first run. If persistence fails we keep the
+  // in-memory upgraded Settings for the session and surface the error rather
+  // than crashing init (Req 3.9); the next successful save persists the
+  // migration.
+  try {
+    const stored = await browser.storage.local.get("settings");
+    const rawSettings: unknown = stored.settings;
+    const migrationOccurred =
+      rawSettings != null &&
+      typeof rawSettings === "object" &&
+      (rawSettings as { version?: unknown }).version !== "1.1";
+    if (migrationOccurred) {
+      try {
+        await saveSettings(settings);
+      } catch (error) {
+        logger.error("Failed to persist migrated settings on startup:", error);
+      }
+    }
+  } catch (error) {
+    logger.error("Failed to check stored settings for migration persistence:", error);
+  }
+
   // Restore logger state from persisted settings
   setDebugEnabled(settings.debugLogging);
   setVerbosityLevel(settings.verbosityLevel);
@@ -186,7 +220,7 @@ async function initialize(): Promise<void> {
     await broadcastSettingsToTabs(settings);
   }
 
-  await updateBadge(settings.enabled);
+  await updateBadge();
 
   // Auto-sync VPN location on startup if enabled
   if (settings.vpnSyncEnabled) {
@@ -257,21 +291,42 @@ async function onAlarm(alarm: Alarms.Alarm): Promise<void> {
   const { tabId, attempt } = parsed;
 
   const settings = await loadSettings();
-  const { enabled, location, timezone, debugLogging, verbosityLevel, webrtcProtection } = settings;
-  const scopedPayload: UpdateSettingsPayload = {
-    enabled,
-    location,
-    timezone,
-    debugLogging,
-    verbosityLevel,
-    webrtcProtection,
-  };
+  const { location, timezone, debugLogging, verbosityLevel, webrtcProtection } = settings;
 
   try {
     const result = await checkTabInjection(tabId);
     if (result.injected) {
       // Clear remaining alarms for this tab
       await clearAlarmsForTab(tabId);
+
+      // Resolve the per-tab Effective_Enabled for this late-injected tab from
+      // its top-level URL via the shared source of truth (Req 7.5, 8.4, 9.3),
+      // instead of delivering the global `enabled`. The alarm carries only the
+      // tab id, so look up the tab's current URL; if the tab can't be resolved
+      // the URL is undefined and computeEffectiveEnabled returns false.
+      let tabUrl: string | undefined;
+      try {
+        const tab = await browser.tabs.get(tabId);
+        tabUrl = tab.url;
+      } catch {
+        tabUrl = undefined;
+      }
+      const enabled = computeEffectiveEnabled({
+        masterEnabled: settings.enabled,
+        scopeMode: settings.scopeMode,
+        allowlist: settings.allowlist,
+        denylist: settings.denylist,
+        topLevelUrl: tabUrl,
+        isRestricted: isRestrictedUrl,
+      });
+      const scopedPayload: UpdateSettingsPayload = {
+        enabled,
+        location,
+        timezone,
+        debugLogging,
+        verbosityLevel,
+        webrtcProtection,
+      };
 
       try {
         await browser.tabs.sendMessage(tabId, {
@@ -378,8 +433,19 @@ if (browser.tabs && browser.tabs.onCreated) {
   browser.tabs.onCreated.addListener((tab: Tabs.Tab) => {
     void (async () => {
       const settings = await loadSettings();
-      const { enabled, location, timezone, debugLogging, verbosityLevel, webrtcProtection } =
-        settings;
+      const { location, timezone, debugLogging, verbosityLevel, webrtcProtection } = settings;
+
+      // Resolve Effective_Enabled for the newly created tab from its top-level
+      // URL via the shared source of truth (Req 8.4, 9.3) rather than sending
+      // the global `enabled`. A missing/undeterminable URL resolves to false.
+      const enabled = computeEffectiveEnabled({
+        masterEnabled: settings.enabled,
+        scopeMode: settings.scopeMode,
+        allowlist: settings.allowlist,
+        denylist: settings.denylist,
+        topLevelUrl: tab.url,
+        isRestricted: isRestrictedUrl,
+      });
       const scopedPayload: UpdateSettingsPayload = {
         enabled,
         location,
@@ -412,16 +478,26 @@ if (browser.tabs && browser.tabs.onUpdated) {
         void (async () => {
           const settings = await loadSettings();
 
-          if (!settings.enabled) {
-            void browser.action.setBadgeBackgroundColor({ color: "gray", tabId });
-            void browser.action.setBadgeText({ text: "", tabId });
-            return;
-          }
+          // Resolve the tab's Effective_Enabled from its top-level URL via the
+          // shared source of truth, then map to the three-state badge (Req
+          // 12.1–12.5). Restricted/out-of-scope URLs resolve to false inside
+          // computeEffectiveEnabled and therefore show the out-of-scope badge.
+          const effectiveEnabled = computeEffectiveEnabled({
+            masterEnabled: settings.enabled,
+            scopeMode: settings.scopeMode,
+            allowlist: settings.allowlist,
+            denylist: settings.denylist,
+            topLevelUrl: tab.url,
+            isRestricted: isRestrictedUrl,
+          });
 
-          const isRestricted = isRestrictedUrl(tab.url!);
-          if (isRestricted) {
-            void browser.action.setBadgeBackgroundColor({ color: "gray", tabId });
-            void browser.action.setBadgeText({ text: "", tabId });
+          setBadgeForTab(tabId, badgeStateFor(settings.enabled, effectiveEnabled));
+
+          // Nothing to verify when spoofing isn't effectively enabled for this
+          // tab (master off, restricted, or out of scope), so skip scheduling
+          // injection checks — this also avoids the alarm path overwriting the
+          // out-of-scope/master-off badge with the active state.
+          if (!effectiveEnabled) {
             return;
           }
 

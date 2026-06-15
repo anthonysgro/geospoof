@@ -1,0 +1,199 @@
+---
+title: "How Websites Actually Know Where You Are"
+description: "Websites pin your location through at least eight independent signals, not just your IP. Here's the full stack, from Wi-Fi positioning to WebRTC, and why a VPN only fixes one of them."
+date: "2026-06-11"
+author: "Anthony Sgro"
+tags: ["Privacy", "How it works"]
+featured: true
+cover: "/images/blog/how-websites-know-your-location.svg"
+coverAlt: "A globe of signal lines on a map grid, titled How Websites Know Where You Are"
+keywords:
+  - "how websites know my location"
+  - "browser location detection"
+  - "wifi positioning browser"
+  - "webrtc ip leak vpn"
+  - "ip geolocation accuracy"
+  - "does a vpn hide my location"
+answer: "Browsers can locate you through at least eight independent signals: your IP address, the Wi-Fi access points around you, GPS, cell-tower triangulation, your timezone offset, your IANA timezone name, JavaScript Date formatting, and WebRTC (which can expose your real IP even behind a VPN). A VPN only changes the IP signal, which is why it isn't enough on its own for location privacy."
+---
+
+A laptop with no GPS chip, sitting in a basement, can tell a website which block
+it's on. It doesn't need satellites and it doesn't need you to click anything.
+It just needs to overhear the names of your neighbors' routers, which it is
+already doing, constantly, for reasons that have nothing to do with you.
+
+Most people picture location as one of two things: GPS, or the little dot an IP
+address puts on a map. It's neither, or rather it's both plus six other things.
+Browsers pull from a whole stack of independent signals, and the reason this
+matters is that a [VPN](https://en.wikipedia.org/wiki/Virtual_private_network)
+only deals with one of them. Here's the rest of the stack.
+
+## Your IP address
+
+The one everyone knows about. Every connection has a public
+[IP address](https://en.wikipedia.org/wiki/IP_address), and commercial databases
+like [MaxMind](https://www.maxmind.com/en/geoip-databases) and
+[IP2Location](https://www.ip2location.com/) map ranges of them to places by
+stitching together registration records, routing data, and active probing.
+Accuracy is usually city-level for home broadband, vaguer on mobile.
+
+This is the signal a VPN actually changes: your traffic exits from the VPN's
+server, so the lookup returns the server's city instead of yours. Useful, and
+also the entire extent of what a VPN does for your location. Everything below
+this line, it leaves completely untouched.
+
+## The Wi-Fi networks around you
+
+This is the one that surprises people. When a page calls
+[`navigator.geolocation.getCurrentPosition()`](https://developer.mozilla.org/en-US/docs/Web/API/Geolocation/getCurrentPosition),
+your browser asks the operating system for a list of nearby
+[Wi-Fi access points](https://en.wikipedia.org/wiki/Wireless_access_point), their
+names and hardware addresses, and ships that list to a location service run by
+Google, Apple, or Mozilla.
+
+Those services know where the routers are because companies literally drove
+around and wrote it down. The practice is called
+[wardriving](https://en.wikipedia.org/wiki/Wardriving): cars with GPS and Wi-Fi
+receivers building a global map of which router lives where, topped up with
+crowdsourced pings from phones. Hand the service a list of the routers you can
+see and it cross-references its database and hands back coordinates good to
+within 10 to 20 meters. No GPS hardware required. Hence the basement laptop.
+
+## GPS
+
+On phones, tablets, and some laptops, the OS can pull coordinates straight from
+[GPS](https://en.wikipedia.org/wiki/Global_Positioning_System) satellites,
+accurate to a few meters outdoors. Browsers reach it through the same
+`navigator.geolocation` API. You don't get to pick the source; the OS quietly
+decides whether GPS, Wi-Fi, or cell towers answers the question.
+
+## Cell towers
+
+When Wi-Fi is thin on the ground, a mobile device can estimate position from the
+signal strength of nearby [cell towers](https://en.wikipedia.org/wiki/Cell_site)
+and a bit of [trilateration](https://en.wikipedia.org/wiki/Trilateration).
+Roughly 100 meters in a dense city, several kilometers out in the country. Less
+precise than Wi-Fi, but it works anywhere there's coverage.
+
+## Your timezone
+
+Two ways in, both free of charge and free of permission prompts.
+
+```javascript
+new Date().getTimezoneOffset() // e.g. 480 for UTC-8 (PST)
+Intl.DateTimeFormat().resolvedOptions().timeZone // e.g. "America/Los_Angeles"
+```
+
+The [offset](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/getTimezoneOffset)
+just bands you to a slice of the planet. The
+[IANA identifier](https://www.iana.org/time-zones) is the chatty one.
+`"America/Los_Angeles"` puts you on the West Coast; `"Asia/Kolkata"` gives up the
+whole country, since India is the only place running UTC+5:30, a detail
+fingerprinting scripts are very aware of. I wrote a
+[whole separate post](/blog/why-your-timezone-reveals-your-location) about how
+much this single signal gives away.
+
+![Developers trying to explain timezones to each other](/images/blog/developers-explaining-timezone.jpg "The timezone signal: simple, until you look at it.")
+
+## Date formatting
+
+Adjacent to the timezone, and easy to forget:
+
+```javascript
+new Date().toString()
+// "Sat May 03 2026 14:23:45 GMT-0800 (Pacific Standard Time)"
+```
+
+[`Date.prototype.toString()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toString)
+and `toLocaleString()` happily print the timezone name right there in the
+output. A script doesn't even have to ask nicely; it just formats a date and
+reads what falls out.
+
+## The Temporal API
+
+The newer [Temporal API](https://tc39.es/proposal-temporal/) replaces the
+ancient `Date` object and is more upfront about timezones, not less:
+
+```javascript
+Temporal.Now.timeZoneId() // "America/Los_Angeles"
+```
+
+As it ships in more browsers it becomes one more door that has to be locked. If
+you spoof `Date` and `Intl` but forget Temporal, you've left it open.
+
+## WebRTC, the one that leaks through your VPN
+
+[WebRTC](https://en.wikipedia.org/wiki/WebRTC) powers in-browser calls and
+file transfer. To connect two peers it uses
+[ICE](https://en.wikipedia.org/wiki/Interactive_Connectivity_Establishment),
+which enumerates your network interfaces looking for a path. That enumeration
+can surface your local IPs and, the part that stings, your real public IP, even
+with a VPN running. The VPN adds a virtual interface, but ICE may also list the
+physical one and attach the public IP it sees. A page can trigger this with a
+few lines of JavaScript and read the result without ever placing a call.
+
+This is the [WebRTC leak](https://browserleaks.com/webrtc), and it isn't a bug.
+It's the spec working as designed, which is somehow worse. You either disable
+WebRTC or restrict which interfaces it's allowed to enumerate.
+
+## Why fixing one signal isn't enough
+
+Here's the thing that trips up the VPN-only crowd. Fingerprinting systems don't
+trust any single signal; they cross-check them and pounce on the contradictions.
+A VPN that says Tokyo while your timezone still says `America/New_York` hasn't
+hidden you, it's flagged you. The usual tells:
+
+- IP country that disagrees with the timezone region
+- a `getTimezoneOffset()` that doesn't match the `Intl` timezone name
+- `navigator.geolocation` coordinates in a different country than the IP
+- WebRTC quietly handing over a non-VPN public IP
+
+Which is the entire reason GeoSpoof overrides the whole set, geolocation,
+timezone offset, IANA name, `Date` formatting, Temporal, and WebRTC, so the
+signals agree with each other no matter which ones a site decides to poke at.
+
+## What an extension can and can't do
+
+I'd rather tell you the ceiling than pretend there isn't one. An extension runs
+in a privileged spot but still a sandboxed one, and a few surfaces sit outside
+its reach.
+
+- **Web Workers** run in their own global scope a content script can't directly
+  touch, so each worker has to be handled on its own. We route different worker
+  patterns through different mechanisms, and on Chromium and Safari, URL-based
+  workers are a documented engine limit we can't fully close.
+- **Engine internals.** JS engines can tell a native built-in from a JavaScript
+  stand-in via internal brand checks. Our anti-fingerprinting layer disguises
+  overrides as `[native code]` and defeats what real-world tools like
+  [CreepJS](https://abrahamjuliot.github.io/creepjs/) and
+  [arkenfox's TZP](https://arkenfox.github.io/TZP/tzp.html) check, but a
+  forensic tool reaching into engine internals can still notice.
+- **Timing side-channels.** A native `getTimezoneOffset()` returns in
+  nanoseconds; a JavaScript override takes microseconds. A determined script
+  with a high-resolution clock can measure the gap.
+
+For true undetectability you need patches at the engine level, which is the road
+[Tor Browser](https://www.torproject.org/) and
+[Mullvad Browser](https://mullvad.net/browser) take. An extension gives you the
+strongest spoofing available from an extension; if your threat model is
+adversarial, reach for a hardened browser. Honest is better than oversold.
+
+## One more detail: the permission prompt
+
+The geolocation API is a [W3C standard](https://www.w3.org/TR/geolocation/), and
+it's supposed to ask before handing out coordinates. GeoSpoof overrides
+[`navigator.permissions.query`](https://developer.mozilla.org/en-US/docs/Web/API/Permissions/query)
+to report `"granted"` while spoofing is on, so the prompt doesn't appear, and it
+returns a realistic `accuracy` value with a small delay rather than an instant,
+suspiciously perfect zero. The tells are in the details, so the details are
+where the work goes.
+
+## Further reading
+
+- [W3C Geolocation API Specification](https://www.w3.org/TR/geolocation/)
+- [MDN: Using the Geolocation API](https://developer.mozilla.org/en-US/docs/Web/API/Geolocation_API/Using_the_Geolocation_API)
+- [Temporal API Proposal (TC39)](https://tc39.es/proposal-temporal/)
+- [WebRTC IP Leak — BrowserLeaks](https://browserleaks.com/webrtc)
+- [IANA Time Zone Database](https://www.iana.org/time-zones)
+- [arkenfox user.js — Firefox privacy hardening](https://github.com/arkenfox/user.js)
+- [CreepJS — advanced fingerprinting detection](https://abrahamjuliot.github.io/creepjs/)

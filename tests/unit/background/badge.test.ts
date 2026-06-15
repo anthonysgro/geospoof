@@ -1,98 +1,161 @@
 /**
- * Unit Tests for Badge Icon Colors
- * Feature: geolocation-spoof-extension-mvp
+ * Unit Tests for the Three-State Per-Tab Badge
+ * Feature: site-scoping
+ *
+ * Covers:
+ *  - badgeStateFor across all master/effective combinations (Req 12.1–12.3)
+ *  - setBadgeForTab writing the expected color/text per state
+ *  - updateBadge computing Effective_Enabled per tab, including restricted
+ *    URLs mapping to the out-of-scope state (Req 12.5)
  */
 
-import { importBackground as importBackgroundBase } from "../../helpers/import-background";
+import { DEFAULT_SETTINGS, type Settings } from "@/shared/types/settings";
+import { badgeStateFor, setBadgeForTab, updateBadge } from "@/background/badge";
+import { storageData } from "../../setup";
 
-// Wrap the shared helper with badge-specific setup (wait for async init + clear mocks)
-async function importBackground() {
-  const mod = await importBackgroundBase();
-  // Allow initialize() async chain to complete before tests assert
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  vi.clearAllMocks();
-  return mod;
+function seedSettings(overrides: Partial<Settings>): void {
+  storageData.settings = { ...DEFAULT_SETTINGS, ...overrides };
 }
 
-beforeEach(() => {
-  // Override tabs.query to throw so updateBadge falls through to the global badge path
-  browser.tabs.query.mockRejectedValue(new Error("tabs.query not available in test"));
+describe("badgeStateFor", () => {
+  /**
+   * Master on + effective true ⇒ active (Req 12.1).
+   */
+  test("returns 'active' when master on and effective enabled", () => {
+    expect(badgeStateFor(true, true)).toBe("active");
+  });
+
+  /**
+   * Master on + effective false ⇒ out-of-scope (Req 12.2, 12.5).
+   */
+  test("returns 'out-of-scope' when master on but effective disabled", () => {
+    expect(badgeStateFor(true, false)).toBe("out-of-scope");
+  });
+
+  /**
+   * Master off ⇒ master-off regardless of effective value (Req 12.3).
+   */
+  test("returns 'master-off' when master off (effective false)", () => {
+    expect(badgeStateFor(false, false)).toBe("master-off");
+  });
+
+  test("returns 'master-off' when master off even if effective true", () => {
+    expect(badgeStateFor(false, true)).toBe("master-off");
+  });
 });
 
-describe("Badge Icon Colors", () => {
-  /**
-   * Test green badge when protection enabled
-   * Validates: Requirements 5.7, 5.8
-   */
-  test("should display green badge with checkmark when protection is enabled", async () => {
-    const { updateBadge } = await importBackground();
+describe("setBadgeForTab", () => {
+  test("writes green checkmark for 'active'", () => {
+    setBadgeForTab(7, "active");
 
-    await updateBadge(true);
-
-    // Verify badge color is set to green
     expect(browser.action.setBadgeBackgroundColor).toHaveBeenCalledWith({
       color: "green",
+      tabId: 7,
     });
-
-    // Verify badge text is set to checkmark
-    expect(browser.action.setBadgeText).toHaveBeenCalledWith({
-      text: "✓",
-    });
+    expect(browser.action.setBadgeText).toHaveBeenCalledWith({ text: "✓", tabId: 7 });
   });
 
-  /**
-   * Test gray badge when protection disabled
-   * Validates: Requirements 5.7, 5.8
-   */
-  test("should display gray badge with empty text when protection is disabled", async () => {
-    const { updateBadge } = await importBackground();
+  test("writes muted slate dot for 'out-of-scope'", () => {
+    setBadgeForTab(8, "out-of-scope");
 
-    await updateBadge(false);
+    expect(browser.action.setBadgeBackgroundColor).toHaveBeenCalledWith({
+      color: "#5b7083",
+      tabId: 8,
+    });
+    expect(browser.action.setBadgeText).toHaveBeenCalledWith({ text: "•", tabId: 8 });
+  });
 
-    // Verify badge color is set to gray
+  test("writes gray empty text for 'master-off'", () => {
+    setBadgeForTab(9, "master-off");
+
     expect(browser.action.setBadgeBackgroundColor).toHaveBeenCalledWith({
       color: "gray",
+      tabId: 9,
     });
-
-    // Verify badge text is empty
-    expect(browser.action.setBadgeText).toHaveBeenCalledWith({
-      text: "",
-    });
+    expect(browser.action.setBadgeText).toHaveBeenCalledWith({ text: "", tabId: 9 });
   });
+});
 
-  test("should call both badge API methods when updating badge", async () => {
-    const { updateBadge } = await importBackground();
+describe("updateBadge", () => {
+  test("shows master-off on every tab when master switch is off", async () => {
+    seedSettings({ enabled: false });
+    browser.tabs.query.mockResolvedValue([
+      { id: 1, url: "https://example.com" },
+      { id: 2, url: "https://other.com" },
+    ]);
 
-    await updateBadge(true);
+    await updateBadge();
 
-    // Both methods should be called
-    expect(browser.action.setBadgeBackgroundColor).toHaveBeenCalledTimes(1);
-    expect(browser.action.setBadgeText).toHaveBeenCalledTimes(1);
-  });
-
-  test("should handle multiple badge updates", async () => {
-    const { updateBadge } = await importBackground();
-
-    // Enable
-    await updateBadge(true);
-    expect(browser.action.setBadgeBackgroundColor).toHaveBeenLastCalledWith({
-      color: "green",
-    });
-
-    // Disable
-    await updateBadge(false);
-    expect(browser.action.setBadgeBackgroundColor).toHaveBeenLastCalledWith({
+    expect(browser.action.setBadgeBackgroundColor).toHaveBeenCalledWith({
       color: "gray",
+      tabId: 1,
     });
+    expect(browser.action.setBadgeBackgroundColor).toHaveBeenCalledWith({
+      color: "gray",
+      tabId: 2,
+    });
+  });
 
-    // Enable again
-    await updateBadge(true);
-    expect(browser.action.setBadgeBackgroundColor).toHaveBeenLastCalledWith({
+  test("shows active for an in-scope tab in 'all' mode", async () => {
+    seedSettings({ enabled: true, scopeMode: "all" });
+    browser.tabs.query.mockResolvedValue([{ id: 1, url: "https://example.com" }]);
+
+    await updateBadge();
+
+    expect(browser.action.setBadgeBackgroundColor).toHaveBeenCalledWith({
       color: "green",
+      tabId: 1,
     });
+    expect(browser.action.setBadgeText).toHaveBeenCalledWith({ text: "✓", tabId: 1 });
+  });
 
-    // Should have been called 3 times total
-    expect(browser.action.setBadgeBackgroundColor).toHaveBeenCalledTimes(3);
-    expect(browser.action.setBadgeText).toHaveBeenCalledTimes(3);
+  test("shows out-of-scope for a restricted URL even when master on (Req 12.5)", async () => {
+    seedSettings({ enabled: true, scopeMode: "all" });
+    browser.tabs.query.mockResolvedValue([{ id: 1, url: "about:blank" }]);
+
+    await updateBadge();
+
+    expect(browser.action.setBadgeBackgroundColor).toHaveBeenCalledWith({
+      color: "#5b7083",
+      tabId: 1,
+    });
+    expect(browser.action.setBadgeText).toHaveBeenCalledWith({ text: "•", tabId: 1 });
+  });
+
+  test("shows out-of-scope for a tab not on the allowlist", async () => {
+    seedSettings({ enabled: true, scopeMode: "allowlist", allowlist: ["example.com"] });
+    browser.tabs.query.mockResolvedValue([{ id: 1, url: "https://not-listed.com" }]);
+
+    await updateBadge();
+
+    expect(browser.action.setBadgeBackgroundColor).toHaveBeenCalledWith({
+      color: "#5b7083",
+      tabId: 1,
+    });
+    expect(browser.action.setBadgeText).toHaveBeenCalledWith({ text: "•", tabId: 1 });
+  });
+
+  test("applies per-tab states across a mixed set of tabs", async () => {
+    seedSettings({ enabled: true, scopeMode: "denylist", denylist: ["blocked.com"] });
+    browser.tabs.query.mockResolvedValue([
+      { id: 1, url: "https://example.com" }, // active
+      { id: 2, url: "https://blocked.com" }, // out-of-scope (denylisted)
+      { id: 3, url: "chrome://settings" }, // out-of-scope (restricted)
+    ]);
+
+    await updateBadge();
+
+    expect(browser.action.setBadgeBackgroundColor).toHaveBeenCalledWith({
+      color: "green",
+      tabId: 1,
+    });
+    expect(browser.action.setBadgeBackgroundColor).toHaveBeenCalledWith({
+      color: "#5b7083",
+      tabId: 2,
+    });
+    expect(browser.action.setBadgeBackgroundColor).toHaveBeenCalledWith({
+      color: "#5b7083",
+      tabId: 3,
+    });
   });
 });

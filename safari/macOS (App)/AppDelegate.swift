@@ -103,6 +103,7 @@ struct MacRootView: View {
         } detail: {
             switch section ?? .home {
             case .home: MacHomeView(controller: controller)
+            case .filters: SiteFiltersView(controller: controller)
             case .details: DetailsTab(controller: controller)
             case .test: MacTestView()
             case .settings: MacSettingsView()
@@ -122,6 +123,7 @@ struct MacRootView: View {
 /// macOS navigation sections (sidebar items).
 enum MacSection: String, CaseIterable, Identifiable {
     case home = "Home"
+    case filters = "Filters"
     case test = "Test"
     case details = "Details"
     case settings = "Settings"
@@ -130,6 +132,7 @@ enum MacSection: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .home: return "location.circle"
+        case .filters: return "line.3.horizontal.decrease.circle"
         case .details: return "list.bullet.rectangle"
         case .test: return "checkmark.shield"
         case .settings: return "gearshape"

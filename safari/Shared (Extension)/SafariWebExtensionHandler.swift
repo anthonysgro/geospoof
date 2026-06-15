@@ -43,6 +43,10 @@ enum RegionKey {
     static let tzDst       = "region_tzDst"
     // Favorites synced as a JSON string (passthrough both ways).
     static let favorites   = "region_favorites"
+    // Site-scoping (passthrough both ways): mode scalar + allow/deny JSON lists.
+    static let scopeMode   = "region_scopeMode"
+    static let allowlist   = "region_allowlist"
+    static let denylist    = "region_denylist"
 
     // App -> Extension: a full desired-state snapshot the extension adopts on
     // next launch / tab activity (last-writer-wins by pending_updatedAt).
@@ -56,6 +60,9 @@ enum RegionKey {
     static let pCleared     = "pending_cleared"
     static let pResync      = "pending_resync"
     static let pFavorites   = "pending_favorites"
+    static let pScopeMode   = "pending_scopeMode"
+    static let pAllowlist   = "pending_allowlist"
+    static let pDenylist    = "pending_denylist"
 }
 
 class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
@@ -184,6 +191,17 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                 dict[RegionKey.favorites] = favoritesJSON
             }
 
+            // Site-scoping: mode scalar + allow/deny lists (JSON strings).
+            if let scopeMode = input["scopeMode"] as? String {
+                dict[RegionKey.scopeMode] = scopeMode
+            }
+            if let allowlistJSON = input["allowlist"] as? String {
+                dict[RegionKey.allowlist] = allowlistJSON
+            }
+            if let denylistJSON = input["denylist"] as? String {
+                dict[RegionKey.denylist] = denylistJSON
+            }
+
             dict[RegionKey.updatedAt] = Date().timeIntervalSince1970
         }
 
@@ -224,6 +242,15 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         }
         if let favoritesJSON = dict[RegionKey.pFavorites] as? String {
             pending["favorites"] = favoritesJSON
+        }
+        if let scopeMode = dict[RegionKey.pScopeMode] as? String {
+            pending["scopeMode"] = scopeMode
+        }
+        if let allowlistJSON = dict[RegionKey.pAllowlist] as? String {
+            pending["allowlist"] = allowlistJSON
+        }
+        if let denylistJSON = dict[RegionKey.pDenylist] as? String {
+            pending["denylist"] = denylistJSON
         }
         return ["pending": pending]
     }
