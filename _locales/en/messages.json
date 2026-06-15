@@ -1,6 +1,6 @@
 {
   "extensionName": {
-    "message": "GeoSpoof",
+    "message": "GeoSpoof: Spoof Geolocation",
     "description": "Extension name shown in the browser and store listing."
   },
   "extensionDescription": {
