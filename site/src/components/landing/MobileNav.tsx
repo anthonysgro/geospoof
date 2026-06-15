@@ -84,7 +84,7 @@ export function MobileNav({ items, className }: MobileNavProps) {
                 className={cn(
                   "flex min-h-12 items-center px-4 py-3",
                   "text-lg font-medium text-(--color-canvas-foreground)",
-                  "rounded-[var(--radius-brand)]",
+                  "rounded-(--radius-brand)",
                   "transition-colors duration-200",
                   "hover:bg-(--color-canvas-border)",
                   "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"

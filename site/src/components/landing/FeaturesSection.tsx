@@ -101,7 +101,7 @@ function CityRow({
 }) {
   const doubled = [...cities, ...cities]
   return (
-    <div className="flex overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+    <div className="flex overflow-hidden mask-[linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
       <div
         className={cn(
           "flex gap-2 py-1",
@@ -167,7 +167,7 @@ function TimezoneVisual() {
       ].map(({ label, value }) => (
         <div
           key={label}
-          className="flex items-center justify-between rounded-lg bg-(--color-canvas-border)/40 px-3 py-2"
+          className="flex items-center justify-between rounded-lg bg-canvas-border/40 px-3 py-2"
         >
           <span className="font-mono text-xs text-(--color-canvas-muted)">
             {label}
@@ -204,7 +204,7 @@ function PrivacyVisual() {
 function VpnSyncVisual() {
   return (
     <div className="mt-4 flex items-center justify-center gap-3">
-      <div className="rounded-xl border border-(--color-canvas-border) bg-(--color-canvas-border)/30 px-4 py-3 text-center">
+      <div className="rounded-xl border border-(--color-canvas-border) bg-canvas-border/30 px-4 py-3 text-center">
         <div className="mb-1 text-xs text-(--color-canvas-muted)">VPN exit</div>
         <div className="text-sm font-semibold text-(--color-canvas-foreground)">
           🇩🇪 Frankfurt
@@ -214,7 +214,7 @@ function VpnSyncVisual() {
         <RefreshCwIcon className="h-4 w-4 text-(--color-brand)" />
         <span className="text-[10px] text-(--color-canvas-muted)">synced</span>
       </div>
-      <div className="rounded-xl border border-(--color-brand)/40 bg-(--color-brand)/10 px-4 py-3 text-center">
+      <div className="rounded-xl border border-brand/40 bg-(--color-brand)/10 px-4 py-3 text-center">
         <div className="mb-1 text-xs text-(--color-canvas-muted)">Spoofed</div>
         <div className="text-sm font-semibold text-(--color-brand)">
           🇩🇪 Frankfurt
@@ -334,7 +334,7 @@ export function FeaturesSection({ className }: { className?: string }) {
                 <Card
                   className={cn(
                     "h-full border border-(--color-canvas-border) bg-(--color-canvas) shadow-none",
-                    "transition-all duration-200 hover:border-(--color-brand)/40 hover:shadow-md"
+                    "transition-all duration-200 hover:border-brand/40 hover:shadow-md"
                   )}
                 >
                   <CardHeader>
