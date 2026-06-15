@@ -5,6 +5,7 @@
   "description": "Firefox extension for geolocation spoofing and location privacy",
   "scripts": {
     "build": "npm run build:prod",
+    "version": "node scripts/sync-xcode-version.mjs && git add safari/GeoSpoof.xcodeproj/project.pbxproj",
     "build:dev": "vite build --mode development",
     "build:prod": "vite build --mode production",
     "build:firefox": "BROWSER=firefox vite build --mode production",
