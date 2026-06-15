@@ -3,12 +3,15 @@ import {
   Outlet,
   Scripts,
   createRootRoute,
+  Link,
 } from "@tanstack/react-router"
 import { Analytics } from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/react"
 import appCss from "../styles.css?url"
 import { ThemeProvider } from "@/components/theme-provider"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { Navigation } from "@/components/landing/Navigation"
+import { Footer } from "@/components/landing/Footer"
 
 export const Route = createRootRoute({
   head: () => ({
@@ -76,10 +79,23 @@ export const Route = createRootRoute({
     ],
   }),
   notFoundComponent: () => (
-    <main className="container mx-auto p-4 pt-16">
-      <h1 className="mb-2 text-2xl font-bold">404</h1>
-      <p className="text-(--color-canvas-muted)">Page not found.</p>
-    </main>
+    <div className="flex min-h-screen flex-col bg-(--color-canvas)">
+      <Navigation />
+      <main className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
+        <p className="text-sm font-semibold tracking-widest text-(--color-brand) uppercase">404</p>
+        <h1 className="text-3xl font-bold text-(--color-canvas-foreground)">Page not found</h1>
+        <p className="text-(--color-canvas-muted)">
+          This page doesn't exist or has been moved.
+        </p>
+        <Link
+          to="/"
+          className="mt-2 inline-flex min-h-10 items-center justify-center rounded-brand px-6 bg-(--color-brand) text-sm font-semibold text-white transition-all hover:bg-(--color-brand-dark)"
+        >
+          Back to home
+        </Link>
+      </main>
+      <Footer />
+    </div>
   ),
   component: () => <Outlet />,
   shellComponent: RootDocument,

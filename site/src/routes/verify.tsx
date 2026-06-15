@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from "@tanstack/react-router"
+import { createFileRoute, notFound } from "@tanstack/react-router"
 import * as React from "react"
 import { Check, Loader2, ShieldAlert, ShieldCheck, X } from "lucide-react"
 
@@ -28,9 +28,7 @@ import {
 import { probeWebrtc, type WebrtcResult } from "@/lib/verification/webrtc-probe"
 
 export const Route = createFileRoute("/verify")({
-  beforeLoad: () => {
-    throw redirect({ to: "/", replace: true })
-  },
+  beforeLoad: () => { throw notFound() },
   component: VerifyPage,
   head: () => ({
     meta: [
