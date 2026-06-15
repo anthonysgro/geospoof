@@ -82,7 +82,8 @@ const config = defineConfig({
       prerender: {
         enabled: true,
         crawlLinks: true,
-        filter: ({ path: routePath }: { path: string }) => routePath !== "/test",
+        filter: ({ path: routePath }: { path: string }) =>
+          routePath !== "/test" && routePath !== "/verify",
       },
     }),
     viteReact(),
