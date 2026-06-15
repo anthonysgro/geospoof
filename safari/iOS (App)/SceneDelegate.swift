@@ -37,12 +37,12 @@ struct RootView: View {
                     Label("Home", systemImage: "location.circle")
                 }
 
-            TestView()
+            SiteFiltersView(controller: controller)
                 .tabItem {
-                    Label("Test", systemImage: "checkmark.shield")
+                    Label("Filters", systemImage: "line.3.horizontal.decrease.circle")
                 }
 
-            DetailsTab(controller: controller)
+            DetailsTab(controller: controller, includeTestLinks: true)
                 .tabItem {
                     Label("Details", systemImage: "list.bullet.rectangle")
                 }
@@ -115,27 +115,12 @@ struct HomeView: View {
     }
 }
 
-/// iOS Test tab — the "Test Your Protection" links and Help, in their own tab
-/// (parity with the macOS Test sidebar section) instead of inline on Home.
-struct TestView: View {
-    var body: some View {
-        AdaptiveNavigationStack {
-            Form {
-                ProtectionTestLinks()
-            }
-            .groupedFormStyle()
-            .tint(.brand)
-            .navigationTitle("Test")
-        }
-    }
-}
-
 struct SettingsView: View {
     @StateObject private var iconModel = AppIconModel()
     @AppStorage("appearanceMode") private var appearance: AppearanceMode = .system
+    #if DEBUG
     @AppStorage(LogSettingsKey.enabled) private var loggingEnabled = false
     @AppStorage(LogSettingsKey.level) private var logLevelRaw = AppLogLevel.info.rawValue
-    #if DEBUG
     @State private var debugReviewToken = 0
     #endif
 
@@ -166,23 +151,6 @@ struct SettingsView: View {
                 } header: {
                     Text("Appearance")
                 }
-                
-                Section {
-                    Toggle(isOn: $loggingEnabled) {
-                        Label("Diagnostic Logging", systemImage: "ladybug")
-                    }
-                    if loggingEnabled {
-                        Picker(selection: $logLevelRaw) {
-                            ForEach(AppLogLevel.allCases) { level in
-                                Text(level.label).tag(level.rawValue)
-                            }
-                        } label: {
-                            Label("Log Level", systemImage: "slider.horizontal.3")
-                        }
-                    }
-                } header: {
-                    Text("Advanced")
-                }
 
                 TipJarView()
 
@@ -202,6 +170,18 @@ struct SettingsView: View {
 
                 #if DEBUG
                 Section {
+                    Toggle(isOn: $loggingEnabled) {
+                        Label("Diagnostic Logging", systemImage: "ladybug")
+                    }
+                    if loggingEnabled {
+                        Picker(selection: $logLevelRaw) {
+                            ForEach(AppLogLevel.allCases) { level in
+                                Text(level.label).tag(level.rawValue)
+                            }
+                        } label: {
+                            Label("Log Level", systemImage: "slider.horizontal.3")
+                        }
+                    }
                     Button {
                         debugReviewToken += 1
                     } label: {

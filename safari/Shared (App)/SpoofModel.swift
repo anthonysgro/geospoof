@@ -55,6 +55,9 @@ enum AppGroup {
     static let regionTzOffset    = "region_tzOffset"
     static let regionTzDst       = "region_tzDst"
     static let regionFavorites   = "region_favorites"
+    static let regionScopeMode   = "region_scopeMode"
+    static let regionAllowlist   = "region_allowlist"
+    static let regionDenylist    = "region_denylist"
 
     // App -> Extension (a full desired-state snapshot the extension adopts on
     // next launch / tab activity, last-writer-wins by `pending_updatedAt`).
@@ -71,6 +74,9 @@ enum AppGroup {
     static let pendingCleared     = "pending_cleared"
     static let pendingResync      = "pending_resync"
     static let pendingFavorites   = "pending_favorites"
+    static let pendingScopeMode   = "pending_scopeMode"
+    static let pendingAllowlist   = "pending_allowlist"
+    static let pendingDenylist    = "pending_denylist"
 
     // Widget-internal: timestamp of the last widget-initiated re-sync, so the
     // widget button can show a spinner for a minimum window. Written by the
@@ -148,6 +154,49 @@ struct SpoofFavorite: Identifiable, Equatable, Codable {
             try c.encodeNil(forKey: .label)
         }
     }
+}
+
+/// Site-scoping mode (mirrors `ScopeMode` in src/shared/types/settings.ts).
+/// "all" preserves the pre-1.1 global behavior.
+enum ScopeMode: String, CaseIterable, Identifiable {
+    case all
+    case allowlist
+    case denylist
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .all: return "All"
+        case .allowlist: return "Allowlist"
+        case .denylist: return "Denylist"
+        }
+    }
+
+    /// One-line description shown under the mode picker (mirrors the popup).
+    var detail: String {
+        switch self {
+        case .all: return "Spoofing applies to every site."
+        case .allowlist: return "Spoofing applies only to listed sites."
+        case .denylist: return "Spoofing applies to every site except listed ones."
+        }
+    }
+
+    /// Header label for the active list section.
+    var listTitle: String {
+        switch self {
+        case .denylist: return "Blocked Sites"
+        default: return "Allowed Sites"
+        }
+    }
+}
+
+/// Outcome of attempting to add a domain to a scope list, so the UI can show an
+/// accurate hint instead of a single catch-all "invalid" message.
+enum ScopeAddResult {
+    case added
+    case duplicate
+    case invalid
 }
 
 enum AppLogLevel: Int, CaseIterable, Identifiable {
@@ -444,6 +493,13 @@ final class SpoofController: ObservableObject {
     @Published var timezone: SpoofTimezone?
     @Published var webrtcProtection = false
     @Published var vpnSyncEnabled = false
+    /// Site-scoping state. Mutated via the explicit setters below (which write
+    /// the pending bridge record) and by adoption in refreshFromExtension /
+    /// restoreLocalPending (which set them directly, no echo). No didSet, so
+    /// adoption never bounces back as a pending write.
+    @Published var scopeMode: ScopeMode = .all
+    @Published var allowlist: [String] = []
+    @Published var denylist: [String] = []
     @Published var favorites: [SpoofFavorite] = [] {
         didSet {
             saveFavorites()
@@ -889,6 +945,89 @@ final class SpoofController: ObservableObject {
         writePending()
     }
 
+    // MARK: Site-scoping
+
+    /// Switch the scope mode. The allow/deny lists are kept independently, so
+    /// switching modes never discards the other list's entries.
+    func setScopeMode(_ value: ScopeMode) {
+        guard scopeMode != value else { return }
+        Log.location.info("Scope mode → \(value.rawValue)")
+        scopeMode = value
+        writePending()
+    }
+
+    /// Add a domain to the given list. The input is lightly normalized here for
+    /// immediate display; the extension re-normalizes authoritatively on adopt
+    /// and pushes the canonical list back. The result distinguishes an invalid
+    /// domain from one that's already present, so the UI can show an accurate
+    /// hint rather than a generic "invalid" message.
+    @discardableResult
+    func addScopeSite(_ raw: String, to mode: ScopeMode) -> ScopeAddResult {
+        guard let domain = Self.normalizeDomainInput(raw) else { return .invalid }
+        switch mode {
+        case .allowlist:
+            guard !allowlist.contains(domain) else { return .duplicate }
+            allowlist.append(domain)
+        case .denylist:
+            guard !denylist.contains(domain) else { return .duplicate }
+            denylist.append(domain)
+        case .all:
+            return .invalid
+        }
+        Log.location.info("Scope site added to \(mode.rawValue): \(domain)")
+        Haptics.impact(.light)
+        writePending()
+        return .added
+    }
+
+    /// Remove a domain from the given list.
+    func removeScopeSite(_ domain: String, from mode: ScopeMode) {
+        switch mode {
+        case .allowlist: allowlist.removeAll { $0 == domain }
+        case .denylist: denylist.removeAll { $0 == domain }
+        case .all: return
+        }
+        Log.location.info("Scope site removed from \(mode.rawValue): \(domain)")
+        Haptics.impact(.light)
+        writePending()
+    }
+
+    /// The list backing the active mode (empty for `.all`).
+    var activeScopeList: [String] {
+        switch scopeMode {
+        case .allowlist: return allowlist
+        case .denylist: return denylist
+        case .all: return []
+        }
+    }
+
+    /// Light domain cleanup mirroring `normalizeDomain` in
+    /// src/shared/utils/scope.ts: trim, lowercase, strip scheme / a single
+    /// leading `www.` / path / port / query / fragment, and require at least one
+    /// dot with DNS-legal characters. Returns nil for unusable input. The
+    /// extension is the authoritative normalizer; this just keeps obvious junk
+    /// out of the UI and out of the pending record.
+    static func normalizeDomainInput(_ raw: String) -> String? {
+        guard raw.count <= 2048 else { return nil }
+        var s = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if s.hasPrefix("https://") { s.removeFirst("https://".count) }
+        else if s.hasPrefix("http://") { s.removeFirst("http://".count) }
+        while s.hasPrefix("www.") { s.removeFirst("www.".count) }
+        if let cut = s.firstIndex(where: { $0 == "/" || $0 == ":" || $0 == "?" || $0 == "#" }) {
+            s = String(s[s.startIndex..<cut])
+        }
+        guard !s.isEmpty, s.contains(".") else { return nil }
+        let labels = s.split(separator: ".", omittingEmptySubsequences: false)
+        let allowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyz0123456789-")
+        for label in labels {
+            if label.isEmpty || label.count > 63 { return nil }
+            if label.hasPrefix("-") || label.hasSuffix("-") { return nil }
+            if label.unicodeScalars.contains(where: { !allowed.contains($0) }) { return nil }
+        }
+        return s.count <= 253 ? s : nil
+    }
+
+
     // MARK: Favorites
 
     func toggleFavorite() {
@@ -1096,6 +1235,17 @@ final class SpoofController: ObservableObject {
             dict[AppGroup.pendingFavorites] = json
         }
 
+        // Site-scoping: mode scalar + allow/deny lists as JSON strings.
+        dict[AppGroup.pendingScopeMode] = scopeMode.rawValue
+        if let data = try? JSONEncoder().encode(allowlist),
+           let json = String(data: data, encoding: .utf8) {
+            dict[AppGroup.pendingAllowlist] = json
+        }
+        if let data = try? JSONEncoder().encode(denylist),
+           let json = String(data: data, encoding: .utf8) {
+            dict[AppGroup.pendingDenylist] = json
+        }
+
         // Location + its derived display fields. The three cases collapse to:
         //   • location present → publish coords + display fields, not cleared.
         //   • no location, VPN-sync ON → mid-sync (e.g. detecting exit IP); keep
@@ -1179,6 +1329,12 @@ final class SpoofController: ObservableObject {
         enabled = (dict[AppGroup.pendingEnabled] as? Bool) ?? enabled
         webrtcProtection = (dict[AppGroup.pendingWebrtc] as? Bool) ?? webrtcProtection
         vpnSyncEnabled = (dict[AppGroup.pendingVpnSync] as? Bool) ?? vpnSyncEnabled
+
+        if let raw = dict[AppGroup.pendingScopeMode] as? String, let mode = ScopeMode(rawValue: raw) {
+            scopeMode = mode
+        }
+        if let list = Self.decodeStringList(dict[AppGroup.pendingAllowlist]) { allowlist = list }
+        if let list = Self.decodeStringList(dict[AppGroup.pendingDenylist]) { denylist = list }
 
         if let lat = dict[AppGroup.pendingLatitude] as? Double,
            let lon = dict[AppGroup.pendingLongitude] as? Double {
@@ -1275,6 +1431,14 @@ final class SpoofController: ObservableObject {
             favorites = decoded
             isApplyingRemoteState = false
         }
+
+        // Adopt the extension's scope state (mode + lists). These props have no
+        // didSet, so setting them directly never echoes back as a pending write.
+        if let raw = dict[AppGroup.regionScopeMode] as? String, let mode = ScopeMode(rawValue: raw) {
+            scopeMode = mode
+        }
+        if let list = Self.decodeStringList(dict[AppGroup.regionAllowlist]) { allowlist = list }
+        if let list = Self.decodeStringList(dict[AppGroup.regionDenylist]) { denylist = list }
     }
 
     private static func readSharedPrefs(suite: String) -> [String: Any]? {
@@ -1287,6 +1451,16 @@ final class SpoofController: ObservableObject {
             .containerURL(forSecurityApplicationGroupIdentifier: suite) else { return nil }
         let url = container.appendingPathComponent("Library/Preferences/\(suite).plist")
         return NSDictionary(contentsOf: url) as? [String: Any]
+    }
+
+    /// Decode a JSON-encoded `[String]` (the scope allow/deny lists) stored in
+    /// the App Group plist. Returns nil when the key is absent or malformed, so
+    /// callers can leave existing state untouched rather than clobbering it.
+    private static func decodeStringList(_ value: Any?) -> [String]? {
+        guard let json = value as? String,
+              let data = json.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode([String].self, from: data) else { return nil }
+        return decoded
     }
 
     // MARK: Timezone resolution (IANA id when known, else offline lookup, else longitude estimate)

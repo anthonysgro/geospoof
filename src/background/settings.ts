@@ -290,6 +290,11 @@ async function pushRegionToNativeHost(settings: Settings): Promise<void> {
       // handler stays a dumb passthrough (no nested-array bridging). The app
       // decodes it; last-writer-wins by region/pending timestamp as usual.
       favorites: JSON.stringify(settings.favorites ?? []),
+      // Site-scoping: the mode is a scalar; the allow/deny lists ride as JSON
+      // strings exactly like favorites (passthrough both ways).
+      scopeMode: settings.scopeMode,
+      allowlist: JSON.stringify(settings.allowlist ?? []),
+      denylist: JSON.stringify(settings.denylist ?? []),
     });
   } catch (error) {
     // Swallow — native messaging may not be available in all contexts

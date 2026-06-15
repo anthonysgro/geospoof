@@ -11,7 +11,8 @@
  */
 
 import { createLogger } from "@/shared/utils/debug-logger";
-import type { Favorite } from "@/shared/types/settings";
+import type { Favorite, ScopeMode, Settings } from "@/shared/types/settings";
+import { normalizeDomain } from "@/shared/utils/scope";
 import { loadSettings, updateSettings } from "./settings";
 import {
   handleSetLocation,
@@ -20,6 +21,7 @@ import {
 } from "./messages";
 import { syncVpnLocation, clearIpGeoCache } from "./vpn-sync";
 import { broadcastSettingsToTabs } from "./tabs";
+import { updateBadge } from "./badge";
 
 const logger = createLogger("BG");
 
@@ -34,6 +36,9 @@ interface PendingSettings {
   longitude?: number;
   displayName?: string;
   favorites?: string; // JSON-encoded Favorite[] from the app
+  scopeMode?: string; // "all" | "allowlist" | "denylist"
+  allowlist?: string; // JSON-encoded string[] from the app
+  denylist?: string; // JSON-encoded string[] from the app
 }
 
 interface PendingResponse {
@@ -190,6 +195,60 @@ export async function adoptPendingSettingsFromApp(): Promise<void> {
       } catch (error) {
         logger.debug("adoptPendingSettingsFromApp: favorites parse failed:", error);
       }
+    }
+
+    // 5. Site-scoping — adopt the mode and the allow/deny lists when present
+    // and changed. Domains are normalized + de-duplicated here so the extension
+    // stays the source of truth for list hygiene regardless of what the app
+    // stored. A scope change re-broadcasts per-tab and re-badges so open tabs
+    // and the toolbar reflect the new decision without a manual reload.
+    const scopeUpdates: Partial<Settings> = {};
+    const VALID_SCOPE_MODES = new Set<ScopeMode>(["all", "allowlist", "denylist"]);
+    const latestForScope = await loadSettings();
+
+    if (
+      typeof pending.scopeMode === "string" &&
+      VALID_SCOPE_MODES.has(pending.scopeMode as ScopeMode) &&
+      pending.scopeMode !== latestForScope.scopeMode
+    ) {
+      scopeUpdates.scopeMode = pending.scopeMode as ScopeMode;
+    }
+
+    const parseDomainList = (json: string | undefined): string[] | undefined => {
+      if (typeof json !== "string") return undefined;
+      let arr: unknown;
+      try {
+        arr = JSON.parse(json);
+      } catch {
+        return undefined;
+      }
+      if (!Array.isArray(arr)) return undefined;
+      const seen = new Set<string>();
+      const out: string[] = [];
+      for (const entry of arr) {
+        if (typeof entry !== "string") continue;
+        const normalized = normalizeDomain(entry);
+        if (normalized !== null && !seen.has(normalized)) {
+          seen.add(normalized);
+          out.push(normalized);
+        }
+      }
+      return out;
+    };
+
+    const adoptedAllow = parseDomainList(pending.allowlist);
+    if (adoptedAllow && JSON.stringify(adoptedAllow) !== JSON.stringify(latestForScope.allowlist)) {
+      scopeUpdates.allowlist = adoptedAllow;
+    }
+    const adoptedDeny = parseDomainList(pending.denylist);
+    if (adoptedDeny && JSON.stringify(adoptedDeny) !== JSON.stringify(latestForScope.denylist)) {
+      scopeUpdates.denylist = adoptedDeny;
+    }
+
+    if (Object.keys(scopeUpdates).length > 0) {
+      const updated = await updateSettings(scopeUpdates);
+      await broadcastSettingsToTabs(updated);
+      await updateBadge();
     }
 
     logger.info("Pending settings adopted and applied.");
