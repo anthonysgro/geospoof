@@ -1,4 +1,5 @@
 import { motion } from "motion/react"
+import { Link } from "@tanstack/react-router"
 import { Section } from "./Section"
 import { cn } from "@/lib/utils"
 import { useReducedMotion } from "@/hooks/use-reduced-motion"
@@ -155,16 +156,10 @@ export function HeroSection({ className }: { className?: string }) {
             >
               Download Free
             </a>
-            <a
-              href="#features"
-              onClick={(e) => {
-                e.preventDefault()
-                document
-                  .getElementById("features")
-                  ?.scrollIntoView({ behavior: "smooth", block: "start" })
-              }}
+            <Link
+              to="/verify"
               className={cn(
-                "inline-flex items-center justify-center",
+                "group inline-flex items-center justify-center gap-2.5",
                 "border border-(--color-canvas-border) text-(--color-canvas-foreground)",
                 "transition-all hover:bg-(--color-canvas-border)",
                 "min-h-14 rounded-brand px-10",
@@ -172,8 +167,12 @@ export function HeroSection({ className }: { className?: string }) {
                 "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
               )}
             >
-              See how it works
-            </a>
+              <span className="relative flex size-2.5" aria-hidden="true">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75" />
+                <span className="relative inline-flex size-2.5 rounded-full bg-green-500" />
+              </span>
+              See what sites detect
+            </Link>
           </div>
 
           {/* Social proof */}

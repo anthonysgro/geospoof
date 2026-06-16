@@ -34,11 +34,11 @@ export const Route = createFileRoute("/verify")({
   component: VerifyPage,
   head: () => ({
     meta: [
-      { title: "Verify your spoofed location | GeoSpoof" },
+      { title: "Browser Location Test — See What Websites Know About You | GeoSpoof" },
       {
         name: "description",
         content:
-          "Quickly verify what GeoSpoof is spoofing — geolocation, timezone, and WebRTC. See the values your browser is reporting right now.",
+          "Free browser location test. See the geolocation, timezone, and IP address websites can read about you right now — and check whether your browser is leaking your real location.",
       },
     ],
   }),
@@ -206,6 +206,12 @@ function VerifyInner() {
   const permissionState = useGeolocationPermission()
   const geoTz = useGeoTimezone(geoLat, geoLon)
 
+  // Resolve the IP's timezone from its coordinates using the same offline
+  // boundary data (browser-geo-tz) the extension uses. This is boundary-
+  // accurate for the IP's point location, and works regardless of whether the
+  // IP provider supplied a timezone string itself.
+  const ipTz = useGeoTimezone(net?.latitude ?? null, net?.longitude ?? null)
+
   const apiGroups = React.useMemo(
     () =>
       buildValueGroups(
@@ -228,10 +234,14 @@ function VerifyInner() {
     haversineKm(loc.value.latitude, loc.value.longitude, net.latitude, net.longitude) >
       200
 
+  // Prefer the provider's own timezone string (geojs supplies one); otherwise
+  // use the zone resolved from the IP's coordinates. Compared by continent for
+  // a coarse "different part of the world" read.
+  const ipTimezone = net?.timezone ?? ipTz?.zone ?? null
   const tzVsIpMismatch =
     !!tz.identifier &&
-    !!net?.timezone &&
-    timezoneContinent(tz.identifier) !== timezoneContinent(net.timezone)
+    !!ipTimezone &&
+    timezoneContinent(tz.identifier) !== timezoneContinent(ipTimezone)
 
   const rows: Array<Row> = [
     // Geolocation
@@ -370,17 +380,18 @@ function VerifyInner() {
     !tzVsIpMismatch
 
   return (
-    <section className="mx-auto max-w-2xl px-4 py-16 md:px-5 md:py-24">
+    <section className="mx-auto max-w-3xl px-4 py-16 md:px-5 md:py-24">
       <div className="mb-8">
         <p className="mb-2 text-sm font-semibold tracking-widest text-(--color-brand) uppercase">
           Verification
         </p>
         <h1 className="mb-3 text-3xl font-bold text-(--color-canvas-foreground) md:text-4xl">
-          What your browser is reporting
+          What websites can see about you
         </h1>
         <p className="text-(--color-canvas-muted)">
-          Live values from your browser right now. We test dozens of APIs attackers
-          use to fingerprint location — these are the highlights.
+          Live values from your browser right now — the location, timezone, and IP
+          websites can read. With GeoSpoof active, they reflect your spoofed location
+          instead of your real one.
         </p>
       </div>
 
@@ -415,7 +426,7 @@ function VerifyInner() {
       )}
 
       {/* API values — wider on desktop */}
-      <div className="mt-12 lg:-mx-32 xl:-mx-48">
+      <div className="mt-12 lg:-mx-20 xl:-mx-36">
         <p className="mb-1 text-sm font-semibold tracking-widest text-(--color-brand) uppercase">
           Browser API surface
         </p>
@@ -426,6 +437,8 @@ function VerifyInner() {
         <ApiChecks groups={apiGroups} />
       </div>
 
+      <FaqSection />
+
       <p className="mt-10 text-center text-sm text-(--color-canvas-muted)">
         See something wrong, or a result you don&rsquo;t expect?{" "}
         <Link
@@ -435,6 +448,82 @@ function VerifyInner() {
           Get support
         </Link>
       </p>
+    </section>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// FAQ — plain-language answers to the literal questions people search for.
+// Doubles as SEO surface (real indexable copy) and emits FAQPage JSON-LD so
+// the answers are eligible for rich results.
+// ---------------------------------------------------------------------------
+
+const FAQS: Array<{ q: string; a: string }> = [
+  {
+    q: "What is my browser's geolocation?",
+    a: "Your browser's geolocation is the latitude and longitude it hands to websites through the JavaScript Geolocation API. The map and coordinates above show exactly what sites read when they ask where you are. With GeoSpoof active, that's your spoofed location instead of your real one.",
+  },
+  {
+    q: "Can websites see my real location even when I use a VPN?",
+    a: "Yes. A VPN only changes your IP address. Your browser still reports its own GPS-level geolocation, system timezone, and locale — and WebRTC can leak your real IP entirely. If those signals disagree with your VPN's exit location, a site can tell something is off. This page flags exactly those mismatches.",
+  },
+  {
+    q: "Why does my timezone not match my IP address?",
+    a: "Your timezone comes from your operating system, while your IP location comes from your network or VPN. If you connect through a VPN in another country but leave your system clock on your home timezone, the two won't line up — a common, easily detected tell. GeoSpoof aligns your timezone to your spoofed location to close that gap.",
+  },
+  {
+    q: "What is a WebRTC leak?",
+    a: "WebRTC is a browser feature for real-time audio, video, and data. It can reveal your real public and local IP addresses directly to a website — bypassing your VPN — unless it's blocked. The WebRTC check above probes for that leak and reports any address it manages to expose.",
+  },
+  {
+    q: "Is this browser location test free?",
+    a: "Yes. The test runs entirely in your browser, costs nothing, and requires no account. It reads the same signals any website can read and shows them back to you in plain language.",
+  },
+]
+
+function FaqSection() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: FAQS.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
+  }
+
+  return (
+    <section className="mt-16" aria-labelledby="faq-heading">
+      <h2
+        id="faq-heading"
+        className="mb-6 text-2xl font-bold text-(--color-canvas-foreground)"
+      >
+        Frequently asked questions
+      </h2>
+      <div className="overflow-hidden rounded-2xl border border-(--color-canvas-border)">
+        {FAQS.map((faq, i) => (
+          <details
+            key={faq.q}
+            className={cn(
+              "group bg-(--color-canvas) px-5 py-4",
+              i < FAQS.length - 1 && "border-b border-(--color-canvas-border)"
+            )}
+          >
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-medium text-(--color-canvas-foreground)">
+              {faq.q}
+              <ChevronDown className="size-5 shrink-0 text-(--color-canvas-muted) transition-transform group-open:rotate-180" />
+            </summary>
+            <p className="mt-3 text-sm leading-relaxed text-(--color-canvas-muted)">
+              {faq.a}
+            </p>
+          </details>
+        ))}
+      </div>
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger -- static, app-authored FAQ schema for rich results
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
     </section>
   )
 }
@@ -853,7 +942,9 @@ function buildValueGroups(
       const iframe = document.createElement("iframe")
       iframe.style.display = "none"
       document.body.appendChild(iframe)
-      const iframeWin = iframe.contentWindow
+      // The iframe's own realm has its own Date / Intl globals — that's the
+      // point of the test (does the spoofing reach into child realms?).
+      const iframeWin = iframe.contentWindow as (Window & typeof globalThis) | null
       if (iframeWin) {
         const iframeDate = new iframeWin.Date()
         iframeRows.push({
@@ -1094,7 +1185,7 @@ function ValueGroupCard({ group }: { group: ValueGroup }) {
                       </span>
                     )}
                   </td>
-                  <td className="w-[55%] px-5 py-2.5 align-top font-mono text-xs break-words text-(--color-canvas-foreground)">
+                  <td className="w-[55%] px-5 py-2.5 align-top font-mono text-xs wrap-break-word text-(--color-canvas-foreground)">
                     {row.value}
                   </td>
                 </tr>

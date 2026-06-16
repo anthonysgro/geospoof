@@ -82,9 +82,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for build instructions.
 
 1. Click the GeoSpoof icon in your toolbar
 2. Search for a city, enter coordinates manually, or use "Sync with VPN" to auto-detect your VPN exit region
-3. Enable "Location Protection" and "WebRTC Protection"
+3. Enable "Location Protection", "WebRTC Protection", and "Sync with VPN" features
 4. Refresh open tabs to apply
-5. Confirm it's working at [geospoof.com/test](https://geospoof.com/test?utm_source=github&utm_medium=readme) — a live dashboard that shows every signal GeoSpoof overrides, running 110 tests against your browser
+5. Confirm it's working at [geospoof.com/verify](https://geospoof.com/verify)
 
 See [docs/USER_GUIDE.md](docs/USER_GUIDE.md) for details.
 
