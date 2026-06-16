@@ -52,6 +52,13 @@ export async function timezoneForCoordinates(
  * as `Date.prototype.getTimezoneOffset()` — positive minutes mean *west* of
  * UTC (e.g. New York in winter returns +300). Returns null if the zone can't
  * be resolved by the engine.
+ *
+ * Sub-minute precision: pre-standard-time (LMT) offsets carry seconds, e.g.
+ * Asia/Tokyo in 1880 is `GMT+9:18:59`. We parse the seconds and return a
+ * fractional result so it matches Firefox/Gecko's native `getTimezoneOffset`
+ * (which preserves the fraction). Chrome/V8 truncates that same value to a
+ * whole minute natively, so callers comparing against a live browser offset
+ * should allow a sub-minute tolerance rather than exact equality.
  */
 export function getTimezoneOffsetConvention(
   identifier: string,
@@ -65,13 +72,14 @@ export function getTimezoneOffsetConvention(
     const part = fmt.formatToParts(at).find((p) => p.type === "timeZoneName")
     const value = part ? part.value : "GMT"
     if (value === "GMT" || value === "UTC") return 0
-    const m = /^GMT([+-])(\d{1,2})(?::(\d{2}))?$/.exec(value)
+    const m = /^GMT([+-])(\d{1,2})(?::(\d{2}))?(?::(\d{2}))?$/.exec(value)
     if (!m) return null
     // shortOffset is east-positive (GMT+9 → +540); getTimezoneOffset is
     // west-positive, so negate.
     const sign = m[1] === "+" ? 1 : -1
     const mins = m[3] ? parseInt(m[3], 10) : 0
-    const eastMinutes = sign * (parseInt(m[2], 10) * 60 + mins)
+    const secs = m[4] ? parseInt(m[4], 10) : 0
+    const eastMinutes = sign * (parseInt(m[2], 10) * 60 + mins + secs / 60)
     return -eastMinutes
   } catch {
     return null

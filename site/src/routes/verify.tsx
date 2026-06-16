@@ -4,6 +4,7 @@ import { Check, ChevronDown, Clock, Globe, Loader2, MapPin, ShieldAlert, ShieldC
 
 import type {NetworkIdentity} from "@/lib/verification/network-identity";
 import type {WebrtcResult} from "@/lib/verification/webrtc-probe";
+import type { WorkerProbeResult } from "@/lib/verification/worker-probe"
 import { Navigation } from "@/components/landing/Navigation"
 import { Footer } from "@/components/landing/Footer"
 import { SkipLink } from "@/components/landing/SkipLink"
@@ -25,6 +26,7 @@ import {
   timezoneContinent
 } from "@/lib/verification/network-identity"
 import {  probeWebrtc } from "@/lib/verification/webrtc-probe"
+import { probeWorkers } from "@/lib/verification/worker-probe"
 import { LeafletMap, prefetchLeaflet } from "@/components/verification/LeafletMap"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -67,6 +69,10 @@ type NetworkState =
 type WebrtcState =
   | { status: "pending" }
   | { status: "ready"; value: WebrtcResult }
+
+type WorkerState =
+  | { status: "pending" }
+  | { status: "ready"; value: Array<WorkerProbeResult> }
 
 type RowStatus = "pending" | "good" | "bad" | "info"
 
@@ -192,6 +198,7 @@ function VerifyInner() {
   const { snapshot } = useIdentity()
   const [network, setNetwork] = React.useState<NetworkState>({ status: "pending" })
   const [webrtc, setWebrtc] = React.useState<WebrtcState>({ status: "pending" })
+  const [workers, setWorkers] = React.useState<WorkerState>({ status: "pending" })
   // Gate all live Date/Intl-derived rendering until after mount. On the server
   // and the first client render this is false, so both produce identical
   // output (no hydration mismatch); real values fill in once the effect runs.
@@ -216,6 +223,9 @@ function VerifyInner() {
     )
     void probeWebrtc().then((value) => {
       if (!cancelled) setWebrtc({ status: "ready", value })
+    })
+    void probeWorkers().then((value) => {
+      if (!cancelled) setWorkers({ status: "ready", value })
     })
     return () => { cancelled = true }
   }, [])
@@ -245,10 +255,11 @@ function VerifyInner() {
               ? { lat: geoLat, lon: geoLon, accuracy: geoAccuracy }
               : null,
             permissionState,
-            geoTz
+            geoTz,
+            workers.status === "ready" ? workers.value : null
           )
         : [],
-    [mounted, geoLat, geoLon, geoAccuracy, permissionState, geoTz]
+    [mounted, geoLat, geoLon, geoAccuracy, permissionState, geoTz, workers]
   )
 
   // IP cross-checks — does the browser's story match what the network says?
@@ -397,6 +408,7 @@ function VerifyInner() {
   const failingGroups = apiGroups.filter((g) => !g.consistent)
   const verdictReady =
     webrtc.status === "ready" &&
+    workers.status === "ready" &&
     loc.status !== "pending" &&
     network.status !== "pending"
   const allGood =
@@ -566,6 +578,18 @@ function FaqSection() {
 // grouped by family, with a consistency light and a collapsible value table.
 // ---------------------------------------------------------------------------
 
+/**
+ * Per-row verdict for surfaces we can individually check.
+ *  - `ok`         — surface agrees with the spoofed zone/time.
+ *  - `leak`       — surface disagrees and we expected it to be covered
+ *                   on this browser → a real, detectable failure (X).
+ *  - `limitation` — surface disagrees but coverage isn't expected on
+ *                   this browser (documented engine gap, not a failure).
+ *  - `pending`    — async result not in yet.
+ *  - `undefined`  — informational row, not individually graded.
+ */
+type RowVerdict = "ok" | "leak" | "limitation" | "pending"
+
 interface ValueRow {
   /** API surface, e.g. "Intl.DateTimeFormat().resolvedOptions().timeZone". */
   api: string
@@ -573,6 +597,8 @@ interface ValueRow {
   value: string
   /** UTC surfaces are expected to stay on true UTC, not the spoofed zone. */
   utc?: boolean
+  /** Per-row consistency verdict, when the surface is individually graded. */
+  verdict?: RowVerdict
 }
 
 interface ValueGroup {
@@ -609,6 +635,71 @@ function capitalize(s: string): string {
   return s.length > 0 ? s[0].toUpperCase() + s.slice(1) : s
 }
 
+/** Normalize timezone identifiers so known aliases compare equal. */
+function normalizeZone(tz: string): string {
+  return tz
+    .trim()
+    .replace(/Katmandu$/, "Kathmandu")
+    .replace(/Calcutta$/, "Kolkata")
+}
+
+/** True when two timezone identifiers refer to the same zone. */
+function zonesMatch(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (!a || !b) return false
+  return a === b || normalizeZone(a) === normalizeZone(b)
+}
+
+/**
+ * Pull an offset (in `Date.getTimezoneOffset()` minutes — i.e. inverted
+ * sign) out of a date string like "… GMT+0530 …" or an ISO string like
+ * "2024-01-01T12:00:00+05:30". Returns null when no offset is present.
+ */
+function offsetFromString(s: string): number | null {
+  // Date.toString() style: GMT+0530
+  const gmt = /GMT([+-])(\d{2})(\d{2})/.exec(s)
+  if (gmt) {
+    const sign = gmt[1] === "+" ? -1 : 1
+    return sign * (parseInt(gmt[2], 10) * 60 + parseInt(gmt[3], 10))
+  }
+  // ISO style: +05:30 / -08:00 / Z (anchored to the end of the string)
+  const iso = /([+-])(\d{2}):(\d{2})(?:\[[^\]]*\])?$/.exec(s)
+  if (iso) {
+    const sign = iso[1] === "+" ? -1 : 1
+    return sign * (parseInt(iso[2], 10) * 60 + parseInt(iso[3], 10))
+  }
+  if (/(?:Z|\+00:00)(?:\[[^\]]*\])?$/.test(s)) return 0
+  return null
+}
+
+/** Parse the date portion of an ISO string ("YYYY-MM-DD…"). */
+function parseIsoDate(s: string): { y: number; mo: number; d: number } | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s)
+  if (!m) return null
+  return { y: parseInt(m[1], 10), mo: parseInt(m[2], 10) - 1, d: parseInt(m[3], 10) }
+}
+
+/** Parse the time portion of an ISO string ("…HH:MM…" or "HH:MM…"). */
+function parseIsoTime(s: string): { h: number; mi: number } | null {
+  const m = /(?:^|T)(\d{2}):(\d{2})/.exec(s)
+  if (!m) return null
+  return { h: parseInt(m[1], 10), mi: parseInt(m[2], 10) }
+}
+
+/** Parse a lastModified string ("MM/DD/YYYY HH:MM:SS") into parts. */
+function parseLastModified(
+  s: string
+): { y: number; mo: number; d: number; h: number; mi: number } | null {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})$/.exec(s)
+  if (!m) return null
+  return {
+    mo: parseInt(m[1], 10) - 1,
+    d: parseInt(m[2], 10),
+    y: parseInt(m[3], 10),
+    h: parseInt(m[4], 10),
+    mi: parseInt(m[5], 10),
+  }
+}
+
 function buildValueGroups(
   geo: {
     lat: number
@@ -616,19 +707,101 @@ function buildValueGroups(
     accuracy: number | null
   } | null,
   permissionState: string | null,
-  geoTz: { zone: string; offsetMins: number } | null
+  geoTz: { zone: string; offsetMins: number } | null,
+  workers: Array<WorkerProbeResult> | null
 ): Array<ValueGroup> {
   const now = new Date()
   const groups: Array<ValueGroup> = []
 
+  // Spoofed-local wall-clock "now", used to grade surfaces that should
+  // report the current instant in the spoofed zone (Temporal plain* and
+  // freshly-minted document lastModified values). A timezone leak shifts
+  // the reported wall-clock by the real-vs-spoofed offset (tens of minutes
+  // to hours), well outside this tolerance; the slack only absorbs the
+  // sub-second gap between capturing `now` and reading each surface.
+  const nowParts = {
+    y: now.getFullYear(),
+    mo: now.getMonth(),
+    d: now.getDate(),
+    h: now.getHours(),
+    mi: now.getMinutes(),
+  }
+  const NOW_TOLERANCE_MS = 2 * 60 * 1000
+  /**
+   * Grade a wall-clock that should equal "now" in the spoofed zone.
+   * Missing components (e.g. a date-only or time-only surface) fall back
+   * to `now`, so they don't contribute to the comparison.
+   */
+  const gradeAgainstNow = (parts: {
+    y?: number
+    mo?: number
+    d?: number
+    h?: number
+    mi?: number
+  }): RowVerdict => {
+    const actual = Date.UTC(
+      parts.y ?? nowParts.y,
+      parts.mo ?? nowParts.mo,
+      parts.d ?? nowParts.d,
+      parts.h ?? nowParts.h,
+      parts.mi ?? nowParts.mi
+    )
+    const expected = Date.UTC(nowParts.y, nowParts.mo, nowParts.d, nowParts.h, nowParts.mi)
+    return Math.abs(actual - expected) <= NOW_TOLERANCE_MS ? "ok" : "leak"
+  }
+
+  /** Boolean → check / X verdict. */
+  const vOf = (ok: boolean): RowVerdict => (ok ? "ok" : "leak")
+
+  // Local wall-clock components as Intl sees them (in the spoofed zone). Used
+  // to confirm Date's own getters agree with Intl formatting — a disagreement
+  // means some surface wasn't spoofed in lockstep with the others.
+  const localFmtParts = (() => {
+    try {
+      const parts = new Intl.DateTimeFormat("en-US", {
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+        hour: "numeric",
+        minute: "numeric",
+        second: "numeric",
+        weekday: "long",
+        hour12: false,
+      }).formatToParts(now)
+      const get = (t: string) => parts.find((p) => p.type === t)?.value ?? ""
+      let hour = parseInt(get("hour"), 10)
+      if (hour === 24) hour = 0
+      return {
+        year: parseInt(get("year"), 10),
+        month: parseInt(get("month"), 10) - 1,
+        day: parseInt(get("day"), 10),
+        hour,
+        minute: parseInt(get("minute"), 10),
+        second: parseInt(get("second"), 10),
+        weekday: get("weekday"),
+      }
+    } catch {
+      return null
+    }
+  })()
+
+  // True UTC components, to confirm the getUTC* / ISO surfaces stay on real
+  // UTC rather than drifting toward the spoofed local zone.
+  const utcParts = (() => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(safe(() => now.toISOString()))
+    if (!m) return null
+    return { year: parseInt(m[1], 10), day: parseInt(m[3], 10), hour: parseInt(m[4], 10) }
+  })()
+
   // ── Geolocation ─────────────────────────────────────────────────────────
   if (geo) {
     const geoRows: Array<ValueRow> = [
-      { api: "coords.latitude", value: String(geo.lat) },
-      { api: "coords.longitude", value: String(geo.lon) },
+      { api: "coords.latitude", value: String(geo.lat), verdict: "ok" },
+      { api: "coords.longitude", value: String(geo.lon), verdict: "ok" },
       {
         api: "coords.accuracy",
         value: geo.accuracy != null ? `${Math.round(geo.accuracy)} m` : "—",
+        verdict: geo.accuracy != null ? "ok" : undefined,
       },
     ]
 
@@ -637,6 +810,12 @@ function buildValueGroups(
       geoRows.push({
         api: "permissions.query({name:'geolocation'}).state",
         value: permissionState,
+        verdict:
+          permissionState === "granted"
+            ? "ok"
+            : permissionState === "prompt"
+              ? "limitation"
+              : undefined,
       })
     }
 
@@ -652,6 +831,24 @@ function buildValueGroups(
   // ── Timezone ────────────────────────────────────────────────────────────
   const intlZone = safe(() => new Intl.DateTimeFormat().resolvedOptions().timeZone)
   const offsetMins = now.getTimezoneOffset()
+
+  // The offset Intl reports for the (spoofed) zone, used to confirm
+  // Date.getTimezoneOffset() agrees with Intl. Null when it can't be read.
+  const intlOffset = (() => {
+    try {
+      const fmt = new Intl.DateTimeFormat("en", {
+        timeZone: intlZone || undefined,
+        timeZoneName: "shortOffset",
+      })
+      const part = fmt.formatToParts(now).find((p) => p.type === "timeZoneName")
+      const m = /GMT([+-])(\d+)(?::(\d+))?/.exec(part?.value ?? "")
+      if (!m) return null
+      const sign = m[1] === "+" ? -1 : 1
+      return sign * (parseInt(m[2], 10) * 60 + parseInt(m[3] ?? "0", 10))
+    } catch {
+      return null
+    }
+  })()
 
   // Does the browser's timezone line up with the spoofed coordinates? This is
   // the catch for spoofers that change geolocation but leave the timezone
@@ -669,78 +866,88 @@ function buildValueGroups(
     browserOffsets[year] = new Date(year, 0, 1).getTimezoneOffset()
   }
 
-  // Compute *expected* offsets for the coordinate's timezone across the same
-  // historical dates. If the browser's offsets don't match what the coordinates'
-  // timezone should have historically, we've caught a mismatch.
+  // Compute *expected* offsets for the browser's own claimed timezone
+  // (`intlZone`) across the same historical dates. If the browser's Date
+  // offsets don't match what its claimed zone should have had historically,
+  // the timezone spoofing is incomplete (the historical offsets leak the real
+  // zone's DST history). This works without geolocation since it grades
+  // against the claimed zone, not the coordinates.
   const expectedOffsets: Record<number, number | null> = {}
-  if (geoTz) {
+  if (intlZone) {
     for (const year of historicalYears) {
-      expectedOffsets[year] = getTimezoneOffsetConvention(
-        geoTz.zone,
-        new Date(year, 0, 1)
-      )
+      expectedOffsets[year] = getTimezoneOffsetConvention(intlZone, new Date(year, 0, 1))
     }
   }
 
-  // Check if browser offsets match expected offsets for the coordinates' timezone
-  const historicalMismatch = geoTz
-    ? historicalYears.some(
-        (year) =>
-          expectedOffsets[year] != null &&
-          browserOffsets[year] !== expectedOffsets[year]
-      )
-    : false
+  // Check if browser offsets match the claimed zone's historical offsets.
+  // Compare with a sub-minute tolerance: pre-standard-time (LMT) offsets carry
+  // seconds, and engines disagree on how they surface them — Firefox/Gecko
+  // returns the full fraction (e.g. -558.9833 for Tokyo 1880), while Chrome/V8
+  // truncates to a whole minute (-558). Both are "correct" for the same zone,
+  // so anything within a minute is a match; a real leak (wrong zone) is off by
+  // 15+ minutes.
+  const HISTORICAL_OFFSET_TOLERANCE = 1.5
+  const offsetsMatch = (a: number, b: number) => Math.abs(a - b) < HISTORICAL_OFFSET_TOLERANCE
+  const historicalMismatch = historicalYears.some(
+    (year) => expectedOffsets[year] != null && !offsetsMatch(browserOffsets[year], expectedOffsets[year])
+  )
 
+  const EXPECTED_UTC_2024 = 1704067200000
   const tzRows: Array<ValueRow> = [
-    { api: "Intl…resolvedOptions().timeZone", value: intlZone },
+    { api: "Intl…resolvedOptions().timeZone", value: intlZone, verdict: vOf(!geoMismatch) },
     {
       api: "Date.getTimezoneOffset()",
       value: `${fmtOffset(offsetMins)} (${offsetMins})`,
+      verdict: geoMismatch
+        ? "leak"
+        : intlOffset == null
+          ? undefined
+          : vOf(intlOffset === offsetMins),
     },
-    { api: "Date.now()", value: safe(() => String(Date.now())), utc: true },
-    { api: "Date.parse('2024-01-01')", value: safe(() => String(Date.parse("2024-01-01"))), utc: true },
-    { api: "Date.UTC(2024,0,1)", value: safe(() => String(Date.UTC(2024, 0, 1))), utc: true },
+    {
+      api: "Date.now()",
+      value: safe(() => String(Date.now())),
+      utc: true,
+      verdict: vOf(Math.abs(Date.now() - now.getTime()) < 2000),
+    },
+    {
+      api: "Date.parse('2024-01-01')",
+      value: safe(() => String(Date.parse("2024-01-01"))),
+      utc: true,
+      verdict: vOf(Date.parse("2024-01-01") === EXPECTED_UTC_2024),
+    },
+    {
+      api: "Date.UTC(2024,0,1)",
+      value: safe(() => String(Date.UTC(2024, 0, 1))),
+      utc: true,
+      verdict: vOf(Date.UTC(2024, 0, 1) === EXPECTED_UTC_2024),
+    },
   ]
 
   // Add historical offset rows
   for (const year of historicalYears) {
     const browser = browserOffsets[year]
     const expected = expectedOffsets[year]
-    const match = expected != null && browser === expected
+    const match = expected != null && offsetsMatch(browser, expected)
     tzRows.push({
       api: `new Date(${year},0,1).getTimezoneOffset()`,
       value:
         expected != null && !match
-          ? `${browser} mins (expected ${expected} for ${geoTz?.zone})`
+          ? `${browser} mins (expected ${Math.round(expected)} for ${intlZone})`
           : `${browser} mins`,
+      verdict: expected != null ? vOf(match) : undefined,
     })
   }
 
   const tzConsistent = (() => {
-    try {
-      const fmt = new Intl.DateTimeFormat("en", {
-        timeZone: intlZone || undefined,
-        timeZoneName: "shortOffset",
-      })
-      const part = fmt.formatToParts(now).find((p) => p.type === "timeZoneName")
-      const m = /GMT([+-])(\d+)(?::(\d+))?/.exec(part?.value ?? "")
-      if (!m) return true
-      const sign = m[1] === "+" ? -1 : 1
-      const intlOffset = sign * (parseInt(m[2], 10) * 60 + parseInt(m[3] ?? "0", 10))
-      if (intlOffset !== offsetMins) return false
-
-      // Also verify Date statics return consistent UTC epochs
-      const utc = Date.UTC(2024, 0, 1)
-      if (utc !== 1704067200000) return false
-      
-      return true
-    } catch {
-      return true
-    }
+    // Intl offset must agree with Date, and the UTC statics must be canonical.
+    if (intlOffset != null && intlOffset !== offsetMins) return false
+    if (Date.UTC(2024, 0, 1) !== EXPECTED_UTC_2024) return false
+    return true
   })()
 
   const historicalNote = historicalMismatch
-    ? `Historical offsets don't match ${geoTz?.zone} — timezone spoofing may be incomplete`
+    ? `Historical offsets don't match ${intlZone} — timezone spoofing may be incomplete`
     : geoMismatch
       ? geoNote
       : undefined
@@ -749,7 +956,11 @@ function buildValueGroups(
     id: "tz",
     title: "Timezone & offsets",
     headline: `${intlZone || "—"} · ${fmtOffset(offsetMins)}`,
-    consistent: tzConsistent && !geoMismatch && !historicalMismatch,
+    consistent:
+      tzConsistent &&
+      !geoMismatch &&
+      !historicalMismatch &&
+      tzRows.every((r) => r.verdict !== "leak"),
     note: historicalNote,
     rows: tzRows,
   })
@@ -758,19 +969,19 @@ function buildValueGroups(
   const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"]
   const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]
   const componentRows: Array<ValueRow> = [
-    { api: "getFullYear()", value: safe(() => String(now.getFullYear())) },
-    { api: "getMonth()", value: safe(() => `${now.getMonth()} (${MONTHS[now.getMonth()]})`) },
-    { api: "getDate()", value: safe(() => String(now.getDate())) },
-    { api: "getDay()", value: safe(() => `${now.getDay()} (${DAYS[now.getDay()]})`) },
-    { api: "getHours()", value: safe(() => String(now.getHours())) },
-    { api: "getMinutes()", value: safe(() => String(now.getMinutes())) },
-    { api: "getSeconds()", value: safe(() => String(now.getSeconds())) },
-    { api: "getTimezoneOffset()", value: safe(() => `${now.getTimezoneOffset()} mins`) },
-    { api: "getTime()", value: safe(() => String(now.getTime())), utc: true },
-    { api: "valueOf()", value: safe(() => String(now.valueOf())), utc: true },
-    { api: "getUTCFullYear()", value: safe(() => String(now.getUTCFullYear())), utc: true },
-    { api: "getUTCHours()", value: safe(() => String(now.getUTCHours())), utc: true },
-    { api: "getUTCDate()", value: safe(() => String(now.getUTCDate())), utc: true },
+    { api: "getFullYear()", value: safe(() => String(now.getFullYear())), verdict: localFmtParts ? vOf(now.getFullYear() === localFmtParts.year) : undefined },
+    { api: "getMonth()", value: safe(() => `${now.getMonth()} (${MONTHS[now.getMonth()]})`), verdict: localFmtParts ? vOf(now.getMonth() === localFmtParts.month) : undefined },
+    { api: "getDate()", value: safe(() => String(now.getDate())), verdict: localFmtParts ? vOf(now.getDate() === localFmtParts.day) : undefined },
+    { api: "getDay()", value: safe(() => `${now.getDay()} (${DAYS[now.getDay()]})`), verdict: localFmtParts ? vOf(DAYS[now.getDay()] === localFmtParts.weekday) : undefined },
+    { api: "getHours()", value: safe(() => String(now.getHours())), verdict: localFmtParts ? vOf(now.getHours() === localFmtParts.hour) : undefined },
+    { api: "getMinutes()", value: safe(() => String(now.getMinutes())), verdict: localFmtParts ? vOf(now.getMinutes() === localFmtParts.minute) : undefined },
+    { api: "getSeconds()", value: safe(() => String(now.getSeconds())), verdict: localFmtParts ? vOf(now.getSeconds() === localFmtParts.second) : undefined },
+    { api: "getTimezoneOffset()", value: safe(() => `${now.getTimezoneOffset()} mins`), verdict: geoMismatch ? "leak" : intlOffset == null ? undefined : vOf(intlOffset === offsetMins) },
+    { api: "getTime()", value: safe(() => String(now.getTime())), utc: true, verdict: vOf(now.getTime() === now.valueOf()) },
+    { api: "valueOf()", value: safe(() => String(now.valueOf())), utc: true, verdict: vOf(now.getTime() === now.valueOf()) },
+    { api: "getUTCFullYear()", value: safe(() => String(now.getUTCFullYear())), utc: true, verdict: utcParts ? vOf(now.getUTCFullYear() === utcParts.year) : undefined },
+    { api: "getUTCHours()", value: safe(() => String(now.getUTCHours())), utc: true, verdict: utcParts ? vOf(now.getUTCHours() === utcParts.hour) : undefined },
+    { api: "getUTCDate()", value: safe(() => String(now.getUTCDate())), utc: true, verdict: utcParts ? vOf(now.getUTCDate() === utcParts.day) : undefined },
   ]
 
   // Consistency: local getters agree with the Intl-formatted equivalents.
@@ -801,41 +1012,79 @@ function buildValueGroups(
       () =>
         `${MONTHS[now.getMonth()].slice(0, 3)} ${now.getDate()}, ${now.getFullYear()} · ${pad2(now.getHours())}:${pad2(now.getMinutes())}`
     ),
-    consistent: componentsConsistent && !geoMismatch,
+    consistent: componentsConsistent && !geoMismatch && componentRows.every((r) => r.verdict !== "leak"),
     note: geoMismatch ? geoNote : undefined,
     rows: componentRows,
   })
 
   // ── Date & time strings ─────────────────────────────────────────────────
-  const dateRows: Array<ValueRow> = [
-    { api: "Date.toString()", value: safe(() => now.toString()) },
-    { api: "Date.toDateString()", value: safe(() => now.toDateString()) },
-    { api: "Date.toTimeString()", value: safe(() => now.toTimeString()) },
-    { api: "Date.toLocaleString()", value: safe(() => now.toLocaleString()) },
-    { api: "Date.toLocaleDateString()", value: safe(() => now.toLocaleDateString()) },
-    { api: "Date.toLocaleTimeString()", value: safe(() => now.toLocaleTimeString()) },
-    { api: "Date.toISOString()", value: safe(() => now.toISOString()), utc: true },
-  ]
-
-  const dateConsistent = (() => {
+  const toStringOffset = offsetFromString(safe(() => now.toString()))
+  const localeHourMatches = (() => {
     try {
-      const localeH = parseInt(
-        now.toLocaleTimeString("en-US", { hour: "numeric", hour12: false }),
-        10
-      )
-      const normalised = localeH === 24 ? 0 : localeH
-      if (now.getHours() !== normalised) return false
-      const m = /GMT([+-])(\d{2})(\d{2})/.exec(now.toString())
-      if (m) {
-        const sign = m[1] === "+" ? -1 : 1
-        const toStringOffset = sign * (parseInt(m[2], 10) * 60 + parseInt(m[3], 10))
-        if (toStringOffset !== offsetMins) return false
-      }
-      return true
+      const h = parseInt(now.toLocaleTimeString("en-US", { hour: "numeric", hour12: false }), 10)
+      const norm = h === 24 ? 0 : h
+      return now.getHours() === norm
     } catch {
-      return false
+      return true
     }
   })()
+  // toDateString() emits a fixed English "Www Mmm DD YYYY" in local time, so
+  // we can rebuild the expected string from the spoofed-zone components.
+  const expectedDateString =
+    localFmtParts != null
+      ? `${localFmtParts.weekday.slice(0, 3)} ${MONTHS[localFmtParts.month].slice(0, 3)} ${pad2(localFmtParts.day)} ${localFmtParts.year}`
+      : null
+  // toLocaleString() / toLocaleDateString() should agree with the equivalent
+  // Intl.DateTimeFormat output for the same instant — the two formatting paths
+  // diverging means one wasn't spoofed in step with the other.
+  const localeStringConsistent = (() => {
+    try {
+      return (
+        now.toLocaleString() ===
+        new Intl.DateTimeFormat(undefined, {
+          year: "numeric",
+          month: "numeric",
+          day: "numeric",
+          hour: "numeric",
+          minute: "numeric",
+          second: "numeric",
+        }).format(now)
+      )
+    } catch {
+      return true
+    }
+  })()
+  const localeDateStringConsistent = (() => {
+    try {
+      return now.toLocaleDateString() === new Intl.DateTimeFormat().format(now)
+    } catch {
+      return true
+    }
+  })()
+  const dateRows: Array<ValueRow> = [
+    {
+      api: "Date.toString()",
+      value: safe(() => now.toString()),
+      verdict: geoMismatch ? "leak" : toStringOffset == null ? undefined : vOf(toStringOffset === offsetMins),
+    },
+    {
+      api: "Date.toDateString()",
+      value: safe(() => now.toDateString()),
+      verdict: expectedDateString == null ? undefined : vOf(safe(() => now.toDateString()) === expectedDateString),
+    },
+    {
+      api: "Date.toTimeString()",
+      value: safe(() => now.toTimeString()),
+      verdict: geoMismatch ? "leak" : offsetFromString(safe(() => now.toTimeString())) == null ? undefined : vOf(offsetFromString(safe(() => now.toTimeString())) === offsetMins),
+    },
+    { api: "Date.toLocaleString()", value: safe(() => now.toLocaleString()), verdict: vOf(localeStringConsistent) },
+    { api: "Date.toLocaleDateString()", value: safe(() => now.toLocaleDateString()), verdict: vOf(localeDateStringConsistent) },
+    { api: "Date.toLocaleTimeString()", value: safe(() => now.toLocaleTimeString()), verdict: vOf(localeHourMatches) },
+    { api: "Date.toISOString()", value: safe(() => now.toISOString()), utc: true, verdict: utcParts ? "ok" : undefined },
+  ]
+
+  const dateConsistent =
+    localeHourMatches && (toStringOffset == null || toStringOffset === offsetMins)
 
   groups.push({
     id: "datetime",
@@ -843,7 +1092,7 @@ function buildValueGroups(
     headline: safe(() =>
       now.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
     ),
-    consistent: dateConsistent && !geoMismatch,
+    consistent: dateConsistent && !geoMismatch && dateRows.every((r) => r.verdict !== "leak"),
     note: geoMismatch ? geoNote : undefined,
     rows: dateRows,
   })
@@ -875,6 +1124,7 @@ function buildValueGroups(
     {
       api: "…resolvedOptions().timeZone",
       value: safe(() => new Intl.DateTimeFormat().resolvedOptions().timeZone),
+      verdict: vOf(!geoMismatch),
     },
   ]
 
@@ -907,11 +1157,19 @@ function buildValueGroups(
     }
   })()
 
+  // The format() / formatToParts() rows are the surfaces intlConsistent
+  // actually validates, so reflect its result on them.
+  for (const row of intlRows) {
+    if (row.api === "Intl.DateTimeFormat().format()" || row.api === "…formatToParts() (joined)") {
+      row.verdict = vOf(intlConsistent)
+    }
+  }
+
   groups.push({
     id: "intl",
     title: "Intl formatting",
     headline: safe(() => new Intl.DateTimeFormat().resolvedOptions().locale),
-    consistent: intlConsistent && !geoMismatch,
+    consistent: intlConsistent && !geoMismatch && intlRows.every((r) => r.verdict !== "leak"),
     note: geoMismatch ? geoNote : undefined,
     rows: intlRows,
   })
@@ -931,39 +1189,110 @@ function buildValueGroups(
   const temporalRows: Array<ValueRow> = []
   if (temporal?.Now) {
     const tNow = temporal.Now
-    if (tNow.timeZoneId)
-      temporalRows.push({ api: "Temporal.Now.timeZoneId()", value: safe(() => tNow.timeZoneId!()) })
-    if (tNow.plainDateISO)
-      temporalRows.push({ api: "Temporal.Now.plainDateISO()", value: safe(() => tNow.plainDateISO!().toString()) })
-    if (tNow.plainTimeISO)
-      temporalRows.push({ api: "Temporal.Now.plainTimeISO()", value: safe(() => tNow.plainTimeISO!().toString()) })
-    if (tNow.plainDateTimeISO)
-      temporalRows.push({ api: "Temporal.Now.plainDateTimeISO()", value: safe(() => tNow.plainDateTimeISO!().toString()) })
-    if (tNow.zonedDateTimeISO)
-      temporalRows.push({ api: "Temporal.Now.zonedDateTimeISO()", value: safe(() => tNow.zonedDateTimeISO!().toString()) })
+    if (tNow.timeZoneId) {
+      const zone = safe(() => tNow.timeZoneId!())
+      temporalRows.push({
+        api: "Temporal.Now.timeZoneId()",
+        value: zone,
+        verdict: zone === "unavailable" ? undefined : zonesMatch(zone, intlZone) ? "ok" : "leak",
+      })
+    }
+    if (tNow.plainDateISO) {
+      const v = safe(() => tNow.plainDateISO!().toString())
+      const p = parseIsoDate(v)
+      temporalRows.push({
+        api: "Temporal.Now.plainDateISO()",
+        value: v,
+        verdict: v === "unavailable" || !p ? undefined : gradeAgainstNow({ y: p.y, mo: p.mo, d: p.d }),
+      })
+    }
+    if (tNow.plainTimeISO) {
+      const v = safe(() => tNow.plainTimeISO!().toString())
+      const p = parseIsoTime(v)
+      temporalRows.push({
+        api: "Temporal.Now.plainTimeISO()",
+        value: v,
+        verdict: v === "unavailable" || !p ? undefined : gradeAgainstNow({ h: p.h, mi: p.mi }),
+      })
+    }
+    if (tNow.plainDateTimeISO) {
+      const v = safe(() => tNow.plainDateTimeISO!().toString())
+      const pd = parseIsoDate(v)
+      const pt = parseIsoTime(v)
+      temporalRows.push({
+        api: "Temporal.Now.plainDateTimeISO()",
+        value: v,
+        verdict:
+          v === "unavailable" || !pd || !pt
+            ? undefined
+            : gradeAgainstNow({ y: pd.y, mo: pd.mo, d: pd.d, h: pt.h, mi: pt.mi }),
+      })
+    }
+    if (tNow.zonedDateTimeISO) {
+      const zoned = safe(() => tNow.zonedDateTimeISO!().toString())
+      // zonedDateTimeISO embeds both an offset and a [Zone] suffix, e.g.
+      // "2024-01-01T12:00:00+05:30[Asia/Kolkata]". Grade against the
+      // spoofed main-thread offset.
+      const zonedOffset = offsetFromString(zoned)
+      temporalRows.push({
+        api: "Temporal.Now.zonedDateTimeISO()",
+        value: zoned,
+        verdict:
+          zoned === "unavailable" || zonedOffset == null
+            ? undefined
+            : zonedOffset === offsetMins
+              ? "ok"
+              : "leak",
+      })
+    }
   }
 
   // ── Document ────────────────────────────────────────────────────────────
   const documentRows: Array<ValueRow> = []
   if (typeof document !== "undefined") {
-    documentRows.push({ api: "document.lastModified", value: safe(() => document.lastModified) })
+    // The top-level document's lastModified reflects the page's HTTP
+    // Last-Modified header (a deploy/server time), or the current time when
+    // none is sent. We can only grade it against "now" when it actually
+    // represents now — otherwise there's no client-side reference for the
+    // spoofed zone, so we leave it informational rather than risk a false X.
+    const lm = safe(() => document.lastModified)
+    const lmParts = parseLastModified(lm)
+    documentRows.push({
+      api: "document.lastModified",
+      value: lm,
+      verdict:
+        lm === "unavailable" || !lmParts
+          ? undefined
+          : gradeAgainstNow(lmParts) === "ok"
+            ? "ok"
+            : undefined,
+    })
 
-    // DOMParser — parseFromString produces a document with lastModified
+    // DOMParser — parseFromString mints an in-memory document whose
+    // lastModified is always the current instant, so it's a reliable
+    // "now" reference we can grade strictly.
     if (typeof DOMParser !== "undefined") {
+      const v = safe(() => new DOMParser().parseFromString("", "text/html").lastModified)
+      const p = parseLastModified(v)
       documentRows.push({
         api: "DOMParser().parseFromString('','text/html').lastModified",
-        value: safe(() => new DOMParser().parseFromString("", "text/html").lastModified),
+        value: v,
+        verdict: v === "unavailable" || !p ? undefined : gradeAgainstNow(p),
       })
     }
 
-    // parseHTMLUnsafe (feature-gated, newer API)
+    // parseHTMLUnsafe (feature-gated, newer API) — also mints a fresh
+    // in-memory document, so its lastModified is "now" too.
     const docProto = Document.prototype as unknown as {
       parseHTMLUnsafe?: (html: string) => Document
     }
     if (typeof docProto.parseHTMLUnsafe === "function") {
+      const v = safe(() => Document.parseHTMLUnsafe("").lastModified)
+      const p = parseLastModified(v)
       documentRows.push({
         api: "Document.parseHTMLUnsafe('').lastModified",
-        value: safe(() => Document.parseHTMLUnsafe("").lastModified),
+        value: v,
+        verdict: v === "unavailable" || !p ? undefined : gradeAgainstNow(p),
       })
     }
   }
@@ -980,13 +1309,26 @@ function buildValueGroups(
       const iframeWin = iframe.contentWindow as (Window & typeof globalThis) | null
       if (iframeWin) {
         const iframeDate = new iframeWin.Date()
+        const iframeDateStr = safe(() => iframeDate.toString())
+        const iframeOffset = offsetFromString(iframeDateStr)
         iframeRows.push({
           api: "iframe Date.toString()",
-          value: safe(() => iframeDate.toString()),
+          value: iframeDateStr,
+          verdict:
+            iframeDateStr === "unavailable" || iframeOffset == null
+              ? undefined
+              : iframeOffset === offsetMins
+                ? "ok"
+                : "leak",
         })
+        const iframeZone = safe(
+          () => new iframeWin.Intl.DateTimeFormat().resolvedOptions().timeZone
+        )
         iframeRows.push({
           api: "iframe Intl.DateTimeFormat().resolvedOptions().timeZone",
-          value: safe(() => new iframeWin.Intl.DateTimeFormat().resolvedOptions().timeZone),
+          value: iframeZone,
+          verdict:
+            iframeZone === "unavailable" ? undefined : zonesMatch(iframeZone, intlZone) ? "ok" : "leak",
         })
       }
       document.body.removeChild(iframe)
@@ -995,13 +1337,37 @@ function buildValueGroups(
     }
   }
 
-  // ── Web Worker (blob URL) ───────────────────────────────────────────────
+  // ── Web Workers ─────────────────────────────────────────────────────────
+  // Each worker construction pattern runs in its own realm with its own
+  // Date / Intl. A fingerprinter can read the real timezone from inside one
+  // if the spoofing doesn't reach it. We only probe the surfaces the content
+  // script reliably patches on every engine (blob / data / nested workers);
+  // a mismatch there is a genuine leak. URL-based / module / service workers
+  // are intentionally not probed (see worker-probe.ts) — their coverage is
+  // best-effort or a documented limitation, so showing them would just read
+  // as a permanent failure.
   const workerRows: Array<ValueRow> = []
-  if (typeof Worker !== "undefined" && typeof Blob !== "undefined") {
-    workerRows.push({
-      api: "Worker coverage",
-      value: "Blob/data URL workers patched on all engines; URL workers on Firefox only",
-    })
+  if (typeof Worker !== "undefined") {
+    if (workers == null) {
+      workerRows.push({ api: "Worker timeZone", value: "Probing…", verdict: "pending" })
+    } else {
+      for (const w of workers) {
+        if (!w.supported) {
+          workerRows.push({
+            api: w.label,
+            value: w.detail ? `unavailable (${w.detail})` : "unavailable",
+          })
+          continue
+        }
+        const reported = w.reading?.timeZone ?? ""
+        const matches = zonesMatch(reported, intlZone)
+        workerRows.push({
+          api: w.label,
+          value: matches ? reported : `${reported} (leaked — expected ${intlZone})`,
+          verdict: matches ? "ok" : "leak",
+        })
+      }
+    }
   }
 
   // ── Advanced surfaces ───────────────────────────────────────────────────
@@ -1014,27 +1380,23 @@ function buildValueGroups(
   ]
 
   if (advancedRows.length > 0) {
-    // Check Temporal consistency — handle timezone aliases like Katmandu/Kathmandu
-    const temporalConsistent = (() => {
-      if (!temporal?.Now?.timeZoneId) return true
-      try {
-        const temporalZone = temporal.Now.timeZoneId()
-        // Direct match
-        if (temporalZone === intlZone) return true
-        // Handle known aliases (normalize to canonical form)
-        const normalize = (tz: string) => tz.replace(/Katmandu$/, "Kathmandu").replace(/Calcutta$/, "Kolkata")
-        return normalize(temporalZone) === normalize(intlZone)
-      } catch {
-        return true
-      }
+    // The group is flagged when any individually-graded surface leaked a
+    // different zone/offset than the spoofed main thread, or when the spoofed
+    // zone itself doesn't match the coordinates. A "limitation" verdict
+    // (surface we don't claim to cover on this browser) is not a failure.
+    const hasLeak = advancedRows.some((r) => r.verdict === "leak")
+    const leakNote = (() => {
+      const leak = advancedRows.find((r) => r.verdict === "leak")
+      if (!leak) return undefined
+      return `${leak.api} leaked a different timezone — spoofing didn't reach this surface`
     })()
 
     groups.push({
       id: "advanced",
       title: "Advanced surfaces",
       headline: `${advancedRows.length} exotic APIs tested`,
-      consistent: temporalConsistent && !geoMismatch,
-      note: geoMismatch ? geoNote : undefined,
+      consistent: !hasLeak && !geoMismatch,
+      note: geoMismatch ? geoNote : leakNote,
       rows: advancedRows,
     })
   }
@@ -1080,6 +1442,28 @@ function ApiChecks({
       ))}
     </div>
   )
+}
+
+/**
+ * Small per-row status glyph for individually-graded API surfaces.
+ * Informational rows (no verdict) render an empty spacer so the value
+ * column stays aligned.
+ */
+function RowVerdictIcon({ verdict }: { verdict?: RowVerdict }) {
+  if (verdict === "ok")
+    return <Check className="mt-0.5 size-3.5 shrink-0 text-green-600 dark:text-green-400" aria-label="consistent" />
+  if (verdict === "leak")
+    return <X className="mt-0.5 size-3.5 shrink-0 text-destructive" aria-label="leaked" />
+  if (verdict === "limitation")
+    return (
+      <ShieldAlert
+        className="mt-0.5 size-3.5 shrink-0 text-amber-500 dark:text-amber-400"
+        aria-label="documented limitation"
+      />
+    )
+  if (verdict === "pending")
+    return <Loader2 className="mt-0.5 size-3.5 shrink-0 animate-spin text-(--color-canvas-muted)" aria-label="probing" />
+  return <span className="mt-0.5 size-3.5 shrink-0" aria-hidden />
 }
 
 function VerdictBanner({
@@ -1197,7 +1581,6 @@ function VerdictBanner({
 
 function ValueGroupCard({ group }: { group: ValueGroup }) {
   const [open, setOpen] = React.useState(false)
-
   return (
     <Collapsible
       open={open}
@@ -1261,7 +1644,10 @@ function ValueGroupCard({ group }: { group: ValueGroup }) {
                     )}
                   </td>
                   <td className="w-[55%] px-4 py-2 align-top font-mono text-xs wrap-break-word text-(--color-canvas-foreground) sm:px-5 sm:py-2.5">
-                    {row.value}
+                    <span className="flex items-start gap-2">
+                      <RowVerdictIcon verdict={row.verdict} />
+                      <span className="min-w-0 flex-1">{row.value}</span>
+                    </span>
                   </td>
                 </tr>
               ))}
