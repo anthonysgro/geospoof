@@ -126,14 +126,29 @@ export function LeafletMap(props: LeafletMapProps) {
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === "dark"
 
-  // Dark mode keeps CARTO's dark basemap; light mode uses the standard
-  // full-color OpenStreetMap tiles (colored ocean, parks, roads, etc).
-  const tileUrl = isDark
-    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-    : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-  const attribution = isDark
-    ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-    : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  // Tile basemap per theme, both on fast production CDNs (no raw OSM community
+  // tiles — those are slow and rate-limited, which is what made the map crawl
+  // in and show grey). Dark mode uses CARTO's dark_all. Light mode uses Esri's
+  // World Topo basemap for vivid, natural coloring: green vegetation, blue
+  // water, tan terrain — closer to the "green grass, blue ocean" look.
+  const tile = isDark
+    ? {
+        url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+        subdomains: "abcd",
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      }
+    : {
+        // Esri uses {z}/{y}/{x} order and a single fast (Akamai-backed) host —
+        // no {s} subdomains, no retina {r}.
+        url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
+        subdomains: "abc",
+        attribution:
+          'Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, DeLorme, NAVTEQ, TomTom &amp; the GIS user community',
+      }
+  const tileUrl = tile.url
+  const attribution = tile.attribution
+  const subdomains = tile.subdomains
 
   // Stable key — remount when coordinates change.
   const coordKey = `${primary.lat},${primary.lon},${secondary?.lat ?? ""},${secondary?.lon ?? ""}`
@@ -174,7 +189,7 @@ export function LeafletMap(props: LeafletMapProps) {
       const layer = L.tileLayer(tileUrl, {
         maxZoom: 19,
         attribution,
-        subdomains: "abc",
+        subdomains,
       })
       layer.addTo(map)
       tileLayerRef.current = layer
@@ -329,12 +344,12 @@ export function LeafletMap(props: LeafletMapProps) {
       const newLayer = L.tileLayer(tileUrl, {
         maxZoom: 19,
         attribution,
-        subdomains: "abcd",
+        subdomains,
       })
       newLayer.addTo(map)
       tileLayerRef.current = newLayer
     })
-  }, [tileUrl, attribution])
+  }, [tileUrl, attribution, subdomains])
 
   return (
     <>

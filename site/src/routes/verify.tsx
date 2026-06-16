@@ -46,13 +46,12 @@ export const Route = createFileRoute("/verify")({
     ],
     // Warm up connections to the map tile CDNs before the map mounts, so the
     // first tiles can be fetched without paying for DNS + TLS at paint time.
-    // OpenStreetMap (light theme) is the default, so its subdomains get a full
-    // preconnect; CARTO (dark theme) gets the lighter dns-prefetch.
+    // Light theme (the default) uses Esri's World Topo basemap, so its host
+    // gets a full preconnect; CARTO (dark theme) gets the lighter dns-prefetch.
     links: [
       { rel: "canonical", href: "https://geospoof.com/verify" },
-      { rel: "preconnect", href: "https://a.tile.openstreetmap.org" },
-      { rel: "preconnect", href: "https://b.tile.openstreetmap.org" },
-      { rel: "preconnect", href: "https://c.tile.openstreetmap.org" },
+      { rel: "preconnect", href: "https://server.arcgisonline.com" },
+      { rel: "dns-prefetch", href: "https://server.arcgisonline.com" },
       { rel: "dns-prefetch", href: "https://a.basemaps.cartocdn.com" },
       { rel: "dns-prefetch", href: "https://b.basemaps.cartocdn.com" },
       { rel: "dns-prefetch", href: "https://c.basemaps.cartocdn.com" },
