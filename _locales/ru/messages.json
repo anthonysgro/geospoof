@@ -273,21 +273,9 @@
     "message": "ℹ️ Расширения не работают на этой странице",
     "description": "Notice shown on browser-internal pages where extensions cannot run."
   },
-  "testLinks_label": {
-    "message": "Проверьте вашу защиту:",
-    "description": "Heading above the test-your-protection links."
-  },
-  "testLinks_geolocation": {
-    "message": "Геолокация",
-    "description": "Link label for the geolocation test page."
-  },
-  "testLinks_timezone": {
-    "message": "Часовой пояс",
-    "description": "Link label for the timezone test page."
-  },
-  "testLinks_ipLeak": {
-    "message": "Утечка IP",
-    "description": "Link label for the IP leak test page."
+  "testLinks_verify": {
+    "message": "Проверить защиту",
+    "description": "Footer link to the hosted verification page that checks the user's protection."
   },
   "support_needHelp": {
     "message": "Нужна помощь?",

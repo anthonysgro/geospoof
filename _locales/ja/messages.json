@@ -273,21 +273,9 @@
     "message": "ℹ️ このページでは拡張機能を実行できません",
     "description": "Notice shown on browser-internal pages where extensions cannot run."
   },
-  "testLinks_label": {
-    "message": "保護をテスト:",
-    "description": "Heading above the test-your-protection links."
-  },
-  "testLinks_geolocation": {
-    "message": "位置情報",
-    "description": "Link label for the geolocation test page."
-  },
-  "testLinks_timezone": {
-    "message": "タイムゾーン",
-    "description": "Link label for the timezone test page."
-  },
-  "testLinks_ipLeak": {
-    "message": "IP 漏洩",
-    "description": "Link label for the IP leak test page."
+  "testLinks_verify": {
+    "message": "保護を検証",
+    "description": "Footer link to the hosted verification page that checks the user's protection."
   },
   "support_needHelp": {
     "message": "ヘルプが必要ですか?",

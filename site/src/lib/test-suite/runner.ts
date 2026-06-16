@@ -5,6 +5,7 @@
  * render progressively rather than waiting for the whole suite to finish.
  */
 
+import { now } from "../verification/safe-time"
 import type {
   TestDefinition,
   TestResult,
@@ -57,7 +58,7 @@ async function runOne(
   timeoutMs: number,
   context: TestRunContext | undefined
 ): Promise<TestResult> {
-  const start = performance.now()
+  const start = now()
 
   try {
     const timeout = new Promise<TestResult>((resolve) => {
@@ -67,13 +68,13 @@ async function runOne(
           expected: "Test to complete within timeout",
           actual: `Test did not complete within ${timeoutMs}ms`,
           error: "TEST_TIMEOUT",
-          durationMs: performance.now() - start,
+          durationMs: now() - start,
         })
       }, timeoutMs)
     })
 
     const result = await Promise.race([definition.run(context), timeout])
-    const durationMs = performance.now() - start
+    const durationMs = now() - start
     const withDuration = {
       ...result,
       durationMs: result.durationMs ?? durationMs,
@@ -104,7 +105,7 @@ async function runOne(
     }
     return withDuration
   } catch (err) {
-    return errorResult(err, performance.now() - start)
+    return errorResult(err, now() - start)
   }
 }
 

@@ -196,7 +196,7 @@ describe("Property 12: Search Results Display", () => {
 
           expect(nameEl!.textContent).toBe(results[i].name);
           expect(coordsEl!.textContent).toBe(
-            `${results[i].latitude.toFixed(4)}, ${results[i].longitude.toFixed(4)}`
+            `${results[i].latitude.toFixed(5)}, ${results[i].longitude.toFixed(5)}`
           );
         }
       }),

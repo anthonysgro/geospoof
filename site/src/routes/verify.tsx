@@ -1,8 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { Link } from "@tanstack/react-router"
+import { Link, createFileRoute  } from "@tanstack/react-router"
 import * as React from "react"
-import { Check, Loader2, MapPin, Globe, Clock, Wifi, X, ChevronDown, ShieldCheck, ShieldAlert } from "lucide-react"
+import { Check, ChevronDown, Clock, Globe, Loader2, MapPin, ShieldAlert, ShieldCheck, Wifi, X } from "lucide-react"
 
+import type {NetworkIdentity} from "@/lib/verification/network-identity";
+import type {WebrtcResult} from "@/lib/verification/webrtc-probe";
 import { Navigation } from "@/components/landing/Navigation"
 import { Footer } from "@/components/landing/Footer"
 import { SkipLink } from "@/components/landing/SkipLink"
@@ -10,24 +11,25 @@ import { DownloadSection } from "@/components/landing/DownloadSection"
 import { cn } from "@/lib/utils"
 import {
   Collapsible,
-  CollapsibleTrigger,
   CollapsibleContent,
+  CollapsibleTrigger,
 } from "@/components/ui/collapsible"
 import {
   IdentityProvider,
   useIdentity,
 } from "@/lib/verification/identity-context"
 import {
-  resolveNetworkIdentity,
+  
   haversineKm,
-  timezoneContinent,
-  type NetworkIdentity,
+  resolveNetworkIdentity,
+  timezoneContinent
 } from "@/lib/verification/network-identity"
-import { probeWebrtc, type WebrtcResult } from "@/lib/verification/webrtc-probe"
-import { LeafletMap } from "@/components/verification/LeafletMap"
+import {  probeWebrtc } from "@/lib/verification/webrtc-probe"
+import { LeafletMap, prefetchLeaflet } from "@/components/verification/LeafletMap"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
-  timezoneForCoordinates,
   getTimezoneOffsetConvention,
+  timezoneForCoordinates,
 } from "@/lib/verification/geo-timezone"
 
 export const Route = createFileRoute("/verify")({
@@ -40,6 +42,19 @@ export const Route = createFileRoute("/verify")({
         content:
           "Free browser location test. See the geolocation, timezone, and IP address websites can read about you right now — and check whether your browser is leaking your real location.",
       },
+    ],
+    // Warm up connections to the map tile CDNs before the map mounts, so the
+    // first tiles can be fetched without paying for DNS + TLS at paint time.
+    // OpenStreetMap (light theme) is the default, so its subdomains get a full
+    // preconnect; CARTO (dark theme) gets the lighter dns-prefetch.
+    links: [
+      { rel: "preconnect", href: "https://a.tile.openstreetmap.org" },
+      { rel: "preconnect", href: "https://b.tile.openstreetmap.org" },
+      { rel: "preconnect", href: "https://c.tile.openstreetmap.org" },
+      { rel: "dns-prefetch", href: "https://a.basemaps.cartocdn.com" },
+      { rel: "dns-prefetch", href: "https://b.basemaps.cartocdn.com" },
+      { rel: "dns-prefetch", href: "https://c.basemaps.cartocdn.com" },
+      { rel: "dns-prefetch", href: "https://d.basemaps.cartocdn.com" },
     ],
   }),
 })
@@ -133,7 +148,7 @@ function useGeolocationPermission(): string | null {
   React.useEffect(() => {
     let cancelled = false
     if (typeof navigator !== "undefined" && navigator.permissions?.query) {
-      navigator.permissions.query({ name: "geolocation" as PermissionName }).then(
+      navigator.permissions.query({ name: "geolocation" }).then(
         (status) => {
           if (!cancelled) setState(status.state)
         },
@@ -177,8 +192,18 @@ function VerifyInner() {
   const { snapshot } = useIdentity()
   const [network, setNetwork] = React.useState<NetworkState>({ status: "pending" })
   const [webrtc, setWebrtc] = React.useState<WebrtcState>({ status: "pending" })
+  // Gate all live Date/Intl-derived rendering until after mount. On the server
+  // and the first client render this is false, so both produce identical
+  // output (no hydration mismatch); real values fill in once the effect runs.
+  const [mounted, setMounted] = React.useState(false)
 
   React.useEffect(() => {
+    setMounted(true)
+    // Start downloading Leaflet immediately, in parallel with the geolocation
+    // permission/resolution wait, so the library is ready by the time
+    // coordinates arrive and the map can mount without a download stall.
+    void prefetchLeaflet()
+
     let cancelled = false
     resolveNetworkIdentity().then(
       (value) => !cancelled && setNetwork({ status: "ready", value }),
@@ -214,14 +239,16 @@ function VerifyInner() {
 
   const apiGroups = React.useMemo(
     () =>
-      buildValueGroups(
-        geoLat != null && geoLon != null
-          ? { lat: geoLat, lon: geoLon, accuracy: geoAccuracy }
-          : null,
-        permissionState,
-        geoTz
-      ),
-    [geoLat, geoLon, geoAccuracy, permissionState, geoTz]
+      mounted
+        ? buildValueGroups(
+            geoLat != null && geoLon != null
+              ? { lat: geoLat, lon: geoLon, accuracy: geoAccuracy }
+              : null,
+            permissionState,
+            geoTz
+          )
+        : [],
+    [mounted, geoLat, geoLon, geoAccuracy, permissionState, geoTz]
   )
 
   // IP cross-checks — does the browser's story match what the network says?
@@ -252,7 +279,7 @@ function VerifyInner() {
           icon: <MapPin className="size-4" />,
           label: "Geolocation",
           value: "Waiting for permission…",
-          status: "pending" as RowStatus,
+          status: "pending",
         }
       }
       if (loc.status === "error" || !loc.value) {
@@ -261,7 +288,7 @@ function VerifyInner() {
           icon: <MapPin className="size-4" />,
           label: "Geolocation",
           value: "Blocked / denied",
-          status: "good" as RowStatus,
+          status: "good",
           note: "Location API returned no coordinates",
         }
       }
@@ -278,7 +305,7 @@ function VerifyInner() {
         icon: <MapPin className="size-4" />,
         label: "Geolocation",
         value: coordStr,
-        status: (geoVsIpMismatch ? "bad" : "info") as RowStatus,
+        status: (geoVsIpMismatch ? "bad" : "info"),
         note: noteparts.length > 0 ? noteparts.join(" · ") : undefined,
       }
     })(),
@@ -295,7 +322,7 @@ function VerifyInner() {
         icon: <Clock className="size-4" />,
         label: "Timezone",
         value: tz.identifier || "—",
-        status: (tzVsIpMismatch ? "bad" : tz.identifier ? "info" : "pending") as RowStatus,
+        status: (tzVsIpMismatch ? "bad" : tz.identifier ? "info" : "pending"),
         note: noteParts.length > 0 ? noteParts.join(" · ") : undefined,
       }
     })(),
@@ -305,8 +332,8 @@ function VerifyInner() {
       id: "time",
       icon: <Clock className="size-4" />,
       label: "Current time",
-      value: new Date().toString(),
-      status: "info" as RowStatus,
+      value: mounted ? new Date().toString() : "—",
+      status: (mounted ? "info" : "pending"),
     },
 
     // IP address
@@ -340,7 +367,7 @@ function VerifyInner() {
           icon: <Wifi className="size-4" />,
           label: "WebRTC",
           value: "Probing…",
-          status: "pending" as RowStatus,
+          status: "pending",
         }
       }
       const leaked = webrtc.value.publicIps.length > 0
@@ -351,7 +378,7 @@ function VerifyInner() {
         value: leaked
           ? webrtc.value.publicIps.filter((ip) => ip !== "(leaked)").join(", ") || "IP leaked"
           : "No IP leak detected",
-        status: leaked ? "bad" : ("good" as RowStatus),
+        status: leaked ? "bad" : ("good"),
         note: leaked ? (webrtc.value.leakDetail || "Real IP exposed via WebRTC") : undefined,
       }
     })(),
@@ -380,15 +407,15 @@ function VerifyInner() {
     !tzVsIpMismatch
 
   return (
-    <section className="mx-auto max-w-3xl px-4 py-16 md:px-5 md:py-24">
-      <div className="mb-8">
+    <section className="mx-auto max-w-3xl px-4 py-10 sm:py-16 md:px-5 md:py-24">
+      <div className="mb-6 sm:mb-8">
         <p className="mb-2 text-sm font-semibold tracking-widest text-(--color-brand) uppercase">
           Verification
         </p>
-        <h1 className="mb-3 text-3xl font-bold text-(--color-canvas-foreground) md:text-4xl">
+        <h1 className="mb-3 text-2xl font-bold text-(--color-canvas-foreground) sm:text-3xl md:text-4xl">
           What websites can see about you
         </h1>
-        <p className="text-(--color-canvas-muted)">
+        <p className="text-sm text-(--color-canvas-muted) sm:text-base">
           Live values from your browser right now — the location, timezone, and IP
           websites can read. With GeoSpoof active, they reflect your spoofed location
           instead of your real one.
@@ -412,12 +439,18 @@ function VerifyInner() {
         </p>
       )}
 
-      {/* Map — shown once we have coordinates */}
-      {geoLat != null && geoLon != null && (
+      {/* Map — reserve the exact final dimensions with a skeleton while
+          geolocation is resolving, so the map (and everything below it)
+          doesn't shift the layout when coordinates arrive. */}
+      {loc.status === "pending" ? (
+        <div className="mb-6 overflow-hidden rounded-2xl">
+          <Skeleton className="h-[220px] w-full rounded-2xl sm:h-[260px]" />
+        </div>
+      ) : geoLat != null && geoLon != null ? (
         <div className="mb-6 overflow-hidden rounded-2xl">
           <LeafletMap lat={geoLat} lon={geoLon} zoom={5} className="rounded-none! h-[220px] sm:h-[260px]" />
         </div>
-      )}
+      ) : null}
 
       <div className="overflow-hidden rounded-2xl border border-(--color-canvas-border)">
         {rows.map((row, i) => (
@@ -434,7 +467,7 @@ function VerifyInner() {
           Key fingerprinting surfaces attackers check. Expand any group to see the
           values they get — they should all tell the same story.
         </p>
-        <ApiChecks groups={apiGroups} />
+        <ApiChecks groups={apiGroups} mounted={mounted} />
       </div>
 
       <FaqSection />
@@ -521,7 +554,7 @@ function FaqSection() {
       </div>
       <script
         type="application/ld+json"
-        // eslint-disable-next-line react/no-danger -- static, app-authored FAQ schema for rich results
+        // Static, app-authored FAQ schema for rich results (no user input).
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
     </section>
@@ -930,7 +963,7 @@ function buildValueGroups(
     if (typeof docProto.parseHTMLUnsafe === "function") {
       documentRows.push({
         api: "Document.parseHTMLUnsafe('').lastModified",
-        value: safe(() => Document.parseHTMLUnsafe!("").lastModified),
+        value: safe(() => Document.parseHTMLUnsafe("").lastModified),
       })
     }
   }
@@ -1009,7 +1042,37 @@ function buildValueGroups(
   return groups
 }
 
-function ApiChecks({ groups }: { groups: Array<ValueGroup> }) {
+function ApiChecks({
+  groups,
+  mounted,
+}: {
+  groups: Array<ValueGroup>
+  mounted: boolean
+}) {
+  // Before mount (server + first client render) the value groups can't be
+  // built deterministically — they read live Date/Intl/document state — so we
+  // show fixed-height skeleton cards that reserve the layout and avoid both a
+  // hydration mismatch and a layout shift when the real cards appear.
+  if (!mounted) {
+    return (
+      <div className="flex flex-col gap-3" aria-hidden>
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-3 rounded-2xl border border-(--color-canvas-border) bg-(--color-canvas) px-4 py-3 sm:gap-4 sm:px-5 sm:py-4"
+          >
+            <Skeleton className="size-8 shrink-0 rounded-full sm:size-9" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-48" />
+            </div>
+            <Skeleton className="size-5 shrink-0 rounded" />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-3">
       {groups.map((group) => (
@@ -1069,8 +1132,7 @@ function VerdictBanner({
             All checks passed
           </p>
           <p className="mt-0.5 text-sm text-(--color-canvas-muted)">
-            No WebRTC leak detected, and the location, timezone, and date APIs
-            we tested all report a consistent story. Nothing we checked gives you away.
+            Nothing we checked gives you away.
           </p>
         </div>
       </div>
@@ -1086,17 +1148,30 @@ function VerdictBanner({
     problems.push(`${failingGroupTitles.join(", ")} ${failingGroupTitles.length === 1 ? "doesn't" : "don't"} line up`)
 
   return (
-    <div className="mb-6 flex items-center gap-5 rounded-2xl border border-destructive/30 bg-destructive/8 px-6 py-6">
-      <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-destructive/12 text-destructive ring-4 ring-destructive/10">
-        <ShieldAlert className="size-8" aria-hidden />
+    <div className="mb-6 flex items-start gap-4 rounded-2xl border border-destructive/30 bg-destructive/8 px-5 py-5 sm:gap-5 sm:px-6 sm:py-6">
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-destructive/12 text-destructive ring-4 ring-destructive/10 sm:size-14">
+        <ShieldAlert className="size-6 sm:size-8" aria-hidden />
       </span>
       <div className="flex-1">
-        <p className="text-xl font-bold text-(--color-canvas-foreground)">
+        <p className="text-lg font-bold text-(--color-canvas-foreground) sm:text-xl">
           Some signals are exposed
         </p>
-        <p className="mt-0.5 text-sm text-(--color-canvas-muted)">
-          {capitalize(problems.join(" · "))}. A site cross-referencing these
-          signals could flag you.
+        <ul className="mt-2 space-y-1">
+          {problems.map((problem) => (
+            <li
+              key={problem}
+              className="flex items-start gap-2 text-sm text-(--color-canvas-muted)"
+            >
+              <span
+                className="mt-1.5 size-1.5 shrink-0 rounded-full bg-destructive"
+                aria-hidden
+              />
+              <span>{capitalize(problem)}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-2 text-sm text-(--color-canvas-muted)">
+          A site cross-referencing these signals could flag you.
         </p>
         <a
           href="#download"
@@ -1129,11 +1204,11 @@ function ValueGroupCard({ group }: { group: ValueGroup }) {
       onOpenChange={setOpen}
       className="overflow-hidden rounded-2xl border border-(--color-canvas-border) bg-(--color-canvas)"
     >
-      <CollapsibleTrigger className="flex w-full items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-canvas-border/30">
+      <CollapsibleTrigger className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-canvas-border/30 sm:gap-4 sm:px-5 sm:py-4">
         {/* Status light */}
         <span
           className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-full",
+            "flex size-8 shrink-0 items-center justify-center rounded-full sm:size-9",
             group.consistent
               ? "bg-green-500/12 text-green-600 dark:text-green-400"
               : "bg-destructive/12 text-destructive"
@@ -1144,13 +1219,13 @@ function ValueGroupCard({ group }: { group: ValueGroup }) {
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="font-semibold text-(--color-canvas-foreground)">
+          <p className="text-sm font-semibold text-(--color-canvas-foreground) sm:text-base">
             {group.title}
           </p>
           {group.note ? (
-            <p className="text-sm text-destructive">{group.note}</p>
+            <p className="text-xs text-destructive sm:text-sm">{group.note}</p>
           ) : (
-            <p className="truncate font-mono text-sm text-(--color-canvas-muted)">
+            <p className="truncate font-mono text-xs text-(--color-canvas-muted) sm:text-sm">
               {group.headline}
             </p>
           )}
@@ -1177,7 +1252,7 @@ function ValueGroupCard({ group }: { group: ValueGroup }) {
                       "border-b border-(--color-canvas-border)"
                   )}
                 >
-                  <td className="w-[45%] px-5 py-2.5 align-top font-mono text-xs text-(--color-canvas-muted) break-all">
+                  <td className="w-[45%] px-4 py-2 align-top font-mono text-xs text-(--color-canvas-muted) break-all sm:px-5 sm:py-2.5">
                     {row.api}
                     {row.utc && (
                       <span className="ml-2 rounded bg-canvas-border/60 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-(--color-canvas-muted) uppercase">
@@ -1185,7 +1260,7 @@ function ValueGroupCard({ group }: { group: ValueGroup }) {
                       </span>
                     )}
                   </td>
-                  <td className="w-[55%] px-5 py-2.5 align-top font-mono text-xs wrap-break-word text-(--color-canvas-foreground)">
+                  <td className="w-[55%] px-4 py-2 align-top font-mono text-xs wrap-break-word text-(--color-canvas-foreground) sm:px-5 sm:py-2.5">
                     {row.value}
                   </td>
                 </tr>
@@ -1216,14 +1291,14 @@ function VerifyRow({ row, last }: { row: Row; last: boolean }) {
   return (
     <div
       className={cn(
-        "flex items-start gap-4 bg-(--color-canvas) px-5 py-4",
+        "flex items-start gap-3 bg-(--color-canvas) px-4 py-3 sm:gap-4 sm:px-5 sm:py-4",
         !last && "border-b border-(--color-canvas-border)"
       )}
     >
       {/* Icon */}
       <div
         className={cn(
-          "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg",
+          "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg sm:size-8",
           iconBg[row.status]
         )}
         aria-hidden
@@ -1241,19 +1316,19 @@ function VerifyRow({ row, last }: { row: Row; last: boolean }) {
 
       {/* Text */}
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold tracking-wide text-(--color-canvas-muted) uppercase">
+        <p className="text-[11px] font-semibold tracking-wide text-(--color-canvas-muted) uppercase sm:text-xs">
           {row.label}
         </p>
         <p
           className={cn(
-            "mt-0.5 break-all font-mono text-sm font-medium",
+            "mt-0.5 break-all font-mono text-[13px] font-medium sm:text-sm",
             statusColor[row.status]
           )}
         >
           {row.value}
         </p>
         {row.note && (
-          <p className="mt-0.5 text-xs text-(--color-canvas-muted)">{row.note}</p>
+          <p className="mt-0.5 text-[11px] text-(--color-canvas-muted) sm:text-xs">{row.note}</p>
         )}
       </div>
     </div>

@@ -4,6 +4,8 @@
  * ERROR and WARN always emit. INFO/DEBUG/TRACE respect verbose mode + verbosity threshold.
  */
 
+import { now } from "./safe-time";
+
 type ComponentTag = "BG" | "CS" | "INJ" | "POPUP";
 
 export const LogLevel = {
@@ -45,11 +47,8 @@ export function getVerbosityLevel(): LogLevelName {
   return "INFO";
 }
 
-const hasPerformanceNow =
-  typeof performance !== "undefined" && typeof performance.now === "function";
-
 function timestamp(): string {
-  const ms = hasPerformanceNow ? performance.now() : Date.now();
+  const ms = now();
   return `${ms}ms`;
 }
 
