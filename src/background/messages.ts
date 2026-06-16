@@ -61,8 +61,7 @@ export async function handleMessage(
           // Safari: adopt the app's pending snapshot first so the popup
           // reflects what the user set in the containing app — without it the
           // popup can show stale "off" state until a tab event triggers
-          // adoption. Scoped to popup-originated messages so content scripts
-          // don't incur a native round-trip per page.
+          // adoption.
           if (__SAFARI__) {
             await adoptPendingSettingsFromApp();
           }
@@ -77,6 +76,18 @@ export async function handleMessage(
         // the shared source of truth and returns a payload typed as
         // UpdateSettingsPayload, which structurally has NO allowlist/denylist
         // keys — the lists cannot leak into a page (Req 6.6, 6.7, 8.5, 8.7).
+
+        // Safari: adopt the app's pending snapshot before reading settings.
+        // Without this, a content script's GET_SETTINGS can race the fire-and-
+        // forget adoptPendingSettingsFromApp() triggered by tabs.onUpdated and
+        // read stale storage — causing the page to display the previous spoofed
+        // location until a manual refresh. The native round-trip is fast (~1-5ms
+        // on-device) and adoptPendingSettingsFromApp no-ops immediately when
+        // there's nothing new, so the overhead is negligible.
+        if (__SAFARI__) {
+          await adoptPendingSettingsFromApp();
+        }
+
         const settings = await loadSettings();
         logger.debug("Loaded settings (content script):", settings);
 
