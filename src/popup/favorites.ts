@@ -147,7 +147,7 @@ export async function handleStarClick(
     const country = locationName?.country ?? "";
     const rawDisplayName =
       locationName?.displayName ??
-      `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`;
+      `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`;
     const displayName = rawDisplayName.slice(0, 100);
 
     const savePayload: SaveFavoritePayload = {

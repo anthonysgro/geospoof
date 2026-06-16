@@ -172,7 +172,7 @@ struct SpoofWidgetEntryView: View {
                     .minimumScaleFactor(0.85)
                     .opacityTransition()
                 if let lat = snap.latitude, let lon = snap.longitude {
-                    Text(String(format: "%.4f, %.4f", lat, lon))
+                    Text(String(format: "%.5f, %.5f", lat, lon))
                         .font(.subheadline.monospacedDigit())
                         .foregroundStyle(.secondary)
                         .opacityTransition()

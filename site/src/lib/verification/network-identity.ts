@@ -7,14 +7,20 @@
  * supposed to be masking), to be contrasted against what the *browser*
  * leaks client-side (HTML5 geolocation, system timezone, locale).
  *
- * Providers mirror the extension's VPN Sync module and the test-suite's
- * `ip-country-match` test so behaviour is consistent across the product:
- *   - Primary:  https://get.geojs.io/v1/ip/geo.json  (IP + geo + ISP + tz)
- *   - Fallback: https://free.freeipapi.com/api/json   (same data, no tz id)
+ * Resolution order:
+ *   1. Same-origin server function (`fetchEdgeNetworkIdentity`). Reads the IP
+ *      and Vercel's geo headers server-side, so it can't be blocked by Safari's
+ *      cross-site tracker prevention (which kills the third-party calls below),
+ *      works behind iCloud Private Relay, and needs no external request.
+ *   2. https://get.geojs.io/v1/ip/geo.json   (IP + geo + ISP + tz)
+ *   3. https://free.freeipapi.com/api/json    (same data, no tz id)
  *
  * SSR-safe: no browser globals are touched at import time. `fetch` is only
  * called from `resolveNetworkIdentity`, which runs in a browser effect.
  */
+
+import { createServerFn } from "@tanstack/react-start"
+import { getRequestHeader } from "@tanstack/react-start/server"
 
 const GEOJS_URL = "https://ipv4.geojs.io/v1/ip/geo.json"
 const FREEIPAPI_URL = "https://free.freeipapi.com/api/json"
@@ -37,8 +43,75 @@ export interface NetworkIdentity {
   /** IANA timezone the IP geolocates to (geojs only), else null. */
   timezone: string | null
   /** Which provider answered. */
-  provider: "geojs" | "freeipapi"
+  provider: "edge" | "geojs" | "freeipapi"
 }
+
+/** Map a 2-letter ISO country code to its English name (e.g. "US" → "United States"). */
+function countryNameFromCode(code: string): string {
+  if (!code) return ""
+  try {
+    return new Intl.DisplayNames(["en"], { type: "region" }).of(code.toUpperCase()) ?? ""
+  } catch {
+    return ""
+  }
+}
+
+/**
+ * Same-origin server function: read the visitor's IP + geolocation straight
+ * from the request headers the platform (Vercel) attaches. Returns null when
+ * there's no usable public IP (e.g. local dev), so the client falls back to
+ * the third-party providers.
+ *
+ * This is the reliable path on Safari / iCloud Private Relay, where the
+ * browser-side calls to geojs/freeipapi get blocked as cross-site trackers.
+ */
+export const fetchEdgeNetworkIdentity = createServerFn({ method: "GET" }).handler(
+  (): NetworkIdentity | null => {
+    const get = (name: string): string | null => {
+      const v = getRequestHeader(name)
+      return typeof v === "string" && v.trim().length > 0 ? v.trim() : null
+    }
+
+    // Vercel sets x-vercel-forwarded-for / x-forwarded-for to the client IP
+    // (the Private Relay egress IP when that's on). Take the first hop.
+    const ipRaw =
+      get("x-vercel-forwarded-for") ?? get("x-forwarded-for") ?? get("x-real-ip")
+    const ip = ipRaw ? ipRaw.split(",")[0].trim() : null
+
+    // No usable public IP (local dev, loopback) — let the client fall back.
+    if (!ip || ip === "::1" || ip.startsWith("127.") || ip.startsWith("10.")) {
+      return null
+    }
+
+    const countryCode = (get("x-vercel-ip-country") ?? "").toUpperCase()
+    // Vercel URL-encodes the city/region (e.g. "New%20York").
+    const decode = (v: string | null): string => {
+      if (!v) return ""
+      try {
+        return decodeURIComponent(v)
+      } catch {
+        return v
+      }
+    }
+
+    return {
+      ip,
+      isp: null,
+      city: decode(get("x-vercel-ip-city")),
+      region: decode(get("x-vercel-ip-country-region")),
+      countryName: countryNameFromCode(countryCode),
+      countryCode,
+      latitude: get("x-vercel-ip-latitude")
+        ? Number(get("x-vercel-ip-latitude"))
+        : null,
+      longitude: get("x-vercel-ip-longitude")
+        ? Number(get("x-vercel-ip-longitude"))
+        : null,
+      timezone: get("x-vercel-ip-timezone"),
+      provider: "edge",
+    }
+  }
+)
 
 interface GeojsResponse {
   ip?: unknown
@@ -157,6 +230,17 @@ async function resolveViaFreeipapi(): Promise<NetworkIdentity> {
  */
 export async function resolveNetworkIdentity(): Promise<NetworkIdentity> {
   const errors: Array<string> = []
+
+  // 1. Same-origin server function — reads the IP + geo from request headers.
+  // Unblockable by Safari tracker prevention and works behind Private Relay.
+  try {
+    const edge = await fetchEdgeNetworkIdentity()
+    if (edge) return edge
+  } catch (err) {
+    errors.push(`edge: ${err instanceof Error ? err.message : String(err)}`)
+  }
+
+  // 2. Third-party providers (local dev, or non-Vercel hosting).
   try {
     return await resolveViaGeojs()
   } catch (err) {

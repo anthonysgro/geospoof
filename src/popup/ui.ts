@@ -162,7 +162,7 @@ export function displayLocation(location: Location, locationName: LocationName |
   }
 
   if (coordsEl) {
-    coordsEl.textContent = `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`;
+    coordsEl.textContent = `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`;
   }
 }
 

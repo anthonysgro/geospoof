@@ -733,7 +733,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = "GeoSpoof WidgetExtensionDebug.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 24;
+				CURRENT_PROJECT_VERSION = 26;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "GeoSpoof Widget/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "GeoSpoof Widget";
@@ -765,7 +765,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = "GeoSpoof WidgetExtensionRelease.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 24;
+				CURRENT_PROJECT_VERSION = 26;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "GeoSpoof Widget/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "GeoSpoof Widget";

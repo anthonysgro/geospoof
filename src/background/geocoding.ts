@@ -184,7 +184,7 @@ export async function reverseGeocode(latitude: number, longitude: number): Promi
     const locationName: LocationName = {
       city: data.address?.city || data.address?.town || data.address?.village || "",
       country: data.address?.country || "",
-      displayName: data.display_name || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
+      displayName: data.display_name || `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`,
     };
 
     await sessionSet("reverseGeo:" + cacheKey, locationName);

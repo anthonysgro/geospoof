@@ -191,6 +191,25 @@ export async function getTimezoneForCoordinates(
       return fallback;
     }
 
+    // browser-geo-tz classifies points it can't place on land (e.g. a coastal
+    // city whose exact coordinate lands just offshore, like Dubai at
+    // 25.07725,55.30927) as an Etc/GMT±N zone. Those generic, DST-less zones
+    // are both wrong for the location and a fingerprinting tell — a real
+    // populated place virtually never legitimately resolves to Etc/GMT. When we
+    // have a real named-zone hint (from the city catalog or geo service),
+    // prefer it over the Etc result.
+    if (identifier.startsWith("Etc/")) {
+      const hinted = buildTimezoneFromHint(ianaHint);
+      if (hinted) {
+        logger.debug("Boundary lookup returned an Etc/GMT zone; preferring IANA hint:", {
+          identifier,
+          hinted,
+        });
+        await sessionSet("timezone:" + cacheKey, hinted);
+        return hinted;
+      }
+    }
+
     const { offset, dstOffset } = computeOffsets(identifier);
 
     const timezone: Timezone = { identifier, offset, dstOffset };

@@ -621,7 +621,7 @@ struct LocationMapPane: View {
                         .font(.headline)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
-                    Text(String(format: "%.4f, %.4f", latitude, longitude))
+                    Text(String(format: "%.5f, %.5f", latitude, longitude))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .monospacedDigit()

@@ -44,8 +44,8 @@ struct SpoofDetailsView: View {
     private var locationSection: some View {
         Section("Spoofed Location") {
             if let loc = controller.location {
-                LabeledRow(label: "Latitude", value: String(format: "%.6f", loc.latitude))
-                LabeledRow(label: "Longitude", value: String(format: "%.6f", loc.longitude))
+                LabeledRow(label: "Latitude", value: String(format: "%.5f", loc.latitude))
+                LabeledRow(label: "Longitude", value: String(format: "%.5f", loc.longitude))
                 LabeledRow(label: "Accuracy", value: "±\(Int(loc.accuracy)) m")
                 if let name = controller.locationName?.displayName, !name.isEmpty {
                     LabeledRow(label: "Location", value: name)
