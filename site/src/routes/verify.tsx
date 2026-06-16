@@ -1131,8 +1131,7 @@ function VerdictBanner({
             All checks passed
           </p>
           <p className="mt-0.5 text-sm text-(--color-canvas-muted)">
-            No WebRTC leak detected, and the location, timezone, and date APIs
-            we tested all report a consistent story. Nothing we checked gives you away.
+            Nothing we checked gives you away.
           </p>
         </div>
       </div>
