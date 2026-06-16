@@ -20,7 +20,7 @@
  */
 
 import { createServerFn } from "@tanstack/react-start"
-import { getRequestHeader } from "@tanstack/react-start/server"
+import { getRequestHeader, setResponseHeader } from "@tanstack/react-start/server"
 
 const GEOJS_URL = "https://ipv4.geojs.io/v1/ip/geo.json"
 const FREEIPAPI_URL = "https://free.freeipapi.com/api/json"
@@ -67,6 +67,10 @@ function countryNameFromCode(code: string): string {
  */
 export const fetchEdgeNetworkIdentity = createServerFn({ method: "GET" }).handler(
   (): NetworkIdentity | null => {
+    // Prevent Vercel's CDN (and browser) from caching this response — the
+    // result depends on the caller's current IP, which changes on VPN switch.
+    setResponseHeader("Cache-Control", "private, no-store, no-cache, must-revalidate")
+
     const get = (name: string): string | null => {
       const v = getRequestHeader(name)
       return typeof v === "string" && v.trim().length > 0 ? v.trim() : null
