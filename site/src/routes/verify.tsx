@@ -405,6 +405,13 @@ function VerifyInner() {
         tzVsIpMismatch={tzVsIpMismatch}
       />
 
+      {allResolved && (
+        <p className="mb-6 -mt-2 text-center text-sm text-(--color-canvas-muted)">
+          Reload the page to run the checks again. If using VPN sync, allow up to
+          10 seconds after changing locations for overrides to update.
+        </p>
+      )}
+
       {/* Map — shown once we have coordinates */}
       {geoLat != null && geoLon != null && (
         <div className="mb-6 overflow-hidden rounded-2xl">
@@ -417,13 +424,6 @@ function VerifyInner() {
           <VerifyRow key={row.id} row={row} last={i === rows.length - 1} />
         ))}
       </div>
-
-      {allResolved && (
-        <p className="mt-6 text-center text-sm text-(--color-canvas-muted)">
-          Reload the page to run the checks again. If using VPN sync, allow up to
-          10 seconds after changing locations for overrides to update.
-        </p>
-      )}
 
       {/* API values — wider on desktop */}
       <div className="mt-12 lg:-mx-20 xl:-mx-36">
