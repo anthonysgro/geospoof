@@ -26,7 +26,7 @@ const softwareApplicationSchema = {
   "@type": "SoftwareApplication",
   name: "GeoSpoof",
   description:
-    "GeoSpoof overrides your browser geolocation, timezone, and WebRTC APIs so websites see exactly where you want them to. Available for Firefox, Chrome, Brave, Edge, and Safari.",
+    "Spoof your browser's geolocation, timezone, and WebRTC in one extension. Open source, privacy-first, no account required. Works on Chrome, Firefox, Edge, Brave, and Safari.",
   url: SITE_URL,
   image: `${SITE_URL}/icon.png`,
   applicationCategory: "BrowserApplication",
