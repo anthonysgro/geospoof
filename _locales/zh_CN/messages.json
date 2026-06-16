@@ -273,21 +273,9 @@
     "message": "ℹ️ 扩展无法在此页面上运行",
     "description": "Notice shown on browser-internal pages where extensions cannot run."
   },
-  "testLinks_label": {
-    "message": "测试您的保护:",
-    "description": "Heading above the test-your-protection links."
-  },
-  "testLinks_geolocation": {
-    "message": "地理位置",
-    "description": "Link label for the geolocation test page."
-  },
-  "testLinks_timezone": {
-    "message": "时区",
-    "description": "Link label for the timezone test page."
-  },
-  "testLinks_ipLeak": {
-    "message": "IP 泄漏",
-    "description": "Link label for the IP leak test page."
+  "testLinks_verify": {
+    "message": "验证保护",
+    "description": "Footer link to the hosted verification page that checks the user's protection."
   },
   "support_needHelp": {
     "message": "需要帮助?",

@@ -16,7 +16,7 @@ import * as React from "react"
 
 import { primeSharedPosition } from "../test-suite/helpers/shared-position"
 import { parseUserAgentSummary } from "./format"
-import { now } from "./safe-time"
+import { now as monotonicNow } from "./safe-time"
 import type {
   AsyncField,
   FeatureAvailability,
@@ -295,11 +295,11 @@ function getLocation(signal: AbortSignal): Promise<AsyncField<LocationValue>> {
   // this stays in for long we'll gate it behind a flag, but while
   // we're debugging the "Chrome hangs on getCurrentPosition after
   // Allow" issue the noise is useful.
-  const t0 = now()
+  const t0 = monotonicNow()
   const tlog = (...args: Array<unknown>): void => {
      
     console.log(
-      `[geo-debug +${Math.round(now() - t0)}ms]`,
+      `[geo-debug +${Math.round(monotonicNow() - t0)}ms]`,
       ...args,
     )
   }

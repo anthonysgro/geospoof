@@ -1,8 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { Link } from "@tanstack/react-router"
+import { Link, createFileRoute  } from "@tanstack/react-router"
 import * as React from "react"
-import { Check, Loader2, MapPin, Globe, Clock, Wifi, X, ChevronDown, ShieldCheck, ShieldAlert } from "lucide-react"
+import { Check, ChevronDown, Clock, Globe, Loader2, MapPin, ShieldAlert, ShieldCheck, Wifi, X } from "lucide-react"
 
+import type {NetworkIdentity} from "@/lib/verification/network-identity";
+import type {WebrtcResult} from "@/lib/verification/webrtc-probe";
 import { Navigation } from "@/components/landing/Navigation"
 import { Footer } from "@/components/landing/Footer"
 import { SkipLink } from "@/components/landing/SkipLink"
@@ -10,25 +11,25 @@ import { DownloadSection } from "@/components/landing/DownloadSection"
 import { cn } from "@/lib/utils"
 import {
   Collapsible,
-  CollapsibleTrigger,
   CollapsibleContent,
+  CollapsibleTrigger,
 } from "@/components/ui/collapsible"
 import {
   IdentityProvider,
   useIdentity,
 } from "@/lib/verification/identity-context"
 import {
-  resolveNetworkIdentity,
+  
   haversineKm,
-  timezoneContinent,
-  type NetworkIdentity,
+  resolveNetworkIdentity,
+  timezoneContinent
 } from "@/lib/verification/network-identity"
-import { probeWebrtc, type WebrtcResult } from "@/lib/verification/webrtc-probe"
+import {  probeWebrtc } from "@/lib/verification/webrtc-probe"
 import { LeafletMap, prefetchLeaflet } from "@/components/verification/LeafletMap"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
-  timezoneForCoordinates,
   getTimezoneOffsetConvention,
+  timezoneForCoordinates,
 } from "@/lib/verification/geo-timezone"
 
 export const Route = createFileRoute("/verify")({
@@ -147,7 +148,7 @@ function useGeolocationPermission(): string | null {
   React.useEffect(() => {
     let cancelled = false
     if (typeof navigator !== "undefined" && navigator.permissions?.query) {
-      navigator.permissions.query({ name: "geolocation" as PermissionName }).then(
+      navigator.permissions.query({ name: "geolocation" }).then(
         (status) => {
           if (!cancelled) setState(status.state)
         },
@@ -278,7 +279,7 @@ function VerifyInner() {
           icon: <MapPin className="size-4" />,
           label: "Geolocation",
           value: "Waiting for permission…",
-          status: "pending" as RowStatus,
+          status: "pending",
         }
       }
       if (loc.status === "error" || !loc.value) {
@@ -287,7 +288,7 @@ function VerifyInner() {
           icon: <MapPin className="size-4" />,
           label: "Geolocation",
           value: "Blocked / denied",
-          status: "good" as RowStatus,
+          status: "good",
           note: "Location API returned no coordinates",
         }
       }
@@ -304,7 +305,7 @@ function VerifyInner() {
         icon: <MapPin className="size-4" />,
         label: "Geolocation",
         value: coordStr,
-        status: (geoVsIpMismatch ? "bad" : "info") as RowStatus,
+        status: (geoVsIpMismatch ? "bad" : "info"),
         note: noteparts.length > 0 ? noteparts.join(" · ") : undefined,
       }
     })(),
@@ -321,7 +322,7 @@ function VerifyInner() {
         icon: <Clock className="size-4" />,
         label: "Timezone",
         value: tz.identifier || "—",
-        status: (tzVsIpMismatch ? "bad" : tz.identifier ? "info" : "pending") as RowStatus,
+        status: (tzVsIpMismatch ? "bad" : tz.identifier ? "info" : "pending"),
         note: noteParts.length > 0 ? noteParts.join(" · ") : undefined,
       }
     })(),
@@ -332,7 +333,7 @@ function VerifyInner() {
       icon: <Clock className="size-4" />,
       label: "Current time",
       value: mounted ? new Date().toString() : "—",
-      status: (mounted ? "info" : "pending") as RowStatus,
+      status: (mounted ? "info" : "pending"),
     },
 
     // IP address
@@ -366,7 +367,7 @@ function VerifyInner() {
           icon: <Wifi className="size-4" />,
           label: "WebRTC",
           value: "Probing…",
-          status: "pending" as RowStatus,
+          status: "pending",
         }
       }
       const leaked = webrtc.value.publicIps.length > 0
@@ -377,7 +378,7 @@ function VerifyInner() {
         value: leaked
           ? webrtc.value.publicIps.filter((ip) => ip !== "(leaked)").join(", ") || "IP leaked"
           : "No IP leak detected",
-        status: leaked ? "bad" : ("good" as RowStatus),
+        status: leaked ? "bad" : ("good"),
         note: leaked ? (webrtc.value.leakDetail || "Real IP exposed via WebRTC") : undefined,
       }
     })(),
@@ -553,7 +554,7 @@ function FaqSection() {
       </div>
       <script
         type="application/ld+json"
-        // eslint-disable-next-line react/no-danger -- static, app-authored FAQ schema for rich results
+        // Static, app-authored FAQ schema for rich results (no user input).
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
     </section>
@@ -962,7 +963,7 @@ function buildValueGroups(
     if (typeof docProto.parseHTMLUnsafe === "function") {
       documentRows.push({
         api: "Document.parseHTMLUnsafe('').lastModified",
-        value: safe(() => Document.parseHTMLUnsafe!("").lastModified),
+        value: safe(() => Document.parseHTMLUnsafe("").lastModified),
       })
     }
   }

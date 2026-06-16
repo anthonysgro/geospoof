@@ -273,21 +273,9 @@
     "message": "ℹ️ Extensões não podem ser executadas nesta página",
     "description": "Notice shown on browser-internal pages where extensions cannot run."
   },
-  "testLinks_label": {
-    "message": "Teste sua proteção:",
-    "description": "Heading above the test-your-protection links."
-  },
-  "testLinks_geolocation": {
-    "message": "Geolocalização",
-    "description": "Link label for the geolocation test page."
-  },
-  "testLinks_timezone": {
-    "message": "Fuso horário",
-    "description": "Link label for the timezone test page."
-  },
-  "testLinks_ipLeak": {
-    "message": "Vazamento de IP",
-    "description": "Link label for the IP leak test page."
+  "testLinks_verify": {
+    "message": "Verificar proteção",
+    "description": "Footer link to the hosted verification page that checks the user's protection."
   },
   "support_needHelp": {
     "message": "Precisa de ajuda?",

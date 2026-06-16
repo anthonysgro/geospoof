@@ -1,5 +1,6 @@
 import * as React from "react"
-import type { Map as LeafletMapInstance, CircleMarker, Polyline } from "leaflet"
+import type * as Leaflet from "leaflet"
+import type { CircleMarker, Map as LeafletMapInstance, Polyline } from "leaflet"
 import { cn } from "@/lib/utils"
 import { useTheme } from "@/hooks/use-theme"
 
@@ -89,7 +90,7 @@ const COLORS = {
 
 // Cached promise for the Leaflet JS + CSS chunks. Kept at module scope so the
 // download happens at most once and can be kicked off *before* the map mounts.
-let leafletModulePromise: Promise<typeof import("leaflet")> | null = null
+let leafletModulePromise: Promise<typeof Leaflet> | null = null
 
 /**
  * Begin loading the Leaflet JS + CSS chunks in parallel. Idempotent — safe to
@@ -98,7 +99,7 @@ let leafletModulePromise: Promise<typeof import("leaflet")> | null = null
  * overlaps the library download with the geolocation wait instead of stacking
  * them, and parallelises the JS and CSS fetches.
  */
-export function prefetchLeaflet(): Promise<typeof import("leaflet")> {
+export function prefetchLeaflet(): Promise<typeof Leaflet> {
   if (!leafletModulePromise) {
     leafletModulePromise = Promise.all([
       import("leaflet"),
@@ -113,14 +114,14 @@ export function LeafletMap(props: LeafletMapProps) {
   const primary: MapPoint =
     "lat" in props && props.lat !== undefined
       ? { lat: props.lat, lon: props.lon, label: "", kind: "browser" }
-      : (props.primary as MapPoint)
+      : (props.primary)
   const secondary = "secondary" in props ? props.secondary : undefined
   const initialZoom = "zoom" in props && props.zoom !== undefined ? props.zoom : 6
   const { className } = props
 
   const containerRef = React.useRef<HTMLDivElement | null>(null)
   const mapRef = React.useRef<LeafletMapInstance | null>(null)
-  const tileLayerRef = React.useRef<ReturnType<typeof import("leaflet")["tileLayer"]> | null>(null)
+  const tileLayerRef = React.useRef<ReturnType<(typeof Leaflet)["tileLayer"]> | null>(null)
   const animFrameRef = React.useRef<number | null>(null)
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === "dark"
@@ -204,7 +205,7 @@ export function LeafletMap(props: LeafletMapProps) {
               className: "leaflet-geospoof-label",
             }).openTooltip()
           }
-          return m as unknown as CircleMarker
+          return m
         }
 
         const marker = L.circleMarker([pt.lat, pt.lon], {
@@ -315,7 +316,6 @@ export function LeafletMap(props: LeafletMapProps) {
         tileLayerRef.current = null
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [coordKey])
 
   // Swap tile layer on theme change without remounting the map.

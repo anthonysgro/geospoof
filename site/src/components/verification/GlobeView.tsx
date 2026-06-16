@@ -67,7 +67,7 @@ export function GlobeView({ primary, secondary, browserTimezone, ipTimezone, cla
   const mountRef = React.useRef<HTMLDivElement>(null)
   const [Globe, setGlobe] = React.useState<React.ElementType | null>(null)
   const [dims, setDims] = React.useState({ width: 0, height: 0 })
-  const [countries, setCountries] = React.useState<CountryFeature[]>([])
+  const [countries, setCountries] = React.useState<Array<CountryFeature>>([])
 
   React.useEffect(() => {
     import("react-globe.gl").then((m) => setGlobe(() => m.default as React.ElementType))
@@ -85,7 +85,7 @@ export function GlobeView({ primary, secondary, browserTimezone, ipTimezone, cla
   React.useEffect(() => {
     fetch(COUNTRIES_URL)
       .then((r) => r.json())
-      .then((d: { features: CountryFeature[] }) => setCountries(d.features))
+      .then((d: { features: Array<CountryFeature> }) => setCountries(d.features))
       .catch(() => {})
   }, [])
 

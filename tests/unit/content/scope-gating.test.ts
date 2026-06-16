@@ -27,7 +27,7 @@
  */
 
 import { describe, test, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
-import type { Location, Timezone } from "@/shared/types/settings";
+import type { Timezone } from "@/shared/types/settings";
 
 // Must match `EVENT_NAME` in src/content/index.ts (process.env.EVENT_NAME || "__x_evt").
 const EVENT_NAME = "__x_evt";

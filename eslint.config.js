@@ -104,7 +104,7 @@ export default [
 
   // JavaScript config files (no type checking)
   {
-    files: ["*.js", "*.mjs", "*.cjs"],
+    files: ["**/*.js", "**/*.mjs", "**/*.cjs"],
     ...tseslint.configs.disableTypeChecked,
     languageOptions: {
       globals: {
@@ -121,7 +121,7 @@ export default [
 
   // Root-level TypeScript config files (no type checking)
   {
-    files: ["*.config.ts", "*.config.mts"],
+    files: ["**/*.config.ts", "**/*.config.mts"],
     ...tseslint.configs.disableTypeChecked,
   },
 

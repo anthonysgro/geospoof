@@ -36,11 +36,15 @@ export default [
       "@typescript-eslint/require-await": "off",
     },
   },
-  // The identity provider defends against partial browser environments
-  // (missing navigator fields, stripped Intl surfaces, etc.) where
-  // static types overstate nullability.
+  // The identity provider and the verification route both defend against
+  // partial browser environments (missing navigator fields, stripped Intl
+  // surfaces, absent Permissions API, etc.) where static types overstate
+  // nullability. The runtime guards are intentional, not redundant.
   {
-    files: ["src/lib/verification/identity-context.tsx"],
+    files: [
+      "src/lib/verification/identity-context.tsx",
+      "src/routes/verify.tsx",
+    ],
     rules: {
       "@typescript-eslint/no-unnecessary-condition": "off",
     },

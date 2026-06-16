@@ -1,16 +1,16 @@
 import * as React from "react"
 import { CheckCircle2, Info, Loader2, MinusCircle, XCircle } from "lucide-react"
 
-import { Section } from "@/components/landing/Section"
-import { useIdentity } from "@/lib/verification/identity-context"
-import { loadAllTests } from "@/lib/test-suite/tests"
-import { initialStates, runSuite } from "@/lib/test-suite/runner"
 import type {
   TestDefinition,
   TestRunContext,
   TestState,
   TestStatus,
 } from "@/lib/test-suite/types"
+import { Section } from "@/components/landing/Section"
+import { useIdentity } from "@/lib/verification/identity-context"
+import { loadAllTests } from "@/lib/test-suite/tests"
+import { initialStates, runSuite } from "@/lib/test-suite/runner"
 
 /**
  * Curated "deeper checks" shown beneath the hero on /verify.

@@ -107,6 +107,12 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ inputs.version }}
+          # Publish the release if it's currently a draft (deleting the git tag
+          # reverts a published release to Draft). This runs under GITHUB_TOKEN,
+          # whose actions do NOT trigger the tag-push `Release` workflow — so the
+          # Firefox/Chromium/AMO job is not re-run. (Re-publishing from the GitHub
+          # UI instead WOULD re-trigger it, so always re-publish via this job.)
+          draft: false
           files: safari/build/geospoof-macos-v${{ env.BASE_VERSION }}.dmg
 
       - name: Clean up keychain
