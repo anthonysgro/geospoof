@@ -16,7 +16,7 @@
  * called from `resolveNetworkIdentity`, which runs in a browser effect.
  */
 
-const GEOJS_URL = "https://get.geojs.io/v1/ip/geo.json"
+const GEOJS_URL = "https://ipv4.geojs.io/v1/ip/geo.json"
 const FREEIPAPI_URL = "https://free.freeipapi.com/api/json"
 const LOOKUP_TIMEOUT_MS = 8_000
 
