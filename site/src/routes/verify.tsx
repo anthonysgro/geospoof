@@ -170,23 +170,42 @@ function useGeolocationPermission(): string | null {
   return state
 }
 
+/** Resolution state for a coordinate→timezone lookup. */
+type GeoTzState =
+  | { status: "loading" }
+  | { status: "ready"; zone: string; offsetMins: number }
+  | { status: "unavailable" }
+
 /** Resolve the timezone the given coordinates should map to (and its offset). */
 function useGeoTimezone(
   lat: number | null,
   lon: number | null
-): { zone: string; offsetMins: number } | null {
-  const [tz, setTz] = React.useState<{ zone: string; offsetMins: number } | null>(null)
+): GeoTzState {
+  const [tz, setTz] = React.useState<GeoTzState>({ status: "loading" })
   React.useEffect(() => {
     if (lat == null || lon == null) {
-      setTz(null)
+      setTz({ status: "loading" })
       return
     }
     let cancelled = false
-    void timezoneForCoordinates(lat, lon).then((zone) => {
-      if (cancelled || !zone) return
-      const offsetMins = getTimezoneOffsetConvention(zone)
-      if (offsetMins != null) setTz({ zone, offsetMins })
-    })
+    setTz({ status: "loading" })
+    void timezoneForCoordinates(lat, lon)
+      .then((zone) => {
+        if (cancelled) return
+        if (!zone) {
+          setTz({ status: "unavailable" })
+          return
+        }
+        const offsetMins = getTimezoneOffsetConvention(zone)
+        if (offsetMins == null) {
+          setTz({ status: "unavailable" })
+          return
+        }
+        setTz({ status: "ready", zone, offsetMins })
+      })
+      .catch(() => {
+        if (!cancelled) setTz({ status: "unavailable" })
+      })
     return () => {
       cancelled = true
     }
@@ -276,8 +295,8 @@ function VerifyInner() {
   // use the zone resolved from the IP's coordinates. Compare both the full IANA
   // identifier and the UTC offset — a mismatch on either means the browser's
   // timezone doesn't match what the IP location expects.
-  const ipTimezone = net?.timezone ?? ipTz?.zone ?? null
-  const ipOffsetMins = ipTz?.offsetMins ?? null
+  const ipTimezone = net?.timezone ?? (ipTz.status === "ready" ? ipTz.zone : null)
+  const ipOffsetMins = ipTz.status === "ready" ? ipTz.offsetMins : null
   const tzVsIpMismatch =
     !!tz.identifier &&
     !!ipTimezone &&
@@ -714,7 +733,7 @@ function buildValueGroups(
     accuracy: number | null
   } | null,
   permissionState: string | null,
-  geoTz: { zone: string; offsetMins: number } | null,
+  geoTz: GeoTzState,
   workers: Array<WorkerProbeResult> | null
 ): Array<ValueGroup> {
   const now = new Date()
@@ -862,10 +881,14 @@ function buildValueGroups(
   // pointing at the user's real region. Compared by IANA identifier so that
   // zones with the same offset but different names (e.g. America/New_York vs
   // America/Toronto) are still flagged.
-  const geoMismatch = geoTz != null && !zonesMatch(geoTz.zone, intlZone)
-  const geoNote = geoTz
-    ? `Doesn't match your coordinates — they're in ${geoTz.zone} (${fmtOffset(geoTz.offsetMins)})`
-    : undefined
+  const geoMismatch = geoTz.status === "ready" && !zonesMatch(geoTz.zone, intlZone)
+  const geoUnavailable = geoTz.status === "unavailable"
+  const geoNote =
+    geoTz.status === "ready" && geoMismatch
+      ? `Doesn't match your coordinates — they're in ${geoTz.zone} (${fmtOffset(geoTz.offsetMins)})`
+      : geoUnavailable
+        ? "Couldn't check against your coordinates — timezone boundary data didn't load."
+        : undefined
 
   // Historical timezone offsets
   const historicalYears = [1880, 1950, 1975, 2000, 2025]
@@ -956,7 +979,7 @@ function buildValueGroups(
 
   const historicalNote = historicalMismatch
     ? `Historical offsets don't match ${intlZone} — timezone spoofing may be incomplete`
-    : geoMismatch
+    : geoMismatch || geoUnavailable
       ? geoNote
       : undefined
 

@@ -21,6 +21,7 @@ import { syncVpnLocation } from "./vpn-sync";
 import { installProxyWatcher } from "./proxy-watcher";
 import { installActivityWatcher } from "./activity-watcher";
 import { adoptPendingSettingsFromApp } from "./app-bridge";
+import { installBgLogRelay } from "./log-relay";
 import {
   installWorkerRequestFilter,
   updateWorkerFilterSettings,
@@ -199,6 +200,10 @@ async function initialize(): Promise<void> {
   // Restore logger state from persisted settings
   setDebugEnabled(settings.debugLogging);
   setVerbosityLevel(settings.verbosityLevel);
+
+  // TEMPORARY (debugging): relay background logs to the page console so they're
+  // capturable on Safari iOS, where the background inspector target is flaky.
+  installBgLogRelay();
 
   // Prime the worker-request-filter cache and install the listener
   // on engines that support webRequest.filterResponseData (Firefox

@@ -204,6 +204,14 @@ browser.runtime.onMessage.addListener(
     } else if (message.type === "PING") {
       // Respond to ping to confirm content script is injected
       return Promise.resolve({ pong: true });
+    } else if (message.type === "BG_LOG") {
+      // TEMPORARY (debugging): a background log line relayed for capture on
+      // Safari iOS, where the background inspector is unreliable. Print it
+      // straight to the page console (already level-gated in the background).
+      const line = (message as { payload?: { line?: string } }).payload?.line;
+      if (typeof line === "string") {
+        console.log(line);
+      }
     }
   }
 );

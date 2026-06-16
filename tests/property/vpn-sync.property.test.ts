@@ -809,7 +809,7 @@ describe("Feature: vpn-region-sync, Property 8: Force refresh bypasses cache", (
 
 /**
  * Feature: vpn-region-sync, Property 9: Rate limiting enforces minimum interval
- * Tiered setup: 1 ip-echo + 3 primary geo services = 4 fetches per sync.
+ * Tiered setup: 1 ip-echo + 2 primary geo services = 3 fetches per sync.
  * Validates: Requirements 8.4
  */
 describe("Feature: vpn-region-sync, Property 9: Rate limiting enforces minimum interval", () => {
@@ -829,19 +829,19 @@ describe("Feature: vpn-region-sync, Property 9: Rate limiting enforces minimum i
 
         vi.mocked(fetch).mockImplementation(() => {
           const callIdx = fetchCallIndex++;
-          // Each sync = 1 ip-echo + 3 primary geo services = 4 fetches.
-          // Position 0 of every 4-block is the ip-echo (first fetch of the sync).
-          const positionInSync = callIdx % 4;
+          // Each sync = 1 ip-echo + 2 primary geo services = 3 fetches.
+          // Position 0 of every 3-block is the ip-echo (first fetch of the sync).
+          const positionInSync = callIdx % 3;
           if (positionInSync === 0) {
             ipifyTimestamps.push(Date.now());
-            const syncNum = Math.floor(callIdx / 4);
+            const syncNum = Math.floor(callIdx / 3);
             return Promise.resolve({
               ok: true,
               text: () => Promise.resolve(`1.2.3.${syncNum + 1}\n`),
             } as Response);
           }
-          // Geo service responses (ipinfo, freeipapi, geojs primary tier)
-          const syncNum = Math.floor(callIdx / 4);
+          // Geo service responses (freeipapi, geojs primary tier)
+          const syncNum = Math.floor(callIdx / 3);
           const ip = `1.2.3.${syncNum + 1}`;
           return Promise.resolve({
             ok: true,
@@ -908,16 +908,16 @@ describe("Feature: ipwhois-migration, Property 1: Two HTTPS requests per sync", 
         const result = await syncVpnLocation(true);
         expect("error" in result).toBe(false);
 
-        // 1 ip-echo + 3 primary geo services = 4 total. reallyfreegeoip is a
-        // fallback tier, only hit if every primary service fails.
-        expect(fetch).toHaveBeenCalledTimes(4);
+        // 1 ip-echo + 2 primary geo services = 3 total. reallyfreegeoip and
+        // ipinfo are the fallback tier, only hit if every primary service fails.
+        expect(fetch).toHaveBeenCalledTimes(3);
 
         // First call is the primary IP-echo endpoint (AWS checkip).
         const firstUrl = vi.mocked(fetch).mock.calls[0][0] as string;
         expect(firstUrl).toBe("https://checkip.amazonaws.com/");
 
         // All geo service URLs use HTTPS
-        for (let i = 1; i < 4; i++) {
+        for (let i = 1; i < 3; i++) {
           const url = vi.mocked(fetch).mock.calls[i][0] as string;
           expect(url.startsWith("https://")).toBe(true);
         }
@@ -1722,8 +1722,8 @@ describe("Feature: ipwhois-migration, Property 9: Force refresh bypasses cache",
             expect(result.longitude).toBeCloseTo(lon2, 10);
             expect(result.city).toBe("Second");
           }
-          // 1 ip-echo + 3 primary geo services = 4 total (fallback tier unused).
-          expect(fetch).toHaveBeenCalledTimes(4);
+          // 1 ip-echo + 2 primary geo services = 3 total (fallback tier unused).
+          expect(fetch).toHaveBeenCalledTimes(3);
         }
       ),
       { numRuns: 100 }
@@ -1755,18 +1755,18 @@ describe("Feature: ipwhois-migration, Property 10: Rate limiting enforces minimu
 
         vi.mocked(fetch).mockImplementation(() => {
           const callIdx = fetchCallIndex++;
-          // Each sync = 1 ip-echo + 3 primary geo services = 4 fetches.
-          // Position 0 of every 4-block is the ip-echo (first fetch of the sync).
-          const positionInSync = callIdx % 4;
+          // Each sync = 1 ip-echo + 2 primary geo services = 3 fetches.
+          // Position 0 of every 3-block is the ip-echo (first fetch of the sync).
+          const positionInSync = callIdx % 3;
           if (positionInSync === 0) {
             ipifyTimestamps.push(Date.now());
-            const syncNum = Math.floor(callIdx / 4);
+            const syncNum = Math.floor(callIdx / 3);
             return Promise.resolve({
               ok: true,
               text: () => Promise.resolve(`1.2.3.${syncNum + 1}\n`),
             } as Response);
           }
-          const syncNum = Math.floor(callIdx / 4);
+          const syncNum = Math.floor(callIdx / 3);
           const ip = `1.2.3.${syncNum + 1}`;
           return Promise.resolve({
             ok: true,

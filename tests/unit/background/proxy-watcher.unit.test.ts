@@ -18,10 +18,12 @@ import { DEFAULT_SETTINGS } from "@/shared/types/settings";
 const detectPublicIp = vi.fn<() => Promise<string>>();
 const getLastSyncedIp = vi.fn<() => Promise<string | undefined>>();
 const syncVpnLocation = vi.fn<(force: boolean) => Promise<unknown>>();
+const clearEndpointCooldowns = vi.fn<() => void>();
 vi.mock("@/background/vpn-sync", () => ({
   detectPublicIp: (): Promise<string> => detectPublicIp(),
   getLastSyncedIp: (): Promise<string | undefined> => getLastSyncedIp(),
   syncVpnLocation: (force: boolean): Promise<unknown> => syncVpnLocation(force),
+  clearEndpointCooldowns: (): void => clearEndpointCooldowns(),
 }));
 
 const handleSetLocation = vi

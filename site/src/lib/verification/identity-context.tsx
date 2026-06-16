@@ -713,7 +713,14 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
         if (controller.signal.aborted) return
         const current = snapshotRef.current
         if (current.runId !== nextRunId) return
-        const updated: IdentitySnapshot = { ...current, location }
+        // Re-resolve the synchronous timezone now that location has settled.
+        // The extension defers getCurrentPosition until its spoofed settings
+        // are applied, so a settled location is a reliable signal that the
+        // Intl/Date overrides are live too. Re-reading here avoids freezing the
+        // real native zone captured in the brief pre-settings window at mount
+        // (which showed as "spoofed-city geolocation but real-city timezone").
+        const timezone = resolveTimezone()
+        const updated: IdentitySnapshot = { ...current, location, timezone }
         publish(updated)
         drainWaiters("location", location)
       })
