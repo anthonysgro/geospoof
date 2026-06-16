@@ -24,7 +24,7 @@ import {
   type NetworkIdentity,
 } from "@/lib/verification/network-identity"
 import { probeWebrtc, type WebrtcResult } from "@/lib/verification/webrtc-probe"
-import { LeafletMap } from "@/components/verification/LeafletMap"
+import { LeafletMap, prefetchLeaflet } from "@/components/verification/LeafletMap"
 import {
   timezoneForCoordinates,
   getTimezoneOffsetConvention,
@@ -40,6 +40,19 @@ export const Route = createFileRoute("/verify")({
         content:
           "Free browser location test. See the geolocation, timezone, and IP address websites can read about you right now — and check whether your browser is leaking your real location.",
       },
+    ],
+    // Warm up connections to the map tile CDNs before the map mounts, so the
+    // first tiles can be fetched without paying for DNS + TLS at paint time.
+    // OpenStreetMap (light theme) is the default, so its subdomains get a full
+    // preconnect; CARTO (dark theme) gets the lighter dns-prefetch.
+    links: [
+      { rel: "preconnect", href: "https://a.tile.openstreetmap.org" },
+      { rel: "preconnect", href: "https://b.tile.openstreetmap.org" },
+      { rel: "preconnect", href: "https://c.tile.openstreetmap.org" },
+      { rel: "dns-prefetch", href: "https://a.basemaps.cartocdn.com" },
+      { rel: "dns-prefetch", href: "https://b.basemaps.cartocdn.com" },
+      { rel: "dns-prefetch", href: "https://c.basemaps.cartocdn.com" },
+      { rel: "dns-prefetch", href: "https://d.basemaps.cartocdn.com" },
     ],
   }),
 })
@@ -179,6 +192,11 @@ function VerifyInner() {
   const [webrtc, setWebrtc] = React.useState<WebrtcState>({ status: "pending" })
 
   React.useEffect(() => {
+    // Start downloading Leaflet immediately, in parallel with the geolocation
+    // permission/resolution wait, so the library is ready by the time
+    // coordinates arrive and the map can mount without a download stall.
+    void prefetchLeaflet()
+
     let cancelled = false
     resolveNetworkIdentity().then(
       (value) => !cancelled && setNetwork({ status: "ready", value }),

@@ -87,6 +87,27 @@ const COLORS = {
   network: { fill: "#fb923c", stroke: "#ffffff" },  // amber
 }
 
+// Cached promise for the Leaflet JS + CSS chunks. Kept at module scope so the
+// download happens at most once and can be kicked off *before* the map mounts.
+let leafletModulePromise: Promise<typeof import("leaflet")> | null = null
+
+/**
+ * Begin loading the Leaflet JS + CSS chunks in parallel. Idempotent — safe to
+ * call early (e.g. while geolocation is still resolving) so the library is
+ * cached by the time coordinates arrive and the map actually mounts. This
+ * overlaps the library download with the geolocation wait instead of stacking
+ * them, and parallelises the JS and CSS fetches.
+ */
+export function prefetchLeaflet(): Promise<typeof import("leaflet")> {
+  if (!leafletModulePromise) {
+    leafletModulePromise = Promise.all([
+      import("leaflet"),
+      import("leaflet/dist/leaflet.css"),
+    ]).then(([L]) => L)
+  }
+  return leafletModulePromise
+}
+
 export function LeafletMap(props: LeafletMapProps) {
   // Normalise both call signatures to primary/secondary.
   const primary: MapPoint =
@@ -104,11 +125,14 @@ export function LeafletMap(props: LeafletMapProps) {
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === "dark"
 
+  // Dark mode keeps CARTO's dark basemap; light mode uses the standard
+  // full-color OpenStreetMap tiles (colored ocean, parks, roads, etc).
   const tileUrl = isDark
     ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-    : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-  const attribution =
-    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+    : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+  const attribution = isDark
+    ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+    : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 
   // Stable key — remount when coordinates change.
   const coordKey = `${primary.lat},${primary.lon},${secondary?.lat ?? ""},${secondary?.lon ?? ""}`
@@ -124,8 +148,7 @@ export function LeafletMap(props: LeafletMapProps) {
       window.matchMedia("(prefers-reduced-motion: reduce)").matches
 
     async function mount() {
-      const L = await import("leaflet")
-      await import("leaflet/dist/leaflet.css")
+      const L = await prefetchLeaflet()
       if (disposal.disposed || !container) return
 
       // Fit bounds to include both points when secondary is present.
@@ -150,7 +173,7 @@ export function LeafletMap(props: LeafletMapProps) {
       const layer = L.tileLayer(tileUrl, {
         maxZoom: 19,
         attribution,
-        subdomains: "abcd",
+        subdomains: "abc",
       })
       layer.addTo(map)
       tileLayerRef.current = layer
