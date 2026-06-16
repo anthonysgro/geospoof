@@ -95,7 +95,7 @@ function VerifyPage() {
         <IdentityProvider>
           <VerifyInner />
         </IdentityProvider>
-        <DownloadSection className="border-t border-(--color-canvas-border)" />
+        <DownloadSection campaign="verify" className="border-t border-(--color-canvas-border)" />
       </main>
       <Footer />
     </div>
