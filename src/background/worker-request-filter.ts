@@ -306,15 +306,37 @@ export function _classifyRequestForTest(details: {
 }
 
 /**
- * Return true when `workerUrl` shares the same registrable domain
- * (eTLD+1) as `tabPageUrl`. Used by the `ANNOUNCE_WORKER_FETCH`
- * message handler to gate allowlist entries to same-origin workers only.
+ * Return true when `workerUrl` is same-site as `tabPageUrl`. Used by the
+ * `ANNOUNCE_WORKER_FETCH` message handler and the `classifyRequest` origin
+ * gate to restrict patching to first-party workers.
  *
- * Returns false when `tabPageUrl` is undefined (unknown tab) or when
- * either URL resolves to a null registrable domain (IP, localhost, etc.).
+ * Two ways to qualify as same-site:
+ *   1. Exact same origin (scheme + host + port). This is the fallback that
+ *      makes `localhost`, bare IPs, and other single-label hosts work —
+ *      `getRegistrableDomain` returns null for those, but a worker loaded
+ *      from the page's own origin is unambiguously first-party.
+ *   2. Same registrable domain (eTLD+1), so a worker served from a sibling
+ *      sub-domain (e.g. `api.example.com` on `app.example.com`) still matches.
+ *
+ * Returns false when `tabPageUrl` is undefined (unknown tab) or either URL
+ * is unparseable.
  */
 export function isSameOriginWorker(workerUrl: string, tabPageUrl: string | undefined): boolean {
   if (!tabPageUrl) return false;
+
+  // Exact-origin match: covers localhost / IP / single-label hosts where
+  // registrable-domain extraction can't produce a comparable value.
+  let workerOrigin: string;
+  let pageOrigin: string;
+  try {
+    workerOrigin = new URL(workerUrl).origin;
+    pageOrigin = new URL(tabPageUrl).origin;
+  } catch {
+    return false;
+  }
+  if (workerOrigin === pageOrigin && workerOrigin !== "null") return true;
+
+  // Otherwise fall back to same registrable domain (eTLD+1) for sub-domains.
   const workerDomain = getRegistrableDomain(workerUrl);
   const pageDomain = getRegistrableDomain(tabPageUrl);
   return workerDomain !== null && pageDomain !== null && workerDomain === pageDomain;
@@ -479,10 +501,9 @@ function classifyRequest(details: WebRequestDetailsWithHeaders): Decision {
   });
   if (!effective) return "pass"; // out-of-scope → unmodified
 
-  const workerDomain = getRegistrableDomain(details.url);
-  const pageDomain = getRegistrableDomain(tabPageUrl);
-
-  if (!workerDomain || !pageDomain || workerDomain !== pageDomain) return "pass";
+  // Same-site gate: exact origin (covers localhost / IP / single-label hosts)
+  // or same registrable domain (covers sibling sub-domains).
+  if (!isSameOriginWorker(details.url, tabPageUrl)) return "pass";
 
   return "patch";
 }
