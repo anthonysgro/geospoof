@@ -406,15 +406,15 @@ function VerifyInner() {
     !tzVsIpMismatch
 
   return (
-    <section className="mx-auto max-w-3xl px-4 py-16 md:px-5 md:py-24">
-      <div className="mb-8">
+    <section className="mx-auto max-w-3xl px-4 py-10 sm:py-16 md:px-5 md:py-24">
+      <div className="mb-6 sm:mb-8">
         <p className="mb-2 text-sm font-semibold tracking-widest text-(--color-brand) uppercase">
           Verification
         </p>
-        <h1 className="mb-3 text-3xl font-bold text-(--color-canvas-foreground) md:text-4xl">
+        <h1 className="mb-3 text-2xl font-bold text-(--color-canvas-foreground) sm:text-3xl md:text-4xl">
           What websites can see about you
         </h1>
-        <p className="text-(--color-canvas-muted)">
+        <p className="text-sm text-(--color-canvas-muted) sm:text-base">
           Live values from your browser right now — the location, timezone, and IP
           websites can read. With GeoSpoof active, they reflect your spoofed location
           instead of your real one.
@@ -1058,9 +1058,9 @@ function ApiChecks({
         {Array.from({ length: 5 }).map((_, i) => (
           <div
             key={i}
-            className="flex items-center gap-4 rounded-2xl border border-(--color-canvas-border) bg-(--color-canvas) px-5 py-4"
+            className="flex items-center gap-3 rounded-2xl border border-(--color-canvas-border) bg-(--color-canvas) px-4 py-3 sm:gap-4 sm:px-5 sm:py-4"
           >
-            <Skeleton className="size-9 shrink-0 rounded-full" />
+            <Skeleton className="size-8 shrink-0 rounded-full sm:size-9" />
             <div className="flex-1 space-y-2">
               <Skeleton className="h-4 w-32" />
               <Skeleton className="h-3 w-48" />
@@ -1148,17 +1148,30 @@ function VerdictBanner({
     problems.push(`${failingGroupTitles.join(", ")} ${failingGroupTitles.length === 1 ? "doesn't" : "don't"} line up`)
 
   return (
-    <div className="mb-6 flex items-center gap-5 rounded-2xl border border-destructive/30 bg-destructive/8 px-6 py-6">
-      <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-destructive/12 text-destructive ring-4 ring-destructive/10">
-        <ShieldAlert className="size-8" aria-hidden />
+    <div className="mb-6 flex items-start gap-4 rounded-2xl border border-destructive/30 bg-destructive/8 px-5 py-5 sm:gap-5 sm:px-6 sm:py-6">
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-destructive/12 text-destructive ring-4 ring-destructive/10 sm:size-14">
+        <ShieldAlert className="size-6 sm:size-8" aria-hidden />
       </span>
       <div className="flex-1">
-        <p className="text-xl font-bold text-(--color-canvas-foreground)">
+        <p className="text-lg font-bold text-(--color-canvas-foreground) sm:text-xl">
           Some signals are exposed
         </p>
-        <p className="mt-0.5 text-sm text-(--color-canvas-muted)">
-          {capitalize(problems.join(" · "))}. A site cross-referencing these
-          signals could flag you.
+        <ul className="mt-2 space-y-1">
+          {problems.map((problem) => (
+            <li
+              key={problem}
+              className="flex items-start gap-2 text-sm text-(--color-canvas-muted)"
+            >
+              <span
+                className="mt-1.5 size-1.5 shrink-0 rounded-full bg-destructive"
+                aria-hidden
+              />
+              <span>{capitalize(problem)}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-2 text-sm text-(--color-canvas-muted)">
+          A site cross-referencing these signals could flag you.
         </p>
         <a
           href="#download"
@@ -1191,11 +1204,11 @@ function ValueGroupCard({ group }: { group: ValueGroup }) {
       onOpenChange={setOpen}
       className="overflow-hidden rounded-2xl border border-(--color-canvas-border) bg-(--color-canvas)"
     >
-      <CollapsibleTrigger className="flex w-full items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-canvas-border/30">
+      <CollapsibleTrigger className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-canvas-border/30 sm:gap-4 sm:px-5 sm:py-4">
         {/* Status light */}
         <span
           className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-full",
+            "flex size-8 shrink-0 items-center justify-center rounded-full sm:size-9",
             group.consistent
               ? "bg-green-500/12 text-green-600 dark:text-green-400"
               : "bg-destructive/12 text-destructive"
@@ -1206,13 +1219,13 @@ function ValueGroupCard({ group }: { group: ValueGroup }) {
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="font-semibold text-(--color-canvas-foreground)">
+          <p className="text-sm font-semibold text-(--color-canvas-foreground) sm:text-base">
             {group.title}
           </p>
           {group.note ? (
-            <p className="text-sm text-destructive">{group.note}</p>
+            <p className="text-xs text-destructive sm:text-sm">{group.note}</p>
           ) : (
-            <p className="truncate font-mono text-sm text-(--color-canvas-muted)">
+            <p className="truncate font-mono text-xs text-(--color-canvas-muted) sm:text-sm">
               {group.headline}
             </p>
           )}
@@ -1239,7 +1252,7 @@ function ValueGroupCard({ group }: { group: ValueGroup }) {
                       "border-b border-(--color-canvas-border)"
                   )}
                 >
-                  <td className="w-[45%] px-5 py-2.5 align-top font-mono text-xs text-(--color-canvas-muted) break-all">
+                  <td className="w-[45%] px-4 py-2 align-top font-mono text-xs text-(--color-canvas-muted) break-all sm:px-5 sm:py-2.5">
                     {row.api}
                     {row.utc && (
                       <span className="ml-2 rounded bg-canvas-border/60 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-(--color-canvas-muted) uppercase">
@@ -1247,7 +1260,7 @@ function ValueGroupCard({ group }: { group: ValueGroup }) {
                       </span>
                     )}
                   </td>
-                  <td className="w-[55%] px-5 py-2.5 align-top font-mono text-xs wrap-break-word text-(--color-canvas-foreground)">
+                  <td className="w-[55%] px-4 py-2 align-top font-mono text-xs wrap-break-word text-(--color-canvas-foreground) sm:px-5 sm:py-2.5">
                     {row.value}
                   </td>
                 </tr>
@@ -1278,14 +1291,14 @@ function VerifyRow({ row, last }: { row: Row; last: boolean }) {
   return (
     <div
       className={cn(
-        "flex items-start gap-4 bg-(--color-canvas) px-5 py-4",
+        "flex items-start gap-3 bg-(--color-canvas) px-4 py-3 sm:gap-4 sm:px-5 sm:py-4",
         !last && "border-b border-(--color-canvas-border)"
       )}
     >
       {/* Icon */}
       <div
         className={cn(
-          "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg",
+          "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg sm:size-8",
           iconBg[row.status]
         )}
         aria-hidden
@@ -1303,19 +1316,19 @@ function VerifyRow({ row, last }: { row: Row; last: boolean }) {
 
       {/* Text */}
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold tracking-wide text-(--color-canvas-muted) uppercase">
+        <p className="text-[11px] font-semibold tracking-wide text-(--color-canvas-muted) uppercase sm:text-xs">
           {row.label}
         </p>
         <p
           className={cn(
-            "mt-0.5 break-all font-mono text-sm font-medium",
+            "mt-0.5 break-all font-mono text-[13px] font-medium sm:text-sm",
             statusColor[row.status]
           )}
         >
           {row.value}
         </p>
         {row.note && (
-          <p className="mt-0.5 text-xs text-(--color-canvas-muted)">{row.note}</p>
+          <p className="mt-0.5 text-[11px] text-(--color-canvas-muted) sm:text-xs">{row.note}</p>
         )}
       </div>
     </div>
