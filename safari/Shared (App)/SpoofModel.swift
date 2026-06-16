@@ -1732,64 +1732,82 @@ enum VpnLookup {
     }
 
     static func geolocate(_ ip: String) async throws -> Result {
-        // geojs is the most accurate/consistent of the providers (and the
-        // extension's designated primary), so give it a head start: the
-        // fallbacks only fire if geojs hasn't already won after `headStart`.
+        // Two-tier resolution mirroring the extension (src/background/vpn-sync.ts):
         //
-        // Selection is quality-aware but still fastest-wins: the FIRST result
-        // that resolved to a city wins immediately (its timezone, if missing, is
-        // refined downstream by resolveExactTimezone). A city-less result is NOT
-        // accepted while others are still in flight — for IP ranges a provider
-        // can't place (e.g. geojs on many IPv6 blocks) it still returns a
-        // timezone but an empty city and the country-centroid coords (the US
-        // geographic center, 37.751/-97.822); accepting that would pin the user
-        // to the middle of Kansas while another provider knows their real city.
-        // City-less results are held only as a last resort and used solely if
-        // every provider comes back without a city.
+        // PRIMARY — geojs + freeipapi: providers that resolve a VPN/hosting exit
+        // IP to its actual deployment city. geojs leads; freeipapi joins after a
+        // short head start so geojs usually wins on latency.
+        //
+        // FALLBACK — reallyfreegeoip + ipinfo: consulted ONLY if every primary
+        // provider fails. Keyless ipinfo returns the IP range's *registration*
+        // city, which is wrong for VPN exits (e.g. Frankfurt for a Datacamp
+        // "Tashkent" exit IP). Keeping it out of the primary race means it can
+        // never win over geojs/freeipapi — it's a true last resort.
+        //
+        // Within a tier, selection is quality-aware but fastest-wins: the first
+        // result with a city wins; a city-less country-centroid is held and
+        // returned only if no provider in that tier produced a city. The fallback
+        // tier is reached only when every primary provider errors outright (a
+        // city-less primary result is still accepted).
         let headStart: UInt64 = 900_000_000 // 0.9s
-        return try await withThrowingTaskGroup(of: Result?.self) { group in
-            group.addTask { try? await geolocateGeoJs(ip) }
-            group.addTask {
-                try? await Task.sleep(nanoseconds: headStart)
-                if Task.isCancelled { return nil }
-                return try? await geolocateFreeIpApi(ip)
-            }
-            group.addTask {
-                try? await Task.sleep(nanoseconds: headStart)
-                if Task.isCancelled { return nil }
-                return try? await geolocateReallyFreeGeoIp(ip)
-            }
-            group.addTask {
-                try? await Task.sleep(nanoseconds: headStart)
-                if Task.isCancelled { return nil }
-                return try? await geolocateIpInfo(ip)
+
+        if let result = await raceTier(
+            [(delay: 0, fetch: { try await geolocateGeoJs($0) }),
+             (delay: headStart, fetch: { try await geolocateFreeIpApi($0) })],
+            ip: ip
+        ) {
+            Log.vpn.info("[geo] winner \(result.source): \(result.city.isEmpty ? "?" : result.city), \(result.country) (\(result.latitude), \(result.longitude)) tz=\(result.timezoneID.isEmpty ? "?" : result.timezoneID)")
+            return result
+        }
+
+        Log.vpn.warn("[geo] all primary providers failed; consulting fallback tier (reallyfreegeoip, ipinfo)")
+        if let result = await raceTier(
+            [(delay: 0, fetch: { try await geolocateReallyFreeGeoIp($0) }),
+             (delay: 0, fetch: { try await geolocateIpInfo($0) })],
+            ip: ip
+        ) {
+            Log.vpn.info("[geo] winner \(result.source) (fallback): \(result.city.isEmpty ? "?" : result.city), \(result.country) (\(result.latitude), \(result.longitude)) tz=\(result.timezoneID.isEmpty ? "?" : result.timezoneID)")
+            return result
+        }
+
+        Log.vpn.error("All geolocation providers failed for \(ip)")
+        throw LookupError.geo
+    }
+
+    /// Race one provider tier. Returns the first city-level result
+    /// (fastest-wins), or the best city-less country-centroid if no provider in
+    /// the tier produced a city, or nil if every provider in the tier errored.
+    /// Mirrors the extension's `raceGeoForBestResult` within a single tier.
+    private static func raceTier(
+        _ providers: [(delay: UInt64, fetch: @Sendable (String) async throws -> Result)],
+        ip: String
+    ) async -> Result? {
+        await withTaskGroup(of: Result?.self) { group in
+            for (delay, fetch) in providers {
+                group.addTask {
+                    if delay > 0 {
+                        try? await Task.sleep(nanoseconds: delay)
+                        if Task.isCancelled { return nil }
+                    }
+                    return try? await fetch(ip)
+                }
             }
 
-            var cityless: Result? // best result with no city — country centroid, last resort
-            for try await result in group {
-                guard let result else { continue }
+            var cityless: Result? // best result with no city — country centroid
+            for await next in group {
+                guard let result = next else { continue }
                 if !result.city.isEmpty {
-                    // Pinpointed to a city — accept the first one to arrive
-                    // (fastest-wins). A missing timezone is refined downstream by
-                    // resolveExactTimezone, so we don't wait for a tz-bearing one.
+                    // Pinpointed to a city — accept the first to arrive.
                     group.cancelAll()
-                    Log.vpn.info("[geo] winner \(result.source): \(result.city), \(result.country) (\(result.latitude), \(result.longitude)) tz=\(result.timezoneID.isEmpty ? "?" : result.timezoneID)")
                     return result
                 }
-                // City-less (country centroid). Hold one as a last resort,
-                // preferring a provider that at least supplied a timezone.
+                // City-less (country centroid). Hold one, preferring a provider
+                // that at least supplied a timezone.
                 if cityless == nil || (cityless!.timezoneID.isEmpty && !result.timezoneID.isEmpty) {
-                    Log.vpn.debug("[geo] city-less result from \(result.source): \(result.country) (\(result.latitude), \(result.longitude)) — holding as last resort, waiting for a city-level provider")
                     cityless = result
                 }
             }
-            // No provider returned a city; fall back to the best city-less result.
-            if let cityless {
-                Log.vpn.info("[geo] winner \(cityless.source) (country-only, no city-level result): \(cityless.country) (\(cityless.latitude), \(cityless.longitude)) tz=\(cityless.timezoneID.isEmpty ? "?" : cityless.timezoneID)")
-                return cityless
-            }
-            Log.vpn.error("All geolocation providers failed for \(ip)")
-            throw LookupError.geo
+            return cityless
         }
     }
 
@@ -1823,7 +1841,8 @@ enum VpnLookup {
         ))
     }
 
-    /// freeipapi.com — fallback #1. Numeric lat/lng; no timezone field used.
+    /// freeipapi.com — fallback #1. Numeric lat/lng. Captures the timezone only
+    /// when unambiguous (see below).
     private static func geolocateFreeIpApi(_ ip: String) async throws -> Result {
         let url = URL(string: "https://free.freeipapi.com/api/json/\(ip)")!
         let (data, response) = try await session.data(for: noCacheRequest(url))
@@ -1833,12 +1852,26 @@ enum VpnLookup {
               isValidCoord(lat, lon) else {
             throw LookupError.geo
         }
+        // freeipapi returns `timeZones` (plural) — the list of ALL IANA zones in
+        // the IP's COUNTRY, alphabetical, not the city's zone. Only trust it when
+        // it's unambiguous (a single-zone country, one element); a multi-zone
+        // list can't pinpoint the city and its first entry is just alphabetical
+        // (e.g. America/Adak for any US IP). Mirrors the extension
+        // (src/background/vpn-sync.ts). A missing/multi-zone value is left empty
+        // and refined downstream by resolveExactTimezone.
+        let timeZones = o["timeZones"] as? [String]
+        let timezoneID: String
+        if let timeZones, timeZones.count == 1 {
+            timezoneID = timeZones[0]
+        } else {
+            timezoneID = o["timeZone"] as? String ?? ""
+        }
         return logResult(Result(
             latitude: lat, longitude: lon,
             city: o["cityName"] as? String ?? "",
             country: o["countryName"] as? String ?? "",
             ip: o["ipAddress"] as? String ?? ip,
-            timezoneID: "",
+            timezoneID: timezoneID,
             source: "freeipapi"
         ))
     }
