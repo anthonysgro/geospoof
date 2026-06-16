@@ -457,8 +457,8 @@ function VerifyInner() {
       />
 
       {allResolved && (
-        <p className="mb-6 -mt-2 text-center text-xs text-(--color-canvas-muted) sm:text-sm">
-          Auto VPN sync may take up to 10 seconds to reflect. Reload to recheck.
+        <p className="mb-6 -mt-2 text-center text-xs italic text-(--color-canvas-muted) sm:text-sm">
+          Using VPN sync? Changes can take up to 10 seconds — reload to see the latest.
         </p>
       )}
 
