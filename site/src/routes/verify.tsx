@@ -23,7 +23,6 @@ import {
   
   haversineKm,
   resolveNetworkIdentity,
-  timezoneContinent
 } from "@/lib/verification/network-identity"
 import {  probeWebrtc } from "@/lib/verification/webrtc-probe"
 import { probeWorkers } from "@/lib/verification/worker-probe"
@@ -274,13 +273,20 @@ function VerifyInner() {
       200
 
   // Prefer the provider's own timezone string (geojs supplies one); otherwise
-  // use the zone resolved from the IP's coordinates. Compared by continent for
-  // a coarse "different part of the world" read.
+  // use the zone resolved from the IP's coordinates. Compare both the full IANA
+  // identifier and the UTC offset — a mismatch on either means the browser's
+  // timezone doesn't match what the IP location expects.
   const ipTimezone = net?.timezone ?? ipTz?.zone ?? null
+  const ipOffsetMins = ipTz?.offsetMins ?? null
   const tzVsIpMismatch =
     !!tz.identifier &&
     !!ipTimezone &&
-    timezoneContinent(tz.identifier) !== timezoneContinent(ipTimezone)
+    // Full identifier check (e.g. America/Toronto vs America/New_York)
+    tz.identifier !== ipTimezone &&
+    // Offset check as fallback — different IANA names can share the same offset
+    // (e.g. America/Toronto and America/New_York are both UTC-5/UTC-4), so only
+    // flag when the offsets also disagree.
+    (ipOffsetMins == null || tz.offsetMinutes !== ipOffsetMins)
 
   const rows: Array<Row> = [
     // Geolocation
