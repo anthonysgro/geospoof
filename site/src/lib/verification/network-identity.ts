@@ -20,7 +20,7 @@
  */
 
 import { createServerFn } from "@tanstack/react-start"
-import { getRequestHeader } from "@tanstack/react-start/server"
+import { getRequestHeader, setResponseHeader } from "@tanstack/react-start/server"
 
 const GEOJS_URL = "https://ipv4.geojs.io/v1/ip/geo.json"
 const FREEIPAPI_URL = "https://free.freeipapi.com/api/json"
@@ -65,8 +65,12 @@ function countryNameFromCode(code: string): string {
  * This is the reliable path on Safari / iCloud Private Relay, where the
  * browser-side calls to geojs/freeipapi get blocked as cross-site trackers.
  */
-export const fetchEdgeNetworkIdentity = createServerFn({ method: "GET" }).handler(
+export const fetchEdgeNetworkIdentity = createServerFn({ method: "POST" }).handler(
   (): NetworkIdentity | null => {
+    // POST is inherently uncacheable by CDNs, but set the header explicitly
+    // as a belt-and-braces measure against any edge-layer surprises.
+    setResponseHeader("Cache-Control", "private, no-store, no-cache, must-revalidate")
+
     const get = (name: string): string | null => {
       const v = getRequestHeader(name)
       return typeof v === "string" && v.trim().length > 0 ? v.trim() : null

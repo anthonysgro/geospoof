@@ -147,12 +147,13 @@ struct SpoofControlPanel: View {
     }
 
     private func openSafari() {
-        // Opens a geolocation test page so the user can switch GeoSpoof on for
-        // the page (via the page menu) and immediately see it working — which
-        // also fires the activation heartbeat. Note: iOS has no public API to
-        // force Safari specifically; this opens the user's default browser,
-        // which is Safari for the vast majority.
-        if let url = URL(string: "https://webbrowsertools.com/geolocation/") {
+        // Opens our own verify page so the user can switch GeoSpoof on for the
+        // page (via the page menu) and immediately see geolocation, timezone,
+        // and leak checks reflect the spoofed location — which also fires the
+        // activation heartbeat. Note: iOS has no public API to force Safari
+        // specifically; this opens the user's default browser, which is Safari
+        // for the vast majority.
+        if let url = URL(string: "https://geospoof.com/verify") {
             UIApplication.shared.open(url)
         }
     }

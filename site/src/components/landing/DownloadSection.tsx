@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 interface DownloadOption {
   name: string
   description: string
-  href: string
+  href: (campaign: string) => string
   primary?: boolean
   badge?: string
 }
@@ -14,19 +14,22 @@ const downloads: Array<DownloadOption> = [
   {
     name: "Firefox Add-ons",
     description: "Firefox 140+ on desktop and Android",
-    href: "https://addons.mozilla.org/firefox/addon/geo-spoof/?utm_source=geospoof.com&utm_medium=website&utm_campaign=download",
+    href: (campaign) =>
+      `https://addons.mozilla.org/firefox/addon/geo-spoof/?utm_source=geospoof.com&utm_medium=website&utm_campaign=${campaign === "homepage" ? "download" : campaign}`,
     primary: true,
   },
   {
     name: "Chrome Web Store",
     description: "Chrome, Brave, and Edge",
-    href: "https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje",
+    href: (campaign) =>
+      `https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje?utm_source=geospoof.com&utm_medium=website&utm_campaign=${campaign === "homepage" ? "download" : campaign}`,
     primary: true,
   },
   {
     name: "App Store",
     description: "Safari on iOS and macOS",
-    href: "https://apps.apple.com/app/apple-store/id6765719745?pt=128299974&ct=dotcom&mt=8",
+    href: (campaign) =>
+      `https://apps.apple.com/app/apple-store/id6765719745?pt=128299974&ct=${campaign === "homepage" ? "dotcom" : campaign}&mt=8`,
     primary: true,
   },
 ]
@@ -36,17 +39,23 @@ const selfHosted: Array<DownloadOption> = [
     name: "Self-hosted XPI (Firefox)",
     description:
       "Signed XPI for Firefox forks or manual installs. Auto-updates via our update manifest.",
-    href: "https://github.com/anthonysgro/geospoof/releases/latest",
+    href: () => "https://github.com/anthonysgro/geospoof/releases/latest",
   },
   {
     name: "Direct download (macOS)",
     description:
       "Notarized DMG for Safari on macOS. No Apple ID required. Manual updates — re-download to upgrade.",
-    href: "https://github.com/anthonysgro/geospoof/releases/latest",
+    href: () => "https://github.com/anthonysgro/geospoof/releases/latest",
   },
 ]
 
-export function DownloadSection({ className }: { className?: string }) {
+export function DownloadSection({
+  className,
+  campaign = "homepage",
+}: {
+  className?: string
+  campaign?: string
+}) {
   return (
     <Section id="download" className={cn("py-16! md:py-24!", className)}>
       <div className="mb-12 text-center">
@@ -67,7 +76,7 @@ export function DownloadSection({ className }: { className?: string }) {
         {downloads.map((d) => (
           <a
             key={d.name}
-            href={d.href}
+            href={d.href(campaign)}
             target="_blank"
             rel="noopener noreferrer"
             className={cn(
@@ -112,7 +121,7 @@ export function DownloadSection({ className }: { className?: string }) {
               </p>
             </div>
             <a
-              href={option.href}
+              href={option.href(campaign)}
               target="_blank"
               rel="noopener noreferrer"
               className={cn(

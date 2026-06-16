@@ -1,0 +1,15 @@
+# GeoSpoof
+
+> Free, open-source browser extension that spoofs your geolocation, timezone, and WebRTC APIs so websites see a location you choose instead of your real one. Works on Firefox, Chrome, Brave, Edge, and Safari.
+
+GeoSpoof overrides browser location APIs at the page level. It does not change your IP address and is not a VPN; it complements one. The site includes a free in-browser location test and guides on location privacy.
+
+## Pages
+
+- [GeoSpoof — Spoof your browser location & timezone](https://geospoof.com/): Free, open-source browser extension that overrides geolocation, timezone, and WebRTC APIs. Works on Firefox, Chrome, Brave, Edge, and Safari.
+- [Browser Location Test](https://geospoof.com/verify): Free tool that shows the geolocation, timezone, and IP address websites can read about you right now, and flags real-vs-reported location leaks.
+- [GeoSpoof Blog](https://geospoof.com/blog): Guides on browser location spoofing, timezone privacy, and WebRTC leaks.
+
+## Blog
+
+- [How Websites Actually Know Where You Are](https://geospoof.com/blog/how-websites-know-your-location): Websites pin your location through at least eight independent signals, not just your IP. Here's the full stack, from Wi-Fi positioning to WebRTC, and why a VPN only fixes one of them.

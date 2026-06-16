@@ -23,7 +23,6 @@ import {
   
   haversineKm,
   resolveNetworkIdentity,
-  timezoneContinent
 } from "@/lib/verification/network-identity"
 import {  probeWebrtc } from "@/lib/verification/webrtc-probe"
 import { probeWorkers } from "@/lib/verification/worker-probe"
@@ -50,6 +49,7 @@ export const Route = createFileRoute("/verify")({
     // OpenStreetMap (light theme) is the default, so its subdomains get a full
     // preconnect; CARTO (dark theme) gets the lighter dns-prefetch.
     links: [
+      { rel: "canonical", href: "https://geospoof.com/verify" },
       { rel: "preconnect", href: "https://a.tile.openstreetmap.org" },
       { rel: "preconnect", href: "https://b.tile.openstreetmap.org" },
       { rel: "preconnect", href: "https://c.tile.openstreetmap.org" },
@@ -94,7 +94,7 @@ function VerifyPage() {
         <IdentityProvider>
           <VerifyInner />
         </IdentityProvider>
-        <DownloadSection className="border-t border-(--color-canvas-border)" />
+        <DownloadSection campaign="verify" className="border-t border-(--color-canvas-border)" />
       </main>
       <Footer />
     </div>
@@ -170,23 +170,42 @@ function useGeolocationPermission(): string | null {
   return state
 }
 
+/** Resolution state for a coordinate→timezone lookup. */
+type GeoTzState =
+  | { status: "loading" }
+  | { status: "ready"; zone: string; offsetMins: number }
+  | { status: "unavailable" }
+
 /** Resolve the timezone the given coordinates should map to (and its offset). */
 function useGeoTimezone(
   lat: number | null,
   lon: number | null
-): { zone: string; offsetMins: number } | null {
-  const [tz, setTz] = React.useState<{ zone: string; offsetMins: number } | null>(null)
+): GeoTzState {
+  const [tz, setTz] = React.useState<GeoTzState>({ status: "loading" })
   React.useEffect(() => {
     if (lat == null || lon == null) {
-      setTz(null)
+      setTz({ status: "loading" })
       return
     }
     let cancelled = false
-    void timezoneForCoordinates(lat, lon).then((zone) => {
-      if (cancelled || !zone) return
-      const offsetMins = getTimezoneOffsetConvention(zone)
-      if (offsetMins != null) setTz({ zone, offsetMins })
-    })
+    setTz({ status: "loading" })
+    void timezoneForCoordinates(lat, lon)
+      .then((zone) => {
+        if (cancelled) return
+        if (!zone) {
+          setTz({ status: "unavailable" })
+          return
+        }
+        const offsetMins = getTimezoneOffsetConvention(zone)
+        if (offsetMins == null) {
+          setTz({ status: "unavailable" })
+          return
+        }
+        setTz({ status: "ready", zone, offsetMins })
+      })
+      .catch(() => {
+        if (!cancelled) setTz({ status: "unavailable" })
+      })
     return () => {
       cancelled = true
     }
@@ -273,13 +292,20 @@ function VerifyInner() {
       200
 
   // Prefer the provider's own timezone string (geojs supplies one); otherwise
-  // use the zone resolved from the IP's coordinates. Compared by continent for
-  // a coarse "different part of the world" read.
-  const ipTimezone = net?.timezone ?? ipTz?.zone ?? null
+  // use the zone resolved from the IP's coordinates. Compare both the full IANA
+  // identifier and the UTC offset — a mismatch on either means the browser's
+  // timezone doesn't match what the IP location expects.
+  const ipTimezone = net?.timezone ?? (ipTz.status === "ready" ? ipTz.zone : null)
+  const ipOffsetMins = ipTz.status === "ready" ? ipTz.offsetMins : null
   const tzVsIpMismatch =
     !!tz.identifier &&
     !!ipTimezone &&
-    timezoneContinent(tz.identifier) !== timezoneContinent(ipTimezone)
+    // Full identifier check (e.g. America/Toronto vs America/New_York)
+    tz.identifier !== ipTimezone &&
+    // Offset check as fallback — different IANA names can share the same offset
+    // (e.g. America/Toronto and America/New_York are both UTC-5/UTC-4), so only
+    // flag when the offsets also disagree.
+    (ipOffsetMins == null || tz.offsetMinutes !== ipOffsetMins)
 
   const rows: Array<Row> = [
     // Geolocation
@@ -428,9 +454,14 @@ function VerifyInner() {
           What websites can see about you
         </h1>
         <p className="text-sm text-(--color-canvas-muted) sm:text-base">
-          Live values from your browser right now — the location, timezone, and IP
-          websites can read. With GeoSpoof active, they reflect your spoofed location
-          instead of your real one.
+          <span className="sm:hidden">
+            Live values websites can read about you right now.
+          </span>
+          <span className="hidden sm:inline">
+            Live values from your browser right now — the location, timezone, and IP
+            websites can read. With GeoSpoof active, they reflect your spoofed location
+            instead of your real one.
+          </span>
         </p>
       </div>
 
@@ -445,9 +476,8 @@ function VerifyInner() {
       />
 
       {allResolved && (
-        <p className="mb-6 -mt-2 text-center text-sm text-(--color-canvas-muted)">
-          Reload the page to run the checks again. If using VPN sync, allow up to
-          10 seconds after changing locations for overrides to update.
+        <p className="mb-6 -mt-2 text-center text-xs italic text-(--color-canvas-muted) sm:text-sm">
+          Using VPN sync? Changes can take up to 10 seconds — reload to see the latest.
         </p>
       )}
 
@@ -631,10 +661,6 @@ function safe(fn: () => string): string {
   }
 }
 
-function capitalize(s: string): string {
-  return s.length > 0 ? s[0].toUpperCase() + s.slice(1) : s
-}
-
 /** Normalize timezone identifiers so known aliases compare equal. */
 function normalizeZone(tz: string): string {
   return tz
@@ -707,7 +733,7 @@ function buildValueGroups(
     accuracy: number | null
   } | null,
   permissionState: string | null,
-  geoTz: { zone: string; offsetMins: number } | null,
+  geoTz: GeoTzState,
   workers: Array<WorkerProbeResult> | null
 ): Array<ValueGroup> {
   const now = new Date()
@@ -852,12 +878,17 @@ function buildValueGroups(
 
   // Does the browser's timezone line up with the spoofed coordinates? This is
   // the catch for spoofers that change geolocation but leave the timezone
-  // pointing at the user's real region. Compared by offset so equivalent
-  // zones (e.g. New York vs Toronto) don't false-positive.
-  const geoMismatch = geoTz != null && geoTz.offsetMins !== offsetMins
-  const geoNote = geoTz
-    ? `Doesn't match your coordinates — they're in ${geoTz.zone} (${fmtOffset(geoTz.offsetMins)})`
-    : undefined
+  // pointing at the user's real region. Compared by IANA identifier so that
+  // zones with the same offset but different names (e.g. America/New_York vs
+  // America/Toronto) are still flagged.
+  const geoMismatch = geoTz.status === "ready" && !zonesMatch(geoTz.zone, intlZone)
+  const geoUnavailable = geoTz.status === "unavailable"
+  const geoNote =
+    geoTz.status === "ready" && geoMismatch
+      ? `Doesn't match your coordinates — they're in ${geoTz.zone} (${fmtOffset(geoTz.offsetMins)})`
+      : geoUnavailable
+        ? "Couldn't check against your coordinates — timezone boundary data didn't load."
+        : undefined
 
   // Historical timezone offsets
   const historicalYears = [1880, 1950, 1975, 2000, 2025]
@@ -948,7 +979,7 @@ function buildValueGroups(
 
   const historicalNote = historicalMismatch
     ? `Historical offsets don't match ${intlZone} — timezone spoofing may be incomplete`
-    : geoMismatch
+    : geoMismatch || geoUnavailable
       ? geoNote
       : undefined
 
@@ -1525,22 +1556,22 @@ function VerdictBanner({
 
   // Something's off.
   const problems: Array<string> = []
-  if (webrtcLeaking) problems.push("WebRTC is leaking your real IP")
-  if (geoVsIpMismatch) problems.push("your location doesn't match your IP")
-  if (tzVsIpMismatch) problems.push("your timezone doesn't match your IP")
+  if (webrtcLeaking) problems.push("WebRTC leaking your real IP")
+  if (geoVsIpMismatch) problems.push("Location doesn't match IP")
+  if (tzVsIpMismatch) problems.push("Timezone doesn't match IP")
   if (failingGroupTitles.length > 0)
     problems.push(`${failingGroupTitles.join(", ")} ${failingGroupTitles.length === 1 ? "doesn't" : "don't"} line up`)
 
   return (
-    <div className="mb-6 flex items-start gap-4 rounded-2xl border border-destructive/30 bg-destructive/8 px-5 py-5 sm:gap-5 sm:px-6 sm:py-6">
-      <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-destructive/12 text-destructive ring-4 ring-destructive/10 sm:size-14">
-        <ShieldAlert className="size-6 sm:size-8" aria-hidden />
+    <div className="mb-6 flex items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/8 px-4 py-4 sm:gap-5 sm:px-6 sm:py-6">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-destructive/12 text-destructive ring-4 ring-destructive/10 sm:size-14">
+        <ShieldAlert className="size-5 sm:size-8" aria-hidden />
       </span>
       <div className="flex-1">
-        <p className="text-lg font-bold text-(--color-canvas-foreground) sm:text-xl">
+        <p className="text-base font-bold text-(--color-canvas-foreground) sm:text-xl">
           Some signals are exposed
         </p>
-        <ul className="mt-2 space-y-1">
+        <ul className="mt-1.5 space-y-0.5 sm:mt-2 sm:space-y-1">
           {problems.map((problem) => (
             <li
               key={problem}
@@ -1550,11 +1581,11 @@ function VerdictBanner({
                 className="mt-1.5 size-1.5 shrink-0 rounded-full bg-destructive"
                 aria-hidden
               />
-              <span>{capitalize(problem)}</span>
+              <span>{problem}</span>
             </li>
           ))}
         </ul>
-        <p className="mt-2 text-sm text-(--color-canvas-muted)">
+        <p className="mt-2 hidden text-sm text-(--color-canvas-muted) sm:block">
           A site cross-referencing these signals could flag you.
         </p>
         <a
@@ -1566,7 +1597,7 @@ function VerdictBanner({
               ?.scrollIntoView({ behavior: "smooth", block: "start" })
           }}
           className={cn(
-            "mt-4 inline-flex items-center justify-center rounded-brand px-6 py-2.5",
+            "mt-3 inline-flex items-center justify-center rounded-brand px-5 py-2 sm:mt-4 sm:px-6 sm:py-2.5",
             "bg-(--color-brand) text-sm font-semibold text-white shadow-sm",
             "transition-all hover:bg-(--color-brand-dark) hover:shadow-md",
             "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"

@@ -26,7 +26,12 @@
 
 import { createLogger } from "@/shared/utils/debug-logger";
 import { loadSettings } from "./settings";
-import { syncVpnLocation, detectPublicIp, getLastSyncedIp } from "./vpn-sync";
+import {
+  syncVpnLocation,
+  detectPublicIp,
+  getLastSyncedIp,
+  clearEndpointCooldowns,
+} from "./vpn-sync";
 import { handleSetLocation } from "./messages";
 import { looksRateLimited } from "./endpoint-cooldown";
 
@@ -198,6 +203,12 @@ async function doCheck(): Promise<void> {
     confirmIp,
     ") — re-syncing location"
   );
+
+  // The exit IP genuinely changed — clear per-endpoint cooldowns so every
+  // geo provider gets a fresh shot (same behavior as manual sync). This is
+  // safe because we only reach here on a *confirmed* IP change (not on
+  // every trigger), so the rate of actual geolocation requests stays low.
+  clearEndpointCooldowns();
 
   // forceRefresh so we re-detect rather than serve a stale in-flight promise.
   // The 30-day persistent IP→geo cache still makes a previously-seen exit IP

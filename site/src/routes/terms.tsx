@@ -6,6 +6,7 @@ import { Footer } from "@/components/landing/Footer"
 import { SkipLink } from "@/components/landing/SkipLink"
 import { Section } from "@/components/landing/Section"
 import { cn } from "@/lib/utils"
+import { SITE_URL } from "@/lib/blog"
 
 export const Route = createFileRoute("/terms")({
   component: TermsPage,
@@ -18,6 +19,7 @@ export const Route = createFileRoute("/terms")({
           "Terms of Service for GeoSpoof — understand the terms governing your use of the extension.",
       },
     ],
+    links: [{ rel: "canonical", href: `${SITE_URL}/terms` }],
   }),
 })
 

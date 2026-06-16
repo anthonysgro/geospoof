@@ -1,19 +1,34 @@
 /**
  * Coordinate → timezone resolution for the /verify page.
  *
- * Uses the same `browser-geo-tz` boundary data the extension itself uses to
- * decide which timezone a spoofed location should map to. That makes the
- * verify page's "does your timezone match your coordinates?" check use the
- * exact same source of truth the extension applied when spoofing.
+ * Uses `browser-geo-tz` against a **same-origin** copy of the boundary data
+ * served from `/geo-tz/` (the 29 MB `.dat` + ~900 KB index, copied out of the
+ * `geo-tz` npm package into `public/geo-tz/` at build time — see
+ * `scripts/copy-geo-tz-data.mjs`). The library only range-fetches the small
+ * shard it needs per lookup, so the client stays light while the full dataset
+ * lives at the CDN edge.
+ *
+ * Why same-origin instead of jsdelivr:
+ *   - jsdelivr serves the immutable `.dat` as `200` (whole file) on a cache hit
+ *     but `206` on a miss. Safari's range/cache layer mishandles that
+ *     inconsistency and intermittently fails the range request with 416, which
+ *     silently broke the "does your timezone match your coordinates?" check.
+ *     Vercel static serving returns consistent `206` for range requests, and a
+ *     same-origin fetch also isn't subject to Safari's cross-site tracker
+ *     prevention.
+ *
+ * We use the full `timezones.geojson` dataset (not the `-1970` variant) to match
+ * the extension's own resolution (`src/background/timezone.ts`), which avoids
+ * the 1970 variant because it lands coastal points in Etc/GMT zones.
  *
  * SSR-safe: the geo-tz instance is created lazily on first call, which only
- * happens from a browser effect. Nothing here touches the network or a
- * browser global at import time.
+ * happens from a browser effect. Nothing here touches the network or a browser
+ * global at import time.
  */
 
-// geo-tz version pinned to match the extension (src/background/timezone.ts)
-// so the .dat and .index.json files are always a matched pair.
-const GEO_TZ_VERSION = "8.1.5"
+// Same-origin paths to the boundary data copied into `public/geo-tz/` at build.
+const GEO_TZ_DATA_URL = "/geo-tz/timezones.geojson.geo.dat"
+const GEO_TZ_INDEX_URL = "/geo-tz/timezones.geojson.index.json"
 
 type GeoTzFinder = { find: (lat: number, lon: number) => Promise<Array<string>> }
 
@@ -21,30 +36,47 @@ let finderPromise: Promise<GeoTzFinder> | null = null
 
 function getFinder(): Promise<GeoTzFinder> {
   if (finderPromise) return finderPromise
-  finderPromise = import("browser-geo-tz").then((mod) =>
-    (mod.init as (geoUrl: string, indexUrl: string) => GeoTzFinder)(
-      `https://cdn.jsdelivr.net/npm/geo-tz@${GEO_TZ_VERSION}/data/timezones.geojson.geo.dat`,
-      `https://cdn.jsdelivr.net/npm/geo-tz@${GEO_TZ_VERSION}/data/timezones.geojson.index.json`
+  finderPromise = import("browser-geo-tz")
+    .then((mod) =>
+      (mod.init as (geoUrl: string, indexUrl: string) => GeoTzFinder)(
+        GEO_TZ_DATA_URL,
+        GEO_TZ_INDEX_URL
+      )
     )
-  )
+    .catch((err) => {
+      // Reset so a transient import/init failure can be retried on the next call
+      // rather than being cached as a permanently-rejected promise.
+      finderPromise = null
+      throw err
+    })
   return finderPromise
 }
 
 /**
  * Resolve the IANA timezone for a coordinate. Returns null on any failure
  * (boundary data unavailable, point over open water with no zone, etc.).
+ *
+ * Retries once: the same-origin range fetch is reliable, but a transient hiccup
+ * (cold edge cache, dropped connection) shouldn't leave the verify row stuck —
+ * the caller treats null as "couldn't verify" rather than "no leak".
  */
 export async function timezoneForCoordinates(
   lat: number,
   lon: number
 ): Promise<string | null> {
-  try {
-    const finder = await getFinder()
-    const zones = await finder.find(lat, lon)
-    return zones[0] ?? null
-  } catch {
-    return null
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const finder = await getFinder()
+      const zones = await finder.find(lat, lon)
+      return zones[0] ?? null
+    } catch {
+      // Drop the cached finder so the retry re-initializes (re-fetches index).
+      finderPromise = null
+      if (attempt === 1) return null
+      await new Promise((resolve) => setTimeout(resolve, 250))
+    }
   }
+  return null
 }
 
 /**

@@ -18,23 +18,23 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "GeoSpoof — Spoof your browser location & timezone" },
+      { title: "GeoSpoof — Free Browser Geolocation Spoofer" },
       {
         name: "description",
         content:
-          "GeoSpoof overrides your browser geolocation, timezone, and WebRTC APIs. Available for Firefox, Chrome, Brave, Edge, and Safari.",
+          "Spoof your browser's geolocation, timezone, and WebRTC in one extension. Open source, privacy-first, no account required. Works on Chrome, Firefox, Edge, Brave, and Safari.",
       },
       // Open Graph
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://geospoof.com" },
       {
         property: "og:title",
-        content: "GeoSpoof — Spoof your browser location & timezone",
+        content: "GeoSpoof — Free Browser Geolocation Spoofer",
       },
       {
         property: "og:description",
         content:
-          "GeoSpoof overrides your browser geolocation, timezone, and WebRTC APIs so websites see exactly where you want them to.",
+          "GeoSpoof overrides your browser's geolocation, timezone, and WebRTC APIs so websites see exactly where you want them to. Free, open-source, and available on every major browser.",
       },
       {
         property: "og:image",
@@ -47,12 +47,12 @@ export const Route = createRootRoute({
       { name: "twitter:url", content: "https://geospoof.com" },
       {
         name: "twitter:title",
-        content: "GeoSpoof — Spoof your browser location & timezone",
+        content: "GeoSpoof — Free Browser Geolocation Spoofer",
       },
       {
         name: "twitter:description",
         content:
-          "GeoSpoof overrides your browser geolocation, timezone, and WebRTC APIs so websites see exactly where you want them to.",
+          "GeoSpoof overrides your browser's geolocation, timezone, and WebRTC APIs so websites see exactly where you want them to. Free, open-source, and available on every major browser.",
       },
       {
         name: "twitter:image",

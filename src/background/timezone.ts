@@ -17,7 +17,7 @@ const logger = createLogger("BG");
 // Pin to a specific geo-tz version so the index and .dat file are always in sync
 // (using @latest risks a version mismatch between the two files if a new release
 // is published between when each CDN cache entry was populated).
-const GEO_TZ_VERSION = "8.1.5";
+const GEO_TZ_VERSION = "8.1.6";
 // Use timezones.geojson (not timezones-1970.geojson) — the 1970 variant unions
 // zones with identical behavior since 1970 and uses the highest-population
 // identifier, which means coordinates near water bodies or zone boundaries
@@ -149,7 +149,7 @@ export async function getTimezoneForCoordinates(
 ): Promise<Timezone> {
   const cacheKey = getCacheKey(latitude, longitude);
   const cached = await sessionGet<Timezone>("timezone:" + cacheKey);
-  if (cached !== undefined) {
+  if (cached !== undefined && !cached.identifier.startsWith("Etc/")) {
     logger.debug("Timezone cache hit:", { latitude, longitude, result: cached });
     return cached;
   }
@@ -208,6 +208,17 @@ export async function getTimezoneForCoordinates(
         await sessionSet("timezone:" + cacheKey, hinted);
         return hinted;
       }
+      // No usable hint. NEVER persist or serve an Etc/GMT zone — it's a
+      // fingerprintable, DST-less longitude bucket and exactly the "wrong
+      // timezone" a user would see leak. Return a fallback (fallback:true →
+      // not cached, and saved as null by the caller so the real lookup is
+      // retried next sync) rather than pinning the Etc zone.
+      const fallback = buildFallbackTimezone(longitude);
+      logger.warn(
+        "Boundary lookup returned an Etc/GMT zone with no usable hint; not persisting it, using fallback:",
+        { identifier, fallback }
+      );
+      return fallback;
     }
 
     const { offset, dstOffset } = computeOffsets(identifier);

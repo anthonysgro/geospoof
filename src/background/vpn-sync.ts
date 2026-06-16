@@ -156,7 +156,17 @@ interface FreeIpApiResponse {
   continent: string;
   continentCode: string;
   isProxy: boolean;
-  timeZone: string;
+  /**
+   * FreeIPAPI returns `timeZones` (plural) — but it's the list of *all* IANA
+   * zones in the IP's COUNTRY, alphabetical, not the zone for the city. For a
+   * single-zone country it's a one-element array we can trust (e.g.
+   * `["America/Caracas"]`); for a multi-zone country (US → 29 zones starting
+   * with "America/Adak") the array can't disambiguate the actual location, so
+   * it's unusable as a hint. We therefore only use it when length === 1. Older
+   * responses occasionally use a singular `timeZone`; honor that too.
+   */
+  timeZones?: string[];
+  timeZone?: string;
 }
 
 // --- geojs.io Response Shape (internal) ---
@@ -525,7 +535,15 @@ async function geolocateWithFreeIpApi(
       city: typeof data.cityName === "string" ? data.cityName : "",
       country: typeof data.countryName === "string" ? data.countryName : "",
       ip: data.ipAddress,
-      timezone: normalizeTimezone(data.timeZone),
+      // Only trust freeipapi's country zone list when it's unambiguous (a
+      // single-zone country); a multi-zone list can't pinpoint the city, and
+      // its alphabetical first entry (e.g. America/Adak for any US IP) would be
+      // a wrong hint worse than none.
+      timezone: normalizeTimezone(
+        Array.isArray(data.timeZones) && data.timeZones.length === 1
+          ? data.timeZones[0]
+          : data.timeZone
+      ),
     };
   } catch (error) {
     const err = error as Error & { code?: string; blocked?: boolean };
@@ -818,25 +836,38 @@ interface GeoService {
 }
 
 /**
- * Primary tier — accurate, frequently-updated providers, raced in parallel.
- * ipinfo uses a probe network with daily updates (strong on VPN/hosting
- * ranges); freeipapi and geojs are current, MaxMind/GeoLite2-class sources.
+ * Primary tier — providers that resolve VPN/hosting exit IPs to their actual
+ * deployment city, raced in parallel. freeipapi and geojs are current,
+ * MaxMind/GeoLite2-class sources that agree on real exit locations.
+ *
+ * ipinfo is deliberately NOT here: without an API token it reports the IP
+ * range's *registration* location rather than its deployment, which is wrong
+ * for VPN exits. Observed in the field on Datacamp VPN range 212.97.65.8 — a
+ * Caracas exit that geojs/freeipapi/reallyfreegeoip all place in Caracas, but
+ * keyless ipinfo places in Miami (the range's registration city). Because the
+ * race takes the first city-level result and ipinfo is fast (Google Cloud), it
+ * kept winning and pinning the wrong city into the 30-day cache. It now lives
+ * in the fallback tier so it can only answer when every primary provider fails.
  */
 const GEO_SERVICES_PRIMARY: GeoService[] = [
-  { name: "ipinfo", fn: geolocateWithIpInfo },
   { name: "freeipapi", fn: geolocateWithFreeIpApi },
   { name: "geojs", fn: geolocateWithGeoJs },
 ];
 
 /**
- * Fallback tier — only consulted if every primary service fails. reallyfreegeoip
- * is a public freegeoip/GeoLite2-derived mirror that's prone to stale data on
- * reassigned VPN exit ranges (it reports the registration country, not the
- * deployment country). Keeping it here means it can never win on latency alone
- * and override a more accurate primary result.
+ * Fallback tier — only consulted if every primary service fails, so nothing
+ * here can win on latency alone and override a more accurate primary result.
+ *
+ * - reallyfreegeoip: a public freegeoip/GeoLite2-derived mirror prone to stale
+ *   data on reassigned VPN exit ranges (reports registration, not deployment).
+ * - ipinfo: keyless, returns registration-level location on VPN/hosting ranges
+ *   (see GEO_SERVICES_PRIMARY). Kept only as a last resort on a different
+ *   network (Google Cloud) so we still have an answer if everything else is
+ *   down or blocked.
  */
 const GEO_SERVICES_FALLBACK: GeoService[] = [
   { name: "reallyfreegeoip", fn: geolocateWithReallyFreeGeoIp },
+  { name: "ipinfo", fn: geolocateWithIpInfo },
 ];
 
 const geoCooldown = new EndpointCooldown(ENDPOINT_COOLDOWN_MS, "IP-GEO");

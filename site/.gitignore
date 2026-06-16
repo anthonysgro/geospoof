@@ -19,5 +19,9 @@ todos.json
 # Generated at build time by scripts/generate-sitemap.mjs
 public/sitemap.xml
 
+# Copied at build time by scripts/copy-geo-tz-data.mjs from the geo-tz package.
+# Large (~30 MB), reproducible, version-pinned by package.json — not committed.
+public/geo-tz/
+
 # Local dev HTTPS certs (mkcert-generated, per-machine)
 certs/

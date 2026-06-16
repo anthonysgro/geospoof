@@ -24,6 +24,32 @@ let _level: LogLevelValue = LogLevel.INFO;
 
 const validLevels = new Set<string>(Object.keys(LogLevel));
 
+/**
+ * TEMPORARY (debugging): optional sink invoked for every emitted log line.
+ * Used to relay background-context logs to the page console on platforms
+ * where the background inspector is unreliable (Safari iOS). Re-entrancy is
+ * guarded so a sink that itself logs can't recurse. Remove with the relay.
+ */
+type LogSink = (component: ComponentTag, level: LogLevelName, args: unknown[]) => void;
+let _sink: LogSink | null = null;
+let _inSink = false;
+
+export function setLogSink(sink: LogSink | null): void {
+  _sink = sink;
+}
+
+function emitToSink(component: ComponentTag, level: LogLevelName, args: unknown[]): void {
+  if (_sink === null || _inSink) return;
+  _inSink = true;
+  try {
+    _sink(component, level, args);
+  } catch {
+    /* never let a logging sink throw into the caller */
+  } finally {
+    _inSink = false;
+  }
+}
+
 export function setDebugEnabled(enabled: boolean): void {
   _enabled = enabled;
 }
@@ -56,26 +82,32 @@ export function createLogger(component: ComponentTag) {
   return {
     error(...args: unknown[]): void {
       console.error(`[GeoSpoof ${component}] [ERROR] ${timestamp()} —`, ...args);
+      emitToSink(component, "ERROR", args);
     },
     warn(...args: unknown[]): void {
       console.warn(`[GeoSpoof ${component}] [WARN] ${timestamp()} —`, ...args);
+      emitToSink(component, "WARN", args);
     },
     info(...args: unknown[]): void {
       if (!_enabled || LogLevel.INFO > _level) return;
       console.info(`[GeoSpoof ${component}] [INFO] ${timestamp()} —`, ...args);
+      emitToSink(component, "INFO", args);
     },
     debug(...args: unknown[]): void {
       if (!_enabled || LogLevel.DEBUG > _level) return;
       console.debug(`[GeoSpoof ${component}] [DEBUG] ${timestamp()} —`, ...args);
+      emitToSink(component, "DEBUG", args);
     },
     trace(...args: unknown[]): void {
       if (!_enabled || LogLevel.TRACE > _level) return;
       console.debug(`[GeoSpoof ${component}] [TRACE] ${timestamp()} —`, ...args);
+      emitToSink(component, "TRACE", args);
     },
     /** @deprecated Use info/debug/trace instead. Alias for `info` during migration. */
     log(...args: unknown[]): void {
       if (!_enabled || LogLevel.INFO > _level) return;
       console.info(`[GeoSpoof ${component}] [INFO] ${timestamp()} —`, ...args);
+      emitToSink(component, "INFO", args);
     },
   };
 }
