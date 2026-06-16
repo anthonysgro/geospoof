@@ -853,9 +853,10 @@ function buildValueGroups(
 
   // Does the browser's timezone line up with the spoofed coordinates? This is
   // the catch for spoofers that change geolocation but leave the timezone
-  // pointing at the user's real region. Compared by offset so equivalent
-  // zones (e.g. New York vs Toronto) don't false-positive.
-  const geoMismatch = geoTz != null && geoTz.offsetMins !== offsetMins
+  // pointing at the user's real region. Compared by IANA identifier so that
+  // zones with the same offset but different names (e.g. America/New_York vs
+  // America/Toronto) are still flagged.
+  const geoMismatch = geoTz != null && !zonesMatch(geoTz.zone, intlZone)
   const geoNote = geoTz
     ? `Doesn't match your coordinates — they're in ${geoTz.zone} (${fmtOffset(geoTz.offsetMins)})`
     : undefined
