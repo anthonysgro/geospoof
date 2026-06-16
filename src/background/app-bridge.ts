@@ -35,6 +35,14 @@ interface PendingSettings {
   latitude?: number;
   longitude?: number;
   displayName?: string;
+  /**
+   * IANA timezone id the app already resolved for these coordinates (e.g.
+   * "Asia/Tashkent"). Forwarded as the timezoneHint so the extension doesn't
+   * have to re-resolve from coordinates — that offline lookup can fail (CDN
+   * range hiccup) and fall back to null, which would leave the page leaking the
+   * real zone even though the app knew the right one.
+   */
+  timezone?: string;
   favorites?: string; // JSON-encoded Favorite[] from the app
   scopeMode?: string; // "all" | "allowlist" | "denylist"
   allowlist?: string; // JSON-encoded string[] from the app
@@ -105,6 +113,7 @@ export async function adoptPendingSettingsFromApp(): Promise<void> {
             { latitude: pending.latitude, longitude: pending.longitude },
             {
               fromVpnSync: true,
+              timezoneHint: pending.timezone,
               locationName: {
                 city: "",
                 country: "",
@@ -165,9 +174,12 @@ export async function adoptPendingSettingsFromApp(): Promise<void> {
       if (changed) {
         await handleSetLocation(
           { latitude: pending.latitude, longitude: pending.longitude },
-          pending.displayName
-            ? { locationName: { city: "", country: "", displayName: pending.displayName } }
-            : undefined
+          {
+            timezoneHint: pending.timezone,
+            ...(pending.displayName
+              ? { locationName: { city: "", country: "", displayName: pending.displayName } }
+              : {}),
+          }
         );
       }
     }

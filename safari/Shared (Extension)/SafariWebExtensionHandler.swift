@@ -59,6 +59,7 @@ enum RegionKey {
     static let pVpnSync     = "pending_vpnSync"
     static let pCleared     = "pending_cleared"
     static let pResync      = "pending_resync"
+    static let pTzId        = "pending_tzId"
     static let pFavorites   = "pending_favorites"
     static let pScopeMode   = "pending_scopeMode"
     static let pAllowlist   = "pending_allowlist"
@@ -239,6 +240,13 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
            let lon = dict[RegionKey.pLongitude] as? Double {
             pending["latitude"] = lat
             pending["longitude"] = lon
+        }
+        // IANA timezone id the app already resolved for these coordinates.
+        // Forwarded so the extension uses it as a hint instead of re-resolving
+        // from coordinates (that offline lookup can fail and leave the page
+        // leaking the real zone). Present only alongside a location.
+        if let tzId = dict[RegionKey.pTzId] as? String, !tzId.isEmpty {
+            pending["timezone"] = tzId
         }
         if let favoritesJSON = dict[RegionKey.pFavorites] as? String {
             pending["favorites"] = favoritesJSON
