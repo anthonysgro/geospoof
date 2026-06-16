@@ -12,16 +12,19 @@ name: Release macOS (App Store)
 #
 # Requires these repository secrets (in addition to the ones the macOS DMG job
 # already uses):
-#   IOS_DISTRIBUTION_P12           - (reused) base64 of the Apple Distribution cert .p12
-#   IOS_DISTRIBUTION_P12_PASSWORD  - (reused) password for that .p12
-#   MACOS_APPSTORE_PROFILE_APP     - base64 of the App Store profile for com.moonloaf.geospoof
-#   MACOS_APPSTORE_PROFILE_EXT     - base64 of the App Store profile for ...Extension
-#   ASC_API_KEY_P8                 - (reused) base64 of the App Store Connect API key
-#   MACOS_KEYCHAIN_PASSWORD        - (reused) temp keychain password
+#   IOS_DISTRIBUTION_P12              - (reused) base64 of the Apple Distribution cert .p12
+#   IOS_DISTRIBUTION_P12_PASSWORD     - (reused) password for that .p12
+#   MACOS_INSTALLER_DISTRIBUTION_P12          - base64 of the Mac Installer Distribution cert .p12
+#   MACOS_INSTALLER_DISTRIBUTION_P12_PASSWORD - password for that .p12
+#   MACOS_APPSTORE_PROFILE_APP        - base64 of the App Store profile for com.moonloaf.geospoof
+#   MACOS_APPSTORE_PROFILE_EXT        - base64 of the App Store profile for ...Extension
+#   ASC_API_KEY_P8                    - (reused) base64 of the App Store Connect API key
+#   MACOS_KEYCHAIN_PASSWORD           - (reused) temp keychain password
 #
-# Note: the Apple Distribution cert is unified across iOS and macOS App Store
-# distribution, so IOS_DISTRIBUTION_P12 is reused here. The provisioning
-# profiles are platform-specific, so the macOS ones are separate secrets.
+# Note: macOS App Store needs TWO certs — Apple Distribution (signs the .app,
+# unified with iOS so IOS_DISTRIBUTION_P12 is reused) and Mac Installer
+# Distribution (signs the .pkg gym uploads). The provisioning profiles are
+# platform-specific, so the macOS ones are separate secrets.
 
 on:
   workflow_dispatch:
@@ -60,21 +63,31 @@ jobs:
           sudo xcode-select -s "$LATEST"
           xcodebuild -version
 
-      - name: Import Apple Distribution certificate
+      # Two certs are required for a Mac App Store submission:
+      #   * Apple Distribution        - signs the .app (reused from the iOS secret)
+      #   * Mac Installer Distribution - signs the .pkg that gym builds for upload
+      # iOS doesn't need the installer cert (it ships an .ipa), which is why the
+      # iOS workflow only imports one. Both are imported into the same temp
+      # keychain so xcodebuild's exportArchive can find them by name.
+      - name: Import Apple Distribution + Mac Installer certificates
         env:
           CERT_P12_BASE64: ${{ secrets.IOS_DISTRIBUTION_P12 }}
           CERT_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_P12_PASSWORD }}
+          INSTALLER_P12_BASE64: ${{ secrets.MACOS_INSTALLER_DISTRIBUTION_P12 }}
+          INSTALLER_PASSWORD: ${{ secrets.MACOS_INSTALLER_DISTRIBUTION_P12_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
         run: |
           KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
           echo "$CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          echo "$INSTALLER_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/installer.p12"
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security import "$RUNNER_TEMP/cert.p12" -P "$CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$RUNNER_TEMP/installer.p12" -P "$INSTALLER_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple:,codesign:,productbuild: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
-          rm "$RUNNER_TEMP/cert.p12"
+          rm "$RUNNER_TEMP/cert.p12" "$RUNNER_TEMP/installer.p12"
 
       - name: Place App Store Connect API key
         env:
