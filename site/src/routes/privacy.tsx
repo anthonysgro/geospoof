@@ -6,6 +6,7 @@ import { Footer } from "@/components/landing/Footer"
 import { SkipLink } from "@/components/landing/SkipLink"
 import { Section } from "@/components/landing/Section"
 import { cn } from "@/lib/utils"
+import { SITE_URL } from "@/lib/blog"
 
 export const Route = createFileRoute("/privacy")({
   component: PrivacyPage,
@@ -18,6 +19,7 @@ export const Route = createFileRoute("/privacy")({
           "Privacy Policy for GeoSpoof — learn how we protect your data and respect your privacy.",
       },
     ],
+    links: [{ rel: "canonical", href: `${SITE_URL}/privacy` }],
   }),
 })
 

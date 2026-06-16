@@ -18,6 +18,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const siteRoot = path.resolve(__dirname, "..")
 const blogDir = path.join(siteRoot, "content/blog")
 const outFile = path.join(siteRoot, "public/sitemap.xml")
+const llmsFile = path.join(siteRoot, "public/llms.txt")
 
 /**
  * Static, indexable routes. `/test` is intentionally excluded — it runs live
@@ -25,6 +26,29 @@ const outFile = path.join(siteRoot, "public/sitemap.xml")
  * targets "browser location test" style queries and has indexable copy/FAQ.
  */
 const staticRoutes = ["/", "/verify", "/blog", "/privacy", "/terms", "/support"]
+
+/**
+ * One-line descriptions for the key static routes, surfaced in llms.txt so AI
+ * crawlers know what each page is for. Routes without an entry (e.g. legal
+ * pages) are still in the sitemap but omitted from the llms.txt highlights.
+ */
+const staticPageMeta = {
+  "/": {
+    title: "GeoSpoof — Spoof your browser location & timezone",
+    description:
+      "Free, open-source browser extension that overrides geolocation, timezone, and WebRTC APIs. Works on Firefox, Chrome, Brave, Edge, and Safari.",
+  },
+  "/verify": {
+    title: "Browser Location Test",
+    description:
+      "Free tool that shows the geolocation, timezone, and IP address websites can read about you right now, and flags real-vs-reported location leaks.",
+  },
+  "/blog": {
+    title: "GeoSpoof Blog",
+    description:
+      "Guides on browser location spoofing, timezone privacy, and WebRTC leaks.",
+  },
+}
 
 /** Pull a single scalar frontmatter value (e.g. `date: "2026-06-11"`). */
 function readFrontmatterField(frontmatter, key) {
@@ -53,9 +77,13 @@ function readPosts() {
     const slug = file.replace(/\.mdx$/, "")
     const date = readFrontmatterField(frontmatter, "date")
     const updated = readFrontmatterField(frontmatter, "updated")
+    const title = readFrontmatterField(frontmatter, "title")
+    const description = readFrontmatterField(frontmatter, "description")
 
-    posts.push({ slug, lastmod: updated ?? date })
+    posts.push({ slug, lastmod: updated ?? date, date, title, description })
   }
+  // Newest first, matching the on-site blog ordering.
+  posts.sort((a, b) => (a.date < b.date ? 1 : -1))
   return posts
 }
 
@@ -82,3 +110,41 @@ const xml = buildSitemap()
 writeFileSync(outFile, xml, "utf8")
 const count = xml.match(/<url>/g)?.length ?? 0
 console.log(`[sitemap] wrote ${count} URLs to public/sitemap.xml`)
+
+/**
+ * Build llms.txt — the emerging convention for telling AI crawlers what a site
+ * is about and which pages matter. Generated from the same routes + blog
+ * frontmatter as the sitemap so the two never drift apart.
+ * Format reference: https://llmstxt.org/
+ */
+function buildLlmsTxt(posts) {
+  const lines = [
+    "# GeoSpoof",
+    "",
+    "> Free, open-source browser extension that spoofs your geolocation, timezone, and WebRTC APIs so websites see a location you choose instead of your real one. Works on Firefox, Chrome, Brave, Edge, and Safari.",
+    "",
+    "GeoSpoof overrides browser location APIs at the page level. It does not change your IP address and is not a VPN; it complements one. The site includes a free in-browser location test and guides on location privacy.",
+    "",
+    "## Pages",
+    "",
+  ]
+
+  for (const route of staticRoutes) {
+    const meta = staticPageMeta[route]
+    if (!meta) continue
+    lines.push(`- [${meta.title}](${SITE_URL}${route}): ${meta.description}`)
+  }
+
+  lines.push("", "## Blog", "")
+  for (const post of posts) {
+    const desc = post.description ? `: ${post.description}` : ""
+    lines.push(`- [${post.title ?? post.slug}](${SITE_URL}/blog/${post.slug})${desc}`)
+  }
+
+  return lines.join("\n") + "\n"
+}
+
+const llms = buildLlmsTxt(readPosts())
+writeFileSync(llmsFile, llms, "utf8")
+const llmsCount = (llms.match(/^- \[/gm) ?? []).length
+console.log(`[llms] wrote ${llmsCount} links to public/llms.txt`)

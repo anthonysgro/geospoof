@@ -50,6 +50,7 @@ export const Route = createFileRoute("/verify")({
     // OpenStreetMap (light theme) is the default, so its subdomains get a full
     // preconnect; CARTO (dark theme) gets the lighter dns-prefetch.
     links: [
+      { rel: "canonical", href: "https://geospoof.com/verify" },
       { rel: "preconnect", href: "https://a.tile.openstreetmap.org" },
       { rel: "preconnect", href: "https://b.tile.openstreetmap.org" },
       { rel: "preconnect", href: "https://c.tile.openstreetmap.org" },

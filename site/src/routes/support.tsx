@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/accordion"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
+import { SITE_URL } from "@/lib/blog"
 
 export const Route = createFileRoute("/support")({
   component: SupportPage,
@@ -24,6 +25,7 @@ export const Route = createFileRoute("/support")({
           "GeoSpoof support — find answers to common issues or get in touch.",
       },
     ],
+    links: [{ rel: "canonical", href: `${SITE_URL}/support` }],
   }),
 })
 

@@ -6,6 +6,7 @@
     "dev": "vite dev --port 3000",
     "build": "node scripts/generate-sitemap.mjs && vite build",
     "sitemap": "node scripts/generate-sitemap.mjs",
+    "indexnow": "node scripts/ping-indexnow.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "lint": "eslint",
