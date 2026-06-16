@@ -25,6 +25,7 @@ import {
 } from "@/lib/verification/network-identity"
 import { probeWebrtc, type WebrtcResult } from "@/lib/verification/webrtc-probe"
 import { LeafletMap, prefetchLeaflet } from "@/components/verification/LeafletMap"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   timezoneForCoordinates,
   getTimezoneOffsetConvention,
@@ -190,8 +191,13 @@ function VerifyInner() {
   const { snapshot } = useIdentity()
   const [network, setNetwork] = React.useState<NetworkState>({ status: "pending" })
   const [webrtc, setWebrtc] = React.useState<WebrtcState>({ status: "pending" })
+  // Gate all live Date/Intl-derived rendering until after mount. On the server
+  // and the first client render this is false, so both produce identical
+  // output (no hydration mismatch); real values fill in once the effect runs.
+  const [mounted, setMounted] = React.useState(false)
 
   React.useEffect(() => {
+    setMounted(true)
     // Start downloading Leaflet immediately, in parallel with the geolocation
     // permission/resolution wait, so the library is ready by the time
     // coordinates arrive and the map can mount without a download stall.
@@ -232,14 +238,16 @@ function VerifyInner() {
 
   const apiGroups = React.useMemo(
     () =>
-      buildValueGroups(
-        geoLat != null && geoLon != null
-          ? { lat: geoLat, lon: geoLon, accuracy: geoAccuracy }
-          : null,
-        permissionState,
-        geoTz
-      ),
-    [geoLat, geoLon, geoAccuracy, permissionState, geoTz]
+      mounted
+        ? buildValueGroups(
+            geoLat != null && geoLon != null
+              ? { lat: geoLat, lon: geoLon, accuracy: geoAccuracy }
+              : null,
+            permissionState,
+            geoTz
+          )
+        : [],
+    [mounted, geoLat, geoLon, geoAccuracy, permissionState, geoTz]
   )
 
   // IP cross-checks — does the browser's story match what the network says?
@@ -323,8 +331,8 @@ function VerifyInner() {
       id: "time",
       icon: <Clock className="size-4" />,
       label: "Current time",
-      value: new Date().toString(),
-      status: "info" as RowStatus,
+      value: mounted ? new Date().toString() : "—",
+      status: (mounted ? "info" : "pending") as RowStatus,
     },
 
     // IP address
@@ -430,12 +438,18 @@ function VerifyInner() {
         </p>
       )}
 
-      {/* Map — shown once we have coordinates */}
-      {geoLat != null && geoLon != null && (
+      {/* Map — reserve the exact final dimensions with a skeleton while
+          geolocation is resolving, so the map (and everything below it)
+          doesn't shift the layout when coordinates arrive. */}
+      {loc.status === "pending" ? (
+        <div className="mb-6 overflow-hidden rounded-2xl">
+          <Skeleton className="h-[220px] w-full rounded-2xl sm:h-[260px]" />
+        </div>
+      ) : geoLat != null && geoLon != null ? (
         <div className="mb-6 overflow-hidden rounded-2xl">
           <LeafletMap lat={geoLat} lon={geoLon} zoom={5} className="rounded-none! h-[220px] sm:h-[260px]" />
         </div>
-      )}
+      ) : null}
 
       <div className="overflow-hidden rounded-2xl border border-(--color-canvas-border)">
         {rows.map((row, i) => (
@@ -452,7 +466,7 @@ function VerifyInner() {
           Key fingerprinting surfaces attackers check. Expand any group to see the
           values they get — they should all tell the same story.
         </p>
-        <ApiChecks groups={apiGroups} />
+        <ApiChecks groups={apiGroups} mounted={mounted} />
       </div>
 
       <FaqSection />
@@ -1027,7 +1041,37 @@ function buildValueGroups(
   return groups
 }
 
-function ApiChecks({ groups }: { groups: Array<ValueGroup> }) {
+function ApiChecks({
+  groups,
+  mounted,
+}: {
+  groups: Array<ValueGroup>
+  mounted: boolean
+}) {
+  // Before mount (server + first client render) the value groups can't be
+  // built deterministically — they read live Date/Intl/document state — so we
+  // show fixed-height skeleton cards that reserve the layout and avoid both a
+  // hydration mismatch and a layout shift when the real cards appear.
+  if (!mounted) {
+    return (
+      <div className="flex flex-col gap-3" aria-hidden>
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-4 rounded-2xl border border-(--color-canvas-border) bg-(--color-canvas) px-5 py-4"
+          >
+            <Skeleton className="size-9 shrink-0 rounded-full" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-48" />
+            </div>
+            <Skeleton className="size-5 shrink-0 rounded" />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-3">
       {groups.map((group) => (

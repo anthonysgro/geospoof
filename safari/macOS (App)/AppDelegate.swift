@@ -373,7 +373,7 @@ struct MacHomeView: View {
                     ExtensionStatusBanner(model: model)
                         .padding([.horizontal, .top])
                 }
-                SpoofControlPanel(controller: controller, includeTestLinks: false)
+                SpoofControlPanel(controller: controller)
             }
             .navigationTitle("Home")
         }
