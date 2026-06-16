@@ -36,3 +36,10 @@ npm-debug.log*
 
 # Personal notes
 .instructions
+
+# Signing material / secrets (never commit private keys or profiles)
+*.p12
+*.cer
+*.mobileprovision
+*.provisionprofile
+*.p8
