@@ -50,7 +50,7 @@ export function FeaturedPostSection({ className }: { className?: string }) {
             alt={post.coverAlt ?? ""}
             width={1200}
             height={630}
-            className="aspect-[1200/630] h-full w-full border-b border-(--color-canvas-border) object-cover md:border-r md:border-b-0"
+            className="aspect-1200/630 h-full w-full border-b border-(--color-canvas-border) object-cover md:border-r md:border-b-0"
           />
         )}
         <div className="flex flex-col justify-center p-6 md:p-8">

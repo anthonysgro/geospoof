@@ -16,28 +16,20 @@ import SafariServices
 /// Wraps the Details screen in a navigation container for use as a tab root.
 struct DetailsTab: View {
     @ObservedObject var controller: SpoofController
-    /// iOS folds the "Test Your Protection" links into Details (it has no
-    /// separate Test tab); macOS keeps its dedicated Test sidebar section, so
-    /// it leaves this off to avoid duplicating them.
-    var includeTestLinks: Bool = false
 
     var body: some View {
         AdaptiveNavigationStack {
-            SpoofDetailsView(controller: controller, includeTestLinks: includeTestLinks)
+            SpoofDetailsView(controller: controller)
         }
     }
 }
 
 struct SpoofDetailsView: View {
     @ObservedObject var controller: SpoofController
-    var includeTestLinks: Bool = false
     @State private var expandedGroups: Set<String> = []
 
     var body: some View {
         Form {
-            if includeTestLinks {
-                ProtectionTestLinks()
-            }
             locationSection
             timezoneSection
             webrtcSection
@@ -52,8 +44,8 @@ struct SpoofDetailsView: View {
     private var locationSection: some View {
         Section("Spoofed Location") {
             if let loc = controller.location {
-                LabeledRow(label: "Latitude", value: String(format: "%.6f", loc.latitude))
-                LabeledRow(label: "Longitude", value: String(format: "%.6f", loc.longitude))
+                LabeledRow(label: "Latitude", value: String(format: "%.5f", loc.latitude))
+                LabeledRow(label: "Longitude", value: String(format: "%.5f", loc.longitude))
                 LabeledRow(label: "Accuracy", value: "±\(Int(loc.accuracy)) m")
                 if let name = controller.locationName?.displayName, !name.isEmpty {
                     LabeledRow(label: "Location", value: name)

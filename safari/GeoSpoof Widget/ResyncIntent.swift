@@ -102,7 +102,7 @@ enum AppGroupPending {
         let now = Date().timeIntervalSince1970
         let displayName: String = {
             let parts = [r.city, r.country].filter { !$0.isEmpty }
-            return parts.isEmpty ? String(format: "%.4f, %.4f", r.latitude, r.longitude)
+            return parts.isEmpty ? String(format: "%.5f, %.5f", r.latitude, r.longitude)
                                  : parts.joined(separator: ", ")
         }()
 

@@ -42,7 +42,7 @@ struct RootView: View {
                     Label("Filters", systemImage: "line.3.horizontal.decrease.circle")
                 }
 
-            DetailsTab(controller: controller, includeTestLinks: true)
+            DetailsTab(controller: controller)
                 .tabItem {
                     Label("Details", systemImage: "list.bullet.rectangle")
                 }
@@ -109,7 +109,7 @@ struct HomeView: View {
 
     var body: some View {
         AdaptiveNavigationStack {
-            SpoofControlPanel(controller: controller, includeTestLinks: false)
+            SpoofControlPanel(controller: controller)
                 .navigationTitle("GeoSpoof")
         }
     }

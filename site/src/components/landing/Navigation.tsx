@@ -43,7 +43,7 @@ function BrandMark() {
         "text-2xl font-bold md:text-3xl lg:text-[2rem]",
         "transition-opacity duration-200 hover:opacity-80",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)",
-        "rounded-[var(--radius-sm-brand)]"
+        "rounded-sm-brand"
       )}
       aria-label="GeoSpoof - Home"
     >
@@ -127,7 +127,7 @@ function RightActions() {
           "hidden items-center justify-center lg:inline-flex",
           "bg-(--color-brand) text-white",
           "transition-all hover:bg-(--color-brand-dark)",
-          "h-auto rounded-[var(--radius-brand)] px-6 py-2.5",
+          "h-auto rounded-(--radius-brand) px-6 py-2.5",
           "text-base font-semibold shadow-md hover:shadow-lg",
           "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
         )}
@@ -147,7 +147,7 @@ export function Navigation({ className }: { className?: string }) {
       role="banner"
       className={cn(
         "sticky top-0 z-50",
-        "bg-(--color-canvas)/80 backdrop-blur-md",
+        "bg-canvas/80 backdrop-blur-md",
         "pt-2 md:pt-3",
         className
       )}

@@ -110,7 +110,7 @@ export async function adoptPendingSettingsFromApp(): Promise<void> {
                 country: "",
                 displayName:
                   pending.displayName ||
-                  `${pending.latitude.toFixed(4)}, ${pending.longitude.toFixed(4)}`,
+                  `${pending.latitude.toFixed(5)}, ${pending.longitude.toFixed(5)}`,
               },
             }
           );
@@ -134,7 +134,7 @@ export async function adoptPendingSettingsFromApp(): Promise<void> {
                       ? `${result.city}, ${result.country}`
                       : result.city ||
                         result.country ||
-                        `${result.latitude.toFixed(4)}, ${result.longitude.toFixed(4)}`,
+                        `${result.latitude.toFixed(5)}, ${result.longitude.toFixed(5)}`,
                 },
               }
             );

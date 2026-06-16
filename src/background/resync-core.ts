@@ -231,7 +231,7 @@ async function doCheck(): Promise<void> {
             ? `${result.city}, ${result.country}`
             : result.city ||
               result.country ||
-              `${result.latitude.toFixed(4)}, ${result.longitude.toFixed(4)}`,
+              `${result.latitude.toFixed(5)}, ${result.longitude.toFixed(5)}`,
       },
     }
   );

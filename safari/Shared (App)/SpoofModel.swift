@@ -1052,7 +1052,7 @@ final class SpoofController: ObservableObject {
                 longitude: location.longitude,
                 city: name?.city ?? "",
                 country: name?.country ?? "",
-                displayName: name?.displayName ?? String(format: "%.4f, %.4f", location.latitude, location.longitude),
+                displayName: name?.displayName ?? String(format: "%.5f, %.5f", location.latitude, location.longitude),
                 label: nil
             )
         )
@@ -1175,7 +1175,7 @@ final class SpoofController: ObservableObject {
 
     private static func displayName(city: String, country: String, lat: Double, lon: Double) -> String {
         let parts = [city, country].filter { !$0.isEmpty }
-        return parts.isEmpty ? String(format: "%.4f, %.4f", lat, lon) : parts.joined(separator: ", ")
+        return parts.isEmpty ? String(format: "%.5f, %.5f", lat, lon) : parts.joined(separator: ", ")
     }
 
     // MARK: App Group bridge

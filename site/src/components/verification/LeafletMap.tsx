@@ -15,6 +15,7 @@ type LeafletMapProps =
       /** Simple single-point usage (lat/lon directly). */
       lat: number
       lon: number
+      zoom?: number
       primary?: never
       secondary?: never
       className?: string
@@ -23,6 +24,7 @@ type LeafletMapProps =
       /** Two-point usage with labels and arc. */
       primary: MapPoint
       secondary?: MapPoint
+      zoom?: never
       lat?: never
       lon?: never
       className?: string
@@ -92,6 +94,7 @@ export function LeafletMap(props: LeafletMapProps) {
       ? { lat: props.lat, lon: props.lon, label: "", kind: "browser" }
       : (props.primary as MapPoint)
   const secondary = "secondary" in props ? props.secondary : undefined
+  const initialZoom = "zoom" in props && props.zoom !== undefined ? props.zoom : 6
   const { className } = props
 
   const containerRef = React.useRef<HTMLDivElement | null>(null)
@@ -136,7 +139,7 @@ export function LeafletMap(props: LeafletMapProps) {
 
       const map = L.map(container, {
         center: bounds ? bounds.getCenter() : [primary.lat, primary.lon],
-        zoom: bounds ? undefined : 6,
+        zoom: bounds ? undefined : initialZoom,
         scrollWheelZoom: false,
         zoomAnimation: !reducedMotion,
         fadeAnimation: !reducedMotion,
@@ -153,8 +156,34 @@ export function LeafletMap(props: LeafletMapProps) {
       tileLayerRef.current = layer
 
       // Helper: labeled circle marker with a tooltip.
-      const addMarker = (pt: MapPoint): CircleMarker => {
+      // Browser-kind markers get a pulsing sonar ring via a DivIcon.
+      const addMarker = (pt: MapPoint): CircleMarker | ReturnType<typeof L.marker> => {
         const c = COLORS[pt.kind]
+
+        if (pt.kind === "browser" && !reducedMotion) {
+          const icon = L.divIcon({
+            className: "",
+            html: `<div class="gs-sonar-wrap">
+                     <span class="gs-sonar-ring"></span>
+                     <span class="gs-sonar-dot"></span>
+                   </div>`,
+            iconSize: [32, 32],
+            iconAnchor: [16, 16],
+            tooltipAnchor: [0, -18],
+          })
+          const m = L.marker([pt.lat, pt.lon], { icon })
+          m.addTo(map)
+          if (pt.label) {
+            m.bindTooltip(pt.label, {
+              permanent: true,
+              direction: "top",
+              offset: [0, -14],
+              className: "leaflet-geospoof-label",
+            }).openTooltip()
+          }
+          return m as unknown as CircleMarker
+        }
+
         const marker = L.circleMarker([pt.lat, pt.lon], {
           radius: 9,
           color: c.stroke,
@@ -162,14 +191,16 @@ export function LeafletMap(props: LeafletMapProps) {
           fillColor: c.fill,
           fillOpacity: 1,
         }).addTo(map)
-        marker
-          .bindTooltip(pt.label, {
-            permanent: true,
-            direction: "top",
-            offset: [0, -14],
-            className: "leaflet-geospoof-label",
-          })
-          .openTooltip()
+        if (pt.label) {
+          marker
+            .bindTooltip(pt.label, {
+              permanent: true,
+              direction: "top",
+              offset: [0, -14],
+              className: "leaflet-geospoof-label",
+            })
+            .openTooltip()
+        }
         return marker
       }
 
@@ -299,6 +330,37 @@ export function LeafletMap(props: LeafletMapProps) {
           white-space: nowrap !important;
         }
         .leaflet-geospoof-label::before { display: none !important; }
+        .gs-sonar-wrap {
+          position: relative;
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .gs-sonar-dot {
+          position: absolute;
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background: #4ade80;
+          border: 2.5px solid #fff;
+          box-shadow: 0 0 0 1px rgba(74,222,128,0.4);
+          z-index: 1;
+        }
+        .gs-sonar-ring {
+          position: absolute;
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background: transparent;
+          border: 2px solid #4ade80;
+          animation: gs-sonar-pulse 2s ease-out infinite;
+        }
+        @keyframes gs-sonar-pulse {
+          0%   { transform: scale(1);   opacity: 0.8; }
+          100% { transform: scale(3.2); opacity: 0; }
+        }
       `}</style>
       <div
         ref={containerRef}

@@ -21,9 +21,10 @@ const outFile = path.join(siteRoot, "public/sitemap.xml")
 
 /**
  * Static, indexable routes. `/test` is intentionally excluded — it runs live
- * browser probes and isn't useful in search results.
+ * browser probes and isn't useful in search results. `/verify` is included: it
+ * targets "browser location test" style queries and has indexable copy/FAQ.
  */
-const staticRoutes = ["/", "/blog", "/privacy", "/terms", "/support"]
+const staticRoutes = ["/", "/verify", "/blog", "/privacy", "/terms", "/support"]
 
 /** Pull a single scalar frontmatter value (e.g. `date: "2026-06-11"`). */
 function readFrontmatterField(frontmatter, key) {

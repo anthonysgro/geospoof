@@ -40,7 +40,7 @@ export function displaySearchResults(
 
     const coordsDiv = document.createElement("div");
     coordsDiv.className = "result-coords";
-    coordsDiv.textContent = `${result.latitude.toFixed(4)}, ${result.longitude.toFixed(4)}`;
+    coordsDiv.textContent = `${result.latitude.toFixed(5)}, ${result.longitude.toFixed(5)}`;
 
     resultDiv.appendChild(nameDiv);
     resultDiv.appendChild(coordsDiv);

@@ -19,11 +19,6 @@ import UIKit
 struct SpoofControlPanel: View {
     @ObservedObject var controller: SpoofController
 
-    /// When false, the "Test Your Protection" / Help links are omitted (macOS
-    /// shows them in a dedicated Test sidebar tab instead). iOS keeps them
-    /// inline on the main screen.
-    var includeTestLinks: Bool = true
-
     @AppStorage("spoofOnboardingCompleted") private var onboardingCompleted = false
     @State private var showOnboarding = false
     @State private var showTrustInfo = false
@@ -41,9 +36,9 @@ struct SpoofControlPanel: View {
             if !controller.favorites.isEmpty {
                 favoritesSection
             }
-            if includeTestLinks {
-                ProtectionTestLinks()
-            }
+            #if os(iOS)
+            verificationSection
+            #endif
         }
         .groupedFormStyle()
         .tint(.brand)
@@ -247,10 +242,32 @@ struct SpoofControlPanel: View {
             Text("VPN")
         } footer: {
             if controller.vpnSyncEnabled {
-                Text("Matches your spoofed location to your current public IP. Re-sync after switching VPN servers.")
+                Text("Matches your spoofed location to your current public IP.")
             }
         }
     }
+
+    // MARK: Verification (iOS only on home tab, macOS shows in Test sidebar)
+
+    #if os(iOS)
+    private var verificationSection: some View {
+        Section {
+            Link(destination: URL(string: "https://www.geospoof.com/verify")!) {
+                HStack {
+                    Label("Verify Your Protection", systemImage: "checkmark.shield")
+                    Spacer()
+                    Image(systemName: "arrow.up.right")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        } header: {
+            Text("Verify")
+        } footer: {
+            Text("Opens a quick check that confirms your location, timezone, and IP address are masked.")
+        }
+    }
+    #endif
 
     // MARK: Favorites
 
@@ -604,7 +621,7 @@ struct LocationMapPane: View {
                         .font(.headline)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
-                    Text(String(format: "%.4f, %.4f", latitude, longitude))
+                    Text(String(format: "%.5f, %.5f", latitude, longitude))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .monospacedDigit()

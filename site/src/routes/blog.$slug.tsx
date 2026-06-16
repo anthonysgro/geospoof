@@ -129,7 +129,7 @@ function BlogPostPage() {
                 alt={post.coverAlt ?? ""}
                 width={1200}
                 height={630}
-                className="mb-8 aspect-[1200/630] w-full rounded-brand border border-(--color-canvas-border) object-cover"
+                className="mb-8 aspect-1200/630 w-full rounded-brand border border-(--color-canvas-border) object-cover"
               />
             )}
 

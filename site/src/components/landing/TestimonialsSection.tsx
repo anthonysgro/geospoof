@@ -5,27 +5,30 @@ import { cn } from "@/lib/utils"
 interface Testimonial {
   quote: string
   author: string
-  source: "Firefox Add-ons"
+  source: "Firefox Add-ons" | "Chrome Web Store" | "App Store"
   sourceHref: string
 }
 
 const AMO_URL =
   "https://addons.mozilla.org/en-US/firefox/addon/geo-spoof/reviews/"
+const CHROME_URL =
+  "https://chromewebstore.google.com/detail/geospoof/reviews"
+const APPSTORE_URL = "https://apps.apple.com/app/geospoof"
 
 const testimonials: Array<Testimonial> = [
   {
     quote:
-      "This is amazing. A month or two ago I was desperately searching for a solution to the specific issue of automatic IP-TZ sync to tick one of the last boxes off against my bscan.info checklist. So glad I googled one more time. The extension is so nicely put together. Thanks so much for your work on this!",
-    author: "lorelei 🌸",
+      "Tried it for a specific use case and it worked flawlessly, with no ads or any annoying stuff.",
+    author: "Diego",
     source: "Firefox Add-ons",
     sourceHref: AMO_URL,
   },
   {
     quote:
-      "Great extension. Thank you, Anthony! Please keep developing it. You can always ask a review from Thorin-Oakenpants on GitHub — he IS THE great master in all the browser fingerprinting matters. Wish you all the best.",
+      "Great extension. Thank you.",
     author: "Kasander",
     source: "Firefox Add-ons",
-    sourceHref: AMO_URL,
+    sourceHref: CHROME_URL,
   },
   {
     quote: "Works well, easy to use, thanks for making this awesome extension!",
@@ -34,10 +37,25 @@ const testimonials: Array<Testimonial> = [
     sourceHref: AMO_URL,
   },
   {
-    quote: "Amazing. Works perfectly.",
-    author: "Lau",
+    quote:
+      "Doing god's work (and the extension is so nicely put together btw) 🖤 Thanks so much for your work on this!",
+    author: "lorelei 🌸",
     source: "Firefox Add-ons",
     sourceHref: AMO_URL,
+  },
+  {
+    quote:
+      "I stumbled upon GeoSpoof nearly a month ago. It's clean, works without any glitches, and truly spoofs your address as good or better than all the spoofing extensions I've used over the years. Absolutely professional extension that works flawlessly. And it's free!",
+    author: "Nuc Man",
+    source: "Chrome Web Store",
+    sourceHref: CHROME_URL,
+  },
+  {
+    quote:
+      "Perfect app — works exactly as expected. Huge shout out to the dev!",
+    author: "App Store user",
+    source: "App Store",
+    sourceHref: APPSTORE_URL,
   },
 ]
 
@@ -110,11 +128,11 @@ export function TestimonialsSection({ className }: { className?: string }) {
           Loved by privacy-minded users
         </h2>
         <p className="mx-auto max-w-xl text-(--color-canvas-muted)">
-          Real reviews from the Firefox Add-ons marketplace.
+          Real reviews from the Chrome Web Store, Firefox Add-ons, and App Store.
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:gap-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-6">
         {testimonials.map((t) => (
           <TestimonialCard key={t.author} testimonial={t} />
         ))}

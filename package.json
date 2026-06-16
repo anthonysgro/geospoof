@@ -1,10 +1,11 @@
 {
   "name": "geospoof-extension",
-  "version": "1.21.0",
+  "version": "1.21.1",
   "type": "module",
   "description": "Firefox extension for geolocation spoofing and location privacy",
   "scripts": {
     "build": "npm run build:prod",
+    "version": "node scripts/sync-xcode-version.mjs && git add safari/GeoSpoof.xcodeproj/project.pbxproj",
     "build:dev": "vite build --mode development",
     "build:prod": "vite build --mode production",
     "build:firefox": "BROWSER=firefox vite build --mode production",
@@ -73,7 +74,7 @@
     "serialize-javascript": "^7.0.3"
   },
   "dependencies": {
-    "browser-geo-tz": "^0.2.1",
+    "browser-geo-tz": "^0.2.3",
     "webextension-polyfill": "^0.12.0"
   }
 }
