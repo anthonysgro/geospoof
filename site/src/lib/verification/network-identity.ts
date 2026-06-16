@@ -65,10 +65,10 @@ function countryNameFromCode(code: string): string {
  * This is the reliable path on Safari / iCloud Private Relay, where the
  * browser-side calls to geojs/freeipapi get blocked as cross-site trackers.
  */
-export const fetchEdgeNetworkIdentity = createServerFn({ method: "GET" }).handler(
+export const fetchEdgeNetworkIdentity = createServerFn({ method: "POST" }).handler(
   (): NetworkIdentity | null => {
-    // Prevent Vercel's CDN (and browser) from caching this response — the
-    // result depends on the caller's current IP, which changes on VPN switch.
+    // POST is inherently uncacheable by CDNs, but set the header explicitly
+    // as a belt-and-braces measure against any edge-layer surprises.
     setResponseHeader("Cache-Control", "private, no-store, no-cache, must-revalidate")
 
     const get = (name: string): string | null => {
