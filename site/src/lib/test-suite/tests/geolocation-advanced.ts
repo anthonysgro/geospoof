@@ -23,6 +23,7 @@
  * so the module is safe to dynamic-import from `loadAllTests`.
  */
 
+import { now } from "../../verification/safe-time"
 import { SkipTestError, buildBehavioralTest } from "../helpers/behavioral"
 import { getSharedPosition } from "../helpers/shared-position"
 import type { TestDefinition, TestRunContext } from "../types"
@@ -58,7 +59,7 @@ function getFullPosition(ctx: TestRunContext): Promise<GeolocationPosition> {
  */
 function measureLatency(options?: PositionOptions): Promise<number> {
   return new Promise((resolve, reject) => {
-    const start = performance.now()
+    const start = now()
     let settled = false
     const timer = setTimeout(() => {
       if (settled) return
@@ -71,7 +72,7 @@ function measureLatency(options?: PositionOptions): Promise<number> {
           if (settled) return
           settled = true
           clearTimeout(timer)
-          resolve(performance.now() - start)
+          resolve(now() - start)
         },
         (err) => {
           if (settled) return

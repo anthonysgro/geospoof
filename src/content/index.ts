@@ -9,6 +9,7 @@
 import type { Location, Timezone } from "@/shared/types/settings";
 import type { UpdateSettingsPayload } from "@/shared/types/messages";
 import { createLogger, setDebugEnabled, setVerbosityLevel } from "@/shared/utils/debug-logger";
+import { now } from "@/shared/utils/safe-time";
 
 const logger = createLogger("CS");
 
@@ -131,7 +132,7 @@ function dispatchSettingsEvent(): void {
  * listener is definitely live.
  */
 function updateInjectedScript(): void {
-  const dispatchAt = performance.now();
+  const dispatchAt = now();
   dispatchSettingsEvent();
   if (!firstDispatchDone) {
     logger.debug(
@@ -211,7 +212,7 @@ browser.runtime.onMessage.addListener(
 logger.info("Content script loaded, requesting initial settings");
 // Timing probes for cold-start diagnosis. Routed through logger.debug
 // so they're silent by default and surface when debug logging is on.
-const CS_SEND_AT = performance.now();
+const CS_SEND_AT = now();
 logger.debug(`Sending GET_SETTINGS to background (page-start=${CS_SEND_AT.toFixed(1)}ms)`);
 browser.runtime
   .sendMessage({ type: "GET_SETTINGS" })
@@ -224,7 +225,7 @@ browser.runtime
       verbosityLevel: string;
       webrtcProtection?: boolean;
     }) => {
-      const roundTrip = performance.now() - CS_SEND_AT;
+      const roundTrip = now() - CS_SEND_AT;
       logger.debug(
         `GET_SETTINGS resolved (round-trip=${roundTrip.toFixed(1)}ms, enabled=${String(settings.enabled)}, hasLocation=${String(!!settings.location)})`
       );
@@ -248,8 +249,5 @@ browser.runtime
     }
   )
   .catch((error: unknown) => {
-    logger.error(
-      `GET_SETTINGS rejected after ${(performance.now() - CS_SEND_AT).toFixed(1)}ms:`,
-      error
-    );
+    logger.error(`GET_SETTINGS rejected after ${(now() - CS_SEND_AT).toFixed(1)}ms:`, error);
   });

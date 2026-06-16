@@ -27,6 +27,8 @@
  * imports without exploding.
  */
 
+import { now } from "./safe-time"
+
 /**
  * Timezone identifier captured at earliest module-load time, before
  * any React lifecycle. `null` when `Intl` isn't available (SSR) or
@@ -50,10 +52,7 @@ export const EARLY_TIMEZONE_PROBE: string | null = (() => {
  */
 export const EARLY_TIMEZONE_PROBE_AT: number = (() => {
   try {
-    if (typeof performance !== "undefined" && typeof performance.now === "function") {
-      return performance.now()
-    }
-    return Date.now()
+    return now()
   } catch {
     return 0
   }

@@ -25,6 +25,7 @@ import {
   setVerbosityLevel as setLoggerVerbosityLevel,
   createLogger,
 } from "@/shared/utils/debug-logger";
+import { now } from "@/shared/utils/safe-time";
 
 const logger = createLogger("INJ");
 
@@ -42,19 +43,17 @@ const logger = createLogger("INJ");
 export function waitForSettings(): Promise<{ timedOut: boolean }> {
   if (settingsReceived) return Promise.resolve({ timedOut: false });
   return new Promise<{ timedOut: boolean }>((resolve) => {
-    const waitStart = performance.now();
+    const waitStart = now();
     const onSettings = (): void => {
       window.removeEventListener(EVENT_NAME, onSettings);
-      logger.debug(
-        `waitForSettings resolved via event after ${(performance.now() - waitStart).toFixed(1)}ms`
-      );
+      logger.debug(`waitForSettings resolved via event after ${(now() - waitStart).toFixed(1)}ms`);
       resolve({ timedOut: false });
     };
     window.addEventListener(EVENT_NAME, onSettings);
     setTimeout(() => {
       window.removeEventListener(EVENT_NAME, onSettings);
       logger.warn(
-        `waitForSettings timed out after ${(performance.now() - waitStart).toFixed(1)}ms — settings never arrived`
+        `waitForSettings timed out after ${(now() - waitStart).toFixed(1)}ms — settings never arrived`
       );
       resolve({ timedOut: true });
     }, SETTINGS_WAIT_TIMEOUT);
@@ -70,7 +69,7 @@ export function waitForSettings(): Promise<{ timedOut: boolean }> {
 export function installSettingsListener(): void {
   window.addEventListener(EVENT_NAME, ((event: CustomEvent<SettingsEventDetail>) => {
     if (event.detail) {
-      const receivedAt = performance.now();
+      const receivedAt = now();
       logger.debug(
         `Settings event received at ${receivedAt.toFixed(1)}ms — enabled:${String(event.detail.enabled)} hasLocation:${String(!!event.detail.location)}`
       );

@@ -11,6 +11,7 @@ import type { Runtime, Tabs, Alarms } from "webextension-polyfill";
 import type { Message, UpdateSettingsPayload } from "@/shared/types/messages";
 import { loadSettings, saveSettings } from "./settings";
 import { setDebugEnabled, setVerbosityLevel, createLogger } from "@/shared/utils/debug-logger";
+import { now } from "@/shared/utils/safe-time";
 import { setWebRTCProtection } from "./webrtc";
 import { updateBadge, setBadgeForTab, badgeStateFor } from "./badge";
 import { broadcastSettingsToTabs, isRestrictedUrl, checkTabInjection } from "./tabs";
@@ -35,7 +36,7 @@ const logger = createLogger("BG");
 // first time; when the worker was warm, the log is absent from the
 // run entirely. Routed through the logger so it's only visible when
 // debug logging is enabled.
-const BG_BOOT_AT = performance.now();
+const BG_BOOT_AT = now();
 logger.debug(`Background script loading (t=${BG_BOOT_AT.toFixed(1)}ms since worker start)`);
 
 // Re-export everything so `import("@/background")` keeps working for tests
@@ -362,7 +363,7 @@ browser.runtime.onMessage.addListener((message: Message, sender: Runtime.Message
   // worker boot and message arrival so we can tell if the delay users
   // see on "Settings not received in time" is the worker waking up,
   // the handler running, or the round-trip reply.
-  const t0 = performance.now();
+  const t0 = now();
   logger.debug(
     `onMessage fired (type=${message.type}, since-boot=${(t0 - BG_BOOT_AT).toFixed(1)}ms)`
   );
@@ -373,12 +374,12 @@ browser.runtime.onMessage.addListener((message: Message, sender: Runtime.Message
   void result.then(
     () => {
       logger.debug(
-        `onMessage handler resolved (type=${message.type}, handler-time=${(performance.now() - t0).toFixed(1)}ms)`
+        `onMessage handler resolved (type=${message.type}, handler-time=${(now() - t0).toFixed(1)}ms)`
       );
     },
     (err: unknown) => {
       logger.debug(
-        `onMessage handler rejected (type=${message.type}, handler-time=${(performance.now() - t0).toFixed(1)}ms): ${err instanceof Error ? err.message : String(err)}`
+        `onMessage handler rejected (type=${message.type}, handler-time=${(now() - t0).toFixed(1)}ms): ${err instanceof Error ? err.message : String(err)}`
       );
     }
   );

@@ -17,6 +17,7 @@ import {
 import { installOverride, registerOverride, disguiseAsNative } from "./function-masking";
 import { waitForSettings } from "./settings-listener";
 import { createLogger } from "@/shared/utils/debug-logger";
+import { now } from "@/shared/utils/safe-time";
 
 const logger = createLogger("INJ");
 
@@ -382,9 +383,9 @@ function getCurrentPositionOverride(
   } else {
     // Settings not yet received — wait for them before responding
     logger.debug("getCurrentPosition: deferring until settings arrive");
-    const deferStart = performance.now();
+    const deferStart = now();
     void waitForSettings().then(({ timedOut }) => {
-      const waited = performance.now() - deferStart;
+      const waited = now() - deferStart;
       if (timedOut) {
         // Settings never arrived within the timeout window. We don't know
         // whether spoofing should be on or off, so we cannot safely fall
