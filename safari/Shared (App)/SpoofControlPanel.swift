@@ -261,10 +261,6 @@ struct SpoofControlPanel: View {
                         .foregroundStyle(.secondary)
                 }
             }
-        } header: {
-            Text("Verify")
-        } footer: {
-            Text("Opens a quick check that confirms your location, timezone, and IP address are masked.")
         }
     }
     #endif
