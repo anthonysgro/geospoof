@@ -12,7 +12,7 @@ import { readWorkerTimezone } from "@/lib/verification/worker-probe"
 import { probeWebrtc } from "@/lib/verification/webrtc-probe"
 import { cn } from "@/lib/utils"
 
-const SESSION_KEY = "gs-exposure-toast-shown"
+const STORAGE_KEY = "gs-exposure-toast-shown"
 const REVEAL_DELAY_MS = 1400
 
 type WebRtcState = "leak" | "clean" | "unsupported"
