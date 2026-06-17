@@ -220,9 +220,12 @@ function ExposureCard({
 export function ExposureToast() {
   React.useEffect(() => {
     if (typeof window === "undefined") return
-    // NOTE: experimental — fires on every load. Re-enable the sessionStorage
-    // guard below before shipping so it only shows once per session.
-    // if (sessionStorage.getItem(SESSION_KEY)) return
+    // Show at most once per browser (persists across sessions).
+    try {
+      if (localStorage.getItem(STORAGE_KEY)) return
+    } catch {
+      /* storage unavailable — fall through and show once */
+    }
 
     let cancelled = false
     const timer = window.setTimeout(async () => {
@@ -258,7 +261,11 @@ export function ExposureToast() {
         webrtc,
       }
 
-      sessionStorage.setItem(SESSION_KEY, "1")
+      try {
+        localStorage.setItem(STORAGE_KEY, "1")
+      } catch {
+        /* ignore */
+      }
       toast.custom((id) => <ExposureCard data={data} toastId={id} />, {
         duration: Infinity,
       })
