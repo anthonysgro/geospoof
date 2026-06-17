@@ -66,7 +66,7 @@ function BrandMark() {
 function CenterNavLinks() {
   return (
     <nav
-      className="hidden items-center gap-12 lg:flex"
+      className="hidden items-center gap-6 lg:flex xl:gap-12"
       aria-label="Main navigation"
     >
       {navItems.map((item) => (
@@ -155,7 +155,7 @@ export function Navigation({ className }: { className?: string }) {
       <nav
         className={cn(
           "mx-auto w-full",
-          "px-6 md:px-10 lg:px-16",
+          "px-6 md:px-10 xl:px-16",
           "flex items-center justify-between lg:grid lg:grid-cols-[1fr_auto_1fr]",
           "h-18 md:h-20"
         )}
