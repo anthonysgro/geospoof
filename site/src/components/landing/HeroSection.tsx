@@ -76,30 +76,30 @@ export function HeroSection({ className }: { className?: string }) {
           <div className="relative">
             <picture className="absolute top-8 left-0 w-56 -rotate-6 drop-shadow-2xl xl:w-80">
               <source
-                srcSet={`${ios1Webp640} 640w, ${ios1Webp} 1008w`}
+                srcSet={`${ios2Webp640} 640w, ${ios2Webp} 1070w`}
                 sizes="(max-width: 1280px) 224px, 320px"
                 type="image/webp"
               />
               <img
-                src={ios1Png}
+                src={ios2Png}
                 alt="GeoSpoof app — secondary view"
-                width={1008}
-                height={2050}
+                width={1070}
+                height={2185}
                 className="w-full"
                 fetchPriority="high"
               />
             </picture>
             <picture className="relative z-10 ml-24 block w-56 rotate-3 drop-shadow-2xl xl:ml-32 xl:w-80">
               <source
-                srcSet={`${ios2Webp640} 640w, ${ios2Webp} 1010w`}
+                srcSet={`${ios1Webp640} 640w, ${ios1Webp} 1070w`}
                 sizes="(max-width: 1280px) 224px, 320px"
                 type="image/webp"
               />
               <img
-                src={ios2Png}
+                src={ios1Png}
                 alt="GeoSpoof app — main view"
-                width={1010}
-                height={2050}
+                width={1070}
+                height={2185}
                 className="w-full"
                 fetchPriority="high"
               />
@@ -211,9 +211,9 @@ export function HeroSection({ className }: { className?: string }) {
               </span>
               <span>
                 <span className="font-semibold text-(--color-canvas-foreground)">
-                  4.0
+                  4.2
                 </span>{" "}
-                Chrome
+                iOS
               </span>
             </span>
           </div>

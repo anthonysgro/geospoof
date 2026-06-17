@@ -1,10 +1,17 @@
 import { Section } from "./Section"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
+import { usePlatform, type Platform } from "@/hooks/use-platform"
 
 interface DownloadOption {
+  /** Which detected platform this store serves (undefined = no auto-match). */
+  platform?: Exclude<Platform, "unknown">
   name: string
   description: string
+  /** Square brand logo shown on the card. */
+  icon: string
+  /** Verb used in the smart primary button, e.g. "Add to Firefox". */
+  cta: string
   href: (campaign: string) => string
   primary?: boolean
   badge?: string
@@ -12,39 +19,52 @@ interface DownloadOption {
 
 const downloads: Array<DownloadOption> = [
   {
+    platform: "firefox",
     name: "Firefox Add-ons",
     description: "Firefox 140+ on desktop and Android",
+    icon: "/images/stores/firefox-store-icon.png",
+    cta: "Add to Firefox",
     href: (campaign) =>
       `https://addons.mozilla.org/firefox/addon/geo-spoof/?utm_source=geospoof.com&utm_medium=website&utm_campaign=${campaign === "homepage" ? "download" : campaign}`,
     primary: true,
   },
   {
+    platform: "chromium",
     name: "Chrome Web Store",
     description: "Chrome, Brave, and Edge",
+    icon: "/images/stores/chrome-store-icon.png",
+    cta: "Add to Chrome",
     href: (campaign) =>
       `https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje?utm_source=geospoof.com&utm_medium=website&utm_campaign=${campaign === "homepage" ? "download" : campaign}`,
     primary: true,
   },
   {
+    platform: "apple",
     name: "App Store",
     description: "Safari on iOS and macOS",
+    icon: "/images/stores/safari-icon.png",
+    cta: "Get on the App Store",
     href: (campaign) =>
       `https://apps.apple.com/app/apple-store/id6765719745?pt=128299974&ct=${campaign === "homepage" ? "dotcom" : campaign}&mt=8`,
     primary: true,
   },
 ]
 
-const selfHosted: Array<DownloadOption> = [
-  {
-    name: "Self-hosted XPI (Firefox)",
-    description:
-      "Signed XPI for Firefox forks or manual installs. Auto-updates via our update manifest.",
-    href: () => "https://github.com/anthonysgro/geospoof/releases/latest",
-  },
+const selfHosted: Array<DownloadOption & { icon: string }> = [
   {
     name: "Direct download (macOS)",
     description:
       "Notarized DMG for Safari on macOS. No Apple ID required. Manual updates — re-download to upgrade.",
+    icon: "/images/stores/dmg-install-icon.png",
+    cta: "GitHub Releases",
+    href: () => "https://github.com/anthonysgro/geospoof/releases/latest",
+  },
+  {
+    name: "Self-hosted XPI (Firefox)",
+    description:
+      "Signed XPI for Firefox forks or manual installs. Auto-updates via our update manifest.",
+    icon: "/images/stores/github-store-icon.svg",
+    cta: "GitHub Releases",
     href: () => "https://github.com/anthonysgro/geospoof/releases/latest",
   },
 ]
@@ -56,6 +76,16 @@ export function DownloadSection({
   className?: string
   campaign?: string
 }) {
+  const platform = usePlatform()
+  const recommended = downloads.find((d) => d.platform === platform)
+
+  // Show the matched store first; the rest keep their original order. On the
+  // server (and first client render) platform is "unknown", so this is a no-op
+  // and the markup matches — the reorder happens after hydration.
+  const orderedDownloads = recommended
+    ? [recommended, ...downloads.filter((d) => d !== recommended)]
+    : downloads
+
   return (
     <Section id="download" className={cn("py-16! md:py-24!", className)}>
       <div className="mb-12 text-center">
@@ -71,47 +101,79 @@ export function DownloadSection({
         </p>
       </div>
 
-      {/* Primary download cards */}
+      {/* Primary download cards — the card matching the visitor's browser is
+          moved first and highlighted (see orderedDownloads / isRecommended). */}
       <div className="mx-auto mb-8 grid max-w-3xl grid-cols-1 gap-4 md:grid-cols-3">
-        {downloads.map((d) => (
-          <a
-            key={d.name}
-            href={d.href(campaign)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              "flex flex-col items-center gap-3 rounded-2xl p-6 text-center",
-              "border border-(--color-canvas-border) transition-all duration-200",
-              "cursor-pointer hover:border-(--color-brand) hover:shadow-lg",
-              "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
-            )}
-          >
-            <span className="text-lg font-bold text-(--color-canvas-foreground)">
-              {d.name}
-            </span>
-            <span className="text-sm text-(--color-canvas-muted)">
-              {d.description}
-            </span>
-            {d.badge ? (
-              <Badge variant="secondary" className="mt-auto">
-                {d.badge}
-              </Badge>
-            ) : (
-              <span className="mt-auto inline-block rounded-full bg-(--color-brand)/10 px-3 py-1 text-xs font-semibold text-(--color-brand)">
-                Install free →
+        {orderedDownloads.map((d) => {
+          const isRecommended = d === recommended
+          return (
+            <a
+              key={d.name}
+              href={d.href(campaign)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                "relative flex flex-col items-center gap-3 rounded-2xl p-6 text-center",
+                "border transition-all duration-200",
+                "cursor-pointer hover:border-(--color-brand) hover:shadow-lg",
+                "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)",
+                isRecommended
+                  ? "border-(--color-brand) ring-1 ring-(--color-brand)/40 shadow-md"
+                  : "border-(--color-canvas-border)"
+              )}
+            >
+              {isRecommended ? (
+                <Badge className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-(--color-brand) text-white">
+                  Recommended for you
+                </Badge>
+              ) : null}
+              <img
+                src={d.icon}
+                alt=""
+                aria-hidden="true"
+                className="h-12 w-12 object-contain"
+                width={48}
+                height={48}
+              />
+              <span className="text-lg font-bold text-(--color-canvas-foreground)">
+                {d.name}
               </span>
-            )}
-          </a>
-        ))}
+              <span className="text-sm text-(--color-canvas-muted)">
+                {d.description}
+              </span>
+              {d.badge ? (
+                <Badge variant="secondary" className="mt-auto">
+                  {d.badge}
+                </Badge>
+              ) : (
+                <span className="mt-auto inline-block rounded-full bg-(--color-brand)/10 px-3 py-1 text-xs font-semibold text-(--color-brand)">
+                  Install free →
+                </span>
+              )}
+            </a>
+          )
+        })}
       </div>
 
       {/* Self-hosted options */}
-      <div className="mx-auto max-w-3xl space-y-3">
+      <div className="mx-auto max-w-3xl">
+        <h3 className="mb-4 text-center text-sm font-semibold tracking-widest text-(--color-canvas-muted) uppercase">
+          Other ways to download
+        </h3>
+        <div className="space-y-3">
         {selfHosted.map((option) => (
           <div
             key={option.name}
             className="flex flex-col gap-3 rounded-xl border border-(--color-canvas-border) px-6 py-4 md:flex-row md:items-center"
           >
+            <img
+              src={option.icon}
+              alt=""
+              aria-hidden="true"
+              className="hidden h-8 w-8 object-contain md:block"
+              width={32}
+              height={32}
+            />
             <div className="flex-1">
               <span className="text-sm font-semibold text-(--color-canvas-foreground)">
                 {option.name}
@@ -131,10 +193,11 @@ export function DownloadSection({
                 "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
               )}
             >
-              GitHub Releases →
+              {option.cta} →
             </a>
           </div>
         ))}
+        </div>
       </div>
     </Section>
   )

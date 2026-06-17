@@ -121,7 +121,6 @@ struct SettingsView: View {
     #if DEBUG
     @AppStorage(LogSettingsKey.enabled) private var loggingEnabled = false
     @AppStorage(LogSettingsKey.level) private var logLevelRaw = AppLogLevel.info.rawValue
-    @State private var debugReviewToken = 0
     #endif
 
     var body: some View {
@@ -155,6 +154,15 @@ struct SettingsView: View {
                 TipJarView()
 
                 Section {
+                    Link(
+                        destination: URL(
+                            string: "https://apps.apple.com/app/id6765719745?action=write-review")!
+                    ) {
+                        Label("Rate GeoSpoof", systemImage: "star")
+                    }
+                }
+
+                Section {
                     Link(destination: URL(string: "https://www.geospoof.com/support")!) {
                         Label("Help & Support", systemImage: "questionmark.circle")
                     }
@@ -166,6 +174,10 @@ struct SettingsView: View {
                     }
                 } header: {
                     Text("Help & Legal")
+                } footer: {
+                    Text(AppInfo.versionWithBuild)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, 8)
                 }
 
                 #if DEBUG
@@ -182,24 +194,12 @@ struct SettingsView: View {
                             Label("Log Level", systemImage: "slider.horizontal.3")
                         }
                     }
-                    Button {
-                        debugReviewToken += 1
-                    } label: {
-                        Label("Request Review (debug)", systemImage: "star.bubble")
-                    }
                 } header: {
                     Text("Debug")
                 }
                 #endif
-
-                Section {
-                    LabeledRow(label: "Version", value: AppInfo.version)
-                }
             }
             .navigationTitle("Settings")
-            #if DEBUG
-            .requestReview(on: debugReviewToken)
-            #endif
         }
         .navigationViewStyle(.stack)
     }

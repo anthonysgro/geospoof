@@ -1947,6 +1947,13 @@ enum AppInfo {
         let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
         return "v\(v)"
     }
+
+    /// Marketing version with build number, e.g. "v1.19.10 (87)". Useful in the
+    /// settings footer so beta/TestFlight reports can be pinned to an exact build.
+    static var versionWithBuild: String {
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
+        return "\(version) (\(build))"
+    }
 }
 
 // MARK: - Haptics
