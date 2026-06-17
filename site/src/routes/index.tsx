@@ -3,12 +3,12 @@ import { Navigation } from "@/components/landing/Navigation"
 import { HeroSection } from "@/components/landing/HeroSection"
 import { FeaturesSection } from "@/components/landing/FeaturesSection"
 import { ScreenshotsSection } from "@/components/landing/ScreenshotsSection"
-import { PhoneCarouselSection } from "@/components/landing/PhoneCarouselSection"
 import { TestimonialsSection } from "@/components/landing/TestimonialsSection"
 import { CompatibilitySection } from "@/components/landing/CompatibilitySection"
 import { FeaturedPostSection } from "@/components/landing/FeaturedPostSection"
 import { DownloadSection } from "@/components/landing/DownloadSection"
 import { Footer } from "@/components/landing/Footer"
+import { ExposureToast } from "@/components/landing/ExposureToast"
 import { SkipLink } from "@/components/landing/SkipLink"
 import { SITE_URL } from "@/lib/blog"
 
@@ -57,7 +57,6 @@ function App() {
       <main id="main-content">
         <HeroSection />
         <ScreenshotsSection />
-        <PhoneCarouselSection />
         <FeaturesSection />
         <TestimonialsSection />
         <CompatibilitySection />
@@ -65,6 +64,8 @@ function App() {
         <DownloadSection />
       </main>
       <Footer />
+
+      <ExposureToast />
 
       <script
         type="application/ld+json"

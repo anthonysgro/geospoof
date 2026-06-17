@@ -1,9 +1,12 @@
 import { motion } from "motion/react"
+import type { MouseEvent } from "react"
 import { Link } from "@tanstack/react-router"
 import { Section } from "./Section"
 import { cn } from "@/lib/utils"
 import { useReducedMotion } from "@/hooks/use-reduced-motion"
 import { useTheme } from "@/hooks/use-theme"
+import { usePlatform } from "@/hooks/use-platform"
+import { getStoreLink } from "@/lib/store-links"
 import { Badge } from "@/components/ui/badge"
 
 const heroTextVariants = {
@@ -33,6 +36,16 @@ export function HeroSection({ className }: { className?: string }) {
   const MotionDiv = prefersReducedMotion ? "div" : motion.div
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === "dark"
+
+  const platform = usePlatform()
+  const store = getStoreLink(platform)
+
+  const scrollToDownload = (e: MouseEvent) => {
+    e.preventDefault()
+    document
+      .getElementById("download")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }
 
   const ios1Webp = isDark
     ? "/images/hero-ios-1-dark.webp"
@@ -136,43 +149,68 @@ export function HeroSection({ className }: { className?: string }) {
             actually are.
           </p>
 
-          <div className="flex flex-wrap justify-center gap-4 xl:justify-start">
-            <a
-              href="#download"
-              onClick={(e) => {
-                e.preventDefault()
-                document
-                  .getElementById("download")
-                  ?.scrollIntoView({ behavior: "smooth", block: "start" })
-              }}
-              className={cn(
-                "inline-flex items-center justify-center",
-                "bg-(--color-brand) text-white",
-                "transition-all hover:bg-(--color-brand-dark)",
-                "min-h-14 rounded-brand px-10",
-                "text-lg font-semibold shadow-md hover:shadow-lg",
-                "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+          <div className="flex flex-col items-center gap-3 xl:items-start">
+            <div className="flex flex-wrap justify-center gap-4 xl:justify-start">
+              {store ? (
+                <a
+                  href={store.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    "inline-flex items-center justify-center",
+                    "bg-(--color-brand) text-white",
+                    "transition-all hover:bg-(--color-brand-dark)",
+                    "min-h-14 rounded-brand px-10",
+                    "text-lg font-semibold shadow-md hover:shadow-lg",
+                    "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+                  )}
+                >
+                  {store.cta}
+                </a>
+              ) : (
+                <a
+                  href="#download"
+                  onClick={scrollToDownload}
+                  className={cn(
+                    "inline-flex items-center justify-center",
+                    "bg-(--color-brand) text-white",
+                    "transition-all hover:bg-(--color-brand-dark)",
+                    "min-h-14 rounded-brand px-10",
+                    "text-lg font-semibold shadow-md hover:shadow-lg",
+                    "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+                  )}
+                >
+                  Download Free
+                </a>
               )}
-            >
-              Download Free
-            </a>
-            <Link
-              to="/verify"
-              className={cn(
-                "group inline-flex items-center justify-center gap-2.5",
-                "border border-(--color-canvas-border) text-(--color-canvas-foreground)",
-                "transition-all hover:bg-(--color-canvas-border)",
-                "min-h-14 rounded-brand px-10",
-                "text-lg font-semibold",
-                "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
-              )}
-            >
-              <span className="relative flex size-2.5" aria-hidden="true">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75" />
-                <span className="relative inline-flex size-2.5 rounded-full bg-green-500" />
-              </span>
-              See what sites detect
-            </Link>
+              <Link
+                to="/verify"
+                className={cn(
+                  "group inline-flex items-center justify-center gap-2.5",
+                  "border border-(--color-canvas-border) text-(--color-canvas-foreground)",
+                  "transition-all hover:bg-(--color-canvas-border)",
+                  "min-h-14 rounded-brand px-10",
+                  "text-lg font-semibold",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+                )}
+              >
+                <span className="relative flex size-2.5" aria-hidden="true">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75" />
+                  <span className="relative inline-flex size-2.5 rounded-full bg-green-500" />
+                </span>
+                See what sites detect
+              </Link>
+            </div>
+            {/* When we've matched a store, still let people reach the others. */}
+            {store ? (
+              <a
+                href="#download"
+                onClick={scrollToDownload}
+                className="text-sm text-(--color-canvas-muted) underline-offset-4 transition-colors hover:text-(--color-canvas-foreground) hover:underline"
+              >
+                All platforms &amp; browsers
+              </a>
+            ) : null}
           </div>
 
           {/* Social proof */}

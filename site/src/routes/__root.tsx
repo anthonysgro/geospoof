@@ -10,6 +10,7 @@ import { SpeedInsights } from "@vercel/speed-insights/react"
 import appCss from "../styles.css?url"
 import { ThemeProvider } from "@/components/theme-provider"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { Toaster } from "@/components/ui/sonner"
 import { Navigation } from "@/components/landing/Navigation"
 import { Footer } from "@/components/landing/Footer"
 
@@ -132,6 +133,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <body suppressHydrationWarning>
         <ThemeProvider defaultTheme="system" storageKey="geospoof-theme">
           <TooltipProvider>{children}</TooltipProvider>
+          <Toaster position="bottom-right" />
         </ThemeProvider>
         <Analytics />
         <SpeedInsights />

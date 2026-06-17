@@ -18,7 +18,13 @@ const IOS_APP_STORE_URL =
 const MAC_APP_STORE_URL =
   "https://apps.apple.com/app/apple-store/id6765719745?pt=128299974&ct=carousel-mac&mt=12"
 
-export function PhoneCarouselSection({ className }: { className?: string }) {
+export function PhoneCarouselSection({
+  className,
+  embedded = false,
+}: {
+  className?: string
+  embedded?: boolean
+}) {
   const { resolvedTheme } = useTheme()
   const variant = resolvedTheme === "dark" ? "dark" : "light"
 
@@ -37,12 +43,22 @@ export function PhoneCarouselSection({ className }: { className?: string }) {
     }
   }, [api])
 
+  const Wrapper = embedded ? "div" : "section"
+
   return (
-    <section className={cn("py-16 md:py-24", className)}>
-      <div className="mx-auto mb-12 max-w-[1200px] px-6 text-center md:px-12 lg:px-16">
-        <h2 className="text-3xl font-bold text-(--color-canvas-foreground) md:text-4xl">
-          GeoSpoof on iOS &amp; iPadOS
-        </h2>
+    <Wrapper
+      className={cn(embedded ? "mt-16 md:mt-20" : "py-16 md:py-24", className)}
+    >
+      <div className="mx-auto mb-10 max-w-[1200px] px-6 text-center md:px-12 lg:px-16">
+        {embedded ? (
+          <h3 className="text-2xl font-bold text-(--color-canvas-foreground) md:text-3xl">
+            And native on iPhone &amp; iPad
+          </h3>
+        ) : (
+          <h2 className="text-3xl font-bold text-(--color-canvas-foreground) md:text-4xl">
+            GeoSpoof on iOS &amp; iPadOS
+          </h2>
+        )}
       </div>
 
       <div className="mx-auto w-full max-w-[1380px] px-12 sm:px-16">
@@ -138,6 +154,6 @@ export function PhoneCarouselSection({ className }: { className?: string }) {
           </div>
         </div>
       </div>
-    </section>
+    </Wrapper>
   )
 }
