@@ -126,11 +126,13 @@ export function LeafletMap(props: LeafletMapProps) {
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === "dark"
 
-  // Tile basemap per theme, both on fast production CDNs (no raw OSM community
-  // tiles — those are slow and rate-limited, which is what made the map crawl
-  // in and show grey). Dark mode uses CARTO's dark_all. Light mode uses Esri's
-  // World Topo basemap for vivid, natural coloring: green vegetation, blue
-  // water, tan terrain — closer to the "green grass, blue ocean" look.
+  // Tile basemap per theme, both on CARTO's fast production CDN (no raw OSM
+  // community tiles — those are slow and rate-limited, which is what made the
+  // map crawl in and show grey). Dark mode uses CARTO's dark_all. Light mode
+  // uses CARTO Voyager: clean modern cartography with blue water, green
+  // vegetation/parks and soft land tones — the "blue ocean, green land" look
+  // without the dated topographic styling. Both support {s} subdomains and
+  // retina {r} tiles.
   const tile = isDark
     ? {
         url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
@@ -139,12 +141,10 @@ export function LeafletMap(props: LeafletMapProps) {
           '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
       }
     : {
-        // Esri uses {z}/{y}/{x} order and a single fast (Akamai-backed) host —
-        // no {s} subdomains, no retina {r}.
-        url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
-        subdomains: "abc",
+        url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+        subdomains: "abcd",
         attribution:
-          'Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, DeLorme, NAVTEQ, TomTom &amp; the GIS user community',
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
       }
   const tileUrl = tile.url
   const attribution = tile.attribution
