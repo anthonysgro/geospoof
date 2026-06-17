@@ -76,10 +76,10 @@ export function HeroSection({ className }: { className?: string }) {
         className
       )}
     >
-      <div className="relative z-10 flex flex-col items-center gap-8 xl:grid xl:grid-cols-2 xl:gap-4">
+      <div className="relative z-10 flex flex-col items-center gap-6 sm:gap-8 xl:grid xl:grid-cols-2 xl:gap-4">
         {/* Visual — two phones */}
         <MotionDiv
-          className="order-2 flex justify-center pb-14 xl:order-1 xl:justify-start xl:pb-0"
+          className="order-2 flex justify-center pb-6 sm:pb-14 xl:order-1 xl:justify-start xl:pb-0"
           {...(!prefersReducedMotion && {
             initial: "hidden",
             animate: "visible",
@@ -136,21 +136,21 @@ export function HeroSection({ className }: { className?: string }) {
             Browser Extension
           </Badge>
 
-          <h1 className="mb-6 text-4xl leading-tight font-bold text-(--color-canvas-foreground) md:text-5xl xl:text-[4.5rem]">
+          <h1 className="mb-4 text-4xl leading-tight font-bold text-(--color-canvas-foreground) sm:mb-6 md:text-5xl xl:text-[4.5rem]">
             Your location,{" "}
             <span className="whitespace-nowrap text-(--color-brand)">
               your rules
             </span>
           </h1>
 
-          <p className="mb-8 max-w-xl text-base text-(--color-canvas-muted) md:text-lg xl:text-xl">
+          <p className="mb-6 max-w-xl text-base text-(--color-canvas-muted) sm:mb-8 md:text-lg xl:text-xl">
             GeoSpoof overrides your browser's geolocation, timezone, and WebRTC
             APIs so websites see exactly where you want them to — not where you
             actually are.
           </p>
 
-          <div className="flex flex-col items-center gap-3 xl:items-start">
-            <div className="flex flex-wrap justify-center gap-4 xl:justify-start">
+          <div className="flex w-full flex-col items-center gap-3 xl:w-auto xl:items-start">
+            <div className="flex w-full flex-col justify-center gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:gap-4 xl:justify-start">
               {store ? (
                 <a
                   href={store.href}
@@ -160,8 +160,8 @@ export function HeroSection({ className }: { className?: string }) {
                     "inline-flex items-center justify-center",
                     "bg-(--color-brand) text-white",
                     "transition-all hover:bg-(--color-brand-dark)",
-                    "min-h-14 rounded-brand px-10",
-                    "text-lg font-semibold shadow-md hover:shadow-lg",
+                    "min-h-12 w-full rounded-brand px-6 sm:min-h-14 sm:w-auto sm:px-10",
+                    "text-base font-semibold shadow-md hover:shadow-lg sm:text-lg",
                     "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
                   )}
                 >
@@ -175,8 +175,8 @@ export function HeroSection({ className }: { className?: string }) {
                     "inline-flex items-center justify-center",
                     "bg-(--color-brand) text-white",
                     "transition-all hover:bg-(--color-brand-dark)",
-                    "min-h-14 rounded-brand px-10",
-                    "text-lg font-semibold shadow-md hover:shadow-lg",
+                    "min-h-12 w-full rounded-brand px-6 sm:min-h-14 sm:w-auto sm:px-10",
+                    "text-base font-semibold shadow-md hover:shadow-lg sm:text-lg",
                     "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
                   )}
                 >
@@ -189,8 +189,8 @@ export function HeroSection({ className }: { className?: string }) {
                   "group inline-flex items-center justify-center gap-2.5",
                   "border border-(--color-canvas-border) text-(--color-canvas-foreground)",
                   "transition-all hover:bg-(--color-canvas-border)",
-                  "min-h-14 rounded-brand px-10",
-                  "text-lg font-semibold",
+                  "min-h-12 w-full rounded-brand px-6 sm:min-h-14 sm:w-auto sm:px-10",
+                  "text-base font-semibold sm:text-lg",
                   "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
                 )}
               >

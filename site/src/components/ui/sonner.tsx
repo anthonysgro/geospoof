@@ -45,6 +45,7 @@ const Toaster = ({ position, ...props }: ToasterProps) => {
       }}
       style={
         {
+          "--width": "min(360px, calc(100vw - 2rem))",
           "--normal-bg": "var(--popover)",
           "--normal-text": "var(--popover-foreground)",
           "--normal-border": "var(--border)",

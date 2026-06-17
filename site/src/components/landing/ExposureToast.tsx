@@ -72,7 +72,7 @@ function Row({
   valueClassName?: string
 }) {
   return (
-    <div className="flex h-6 items-center gap-2.5">
+    <div className="flex h-6 items-center gap-2.5 sm:h-7">
       <span className="flex w-4 justify-center text-(--color-canvas-muted)">
         {icon}
       </span>
@@ -125,7 +125,7 @@ function ExposureCard({
   return (
     <div
       className={cn(
-        "relative w-[360px] max-w-[calc(100vw-2rem)] rounded-xl border p-4 shadow-lg",
+        "relative mx-auto w-[360px] max-w-[calc(100vw-2rem)] rounded-xl border p-3 shadow-lg sm:p-4",
         "border-(--color-canvas-border) bg-(--color-canvas)"
       )}
     >
@@ -155,7 +155,7 @@ function ExposureCard({
         </div>
       </div>
 
-      <div className="mt-3 flex flex-col">
+      <div className="mt-2.5 flex flex-col sm:mt-3">
         <Row
           icon={<MapPinIcon className="size-3.5" />}
           label="Location"
@@ -167,11 +167,13 @@ function ExposureCard({
           value={data.timezone}
         />
         {data.ip ? (
-          <Row
-            icon={<span className="font-mono text-[11px]">IP</span>}
-            label="Address"
-            value={maskIp(data.ip)}
-          />
+          <div className="hidden sm:contents">
+            <Row
+              icon={<span className="font-mono text-[11px]">IP</span>}
+              label="Address"
+              value={maskIp(data.ip)}
+            />
+          </div>
         ) : null}
         {data.webrtc !== "unsupported" ? (
           <Row
@@ -185,7 +187,7 @@ function ExposureCard({
         ) : null}
       </div>
 
-      <div className="mt-3.5 flex items-center gap-3">
+      <div className="mt-3 flex items-center gap-3 sm:mt-3.5">
         <a
           href={store ? store.href : "#download"}
           target={store ? "_blank" : undefined}
@@ -197,7 +199,7 @@ function ExposureCard({
             "transition-colors hover:bg-(--color-brand-dark)"
           )}
         >
-          {store ? "Hide all of this" : "Get GeoSpoof"}
+          {store ? "Hide my location" : "Get GeoSpoof"}
         </a>
         <Link
           to="/verify"

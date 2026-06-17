@@ -63,13 +63,13 @@ export function PhoneCarouselSection({
 
       <div className="mx-auto w-full max-w-[1380px] px-12 sm:px-16">
         <Carousel setApi={setApi} opts={{ loop: true, align: "center" }}>
-          <CarouselContent className="-ml-8 pt-8 pb-20">
+          <CarouselContent className="-ml-4 pt-8 pb-20 sm:-ml-8">
             {SHOTS.map((id, i) => {
               const base = `/screenshots/${id}-${variant}`
               return (
                 <CarouselItem
                   key={id}
-                  className="pl-8 sm:basis-1/2 lg:basis-1/4"
+                  className="basis-3/5 pl-4 sm:basis-1/2 sm:pl-8 lg:basis-1/4"
                 >
                   <picture>
                     <source
