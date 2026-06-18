@@ -359,13 +359,17 @@
     "message": "⚠️ Приблизительно (API недоступен)",
     "description": "Inline note shown when timezone data is estimated rather than authoritative."
   },
-  "details_webrtcActive": {
-    "message": "✓ Активна\n\nRTCPeerConnection обёрнут, чтобы подавлять сбор ICE-кандидатов.\nЭто предотвращает утечку настоящего IP через WebRTC.",
-    "description": "Body text shown in the WebRTC details when protection is active."
+  "details_webrtcActiveStatus": {
+    "message": "✓ Активна",
+    "description": "Status label shown in the WebRTC details when protection is active."
   },
-  "details_webrtcInactive": {
-    "message": "✗ Неактивна\n\nWebRTC может раскрыть ваш настоящий IP даже при использовании VPN.",
-    "description": "Body text shown in the WebRTC details when protection is inactive."
+  "details_webrtcInactiveStatus": {
+    "message": "✗ Неактивна",
+    "description": "Status label shown in the WebRTC details when protection is inactive."
+  },
+  "details_webrtcInactiveNote": {
+    "message": "WebRTC может раскрыть ваш настоящий IP даже при использовании VPN.",
+    "description": "Caption shown under the WebRTC status when protection is inactive."
   },
   "details_section_geolocation": {
     "message": "Геолокация",
@@ -379,6 +383,30 @@
     "message": "WebRTC",
     "description": "Header for the WebRTC overrides section."
   },
+  "details_section_dateTime": {
+    "message": "Дата и время",
+    "description": "Header for the date/time overrides section."
+  },
+  "details_section_temporal": {
+    "message": "Temporal",
+    "description": "Header for the Temporal API overrides section."
+  },
+  "details_section_xslt": {
+    "message": "XSLT / EXSLT",
+    "description": "Header for the XSLT/EXSLT overrides section."
+  },
+  "details_section_workers": {
+    "message": "Workers",
+    "description": "Header for the worker timezone-propagation overrides section."
+  },
+  "details_section_antiFingerprinting": {
+    "message": "Антифингерпринтинг и структура",
+    "description": "Header for the anti-fingerprinting and structural overrides section."
+  },
+  "details_keyOverrides": {
+    "message": "Основные переопределения (если доступно)",
+    "description": "Title of the summary line above the grouped list of overridden APIs."
+  },
   "advanced_button": {
     "message": "Дополнительно",
     "description": "Button that opens the advanced-settings drawer."
@@ -386,6 +414,18 @@
   "advanced_debugLogging": {
     "message": "Отладочное логирование",
     "description": "Label for the debug-logging toggle."
+  },
+  "advanced_earlyTz": {
+    "message": "Мгновенная защита часового пояса",
+    "description": "Label for the Firefox-only toggle that grants the userScripts permission to spoof synchronous timezone surfaces from the very first script on a page."
+  },
+  "earlyTz_infoAriaLabel": {
+    "message": "Подробнее о мгновенной защите часового пояса",
+    "description": "Accessible label on the Instant timezone protection info icon."
+  },
+  "earlyTz_tooltip": {
+    "message": "Только Firefox. При включении запрашивается необязательное разрешение «userScripts», чтобы GeoSpoof мог запускаться в самом начале загрузки каждой страницы, закрывая короткий промежуток, когда сайт мог бы считать ваш настоящий часовой пояс до срабатывания защиты. Отключите, чтобы отозвать разрешение.",
+    "description": "Tooltip explaining the Firefox-only Instant timezone protection toggle and the userScripts permission it requests."
   },
   "advanced_verbosityLevel": {
     "message": "Уровень подробности",

@@ -66,7 +66,7 @@ function PrivacyPage() {
               Privacy Policy
             </h1>
             <p className="text-body-base text-(--color-canvas-muted)">
-              Last Updated: June 9, 2026
+              Last Updated: June 18, 2026
             </p>
           </div>
 
@@ -131,8 +131,10 @@ function PrivacyPage() {
               <p>
                 When you use certain features, GeoSpoof (both the Safari
                 extension and the companion app) communicates with external
-                services. The developer operates no server and receives none of
-                this data.
+                services. With one exception, the developer operates no server
+                and receives none of this data. The exception is the timezone
+                boundary data, which the extension fetches from the developer's
+                own domain (geospoof.com) — see that entry below.
               </p>
               <p>
                 <strong>Nominatim (OpenStreetMap)</strong> — Used when you
@@ -255,11 +257,25 @@ function PrivacyPage() {
                 VPN" or switch to a different location input method.
               </p>
               <p>
-                <strong>browser-geo-tz</strong> — Makes HTTPS range requests to
-                a CDN to fetch small chunks of timezone boundary data. Your
-                coordinates are never sent as a query or stored by a third-party
-                API; the extension resolves your timezone locally using the
-                downloaded boundary data.{" "}
+                <strong>browser-geo-tz (served from geospoof.com)</strong> —
+                Makes HTTPS range requests to{" "}
+                <code className="rounded bg-(--color-canvas-border) px-1 text-sm">
+                  geospoof.com
+                </code>{" "}
+                to fetch small chunks of timezone boundary data, then resolves
+                your timezone locally on your device. This data is hosted on the
+                developer's own domain (a static-file host, Vercel) rather than
+                a third-party CDN, because the previous CDN truncated the dataset
+                and broke timezone resolution. Because the request reaches the
+                developer's infrastructure, it carries your IP address (your real
+                IP, unless you are behind a VPN) and the byte ranges requested —
+                and those ranges correspond to the region being looked up, so the
+                request can reveal your approximate spoofed region. Your
+                coordinates are never sent as a query. The developer does not use
+                these requests for analytics, tracking, profiling, or accounts,
+                and stores no personal data from them; standard web-server logs
+                may record the request transiently. The data is cached by your
+                browser, so it is rarely re-fetched.{" "}
                 <a
                   href="https://github.com/kevmo314/browser-geo-tz"
                   target="_blank"
@@ -296,15 +312,23 @@ function PrivacyPage() {
 
             <PolicySection title="Data Security">
               <ul>
-                <li>
-                  All settings are stored locally using the browser's secure
+                <li>All settings are stored locally using the browser's secure
                   storage API
                 </li>
-                <li>No data is transmitted to the extension developer</li>
+                <li>
+                  No data is transmitted to the developer for collection,
+                  analytics, or profiling
+                </li>
+                <li>
+                  The one request that reaches developer-controlled
+                  infrastructure — fetching timezone boundary data from
+                  geospoof.com — is a static-file download and is not used to
+                  track or identify you
+                </li>
                 <li>All third-party API calls use HTTPS encryption</li>
                 <li>
-                  The developer operates no backend server and maintains no user
-                  accounts
+                  The developer maintains no user accounts and runs no backend
+                  application or database; geospoof.com serves only static files
                 </li>
               </ul>
             </PolicySection>
@@ -437,10 +461,11 @@ function PrivacyPage() {
                     <tr>
                       <td>Transmit data externally</td>
                       <td>
-                        Sends nothing to the developer. The only outbound
-                        requests are the optional geocoding / VPN-sync API calls
-                        described above, and only when you actively use those
-                        features.
+                        Sends nothing to the developer for collection or
+                        analytics. Outbound requests are the optional geocoding /
+                        VPN-sync API calls described above (only when you use
+                        those features) and fetching timezone boundary data from
+                        geospoof.com when a location is set.
                       </td>
                     </tr>
                   </tbody>
@@ -573,25 +598,36 @@ function PrivacyPage() {
                 <a href="mailto:support@geospoof.com">support@geospoof.com</a>.
               </p>
               <p>
-                <strong>Legal basis for processing:</strong> The only personal
-                data processed is your public IP address, and only when you
-                explicitly enable the "Sync with VPN" feature. We rely on your
-                consent (GDPR Art. 6(1)(a)), which you give by enabling the
-                feature, and which you can withdraw at any time by disabling
-                "Sync with VPN" in the extension popup. Withdrawing consent does
-                not affect the lawfulness of processing based on consent before
-                its withdrawal.
+                <strong>Legal basis for processing:</strong> Two kinds of
+                personal data may be processed, both limited to your public IP
+                address. (1) When you explicitly enable "Sync with VPN," your
+                public IP is sent to the IP-detection and geolocation services
+                listed above; we rely on your consent (GDPR Art. 6(1)(a)), which
+                you give by enabling the feature and can withdraw at any time by
+                disabling "Sync with VPN" in the extension popup. (2) Whenever
+                the extension resolves a timezone, it fetches boundary data from
+                geospoof.com, which — like any web request — transmits your IP to
+                the developer's static-file host; we rely on legitimate interests
+                (GDPR Art. 6(1)(f)) in delivering the boundary data needed for
+                the location-spoofing you requested, and the IP is used only to
+                serve the file and is not retained. Withdrawing consent does not
+                affect the lawfulness of processing based on consent before its
+                withdrawal.
               </p>
               <p>
                 <strong>International transfers:</strong> The third-party
                 services listed above (AWS, Cloudflare, Akamai, ipify, GeoJS,
-                FreeIPAPI, ReallyFreeGeoIP, ipinfo.io, Google STUN, Nominatim,
-                and the jsDelivr CDN) are operated outside the EEA, including in
-                the United States. When you use features that contact these
-                services, your public IP is transferred to their infrastructure.
-                Each service is an independent controller and determines its own
-                transfer mechanisms. The extension developer operates no server
-                and performs no cross-border transfer on its own.
+                FreeIPAPI, ReallyFreeGeoIP, ipinfo.io, Google STUN, and
+                Nominatim) are operated outside the EEA, including in the United
+                States; each is an independent controller and determines its own
+                transfer mechanisms. Separately, the timezone boundary data is
+                served from the developer's own domain geospoof.com, hosted on
+                Vercel, whose infrastructure is also outside the EEA, including
+                in the United States. When you use features that contact any of
+                these endpoints, your public IP is transferred to that
+                infrastructure. Apart from serving that static boundary data from
+                geospoof.com, the extension developer operates no server and
+                performs no other cross-border transfer of its own.
               </p>
               <p>
                 <strong>Your rights under GDPR / UK GDPR:</strong> you have the
@@ -631,9 +667,12 @@ function PrivacyPage() {
               <p>
                 <strong>Categories collected:</strong> The only category of
                 personal information touched by the extension is an internet
-                identifier (your public IP address), and only when you
-                explicitly enable "Sync with VPN." It is used for the single
-                purpose described above and is not retained.
+                identifier (your public IP address). This happens when you enable
+                "Sync with VPN" (sent to the IP-detection and geolocation
+                services) and when the extension fetches timezone boundary data
+                from geospoof.com (your IP reaches the developer's static-file
+                host as part of an ordinary web request). In both cases it is
+                used only for the purposes described above and is not retained.
               </p>
               <p>
                 <strong>Your rights:</strong> You have the right to know what

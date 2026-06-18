@@ -830,17 +830,25 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   color: var(--brand);
 }
 
-.coffee-row {
-  margin-top: 12px;
+/* Meta footer: "☕ Buy me a coffee · v1.21.7" as small subtext, centered, with
+   a single divider separating it from the settings above. */
+.advanced-footer {
+  margin-top: 14px;
   padding-top: 12px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--border-subtle);
   text-align: center;
+  font-size: 11px;
+  color: var(--text-subtle);
+}
+
+.advanced-footer-sep {
+  margin: 0 6px;
+  color: var(--text-faint);
 }
 
 .coffee-link {
   color: var(--text-subtle);
   text-decoration: none;
-  font-size: 12px;
   transition: color 0.2s;
 }
 
@@ -1019,6 +1027,153 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   white-space: pre-wrap;
 }
 
+/* When the Overridden APIs value is rendered as collapsible groups (iOS-style)
+   rather than a flat text block, drop the pre-wrap so block children lay out
+   normally. */
+.detail-value.api-groups {
+  white-space: normal;
+}
+
+/* Location / Timezone / WebRTC values rendered as structured label+value rows
+   (mirrors the native iOS Details screen) rather than a flat text block. */
+.detail-value.detail-rows {
+  white-space: normal;
+}
+
+.detail-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 0;
+}
+
+.detail-row + .detail-row {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.detail-row-label {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.detail-row-value {
+  text-align: right;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  word-break: break-word;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Status line for WebRTC protection: green when active, muted when not. */
+.detail-status {
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.detail-status.active {
+  color: var(--brand);
+}
+
+/* Small caption under a section (fallback timezone note, WebRTC warning). */
+.detail-note {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+/* Summary line above the groups: "Key Overrides" + a short description of the
+   totals, mirroring the native Details screen header. */
+.api-overview {
+  margin-bottom: 10px;
+}
+
+.api-overview-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+/* One collapsible group per surface (Geolocation, Date & Time, …). */
+.api-group + .api-group {
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* Clickable group header: rotating chevron, title, and a count chip that
+   reuses the badge surface (peer of .scope-list-count). */
+.api-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 0;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.api-group-chevron {
+  flex-shrink: 0;
+  font-size: 9px;
+  color: var(--text-muted);
+  transition: transform 0.2s;
+}
+
+.api-group-toggle[aria-expanded="true"] .api-group-chevron {
+  transform: rotate(90deg);
+}
+
+.api-group-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.api-group-count {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--badge-bg);
+  border-radius: 10px;
+  padding: 1px 8px;
+  min-width: 20px;
+  text-align: center;
+}
+
+/* Expanded list of API signatures: monospace, selectable, slightly inset to
+   align under the chevron. */
+.api-group-list {
+  padding: 0 0 8px 17px;
+}
+
+.api-group-item {
+  position: relative;
+  padding-left: 12px;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  word-break: break-word;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Bullet marker rendered via ::before so wrapped lines stay hanging-indented
+   under the text rather than the bullet. */
+.api-group-item::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: var(--text-subtle);
+}
+
 /* ───────────────────────────────────────────────────────────────────────────
    Advanced section
    ────────────────────────────────────────────────────────────────────── */
@@ -1066,37 +1221,29 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 }
 
 /* Standardize each advanced setting row (toggles + selectors) into a uniform,
-   evenly-separated list. The toggle rows previously sat flush against each
-   other with no spacing; give them the same 12px gap + divider the selectors
-   below already use. */
+   evenly-spaced list. The rows share a 12px gap but no longer carry dividers —
+   the grouping reads cleanly without lines between each control. */
 .advanced-content > .toggle-label {
   margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border-subtle);
   font-size: 14px;
 }
 
-/* No separator above the first row. */
+/* No spacing above the first row. */
 .advanced-content > .toggle-label:first-child {
   margin-top: 0;
-  padding-top: 0;
-  border-top: none;
 }
 
 /* The "Instant timezone protection" row is Firefox-only and hidden elsewhere;
    when it's hidden, the next toggle becomes the first visible row, so drop its
-   separator too. */
-.advanced-content > .toggle-label[style*="display: none"] + .toggle-label {
+   top spacing too. Uses the general-sibling combinator because the row's info
+   tooltip sits between it and the next toggle. */
+.advanced-content > #earlyTzRow[style*="display: none"] ~ .toggle-label {
   margin-top: 0;
-  padding-top: 0;
-  border-top: none;
 }
 
 /* Verbosity selector */
 .verbosity-selector {
   margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border-subtle);
 }
 
 /* Per-setting inline disclaimer (e.g. advanced worker protection).
@@ -1132,8 +1279,6 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 /* Theme selector */
 .theme-selector {
   margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border-subtle);
 }
 
 .select-label {
@@ -1158,14 +1303,9 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   border-color: var(--brand);
 }
 
-/* Version label */
+/* Version label — inline within the advanced footer. */
 .version-label {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border-subtle);
-  font-size: 11px;
   color: var(--text-subtle);
-  text-align: center;
 }
 
 /* ───────────────────────────────────────────────────────────────────────────

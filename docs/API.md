@@ -417,7 +417,7 @@ The extension uses `browser.runtime.sendMessage` and `browser.runtime.onMessage`
 { type: "SET_LOCATION", payload: { latitude: number, longitude: number } }
 ```
 
-Side effects: Calculates timezone (offline via browser-geo-tz), performs reverse geocoding, saves to storage, broadcasts to all content scripts, updates badge.
+Side effects: Calculates timezone (local lookup via browser-geo-tz boundary data fetched from geospoof.com), performs reverse geocoding, saves to storage, broadcasts to all content scripts, updates badge.
 
 #### SET_PROTECTION_STATUS
 
@@ -671,7 +671,7 @@ Timeout: 10s (IP detection), 5s per geo service | Retry: 2x exponential backoff 
 
    CreepJS's `code:` worker-fingerprint hash is closed on Firefox: the payload derives the engine-specific `"[native code]"` surround format at runtime and matches Firefox's multi-line shape, so spoofed `Intl.DateTimeFormat`, `Date` prototype methods, `Worker`, and `importScripts` all pass the native-shape check.
 
-2. **XSLT/EXSLT datetime leak (Firefox only)** — `XSLTProcessor` runs inside a C++ engine that doesn't round-trip through JavaScript date machinery. The EXSLT function `date:date-time()` emits an ISO datetime string with the real system UTC offset, bypassing every Date/Intl/Temporal override. This is the technique arkenfox's TZP uses as its ground-truth timezone source. Chromium doesn't ship EXSLT, so the leak is Firefox-only. Unpatchable without browser-level changes.
+2. **XSLT/EXSLT datetime (Firefox only) — closed, with edges.** `XSLTProcessor` runs inside a C++ engine (libxslt on Gecko) that doesn't round-trip through JavaScript date machinery, so EXSLT's `date:date-time()` emits an ISO datetime carrying the real system UTC offset, bypassing every Date/Intl/Temporal override — the ground-truth surface arkenfox's TZP uses. The result is still delivered back through the JS `XSLTProcessor` API, so GeoSpoof wraps `transformToFragment` / `transformToDocument` (`src/content/injected/xslt-overrides.ts`), walks the result's text nodes, and rewrites any offset-bearing ISO datetime within ~10s of the current instant into the spoofed zone (the tight "is it now?" gate avoids corrupting legitimate datetimes in transformed content). The iframe patcher installs the same wrap on each same-origin iframe realm's `XSLTProcessor`. Residual edges: cross-origin iframe XSLT can't be reached (see #4). Chromium/WebKit don't ship EXSLT, and Firefox is winding XSLT down behind `dom.xslt.enabled` (FF151+; when off, no EXSLT date is produced and this no-ops), so the surface is shrinking regardless.
 
 3. **Extension initialization race** — Browser extensions install overrides at `document_start`, but spoofing settings arrive asynchronously (typically 50-250ms on cold page loads). A fingerprinting script that reads timezone synchronously in `<head>` can win that race and learn the real zone. This is a fundamental MV3 limitation that requires browser-level fixes to eliminate (see Tor Browser, which patches C++ directly).
 

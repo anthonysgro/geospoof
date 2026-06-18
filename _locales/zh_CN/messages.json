@@ -359,13 +359,17 @@
     "message": "⚠️ 估算值(API 不可用)",
     "description": "Inline note shown when timezone data is estimated rather than authoritative."
   },
-  "details_webrtcActive": {
-    "message": "✓ 活动\n\nRTCPeerConnection 已被包装以抑制 ICE 候选收集。\n这可以防止 WebRTC 泄漏您的真实 IP 地址。",
-    "description": "Body text shown in the WebRTC details when protection is active."
+  "details_webrtcActiveStatus": {
+    "message": "✓ 活动",
+    "description": "Status label shown in the WebRTC details when protection is active."
   },
-  "details_webrtcInactive": {
-    "message": "✗ 非活动\n\n即使使用 VPN,WebRTC 仍可能泄漏您的真实 IP 地址。",
-    "description": "Body text shown in the WebRTC details when protection is inactive."
+  "details_webrtcInactiveStatus": {
+    "message": "✗ 非活动",
+    "description": "Status label shown in the WebRTC details when protection is inactive."
+  },
+  "details_webrtcInactiveNote": {
+    "message": "即使使用 VPN WebRTC 仍可能泄漏您的真实 IP 地址。",
+    "description": "Caption shown under the WebRTC status when protection is inactive."
   },
   "details_section_geolocation": {
     "message": "地理位置",
@@ -379,6 +383,30 @@
     "message": "WebRTC",
     "description": "Header for the WebRTC overrides section."
   },
+  "details_section_dateTime": {
+    "message": "日期和时间",
+    "description": "Header for the date/time overrides section."
+  },
+  "details_section_temporal": {
+    "message": "Temporal",
+    "description": "Header for the Temporal API overrides section."
+  },
+  "details_section_xslt": {
+    "message": "XSLT / EXSLT",
+    "description": "Header for the XSLT/EXSLT overrides section."
+  },
+  "details_section_workers": {
+    "message": "Worker",
+    "description": "Header for the worker timezone-propagation overrides section."
+  },
+  "details_section_antiFingerprinting": {
+    "message": "反指纹识别与结构",
+    "description": "Header for the anti-fingerprinting and structural overrides section."
+  },
+  "details_keyOverrides": {
+    "message": "主要覆盖项（如果可用）",
+    "description": "Title of the summary line above the grouped list of overridden APIs."
+  },
   "advanced_button": {
     "message": "高级",
     "description": "Button that opens the advanced-settings drawer."
@@ -386,6 +414,18 @@
   "advanced_debugLogging": {
     "message": "调试日志",
     "description": "Label for the debug-logging toggle."
+  },
+  "advanced_earlyTz": {
+    "message": "即时时区保护",
+    "description": "Label for the Firefox-only toggle that grants the userScripts permission to spoof synchronous timezone surfaces from the very first script on a page."
+  },
+  "earlyTz_infoAriaLabel": {
+    "message": "关于即时时区保护的更多信息",
+    "description": "Accessible label on the Instant timezone protection info icon."
+  },
+  "earlyTz_tooltip": {
+    "message": "仅限 Firefox。开启后会请求可选的「userScripts」权限，使 GeoSpoof 能在每次页面加载的最开始运行，从而消除在保护生效前网站可能读取到您真实时区的短暂空隙。关闭即可撤销该权限。",
+    "description": "Tooltip explaining the Firefox-only Instant timezone protection toggle and the userScripts permission it requests."
   },
   "advanced_verbosityLevel": {
     "message": "详细级别",

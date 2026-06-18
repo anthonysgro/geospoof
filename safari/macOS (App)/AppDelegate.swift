@@ -467,6 +467,12 @@ struct MacSettingsView: View {
                 TipJarView()
 
                 Section {
+                    Link(destination: URL(string: "https://github.com/anthonysgro/geospoof")!) {
+                        Label("View Source on GitHub", systemImage: "chevron.left.forwardslash.chevron.right")
+                    }
+                }
+
+                Section {
                     Link(destination: URL(string: "https://www.geospoof.com/support")!) {
                         Label("Help & Support", systemImage: "questionmark.circle")
                     }
