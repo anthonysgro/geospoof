@@ -8,6 +8,7 @@ export default defineConfig({
   define: {
     __SAFARI__: "false",
     __CHROMIUM__: "false",
+    __FIREFOX__: "true",
   },
   test: {
     globals: true,
