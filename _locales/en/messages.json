@@ -359,13 +359,17 @@
     "message": "⚠️ Estimated (API unavailable)",
     "description": "Inline note shown when timezone data is estimated rather than authoritative."
   },
-  "details_webrtcActive": {
-    "message": "✓ Active\n\nRTCPeerConnection is wrapped to suppress ICE candidate gathering.\nThis prevents WebRTC from leaking your real IP address.",
-    "description": "Body text shown in the WebRTC details when protection is active."
+  "details_webrtcActiveStatus": {
+    "message": "✓ Active",
+    "description": "Status label shown in the WebRTC details when protection is active."
   },
-  "details_webrtcInactive": {
-    "message": "✗ Inactive\n\nWebRTC can leak your real IP address even when using a VPN.",
-    "description": "Body text shown in the WebRTC details when protection is inactive."
+  "details_webrtcInactiveStatus": {
+    "message": "✗ Inactive",
+    "description": "Status label shown in the WebRTC details when protection is inactive."
+  },
+  "details_webrtcInactiveNote": {
+    "message": "WebRTC can leak your real IP address even when using a VPN.",
+    "description": "Caption shown under the WebRTC status when protection is inactive."
   },
   "details_section_geolocation": {
     "message": "Geolocation",
@@ -379,6 +383,30 @@
     "message": "WebRTC",
     "description": "Header for the WebRTC overrides section."
   },
+  "details_section_dateTime": {
+    "message": "Date & Time",
+    "description": "Header for the date/time overrides section."
+  },
+  "details_section_temporal": {
+    "message": "Temporal",
+    "description": "Header for the Temporal API overrides section."
+  },
+  "details_section_xslt": {
+    "message": "XSLT / EXSLT",
+    "description": "Header for the XSLT/EXSLT overrides section."
+  },
+  "details_section_workers": {
+    "message": "Workers",
+    "description": "Header for the worker timezone-propagation overrides section."
+  },
+  "details_section_antiFingerprinting": {
+    "message": "Anti-Fingerprinting & Structural",
+    "description": "Header for the anti-fingerprinting and structural overrides section."
+  },
+  "details_keyOverrides": {
+    "message": "Key Overrides (where available)",
+    "description": "Title of the summary line above the grouped list of overridden APIs."
+  },
   "advanced_button": {
     "message": "Advanced",
     "description": "Button that opens the advanced-settings drawer."
@@ -390,6 +418,14 @@
   "advanced_earlyTz": {
     "message": "Instant timezone protection",
     "description": "Label for the Firefox-only toggle that grants the userScripts permission to spoof synchronous timezone surfaces from the very first script on a page."
+  },
+  "earlyTz_infoAriaLabel": {
+    "message": "More info about Instant timezone protection",
+    "description": "Accessible label on the Instant timezone protection info icon."
+  },
+  "earlyTz_tooltip": {
+    "message": "Firefox only. Turning this on requests the optional “userScripts” permission so GeoSpoof can run at the very start of each page load, closing a brief gap where a site could read your real timezone before protection kicks in. Turn it off to revoke the permission.",
+    "description": "Tooltip explaining the Firefox-only Instant timezone protection toggle and the userScripts permission it requests."
   },
   "advanced_verbosityLevel": {
     "message": "Verbosity Level",

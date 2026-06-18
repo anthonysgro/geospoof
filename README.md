@@ -120,6 +120,8 @@ When protection is enabled, GeoSpoof overrides browser APIs synchronously at `do
 - **Date & Timezone** — `Date` constructor, `Date.parse`, all `Date.prototype` getters and formatters, `getTimezoneOffset`
 - **Intl** — `Intl.DateTimeFormat` constructor and `resolvedOptions`
 - **Temporal** — `Temporal.Now.*` (feature-detected)
+- **XSLT / EXSLT** — `XSLTProcessor.prototype.transformToFragment/transformToDocument` rewrite EXSLT `date:date-time()` output (Firefox, where available)
+- **Workers** — `Worker`, `SharedWorker`, and `navigator.serviceWorker.register` wrapped to propagate the spoofed timezone into worker scopes
 - **WebRTC** — via browser privacy API, no script injection needed
 - **Anti-fingerprinting** — `Function.prototype.toString` returns `[native code]` for all overrides; iframes patched on insertion
 

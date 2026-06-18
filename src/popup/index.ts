@@ -7,7 +7,7 @@ import type { GeocodeResponse } from "@/shared/types/messages";
 import { loadSettings, applyTheme } from "./settings";
 import { closeOnboarding } from "./onboarding";
 import { displaySearchResults } from "./search";
-import { updateStatusBadge, formatWebRTCDetails, clearChildren } from "./ui";
+import { updateStatusBadge, renderWebRTCDetails, clearChildren } from "./ui";
 import { handleVpnSync } from "./vpn-sync";
 import { wireEarlyProtectionToggle } from "./early-protection";
 import { applyI18n, t } from "./i18n";
@@ -85,7 +85,7 @@ document.getElementById("webrtcToggle")?.addEventListener("change", (e: Event) =
 
       const detailWebRTC = document.getElementById("detailWebRTC");
       if (detailWebRTC) {
-        detailWebRTC.textContent = formatWebRTCDetails(enabled);
+        renderWebRTCDetails(detailWebRTC, enabled);
       }
     } catch (error: unknown) {
       console.error("Failed to set WebRTC protection:", error);
@@ -435,6 +435,23 @@ document.getElementById("vpnSyncInfo")?.addEventListener("click", (e: Event) => 
 document.addEventListener("click", (e: Event) => {
   const tooltip = document.getElementById("vpnSyncTooltip");
   const infoBtn = document.getElementById("vpnSyncInfo");
+  if (tooltip && e.target !== infoBtn && !infoBtn?.contains(e.target as Node)) {
+    tooltip.classList.remove("visible");
+  }
+});
+
+// Instant timezone protection info tooltip (Firefox-only row)
+document.getElementById("earlyTzInfo")?.addEventListener("click", (e: Event) => {
+  e.preventDefault();
+  e.stopPropagation();
+  const tooltip = document.getElementById("earlyTzTooltip");
+  tooltip?.classList.toggle("visible");
+});
+
+// Dismiss the early-tz tooltip when tapping elsewhere
+document.addEventListener("click", (e: Event) => {
+  const tooltip = document.getElementById("earlyTzTooltip");
+  const infoBtn = document.getElementById("earlyTzInfo");
   if (tooltip && e.target !== infoBtn && !infoBtn?.contains(e.target as Node)) {
     tooltip.classList.remove("visible");
   }

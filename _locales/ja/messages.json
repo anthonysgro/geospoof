@@ -359,13 +359,17 @@
     "message": "⚠️ 推定値 (API 利用不可)",
     "description": "Inline note shown when timezone data is estimated rather than authoritative."
   },
-  "details_webrtcActive": {
-    "message": "✓ 有効\n\nRTCPeerConnection がラップされ、ICE 候補の収集が抑制されます。\nこれにより WebRTC による真の IP アドレスの漏洩が防止されます。",
-    "description": "Body text shown in the WebRTC details when protection is active."
+  "details_webrtcActiveStatus": {
+    "message": "✓ 有効",
+    "description": "Status label shown in the WebRTC details when protection is active."
   },
-  "details_webrtcInactive": {
-    "message": "✗ 無効\n\nVPN を使用していても WebRTC が真の IP アドレスを漏洩する可能性があります。",
-    "description": "Body text shown in the WebRTC details when protection is inactive."
+  "details_webrtcInactiveStatus": {
+    "message": "✗ 無効",
+    "description": "Status label shown in the WebRTC details when protection is inactive."
+  },
+  "details_webrtcInactiveNote": {
+    "message": "VPN を使用していても WebRTC が真の IP アドレスを漏洩する可能性があります。",
+    "description": "Caption shown under the WebRTC status when protection is inactive."
   },
   "details_section_geolocation": {
     "message": "位置情報",
@@ -379,6 +383,30 @@
     "message": "WebRTC",
     "description": "Header for the WebRTC overrides section."
   },
+  "details_section_dateTime": {
+    "message": "日付と時刻",
+    "description": "Header for the date/time overrides section."
+  },
+  "details_section_temporal": {
+    "message": "Temporal",
+    "description": "Header for the Temporal API overrides section."
+  },
+  "details_section_xslt": {
+    "message": "XSLT / EXSLT",
+    "description": "Header for the XSLT/EXSLT overrides section."
+  },
+  "details_section_workers": {
+    "message": "Worker",
+    "description": "Header for the worker timezone-propagation overrides section."
+  },
+  "details_section_antiFingerprinting": {
+    "message": "アンチフィンガープリントと構造",
+    "description": "Header for the anti-fingerprinting and structural overrides section."
+  },
+  "details_keyOverrides": {
+    "message": "主なオーバーライド（利用可能な場合）",
+    "description": "Title of the summary line above the grouped list of overridden APIs."
+  },
   "advanced_button": {
     "message": "詳細設定",
     "description": "Button that opens the advanced-settings drawer."
@@ -390,6 +418,14 @@
   "advanced_earlyTz": {
     "message": "即時タイムゾーン保護",
     "description": "Label for the Firefox-only toggle that grants the userScripts permission to spoof synchronous timezone surfaces from the very first script on a page."
+  },
+  "earlyTz_infoAriaLabel": {
+    "message": "即時タイムゾーン保護の詳細",
+    "description": "Accessible label on the Instant timezone protection info icon."
+  },
+  "earlyTz_tooltip": {
+    "message": "Firefox のみ。オンにするとオプションの「userScripts」権限を要求し、GeoSpoof が各ページ読み込みの最初に実行できるようになります。これにより、保護が有効になる前にサイトが実際のタイムゾーンを読み取れるわずかな隙間を塞ぎます。権限を取り消すにはオフにしてください。",
+    "description": "Tooltip explaining the Firefox-only Instant timezone protection toggle and the userScripts permission it requests."
   },
   "advanced_verbosityLevel": {
     "message": "詳細レベル",

@@ -137,12 +137,24 @@ struct SpoofDetailsView: View {
                 "Intl.DateTimeFormat.prototype.formatRange() / formatRangeToParts()",
             ]))
 
-            groups.append(APICategory(title: "Temporal (where available)", apis: [
+            groups.append(APICategory(title: "Temporal", apis: [
                 "Temporal.Now.timeZoneId()",
                 "Temporal.Now.plainDateTimeISO()",
                 "Temporal.Now.plainDateISO()",
                 "Temporal.Now.plainTimeISO()",
                 "Temporal.Now.zonedDateTimeISO()",
+            ]))
+
+            groups.append(APICategory(title: "XSLT / EXSLT", apis: [
+                "XSLTProcessor.prototype.transformToFragment()",
+                "XSLTProcessor.prototype.transformToDocument()",
+                "EXSLT date:date-time() (result rewriting)",
+            ]))
+
+            groups.append(APICategory(title: "Workers", apis: [
+                "Worker (constructor wrapper)",
+                "SharedWorker (constructor wrapper)",
+                "navigator.serviceWorker.register()",
             ]))
         }
 
@@ -176,7 +188,7 @@ struct SpoofDetailsView: View {
                 let total = groups.reduce(0) { $0 + $1.apis.count }
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Key Overrides")
+                    Text("Key Overrides (where available)")
                         .font(.subheadline.weight(.semibold))
                     Text("\(total) JavaScript APIs are intercepted across \(groups.count) groups while protection is active. Expand a group for the full list.")
                         .font(.caption)

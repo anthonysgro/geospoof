@@ -489,13 +489,35 @@
             <span data-i18n="advanced_button">Advanced</span>
           </button>
           <div class="advanced-content" id="advancedContent" style="display: none">
-            <label class="toggle-label" id="earlyTzRow" style="display: none">
-              <span data-i18n="advanced_earlyTz">Instant timezone protection</span>
+            <label class="toggle-label" id="earlyTzRow" for="earlyTzToggle" style="display: none">
+              <span class="label-with-info">
+                <span data-i18n="advanced_earlyTz">Instant timezone protection</span>
+                <button
+                  type="button"
+                  class="info-icon"
+                  id="earlyTzInfo"
+                  aria-label="More info about Instant timezone protection"
+                  data-i18n-aria-label="earlyTz_infoAriaLabel"
+                >
+                  ⓘ
+                </button>
+              </span>
               <div class="toggle-wrapper">
                 <input type="checkbox" id="earlyTzToggle" />
                 <span class="toggle-slider"></span>
               </div>
             </label>
+            <div
+              class="info-tooltip"
+              id="earlyTzTooltip"
+              role="tooltip"
+              data-i18n="earlyTz_tooltip"
+            >
+              Firefox only. Turning this on requests the optional “userScripts” permission so
+              GeoSpoof can run at the very start of each page load, closing a brief gap where a site
+              could read your real timezone before protection kicks in. Turn it off to revoke the
+              permission.
+            </div>
             <label class="toggle-label">
               <span data-i18n="advanced_debugLogging">Debug Logging</span>
               <div class="toggle-wrapper">
@@ -523,16 +545,19 @@
                 </select>
               </label>
             </div>
-            <div class="coffee-row" id="coffeeRow">
-              <a
-                href="https://buymeacoffee.com/sgro"
-                target="_blank"
-                class="coffee-link"
-                data-i18n="advanced_coffee"
-                >☕ Buy me a coffee</a
-              >
+            <div class="advanced-footer">
+              <span class="advanced-footer-coffee" id="coffeeRow">
+                <a
+                  href="https://buymeacoffee.com/sgro"
+                  target="_blank"
+                  class="coffee-link"
+                  data-i18n="advanced_coffee"
+                  >☕ Buy me a coffee</a
+                >
+                <span class="advanced-footer-sep" aria-hidden="true">·</span>
+              </span>
+              <span class="version-label" id="versionLabel"></span>
             </div>
-            <div class="version-label" id="versionLabel"></div>
           </div>
         </div>
       </div>

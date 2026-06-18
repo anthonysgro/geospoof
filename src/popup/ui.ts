@@ -6,102 +6,337 @@
 import type { Settings, Location, Timezone, LocationName } from "@/shared/types/settings";
 import { t } from "./i18n";
 
-export function formatLocationDetails(
-  location: Location | null,
-  locationName: LocationName | null
-): string {
-  if (!location) return t("details_notConfigured") || "Not configured";
+/** Append a label/value row (mirrors the native iOS `LabeledRow`). */
+function appendDetailRow(container: HTMLElement, label: string, value: string): void {
+  const row = document.createElement("div");
+  row.className = "detail-row";
 
-  let details = `${t("details_latitudeLabel") || "Latitude"}: ${location.latitude.toFixed(6)}\n`;
-  details += `${t("details_longitudeLabel") || "Longitude"}: ${location.longitude.toFixed(6)}\n`;
-  details += `${t("details_accuracyLabel") || "Accuracy"}: ±${location.accuracy}m\n`;
+  const labelEl = document.createElement("span");
+  labelEl.className = "detail-row-label";
+  labelEl.textContent = label;
 
-  if (locationName && locationName.displayName) {
-    details += `\n${t("details_locationLabel") || "Location"}: ${locationName.displayName}`;
-  }
+  const valueEl = document.createElement("span");
+  valueEl.className = "detail-row-value";
+  valueEl.textContent = value;
 
-  return details;
+  row.append(labelEl, valueEl);
+  container.appendChild(row);
 }
 
-export function formatTimezoneDetails(timezone: Timezone | null): string {
-  if (!timezone) return t("details_notConfigured") || "Not configured";
+export function renderLocationDetails(
+  container: HTMLElement,
+  location: Location | null,
+  locationName: LocationName | null
+): void {
+  clearChildren(container);
+
+  if (!location) {
+    container.classList.remove("detail-rows");
+    container.textContent = t("details_notConfigured") || "Not configured";
+    return;
+  }
+
+  container.classList.add("detail-rows");
+  appendDetailRow(
+    container,
+    t("details_latitudeLabel") || "Latitude",
+    location.latitude.toFixed(6)
+  );
+  appendDetailRow(
+    container,
+    t("details_longitudeLabel") || "Longitude",
+    location.longitude.toFixed(6)
+  );
+  appendDetailRow(container, t("details_accuracyLabel") || "Accuracy", `±${location.accuracy}m`);
+
+  if (locationName && locationName.displayName) {
+    appendDetailRow(container, t("details_locationLabel") || "Location", locationName.displayName);
+  }
+}
+
+export function renderTimezoneDetails(container: HTMLElement, timezone: Timezone | null): void {
+  clearChildren(container);
+
+  if (!timezone) {
+    container.classList.remove("detail-rows");
+    container.textContent = t("details_notConfigured") || "Not configured";
+    return;
+  }
+
+  container.classList.add("detail-rows");
 
   const offsetHours = Math.floor(Math.abs(timezone.offset) / 60);
   const offsetMinutes = Math.abs(timezone.offset) % 60;
   const sign = timezone.offset >= 0 ? "+" : "-";
   const offsetStr = `UTC${sign}${String(offsetHours).padStart(2, "0")}:${String(offsetMinutes).padStart(2, "0")}`;
 
-  let details = `${t("details_identifierLabel") || "Identifier"}: ${timezone.identifier}\n`;
-  details += `${t("details_offsetLabel") || "Offset"}: ${offsetStr}\n`;
   const dstMinutes = String(timezone.dstOffset);
-  const dstLabel = t("details_dstOffsetLabel") || "DST Offset";
   const dstValue = t("details_dstOffsetMinutes", [dstMinutes]) || `${dstMinutes} minutes`;
-  details += `${dstLabel}: ${dstValue}`;
+
+  appendDetailRow(container, t("details_identifierLabel") || "Identifier", timezone.identifier);
+  appendDetailRow(container, t("details_offsetLabel") || "Offset", offsetStr);
+  appendDetailRow(container, t("details_dstOffsetLabel") || "DST Offset", dstValue);
 
   if (timezone.fallback) {
-    details += `\n\n${t("details_fallbackNote") || "⚠️ Estimated (API unavailable)"}`;
+    const note = document.createElement("div");
+    note.className = "detail-note";
+    note.textContent = t("details_fallbackNote") || "⚠️ Estimated (API unavailable)";
+    container.appendChild(note);
   }
-
-  return details;
 }
 
-export function formatWebRTCDetails(enabled: boolean): string {
-  // Wording is engine-agnostic because the protection mechanism
-  // differs by engine: Chromium/Firefox use the browser-level
-  // webRTCIPHandlingPolicy pref (strict on Chromium, proxy-gated on
-  // Firefox), Safari relies on the content-script RTCPeerConnection
-  // wrapper. Both paths block candidate gathering end-to-end; the
-  // user doesn't need to know which one fired.
+export function renderWebRTCDetails(container: HTMLElement, enabled: boolean): void {
+  // Wording is engine-agnostic because the protection mechanism differs by
+  // engine: Chromium/Firefox use the browser-level webRTCIPHandlingPolicy pref,
+  // Safari relies on the content-script RTCPeerConnection wrapper. Both block
+  // candidate gathering end-to-end; the user doesn't need to know which fired.
+  clearChildren(container);
+  container.classList.add("detail-rows");
+
+  const status = document.createElement("div");
+  status.className = enabled ? "detail-status active" : "detail-status";
+  status.textContent = enabled
+    ? t("details_webrtcActiveStatus") || "✓ Active"
+    : t("details_webrtcInactiveStatus") || "✗ Inactive";
+  container.appendChild(status);
+
   if (!enabled) {
-    return (
-      t("details_webrtcInactive") ||
-      "✗ Inactive\n\nWebRTC can leak your real IP address even when using a VPN."
-    );
+    const note = document.createElement("div");
+    note.className = "detail-note";
+    note.textContent =
+      t("details_webrtcInactiveNote") ||
+      "WebRTC can leak your real IP address even when using a VPN.";
+    container.appendChild(note);
   }
-  return (
-    t("details_webrtcActive") ||
-    "✓ Active\n\nRTCPeerConnection is wrapped to suppress ICE candidate gathering.\nThis prevents WebRTC from leaking your real IP address."
-  );
 }
 
-export function formatAPIsDetails(
-  enabled: boolean,
+/** One collapsible group of overridden APIs, mirroring the iOS Details screen. */
+interface ApiGroup {
+  /** Stable id used to track which groups are expanded across re-renders. */
+  id: string;
+  title: string;
+  apis: string[];
+}
+
+/**
+ * The full set of overridden APIs, grouped by surface — kept in parity with
+ * the native iOS/macOS Details screen (`SpoofDetailsView.swift`). Only groups
+ * whose protection is active are included; the anti-fingerprinting / structural
+ * overrides are always installed while protection is on.
+ */
+export function buildApiGroups(
   hasLocation: boolean,
   hasTimezone: boolean,
-  hasWebRTC: boolean = false
-): string {
-  if (!enabled) return t("details_noneDisabled") || "None (protection disabled)";
-
-  const sections: string[] = [];
+  hasWebRTC: boolean
+): ApiGroup[] {
+  const groups: ApiGroup[] = [];
 
   if (hasLocation) {
-    sections.push(t("details_section_geolocation") || "Geolocation");
-    sections.push("    • navigator.geolocation.getCurrentPosition()");
-    sections.push("    • navigator.geolocation.watchPosition()");
-    sections.push("    • navigator.geolocation.clearWatch()");
-    sections.push("    • navigator.permissions.query()");
+    groups.push({
+      id: "geolocation",
+      title: t("details_section_geolocation") || "Geolocation",
+      apis: [
+        "navigator.geolocation.getCurrentPosition()",
+        "navigator.geolocation.watchPosition()",
+        "navigator.geolocation.clearWatch()",
+        "navigator.permissions.query()",
+        "GeolocationCoordinates.prototype.latitude",
+        "GeolocationCoordinates.prototype.longitude",
+        "GeolocationCoordinates.prototype.accuracy",
+        "GeolocationCoordinates.prototype.altitude",
+        "GeolocationCoordinates.prototype.altitudeAccuracy",
+        "GeolocationCoordinates.prototype.heading",
+        "GeolocationCoordinates.prototype.speed",
+        "GeolocationCoordinates.prototype.toJSON()",
+        "GeolocationPosition.prototype.coords",
+        "GeolocationPosition.prototype.timestamp",
+        "GeolocationPosition.prototype.toJSON()",
+      ],
+    });
   }
 
   if (hasTimezone) {
-    sections.push(t("details_section_timezone") || "Timezone");
-    sections.push("    • Date.prototype.getTimezoneOffset()");
-    sections.push("    • Intl.DateTimeFormat() constructor");
-    sections.push("    • Intl.DateTimeFormat.resolvedOptions()");
-    sections.push("    • Date.prototype.toString()");
-    sections.push("    • Date.prototype.toTimeString()");
-    sections.push("    • Date.prototype.toLocaleString()");
-    sections.push("    • Date.prototype.toLocaleDateString()");
-    sections.push("    • Date.prototype.toLocaleTimeString()");
+    groups.push({
+      id: "datetime",
+      title: t("details_section_dateTime") || "Date & Time",
+      apis: [
+        "Date() constructor",
+        "Date.parse()",
+        "Date.prototype.getTimezoneOffset()",
+        "Date.prototype.getHours() / getMinutes() / getSeconds()",
+        "Date.prototype.getDate() / getDay() / getMonth() / getFullYear()",
+        "Date.prototype.setHours() / setMinutes() / setSeconds()",
+        "Date.prototype.setDate() / setMonth() / setFullYear()",
+        "Date.prototype.toString() / toDateString() / toTimeString()",
+        "Date.prototype.toLocaleString() / toLocaleDateString() / toLocaleTimeString()",
+        "Intl.DateTimeFormat()",
+        "Intl.DateTimeFormat.prototype.resolvedOptions()",
+        "Intl.DateTimeFormat.prototype.formatToParts()",
+        "Intl.DateTimeFormat.prototype.formatRange() / formatRangeToParts()",
+      ],
+    });
+
+    groups.push({
+      id: "temporal",
+      title: t("details_section_temporal") || "Temporal",
+      apis: [
+        "Temporal.Now.timeZoneId()",
+        "Temporal.Now.plainDateTimeISO()",
+        "Temporal.Now.plainDateISO()",
+        "Temporal.Now.plainTimeISO()",
+        "Temporal.Now.zonedDateTimeISO()",
+      ],
+    });
+
+    groups.push({
+      id: "xslt",
+      title: t("details_section_xslt") || "XSLT / EXSLT",
+      apis: [
+        "XSLTProcessor.prototype.transformToFragment()",
+        "XSLTProcessor.prototype.transformToDocument()",
+        "EXSLT date:date-time() (result rewriting)",
+      ],
+    });
+
+    groups.push({
+      id: "workers",
+      title: t("details_section_workers") || "Workers",
+      apis: [
+        "Worker (constructor wrapper)",
+        "SharedWorker (constructor wrapper)",
+        "navigator.serviceWorker.register()",
+      ],
+    });
   }
 
   if (hasWebRTC) {
-    sections.push(t("details_section_webrtc") || "WebRTC");
-    sections.push("    • RTCPeerConnection (content-script wrapper)");
-    sections.push("    • RTCPeerConnection.prototype.getStats");
-    sections.push("    • privacy.network.webRTCIPHandlingPolicy (where available)");
+    groups.push({
+      id: "webrtc",
+      title: t("details_section_webrtc") || "WebRTC",
+      apis: [
+        "RTCPeerConnection (constructor wrapper)",
+        "RTCPeerConnection.prototype.getStats()",
+        "privacy.network.webRTCIPHandlingPolicy (where available)",
+      ],
+    });
   }
 
-  return sections.length > 0 ? sections.join("\n") : t("details_none") || "None";
+  groups.push({
+    id: "antifingerprint",
+    title: t("details_section_antiFingerprinting") || "Anti-Fingerprinting & Structural",
+    apis: [
+      "Function.prototype.toString()",
+      "Document.prototype.lastModified",
+      "HTMLIFrameElement.prototype.contentWindow",
+      "HTMLIFrameElement.prototype.contentDocument",
+      "Node.prototype.appendChild() / insertBefore() / replaceChild()",
+      "Element.prototype.append() / prepend() / replaceWith()",
+      "Element.prototype.insertAdjacentElement() / insertAdjacentHTML()",
+      "Element.prototype.innerHTML (setter)",
+    ],
+  });
+
+  return groups;
+}
+
+/**
+ * Render the overridden APIs into `container` as iOS-style collapsible groups:
+ * a summary line followed by one expandable row per surface, each showing a
+ * count chip and a rotating chevron. Expansion state persists across re-renders
+ * via `expandedApiGroups`.
+ */
+export function renderAPIsDetails(
+  container: HTMLElement,
+  enabled: boolean,
+  hasLocation: boolean,
+  hasTimezone: boolean,
+  hasWebRTC: boolean
+): void {
+  clearChildren(container);
+
+  if (!enabled) {
+    container.classList.remove("api-groups");
+    container.textContent = t("details_noneDisabled") || "None (protection disabled)";
+    return;
+  }
+
+  const groups = buildApiGroups(hasLocation, hasTimezone, hasWebRTC);
+  if (groups.length === 0) {
+    container.classList.remove("api-groups");
+    container.textContent = t("details_none") || "None";
+    return;
+  }
+
+  container.classList.add("api-groups");
+
+  // Summary header introducing the grouped list.
+  const overview = document.createElement("div");
+  overview.className = "api-overview";
+
+  const overviewTitle = document.createElement("div");
+  overviewTitle.className = "api-overview-title";
+  overviewTitle.textContent = t("details_keyOverrides") || "Key Overrides (where available)";
+  overview.appendChild(overviewTitle);
+
+  container.appendChild(overview);
+
+  for (const group of groups) {
+    container.appendChild(buildApiGroupElement(group));
+  }
+}
+
+/** Tracks which API groups are currently expanded, keyed by group id. */
+const expandedApiGroups = new Set<string>();
+
+function buildApiGroupElement(group: ApiGroup): HTMLElement {
+  const wrapper = document.createElement("div");
+  wrapper.className = "api-group";
+
+  const isExpanded = expandedApiGroups.has(group.id);
+
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "api-group-toggle";
+  toggle.setAttribute("aria-expanded", String(isExpanded));
+
+  const chevron = document.createElement("span");
+  chevron.className = "api-group-chevron";
+  chevron.setAttribute("aria-hidden", "true");
+  chevron.textContent = "▶";
+
+  const title = document.createElement("span");
+  title.className = "api-group-title";
+  title.textContent = group.title;
+
+  const count = document.createElement("span");
+  count.className = "api-group-count";
+  count.textContent = String(group.apis.length);
+
+  toggle.append(chevron, title, count);
+
+  const list = document.createElement("div");
+  list.className = "api-group-list";
+  list.style.display = isExpanded ? "" : "none";
+  for (const api of group.apis) {
+    const item = document.createElement("div");
+    item.className = "api-group-item";
+    item.textContent = api;
+    list.appendChild(item);
+  }
+
+  toggle.addEventListener("click", () => {
+    const nowExpanded = !expandedApiGroups.has(group.id);
+    if (nowExpanded) {
+      expandedApiGroups.add(group.id);
+    } else {
+      expandedApiGroups.delete(group.id);
+    }
+    toggle.setAttribute("aria-expanded", String(nowExpanded));
+    list.style.display = nowExpanded ? "" : "none";
+  });
+
+  wrapper.append(toggle, list);
+  return wrapper;
 }
 
 export function updateDetailsView(settings: Settings): void {
@@ -111,16 +346,17 @@ export function updateDetailsView(settings: Settings): void {
   const detailAPIs = document.getElementById("detailAPIs");
 
   if (detailLocation) {
-    detailLocation.textContent = formatLocationDetails(settings.location, settings.locationName);
+    renderLocationDetails(detailLocation, settings.location, settings.locationName);
   }
   if (detailTimezone) {
-    detailTimezone.textContent = formatTimezoneDetails(settings.timezone);
+    renderTimezoneDetails(detailTimezone, settings.timezone);
   }
   if (detailWebRTC) {
-    detailWebRTC.textContent = formatWebRTCDetails(settings.webrtcProtection);
+    renderWebRTCDetails(detailWebRTC, settings.webrtcProtection);
   }
   if (detailAPIs) {
-    detailAPIs.textContent = formatAPIsDetails(
+    renderAPIsDetails(
+      detailAPIs,
       settings.enabled,
       !!settings.location,
       !!settings.timezone,
