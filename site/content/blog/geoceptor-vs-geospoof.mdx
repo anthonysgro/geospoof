@@ -1,0 +1,231 @@
+---
+title: "Geoceptor vs GeoSpoof: A Signal-by-Signal Comparison"
+description: "Both extensions spoof your browser location, but a real fingerprint test pulls them apart fast. We ran the same seven checks against each — WebRTC, timezone offsets, Date methods, and exotic worker surfaces — and screenshotted every result."
+date: "2026-06-17"
+author: "Anthony Sgro"
+tags: ["Privacy", "Comparison"]
+cover: "/images/blog/geoceptor-vs-geospoof/geospoof-vs-geoceptor.png"
+coverAlt: "GeoSpoof versus Geoceptor — a signal-by-signal comparison"
+keywords:
+  - "geoceptor vs geospoof"
+  - "geoceptor alternative"
+  - "best location spoofing extension"
+  - "browser location spoofer comparison"
+  - "webrtc leak location spoofer"
+answer: "Geoceptor and GeoSpoof both change your browser's reported location, but on a full fingerprint test GeoSpoof keeps every signal consistent while Geoceptor leaks several. In our runs Geoceptor exposed the real IP through WebRTC, ignored historical timezone offsets, returned wrong values from Date.getHours/setHours and the Date string methods, and failed on blob-URL, data-URL, and nested workers. GeoSpoof passed all of those. Both handled Intl formatting correctly."
+---
+
+Changing the location a website sees is the easy part. Any extension can set
+`navigator.geolocation` to coordinates in Paris. The hard part is making every
+*other* signal agree, because a site that catches one disagreement doesn't see
+Paris — it sees someone pretending to be in Paris, which is worse than not
+hiding at all.
+
+So instead of comparing feature lists, we put [Geoceptor](https://geoceptor.com)
+and [GeoSpoof](/) through the same test: our own
+[browser location test page](/verify), which probes the full stack of signals a
+real fingerprinting script would check. Same browser, same target location, same
+seven checks. Every screenshot below is a live result.
+
+## How the test works
+
+The [verify page](/verify) doesn't just read back the location you set. It pulls
+each signal independently — WebRTC, the timezone offset, individual `Date`
+methods, locale formatting, and a set of exotic execution contexts — then checks
+whether they tell the same story. A green result means the signals are
+internally consistent. A red one means a site could spot the contradiction.
+
+If you want to follow along, install either extension, set a location, and open
+the test yourself. Nothing here is hand-picked; it's just what the page returns.
+
+## 1. The overview
+
+First, the top-level verdict with each extension active and spoofing to the same
+location.
+
+<Compare
+  leftLabel="GeoSpoof"
+  leftLight="/images/blog/geoceptor-vs-geospoof/geospoof-1-light.jpg"
+  leftDark="/images/blog/geoceptor-vs-geospoof/geospoof-1-dark.jpg"
+  rightLabel="Geoceptor"
+  rightLight="/images/blog/geoceptor-vs-geospoof/geoceptor-1-light.jpg"
+  rightDark="/images/blog/geoceptor-vs-geospoof/geoceptor-1-dark.jpg"
+  alt="The verify page summary with the extension active"
+  caption="GeoSpoof comes back clean; Geoceptor leaves several signals exposed."
+/>
+
+Geoceptor moves the location, but the summary flags exposed signals across
+WebRTC, the timezone offsets, `Date` components, date and time strings, and the
+advanced surfaces. GeoSpoof reports a clean, consistent result. The rest of the
+post is just walking through *why* — one signal at a time.
+
+## 2. WebRTC
+
+[WebRTC](https://browserleaks.com/webrtc) is the leak that bypasses VPNs, and
+it's the one that matters most: it can hand a site your real public IP directly,
+regardless of what your geolocation says.
+
+<Compare
+  leftLabel="GeoSpoof"
+  leftLight="/images/blog/geoceptor-vs-geospoof/geospoof-2-light.jpg"
+  leftDark="/images/blog/geoceptor-vs-geospoof/geospoof-2-dark.jpg"
+  rightLabel="Geoceptor"
+  rightLight="/images/blog/geoceptor-vs-geospoof/geoceptor-2-light.jpg"
+  rightDark="/images/blog/geoceptor-vs-geospoof/geoceptor-2-dark.jpg"
+  alt="WebRTC probe results"
+  caption="GeoSpoof patches WebRTC; Geoceptor doesn't protect it."
+/>
+
+Geoceptor leaves WebRTC untouched, so the real IP surfaces. A spoofed
+geolocation pointing at one country while WebRTC quietly reports an IP in another
+is exactly the kind of contradiction fingerprinting systems live for. GeoSpoof
+closes the surface so there's nothing to cross-check against.
+
+## 3. Timezone and offsets
+
+Setting the timezone *name* is easy. The trap is the **offset**, and
+specifically historical offsets — the UTC offset for a zone isn't constant,
+because daylight saving rules have changed over the years. A correct spoof has to
+return the right offset for *any* date, not just today.
+
+<Compare
+  leftLabel="GeoSpoof"
+  leftLight="/images/blog/geoceptor-vs-geospoof/geospoof-3-light.jpg"
+  leftDark="/images/blog/geoceptor-vs-geospoof/geospoof-3-dark.jpg"
+  rightLabel="Geoceptor"
+  rightLight="/images/blog/geoceptor-vs-geospoof/geoceptor-3-light.jpg"
+  rightDark="/images/blog/geoceptor-vs-geospoof/geoceptor-3-dark.jpg"
+  alt="Timezone and offset results, including historical dates"
+  caption="GeoSpoof gets every date right; Geoceptor sets the zone but mishandles historical offsets."
+/>
+
+Geoceptor changes the timezone correctly for the present, but doesn't account
+for historical offsets, so a `Date` constructed for a past year reports an offset
+that doesn't match the zone it claims. GeoSpoof computes the offset from the
+zone's full history, so it stays consistent no matter which date a script picks.
+
+## 4. Date components
+
+Scripts can read the clock through individual `Date` methods like `getHours()`
+and write to it with `setHours()`. These have to reflect the spoofed timezone,
+and they have to round-trip correctly.
+
+<Compare
+  leftLabel="GeoSpoof"
+  leftLight="/images/blog/geoceptor-vs-geospoof/geospoof-4-light.jpg"
+  leftDark="/images/blog/geoceptor-vs-geospoof/geospoof-4-dark.jpg"
+  rightLabel="Geoceptor"
+  rightLight="/images/blog/geoceptor-vs-geospoof/geoceptor-4-light.jpg"
+  rightDark="/images/blog/geoceptor-vs-geospoof/geoceptor-4-dark.jpg"
+  alt="Date component method results"
+  caption="GeoSpoof is correct; Geoceptor returns wrong values from getHours/setHours."
+/>
+
+Here Geoceptor gets `getHours` and `setHours` wrong — the local-time components
+don't line up with the timezone it's presenting, and the setter doesn't behave
+consistently with the getter. GeoSpoof returns the correct values for both.
+
+## 5. Date and time strings
+
+The `Date` object also stringifies itself, and those strings embed the timezone
+name and offset in plain text. `toString()`, `toTimeString()`, and
+`toLocaleTimeString()` all have to agree with everything above.
+
+<Compare
+  leftLabel="GeoSpoof"
+  leftLight="/images/blog/geoceptor-vs-geospoof/geospoof-5-light.jpg"
+  leftDark="/images/blog/geoceptor-vs-geospoof/geospoof-5-dark.jpg"
+  rightLabel="Geoceptor"
+  rightLight="/images/blog/geoceptor-vs-geospoof/geoceptor-5-light.jpg"
+  rightDark="/images/blog/geoceptor-vs-geospoof/geoceptor-5-dark.jpg"
+  alt="Date and time string method results"
+  caption="GeoSpoof's Date string methods match the spoofed zone; Geoceptor's disagree."
+/>
+
+Geoceptor returns the wrong `Date.toString`, `Date.toTimeString`, and
+`Date.toLocaleTimeString` — the strings still carry traces of the real timezone.
+A script doesn't even have to call a special API for this; it just formats a date
+and reads the offset out of the text. GeoSpoof gets all three right.
+
+## 6. Intl formatting
+
+Credit where it's due. The `Intl` API is another way to read the locale and
+timezone, and this is the one check both extensions pass.
+
+<Compare
+  leftLabel="GeoSpoof"
+  leftLight="/images/blog/geoceptor-vs-geospoof/geospoof-6-light.jpg"
+  leftDark="/images/blog/geoceptor-vs-geospoof/geospoof-6-dark.jpg"
+  rightLabel="Geoceptor"
+  rightLight="/images/blog/geoceptor-vs-geospoof/geoceptor-6-light.jpg"
+  rightDark="/images/blog/geoceptor-vs-geospoof/geoceptor-6-dark.jpg"
+  alt="Intl formatting results"
+  caption="Both handle Intl formatting correctly."
+/>
+
+Both Geoceptor and GeoSpoof return correct `Intl` formatting. If `Intl` were the
+only signal a site checked, either extension would do. It isn't, which is the
+whole point of the other six sections.
+
+## 7. Advanced surfaces
+
+The last check is the exotic stuff: code running in contexts that aren't the main
+page. Blob URLs, data URLs, and nested workers each get their own JavaScript
+environment, and a spoof that only patches the top-level window leaves these
+wide open.
+
+<Compare
+  leftLabel="GeoSpoof"
+  leftLight="/images/blog/geoceptor-vs-geospoof/geospoof-7-light.jpg"
+  leftDark="/images/blog/geoceptor-vs-geospoof/geospoof-7-dark.jpg"
+  rightLabel="Geoceptor"
+  rightLight="/images/blog/geoceptor-vs-geospoof/geoceptor-7-light.jpg"
+  rightDark="/images/blog/geoceptor-vs-geospoof/geoceptor-7-dark.jpg"
+  alt="Advanced execution surface results"
+  caption="GeoSpoof covers blob-URL, data-URL, and nested workers; Geoceptor leaks through them."
+/>
+
+Geoceptor gets blob-URL, data-URL, and nested workers wrong — spin up a worker
+through one of these and it reports the real environment, undoing the spoof from
+inside. These are the hardest surfaces to cover, and they're where a lot of
+extensions stop. GeoSpoof handles all three.
+
+## The scorecard
+
+| Signal | GeoSpoof | Geoceptor |
+| --- | --- | --- |
+| Geolocation (the easy part) | Pass | Pass |
+| WebRTC | Patched | Leaks real IP |
+| Timezone & historical offsets | Correct | Wrong offsets |
+| Date components (`getHours`/`setHours`) | Correct | Wrong |
+| Date & time strings | Correct | Wrong |
+| Intl formatting | Pass | Pass |
+| Advanced surfaces (blob/data/workers) | Covered | Leaks |
+
+## Why this matters
+
+None of these are obscure edge cases. WebRTC leaks are the first thing a
+privacy-aware site checks. Timezone offset and the `Date` string methods are
+read by routine fingerprinting libraries without any permission prompt. Workers
+are how modern apps run code off the main thread. Each leak on its own is a
+contradiction, and [contradictions are what get you
+flagged](/blog/how-websites-know-your-location) — a site cross-checks the
+signals and pounces on the one that disagrees.
+
+That's the difference the test surfaces: Geoceptor changes the location, but the
+supporting signals don't all follow. GeoSpoof's whole design goal is that they
+do, so a site checking any of them sees one coherent location instead of a seam.
+
+## Try it yourself
+
+Don't take our screenshots for it. Install either extension, point it somewhere,
+and run the [browser location test](/verify). The page checks the same signals
+against whatever you have active and shows you exactly which ones hold up.
+
+GeoSpoof is a Safari extension for iPhone, iPad, and Mac — one universal app:
+
+<AppStoreBadges campaign="blog-geoceptor-vs" />
+
+> We tested Geoceptor as it behaved on the date of this post; extensions change,
+> and a later version may close some of these gaps. The test page is public, so
+> you can always re-run the comparison yourself and see the current state.

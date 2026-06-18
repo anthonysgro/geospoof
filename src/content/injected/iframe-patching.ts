@@ -57,6 +57,7 @@ import {
 import { isAmbiguousDateString, computeEpochAdjustment } from "./timezone-helpers";
 import { getPaddedCoords } from "./geolocation";
 import { installLastModifiedOverride } from "./document-overrides";
+import { installXsltOverridesOn } from "./xslt-overrides";
 import { buildRTCPeerConnectionWrapper, installRTCGetStatsOverride } from "./webrtc";
 import { waitForSettings } from "./settings-listener";
 import { installDateGetterOverridesOn, type DateGetterOriginals } from "./date-getters";
@@ -1338,6 +1339,25 @@ export function patchIframeWindow(iframeWindow: Window): void {
   } catch (err) {
     logger.debug(
       "[lastModified-patch] outer try caught error (cross-origin or missing Document):",
+      err instanceof Error ? err.message : String(err)
+    );
+  }
+
+  // ── 9b. XSLT / EXSLT date-time override ───────────────────────────────
+  // The iframe realm has its own XSLTProcessor, so an EXSLT date:date-time()
+  // read through `iframe.contentWindow.XSLTProcessor` would bypass the
+  // top-level override. Patch the iframe realm's prototype too (Gecko-only
+  // in effect; a no-op where EXSLT isn't shipped).
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+    const iframeXsltCtor = (iframeWindow as any).XSLTProcessor as typeof XSLTProcessor | undefined;
+    if (iframeXsltCtor) {
+      installXsltOverridesOn(iframeXsltCtor);
+      logger.debug("[patchIframeWindow] section 9b (XSLT) complete");
+    }
+  } catch (err) {
+    logger.debug(
+      "[patchIframeWindow] section 9b (XSLT) threw:",
       err instanceof Error ? err.message : String(err)
     );
   }
