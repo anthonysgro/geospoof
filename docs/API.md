@@ -641,7 +641,7 @@ Rate Limit: 1 req/sec | Auth: None | Timeout: 5s | Retry: 3x exponential backoff
 
 ### Offline Timezone Lookup
 
-Uses `browser-geo-tz` npm package for offline coordinate-to-timezone resolution. No external API calls needed for timezone lookup.
+Uses `browser-geo-tz` npm package for offline coordinate-to-timezone resolution. No external geocoding API calls needed for timezone lookup — the boundary dataset is fetched as a version-scoped static asset from `geospoof.com/geo-tz/<version>/` (range-requested). See [TIMEZONE_GEO_DATA.md](TIMEZONE_GEO_DATA.md) for hosting, versioning, and the data-update runbook.
 
 `getTimezoneForCoordinates(lat, lng, ianaHint?)` resolves in priority order: (1) the offline `browser-geo-tz` boundary lookup, (2) the optional `ianaHint` — an IANA identifier from the winning geo service on the VPN-sync path, used when the boundary lookup throws or returns nothing, and (3) the crude longitude estimate (`Etc/GMT±N`) as a last resort. The hint is validated by format and guarded with a `try/catch` around `Intl` (it's external/untrusted). Longitude-estimate fallbacks are never cached or persisted, so a transient CDN failure retries on the next call. See [VPN_SYNC.md](VPN_SYNC.md#timezone-hint-resolution) for details.
 

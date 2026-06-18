@@ -1,7 +1,7 @@
 {
   "outputDirectory": ".output/public",
   "buildCommand": "npm run build",
-  "installCommand": "npm install",
+  "installCommand": "npm ci",
   "headers": [
     {
       "source": "/(.*)",

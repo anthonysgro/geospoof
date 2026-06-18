@@ -9,6 +9,7 @@ import { createLogger } from "@/shared/utils/debug-logger";
 import { getCacheKey } from "./geocoding";
 import { sessionGet, sessionSet, sessionClearNamespace } from "./session-cache";
 import { init as geoTzInit } from "browser-geo-tz";
+import geoTzData from "@/shared/geo-tz-data.json";
 
 const logger = createLogger("BG");
 
@@ -25,12 +26,23 @@ const logger = createLogger("BG");
 // location but leaves Date/Intl/Temporal/EXSLT reporting the user's REAL zone.
 //
 // The site copies the full, intact dataset out of the pinned `geo-tz` npm
-// package into `/geo-tz/` at build time (see site/scripts/copy-geo-tz-data.mjs)
-// and Vercel serves it with proper 206 range support and
-// `Access-Control-Allow-Origin: *`. Using the full `timezones.geojson` (not the
-// -1970 variant) gives complete land coverage and returns a real IANA zone for
-// coastal/boundary points instead of a fingerprintable Etc/GMT longitude bucket.
-const GEO_TZ_BASE = "https://geospoof.com/geo-tz";
+// package into `/geo-tz/<version>/` at build time (see
+// site/scripts/copy-geo-tz-data.mjs) and Vercel serves it with proper 206 range
+// support. Using the full `timezones.geojson` (not the -1970 variant) gives
+// complete land coverage and returns a real IANA zone for coastal/boundary
+// points instead of a fingerprintable Etc/GMT longitude bucket.
+//
+// The URL is VERSIONED by the geo-tz data version (src/shared/geo-tz-data.json,
+// the single source of truth the site build is guarded against). This is load-
+// bearing: the `.index.json` table-of-contents and the `.dat` it indexes are
+// fetched separately and cached `immutable` for a year. If we ever bump the
+// geo-tz data under a stable URL, a returning user could pair a stale cached
+// index with freshly-fetched `.dat` byte ranges from the new file — mismatched
+// offsets, silently wrong/garbage lookups, no error. Versioning the path means
+// new data lives at a new URL, so a cached index and the `.dat` it indexes can
+// never disagree. The site build fails loudly if the path version, the canonical
+// JSON, and the installed `geo-tz` package version don't all match.
+const GEO_TZ_BASE = `https://geospoof.com/geo-tz/${geoTzData.version}`;
 const _geoTz = geoTzInit(
   `${GEO_TZ_BASE}/timezones.geojson.geo.dat`,
   `${GEO_TZ_BASE}/timezones.geojson.index.json`

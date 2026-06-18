@@ -70,6 +70,35 @@ function referenceIntlOffset(date: Date, timezoneId: string): number {
     return 0;
   }
 }
+
+/**
+ * Fixed reference instant for the (fallback-only) config offset below. MUST be
+ * deterministic — never `new Date()` — so the arbitrary doesn't depend on when
+ * the suite runs. The implementation resolves offsets per-date via `Intl` from
+ * the identifier; the numeric `offset`/`dstOffset` fields are only used if that
+ * `Intl` path throws, which never happens in these tests, so the exact value is
+ * immaterial here — only its determinism is.
+ */
+const REFERENCE_INSTANT = new Date("2024-01-15T12:00:00Z");
+
+/**
+ * True when the spoofed-zone UTC offset is the same throughout a window around
+ * `epoch` — i.e. `epoch` is not on/near a DST transition.
+ *
+ * The epoch-adjustment properties below assert that a constructed instant,
+ * viewed in the spoofed zone, reproduces the input wall-clock time. At a
+ * spring-forward gap that wall-clock time does not exist, and at a fall-back
+ * fold it is ambiguous, so the property is undefined there. Those inputs are
+ * outside the property's domain, not failures — this guard excludes them
+ * deterministically (it depends only on the instant and the zone's real rules).
+ */
+function offsetStableAround(epoch: number, timezoneId: string): boolean {
+  const hours = 2 * 60 * 60 * 1000;
+  const here = referenceIntlOffset(new Date(epoch), timezoneId);
+  const before = referenceIntlOffset(new Date(epoch - hours), timezoneId);
+  const after = referenceIntlOffset(new Date(epoch + hours), timezoneId);
+  return here === before && here === after;
+}
 // ── Custom fast-check arbitraries ────────────────────────────────────
 
 /** Generate ambiguous date strings (no timezone indicator) */
@@ -227,7 +256,7 @@ const explicitDateStringArb = fc.oneof(
 /** Generate a timezone config object */
 const timezoneArb = fc.constantFrom(...ALL_TEST_ZONES).map((tz) => ({
   identifier: tz,
-  offset: referenceIntlOffset(new Date(), tz),
+  offset: referenceIntlOffset(REFERENCE_INSTANT, tz),
   dstOffset: 0,
 }));
 
@@ -275,6 +304,11 @@ describe("Date Constructor Spoofing Properties", () => {
         // is stable, so we verify the result's getTimezoneOffset matches the epoch shift.
         const constructedDate = cs.DateConstructor(dateStr);
         const resultEpoch = constructedDate.getTime();
+
+        // The constructed wall-clock time must exist unambiguously in the
+        // spoofed zone; skip DST-transition instants where it doesn't (see
+        // offsetStableAround).
+        fc.pre(offsetStableAround(resultEpoch, timezone.identifier));
 
         // The offset at the result date should match the epoch arithmetic
         const resultOffset = referenceIntlOffset(constructedDate, timezone.identifier);
@@ -404,6 +438,11 @@ describe("Date Constructor Spoofing Properties", () => {
           comps.second
         );
         const resultEpoch = result.getTime();
+
+        // The constructed wall-clock time must exist unambiguously in the
+        // spoofed zone; skip DST-transition instants where it doesn't (see
+        // offsetStableAround).
+        fc.pre(offsetStableAround(resultEpoch, timezone.identifier));
 
         // Verify: the offset at the result date matches the epoch shift
         const realOffset = cs.originals.getTimezoneOffset.call(originalDate);
@@ -545,7 +584,7 @@ describe("Date Constructor Spoofing Properties", () => {
         (tzId, year) => {
           const timezone = {
             identifier: tzId,
-            offset: referenceIntlOffset(new Date(), tzId),
+            offset: referenceIntlOffset(REFERENCE_INSTANT, tzId),
             dstOffset: 60,
           };
 

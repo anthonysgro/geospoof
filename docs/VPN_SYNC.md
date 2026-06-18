@@ -149,6 +149,8 @@ The `proxy` and `idle` permissions are declared in the shared manifest (`src/bui
 
 Manual map-pin locations carry no hint and behave as before.
 
+For how the boundary data is hosted, version-scoped, and updated, see [TIMEZONE_GEO_DATA.md](TIMEZONE_GEO_DATA.md).
+
 ## The Three Sync Paths
 
 | Path                  | Trigger                                                           | Cache                                                             | Gate                                                         | Endpoint cooldowns                         |
