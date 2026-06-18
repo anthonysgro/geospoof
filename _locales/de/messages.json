@@ -387,6 +387,10 @@
     "message": "Debug-Protokollierung",
     "description": "Label for the debug-logging toggle."
   },
+  "advanced_earlyTz": {
+    "message": "Sofortiger Zeitzonenschutz",
+    "description": "Label for the Firefox-only toggle that grants the userScripts permission to spoof synchronous timezone surfaces from the very first script on a page."
+  },
   "advanced_verbosityLevel": {
     "message": "Detailstufe",
     "description": "Label for the log-verbosity selector."

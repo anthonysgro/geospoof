@@ -387,6 +387,10 @@
     "message": "Registro de depuração",
     "description": "Label for the debug-logging toggle."
   },
+  "advanced_earlyTz": {
+    "message": "Proteção instantânea de fuso horário",
+    "description": "Label for the Firefox-only toggle that grants the userScripts permission to spoof synchronous timezone surfaces from the very first script on a page."
+  },
   "advanced_verbosityLevel": {
     "message": "Nível de detalhes",
     "description": "Label for the log-verbosity selector."
