@@ -745,6 +745,24 @@ function onTabRemoved(tabId: number): void {
  * are no-ops. Feature-detects `filterResponseData` at install time
  * and silently skips installation on engines that don't support it
  * (all non-Firefox engines).
+ *
+ * ## Respawn safety (why listeners register BEFORE any await)
+ *
+ * MV3 backgrounds are non-persistent: Firefox tears down the event page (and
+ * Chromium the service worker) when idle and respawns it on the next event.
+ * Only listeners registered SYNCHRONOUSLY during the top-level module run are
+ * re-registered on respawn and able to wake the background for their event.
+ * If we awaited `loadSettings()` / `browser.tabs.query()` before calling
+ * `addListener`, the webRequest listeners would be registered a microtask too
+ * late and would be lost on the first idle respawn — which is exactly how
+ * URL-based worker patching silently stopped working once the background went
+ * idle (the constructor still fired ANNOUNCE_WORKER_FETCH, but no filter was
+ * attached). So we register the listeners first, then prime the caches
+ * asynchronously; until priming lands the listeners short-circuit on
+ * `!cachedSettings` and pass requests through unpatched (the same safe
+ * fallback as a cold start). This function must therefore also be invoked
+ * synchronously at the top level of the background entry point, not only from
+ * `initialize()`.
  */
 export async function installWorkerRequestFilter(): Promise<void> {
   if (beforeRequestListener) return;
@@ -754,39 +772,7 @@ export async function installWorkerRequestFilter(): Promise<void> {
     return;
   }
 
-  // Prime the settings cache before the first listener invocation.
-  try {
-    cachedSettings = await loadSettings();
-  } catch (err) {
-    logger.warn(
-      "[worker-filter] failed to prime settings cache:",
-      err instanceof Error ? err.message : String(err)
-    );
-    // Continue — cachedSettings will remain undefined until the first
-    // settings update arrives. The listeners short-circuit on undefined.
-  }
-
-  // Seed the tab URL cache from existing tabs.
-  try {
-    const existingTabs = await browser.tabs.query({});
-    for (const tab of existingTabs) {
-      if (
-        tab.id != null &&
-        tab.url &&
-        (tab.url.startsWith("http://") || tab.url.startsWith("https://"))
-      ) {
-        tabPageUrlCache.set(tab.id, tab.url);
-      }
-    }
-    browser.tabs.onUpdated.addListener(onTabUpdated);
-    browser.tabs.onRemoved.addListener(onTabRemoved);
-  } catch (err) {
-    logger.warn(
-      "[worker-filter] failed to seed tab URL cache:",
-      err instanceof Error ? err.message : String(err)
-    );
-  }
-
+  // ── Synchronous: register the wake-critical listeners before any await ──
   try {
     const wr = browser.webRequest as unknown as WebRequestWithFilter;
     if (!wr.onBeforeRequest || !wr.onBeforeSendHeaders) {
@@ -814,6 +800,9 @@ export async function installWorkerRequestFilter(): Promise<void> {
       ["requestHeaders"]
     );
 
+    browser.tabs.onUpdated.addListener(onTabUpdated);
+    browser.tabs.onRemoved.addListener(onTabRemoved);
+
     logger.info(
       "[worker-filter] installed webRequest listeners (onBeforeRequest + onBeforeSendHeaders)"
     );
@@ -822,6 +811,43 @@ export async function installWorkerRequestFilter(): Promise<void> {
     beforeSendHeadersListener = null;
     logger.warn(
       "[worker-filter] install failed:",
+      err instanceof Error ? err.message : String(err)
+    );
+    return;
+  }
+
+  // ── Asynchronous priming (NOT on the wake path) ──
+  //
+  // Prime the settings cache. Until this lands the listeners short-circuit on
+  // `!cachedSettings` and pass through. broadcastSettingsToTabs also refreshes
+  // this on every settings change, so a missed prime self-heals.
+  try {
+    cachedSettings = await loadSettings();
+  } catch (err) {
+    logger.warn(
+      "[worker-filter] failed to prime settings cache:",
+      err instanceof Error ? err.message : String(err)
+    );
+  }
+
+  // Seed the tab URL cache from existing tabs. Misses self-heal via
+  // onTabUpdated, and tab-less SharedWorker requests fall back to
+  // documentUrl/originUrl in classifyRequest, so a slow seed only delays
+  // dedicated-worker coverage briefly.
+  try {
+    const existingTabs = await browser.tabs.query({});
+    for (const tab of existingTabs) {
+      if (
+        tab.id != null &&
+        tab.url &&
+        (tab.url.startsWith("http://") || tab.url.startsWith("https://"))
+      ) {
+        tabPageUrlCache.set(tab.id, tab.url);
+      }
+    }
+  } catch (err) {
+    logger.warn(
+      "[worker-filter] failed to seed tab URL cache:",
       err instanceof Error ? err.message : String(err)
     );
   }
