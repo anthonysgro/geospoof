@@ -40,6 +40,22 @@ const posts = defineCollection({
      */
     answer: z.string().optional(),
     /**
+     * Frequently-asked questions rendered as a visible FAQ section at the foot
+     * of the post AND emitted as FAQPage structured data (JSON-LD). This is the
+     * highest-leverage SEO surface for comparison / "X vs Y" posts: it targets
+     * People-Also-Ask boxes and long-tail question queries. Phrase each
+     * `question` exactly as a searcher would type it; keep each `answer`
+     * self-contained (1–3 sentences, plain text — no Markdown).
+     */
+    faq: z
+      .array(
+        z.object({
+          question: z.string(),
+          answer: z.string(),
+        })
+      )
+      .default([]),
+    /**
      * Cover image, shown on the listing card and at the top of the post.
      * Path is relative to the site root, e.g. "/images/blog/my-post.svg".
      */

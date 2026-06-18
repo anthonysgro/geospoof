@@ -799,13 +799,48 @@ function buildValueGroups(
   // the reported wall-clock by the real-vs-spoofed offset (tens of minutes
   // to hours), well outside this tolerance; the slack only absorbs the
   // sub-second gap between capturing `now` and reading each surface.
-  const nowParts = {
-    y: now.getFullYear(),
-    mo: now.getMonth(),
-    d: now.getDate(),
-    h: now.getHours(),
-    mi: now.getMinutes(),
-  }
+  //
+  // CRITICAL: this reference is derived from `Intl`, NOT from `Date`'s own
+  // getters. Intl converts the real epoch (Date's underlying timestamp, which a
+  // timezone spoof never shifts) into the target zone on its own, so it stays a
+  // trustworthy "spoofed now" even when an extension leaks the real zone
+  // through the Date getters. Grading against `now.getHours()` etc. was a
+  // false-pass bug: an extension that leaked the real zone in BOTH the Date
+  // getters AND `lastModified` would agree with itself and grade "ok" (this is
+  // exactly how a competitor that doesn't patch the Document lastModified
+  // getter slipped through as a pass). Falls back to Date getters only if Intl
+  // is unavailable.
+  const nowParts = (() => {
+    try {
+      const parts = new Intl.DateTimeFormat("en-US", {
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+        hour: "numeric",
+        minute: "numeric",
+        hour12: false,
+      }).formatToParts(now)
+      const get = (t: string) => parts.find((p) => p.type === t)?.value ?? ""
+      let h = parseInt(get("hour"), 10)
+      if (h === 24) h = 0 // hour12:false renders midnight as "24"
+      const y = parseInt(get("year"), 10)
+      const mo = parseInt(get("month"), 10) - 1
+      const d = parseInt(get("day"), 10)
+      const mi = parseInt(get("minute"), 10)
+      if ([y, mo, d, h, mi].every((n) => Number.isFinite(n))) {
+        return { y, mo, d, h, mi }
+      }
+    } catch {
+      /* fall through to Date getters */
+    }
+    return {
+      y: now.getFullYear(),
+      mo: now.getMonth(),
+      d: now.getDate(),
+      h: now.getHours(),
+      mi: now.getMinutes(),
+    }
+  })()
   const NOW_TOLERANCE_MS = 2 * 60 * 1000
   /**
    * Grade a wall-clock that should equal "now" in the spoofed zone.

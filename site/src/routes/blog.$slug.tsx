@@ -86,6 +86,22 @@ function BlogPostPage() {
     keywords: post.keywords.join(", "),
   }
 
+  // FAQPage structured data — only emitted when the post defines FAQs. This is
+  // what makes a comparison post eligible for People-Also-Ask / FAQ rich
+  // results on the competitor-name queries we're targeting.
+  const faqSchema =
+    post.faq.length > 0
+      ? {
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: post.faq.map((item) => ({
+            "@type": "Question",
+            name: item.question,
+            acceptedAnswer: { "@type": "Answer", text: item.answer },
+          })),
+        }
+      : null
+
   return (
     <div className="min-h-screen bg-(--color-canvas)">
       <SkipLink />
@@ -146,6 +162,26 @@ function BlogPostPage() {
             <div>
               <MDXContent code={post.mdx} components={mdxComponents} />
             </div>
+
+            {post.faq.length > 0 && (
+              <section className="mt-12 border-t border-(--color-canvas-border) pt-8">
+                <h2 className="mb-6 text-2xl font-bold text-(--color-canvas-foreground)">
+                  Frequently asked questions
+                </h2>
+                <dl className="space-y-6">
+                  {post.faq.map((item) => (
+                    <div key={item.question}>
+                      <dt className="mb-1.5 text-lg font-semibold text-(--color-canvas-foreground)">
+                        {item.question}
+                      </dt>
+                      <dd className="text-body-base text-(--color-canvas-muted)">
+                        {item.answer}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            )}
           </article>
         </Section>
       </main>
@@ -155,6 +191,12 @@ function BlogPostPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
       />
+      {faqSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+        />
+      )}
     </div>
   )
 }

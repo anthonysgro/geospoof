@@ -1,5 +1,7 @@
 import * as React from "react"
+import type { Platform } from "@/hooks/use-platform"
 import { cn } from "@/lib/utils"
+import { usePlatform } from "@/hooks/use-platform"
 
 /**
  * Theme-aware screenshot. Renders both the light and dark variant and lets CSS
@@ -149,10 +151,113 @@ export function AppStoreBadges({
   )
 }
 
+/**
+ * Platform-aware download row for blog posts. GeoSpoof ships on Firefox, Chrome
+ * (Brave/Edge), and the App Store (iOS/iPadOS + macOS Safari); this surfaces all
+ * three and highlights — and reorders to the front — the store matching the
+ * visitor's browser. Reuses the same store URLs and brand icons as the home
+ * page's download section so links stay in one mental model. `campaign` feeds
+ * the UTM / App Store attribution token.
+ *
+ * Built from inline-level spans (styled as blocks) because MDX may wrap a
+ * standalone component in a paragraph; block <div>s there would be invalid
+ * nesting — same defensive pattern as ThemeImage / Compare above.
+ */
+function DownloadCTA({ campaign = "blog" }: { campaign?: string }) {
+  const platform = usePlatform()
+
+  const stores: Array<{
+    platform: Exclude<Platform, "unknown">
+    name: string
+    detail: string
+    icon: string
+    cta: string
+    href: string
+  }> = [
+    {
+      platform: "firefox",
+      name: "Firefox",
+      detail: "Desktop & Android",
+      icon: "/images/stores/firefox-store-icon.png",
+      cta: "Add to Firefox",
+      href: `https://addons.mozilla.org/firefox/addon/geo-spoof/?utm_source=geospoof.com&utm_medium=blog&utm_campaign=${campaign}`,
+    },
+    {
+      platform: "chromium",
+      name: "Chrome",
+      detail: "Chrome, Brave & Edge",
+      icon: "/images/stores/chrome-store-icon.png",
+      cta: "Add to Chrome",
+      href: `https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje?utm_source=geospoof.com&utm_medium=blog&utm_campaign=${campaign}`,
+    },
+    {
+      platform: "apple",
+      name: "iPhone, iPad & Mac",
+      detail: "Safari via the App Store",
+      icon: "/images/stores/safari-icon.png",
+      cta: "Get on the App Store",
+      href: `https://apps.apple.com/app/apple-store/id6765719745?pt=128299974&ct=${campaign}&mt=8`,
+    },
+  ]
+
+  const recommended = stores.find((s) => s.platform === platform)
+  // Recommended store first after hydration; stable order on the server (where
+  // platform is "unknown") so markup matches and hydration doesn't warn.
+  const ordered = recommended
+    ? [recommended, ...stores.filter((s) => s !== recommended)]
+    : stores
+
+  return (
+    <span className="my-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      {ordered.map((s) => {
+        const isRecommended = s === recommended
+        return (
+          <a
+            key={s.platform}
+            href={s.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              "relative flex flex-col items-center gap-2 rounded-md-brand border p-4 text-center no-underline!",
+              "transition-all duration-200 hover:border-(--color-brand) hover:shadow-md",
+              "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)",
+              isRecommended
+                ? "border-(--color-brand) ring-1 ring-brand/40"
+                : "border-(--color-canvas-border)"
+            )}
+          >
+            {isRecommended && (
+              <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-(--color-brand) px-2 py-0.5 text-xs font-semibold text-white">
+                Your browser
+              </span>
+            )}
+            <img
+              src={s.icon}
+              alt=""
+              aria-hidden="true"
+              width={40}
+              height={40}
+              className="h-10 w-10 object-contain"
+            />
+            <span className="text-sm font-bold text-(--color-canvas-foreground)">
+              {s.name}
+            </span>
+            <span className="text-xs text-(--color-canvas-muted)">{s.detail}</span>
+            <span className="mt-1 inline-block text-xs font-semibold text-(--color-brand)">
+              {s.cta} →
+            </span>
+          </a>
+        )
+      })}
+    </span>
+  )
+}
+
 export const mdxComponents = {
   ThemeImage,
   Compare,
   AppStoreBadges,
+  DownloadCTA,
   h2: (props: React.ComponentProps<"h2">) => (
     <h2
       className="mt-12 mb-4 scroll-mt-24 text-2xl font-bold text-(--color-canvas-foreground)"
