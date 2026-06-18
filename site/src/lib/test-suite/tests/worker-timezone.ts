@@ -573,15 +573,16 @@ worker.postMessage(null)
 })
 
 // ---------------------------------------------------------------------------
-// Known limitation: module Workers
+// Module Workers — closed on Firefox (filterResponseData), known limitation
+// elsewhere (same engine split as the other URL-based worker tests)
 // ---------------------------------------------------------------------------
 
 const moduleWorkerTimezoneTest = buildBehavioralTest<string>({
-  id: "known-limitation.worker.module-timezone",
-  group: "known-limitations",
-  name: "Module Worker reports the spoofed Intl timezone",
+  id: "tampering.worker.module-timezone",
+  group: urlWorkerGroup,
+  name: "Module Worker honors the spoofed Intl timezone",
   description:
-    "A module Worker (`new Worker('/workers/module-probe.js', { type: 'module' })`) SHOULD report the same timezone as the main thread, but the injected script cannot intercept module Workers the same way it handles classic Workers. Blob URLs break relative `import` statements inside the Worker — module Workers resolve imports relative to the Worker's script URL, and a blob URL has no meaningful base path for resolution. Closing this would require either fetching and rewriting every `import` statement at Worker construction time (essentially building a bundler) or intercepting the module fetch at the network layer via a ServiceWorker. Both are significant undertakings beyond the scope of a content-script override. Documented as a known limitation pending a future implementation.",
+    "A module Worker (`new Worker('/workers/module-probe.js', { type: 'module' })`) must report the same timezone as the main thread. The content-script Worker wrapper can't help here — module Workers resolve `import` statements relative to their script URL, and the blob-wrap technique used for classic Workers has no meaningful base path, which would break those imports. On Firefox the extension instead prepends the spoofing payload to the module Worker's script response at the network layer via `webRequest.filterResponseData`, leaving the URL (and therefore import resolution) intact — so the test passes. On Chromium-based browsers and Safari, where `filterResponseData` doesn't exist, module Workers can't be patched without a fundamentally different architecture, so this remains a documented known limitation on those engines.",
   technique:
     "Construct a module Worker from /workers/module-probe.js, send a start message, compare the reported timezone to the main thread's post-settlement timezone. When they differ, the Worker leaked the real system zone.",
   codeSnippet: `const worker = new Worker("/workers/module-probe.js", { type: "module" })

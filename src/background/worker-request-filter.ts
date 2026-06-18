@@ -179,6 +179,19 @@ interface WebRequestDetails {
   method: string;
   tabId: number;
   frameId: number;
+  /**
+   * Firefox-only: the URL of the document that initiated the request. For a
+   * worker script fetch this is the document that constructed the worker —
+   * the reliable origin signal for tab-less SharedWorker requests where
+   * `tabId === -1`. Absent on engines without `filterResponseData` (which
+   * never reach this code) and on some redirected/proxied requests.
+   */
+  documentUrl?: string;
+  /**
+   * Firefox-only: the origin URL that triggered the request. Fallback origin
+   * signal when `documentUrl` is absent.
+   */
+  originUrl?: string;
 }
 
 interface WebRequestDetailsWithHeaders extends WebRequestDetails {
@@ -300,6 +313,8 @@ export function _classifyRequestForTest(details: {
   method: string;
   tabId: number;
   frameId: number;
+  documentUrl?: string;
+  originUrl?: string;
   requestHeaders?: { name: string; value?: string }[];
 }): Decision {
   return classifyRequest(details);
@@ -343,7 +358,6 @@ export function isSameOriginWorker(workerUrl: string, tabPageUrl: string | undef
 }
 
 // ── Feature detection ────────────────────────────────────────────────
-
 /**
  * Return true when the current engine exposes the
  * `webRequest.filterResponseData` API. Firefox (all MV3 versions
@@ -481,13 +495,32 @@ function classifyRequest(details: WebRequestDetailsWithHeaders): Decision {
   // Already a pass — no origin check needed.
   if (baseDecision === "pass") return "pass";
 
-  // Origin gate: only patch same-registrable-domain workers.
-  const tabPageUrl = tabPageUrlCache.get(details.tabId);
-  if (!tabPageUrl) return "pass"; // no cached URL / tabId === -1 / unknown tab → safe fallback
+  // Never patch service workers. `filterResponseData` *can* prepend our
+  // payload to the SW script on first install, but the browser then caches the
+  // modified bytes and the registered SW keeps running our payload across page
+  // loads — even after the extension is disabled — until the site ships a new
+  // script or the user clears site data. That persistence is a footgun, and SW
+  // spoofing is unreliable anyway: an already-installed SW is served from the
+  // browser's cache and never re-fetched through the filter. Leave SW scripts
+  // untouched (documented known limitation).
+  if (dest === "serviceworker") return "pass";
+
+  // Resolve the URL of the document that initiated this worker fetch.
+  //
+  //   - Dedicated / module workers carry the spawning page's tabId, so the
+  //     per-tab cache answers directly.
+  //   - SharedWorkers are NOT bound to a tab (Firefox reports tabId === -1), so
+  //     the cache can't help. Firefox does, however, populate `documentUrl` /
+  //     `originUrl` on the request with the document that created the worker.
+  //     Using that is race-free — no dependency on the ANNOUNCE_WORKER_FETCH
+  //     handshake winning against the worker fetch — and gives a reliable
+  //     origin for the same-origin and scope gates below.
+  const pageUrl = tabPageUrlCache.get(details.tabId) ?? details.documentUrl ?? details.originUrl;
+  if (!pageUrl) return "pass"; // unknown initiator → safe fallback
 
   // Scope gate (Req 11): consult the single source of truth so the worker
-  // filter agrees with the background's per-tab decision for this top-level
-  // URL. Out-of-scope (allowlist miss / denylist hit / restricted / master
+  // filter agrees with the background's per-tab decision for this initiating
+  // document. Out-of-scope (allowlist miss / denylist hit / restricted / master
   // off) ⇒ leave the worker script unmodified. When settings haven't loaded
   // yet, fall back to "pass".
   if (!cachedSettings) return "pass";
@@ -496,14 +529,14 @@ function classifyRequest(details: WebRequestDetailsWithHeaders): Decision {
     scopeMode: cachedSettings.scopeMode,
     allowlist: cachedSettings.allowlist,
     denylist: cachedSettings.denylist,
-    topLevelUrl: tabPageUrl,
+    topLevelUrl: pageUrl,
     isRestricted: isRestrictedUrl,
   });
   if (!effective) return "pass"; // out-of-scope → unmodified
 
   // Same-site gate: exact origin (covers localhost / IP / single-label hosts)
   // or same registrable domain (covers sibling sub-domains).
-  if (!isSameOriginWorker(details.url, tabPageUrl)) return "pass";
+  if (!isSameOriginWorker(details.url, pageUrl)) return "pass";
 
   return "patch";
 }
