@@ -255,7 +255,6 @@ export function installDateFormattingOverridesOn(
           if (spoofingEnabled && timezoneData) {
             const hasExplicitTimezone = options?.timeZone != null;
             if (!hasExplicitTimezone) {
-              logger.debug("toLocaleString: timezone injected", timezoneData.identifier);
               const opts: Intl.DateTimeFormatOptions = {
                 ...options,
                 timeZone: timezoneData.identifier,
@@ -291,7 +290,6 @@ export function installDateFormattingOverridesOn(
           if (spoofingEnabled && timezoneData) {
             const hasExplicitTimezone = options?.timeZone != null;
             if (!hasExplicitTimezone) {
-              logger.debug("toLocaleDateString: timezone injected", timezoneData.identifier);
               const opts: Intl.DateTimeFormatOptions = {
                 ...options,
                 timeZone: timezoneData.identifier,
@@ -327,7 +325,6 @@ export function installDateFormattingOverridesOn(
           if (spoofingEnabled && timezoneData) {
             const hasExplicitTimezone = options?.timeZone != null;
             if (!hasExplicitTimezone) {
-              logger.debug("toLocaleTimeString: timezone injected", timezoneData.identifier);
               const opts: Intl.DateTimeFormatOptions = {
                 ...options,
                 timeZone: timezoneData.identifier,
