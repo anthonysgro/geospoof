@@ -52,12 +52,7 @@ const installedVersion = JSON.parse(
   readFileSync(path.join(siteRoot, "node_modules", "geo-tz", "package.json"), "utf-8")
 ).version
 
-// 2. The canonical version the EXTENSION builds its CDN URL from.
-const canonicalVersion = JSON.parse(
-  readFileSync(path.join(repoRoot, "src", "shared", "geo-tz-data.json"), "utf-8")
-).version
-
-// 3. The literal the SITE's verify page builds its URL from.
+// 2. The literal the SITE's verify page builds its URL from.
 const geoTimezoneSource = readFileSync(
   path.join(siteRoot, "src", "lib", "verification", "geo-timezone.ts"),
   "utf-8"
@@ -65,21 +60,37 @@ const geoTimezoneSource = readFileSync(
 const siteMatch = geoTimezoneSource.match(/GEO_TZ_DATA_VERSION\s*=\s*"([^"]+)"/)
 const siteVersion = siteMatch ? siteMatch[1] : null
 
-// ── Guard: all three MUST agree, or the path-versioning guarantee is void ────
+// 3. The canonical version the EXTENSION builds its CDN URL from. This lives in
+//    the extension source ABOVE the site dir, so it's only present when the full
+//    repo is checked out (local dev, full-repo CI) — NOT in Vercel's site-rooted
+//    build context. Check it opportunistically; never require it.
+const extensionDataPath = path.join(repoRoot, "src", "shared", "geo-tz-data.json")
+const canonicalVersion = existsSync(extensionDataPath)
+  ? JSON.parse(readFileSync(extensionDataPath, "utf-8")).version
+  : null
 
-if (installedVersion !== canonicalVersion || installedVersion !== siteVersion) {
+// ── Guard: versions MUST agree, or the path-versioning guarantee is void ─────
+//
+// The site build can always see (1) and (2); those drive what data we serve and
+// what URL the verify page requests, so they must match. (3) is included when
+// present so a drift between the extension and the data is caught locally.
+const mismatch =
+  installedVersion !== siteVersion ||
+  (canonicalVersion !== null && installedVersion !== canonicalVersion)
+
+if (mismatch) {
   fail(
     "geo-tz data version mismatch — refusing to build.\n" +
       `  installed geo-tz package : ${installedVersion}\n` +
-      `  src/shared/geo-tz-data.json (extension) : ${canonicalVersion}\n` +
       `  site geo-timezone.ts literal : ${siteVersion ?? "<not found>"}\n` +
+      `  src/shared/geo-tz-data.json (extension) : ${canonicalVersion ?? "<not in build context>"}\n` +
       "\n" +
       "  These drive the VERSIONED data URL (/geo-tz/<version>/). If they\n" +
       "  disagree, clients can pair a stale cached index with new .dat bytes\n" +
       "  and get silently corrupt timezone lookups. To bump the data:\n" +
       "    1. set geo-tz to the exact new version in site/package.json + lockfile\n" +
-      "    2. update the version in src/shared/geo-tz-data.json\n" +
-      "    3. update GEO_TZ_DATA_VERSION in site/src/lib/verification/geo-timezone.ts\n" +
+      "    2. update GEO_TZ_DATA_VERSION in site/src/lib/verification/geo-timezone.ts\n" +
+      "    3. update the version in src/shared/geo-tz-data.json\n" +
       "    4. ship a new extension build so installed clients request the new path"
   )
 }
