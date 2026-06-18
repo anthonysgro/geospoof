@@ -65,6 +65,7 @@
 
 import { timezoneData, spoofingEnabled, ANNOUNCE_EVENT_NAME } from "./state";
 import { registerOverride, disguiseAsNative } from "./function-masking";
+import { seedFromBootstrap } from "./bootstrap";
 import { SPOOF_CORE } from "@/shared/worker-payload";
 import { createLogger } from "@/shared/utils/debug-logger";
 
@@ -614,6 +615,7 @@ function installWorkerOverride(): void {
     scriptURL: string | URL,
     options?: WorkerOptions
   ): Worker {
+    seedFromBootstrap();
     const urlStr = scriptURL instanceof URL ? scriptURL.href : String(scriptURL);
     const isInline = urlStr.startsWith("blob:") || urlStr.startsWith("data:");
 
@@ -694,6 +696,7 @@ function installSharedWorkerOverride(): void {
     scriptURL: string | URL,
     options?: string | WorkerOptions
   ): SharedWorker {
+    seedFromBootstrap();
     const opts: WorkerOptions | undefined =
       typeof options === "string" ? { name: options } : options;
 

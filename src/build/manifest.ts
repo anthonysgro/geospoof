@@ -125,6 +125,19 @@ export function generateManifest(target: BrowserTarget, version: string): Record
       "webRequestFilterResponse",
       "webRequestFilterResponse.serviceWorkerScript",
     ],
+    // userScripts lets us register a document_start MAIN-world script with the
+    // saved timezone inlined, so synchronous Date/Intl reads in a page's first
+    // <script> are already spoofed (closes the cold-start race). In Firefox it
+    // is an *optional-only* permission: it CANNOT be listed under required
+    // `permissions` (Firefox drops it there, leaving `browser.userScripts`
+    // undefined) and is never granted silently — it must be requested at
+    // runtime from a user gesture via `permissions.request({permissions:
+    // ["userScripts"]})`. The popup's "Instant timezone protection" toggle
+    // (Advanced section) drives that request; until the user opts in, the
+    // bootstrap registration no-ops and the pre-existing async path applies the
+    // spoof a few ms later. Optional-only permissions must be requested alone,
+    // so this array contains nothing else.
+    optional_permissions: ["userScripts"],
     browser_specific_settings: {
       gecko: {
         id: "{a8f7e9c2-4d3b-4a1e-9f8c-7b6d5e4a3c2b}",

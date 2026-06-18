@@ -2,13 +2,157 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 
 /**
+ * Theme-aware screenshot. Renders both the light and dark variant and lets CSS
+ * pick which one shows, keyed off the `.dark` class the theme script puts on
+ * <html>. No JS / hydration dance — both <img> tags are in the DOM and the
+ * dark-mode variant only swaps in visually. Use in MDX as:
+ *
+ *   <ThemeImage light="/a-light.jpg" dark="/a-dark.jpg" alt="..." caption="..." />
+ */
+export function ThemeImage({
+  light,
+  dark,
+  alt,
+  caption,
+  wrapperClassName,
+}: {
+  light: string
+  dark: string
+  alt: string
+  caption?: string
+  wrapperClassName?: string
+}) {
+  // The screenshots share the page's canvas background, so on their own they
+  // melt into the page. Sitting them on a `card` surface (a different token
+  // from `canvas` in both themes) with padding, a border and a soft shadow
+  // frames each one as a distinct, lifted panel.
+  const imgClass = "block h-auto w-full rounded-sm-brand"
+  return (
+    <span className={cn("my-6 block", wrapperClassName)}>
+      <span className="block overflow-hidden rounded-md-brand border border-(--color-canvas-border) bg-card p-2 shadow-md ring-1 ring-black/5 sm:p-3 dark:ring-white/10">
+        <img src={light} alt={alt} loading="lazy" className={cn(imgClass, "dark:hidden")} />
+        <img src={dark} alt={alt} loading="lazy" className={cn(imgClass, "hidden dark:block")} />
+      </span>
+      {caption && (
+        <span className="text-small mt-2 block text-center text-(--color-canvas-muted)">
+          {caption}
+        </span>
+      )}
+    </span>
+  )
+}
+
+/**
+ * Side-by-side comparison of a GeoSpoof screenshot against a competitor's, each
+ * theme-aware. Stacks on narrow screens, two columns from `sm` up. Use as:
+ *
+ *   <Compare
+ *     leftLabel="Geoceptor"  leftLight="..."  leftDark="..."
+ *     rightLabel="GeoSpoof"  rightLight="..." rightDark="..."
+ *     alt="What both screens show"
+ *     caption="Optional shared caption below the pair"
+ *   />
+ */
+export function Compare({
+  leftLabel,
+  leftLight,
+  leftDark,
+  rightLabel,
+  rightLight,
+  rightDark,
+  alt,
+  caption,
+}: {
+  leftLabel: string
+  leftLight: string
+  leftDark: string
+  rightLabel: string
+  rightLight: string
+  rightDark: string
+  alt: string
+  caption?: string
+}) {
+  const figure = (label: string, light: string, dark: string) => (
+    <span className="block">
+      <span className="text-small mb-2 block text-center font-semibold text-(--color-canvas-foreground)">
+        {label}
+      </span>
+      <ThemeImage light={light} dark={dark} alt={`${label}: ${alt}`} wrapperClassName="my-0" />
+    </span>
+  )
+  return (
+    <span className="my-6 block">
+      <span className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {figure(leftLabel, leftLight, leftDark)}
+        {figure(rightLabel, rightLight, rightDark)}
+      </span>
+      {caption && (
+        <span className="text-small mt-3 block text-center text-(--color-canvas-muted)">
+          {caption}
+        </span>
+      )}
+    </span>
+  )
+}
+
+/**
  * Element styling for rendered MDX blog content.
  *
  * These map the raw HTML tags MDX produces (h2, p, ul, a, code, ...) onto the
  * site's design tokens so posts match the look of the Privacy / Terms pages.
  * Passed to `<MDXContent components={mdxComponents} />`.
  */
+/**
+ * Official Apple "Download on the App Store" / "Download on the Mac App Store"
+ * badges for use in blog posts. Reuses the same assets and universal listing
+ * (id 6765719745; mt=8 → iOS/iPadOS, mt=12 → Mac) as the landing page so the
+ * branding stays compliant with Apple's marketing guidelines. The `campaign`
+ * prop feeds App Store Connect's `ct` attribution token.
+ */
+export function AppStoreBadges({
+  campaign = "blog",
+}: {
+  campaign?: string
+}) {
+  const base = "https://apps.apple.com/app/apple-store/id6765719745?pt=128299974"
+  const linkClass =
+    "transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) focus-visible:ring-offset-2 rounded-md-brand"
+  return (
+    <span className="my-6 flex flex-wrap items-center justify-center gap-4">
+      <a
+        href={`${base}&ct=${campaign}&mt=8`}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Download on the App Store"
+        className={linkClass}
+      >
+        <img
+          src="/images/stores/ios-store-icon.svg"
+          alt="Download on the App Store"
+          className="h-12 w-auto"
+        />
+      </a>
+      <a
+        href={`${base}&ct=${campaign}&mt=12`}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Download on the Mac App Store"
+        className={linkClass}
+      >
+        <img
+          src="/images/stores/mac-store-icon.svg"
+          alt="Download on the Mac App Store"
+          className="h-12 w-auto"
+        />
+      </a>
+    </span>
+  )
+}
+
 export const mdxComponents = {
+  ThemeImage,
+  Compare,
+  AppStoreBadges,
   h2: (props: React.ComponentProps<"h2">) => (
     <h2
       className="mt-12 mb-4 scroll-mt-24 text-2xl font-bold text-(--color-canvas-foreground)"
@@ -78,7 +222,7 @@ export const mdxComponents = {
   ),
   pre: (props: React.ComponentProps<"pre">) => (
     <pre
-      className="my-6 overflow-x-auto rounded-[var(--radius-md-brand)] border border-(--color-canvas-border) bg-(--color-canvas-border)/40 p-4 text-sm [&_code]:bg-transparent [&_code]:p-0"
+      className="my-6 overflow-x-auto rounded-md-brand border border-(--color-canvas-border) bg-canvas-border/40 p-4 text-sm [&_code]:bg-transparent [&_code]:p-0"
       {...props}
     />
   ),
@@ -105,7 +249,7 @@ export const mdxComponents = {
     // full width) so small square memes stay crisp instead of stretching blurry.
     const image = (
       <img
-        className="mx-auto block h-auto max-w-full rounded-[var(--radius-md-brand)] border border-(--color-canvas-border)"
+        className="mx-auto block h-auto max-w-full rounded-md-brand border border-(--color-canvas-border)"
         loading="lazy"
         {...props}
       />

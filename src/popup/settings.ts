@@ -9,6 +9,7 @@ import { showOnboarding } from "./onboarding";
 import { t } from "./i18n";
 import { renderFavorites } from "./favorites";
 import { renderScope, renderScopeLoadError } from "./scope";
+import { reflectEarlyProtectionState } from "./early-protection";
 
 /**
  * Apply a theme class to the document body.
@@ -98,6 +99,10 @@ export async function loadSettings(): Promise<void> {
       themeSelect.value = settings.theme ?? "system";
     }
     applyTheme(settings.theme ?? "system");
+
+    // Firefox-only: reveal the "Instant timezone protection" toggle and sync it
+    // to whether the optional userScripts permission is currently granted.
+    void reflectEarlyProtectionState();
 
     // Restore VPN sync toggle state (Req 4.1–4.4)
     const vpnSyncToggle = document.getElementById("vpnSyncToggle") as HTMLInputElement | null;

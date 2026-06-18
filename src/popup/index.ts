@@ -9,6 +9,7 @@ import { closeOnboarding } from "./onboarding";
 import { displaySearchResults } from "./search";
 import { updateStatusBadge, formatWebRTCDetails, clearChildren } from "./ui";
 import { handleVpnSync } from "./vpn-sync";
+import { wireEarlyProtectionToggle } from "./early-protection";
 import { applyI18n, t } from "./i18n";
 
 // --- Location setting ---
@@ -447,6 +448,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // before loadSettings() so any text we later overwrite dynamically
   // inherits the localized copy rather than the English fallback.
   applyI18n();
+
+  // Wire the Firefox-only "Instant timezone protection" toggle (requests the
+  // optional userScripts permission). Compiles out / no-ops elsewhere.
+  wireEarlyProtectionToggle();
 
   const versionLabel = document.getElementById("versionLabel");
   if (versionLabel) {

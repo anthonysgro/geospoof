@@ -22,6 +22,7 @@ import { installProxyWatcher } from "./proxy-watcher";
 import { installActivityWatcher } from "./activity-watcher";
 import { adoptPendingSettingsFromApp } from "./app-bridge";
 import { installBgLogRelay } from "./log-relay";
+import { updateBootstrapRegistration } from "./bootstrap-register";
 import {
   installWorkerRequestFilter,
   updateWorkerFilterSettings,
@@ -200,6 +201,14 @@ async function initialize(): Promise<void> {
   // Restore logger state from persisted settings
   setDebugEnabled(settings.debugLogging);
   setVerbosityLevel(settings.verbosityLevel);
+
+  // Firefox: (re-)register the document_start bootstrap user script from the
+  // persisted settings so the synchronous-timezone cold-start race is closed
+  // on the very next navigation, even when nothing has changed this session
+  // (registrations may not survive a browser restart). No-op elsewhere.
+  if (__FIREFOX__) {
+    await updateBootstrapRegistration(settings);
+  }
 
   // TEMPORARY (debugging): relay background logs to the page console so they're
   // capturable on Safari iOS, where the background inspector target is flaky.
@@ -434,6 +443,27 @@ if (__SAFARI__) {
 browser.alarms.onAlarm.addListener((alarm: Alarms.Alarm) => {
   void onAlarm(alarm);
 });
+
+// Firefox only: the synchronous-timezone cold-start fix relies on the
+// `userScripts` API, which is an *optional-only* permission the user grants at
+// runtime via the popup. React to grant/revoke so the document_start bootstrap
+// script is (re)registered the instant the permission is added and torn down
+// when it's removed — without needing the popup to round-trip a message.
+if (__FIREFOX__ && browser.permissions) {
+  const refreshBootstrap = (perms: { permissions?: string[] }): void => {
+    if (!perms.permissions || !perms.permissions.includes("userScripts")) return;
+    void (async () => {
+      try {
+        const settings = await loadSettings();
+        await updateBootstrapRegistration(settings);
+      } catch (error) {
+        logger.warn("[bootstrap] failed to refresh registration on permission change:", error);
+      }
+    })();
+  };
+  browser.permissions.onAdded?.addListener(refreshBootstrap);
+  browser.permissions.onRemoved?.addListener(refreshBootstrap);
+}
 
 if (browser.tabs && browser.tabs.onCreated) {
   browser.tabs.onCreated.addListener((tab: Tabs.Tab) => {

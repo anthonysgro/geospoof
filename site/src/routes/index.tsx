@@ -8,6 +8,7 @@ import { CompatibilitySection } from "@/components/landing/CompatibilitySection"
 import { FeaturedPostSection } from "@/components/landing/FeaturedPostSection"
 import { DownloadSection } from "@/components/landing/DownloadSection"
 import { Footer } from "@/components/landing/Footer"
+import { ExposureToast } from "@/components/landing/ExposureToast"
 import { SkipLink } from "@/components/landing/SkipLink"
 import { SITE_URL } from "@/lib/blog"
 
@@ -63,6 +64,8 @@ function App() {
         <DownloadSection />
       </main>
       <Footer />
+
+      <ExposureToast />
 
       <script
         type="application/ld+json"

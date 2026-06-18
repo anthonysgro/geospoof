@@ -41,9 +41,12 @@
 // 4. XSLT/EXSLT datetime leak (Firefox only) — XSLTProcessor runs
 //    inside a C++ engine that doesn't round-trip through JavaScript.
 //    The EXSLT function date:date-time() emits the real system UTC
-//    offset, bypassing every Date/Intl/Temporal override. Chromium
-//    doesn't ship EXSLT so the leak is Firefox-only. Unpatchable
-//    without browser-level changes.
+//    offset, bypassing every Date/Intl/Temporal override. We can't
+//    reach into libxslt, but the result comes back through the JS
+//    XSLTProcessor API, so `xslt-overrides.ts` wraps transformToFragment/
+//    transformToDocument and rewrites the freshly emitted "now" datetime
+//    into the spoofed zone. Chromium/WebKit don't ship EXSLT, so the
+//    wrapper is a harmless no-op there.
 //
 // 5. Extension initialization race — Overrides install at
 //    document_start, but spoofing settings arrive asynchronously
@@ -81,6 +84,16 @@ initFunctionMasking();
 // 3. State module loads eagerly — original API references are captured at
 //    import time, before any overrides replace them.
 import "./state";
+
+// 3b. Early bootstrap seed (Firefox). If the background registered a
+//     document_start MAIN-world userScript that stashed the last-saved
+//     settings in a global, consume it now — synchronously, before any
+//     overrides install — so the spoof is live from the first instruction
+//     and beats page scripts that snapshot Date/Intl in <head>. No-op on
+//     Chrome/Safari (no such global) and harmless if it runs before the
+//     bootstrap (the override hot paths re-attempt the seed lazily).
+import { seedFromBootstrap } from "./bootstrap";
+seedFromBootstrap();
 
 // 4. Date constructor override — must precede other Date-related overrides
 //    so the global Date is replaced before anything else uses it.
@@ -170,6 +183,14 @@ if (!isCrossOriginFrame) installWorkerPatching();
 //     popup takes effect for new peer connections without a reload.
 import { installWebRTCOverride } from "./webrtc";
 installWebRTCOverride();
+
+// 18. XSLT / EXSLT date-time override. Wraps XSLTProcessor's transform
+//     methods so EXSLT's date:date-time() — which emits the real system
+//     offset from inside libxslt, bypassing every Date/Intl override — is
+//     rewritten into the spoofed zone. Gecko-only in effect (Chromium/WebKit
+//     don't ship the EXSLT date extension); a harmless no-op elsewhere.
+import { installXsltOverrides } from "./xslt-overrides";
+installXsltOverrides();
 
 import { createLogger } from "@/shared/utils/debug-logger";
 const logger = createLogger("INJ");

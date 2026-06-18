@@ -28,6 +28,7 @@ import {
 } from "./state";
 import { registerOverride, disguiseAsNative, installOverride } from "./function-masking";
 import { deriveOffsetFromParts, getIntlBasedOffset } from "./timezone-helpers";
+import { seedFromBootstrap } from "./bootstrap";
 import { createLogger } from "@/shared/utils/debug-logger";
 
 const logger = createLogger("INJ");
@@ -45,6 +46,10 @@ export function installGetTimezoneOffsetOverrideOn(
 ): void {
   try {
     installOverride(proto, "getTimezoneOffset", function (this: Date): number {
+      // Close the document_start race for synchronous reads: if the early
+      // bootstrap global is present (Firefox) and settings haven't arrived
+      // yet, apply it before answering. No-op once seeded / settings received.
+      seedFromBootstrap();
       try {
         if (spoofingEnabled && timezoneData) {
           const epoch = this.getTime();
@@ -119,6 +124,10 @@ export function installTimezoneOverrides(): void {
       locales?: string | string[],
       options?: Intl.DateTimeFormatOptions
     ): Intl.DateTimeFormat {
+      // Close the document_start race for the most common aggressive probe:
+      // `Intl.DateTimeFormat().resolvedOptions().timeZone` read in the page's
+      // first script. Seed from the early bootstrap global if present.
+      seedFromBootstrap();
       try {
         const hasExplicitTimezone = options?.timeZone != null;
         // Treat explicit timezone matching the spoofed timezone as non-explicit

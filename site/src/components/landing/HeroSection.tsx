@@ -1,9 +1,12 @@
 import { motion } from "motion/react"
+import type { MouseEvent } from "react"
 import { Link } from "@tanstack/react-router"
 import { Section } from "./Section"
 import { cn } from "@/lib/utils"
 import { useReducedMotion } from "@/hooks/use-reduced-motion"
 import { useTheme } from "@/hooks/use-theme"
+import { usePlatform } from "@/hooks/use-platform"
+import { getStoreLink } from "@/lib/store-links"
 import { Badge } from "@/components/ui/badge"
 
 const heroTextVariants = {
@@ -34,6 +37,16 @@ export function HeroSection({ className }: { className?: string }) {
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === "dark"
 
+  const platform = usePlatform()
+  const store = getStoreLink(platform)
+
+  const scrollToDownload = (e: MouseEvent) => {
+    e.preventDefault()
+    document
+      .getElementById("download")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }
+
   const ios1Webp = isDark
     ? "/images/hero-ios-1-dark.webp"
     : "/images/hero-ios-1.webp"
@@ -63,10 +76,10 @@ export function HeroSection({ className }: { className?: string }) {
         className
       )}
     >
-      <div className="relative z-10 flex flex-col items-center gap-8 xl:grid xl:grid-cols-2 xl:gap-4">
+      <div className="relative z-10 flex flex-col items-center gap-6 sm:gap-8 xl:grid xl:grid-cols-2 xl:gap-4">
         {/* Visual — two phones */}
         <MotionDiv
-          className="order-2 flex justify-center pb-14 xl:order-1 xl:justify-start xl:pb-0"
+          className="order-2 flex justify-center pb-6 sm:pb-14 xl:order-1 xl:justify-start xl:pb-0"
           {...(!prefersReducedMotion && {
             initial: "hidden",
             animate: "visible",
@@ -76,30 +89,30 @@ export function HeroSection({ className }: { className?: string }) {
           <div className="relative">
             <picture className="absolute top-8 left-0 w-56 -rotate-6 drop-shadow-2xl xl:w-80">
               <source
-                srcSet={`${ios1Webp640} 640w, ${ios1Webp} 1008w`}
+                srcSet={`${ios2Webp640} 640w, ${ios2Webp} 1070w`}
                 sizes="(max-width: 1280px) 224px, 320px"
                 type="image/webp"
               />
               <img
-                src={ios1Png}
+                src={ios2Png}
                 alt="GeoSpoof app — secondary view"
-                width={1008}
-                height={2050}
+                width={1070}
+                height={2185}
                 className="w-full"
                 fetchPriority="high"
               />
             </picture>
             <picture className="relative z-10 ml-24 block w-56 rotate-3 drop-shadow-2xl xl:ml-32 xl:w-80">
               <source
-                srcSet={`${ios2Webp640} 640w, ${ios2Webp} 1010w`}
+                srcSet={`${ios1Webp640} 640w, ${ios1Webp} 1070w`}
                 sizes="(max-width: 1280px) 224px, 320px"
                 type="image/webp"
               />
               <img
-                src={ios2Png}
+                src={ios1Png}
                 alt="GeoSpoof app — main view"
-                width={1010}
-                height={2050}
+                width={1070}
+                height={2185}
                 className="w-full"
                 fetchPriority="high"
               />
@@ -123,56 +136,81 @@ export function HeroSection({ className }: { className?: string }) {
             Browser Extension
           </Badge>
 
-          <h1 className="mb-6 text-4xl leading-tight font-bold text-(--color-canvas-foreground) md:text-5xl xl:text-[4.5rem]">
+          <h1 className="mb-4 text-4xl leading-tight font-bold text-(--color-canvas-foreground) sm:mb-6 md:text-5xl xl:text-[4.5rem]">
             Your location,{" "}
             <span className="whitespace-nowrap text-(--color-brand)">
               your rules
             </span>
           </h1>
 
-          <p className="mb-8 max-w-xl text-base text-(--color-canvas-muted) md:text-lg xl:text-xl">
+          <p className="mb-6 max-w-xl text-base text-(--color-canvas-muted) sm:mb-8 md:text-lg xl:text-xl">
             GeoSpoof overrides your browser's geolocation, timezone, and WebRTC
             APIs so websites see exactly where you want them to — not where you
             actually are.
           </p>
 
-          <div className="flex flex-wrap justify-center gap-4 xl:justify-start">
-            <a
-              href="#download"
-              onClick={(e) => {
-                e.preventDefault()
-                document
-                  .getElementById("download")
-                  ?.scrollIntoView({ behavior: "smooth", block: "start" })
-              }}
-              className={cn(
-                "inline-flex items-center justify-center",
-                "bg-(--color-brand) text-white",
-                "transition-all hover:bg-(--color-brand-dark)",
-                "min-h-14 rounded-brand px-10",
-                "text-lg font-semibold shadow-md hover:shadow-lg",
-                "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+          <div className="flex w-full flex-col items-center gap-3 xl:w-auto xl:items-start">
+            <div className="flex w-full flex-col justify-center gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:gap-4 xl:justify-start">
+              {store ? (
+                <a
+                  href={store.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    "inline-flex items-center justify-center",
+                    "bg-(--color-brand) text-white",
+                    "transition-all hover:bg-(--color-brand-dark)",
+                    "min-h-12 w-full rounded-brand px-6 sm:min-h-14 sm:w-auto sm:px-10",
+                    "text-base font-semibold shadow-md hover:shadow-lg sm:text-lg",
+                    "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+                  )}
+                >
+                  {store.cta}
+                </a>
+              ) : (
+                <a
+                  href="#download"
+                  onClick={scrollToDownload}
+                  className={cn(
+                    "inline-flex items-center justify-center",
+                    "bg-(--color-brand) text-white",
+                    "transition-all hover:bg-(--color-brand-dark)",
+                    "min-h-12 w-full rounded-brand px-6 sm:min-h-14 sm:w-auto sm:px-10",
+                    "text-base font-semibold shadow-md hover:shadow-lg sm:text-lg",
+                    "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+                  )}
+                >
+                  Download Free
+                </a>
               )}
-            >
-              Download Free
-            </a>
-            <Link
-              to="/verify"
-              className={cn(
-                "group inline-flex items-center justify-center gap-2.5",
-                "border border-(--color-canvas-border) text-(--color-canvas-foreground)",
-                "transition-all hover:bg-(--color-canvas-border)",
-                "min-h-14 rounded-brand px-10",
-                "text-lg font-semibold",
-                "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
-              )}
-            >
-              <span className="relative flex size-2.5" aria-hidden="true">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75" />
-                <span className="relative inline-flex size-2.5 rounded-full bg-green-500" />
-              </span>
-              See what sites detect
-            </Link>
+              <Link
+                to="/verify"
+                className={cn(
+                  "group inline-flex items-center justify-center gap-2.5",
+                  "border border-(--color-canvas-border) text-(--color-canvas-foreground)",
+                  "transition-all hover:bg-(--color-canvas-border)",
+                  "min-h-12 w-full rounded-brand px-6 sm:min-h-14 sm:w-auto sm:px-10",
+                  "text-base font-semibold sm:text-lg",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+                )}
+              >
+                <span className="relative flex size-2.5" aria-hidden="true">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75" />
+                  <span className="relative inline-flex size-2.5 rounded-full bg-green-500" />
+                </span>
+                See what sites detect
+              </Link>
+            </div>
+            {/* When we've matched a store, still let people reach the others. */}
+            {store ? (
+              <a
+                href="#download"
+                onClick={scrollToDownload}
+                className="text-sm text-(--color-canvas-muted) underline-offset-4 transition-colors hover:text-(--color-canvas-foreground) hover:underline"
+              >
+                All platforms &amp; browsers
+              </a>
+            ) : null}
           </div>
 
           {/* Social proof */}
@@ -211,9 +249,9 @@ export function HeroSection({ className }: { className?: string }) {
               </span>
               <span>
                 <span className="font-semibold text-(--color-canvas-foreground)">
-                  4.0
+                  4.2
                 </span>{" "}
-                Chrome
+                iOS
               </span>
             </span>
           </div>

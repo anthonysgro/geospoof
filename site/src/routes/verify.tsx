@@ -46,13 +46,12 @@ export const Route = createFileRoute("/verify")({
     ],
     // Warm up connections to the map tile CDNs before the map mounts, so the
     // first tiles can be fetched without paying for DNS + TLS at paint time.
-    // OpenStreetMap (light theme) is the default, so its subdomains get a full
-    // preconnect; CARTO (dark theme) gets the lighter dns-prefetch.
+    // Light theme (the default) uses Esri's World Topo basemap, so its host
+    // gets a full preconnect; CARTO (dark theme) gets the lighter dns-prefetch.
     links: [
       { rel: "canonical", href: "https://geospoof.com/verify" },
-      { rel: "preconnect", href: "https://a.tile.openstreetmap.org" },
-      { rel: "preconnect", href: "https://b.tile.openstreetmap.org" },
-      { rel: "preconnect", href: "https://c.tile.openstreetmap.org" },
+      { rel: "preconnect", href: "https://server.arcgisonline.com" },
+      { rel: "dns-prefetch", href: "https://server.arcgisonline.com" },
       { rel: "dns-prefetch", href: "https://a.basemaps.cartocdn.com" },
       { rel: "dns-prefetch", href: "https://b.basemaps.cartocdn.com" },
       { rel: "dns-prefetch", href: "https://c.basemaps.cartocdn.com" },
@@ -307,6 +306,23 @@ function VerifyInner() {
     // flag when the offsets also disagree.
     (ipOffsetMins == null || tz.offsetMinutes !== ipOffsetMins)
 
+  // WebRTC only counts as a *leak* when it exposes a public IP that differs
+  // from the one the site already sees from your connection. An IP equal to
+  // the connection IP is just the VPN's own exit address (or your real IP when
+  // no VPN is in use) — the site already has it, so it isn't a separate leak.
+  // A *different* public IP is your real address escaping the VPN: that's the
+  // meaningful WebRTC leak, and it's the true device IP worth surfacing.
+  const connectionIp = net?.ip ?? null
+  const webrtcIps =
+    webrtc.status === "ready"
+      ? webrtc.value.publicIps.filter((ip) => ip !== "(leaked)")
+      : []
+  const webrtcLeakedIps = connectionIp
+    ? webrtcIps.filter((ip) => ip !== connectionIp)
+    : webrtcIps
+  const webrtcMatchesConnection =
+    webrtcIps.length > 0 && webrtcLeakedIps.length === 0
+
   const rows: Array<Row> = [
     // Geolocation
     (() => {
@@ -407,16 +423,51 @@ function VerifyInner() {
           status: "pending",
         }
       }
-      const leaked = webrtc.value.publicIps.length > 0
+      // No public IP surfaced at all — clean.
+      if (webrtcIps.length === 0) {
+        return {
+          id: "webrtc",
+          icon: <Wifi className="size-4" />,
+          label: "WebRTC",
+          value: "No IP leak detected",
+          status: "good",
+        }
+      }
+      // We need the connection IP to tell a real leak (a *different* IP
+      // escaping the VPN) from the VPN's own exit IP. Hold off on a verdict
+      // until the IP lookup resolves.
+      if (network.status === "pending") {
+        return {
+          id: "webrtc",
+          icon: <Wifi className="size-4" />,
+          label: "WebRTC",
+          value: webrtcIps.join(", "),
+          status: "pending",
+          note: "Checking against your IP address…",
+        }
+      }
+      // Every WebRTC IP matches the connection IP — the site already has it,
+      // so WebRTC isn't exposing anything extra. This is the expected, healthy
+      // result for a full-tunnel VPN (or no VPN at all).
+      if (webrtcMatchesConnection) {
+        return {
+          id: "webrtc",
+          icon: <Wifi className="size-4" />,
+          label: "WebRTC",
+          value: webrtcIps.join(", "),
+          status: "good",
+          note: "Same as your IP address — no separate leak",
+        }
+      }
+      // A public IP that differs from the connection IP: your real address
+      // bypassing the VPN. This is the meaningful leak.
       return {
         id: "webrtc",
         icon: <Wifi className="size-4" />,
         label: "WebRTC",
-        value: leaked
-          ? webrtc.value.publicIps.filter((ip) => ip !== "(leaked)").join(", ") || "IP leaked"
-          : "No IP leak detected",
-        status: leaked ? "bad" : ("good"),
-        note: leaked ? (webrtc.value.leakDetail || "Real IP exposed via WebRTC") : undefined,
+        value: webrtcLeakedIps.join(", ") || "IP leaked",
+        status: "bad",
+        note: webrtc.value.leakDetail || "Real IP exposed via WebRTC — bypassing your VPN",
       }
     })(),
   ]
@@ -429,8 +480,7 @@ function VerifyInner() {
   // Aggregate verdict — no WebRTC leak, every spoofed API surface internally
   // consistent and aligned with the chosen location, AND the location and
   // timezone match the IP (a mismatch is what gets VPN users flagged).
-  const webrtcLeaking =
-    webrtc.status === "ready" && webrtc.value.publicIps.length > 0
+  const webrtcLeaking = webrtcLeakedIps.length > 0
   const failingGroups = apiGroups.filter((g) => !g.consistent)
   const verdictReady =
     webrtc.status === "ready" &&
@@ -715,7 +765,11 @@ function parseIsoTime(s: string): { h: number; mi: number } | null {
 function parseLastModified(
   s: string
 ): { y: number; mo: number; d: number; h: number; mi: number } | null {
-  const m = /^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})$/.exec(s)
+  // lastModified strings vary across engines/locales: "MM/DD/YYYY HH:MM:SS",
+  // sometimes with a comma after the date and with 1- or 2-digit components.
+  // Be lenient about separators/padding so a genuine leak is never silently
+  // dropped just because the format wasn't the one the strict regex expected.
+  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4}),?\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(s.trim())
   if (!m) return null
   return {
     mo: parseInt(m[1], 10) - 1,
@@ -1281,34 +1335,23 @@ function buildValueGroups(
   // ── Document ────────────────────────────────────────────────────────────
   const documentRows: Array<ValueRow> = []
   if (typeof document !== "undefined") {
-    // The top-level document's lastModified reflects the page's HTTP
-    // Last-Modified header (a deploy/server time), or the current time when
-    // none is sent. We can only grade it against "now" when it actually
-    // represents now — otherwise there's no client-side reference for the
-    // spoofed zone, so we leave it informational rather than risk a false X.
-    const lm = safe(() => document.lastModified)
-    const lmParts = parseLastModified(lm)
-    documentRows.push({
-      api: "document.lastModified",
-      value: lm,
-      verdict:
-        lm === "unavailable" || !lmParts
-          ? undefined
-          : gradeAgainstNow(lmParts) === "ok"
-            ? "ok"
-            : undefined,
-    })
+    // Freshly-minted documents (DOMParser / parseHTMLUnsafe) have a
+    // lastModified that is ALWAYS the current instant — there's no HTTP
+    // Last-Modified header in play — so they're a reliable "now" reference we
+    // can grade strictly. These are the surfaces arkenfox leans on: a JS
+    // timezone spoof that forgets to patch the Document lastModified getter
+    // leaks the real zone here even while Date / Intl look spoofed.
+    let freshParts: ReturnType<typeof parseLastModified> = null
 
     // DOMParser — parseFromString mints an in-memory document whose
-    // lastModified is always the current instant, so it's a reliable
-    // "now" reference we can grade strictly.
+    // lastModified is the current instant, so it's a strict "now" reference.
     if (typeof DOMParser !== "undefined") {
       const v = safe(() => new DOMParser().parseFromString("", "text/html").lastModified)
-      const p = parseLastModified(v)
+      freshParts = parseLastModified(v)
       documentRows.push({
         api: "DOMParser().parseFromString('','text/html').lastModified",
         value: v,
-        verdict: v === "unavailable" || !p ? undefined : gradeAgainstNow(p),
+        verdict: v === "unavailable" || !freshParts ? undefined : gradeAgainstNow(freshParts),
       })
     }
 
@@ -1320,12 +1363,43 @@ function buildValueGroups(
     if (typeof docProto.parseHTMLUnsafe === "function") {
       const v = safe(() => Document.parseHTMLUnsafe("").lastModified)
       const p = parseLastModified(v)
+      if (!freshParts) freshParts = p
       documentRows.push({
         api: "Document.parseHTMLUnsafe('').lastModified",
         value: v,
         verdict: v === "unavailable" || !p ? undefined : gradeAgainstNow(p),
       })
     }
+
+    // The top-level document's lastModified reflects the page's HTTP
+    // Last-Modified header (a deploy/server time) when one is sent, or the
+    // current instant when none is. We can only grade it strictly when it
+    // actually represents "now" — which we confirm by checking it lines up
+    // with the freshly-minted reference above. When they agree there's no
+    // header masking it, so a wrong zone here is a genuine leak; when they
+    // disagree a header is in play, so we confirm-only and never emit a false
+    // X (the fresh-doc rows still catch the leak either way).
+    const lm = safe(() => document.lastModified)
+    const lmParts = parseLastModified(lm)
+    const lmIsNow =
+      !!lmParts &&
+      !!freshParts &&
+      Math.abs(
+        Date.UTC(lmParts.y, lmParts.mo, lmParts.d, lmParts.h, lmParts.mi) -
+          Date.UTC(freshParts.y, freshParts.mo, freshParts.d, freshParts.h, freshParts.mi)
+      ) <= NOW_TOLERANCE_MS
+    documentRows.unshift({
+      api: "document.lastModified",
+      value: lm,
+      verdict:
+        lm === "unavailable" || !lmParts
+          ? undefined
+          : lmIsNow
+            ? gradeAgainstNow(lmParts)
+            : gradeAgainstNow(lmParts) === "ok"
+              ? "ok"
+              : undefined,
+    })
   }
 
   // ── Same-origin iframe ──────────────────────────────────────────────────
@@ -1361,10 +1435,61 @@ function buildValueGroups(
           verdict:
             iframeZone === "unavailable" ? undefined : zonesMatch(iframeZone, intlZone) ? "ok" : "leak",
         })
+        // The iframe's contentDocument is freshly minted (about:blank), so its
+        // lastModified is the current instant — a strict "now" reference. A
+        // spoof that patches the iframe's Date but not its document leaks here.
+        const iframeLm = safe(() => iframeWin.document.lastModified)
+        const iframeLmParts = parseLastModified(iframeLm)
+        iframeRows.push({
+          api: "iframe document.lastModified",
+          value: iframeLm,
+          verdict:
+            iframeLm === "unavailable" || !iframeLmParts
+              ? undefined
+              : gradeAgainstNow(iframeLmParts),
+        })
       }
       document.body.removeChild(iframe)
     } catch {
       iframeRows.push({ api: "iframe test", value: "unavailable" })
+    }
+  }
+
+  // ── XSLT / EXSLT date-time ────────────────────────────────────────────────
+  // EXSLT's date:date-time() returns an ISO timestamp WITH the real timezone
+  // offset (e.g. "2024-01-01T12:00:00+05:30"), computed natively via libxslt.
+  // That makes it the strongest "truth anchor" available — a naive JS-level
+  // timezone spoof won't reach it — which is why arkenfox prefers it. It's
+  // Gecko-only in practice (other engines don't implement the EXSLT date
+  // extension), and Firefox is winding XSLT down behind `dom.xslt.enabled`
+  // (FF151+). GeoSpoof patches this surface (via the XSLTProcessor wrapper),
+  // so it's now graded: the offset must match the spoofed Date offset.
+  const exsltRows: Array<ValueRow> = []
+  if (typeof DOMParser !== "undefined" && typeof XSLTProcessor !== "undefined") {
+    const exsltValue = safe(() => {
+      const xslText =
+        '<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"' +
+        ' xmlns:date="http://exslt.org/dates-and-times" extension-element-prefixes="date">' +
+        '<xsl:output method="html"/>' +
+        '<xsl:template match="/"><xsl:value-of select="date:date-time()"/></xsl:template>' +
+        "</xsl:stylesheet>"
+      const xslDoc = new DOMParser().parseFromString(xslText, "text/xml")
+      const proc = new XSLTProcessor()
+      proc.importStylesheet(xslDoc)
+      const fragment = proc.transformToFragment(xslDoc, document)
+      return fragment?.firstChild?.nodeValue || "unavailable"
+    })
+    // Only grade when the engine actually produced an EXSLT timestamp carrying
+    // an offset. Elsewhere (Chromium/Safari, or XSLT disabled) we skip the row
+    // rather than show a permanent "unavailable" that reads like a failure.
+    const exsltOffset = exsltValue === "unavailable" ? null : offsetFromString(exsltValue)
+    if (exsltOffset != null) {
+      const exsltLeaks = exsltOffset !== offsetMins
+      exsltRows.push({
+        api: "EXSLT date:date-time() (XSLTProcessor)",
+        value: exsltLeaks ? `${exsltValue} (offset ${exsltOffset} vs ${offsetMins})` : exsltValue,
+        verdict: exsltLeaks ? "leak" : "ok",
+      })
     }
   }
 
@@ -1406,6 +1531,7 @@ function buildValueGroups(
   const advancedRows: Array<ValueRow> = [
     ...documentRows,
     ...iframeRows,
+    ...exsltRows,
     ...temporalRows,
     ...workerRows,
   ]

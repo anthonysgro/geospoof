@@ -133,6 +133,28 @@ async function probeInlineWorker(source: string): Promise<WorkerReading> {
   }
 }
 
+/**
+ * Read the timezone from inside a Blob-URL Worker. This realm sidesteps
+ * naive main-thread-only timezone spoofers, so it reveals the real zone even
+ * when `Intl` is patched on the page. Returns null if workers/blobs are
+ * unavailable or the probe fails. (GeoSpoof itself patches this surface — the
+ * point being that almost nothing else does.)
+ */
+export async function readWorkerTimezone(): Promise<string | null> {
+  const hasWorker = typeof Worker !== "undefined"
+  const hasBlob =
+    typeof Blob !== "undefined" &&
+    typeof URL !== "undefined" &&
+    typeof URL.createObjectURL === "function"
+  if (!hasWorker || !hasBlob) return null
+  try {
+    const reading = await probeInlineWorker(PROBE_SOURCE)
+    return reading.timeZone
+  } catch {
+    return null
+  }
+}
+
 async function probeDataWorker(source: string): Promise<WorkerReading> {
   const worker = new Worker(`data:application/javascript,${encodeURIComponent(source)}`)
   try {

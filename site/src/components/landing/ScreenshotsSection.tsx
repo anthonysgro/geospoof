@@ -2,6 +2,7 @@ import { motion } from "motion/react"
 import { useReducedMotion } from "@/hooks/use-reduced-motion"
 import { useTheme } from "@/hooks/use-theme"
 import { cn } from "@/lib/utils"
+import { PhoneCarouselSection } from "./PhoneCarouselSection"
 
 export function ScreenshotsSection({ className }: { className?: string }) {
   const prefersReducedMotion = useReducedMotion()
@@ -59,6 +60,9 @@ export function ScreenshotsSection({ className }: { className?: string }) {
           </picture>
         </div>
       </MotionDiv>
+
+      {/* Mobile counterpart — same "in action" story, native on iOS/iPadOS. */}
+      <PhoneCarouselSection embedded />
     </section>
   )
 }

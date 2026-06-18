@@ -1,5 +1,6 @@
 import { defineCollection, defineConfig } from "@content-collections/core"
 import { compileMDX } from "@content-collections/mdx"
+import remarkGfm from "remark-gfm"
 import { z } from "zod"
 
 /**
@@ -53,7 +54,9 @@ const posts = defineCollection({
     content: z.string(),
   }),
   transform: async (document, context) => {
-    const mdx = await compileMDX(context, document)
+    const mdx = await compileMDX(context, document, {
+      remarkPlugins: [remarkGfm],
+    })
 
     // Derive the URL slug from the file path (strip directories + extension).
     const slug = document._meta.path

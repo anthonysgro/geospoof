@@ -13,20 +13,27 @@ import { init as geoTzInit } from "browser-geo-tz";
 const logger = createLogger("BG");
 
 // Initialize browser-geo-tz once at module load so the data fetch promises
-// are reused across all calls — avoids re-fetching the CDN files on every lookup.
-// Pin to a specific geo-tz version so the index and .dat file are always in sync
-// (using @latest risks a version mismatch between the two files if a new release
-// is published between when each CDN cache entry was populated).
-const GEO_TZ_VERSION = "8.1.6";
-// Use timezones.geojson (not timezones-1970.geojson) — the 1970 variant unions
-// zones with identical behavior since 1970 and uses the highest-population
-// identifier, which means coordinates near water bodies or zone boundaries
-// (e.g. coastal Chicago) can land in an Etc/GMT±N zone with no DST instead of
-// the correct named zone like America/Chicago. The full timezones.geojson has
-// complete land coverage and always returns the proper IANA identifier.
+// are reused across all calls — avoids re-fetching the data files on every lookup.
+//
+// Source the boundary data from geospoof.com (our own site), NOT jsdelivr.
+// jsdelivr TRUNCATES the large `timezones.geojson.geo.dat`: it serves ~24.3 MB
+// of the real ~29.3 MB file the npm package ships, while the index still points
+// at byte offsets up to ~29.3 MB. Any shard past the truncation point makes
+// browser-geo-tz's range request return HTTP 416, the lookup silently falls
+// back to a longitude-bucket Etc/GMT zone, and because we (correctly) refuse to
+// persist Etc/GMT zones the timezone ends up null — so the extension spoofs the
+// location but leaves Date/Intl/Temporal/EXSLT reporting the user's REAL zone.
+//
+// The site copies the full, intact dataset out of the pinned `geo-tz` npm
+// package into `/geo-tz/` at build time (see site/scripts/copy-geo-tz-data.mjs)
+// and Vercel serves it with proper 206 range support and
+// `Access-Control-Allow-Origin: *`. Using the full `timezones.geojson` (not the
+// -1970 variant) gives complete land coverage and returns a real IANA zone for
+// coastal/boundary points instead of a fingerprintable Etc/GMT longitude bucket.
+const GEO_TZ_BASE = "https://geospoof.com/geo-tz";
 const _geoTz = geoTzInit(
-  `https://cdn.jsdelivr.net/npm/geo-tz@${GEO_TZ_VERSION}/data/timezones.geojson.geo.dat`,
-  `https://cdn.jsdelivr.net/npm/geo-tz@${GEO_TZ_VERSION}/data/timezones.geojson.index.json`
+  `${GEO_TZ_BASE}/timezones.geojson.geo.dat`,
+  `${GEO_TZ_BASE}/timezones.geojson.index.json`
 );
 
 /**

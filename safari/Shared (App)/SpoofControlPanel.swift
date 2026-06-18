@@ -1146,9 +1146,10 @@ enum ReviewPrompt {
 
 extension View {
     /// Presents the system review prompt whenever `token` changes to a new
-    /// non-zero value, using Apple's recommended SwiftUI `requestReview`
-    /// environment action on iOS 16+/macOS 13+, falling back to StoreKit on
-    /// iOS 15. Bump an `@State` token to trigger.
+    /// non-zero value. On iOS 16+/macOS 13+ this uses the scene-based
+    /// `AppStore.requestReview(in:)` (iOS) / `requestReview` environment action
+    /// (macOS); on iOS 15 it falls back to `SKStoreReviewController`. Bump an
+    /// `@State` token to trigger.
     @ViewBuilder
     func requestReview(on token: Int) -> some View {
         if #available(iOS 16.0, macOS 13.0, *) {
@@ -1173,7 +1174,25 @@ private struct EnvironmentReviewModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content.onChange(of: token) { newValue in
-            if newValue > 0 { requestReview() }
+            guard newValue > 0 else { return }
+            #if os(iOS)
+            // Prefer the scene-based StoreKit call over the environment action:
+            // the environment `requestReview()` can silently no-op when invoked
+            // from a view nested inside a NavigationStack (a long-standing quirk),
+            // whereas the scene-based API presents reliably. `AppStore.requestReview(in:)`
+            // is the modern, non-deprecated replacement for `SKStoreReviewController`.
+            let scene =
+                UIApplication.shared.connectedScenes
+                .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene
+                ?? UIApplication.shared.connectedScenes.first as? UIWindowScene
+            if let scene {
+                AppStore.requestReview(in: scene)
+            } else {
+                requestReview()
+            }
+            #else
+            requestReview()
+            #endif
         }
     }
 }
