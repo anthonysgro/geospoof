@@ -711,12 +711,28 @@ function safe(fn: () => string): string {
   }
 }
 
-/** Normalize timezone identifiers so known aliases compare equal. */
+/**
+ * Normalize timezone identifiers so known aliases compare equal.
+ *
+ * Primary strategy: round-trip through the running engine's
+ * `Intl.DateTimeFormat().resolvedOptions().timeZone`. This collapses aliases to
+ * whatever canonical form *that engine* uses — crucially, Chrome/V8 rewrites
+ * `America/Argentina/Buenos_Aires` → `America/Buenos_Aires` while Firefox keeps
+ * the canonical form, so a raw string compare would falsely flag a "mismatch"
+ * between, say, the geo-tz canonical zone and what Chrome's Intl reports. Doing
+ * it per-engine means both sides map to the same key. Manual fallbacks cover
+ * any engine that throws or doesn't normalize.
+ */
 function normalizeZone(tz: string): string {
-  return tz
-    .trim()
-    .replace(/Katmandu$/, "Kathmandu")
-    .replace(/Calcutta$/, "Kolkata")
+  const cleaned = tz.trim()
+  try {
+    const resolved = new Intl.DateTimeFormat("en-US", { timeZone: cleaned }).resolvedOptions()
+      .timeZone
+    if (resolved) return resolved
+  } catch {
+    // fall through to manual aliases below
+  }
+  return cleaned.replace(/Katmandu$/, "Kathmandu").replace(/Calcutta$/, "Kolkata")
 }
 
 /** True when two timezone identifiers refer to the same zone. */
