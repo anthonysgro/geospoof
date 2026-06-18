@@ -160,6 +160,9 @@ struct SettingsView: View {
                     ) {
                         Label("Rate GeoSpoof", systemImage: "star")
                     }
+                    Link(destination: URL(string: "https://github.com/anthonysgro/geospoof")!) {
+                        Label("View Source on GitHub", systemImage: "chevron.left.forwardslash.chevron.right")
+                    }
                 }
 
                 Section {

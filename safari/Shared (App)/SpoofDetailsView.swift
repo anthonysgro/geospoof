@@ -569,7 +569,7 @@ struct TrustSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     private let points: [(symbol: String, text: String)] = [
-        ("lock.fill",           "Runs entirely on-device — no backend, no servers."),
+        ("lock.fill",           "Spoofing runs on your device — we operate no data-collecting backend."),
         ("eye.slash.fill",      "Never reads, stores, or transmits your browsing."),
         ("chevron.left.forwardslash.chevron.right", "Open source — the code is public and auditable."),
         ("hand.raised.fill",    "No account, no sign-up, no tracking of any kind."),

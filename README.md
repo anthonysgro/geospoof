@@ -127,7 +127,7 @@ For the full API reference, see [docs/API.md](docs/API.md). For the VPN sync and
 
 ## External Services
 
-GeoSpoof sends nothing to the developer and runs no backend. Some features — city search, timezone resolution, and the optional "Sync with VPN" — make requests directly from your device to third-party services. Exactly what is sent, when, and to whom (for both the Safari extension and the companion apps) is documented in the [Privacy Policy](PRIVACY_POLICY.md).
+GeoSpoof runs no backend application and sends no data to the developer for collection or analytics. Some features — city search and the optional "Sync with VPN" — make requests directly from your device to third-party services. Timezone resolution downloads boundary data from the developer's own domain (`geospoof.com`, a static-file host), which transmits your IP as part of that request. The developer does **not** use these requests for analytics, tracking, profiling, advertising, or user accounts, and stores no personal data from them. Exactly what is sent, when, and to whom (for both the Safari extension and the companion apps) is documented in the [Privacy Policy](PRIVACY_POLICY.md).
 
 ## Development
 
