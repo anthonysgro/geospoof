@@ -193,9 +193,13 @@ describe("Shared fields preservation", () => {
     expect(cr).not.toContain("webRequestFilterResponse");
     expect(cr).not.toContain("webRequestFilterResponse.serviceWorkerScript");
 
-    // Neither build declares optional_permissions — advanced worker
-    // protection is baked in on Firefox rather than opt-in.
-    expect(firefoxManifest().optional_permissions).toBeUndefined();
+    // Firefox declares `userScripts` as an optional-only permission (it is
+    // requested at runtime from a user gesture to close the synchronous-
+    // timezone cold-start race). It must NOT appear under required permissions
+    // — Firefox drops optional-only permissions listed there. Chromium has no
+    // optional_permissions block.
+    expect(firefoxManifest().optional_permissions).toEqual(["userScripts"]);
+    expect(ff).not.toContain("userScripts");
     expect(chromiumManifest().optional_permissions).toBeUndefined();
   });
 });

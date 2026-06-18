@@ -8,6 +8,7 @@ import { DEFAULT_SETTINGS } from "@/shared/types/settings";
 import { createLogger } from "@/shared/utils/debug-logger";
 import { normalizeDomain } from "@/shared/utils/scope";
 import { getLastSyncedIp } from "./vpn-sync";
+import { updateBootstrapRegistration } from "./bootstrap-register";
 
 const logger = createLogger("BG");
 
@@ -261,6 +262,14 @@ export async function saveSettings(settings: Settings): Promise<void> {
   // here must never block saving the actual settings.
   if (__SAFARI__) {
     void pushRegionToNativeHost(settings);
+  }
+
+  // Refresh the Firefox document_start bootstrap user script so the next page
+  // load can apply the timezone synchronously (closing the cold-start race for
+  // Date/Intl). Firefox-only and fully guarded; fire-and-forget so it never
+  // blocks or fails the save. Compiled out on Chromium / Safari.
+  if (__FIREFOX__) {
+    void updateBootstrapRegistration(settings);
   }
 }
 

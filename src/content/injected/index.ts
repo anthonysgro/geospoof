@@ -85,6 +85,16 @@ initFunctionMasking();
 //    import time, before any overrides replace them.
 import "./state";
 
+// 3b. Early bootstrap seed (Firefox). If the background registered a
+//     document_start MAIN-world userScript that stashed the last-saved
+//     settings in a global, consume it now — synchronously, before any
+//     overrides install — so the spoof is live from the first instruction
+//     and beats page scripts that snapshot Date/Intl in <head>. No-op on
+//     Chrome/Safari (no such global) and harmless if it runs before the
+//     bootstrap (the override hot paths re-attempt the seed lazily).
+import { seedFromBootstrap } from "./bootstrap";
+seedFromBootstrap();
+
 // 4. Date constructor override — must precede other Date-related overrides
 //    so the global Date is replaced before anything else uses it.
 import { installDateConstructor } from "./date-constructor";

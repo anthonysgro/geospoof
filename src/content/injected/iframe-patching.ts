@@ -58,6 +58,7 @@ import { isAmbiguousDateString, computeEpochAdjustment } from "./timezone-helper
 import { getPaddedCoords } from "./geolocation";
 import { installLastModifiedOverride } from "./document-overrides";
 import { installXsltOverridesOn } from "./xslt-overrides";
+import { seedFromBootstrap } from "./bootstrap";
 import { buildRTCPeerConnectionWrapper, installRTCGetStatsOverride } from "./webrtc";
 import { waitForSettings } from "./settings-listener";
 import { installDateGetterOverridesOn, type DateGetterOriginals } from "./date-getters";
@@ -178,6 +179,10 @@ export function patchIframeWindow(iframeWindow: Window): void {
     return;
   }
   patchedIframeWindows.add(iframeWindow);
+  // Seed spoofing state from the early bootstrap global if it hasn't been
+  // consumed yet — covers a page that reaches into an iframe's Date/Intl
+  // realm before touching the top-level ones.
+  seedFromBootstrap();
   logger.debug("[patchIframeWindow] entering", {
     hasDocument: (() => {
       try {

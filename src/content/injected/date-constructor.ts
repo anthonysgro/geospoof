@@ -10,6 +10,7 @@ import type { AnyFunction } from "./types";
 import { OriginalDate, OriginalDateParse, spoofingEnabled, timezoneData } from "./state";
 import { isAmbiguousDateString, computeEpochAdjustment } from "./timezone-helpers";
 import { registerOverride, disguiseAsNative } from "./function-masking";
+import { seedFromBootstrap } from "./bootstrap";
 import { createLogger } from "@/shared/utils/debug-logger";
 
 const logger = createLogger("INJ");
@@ -32,6 +33,10 @@ export function installDateConstructor(): void {
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function DateOverride(this: any, ...args: any[]): any {
+    // Close the document_start race for `new Date()` snapshots taken in the
+    // page's first script — seed from the early bootstrap global if present
+    // (Firefox). No-op once seeded or once the settings event has arrived.
+    seedFromBootstrap();
     // Called as function (without new) — return current time string.
     //
     // Native `Date()` returns a string of the current time formatted

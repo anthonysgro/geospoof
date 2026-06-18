@@ -1065,6 +1065,33 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   margin-top: -4px;
 }
 
+/* Standardize each advanced setting row (toggles + selectors) into a uniform,
+   evenly-separated list. The toggle rows previously sat flush against each
+   other with no spacing; give them the same 12px gap + divider the selectors
+   below already use. */
+.advanced-content > .toggle-label {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 14px;
+}
+
+/* No separator above the first row. */
+.advanced-content > .toggle-label:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+/* The "Instant timezone protection" row is Firefox-only and hidden elsewhere;
+   when it's hidden, the next toggle becomes the first visible row, so drop its
+   separator too. */
+.advanced-content > .toggle-label[style*="display: none"] + .toggle-label {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
 /* Verbosity selector */
 .verbosity-selector {
   margin-top: 12px;

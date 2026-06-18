@@ -29,6 +29,7 @@
 
 import { OriginalDate, OriginalDateTimeFormat, spoofingEnabled, timezoneData } from "./state";
 import { registerOverride, disguiseAsNative } from "./function-masking";
+import { seedFromBootstrap } from "./bootstrap";
 import { createLogger } from "@/shared/utils/debug-logger";
 
 const logger = createLogger("INJ");
@@ -130,6 +131,10 @@ export function installLastModifiedOverride(documentProto: object): void {
   // eslint-disable-next-line @typescript-eslint/unbound-method -- intentional: method shorthand destructuring for anti-fingerprint (no prototype/[[Construct]])
   const spoofedGet = {
     lastModified(this: Document): string {
+      // Close the document_start race for `document.lastModified` (and the
+      // DOMParser / parseHTMLUnsafe / iframe variants that share this getter):
+      // seed from the early bootstrap global if it hasn't been consumed yet.
+      seedFromBootstrap();
       const native = originalGet.call(this) as string;
       if (!spoofingEnabled || !timezoneData) {
         logger.debug("[lastModified-get] spoofing disabled, returning native", {

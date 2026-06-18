@@ -26,6 +26,7 @@
 import { OriginalDate, spoofingEnabled, timezoneData } from "./state";
 import { getIntlBasedOffset, resolvePartsForDate } from "./timezone-helpers";
 import { installOverride } from "./function-masking";
+import { seedFromBootstrap } from "./bootstrap";
 import { createLogger } from "@/shared/utils/debug-logger";
 
 const logger = createLogger("INJ");
@@ -146,6 +147,7 @@ export function installXsltOverridesOn(ProcessorCtor: typeof XSLTProcessor): voi
       proto,
       "transformToFragment",
       function (this: XSLTProcessor, source: Node, output: Document): DocumentFragment {
+        seedFromBootstrap();
         const result = originalTransformToFragment.call(this, source, output);
         try {
           if (spoofingEnabled && timezoneData && result) rewriteResultDates(result);
@@ -160,6 +162,7 @@ export function installXsltOverridesOn(ProcessorCtor: typeof XSLTProcessor): voi
       proto,
       "transformToDocument",
       function (this: XSLTProcessor, source: Node): Document {
+        seedFromBootstrap();
         const result = originalTransformToDocument.call(this, source);
         try {
           if (spoofingEnabled && timezoneData && result) rewriteResultDates(result);
