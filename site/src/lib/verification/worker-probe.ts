@@ -7,25 +7,43 @@
  * reports the timezone each one sees, so the verify page can flag any that
  * leak the real zone.
  *
- * We only probe the surfaces the content script patches in-page on every
- * engine — blob-URL, data-URL, and nested workers — because those are
- * reliable, so a leak there is a genuine failure worth surfacing.
+ * We probe the surfaces the content script patches in-page on every engine —
+ * blob-URL, data-URL, and nested workers — because those are reliable, so a
+ * leak there is a genuine failure worth surfacing.
+ *
+ * On Firefox we additionally probe URL-based classic Workers, SharedWorkers,
+ * and module Workers. These are patched by the background
+ * `webRequest.filterResponseData` listener (after the fixes that made it
+ * race-free and respawn-safe), so they're now reliable enough to show a
+ * verdict for. They are gated behind `engineHasResponseFilter` and omitted on
+ * Chromium/Safari, where the same surfaces remain documented known limitations.
  *
  * Deliberately NOT probed:
- *   - URL-based classic Worker / SharedWorker — only patchable via Firefox's
- *     `webRequest.filterResponseData`, which is best-effort (the worker
- *     request can outrun the MV3 background's settings priming, and
- *     SharedWorker instances persist across loads). Too flaky to show a
- *     verdict for.
- *   - Module Worker / ServiceWorker — documented known limitations on every
- *     engine (and registering a ServiceWorker on each page load has side
- *     effects we don't want).
+ *   - ServiceWorker — even on Firefox the patched script bytes get cached and
+ *     persist across page loads / after the extension is disabled, and an
+ *     already-installed SW is never re-fetched through the filter. Unreliable
+ *     plus a persistence footgun, so it stays a documented known limitation.
  *
  * Showing a permanent "not covered" row for those just reads as a failure to
  * users, so they're omitted entirely rather than displayed as caveats.
  */
 
 const WORKER_TIMEOUT_MS = 5_000
+
+/**
+ * True on Firefox, where `webRequest.filterResponseData` lets the extension
+ * prepend the spoofing payload to URL-based worker script responses. The
+ * URL-classic, SharedWorker, and module-worker probes below are only meaningful
+ * (and reliable) on Firefox; on Chromium/Safari those surfaces are documented
+ * known limitations, so we omit them entirely rather than render a permanent
+ * red "leak" row on the verify page.
+ *
+ * We UA-sniff because the feature lives on the background `browser` global,
+ * which the page context can't reach. A misclassification at worst hides a row
+ * that could have shown green — never a false leak.
+ */
+const engineHasResponseFilter: boolean =
+  typeof navigator !== "undefined" && /\bFirefox\//.test(navigator.userAgent)
 
 /** What a worker reported back about its own realm's timezone. */
 export interface WorkerReading {
@@ -164,6 +182,71 @@ async function probeDataWorker(source: string): Promise<WorkerReading> {
   }
 }
 
+/**
+ * Read the timezone from a URL-based classic Worker (`new Worker("/path.js")`).
+ * Firefox-only surface — patched via the background `filterResponseData`
+ * listener. Terminates the worker when done.
+ */
+async function probeUrlWorker(scriptUrl: string): Promise<WorkerReading> {
+  const worker = new Worker(scriptUrl)
+  try {
+    return await waitForWorker(worker)
+  } finally {
+    try { worker.terminate() } catch { /* cleanup */ }
+  }
+}
+
+/**
+ * Read the timezone from a module Worker (`new Worker(url, { type: "module" })`).
+ * Firefox-only surface. Terminates the worker when done.
+ */
+async function probeModuleWorker(scriptUrl: string): Promise<WorkerReading> {
+  const worker = new Worker(scriptUrl, { type: "module" })
+  try {
+    return await waitForWorker(worker)
+  } finally {
+    try { worker.terminate() } catch { /* cleanup */ }
+  }
+}
+
+/** Wait for a SharedWorker to post back its reading over its port. */
+function waitForSharedWorker(worker: SharedWorker): Promise<WorkerReading> {
+  return new Promise<WorkerReading>((resolve, reject) => {
+    const port = worker.port
+    const timer = setTimeout(
+      () => reject(new Error(`SharedWorker did not respond within ${WORKER_TIMEOUT_MS}ms`)),
+      WORKER_TIMEOUT_MS
+    )
+    port.onmessage = (event: MessageEvent<unknown>) => {
+      clearTimeout(timer)
+      try {
+        resolve(readMessage(event.data))
+      } catch (err) {
+        reject(err instanceof Error ? err : new Error(String(err)))
+      }
+    }
+    worker.onerror = (event) => {
+      clearTimeout(timer)
+      reject(new Error(event.message || "SharedWorker error"))
+    }
+    port.start()
+    port.postMessage({ start: true })
+  })
+}
+
+/**
+ * Read the timezone from a URL-based SharedWorker. Firefox-only surface.
+ * Closes the port when done so the registration doesn't linger.
+ */
+async function probeSharedWorker(scriptUrl: string): Promise<WorkerReading> {
+  const worker = new SharedWorker(scriptUrl)
+  try {
+    return await waitForSharedWorker(worker)
+  } finally {
+    try { worker.port.close() } catch { /* cleanup */ }
+  }
+}
+
 interface ProbeSpec {
   id: string
   label: string
@@ -201,6 +284,30 @@ export async function probeWorkers(): Promise<Array<WorkerProbeResult>> {
           id: "worker-nested",
           label: "Nested Worker timeZone",
           run: () => probeInlineWorker(NESTED_SOURCE),
+        }
+      : null,
+    // Firefox-only URL-based surfaces. Reliable there via the background
+    // filterResponseData listener; omitted on other engines so they never
+    // render as a permanent leak (documented known limitation off Firefox).
+    hasWorker && engineHasResponseFilter
+      ? {
+          id: "worker-url",
+          label: "URL Worker timeZone",
+          run: () => probeUrlWorker("/workers/classic-probe.js"),
+        }
+      : null,
+    hasWorker && engineHasResponseFilter
+      ? {
+          id: "worker-module",
+          label: "Module Worker timeZone",
+          run: () => probeModuleWorker("/workers/module-probe.js"),
+        }
+      : null,
+    typeof SharedWorker !== "undefined" && engineHasResponseFilter
+      ? {
+          id: "worker-shared",
+          label: "SharedWorker timeZone",
+          run: () => probeSharedWorker("/workers/shared-probe.js"),
         }
       : null,
   ]
