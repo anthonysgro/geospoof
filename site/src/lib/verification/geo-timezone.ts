@@ -27,8 +27,17 @@
  */
 
 // Same-origin paths to the boundary data copied into `public/geo-tz/` at build.
-const GEO_TZ_DATA_URL = "/geo-tz/timezones.geojson.geo.dat"
-const GEO_TZ_INDEX_URL = "/geo-tz/timezones.geojson.index.json"
+//
+// VERSIONED by the geo-tz data version. The `.index.json` (table of contents)
+// and the `.dat` it indexes are fetched separately and cached `immutable`; if
+// the data ever changes under a stable URL, a returning visitor could pair a
+// stale cached index with new `.dat` byte ranges and get silently wrong
+// lookups. A version in the path means new data = new URL, so the pair can
+// never mismatch. This literal MUST equal the geo-tz package version; the build
+// (scripts/copy-geo-tz-data.mjs) fails loudly if it drifts.
+const GEO_TZ_DATA_VERSION = "8.1.6"
+const GEO_TZ_DATA_URL = `/geo-tz/${GEO_TZ_DATA_VERSION}/timezones.geojson.geo.dat`
+const GEO_TZ_INDEX_URL = `/geo-tz/${GEO_TZ_DATA_VERSION}/timezones.geojson.index.json`
 
 type GeoTzFinder = { find: (lat: number, lon: number) => Promise<Array<string>> }
 
