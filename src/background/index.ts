@@ -41,6 +41,31 @@ const logger = createLogger("BG");
 const BG_BOOT_AT = now();
 logger.debug(`Background script loading (t=${BG_BOOT_AT.toFixed(1)}ms since worker start)`);
 
+// Restore logger verbosity synchronously on EVERY background spawn.
+//
+// The logger's `_enabled` / `_level` flags are module-level state that resets
+// to defaults (disabled / INFO) every time the MV3 background is torn down and
+// respawned. `initialize()` restores them — but it only runs from
+// onInstalled / onStartup, which do NOT fire on the ordinary event-driven
+// respawns (an incoming message, a webRequest, an alarm). On those respawns
+// the background would run with logging silently off until something happened
+// to call initialize() again, so BG info/debug lines never appeared in the
+// console even with debug mode enabled in settings.
+//
+// Kicking the restore off here, at the top level, means it runs on every
+// spawn. There's a small async window before storage resolves (a handful of
+// early log lines on a cold wake may still be suppressed), but from that point
+// on BG logging honours the persisted setting. initialize() still calls these
+// too, which is harmless (idempotent).
+void loadSettings()
+  .then((s) => {
+    setDebugEnabled(s.debugLogging);
+    setVerbosityLevel(s.verbosityLevel);
+  })
+  .catch(() => {
+    /* storage unavailable this early — initialize() will restore later */
+  });
+
 // Re-export everything so `import("@/background")` keeps working for tests
 export { DEFAULT_SETTINGS } from "@/shared/types/settings";
 export { isValidIANATimezone } from "@/shared/utils/type-guards";
@@ -294,6 +319,17 @@ export { installResyncWatchers };
 // fire — which is what keeps the VPN auto-resync alive across the event-page /
 // service-worker lifecycle.
 installResyncWatchers();
+
+// Register the worker-request-filter webRequest listeners synchronously at
+// module load, for the same reason. These listeners must exist before the
+// first worker-script request so Firefox can wake the background and attach
+// the response filter; if they were only installed inside initialize() they'd
+// be lost on the first idle respawn and URL-based worker patching would
+// silently stop (the symptom: ANNOUNCE_WORKER_FETCH still arrives but no
+// `[worker-filter] attach filter` ever logs). The function is idempotent, so
+// the initialize() call is a harmless no-op after this. Fire-and-forget — the
+// listeners register synchronously inside before any await.
+void installWorkerRequestFilter();
 
 export { initialize };
 

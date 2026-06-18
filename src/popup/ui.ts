@@ -201,11 +201,7 @@ export function buildApiGroups(
     groups.push({
       id: "workers",
       title: t("details_section_workers") || "Workers",
-      apis: [
-        "Worker (constructor wrapper)",
-        "SharedWorker (constructor wrapper)",
-        "navigator.serviceWorker.register()",
-      ],
+      apis: ["Worker (blob / data / URL scripts)", "SharedWorker (blob / data / URL scripts)"],
     });
   }
 

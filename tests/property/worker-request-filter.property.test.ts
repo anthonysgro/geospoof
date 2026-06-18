@@ -76,6 +76,12 @@ const crossOriginPairArb = fc
 
 const workerDestArb = fc.constantFrom("worker", "sharedworker", "serviceworker");
 
+// Worker destinations that are eligible for patching. ServiceWorker is
+// deliberately excluded — the filter never patches SW scripts (browser caches
+// the modified bytes and the SW persists after the extension is disabled), so
+// it always classifies as "pass" regardless of origin/scope.
+const patchableDestArb = fc.constantFrom("worker", "sharedworker");
+
 // ── Property 1: Fix Checking ──────────────────────────────────────────
 
 describe("Property 1 — Fix Checking: cross-origin workers always classified as pass", () => {
@@ -115,7 +121,7 @@ describe("Property 2 — Preservation: same-origin workers with worker dest stil
 
   test("for all same-origin (workerUrl, tabPageUrl) pairs with worker Sec-Fetch-Dest → patch", () => {
     fc.assert(
-      fc.property(sameOriginPairArb, workerDestArb, ([workerUrl, tabPageUrl], dest) => {
+      fc.property(sameOriginPairArb, patchableDestArb, ([workerUrl, tabPageUrl], dest) => {
         // Only proceed when both URLs resolve to the same non-null domain.
         const wd = getRegistrableDomain(workerUrl);
         const pd = getRegistrableDomain(tabPageUrl);
@@ -295,7 +301,7 @@ describe("Property 4 — Scope gating: out-of-scope tabs are never patched", () 
 
   test("in-scope same-origin worker → patch", () => {
     fc.assert(
-      fc.property(sameOriginPairArb, workerDestArb, ([workerUrl, tabPageUrl], dest) => {
+      fc.property(sameOriginPairArb, patchableDestArb, ([workerUrl, tabPageUrl], dest) => {
         const wd = getRegistrableDomain(workerUrl);
         const pd = getRegistrableDomain(tabPageUrl);
         if (!wd || !pd || wd !== pd) return true; // skip degenerate cases
@@ -337,6 +343,58 @@ describe("Property 4 — Scope gating: out-of-scope tabs are never patched", () 
         return result === "pass";
       }),
       { numRuns: 100 }
+    );
+  });
+
+  test("tab-less SharedWorker resolved via documentUrl (same-origin, in-scope) → patch", () => {
+    fc.assert(
+      fc.property(sameOriginPairArb, ([workerUrl, pageUrl]) => {
+        const wd = getRegistrableDomain(workerUrl);
+        const pd = getRegistrableDomain(pageUrl);
+        if (!wd || !pd || wd !== pd) return true; // skip degenerate cases
+
+        updateWorkerFilterSettings(makeSettings({ scopeMode: "all" }));
+        // No tab URL cached (tabId -1), but Firefox supplies documentUrl — the
+        // race-free origin signal for SharedWorkers.
+        const result = _classifyRequestForTest({
+          requestId: "prop-shared-docurl",
+          url: workerUrl,
+          type: "script",
+          method: "GET",
+          tabId: -1,
+          frameId: 0,
+          documentUrl: pageUrl,
+          requestHeaders: [{ name: "Sec-Fetch-Dest", value: "sharedworker" }],
+        });
+        return result === "patch";
+      }),
+      { numRuns: 200 }
+    );
+  });
+
+  test("ServiceWorker is never patched, even same-origin and in-scope", () => {
+    fc.assert(
+      fc.property(sameOriginPairArb, ([workerUrl, pageUrl]) => {
+        const wd = getRegistrableDomain(workerUrl);
+        const pd = getRegistrableDomain(pageUrl);
+        if (!wd || !pd || wd !== pd) return true; // skip degenerate cases
+
+        updateWorkerFilterSettings(makeSettings({ scopeMode: "all" }));
+        tabPageUrlCache.set(99, pageUrl);
+        const result = _classifyRequestForTest({
+          requestId: "prop-sw-never",
+          url: workerUrl,
+          type: "script",
+          method: "GET",
+          tabId: 99,
+          frameId: 0,
+          documentUrl: pageUrl,
+          requestHeaders: [{ name: "Sec-Fetch-Dest", value: "serviceworker" }],
+        });
+        tabPageUrlCache.clear();
+        return result === "pass";
+      }),
+      { numRuns: 200 }
     );
   });
 });

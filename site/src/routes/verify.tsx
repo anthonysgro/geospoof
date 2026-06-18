@@ -16,6 +16,16 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
 import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import {
   IdentityProvider,
   useIdentity,
 } from "@/lib/verification/identity-context"
@@ -28,6 +38,8 @@ import {  probeWebrtc } from "@/lib/verification/webrtc-probe"
 import { probeWorkers } from "@/lib/verification/worker-probe"
 import { LeafletMap, prefetchLeaflet } from "@/components/verification/LeafletMap"
 import { Skeleton } from "@/components/ui/skeleton"
+import { usePlatform } from "@/hooks/use-platform"
+import { getStoreLink } from "@/lib/store-links"
 import {
   getTimezoneOffsetConvention,
   timezoneForCoordinates,
@@ -1689,6 +1701,9 @@ function VerdictBanner({
   geoVsIpMismatch: boolean
   tzVsIpMismatch: boolean
 }) {
+  const platform = usePlatform()
+  const storeLink = getStoreLink(platform, "verify")
+
   // Loading state — neutral, calm.
   if (!ready) {
     return (
@@ -1765,23 +1780,139 @@ function VerdictBanner({
         <p className="mt-2 hidden text-sm text-(--color-canvas-muted) sm:block">
           A site cross-referencing these signals could flag you.
         </p>
-        <a
-          href="#download"
-          onClick={(e) => {
-            e.preventDefault()
-            document
-              .getElementById("download")
-              ?.scrollIntoView({ behavior: "smooth", block: "start" })
-          }}
-          className={cn(
-            "mt-3 inline-flex items-center justify-center rounded-brand px-5 py-2 sm:mt-4 sm:px-6 sm:py-2.5",
-            "bg-(--color-brand) text-sm font-semibold text-white shadow-sm",
-            "transition-all hover:bg-(--color-brand-dark) hover:shadow-md",
-            "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
-          )}
-        >
-          Install GeoSpoof free
-        </a>
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 sm:mt-4">
+          <a
+            href="#download"
+            onClick={(e) => {
+              e.preventDefault()
+              document
+                .getElementById("download")
+                ?.scrollIntoView({ behavior: "smooth", block: "start" })
+            }}
+            className={cn(
+              "inline-flex items-center justify-center rounded-brand px-5 py-2 sm:px-6 sm:py-2.5",
+              "bg-(--color-brand) text-sm font-semibold text-white shadow-sm",
+              "transition-all hover:bg-(--color-brand-dark) hover:shadow-md",
+              "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+            )}
+          >
+            Install GeoSpoof free
+          </a>
+
+          <Dialog>
+            <DialogTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  "rounded text-sm font-medium text-(--color-canvas-muted) underline underline-offset-4",
+                  "transition-colors hover:text-(--color-canvas-foreground)",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+                )}
+              >
+                Already have GeoSpoof?
+              </button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Already running GeoSpoof?</DialogTitle>
+                <DialogDescription>
+                  A quick checklist clears up almost every flagged signal.
+                </DialogDescription>
+              </DialogHeader>
+              <ul className="space-y-3 text-sm text-(--color-canvas-foreground)">
+                {(geoVsIpMismatch || tzVsIpMismatch) && (
+                  <li className="flex gap-2.5">
+                    <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-amber-500" aria-hidden />
+                    <span>
+                      <span className="font-semibold">
+                        IP doesn&apos;t match your {geoVsIpMismatch ? "location" : "timezone"}?
+                      </span>{" "}
+                      That&apos;s expected when VPN sync is off — GeoSpoof only
+                      aligns your IP when you turn it on. If you meant to keep
+                      your real IP, this is working as intended.
+                    </span>
+                  </li>
+                )}
+                {(geoVsIpMismatch || tzVsIpMismatch) && (
+                  <li className="flex gap-2.5">
+                    <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-amber-500" aria-hidden />
+                    <span>
+                      <span className="font-semibold">Just turned on auto VPN sync?</span>{" "}
+                      Give it up to ~10 seconds after a refresh to catch up, then
+                      re-check — auto sync isn&apos;t instant the way manual sync is.
+                    </span>
+                  </li>
+                )}
+                <li className="flex gap-2.5">
+                  <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-(--color-brand)" aria-hidden />
+                  <span>
+                    <span className="font-semibold">Update to the latest version.</span>{" "}
+                    New fingerprinting tricks get patched continuously.{" "}
+                    {storeLink ? (
+                      <a
+                        href={storeLink.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-(--color-brand) underline underline-offset-4 hover:text-(--color-brand-dark)"
+                      >
+                        {storeLink.cta}
+                      </a>
+                    ) : (
+                      <a
+                        href="#download"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          document
+                            .getElementById("download")
+                            ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                        }}
+                        className="font-medium text-(--color-brand) underline underline-offset-4 hover:text-(--color-brand-dark)"
+                      >
+                        See download options
+                      </a>
+                    )}
+                    .
+                  </span>
+                </li>
+                <li className="flex gap-2.5">
+                  <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-(--color-brand)" aria-hidden />
+                  <span>
+                    <span className="font-semibold">Check it's on for this site.</span>{" "}
+                    Look at the toolbar icon; if you scope by allowlist or
+                    denylist, include this site.
+                  </span>
+                </li>
+                <li className="flex gap-2.5">
+                  <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-(--color-brand)" aria-hidden />
+                  <span>
+                    <span className="font-semibold">Reload after enabling or updating.</span>{" "}
+                    Some surfaces only apply on a fresh page load.
+                  </span>
+                </li>
+              </ul>
+              <DialogFooter className="sm:items-center sm:justify-between">
+                <Link
+                  to="/support"
+                  className="text-sm font-medium text-(--color-brand) underline underline-offset-4 hover:text-(--color-brand-dark)"
+                >
+                  Still stuck? Contact support
+                </Link>
+                <DialogClose asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      "inline-flex items-center justify-center rounded-brand border border-(--color-canvas-border) px-4 py-2",
+                      "text-sm font-semibold text-(--color-canvas-foreground) transition-colors",
+                      "hover:bg-canvas-border/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+                    )}
+                  >
+                    Got it
+                  </button>
+                </DialogClose>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
     </div>
   )
