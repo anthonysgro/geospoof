@@ -92,7 +92,7 @@
     "description": "Description shown under the selector when 'Denylist' mode is active."
   },
   "filters_addPlaceholder": {
-    "message": "example.com",
+    "message": "ejemplo.com",
     "description": "Placeholder text in the add-site input."
   },
   "filters_addButton": {
