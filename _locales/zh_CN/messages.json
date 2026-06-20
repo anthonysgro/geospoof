@@ -459,6 +459,34 @@
     "message": "深色",
     "description": "Theme option that forces the dark popup theme."
   },
+  "advanced_accuracy": {
+    "message": "位置精度",
+    "description": "Label for the accuracy selector that controls how the spoofed GeolocationCoordinates.accuracy value is produced."
+  },
+  "advanced_accuracy_realistic": {
+    "message": "真实",
+    "description": "Accuracy option that picks a device-appropriate value automatically (auto mode)."
+  },
+  "advanced_accuracy_custom": {
+    "message": "自定义",
+    "description": "Accuracy option that reveals a numeric input for an exact meter value (fixed mode)."
+  },
+  "advanced_accuracy_customMeters": {
+    "message": "精度（米）",
+    "description": "Label for the numeric input shown when the Custom accuracy option is selected."
+  },
+  "advanced_accuracy_customHint": {
+    "message": "请输入 1 到 10000 米之间的值",
+    "description": "Inline hint shown when the custom accuracy value is out of the allowed range."
+  },
+  "advanced_accuracy_customSet": {
+    "message": "设置",
+    "description": "Button that commits the typed custom accuracy value (fixed mode). The custom value is applied only when this button is clicked or Enter is pressed."
+  },
+  "advanced_accuracy_customEdit": {
+    "message": "编辑",
+    "description": "Button that reopens the custom accuracy editor from the compact display showing the committed value."
+  },
   "advanced_coffee": {
     "message": "☕ 请我喝咖啡",
     "description": "Footer link inviting the user to buy the maintainer a coffee."

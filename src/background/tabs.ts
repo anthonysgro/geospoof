@@ -32,7 +32,15 @@ export async function broadcastSettingsToTabs(settings: Settings): Promise<void>
   // every mutation flows through broadcastSettingsToTabs.
   updateWorkerFilterSettings(settings);
 
-  const { location, timezone, debugLogging, verbosityLevel, webrtcProtection } = settings;
+  const {
+    location,
+    timezone,
+    debugLogging,
+    verbosityLevel,
+    webrtcProtection,
+    accuracySetting,
+    accuracySeed,
+  } = settings;
   const tabs = await browser.tabs.query({});
 
   logger.info("Broadcasting settings to tabs:", { tabCount: tabs.length });
@@ -59,6 +67,8 @@ export async function broadcastSettingsToTabs(settings: Settings): Promise<void>
       debugLogging,
       verbosityLevel,
       webrtcProtection,
+      accuracySetting,
+      accuracySeed,
     };
 
     const promise = browser.tabs

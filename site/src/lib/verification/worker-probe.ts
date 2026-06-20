@@ -237,9 +237,25 @@ function waitForSharedWorker(worker: SharedWorker): Promise<WorkerReading> {
 /**
  * Read the timezone from a URL-based SharedWorker. Firefox-only surface.
  * Closes the port when done so the registration doesn't linger.
+ *
+ * A SharedWorker is keyed by `(origin, resolved URL, name)` and lives
+ * independently of any tab: once one is running for a given key, every later
+ * `new SharedWorker(sameUrl)` just opens a fresh port to the already-running
+ * instance instead of re-fetching the script. That means the background
+ * `filterResponseData` listener only ever sees the *first* fetch — if that
+ * first instance was created before the spoofing payload was in place (e.g. on
+ * a prior page load), it survives port closes and page reloads and keeps
+ * leaking the real zone, while `onBeforeRequest` never fires again.
+ *
+ * To measure the extension's actual fetch-time patching (rather than a stale
+ * reused instance) we force a brand-new SharedWorker key every run by
+ * cache-busting the URL with a unique query param. The distinct URL guarantees
+ * a fresh network fetch that flows through the filter. The query param doesn't
+ * change the script's origin, so the same-origin / scope gates still apply.
  */
 async function probeSharedWorker(scriptUrl: string): Promise<WorkerReading> {
-  const worker = new SharedWorker(scriptUrl)
+  const uniqueUrl = `${scriptUrl}${scriptUrl.includes("?") ? "&" : "?"}probe=${Date.now()}-${Math.random().toString(36).slice(2)}`
+  const worker = new SharedWorker(uniqueUrl)
   try {
     return await waitForSharedWorker(worker)
   } finally {

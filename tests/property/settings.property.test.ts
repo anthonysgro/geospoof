@@ -59,6 +59,14 @@ const settingsArb: fc.Arbitrary<Settings> = fc.record({
   scopeMode: fc.constantFrom("all", "allowlist", "denylist"),
   allowlist: fc.constant([]),
   denylist: fc.constant([]),
+  accuracySetting: fc.oneof(
+    fc.constant({ mode: "auto" as const }),
+    fc.record({ mode: fc.constant("fixed" as const), meters: fc.integer({ min: 1, max: 5000 }) }),
+    fc
+      .tuple(fc.integer({ min: 1, max: 2500 }), fc.integer({ min: 2500, max: 5000 }))
+      .map(([min, max]) => ({ mode: "range" as const, min, max }))
+  ),
+  accuracySeed: fc.integer({ min: 0, max: 2 ** 31 }),
 });
 
 /** The keys that MUST NOT appear in the broadcast payload. */
@@ -83,6 +91,11 @@ const REQUIRED_KEYS: (keyof UpdateSettingsPayload)[] = [
   // the content-script layer (closes the gap where Firefox's
   // `disable_non_proxied_udp` policy only works behind a proxy).
   "webrtcProtection",
+  // Accuracy resolution inputs threaded end-to-end so the injected
+  // Resolver uses the user's chosen setting/seed rather than always
+  // falling back to auto/0.
+  "accuracySetting",
+  "accuracySeed",
 ];
 
 /**
@@ -92,7 +105,9 @@ const REQUIRED_KEYS: (keyof UpdateSettingsPayload)[] = [
  *
  * For any Settings object, when broadcastSettingsToTabs is called,
  * the payload sent via browser.tabs.sendMessage contains exactly
- * `enabled`, `location`, `timezone` and no internal fields.
+ * `enabled`, `location`, `timezone`, `debugLogging`, `verbosityLevel`,
+ * `webrtcProtection`, `accuracySetting`, `accuracySeed` and no internal
+ * fields.
  */
 test("Property 4: Broadcast Payload Contains Only Scoped Fields", async () => {
   await fc.assert(
@@ -129,8 +144,8 @@ test("Property 4: Broadcast Payload Contains Only Scoped Fields", async () => {
         expect(payload).not.toHaveProperty(key);
       }
 
-      // Payload must have exactly 6 scoped keys.
-      expect(Object.keys(payload)).toHaveLength(6);
+      // Payload must have exactly 8 scoped keys.
+      expect(Object.keys(payload)).toHaveLength(8);
 
       // `enabled` is now resolved per tab via the shared source of truth
       // (background-authoritative per-tab scoping), not the raw master flag.
@@ -148,6 +163,8 @@ test("Property 4: Broadcast Payload Contains Only Scoped Fields", async () => {
       expect(payload.timezone).toEqual(settings.timezone);
       expect(payload.debugLogging).toBe(settings.debugLogging);
       expect(payload.webrtcProtection).toBe(settings.webrtcProtection);
+      expect(payload.accuracySetting).toEqual(settings.accuracySetting);
+      expect(payload.accuracySeed).toBe(settings.accuracySeed);
     }),
     { numRuns: 100 }
   );

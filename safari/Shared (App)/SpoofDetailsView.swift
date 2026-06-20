@@ -46,7 +46,7 @@ struct SpoofDetailsView: View {
             if let loc = controller.location {
                 LabeledRow(label: "Latitude", value: String(format: "%.5f", loc.latitude))
                 LabeledRow(label: "Longitude", value: String(format: "%.5f", loc.longitude))
-                LabeledRow(label: "Accuracy", value: "±\(Int(loc.accuracy)) m")
+                LabeledRow(label: "Accuracy", value: accuracyDetailValue(for: controller.accuracySetting))
                 if let name = controller.locationName?.displayName, !name.isEmpty {
                     LabeledRow(label: "Location", value: name)
                 }

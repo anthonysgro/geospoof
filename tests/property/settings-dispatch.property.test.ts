@@ -14,6 +14,8 @@ interface SettingsEventDetail {
     latitude: number;
     longitude: number;
     accuracy: number;
+    accuracySetting?: AccuracySetting;
+    accuracySeed?: number;
   } | null;
   timezone: {
     identifier: string;
@@ -22,6 +24,12 @@ interface SettingsEventDetail {
     fallback?: boolean;
   } | null;
 }
+
+/** Mirrors the AccuracySetting union from src/shared/types/settings.ts */
+type AccuracySetting =
+  | { mode: "auto" }
+  | { mode: "fixed"; meters: number }
+  | { mode: "range"; min: number; max: number };
 
 /** A representative set of valid IANA timezone identifiers for generation. */
 const IANA_TIMEZONES = [
@@ -40,11 +48,22 @@ const IANA_TIMEZONES = [
   "UTC",
 ];
 
-/** fast-check arbitrary for a valid Location object. */
+/** fast-check arbitrary for an AccuracySetting union value. */
+const arbAccuracySetting: fc.Arbitrary<AccuracySetting> = fc.oneof(
+  fc.constant({ mode: "auto" as const }),
+  fc.record({ mode: fc.constant("fixed" as const), meters: fc.integer({ min: 1, max: 5000 }) }),
+  fc
+    .tuple(fc.integer({ min: 1, max: 2500 }), fc.integer({ min: 2500, max: 5000 }))
+    .map(([min, max]) => ({ mode: "range" as const, min, max }))
+);
+
+/** fast-check arbitrary for a valid Location object, carrying accuracy resolution inputs. */
 const arbLocation = fc.record({
   latitude: fc.double({ min: -90, max: 90, noNaN: true, noDefaultInfinity: true }),
   longitude: fc.double({ min: -180, max: 180, noNaN: true, noDefaultInfinity: true }),
   accuracy: fc.double({ min: 0.1, max: 10000, noNaN: true, noDefaultInfinity: true }),
+  accuracySetting: arbAccuracySetting,
+  accuracySeed: fc.integer({ min: 0, max: 2 ** 31 }),
 });
 
 /** fast-check arbitrary for a valid Timezone object. */
@@ -94,6 +113,13 @@ describe("Settings Dispatch Round-Trip via CustomEvent", () => {
           expect(received!.enabled).toBe(settings.enabled);
           expect(received!.location).toEqual(settings.location);
           expect(received!.timezone).toEqual(settings.timezone);
+          // The accuracy resolution inputs ride on `location` and must
+          // survive the dispatch round-trip so the injected Resolver can
+          // read the user's chosen setting/seed (bug: these were dropped).
+          if (settings.location) {
+            expect(received!.location!.accuracySetting).toEqual(settings.location.accuracySetting);
+            expect(received!.location!.accuracySeed).toBe(settings.location.accuracySeed);
+          }
         } finally {
           window.removeEventListener(EVENT_NAME, listener);
         }

@@ -6,7 +6,7 @@
  * and with the injected page-context script via CustomEvent (CSP-safe).
  */
 
-import type { Location, Timezone } from "@/shared/types/settings";
+import type { Location, Timezone, AccuracySetting } from "@/shared/types/settings";
 import type { UpdateSettingsPayload } from "@/shared/types/messages";
 import { createLogger, setDebugEnabled, setVerbosityLevel } from "@/shared/utils/debug-logger";
 import { now } from "@/shared/utils/safe-time";
@@ -17,6 +17,16 @@ const logger = createLogger("CS");
 let spoofingEnabled = false;
 let spoofedLocation: Location | null = null;
 let timezoneOverride: Timezone | null = null;
+/**
+ * The user's chosen accuracy setting and per-install seed. Threaded
+ * through from the background so the injected page-world script
+ * resolves `GeolocationCoordinates.accuracy` from the user's choice
+ * rather than always falling back to auto mode. Left undefined until
+ * the first settings message arrives; the injected Resolver defaults
+ * to auto / seed 0 in that window (same as before any settings land).
+ */
+let accuracySetting: AccuracySetting | undefined;
+let accuracySeed: number | undefined;
 let debugLogging = false;
 let verbosityLevel = "INFO";
 /**
@@ -60,7 +70,14 @@ window.addEventListener(ANNOUNCE_EVENT_NAME, ((event: CustomEvent<{ url: string 
 /** Data dispatched to the injected script via CustomEvent. */
 interface SettingsEventDetail {
   enabled: boolean;
-  location: Location | null;
+  /**
+   * The spoofed location, widened to carry the optional accuracy
+   * resolution inputs the injected Resolver reads off `location`
+   * (see SpoofedLocation in src/content/injected/types.ts). When
+   * spoofing has no location these fields are irrelevant and the
+   * value is null.
+   */
+  location: (Location & { accuracySetting?: AccuracySetting; accuracySeed?: number }) | null;
   timezone: Timezone | null;
   debugLogging: boolean;
   verbosityLevel: string;
@@ -99,7 +116,7 @@ const INITIAL_DISPATCH_RETRIES_MS: ReadonlyArray<number> = [16, 50, 120];
 function buildSettingsEventDetail(): SettingsEventDetail {
   return {
     enabled: spoofingEnabled,
-    location: spoofedLocation,
+    location: spoofedLocation ? { ...spoofedLocation, accuracySetting, accuracySeed } : null,
     timezone: timezoneOverride,
     debugLogging,
     verbosityLevel,
@@ -187,6 +204,8 @@ browser.runtime.onMessage.addListener(
       spoofingEnabled = message.payload.enabled;
       spoofedLocation = message.payload.location;
       timezoneOverride = message.payload.timezone;
+      accuracySetting = message.payload.accuracySetting;
+      accuracySeed = message.payload.accuracySeed;
       debugLogging = message.payload.debugLogging;
       verbosityLevel = message.payload.verbosityLevel ?? "INFO";
       webrtcProtection = message.payload.webrtcProtection ?? false;
@@ -232,6 +251,8 @@ browser.runtime
       debugLogging: boolean;
       verbosityLevel: string;
       webrtcProtection?: boolean;
+      accuracySetting?: AccuracySetting;
+      accuracySeed?: number;
     }) => {
       const roundTrip = now() - CS_SEND_AT;
       logger.debug(
@@ -240,6 +261,8 @@ browser.runtime
       spoofingEnabled = settings.enabled;
       spoofedLocation = settings.location;
       timezoneOverride = settings.timezone;
+      accuracySetting = settings.accuracySetting;
+      accuracySeed = settings.accuracySeed;
       debugLogging = settings.debugLogging;
       verbosityLevel = settings.verbosityLevel ?? "INFO";
       webrtcProtection = settings.webrtcProtection ?? false;

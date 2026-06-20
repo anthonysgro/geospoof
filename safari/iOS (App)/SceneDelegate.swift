@@ -47,7 +47,7 @@ struct RootView: View {
                     Label("Details", systemImage: "list.bullet.rectangle")
                 }
 
-            SettingsView()
+            SettingsView(controller: controller)
                 .tabItem {
                     Label("Settings", systemImage: "gearshape")
                 }
@@ -116,6 +116,7 @@ struct HomeView: View {
 }
 
 struct SettingsView: View {
+    @ObservedObject var controller: SpoofController
     @StateObject private var iconModel = AppIconModel()
     @AppStorage("appearanceMode") private var appearance: AppearanceMode = .system
     #if DEBUG
@@ -149,6 +150,21 @@ struct SettingsView: View {
                     }
                 } header: {
                     Text("Appearance")
+                }
+
+                Section {
+                    NavigationLink {
+                        AccuracyPickerView(controller: controller)
+                    } label: {
+                        HStack {
+                            Label("Location Accuracy", systemImage: "scope")
+                            Spacer()
+                            Text(accuracyValueLabel(for: controller.accuracySetting))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Advanced")
                 }
 
                 TipJarView()

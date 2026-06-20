@@ -45,6 +45,8 @@ function makeSettings(partial: Partial<Settings>): Settings {
     scopeMode: "all" as const,
     allowlist: [],
     denylist: [],
+    accuracySetting: { mode: "auto" },
+    accuracySeed: 0,
     ...partial,
   };
 }
@@ -90,6 +92,17 @@ function urlFromSpec(spec: UrlSpec): string | undefined {
 const listArb = fc.uniqueArray(fc.constantFrom(...LIST_DOMAINS), { maxLength: 3 });
 
 const scopeModeArb: fc.Arbitrary<ScopeMode> = fc.constantFrom("all", "allowlist", "denylist");
+
+/** fast-check arbitrary for an AccuracySetting union value. */
+const accuracySettingArb = fc.oneof(
+  fc.constant({ mode: "auto" as const }),
+  fc.record({ mode: fc.constant("fixed" as const), meters: fc.integer({ min: 1, max: 5000 }) }),
+  fc
+    .tuple(fc.integer({ min: 1, max: 2500 }), fc.integer({ min: 2500, max: 5000 }))
+    .map(([min, max]) => ({ mode: "range" as const, min, max }))
+);
+
+const accuracySeedArb = fc.integer({ min: 0, max: 2 ** 31 });
 
 const locationArb = fc.option(
   fc.record({
@@ -175,6 +188,8 @@ describe("Per-Tab Settings Broadcast", () => {
         fc.boolean(),
         fc.boolean(),
         fc.constantFrom("ERROR", "WARN", "INFO", "DEBUG", "TRACE"),
+        accuracySettingArb,
+        accuracySeedArb,
         async (
           urlSpecs,
           enabled,
@@ -185,7 +200,9 @@ describe("Per-Tab Settings Broadcast", () => {
           timezone,
           debugLogging,
           webrtcProtection,
-          verbosityLevel
+          verbosityLevel,
+          accuracySetting,
+          accuracySeed
         ) => {
           const { settings, tabs, messagesByTab, callsByTab } = await runBroadcast(urlSpecs, {
             enabled,
@@ -197,6 +214,8 @@ describe("Per-Tab Settings Broadcast", () => {
             debugLogging,
             webrtcProtection,
             verbosityLevel,
+            accuracySetting,
+            accuracySeed,
           });
 
           // Every open tab receives a settings broadcast (Req 8.1).
@@ -223,6 +242,12 @@ describe("Per-Tab Settings Broadcast", () => {
             expect(payload.debugLogging).toBe(settings.debugLogging);
             expect(payload.verbosityLevel).toBe(settings.verbosityLevel);
             expect(payload.webrtcProtection).toBe(settings.webrtcProtection);
+
+            // Accuracy resolution inputs are threaded end-to-end so the
+            // injected Resolver uses the user's chosen setting/seed rather
+            // than always falling back to auto/0 (the wiring bug).
+            expect(payload.accuracySetting).toEqual(settings.accuracySetting);
+            expect(payload.accuracySeed).toBe(settings.accuracySeed);
 
             // Privacy invariant: lists never appear in a page-bound payload.
             expect(payload).not.toHaveProperty("allowlist");

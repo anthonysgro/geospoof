@@ -1241,6 +1241,12 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   margin-top: 0;
 }
 
+/* Divider separating the spoofing controls (timezone, accuracy) from the app
+   preferences (theme, debug). Even 12px rhythm to match the surrounding rows. */
+.advanced-content > .section-divider {
+  margin: 12px 0;
+}
+
 /* Verbosity selector */
 .verbosity-selector {
   margin-top: 12px;
@@ -1281,6 +1287,93 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   margin-top: 12px;
 }
 
+/* Accuracy selector */
+.accuracy-selector {
+  margin-top: 12px;
+}
+
+/* The label + dropdown row reuses .select-label (flex, space-between,
+   align-items center) just like the Theme/Verbosity selectors. */
+
+/* Editing row on its own line: input grows + Set button (mirrors
+   .scope-add-row). */
+.accuracy-custom-edit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* Display row on its own line: committed "±Nm" value + compact Edit button. */
+.accuracy-custom-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* The numeric input grows to fill the row (mirrors .scope-add-row input). */
+#accuracyCustomInput {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--border-input);
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface-alt);
+}
+
+#accuracyCustomInput:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+
+#accuracyCustomInput.invalid {
+  border-color: var(--danger, #d9534f);
+}
+
+#accuracyCustomValue {
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Confirm/Edit buttons for the Custom accuracy control. Mirror the
+   brand-coloured primary buttons so the commit affordance matches the rest of
+   the popup, with light/dark parity via the shared tokens. Compact horizontal
+   padding so they fit inline on the label row. The Custom value commits only
+   when Set is clicked (or on Enter) — never on blur or keystroke. */
+.accuracy-custom-confirm {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  background: var(--brand);
+  color: var(--text-on-brand);
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.accuracy-custom-confirm:hover {
+  background: var(--brand-hover);
+}
+
+.accuracy-custom-confirm:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.accuracy-custom-hint {
+  margin-top: 6px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--disclaimer-text);
+}
+
 .select-label {
   display: flex;
   justify-content: space-between;
@@ -1301,6 +1394,25 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 .select-label select:focus {
   outline: none;
   border-color: var(--brand);
+}
+
+.select-label input[type="number"] {
+  width: 90px;
+  padding: 4px 8px;
+  border: 1px solid var(--border-input);
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface-alt);
+}
+
+.select-label input[type="number"]:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+
+.select-label input[type="number"].invalid {
+  border-color: var(--danger, #d9534f);
 }
 
 /* Version label — inline within the advanced footer. */

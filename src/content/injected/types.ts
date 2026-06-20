@@ -3,10 +3,22 @@
  * This module contains only type definitions and interfaces — no runtime code.
  */
 
+import type { AccuracySetting } from "@/shared/types/settings";
+
 export interface SpoofedLocation {
   latitude: number;
   longitude: number;
   accuracy?: number;
+  /**
+   * How the spoofed `accuracy` value should be produced. When absent the
+   * Resolver falls back to {@link DEFAULT_ACCURACY_SETTING} (auto mode).
+   */
+  accuracySetting?: AccuracySetting;
+  /**
+   * Per-install stable seed used by the Resolver to deterministically derive
+   * the accuracy value. When absent it defaults to `0`.
+   */
+  accuracySeed?: number;
 }
 
 export interface TimezoneData {

@@ -4,12 +4,16 @@
  */
 
 import type { Settings } from "@/shared/types/settings";
+import { DEFAULT_ACCURACY_M } from "@/shared/types/settings";
+import { resolveAccuracy } from "@/shared/accuracy/resolver";
+import { detectDeviceClass } from "@/shared/accuracy/device-class";
 import { updateDetailsView, updateStatusBadge, displayLocation } from "./ui";
 import { showOnboarding } from "./onboarding";
 import { t } from "./i18n";
 import { renderFavorites } from "./favorites";
 import { renderScope, renderScopeLoadError } from "./scope";
 import { reflectEarlyProtectionState } from "./early-protection";
+import { restoreAccuracyControl } from "./accuracy";
 
 /**
  * Apply a theme class to the document body.
@@ -99,6 +103,20 @@ export async function loadSettings(): Promise<void> {
       themeSelect.value = settings.theme ?? "system";
     }
     applyTheme(settings.theme ?? "system");
+
+    // Restore accuracy control state from the stored accuracySetting. Pass the
+    // currently-resolved accuracy (the ±Nm in effect) so selecting "Custom"
+    // pre-fills the input with the value the user currently sees.
+    const resolvedAccuracy = settings.location
+      ? resolveAccuracy({
+          setting: settings.accuracySetting ?? { mode: "auto" },
+          deviceClass: detectDeviceClass(navigator),
+          seed: settings.accuracySeed,
+          latitude: settings.location.latitude,
+          longitude: settings.location.longitude,
+        })
+      : DEFAULT_ACCURACY_M;
+    restoreAccuracyControl(settings.accuracySetting, resolvedAccuracy);
 
     // Firefox-only: reveal the "Instant timezone protection" toggle and sync it
     // to whether the optional userScripts permission is currently granted.

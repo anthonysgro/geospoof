@@ -39,6 +39,8 @@ function makeSettings(overrides?: Partial<Settings>): Settings {
     scopeMode: "all",
     allowlist: ["allowed.com"],
     denylist: ["blocked.com"],
+    accuracySetting: { mode: "auto" },
+    accuracySeed: 0,
     ...overrides,
   };
 }
@@ -140,6 +142,26 @@ describe("Scoped GET_SETTINGS by sender (task 6)", () => {
       expect(response.verbosityLevel).toBe(s.verbosityLevel);
       expect(response.webrtcProtection).toBe(s.webrtcProtection);
     });
+
+    test("scoped payload carries accuracySetting and accuracySeed", async () => {
+      // The content-script payload must thread the accuracy resolution inputs
+      // so the injected Resolver uses the user's chosen setting rather than
+      // always falling back to auto/0 (the wiring bug this fixes).
+      const s = makeSettings({
+        scopeMode: "all",
+        accuracySetting: { mode: "fixed", meters: 250 },
+        accuracySeed: 1234567,
+      });
+      const { handleMessage } = await importBackgroundWith(s);
+
+      const response = (await handleMessage(
+        { type: "GET_SETTINGS" },
+        senderFor(10, "https://example.com/")
+      )) as Record<string, unknown>;
+
+      expect(response.accuracySetting).toEqual({ mode: "fixed", meters: 250 });
+      expect(response.accuracySeed).toBe(1234567);
+    });
   });
 
   describe("popup branch (sender.tab == null)", () => {
@@ -166,6 +188,8 @@ describe("Scoped GET_SETTINGS by sender (task 6)", () => {
         scopeMode: "denylist",
         allowlist: ["allowed.com"],
         denylist: ["blocked.com"],
+        accuracySetting: { mode: "range", min: 30, max: 90 },
+        accuracySeed: 42,
       });
       const { broadcastSettingsToTabs, isRestrictedUrl } = await importBackgroundWith(s);
 
@@ -193,6 +217,11 @@ describe("Scoped GET_SETTINGS by sender (task 6)", () => {
         expect(payload).not.toHaveProperty("allowlist");
         expect(payload).not.toHaveProperty("denylist");
         expect(payload).not.toHaveProperty("scopeMode");
+
+        // Accuracy resolution inputs must be present in every broadcast
+        // payload so live content scripts re-resolve with the user's choice.
+        expect(payload.accuracySetting).toEqual({ mode: "range", min: 30, max: 90 });
+        expect(payload.accuracySeed).toBe(42);
 
         const tab = tabs.find((t) => t.id === tabId)!;
         const expected = computeEffectiveEnabled({

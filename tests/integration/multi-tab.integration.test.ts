@@ -107,6 +107,8 @@ describe("Multi-Tab Integration Tests", () => {
         scopeMode: "all" as const,
         allowlist: [],
         denylist: [],
+        accuracySetting: { mode: "auto" as const },
+        accuracySeed: 0,
       };
 
       // Act: Should not throw even if some tabs fail
@@ -255,6 +257,10 @@ describe("Multi-Tab Integration Tests", () => {
         scopeMode: "all" as const,
         allowlist: [],
         denylist: [],
+        accuracySetting: { mode: "auto" as const },
+        // A valid (finite, non-zero) per-install seed: validateSettings keeps
+        // it as-is, so the reloaded payload round-trips unchanged (Req 5.5).
+        accuracySeed: 123456789,
       };
 
       storageGet.mockResolvedValue({ settings });
@@ -310,6 +316,11 @@ describe("Multi-Tab Integration Tests", () => {
         debugLogging: false,
         verbosityLevel: "INFO",
         theme: "system" as const,
+        // A valid (finite, non-zero) per-install seed so every loadSettings()
+        // call keeps the same seed and the reloaded payloads stay identical
+        // (Req 5.2/5.5). Without a stored seed, validateSettings would assign a
+        // fresh random one on each load.
+        accuracySeed: 987654321,
       };
 
       storageGet.mockResolvedValue({ settings });
@@ -372,6 +383,8 @@ describe("Multi-Tab Integration Tests", () => {
         scopeMode: "all" as const,
         allowlist: [],
         denylist: [],
+        accuracySetting: { mode: "auto" as const },
+        accuracySeed: 0,
       };
 
       storageGet.mockResolvedValue({ settings });
