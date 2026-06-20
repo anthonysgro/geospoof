@@ -342,7 +342,15 @@ async function onAlarm(alarm: Alarms.Alarm): Promise<void> {
   const { tabId, attempt } = parsed;
 
   const settings = await loadSettings();
-  const { location, timezone, debugLogging, verbosityLevel, webrtcProtection } = settings;
+  const {
+    location,
+    timezone,
+    debugLogging,
+    verbosityLevel,
+    webrtcProtection,
+    accuracySetting,
+    accuracySeed,
+  } = settings;
 
   try {
     const result = await checkTabInjection(tabId);
@@ -377,6 +385,8 @@ async function onAlarm(alarm: Alarms.Alarm): Promise<void> {
         debugLogging,
         verbosityLevel,
         webrtcProtection,
+        accuracySetting,
+        accuracySeed,
       };
 
       try {
@@ -505,7 +515,15 @@ if (browser.tabs && browser.tabs.onCreated) {
   browser.tabs.onCreated.addListener((tab: Tabs.Tab) => {
     void (async () => {
       const settings = await loadSettings();
-      const { location, timezone, debugLogging, verbosityLevel, webrtcProtection } = settings;
+      const {
+        location,
+        timezone,
+        debugLogging,
+        verbosityLevel,
+        webrtcProtection,
+        accuracySetting,
+        accuracySeed,
+      } = settings;
 
       // Resolve Effective_Enabled for the newly created tab from its top-level
       // URL via the shared source of truth (Req 8.4, 9.3) rather than sending
@@ -525,6 +543,8 @@ if (browser.tabs && browser.tabs.onCreated) {
         debugLogging,
         verbosityLevel,
         webrtcProtection,
+        accuracySetting,
+        accuracySeed,
       };
 
       setTimeout(() => {

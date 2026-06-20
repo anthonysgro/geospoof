@@ -106,7 +106,7 @@ struct MacRootView: View {
             case .filters: SiteFiltersView(controller: controller)
             case .details: DetailsTab(controller: controller)
             case .test: MacTestView()
-            case .settings: MacSettingsView()
+            case .settings: MacSettingsView(controller: controller)
             }
         }
         .tint(.brand)
@@ -436,9 +436,12 @@ struct ExtensionStatusBanner: View {
 }
 
 struct MacSettingsView: View {
+    @ObservedObject var controller: SpoofController
     @AppStorage("appearanceMode") private var appearance: AppearanceMode = .system
+    #if DEBUG
     @AppStorage(LogSettingsKey.enabled) private var loggingEnabled = false
     @AppStorage(LogSettingsKey.level) private var logLevelRaw = AppLogLevel.info.rawValue
+    #endif
 
     var body: some View {
         AdaptiveNavigationStack {
@@ -450,23 +453,20 @@ struct MacSettingsView: View {
                 }
 
                 Section {
-                    Toggle(isOn: $loggingEnabled) {
-                        Label("Diagnostic Logging", systemImage: "ladybug")
-                    }
-                    if loggingEnabled {
-                        Picker("Log Level", selection: $logLevelRaw) {
-                            ForEach(AppLogLevel.allCases) { level in
-                                Text(level.label).tag(level.rawValue)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                    }
+                    AccuracySettingsRows(controller: controller)
                 } header: {
                     Text("Advanced")
                 }
+
                 TipJarView()
 
                 Section {
+                    Link(
+                        destination: URL(
+                            string: "https://apps.apple.com/app/id6765719745?action=write-review")!
+                    ) {
+                        Label("Rate GeoSpoof", systemImage: "star")
+                    }
                     Link(destination: URL(string: "https://github.com/anthonysgro/geospoof")!) {
                         Label("View Source on GitHub", systemImage: "chevron.left.forwardslash.chevron.right")
                     }
@@ -484,12 +484,30 @@ struct MacSettingsView: View {
                     }
                 } header: {
                     Text("Help & Legal")
+                } footer: {
+                    Text(AppInfo.versionWithBuild)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, 8)
                 }
 
+                #if DEBUG
                 Section {
-                    Text("Version \(AppInfo.version)")
-                        .foregroundColor(.secondary)
+                    Toggle(isOn: $loggingEnabled) {
+                        Label("Diagnostic Logging", systemImage: "ladybug")
+                    }
+                    if loggingEnabled {
+                        Picker(selection: $logLevelRaw) {
+                            ForEach(AppLogLevel.allCases) { level in
+                                Text(level.label).tag(level.rawValue)
+                            }
+                        } label: {
+                            Label("Log Level", systemImage: "slider.horizontal.3")
+                        }
+                    }
+                } header: {
+                    Text("Debug")
                 }
+                #endif
             }
             .groupedFormStyle()
             .navigationTitle("Settings")

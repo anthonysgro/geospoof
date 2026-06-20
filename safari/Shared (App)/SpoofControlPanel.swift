@@ -1489,3 +1489,367 @@ struct ScopeMonogram: View {
         return Color(hue: Double(hash) / 360.0, saturation: 0.55, brightness: 0.55)
     }
 }
+
+// MARK: - Accuracy settings
+
+/// UI-only preset model for the accuracy picker. Maps onto SpoofAccuracySetting.
+/// The Tight/Loose range presets were retired — "Realistic" already picks a
+/// device-appropriate band automatically, so the manual range options mostly
+/// added noise. `.range` still exists in the model for backward compatibility
+/// (a value saved before removal keeps resolving), but it has no preset here and
+/// is shown as "Realistic".
+private enum AccuracyPreset: String, CaseIterable, Identifiable {
+    case realistic, custom
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .realistic: return "Realistic"
+        case .custom: return "Custom"
+        }
+    }
+}
+
+/// Accuracy control rows (a Picker + a conditional Custom meters field) intended
+/// to be embedded inside a Form Section. Reads/writes `controller.accuracySetting`,
+/// mirroring the web extension's preset mapping exactly:
+///   Realistic → `.auto`, Custom → `.fixed(meters:)`.
+struct AccuracySettingsRows: View {
+    @ObservedObject var controller: SpoofController
+    @State private var customText: String = ""
+    @State private var customInvalid: Bool = false
+    @FocusState private var customFocused: Bool
+
+    /// Seed used when switching to Custom from a non-fixed setting. Matches the
+    /// extension's DEFAULT_ACCURACY_M.
+    private static let defaultCustomMeters = 45
+    /// Inclusive bounds the entered value must fall within (mirrors the
+    /// extension's ACCURACY_MIN_M / ACCURACY_MAX_M). Out-of-range input is
+    /// rejected outright — we never silently clamp the user's number.
+    private static let minMeters = 1
+    private static let maxMeters = 10000
+
+    /// Derive the active preset from the committed setting. Any `.range(...)` —
+    /// including a legacy Tight (5–15) or Loose (35–100) value saved before
+    /// those presets were retired — collapses to Realistic, and is normalized to
+    /// `.auto` the next time the user changes the setting.
+    private static func preset(for setting: SpoofAccuracySetting) -> AccuracyPreset {
+        switch setting {
+        case .fixed: return .custom
+        case .auto, .range: return .realistic
+        }
+    }
+
+    private var currentPreset: AccuracyPreset {
+        Self.preset(for: controller.accuracySetting)
+    }
+
+    private var presetSelection: Binding<AccuracyPreset> {
+        Binding(
+            get: { currentPreset },
+            set: { applyPreset($0) }
+        )
+    }
+
+    var body: some View {
+        Picker(selection: presetSelection) {
+            ForEach(AccuracyPreset.allCases) { preset in
+                Text(preset.label).tag(preset)
+            }
+        } label: {
+            Label("Location Accuracy", systemImage: "scope")
+        }
+        .pickerStyle(.menu)
+        .onAppear { syncFromController() }
+        .onChange(of: controller.accuracySetting) { _ in syncFromController() }
+
+        if currentPreset == .custom {
+            customMetersRow
+        }
+    }
+
+    private var customMetersRow: some View {
+        HStack {
+            Label("Accuracy (m)", systemImage: "ruler")
+            Spacer(minLength: 12)
+            metersField
+                .multilineTextAlignment(.trailing)
+                .frame(maxWidth: 120)
+                .focused($customFocused)
+                .foregroundStyle(customInvalid ? Color.red : Color.primary)
+                .onSubmit { commitCustom() }
+                .onChange(of: customFocused) { focused in
+                    // Commit when focus leaves the field.
+                    if !focused { commitCustom() }
+                }
+        }
+    }
+
+    /// The meters text field, with a number pad on iOS and a plain field on
+    /// macOS. The title is an accessibility-only label (hidden) and "45" is the
+    /// placeholder via `prompt:` — on macOS a `TextField` title renders as a
+    /// visible leading label, which otherwise showed "45" twice (once as that
+    /// label, once as the entered value).
+    private var metersField: some View {
+        let field = TextField("Accuracy in meters", text: $customText, prompt: Text("45"))
+            .labelsHidden()
+        #if os(iOS)
+        return field.keyboardType(.numberPad)
+        #else
+        return field
+        #endif
+    }
+
+    /// Map the chosen preset onto a concrete setting and push it through the
+    /// controller. For Custom we keep an existing fixed value or seed a sensible
+    /// default, then sync the text field.
+    private func applyPreset(_ preset: AccuracyPreset) {
+        switch preset {
+        case .realistic:
+            controller.setAccuracySetting(.auto)
+        case .custom:
+            let seed: Int
+            if case .fixed(let meters) = controller.accuracySetting {
+                seed = meters
+            } else {
+                seed = Self.defaultCustomMeters
+            }
+            customText = String(seed)
+            customInvalid = false
+            controller.setAccuracySetting(.fixed(meters: seed))
+        }
+    }
+
+    /// Validate and commit the custom meters field. Mirrors the web's
+    /// reject-out-of-range behavior: a finite integer within [1, 10000] commits;
+    /// anything else (empty / non-numeric / out of range) flags the field and is
+    /// left uncommitted so the user can correct it.
+    private func commitCustom() {
+        // If the user has switched away from Custom (e.g. picked Realistic while
+        // the field still had focus), don't re-commit the old meters — that
+        // would bounce the setting straight back to Custom. Losing focus as the
+        // Custom row disappears must be a no-op, not a write.
+        guard currentPreset == .custom else {
+            customInvalid = false
+            return
+        }
+        let trimmed = customText.trimmingCharacters(in: .whitespaces)
+        guard let value = Int(trimmed),
+              value >= Self.minMeters,
+              value <= Self.maxMeters else {
+            customInvalid = true
+            return
+        }
+        customInvalid = false
+        controller.setAccuracySetting(.fixed(meters: value))
+    }
+
+    /// Pull the committed `.fixed` meters back into the text field when the
+    /// setting changes externally (e.g. adopted from the extension). We don't
+    /// fight the user mid-edit, so this only runs while the field isn't focused.
+    private func syncFromController() {
+        guard !customFocused else { return }
+        customInvalid = false
+        if case .fixed(let meters) = controller.accuracySetting {
+            customText = String(meters)
+        }
+    }
+}
+
+// MARK: - Accuracy picker (iOS pushed detail screen)
+
+/// Short label for the currently selected accuracy, e.g. "Realistic" or
+/// "Custom · 250 m". Used as the trailing value on the iOS NavigationLink row
+/// (mirrors the Appearance/App Icon rows).
+func accuracyValueLabel(for setting: SpoofAccuracySetting) -> String {
+    switch setting {
+    case .fixed(let m): return "Custom · \(m) m"
+    case .auto, .range: return "Realistic"
+    }
+}
+
+/// Detail-panel readout for the spoofed accuracy. Unlike `accuracyValueLabel`
+/// (which names the preset for a settings row), this shows the concrete metres
+/// the setting maps to so the Details screen stays a technical readout: a fixed
+/// value as "±N m", and auto (or a legacy range) as "Realistic" (no fixed
+/// number — the emitted value varies per location/seed and the app, which
+/// doesn't hold the extension-owned seed, can't compute the exact figure).
+func accuracyDetailValue(for setting: SpoofAccuracySetting) -> String {
+    switch setting {
+    case .fixed(let m): return "±\(m) m"
+    case .auto, .range: return "Realistic"
+    }
+}
+
+/// Seed used when switching to Custom from a non-fixed setting. Matches the
+/// extension's DEFAULT_ACCURACY_M and `AccuracySettingsRows`.
+private let accuracyDefaultCustomMeters = 45
+/// Inclusive bounds the entered value must fall within (mirrors the extension's
+/// ACCURACY_MIN_M / ACCURACY_MAX_M). Out-of-range input is rejected outright —
+/// we never silently clamp the user's number.
+private let accuracyMinMeters = 1
+private let accuracyMaxMeters = 10000
+
+/// Derive the active preset from a committed setting. Any `.range(...)` —
+/// including a legacy Tight/Loose value saved before those presets were retired
+/// — collapses to Realistic, and is normalized to `.auto` the next time the user
+/// changes the setting. Shared by the inline `AccuracySettingsRows` semantics
+/// and the pushed `AccuracyPickerView`.
+private func accuracyPreset(for setting: SpoofAccuracySetting) -> AccuracyPreset {
+    switch setting {
+    case .fixed: return .custom
+    case .auto, .range: return .realistic
+    }
+}
+
+/// Pushed detail screen for choosing the spoofed accuracy (iOS pattern,
+/// mirroring AppearancePickerView/AppIconPickerView). A checkmark list of
+/// presets; when Custom is selected, a second section reveals a numeric field.
+struct AccuracyPickerView: View {
+    @ObservedObject var controller: SpoofController
+    @State private var customText: String = ""
+    @State private var customInvalid: Bool = false
+    @FocusState private var customFocused: Bool
+
+    private var currentPreset: AccuracyPreset {
+        accuracyPreset(for: controller.accuracySetting)
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                ForEach(AccuracyPreset.allCases) { preset in
+                    Button { selectPreset(preset) } label: {
+                        HStack {
+                            Text(preset.label).foregroundStyle(.primary)
+                            Spacer()
+                            if currentPreset == preset {
+                                Image(systemName: "checkmark")
+                                    .font(.body.weight(.semibold))
+                                    .foregroundStyle(Color.brand)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            if currentPreset == .custom {
+                Section {
+                    HStack {
+                        Text("Accuracy (m)")
+                        Spacer(minLength: 12)
+                        metersField
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 120)
+                            .focused($customFocused)
+                            .foregroundStyle(customInvalid ? Color.red : Color.primary)
+                            .onSubmit { commitCustom() }
+                            .onChange(of: customFocused) { focused in
+                                // Commit when focus leaves the field.
+                                if !focused { commitCustom() }
+                            }
+                    }
+                } footer: {
+                    Text("Enter a value between 1 and 10,000 meters.")
+                }
+            }
+        }
+        .navigationTitle("Location Accuracy")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
+        .onAppear { syncFromController() }
+        .onChange(of: controller.accuracySetting) { _ in syncFromController() }
+        // Safety: if the user taps Back with the keyboard still up (no Done),
+        // commit a valid value (or leave invalid input flagged/uncommitted).
+        // commitCustom is idempotent for an already-committed value.
+        .onDisappear { commitCustom() }
+    }
+
+    /// The meters text field. On iOS it uses the numbers-and-punctuation
+    /// keyboard (which has a Return key) with a "Done" submit label so the
+    /// in-keyboard Return commits; on macOS it's a plain field. When the field
+    /// gains focus on iOS we select the whole value (rather than dropping the
+    /// caret at the start) so typing replaces the accuracy outright — the
+    /// behavior users expect for a single short numeric value, and what UIKit
+    /// does for select-all fields. SwiftUI's TextField doesn't do this on its
+    /// own, so we set the selection when editing begins (deferred a tick, since
+    /// UIKit places its own caret first).
+    private var metersField: some View {
+        let field = TextField("45", text: $customText)
+        #if os(iOS)
+        return field
+            .keyboardType(.numbersAndPunctuation)
+            .submitLabel(.done)
+            .onReceive(NotificationCenter.default.publisher(for: UITextField.textDidBeginEditingNotification)) { note in
+                guard let textField = note.object as? UITextField else { return }
+                DispatchQueue.main.async {
+                    textField.selectedTextRange = textField.textRange(
+                        from: textField.beginningOfDocument,
+                        to: textField.endOfDocument
+                    )
+                }
+            }
+        #else
+        return field
+        #endif
+    }
+
+    /// Map the chosen preset onto a concrete setting and push it through the
+    /// controller. For Custom we keep an existing fixed value or seed a sensible
+    /// default, then sync the text field. Selecting a non-custom preset does NOT
+    /// auto-dismiss — the user taps Back, matching AppearancePickerView.
+    private func selectPreset(_ preset: AccuracyPreset) {
+        switch preset {
+        case .realistic:
+            controller.setAccuracySetting(.auto)
+        case .custom:
+            let seed: Int
+            if case .fixed(let meters) = controller.accuracySetting {
+                seed = meters
+            } else {
+                seed = accuracyDefaultCustomMeters
+            }
+            customText = String(seed)
+            customInvalid = false
+            controller.setAccuracySetting(.fixed(meters: seed))
+        }
+    }
+
+    /// Validate and commit the custom meters field. Mirrors the web's
+    /// reject-out-of-range behavior: a finite integer within [1, 10000] commits;
+    /// anything else (empty / non-numeric / out of range) flags the field and is
+    /// left uncommitted so the user can correct it.
+    private func commitCustom() {
+        // If the user has switched away from Custom (e.g. picked Realistic while
+        // the field still had focus), don't re-commit the old meters — that
+        // would bounce the setting straight back to Custom. Losing focus as the
+        // Custom section disappears, or tapping Back after switching, must be a
+        // no-op rather than a write.
+        guard currentPreset == .custom else {
+            customInvalid = false
+            return
+        }
+        let trimmed = customText.trimmingCharacters(in: .whitespaces)
+        guard let value = Int(trimmed),
+              value >= accuracyMinMeters,
+              value <= accuracyMaxMeters else {
+            customInvalid = true
+            return
+        }
+        customInvalid = false
+        controller.setAccuracySetting(.fixed(meters: value))
+    }
+
+    /// Pull the committed `.fixed` meters back into the text field when the
+    /// setting changes externally (e.g. adopted from the extension). We don't
+    /// fight the user mid-edit, so this only runs while the field isn't focused.
+    private func syncFromController() {
+        guard !customFocused else { return }
+        customInvalid = false
+        if case .fixed(let meters) = controller.accuracySetting {
+            customText = String(meters)
+        }
+    }
+}

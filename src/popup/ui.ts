@@ -4,6 +4,10 @@
  */
 
 import type { Settings, Location, Timezone, LocationName } from "@/shared/types/settings";
+import { DEFAULT_ACCURACY_SETTING } from "@/shared/types/settings";
+import type { AccuracySetting } from "@/shared/types/settings";
+import { resolveAccuracy } from "@/shared/accuracy/resolver";
+import { detectDeviceClass } from "@/shared/accuracy/device-class";
 import { t } from "./i18n";
 
 /** Append a label/value row (mirrors the native iOS `LabeledRow`). */
@@ -23,10 +27,21 @@ function appendDetailRow(container: HTMLElement, label: string, value: string): 
   container.appendChild(row);
 }
 
+/**
+ * Render the location detail rows, including the live-resolved accuracy.
+ *
+ * The `±Nm` value is computed by invoking the shared Resolver with the popup's
+ * own runtime-detected device class, the stored `accuracySetting`/`accuracySeed`,
+ * and the current coordinates — it does NOT read the stored `Location.accuracy`
+ * (Requirement 10.3). This shows the resolved integer for all modes
+ * (`auto`/`range`/`fixed`) and matches what the page receives on the same device.
+ */
 export function renderLocationDetails(
   container: HTMLElement,
   location: Location | null,
-  locationName: LocationName | null
+  locationName: LocationName | null,
+  accuracySetting: AccuracySetting,
+  accuracySeed: number
 ): void {
   clearChildren(container);
 
@@ -47,7 +62,15 @@ export function renderLocationDetails(
     t("details_longitudeLabel") || "Longitude",
     location.longitude.toFixed(6)
   );
-  appendDetailRow(container, t("details_accuracyLabel") || "Accuracy", `±${location.accuracy}m`);
+
+  const resolvedAccuracy = resolveAccuracy({
+    setting: accuracySetting ?? DEFAULT_ACCURACY_SETTING,
+    deviceClass: detectDeviceClass(navigator),
+    seed: Number.isFinite(accuracySeed) ? accuracySeed : 0,
+    latitude: location.latitude,
+    longitude: location.longitude,
+  });
+  appendDetailRow(container, t("details_accuracyLabel") || "Accuracy", `±${resolvedAccuracy}m`);
 
   if (locationName && locationName.displayName) {
     appendDetailRow(container, t("details_locationLabel") || "Location", locationName.displayName);
@@ -342,7 +365,13 @@ export function updateDetailsView(settings: Settings): void {
   const detailAPIs = document.getElementById("detailAPIs");
 
   if (detailLocation) {
-    renderLocationDetails(detailLocation, settings.location, settings.locationName);
+    renderLocationDetails(
+      detailLocation,
+      settings.location,
+      settings.locationName,
+      settings.accuracySetting,
+      settings.accuracySeed
+    );
   }
   if (detailTimezone) {
     renderTimezoneDetails(detailTimezone, settings.timezone);

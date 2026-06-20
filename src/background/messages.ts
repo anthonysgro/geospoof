@@ -23,11 +23,14 @@ import type {
   SetScopeModePayload,
   ScopeSitePayload,
   ScopeResponse,
+  SetAccuracyPayload,
 } from "@/shared/types/messages";
 import type { LocationName } from "@/shared/types/settings";
+import { resolveAccuracy } from "@/shared/accuracy/resolver";
+import { detectDeviceClass } from "@/shared/accuracy/device-class";
 import { setDebugEnabled, setVerbosityLevel, createLogger } from "@/shared/utils/debug-logger";
 import { computeEffectiveEnabled, normalizeDomain } from "@/shared/utils/scope";
-import { loadSettings, updateSettings } from "./settings";
+import { loadSettings, updateSettings, validateAccuracySetting } from "./settings";
 
 const logger = createLogger("BG");
 
@@ -119,6 +122,8 @@ export async function handleMessage(
           debugLogging: settings.debugLogging,
           verbosityLevel: settings.verbosityLevel,
           webrtcProtection: settings.webrtcProtection,
+          accuracySetting: settings.accuracySetting,
+          accuracySeed: settings.accuracySeed,
         };
         return scoped;
       }
@@ -283,6 +288,9 @@ export async function handleMessage(
       case "REMOVE_SCOPE_SITE":
         return await handleRemoveScopeSite(message.payload as ScopeSitePayload);
 
+      case "SET_ACCURACY":
+        return await handleSetAccuracy(message.payload as SetAccuracyPayload);
+
       default:
         logger.warn("Unknown message type:", message.type);
         return { error: "Unknown message type" };
@@ -322,8 +330,15 @@ export async function handleSetLocation(
 
   // If locationName was provided (e.g., from VPN sync), use it directly
   if (options?.locationName) {
+    const accuracy = resolveAccuracy({
+      setting: currentSettings.accuracySetting,
+      deviceClass: detectDeviceClass(),
+      seed: currentSettings.accuracySeed,
+      latitude,
+      longitude,
+    });
     const settings = await updateSettings({
-      location: { latitude, longitude, accuracy: 10 },
+      location: { latitude, longitude, accuracy },
       timezone: timezoneToSave,
       locationName: options.locationName,
       ...vpnUpdates,
@@ -342,8 +357,16 @@ export async function handleSetLocation(
     logger.warn("Reverse geocoding failed:", error);
   }
 
+  const accuracy = resolveAccuracy({
+    setting: currentSettings.accuracySetting,
+    deviceClass: detectDeviceClass(),
+    seed: currentSettings.accuracySeed,
+    latitude,
+    longitude,
+  });
+
   const settings = await updateSettings({
-    location: { latitude, longitude, accuracy: 10 },
+    location: { latitude, longitude, accuracy },
     timezone: timezoneToSave,
     locationName,
     ...vpnUpdates,
@@ -542,5 +565,28 @@ export async function handleRemoveScopeSite(payload: ScopeSitePayload): Promise<
 
   await broadcastSettingsToTabs(updated);
   await updateBadge();
+  return { success: true };
+}
+
+/**
+ * SET_ACCURACY handler (Req 9.2, 7.3, 7.4). Validate the incoming
+ * AccuracySetting via the same repair path used at load-time, persist it, then
+ * broadcast updated settings to tabs so the content scripts pick up the change.
+ */
+export async function handleSetAccuracy(
+  payload: SetAccuracyPayload
+): Promise<{ success: true } | { error: string }> {
+  // Validate the incoming payload through the same validation path used during
+  // settings load — this repairs malformed/out-of-range values (Req 7.3, 7.4).
+  const accuracySetting = validateAccuracySetting(payload?.accuracySetting);
+
+  let settings;
+  try {
+    settings = await updateSettings({ accuracySetting });
+  } catch {
+    return { error: "STORAGE_ERROR" };
+  }
+
+  await broadcastSettingsToTabs(settings);
   return { success: true };
 }

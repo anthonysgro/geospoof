@@ -36,6 +36,8 @@ function makeSettings(partial: Partial<Settings>): Settings {
     scopeMode: "all" as const,
     allowlist: [],
     denylist: [],
+    accuracySetting: { mode: "auto" },
+    accuracySeed: 0,
     ...partial,
   };
 }
@@ -111,6 +113,10 @@ describe("Property 23: Multi-Tab Consistency", () => {
             debugLogging: settings.debugLogging,
             verbosityLevel: settings.verbosityLevel,
             webrtcProtection: settings.webrtcProtection,
+            // Accuracy resolution inputs are threaded end-to-end so the
+            // injected Resolver uses the user's chosen setting/seed.
+            accuracySetting: settings.accuracySetting,
+            accuracySeed: settings.accuracySeed,
           });
           expect(firstMessage.payload!.enabled).toBe(enabled);
           expect(firstMessage.payload!.location).toEqual(location);

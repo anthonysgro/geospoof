@@ -54,6 +54,8 @@ const settingsArb: fc.Arbitrary<Settings> = fc.record({
   scopeMode: fc.constantFrom("all", "allowlist", "denylist"),
   allowlist: fc.constant([]),
   denylist: fc.constant([]),
+  accuracySetting: fc.constant({ mode: "auto" as const }),
+  accuracySeed: fc.constant(0),
 });
 
 describe("Property 7: State restoration on re-awakening", () => {

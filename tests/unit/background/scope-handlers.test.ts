@@ -37,6 +37,8 @@ function makeSettings(overrides?: Partial<Settings>): Settings {
     scopeMode: "all",
     allowlist: [],
     denylist: [],
+    accuracySetting: { mode: "auto" },
+    accuracySeed: 0,
     ...overrides,
   };
 }

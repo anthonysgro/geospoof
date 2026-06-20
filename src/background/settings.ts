@@ -3,8 +3,8 @@
  * Load, save, validate, and update extension settings in browser.storage.local.
  */
 
-import type { Favorite, ScopeMode, Settings } from "@/shared/types/settings";
-import { DEFAULT_SETTINGS } from "@/shared/types/settings";
+import type { AccuracySetting, Favorite, ScopeMode, Settings } from "@/shared/types/settings";
+import { DEFAULT_ACCURACY_M, DEFAULT_SETTINGS } from "@/shared/types/settings";
 import { createLogger } from "@/shared/utils/debug-logger";
 import { normalizeDomain } from "@/shared/utils/scope";
 import { getLastSyncedIp } from "./vpn-sync";
@@ -45,6 +45,74 @@ function sanitizeDomainList(value: unknown): string[] {
   return out;
 }
 
+/** Inclusive bounds the emitted accuracy is constrained to (Req 6.2, 7.3, 7.4). */
+const ACCURACY_MIN_M = 1;
+const ACCURACY_MAX_M = 10000;
+
+/** Round to an integer and clamp into [ACCURACY_MIN_M, ACCURACY_MAX_M]. */
+function clampAccuracyMeters(value: number): number {
+  return Math.min(ACCURACY_MAX_M, Math.max(ACCURACY_MIN_M, Math.round(value)));
+}
+
+/**
+ * Repair an arbitrary stored `accuracySetting` value into one of the three
+ * valid AccuracySetting shapes with in-range numbers (Req 7.1–7.4):
+ *   - absent / non-object / unknown mode → { mode: "auto" }
+ *   - fixed with non-finite meters       → { mode: "auto" }
+ *   - fixed otherwise                     → meters clamped+rounded into range
+ *   - range with non-finite bound(s)      → { mode: "auto" }
+ *   - range otherwise                     → swap inverted bounds, clamp both
+ */
+export function validateAccuracySetting(value: unknown): AccuracySetting {
+  if (!value || typeof value !== "object") {
+    return { mode: "auto" };
+  }
+
+  const setting = value as { mode?: unknown; meters?: unknown; min?: unknown; max?: unknown };
+
+  switch (setting.mode) {
+    case "auto":
+      return { mode: "auto" };
+
+    case "fixed": {
+      if (typeof setting.meters !== "number" || !Number.isFinite(setting.meters)) {
+        return { mode: "auto" };
+      }
+      return { mode: "fixed", meters: clampAccuracyMeters(setting.meters) };
+    }
+
+    case "range": {
+      if (
+        typeof setting.min !== "number" ||
+        typeof setting.max !== "number" ||
+        !Number.isFinite(setting.min) ||
+        !Number.isFinite(setting.max)
+      ) {
+        return { mode: "auto" };
+      }
+      let lo = setting.min;
+      let hi = setting.max;
+      if (lo > hi) {
+        [lo, hi] = [hi, lo];
+      }
+      return { mode: "range", min: clampAccuracyMeters(lo), max: clampAccuracyMeters(hi) };
+    }
+
+    default:
+      return { mode: "auto" };
+  }
+}
+
+/** A stored seed is usable only when it is a finite, non-zero number (Req 5.5). */
+function isValidAccuracySeed(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value !== 0;
+}
+
+/** Generate a fresh per-install accuracy seed in [0, 2^31). */
+function generateAccuracySeed(): number {
+  return Math.floor(Math.random() * 2 ** 31);
+}
+
 /**
  * Load settings from storage with validation and corruption handling
  */
@@ -58,7 +126,15 @@ export async function loadSettings(): Promise<Settings> {
       return { ...DEFAULT_SETTINGS };
     }
 
-    return validateSettings(settings);
+    const validated = validateSettings(settings);
+
+    // NOTE: a freshly assigned per-install accuracy seed (Req 5.5) is returned
+    // in-memory here but intentionally NOT written from this read path —
+    // loadSettings does not persist (see initialize() in index.ts, which owns
+    // the one-time startup persistence for migrated settings). The assigned
+    // seed is durably written on the next save (startup migration persistence
+    // for upgraded installs, or any subsequent settings update).
+    return validated;
   } catch (error) {
     logger.error("Failed to load settings:", error);
     return { ...DEFAULT_SETTINGS };
@@ -89,7 +165,7 @@ export function validateSettings(settings: Partial<Settings>): Settings {
       validated.location = {
         latitude,
         longitude,
-        accuracy: typeof accuracy === "number" && accuracy > 0 ? accuracy : 10,
+        accuracy: typeof accuracy === "number" && accuracy > 0 ? accuracy : DEFAULT_ACCURACY_M,
       };
     } else {
       logger.warn("Invalid coordinates in settings, resetting location");
@@ -214,6 +290,17 @@ export function validateSettings(settings: Partial<Settings>): Settings {
     validated.favorites = [];
   }
 
+  // accuracySetting (Req 7.1–7.4): repair an absent/unknown/malformed value
+  // into one of the three valid shapes with in-range numbers.
+  validated.accuracySetting = validateAccuracySetting(settings.accuracySetting);
+
+  // accuracySeed (Req 5.5): keep a valid stored seed; otherwise assign a fresh
+  // per-install seed. loadSettings persists it once when it was freshly
+  // assigned during a load.
+  validated.accuracySeed = isValidAccuracySeed(settings.accuracySeed)
+    ? settings.accuracySeed
+    : generateAccuracySeed();
+
   return validated;
 }
 
@@ -304,6 +391,10 @@ async function pushRegionToNativeHost(settings: Settings): Promise<void> {
       scopeMode: settings.scopeMode,
       allowlist: JSON.stringify(settings.allowlist ?? []),
       denylist: JSON.stringify(settings.denylist ?? []),
+      // Spoofed-accuracy setting rides as a JSON string (mirroring favorites /
+      // allow/deny). The app decodes + adopts it; accuracySeed stays
+      // extension-owned and is intentionally NOT bridged.
+      accuracySetting: JSON.stringify(settings.accuracySetting),
     });
   } catch (error) {
     // Swallow — native messaging may not be available in all contexts

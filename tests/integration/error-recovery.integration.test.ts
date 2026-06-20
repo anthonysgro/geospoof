@@ -459,6 +459,8 @@ describe("Error Recovery Integration Tests", () => {
         scopeMode: "all" as const,
         allowlist: [],
         denylist: [],
+        accuracySetting: { mode: "auto" as const },
+        accuracySeed: 0,
       };
 
       // Act: Broadcast settings (should not throw)

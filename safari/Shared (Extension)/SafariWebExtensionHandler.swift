@@ -47,6 +47,9 @@ enum RegionKey {
     static let scopeMode   = "region_scopeMode"
     static let allowlist   = "region_allowlist"
     static let denylist    = "region_denylist"
+    // Spoofed-accuracy setting (passthrough both ways) as a JSON string.
+    static let accuracySetting  = "region_accuracySetting"   // Extension -> App (JSON string, for display + adoption)
+    static let pAccuracySetting = "pending_accuracySetting"  // App -> Extension (JSON string)
 
     // App -> Extension: a full desired-state snapshot the extension adopts on
     // next launch / tab activity (last-writer-wins by pending_updatedAt).
@@ -203,6 +206,12 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                 dict[RegionKey.denylist] = denylistJSON
             }
 
+            // Spoofed-accuracy setting arrives as a JSON string; store verbatim
+            // for the app to decode + display (accuracySeed is not bridged).
+            if let accuracyJSON = input["accuracySetting"] as? String {
+                dict[RegionKey.accuracySetting] = accuracyJSON
+            }
+
             dict[RegionKey.updatedAt] = Date().timeIntervalSince1970
         }
 
@@ -259,6 +268,9 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         }
         if let denylistJSON = dict[RegionKey.pDenylist] as? String {
             pending["denylist"] = denylistJSON
+        }
+        if let accuracyJSON = dict[RegionKey.pAccuracySetting] as? String {
+            pending["accuracySetting"] = accuracyJSON
         }
         return ["pending": pending]
     }

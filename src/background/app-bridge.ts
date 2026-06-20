@@ -13,7 +13,7 @@
 import { createLogger } from "@/shared/utils/debug-logger";
 import type { Favorite, ScopeMode, Settings } from "@/shared/types/settings";
 import { normalizeDomain } from "@/shared/utils/scope";
-import { loadSettings, updateSettings } from "./settings";
+import { loadSettings, updateSettings, validateAccuracySetting } from "./settings";
 import {
   handleSetLocation,
   handleSetProtectionStatus,
@@ -47,6 +47,7 @@ interface PendingSettings {
   scopeMode?: string; // "all" | "allowlist" | "denylist"
   allowlist?: string; // JSON-encoded string[] from the app
   denylist?: string; // JSON-encoded string[] from the app
+  accuracySetting?: string; // JSON-encoded AccuracySetting from the app (accuracySeed stays extension-owned)
 }
 
 interface PendingResponse {
@@ -261,6 +262,27 @@ export async function adoptPendingSettingsFromApp(): Promise<void> {
       const updated = await updateSettings(scopeUpdates);
       await broadcastSettingsToTabs(updated);
       await updateBadge();
+    }
+
+    // 6. Accuracy setting — adopt the app's value when present and changed.
+    // Rides as a JSON string like favorites/allow-deny; validated through the
+    // same repair function the SET_ACCURACY handler uses so the extension stays
+    // the source of truth for shape/range hygiene. accuracySeed is NOT bridged
+    // (per-install, extension-owned).
+    if (typeof pending.accuracySetting === "string") {
+      try {
+        const parsedAccuracy: unknown = JSON.parse(pending.accuracySetting);
+        const validatedAccuracy = validateAccuracySetting(parsedAccuracy);
+        const latestForAccuracy = await loadSettings();
+        if (
+          JSON.stringify(validatedAccuracy) !== JSON.stringify(latestForAccuracy.accuracySetting)
+        ) {
+          const updated = await updateSettings({ accuracySetting: validatedAccuracy });
+          await broadcastSettingsToTabs(updated);
+        }
+      } catch (error) {
+        logger.debug("adoptPendingSettingsFromApp: accuracySetting parse failed:", error);
+      }
     }
 
     logger.info("Pending settings adopted and applied.");

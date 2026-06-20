@@ -58,6 +58,7 @@ enum AppGroup {
     static let regionScopeMode   = "region_scopeMode"
     static let regionAllowlist   = "region_allowlist"
     static let regionDenylist    = "region_denylist"
+    static let regionAccuracySetting = "region_accuracySetting"
 
     // App -> Extension (a full desired-state snapshot the extension adopts on
     // next launch / tab activity, last-writer-wins by `pending_updatedAt`).
@@ -77,6 +78,7 @@ enum AppGroup {
     static let pendingScopeMode   = "pending_scopeMode"
     static let pendingAllowlist   = "pending_allowlist"
     static let pendingDenylist    = "pending_denylist"
+    static let pendingAccuracySetting = "pending_accuracySetting"
 
     // Widget-internal: timestamp of the last widget-initiated re-sync, so the
     // widget button can show a spinner for a minimum window. Written by the
@@ -197,6 +199,80 @@ enum ScopeAddResult {
     case added
     case duplicate
     case invalid
+}
+
+/// How the spoofed `GeolocationCoordinates.accuracy` value is produced. Mirrors
+/// the `AccuracySetting` union in src/shared/types/settings.ts:
+///   `{"mode":"auto"}` | `{"mode":"fixed","meters":N}` | `{"mode":"range","min":N,"max":N}`
+/// (numbers are plain JSON numbers). Bridged through the App Group as a JSON
+/// string (passthrough both ways); `accuracySeed` is per-install and stays
+/// owned by the extension, so it is intentionally NOT modeled here.
+enum SpoofAccuracySetting: Equatable {
+    case auto
+    case fixed(meters: Int)
+    case range(min: Int, max: Int)
+
+    /// Inclusive bounds the emitted accuracy is constrained to (mirrors the
+    /// extension's ACCURACY_MIN_M / ACCURACY_MAX_M).
+    private static let minMeters = 1
+    private static let maxMeters = 10000
+
+    private static func clamp(_ value: Int) -> Int {
+        Swift.min(maxMeters, Swift.max(minMeters, value))
+    }
+
+    /// Round a JSON number to an integer and clamp into [1, 10000].
+    private static func clamp(_ value: Double) -> Int {
+        clamp(Int(value.rounded()))
+    }
+
+    /// Decode from the JSON string stored in the App Group. Returns `.auto` on
+    /// any malformed/unknown input (mirrors the extension's
+    /// `validateAccuracySetting`): parses defensively via JSONSerialization,
+    /// switches on `mode`, and clamps numbers into [1, 10000].
+    static func fromJSON(_ json: String?) -> SpoofAccuracySetting {
+        guard let json,
+              let data = json.data(using: .utf8),
+              let obj = try? JSONSerialization.jsonObject(with: data),
+              let dict = obj as? [String: Any],
+              let mode = dict["mode"] as? String else {
+            return .auto
+        }
+
+        switch mode {
+        case "auto":
+            return .auto
+        case "fixed":
+            guard let meters = (dict["meters"] as? NSNumber)?.doubleValue,
+                  meters.isFinite else { return .auto }
+            return .fixed(meters: clamp(meters))
+        case "range":
+            guard let minRaw = (dict["min"] as? NSNumber)?.doubleValue,
+                  let maxRaw = (dict["max"] as? NSNumber)?.doubleValue,
+                  minRaw.isFinite, maxRaw.isFinite else { return .auto }
+            var lo = minRaw
+            var hi = maxRaw
+            if lo > hi { swap(&lo, &hi) }
+            return .range(min: clamp(lo), max: clamp(hi))
+        default:
+            return .auto
+        }
+    }
+
+    /// Encode to the compact JSON the extension expects. Meters/min/max are
+    /// rounded + clamped into [1, 10000] for safety.
+    func toJSON() -> String {
+        switch self {
+        case .auto:
+            return "{\"mode\":\"auto\"}"
+        case .fixed(let meters):
+            return "{\"mode\":\"fixed\",\"meters\":\(Self.clamp(meters))}"
+        case .range(let lo, let hi):
+            let clampedLo = Self.clamp(lo)
+            let clampedHi = Self.clamp(hi)
+            return "{\"mode\":\"range\",\"min\":\(clampedLo),\"max\":\(clampedHi)}"
+        }
+    }
 }
 
 enum AppLogLevel: Int, CaseIterable, Identifiable {
@@ -500,6 +576,12 @@ final class SpoofController: ObservableObject {
     @Published var scopeMode: ScopeMode = .all
     @Published var allowlist: [String] = []
     @Published var denylist: [String] = []
+    /// Spoofed-accuracy setting. Like `scopeMode`, mutated via the explicit
+    /// setter below (which writes the pending bridge record) and by adoption in
+    /// refreshFromExtension / restoreLocalPending (which set it directly, no
+    /// echo). No didSet, so adoption never bounces back as a pending write.
+    /// `accuracySeed` is per-install / extension-owned and is not modeled here.
+    @Published var accuracySetting: SpoofAccuracySetting = .auto
     @Published var favorites: [SpoofFavorite] = [] {
         didSet {
             saveFavorites()
@@ -956,6 +1038,16 @@ final class SpoofController: ObservableObject {
         writePending()
     }
 
+    /// Change the spoofed-accuracy setting. Mirrors `setScopeMode`: writes the
+    /// pending bridge record so the extension adopts it last-writer-wins. The
+    /// `writePending` call bumps `lastLocalChangeAt`.
+    func setAccuracySetting(_ setting: SpoofAccuracySetting) {
+        guard setting != accuracySetting else { return }
+        Log.location.info("Accuracy setting → \(setting.toJSON())")
+        accuracySetting = setting
+        writePending()
+    }
+
     /// Add a domain to the given list. The input is lightly normalized here for
     /// immediate display; the extension re-normalizes authoritatively on adopt
     /// and pushes the canonical list back. The result distinguishes an invalid
@@ -1246,6 +1338,10 @@ final class SpoofController: ObservableObject {
             dict[AppGroup.pendingDenylist] = json
         }
 
+        // Spoofed-accuracy setting as a JSON string (passthrough via the native
+        // handler). accuracySeed is extension-owned and is not written here.
+        dict[AppGroup.pendingAccuracySetting] = accuracySetting.toJSON()
+
         // Location + its derived display fields. The three cases collapse to:
         //   • location present → publish coords + display fields, not cleared.
         //   • no location, VPN-sync ON → mid-sync (e.g. detecting exit IP); keep
@@ -1335,6 +1431,10 @@ final class SpoofController: ObservableObject {
         }
         if let list = Self.decodeStringList(dict[AppGroup.pendingAllowlist]) { allowlist = list }
         if let list = Self.decodeStringList(dict[AppGroup.pendingDenylist]) { denylist = list }
+
+        if let raw = dict[AppGroup.pendingAccuracySetting] as? String {
+            accuracySetting = SpoofAccuracySetting.fromJSON(raw)
+        }
 
         if let lat = dict[AppGroup.pendingLatitude] as? Double,
            let lon = dict[AppGroup.pendingLongitude] as? Double {
@@ -1439,6 +1539,13 @@ final class SpoofController: ObservableObject {
         }
         if let list = Self.decodeStringList(dict[AppGroup.regionAllowlist]) { allowlist = list }
         if let list = Self.decodeStringList(dict[AppGroup.regionDenylist]) { denylist = list }
+
+        // Adopt the extension's spoofed-accuracy setting (JSON string). Like the
+        // scope props it has no didSet, so assigning it never echoes back as a
+        // pending write. accuracySeed is extension-owned and never read here.
+        if let raw = dict[AppGroup.regionAccuracySetting] as? String {
+            accuracySetting = SpoofAccuracySetting.fromJSON(raw)
+        }
     }
 
     private static func readSharedPrefs(suite: String) -> [String: Any]? {

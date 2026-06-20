@@ -43,6 +43,8 @@ function buildPayload(enabled: unknown): Record<string, unknown> {
     debugLogging: false,
     verbosityLevel: "INFO",
     webrtcProtection: false,
+    accuracySetting: { mode: "fixed", meters: 120 },
+    accuracySeed: 9876,
   };
 }
 
@@ -79,12 +81,12 @@ async function loadContentScript(): Promise<MessageListener> {
  * injected script. Returns the list of forwarded event details and a cleanup fn.
  */
 function captureForwardedSettings(): {
-  details: Array<{ enabled: unknown }>;
+  details: Array<{ enabled: unknown; location: unknown }>;
   stop: () => void;
 } {
-  const details: Array<{ enabled: unknown }> = [];
+  const details: Array<{ enabled: unknown; location: unknown }> = [];
   const handler = (event: Event): void => {
-    details.push((event as CustomEvent<{ enabled: unknown }>).detail);
+    details.push((event as CustomEvent<{ enabled: unknown; location: unknown }>).detail);
   };
   window.addEventListener(EVENT_NAME, handler);
   return { details, stop: () => window.removeEventListener(EVENT_NAME, handler) };
@@ -121,6 +123,13 @@ describe("content script gating against scoped enabled value (Req 10)", () => {
     for (const detail of captured.details) {
       expect(detail.enabled).toBe(true);
       expect(gatingActive(detail.enabled)).toBe(true);
+      // The accuracy resolution inputs must be attached onto the forwarded
+      // `location` so the injected Resolver reads the user's chosen setting
+      // (the wiring bug dropped these before reaching the page).
+      expect(detail.location).toMatchObject({
+        accuracySetting: { mode: "fixed", meters: 120 },
+        accuracySeed: 9876,
+      });
     }
     captured.stop();
   });

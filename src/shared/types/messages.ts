@@ -1,4 +1,4 @@
-import type { Location, Timezone, Settings, ScopeMode } from "./settings";
+import type { AccuracySetting, Location, Timezone, Settings, ScopeMode } from "./settings";
 
 /**
  * All supported message types for inter-component communication.
@@ -25,7 +25,8 @@ export type MessageType =
   | "RENAME_FAVORITE"
   | "SET_SCOPE_MODE"
   | "ADD_SCOPE_SITE"
-  | "REMOVE_SCOPE_SITE";
+  | "REMOVE_SCOPE_SITE"
+  | "SET_ACCURACY";
 
 /**
  * Generic message structure for runtime messaging.
@@ -127,6 +128,22 @@ export interface UpdateSettingsPayload {
    *   - Safari doesn't expose `browser.privacy` at all.
    */
   webrtcProtection: boolean;
+  /**
+   * How the spoofed `GeolocationCoordinates.accuracy` value should be
+   * produced. Threaded end-to-end so the injected page-world script
+   * resolves accuracy using the user's chosen setting rather than
+   * falling back to auto mode. The content script attaches this onto
+   * the dispatched `location` object, where the injected Resolver
+   * reads it (see SpoofedLocation.accuracySetting).
+   */
+  accuracySetting: AccuracySetting;
+  /**
+   * Per-install stable seed the Resolver uses to deterministically
+   * derive the accuracy value. Delivered alongside `accuracySetting`
+   * so the page-emitted value matches the popup's Details panel for
+   * the same device class (both consume the real seed).
+   */
+  accuracySeed: number;
 }
 
 /**
@@ -203,6 +220,12 @@ export interface SetScopeModePayload {
 export interface ScopeSitePayload {
   list: "allowlist" | "denylist";
   domain: string;
+}
+
+// --- Accuracy payload types ---
+
+export interface SetAccuracyPayload {
+  accuracySetting: AccuracySetting;
 }
 
 // --- Site-scoping response types ---

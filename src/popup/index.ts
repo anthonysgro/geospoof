@@ -11,6 +11,7 @@ import { updateStatusBadge, renderWebRTCDetails, clearChildren } from "./ui";
 import { handleVpnSync } from "./vpn-sync";
 import { wireEarlyProtectionToggle } from "./early-protection";
 import { applyI18n, t } from "./i18n";
+import { initAccuracyControl } from "./accuracy";
 
 // --- Location setting ---
 
@@ -469,6 +470,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // Wire the Firefox-only "Instant timezone protection" toggle (requests the
   // optional userScripts permission). Compiles out / no-ops elsewhere.
   wireEarlyProtectionToggle();
+
+  // Wire the accuracy control (Advanced accordion). State is restored later in
+  // loadSettings() from the stored accuracySetting.
+  initAccuracyControl();
 
   const versionLabel = document.getElementById("versionLabel");
   if (versionLabel) {

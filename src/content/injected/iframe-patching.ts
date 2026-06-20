@@ -56,6 +56,9 @@ import {
 } from "./function-masking";
 import { isAmbiguousDateString, computeEpochAdjustment } from "./timezone-helpers";
 import { getPaddedCoords } from "./geolocation";
+import { resolveAccuracy } from "@/shared/accuracy/resolver";
+import { detectDeviceClass } from "@/shared/accuracy/device-class";
+import { DEFAULT_ACCURACY_SETTING } from "@/shared/types/settings";
 import { installLastModifiedOverride } from "./document-overrides";
 import { installXsltOverridesOn } from "./xslt-overrides";
 import { seedFromBootstrap } from "./bootstrap";
@@ -101,7 +104,18 @@ function buildSpoofedPosition(
   const coordsFields = {
     latitude: padded.latitude,
     longitude: padded.longitude,
-    accuracy: location.accuracy ?? 10,
+    // Resolve the accuracy via the shared Resolver — identical inputs to the
+    // top-level frame (same setting, seed, device class, and raw coordinates)
+    // yield an identical value, so a page reading an iframe's geolocation sees
+    // the same accuracy as `navigator.geolocation` directly. See
+    // createGeolocationPosition in geolocation.ts for the rationale.
+    accuracy: resolveAccuracy({
+      setting: location.accuracySetting ?? DEFAULT_ACCURACY_SETTING,
+      deviceClass: detectDeviceClass(navigator),
+      seed: location.accuracySeed ?? 0,
+      latitude: location.latitude,
+      longitude: location.longitude,
+    }),
     altitude: null,
     altitudeAccuracy: null,
     heading: null,

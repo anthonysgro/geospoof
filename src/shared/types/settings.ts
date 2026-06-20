@@ -59,6 +59,25 @@ export interface Favorite {
  */
 export type ScopeMode = "all" | "allowlist" | "denylist";
 
+/** How the spoofed GeolocationCoordinates.accuracy value is produced. */
+export type AccuracySetting =
+  | { mode: "auto" }
+  | { mode: "fixed"; meters: number }
+  | { mode: "range"; min: number; max: number };
+
+/** Single canonical fallback when no setting/context is available. */
+export const DEFAULT_ACCURACY_M = 45; // desktop Wi-Fi band midpoint, integer
+
+/**
+ * Location quantum (decimal places) used when deriving the stable value.
+ * Coarse on purpose (~11km at 1dp) so continuous movement / route playback
+ * does not re-roll accuracy every few meters; only a meaningfully different
+ * place lands in a new grid cell.
+ */
+export const ACCURACY_GRID_DP = 1;
+
+export const DEFAULT_ACCURACY_SETTING: AccuracySetting = { mode: "auto" };
+
 /**
  * Complete extension settings persisted in browser.storage.local.
  */
@@ -95,6 +114,10 @@ export interface Settings {
   allowlist: string[];
   /** Normalized domain strings excluded in denylist mode */
   denylist: string[];
+  /** How the spoofed GeolocationCoordinates.accuracy value is produced */
+  accuracySetting: AccuracySetting;
+  /** Per-install, persisted; stable derivation source for auto accuracy */
+  accuracySeed: number;
 }
 
 /**
@@ -123,4 +146,6 @@ export const DEFAULT_SETTINGS: Settings = {
   scopeMode: "all",
   allowlist: [],
   denylist: [],
+  accuracySetting: { mode: "auto" },
+  accuracySeed: 0,
 };

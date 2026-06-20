@@ -18,6 +18,9 @@ import { installOverride, registerOverride, disguiseAsNative } from "./function-
 import { waitForSettings } from "./settings-listener";
 import { createLogger } from "@/shared/utils/debug-logger";
 import { now } from "@/shared/utils/safe-time";
+import { resolveAccuracy } from "@/shared/accuracy/resolver";
+import { detectDeviceClass } from "@/shared/accuracy/device-class";
+import { DEFAULT_ACCURACY_SETTING } from "@/shared/types/settings";
 
 const logger = createLogger("INJ");
 
@@ -234,10 +237,19 @@ function createGeolocationPosition(location: SpoofedLocation): SpoofedGeolocatio
   const coordsFields: CoordsSlots = {
     latitude: padded.latitude,
     longitude: padded.longitude,
-    // Native desktop geolocation (Wi-Fi / MLS / Google) returns an integer
-    // accuracy in metres that stays stable across back-to-back calls from
-    // a stationary device. See `jitterAccuracy` for the matching behaviour.
-    accuracy: jitterAccuracy(location.accuracy),
+    // Resolve a realistic, stable integer accuracy via the shared Resolver.
+    // Determinism (seed + coarsely-quantized location) keeps the value stable
+    // across back-to-back calls and page loads — matching how a stationary
+    // native device reports a steady integer — without the old per-context
+    // cache. Device class is detected page-side so the band is plausible for
+    // the running device.
+    accuracy: resolveAccuracy({
+      setting: location.accuracySetting ?? DEFAULT_ACCURACY_SETTING,
+      deviceClass: detectDeviceClass(navigator),
+      seed: location.accuracySeed ?? 0,
+      latitude: location.latitude,
+      longitude: location.longitude,
+    }),
     altitude: null,
     altitudeAccuracy: null,
     heading: null,
@@ -274,39 +286,6 @@ function createGeolocationPosition(location: SpoofedLocation): SpoofedGeolocatio
     // fall through to plain object
   }
   return { coords: coordsFields as unknown as SpoofedGeolocationPosition["coords"], timestamp };
-}
-
-/**
- * Produce a realistic geolocation accuracy value.
- *
- * On desktop, native geolocation is served by Wi-Fi / Mozilla Location
- * Service / Google Location Services — all of which return an **integer**
- * accuracy in metres that is stable across back-to-back calls from a
- * stationary device (e.g. two consecutive `getCurrentPosition` calls
- * both report `36`). A spoofer that emits fractional values like
- * `12.347m`, or that jitters the value call-to-call, visibly stands out
- * against that native baseline.
- *
- * We therefore match native: round to an integer, and hold the value
- * stable for the lifetime of the content-script context (re-generated
- * only when the configured accuracy or location changes). A small
- * ±2m randomisation on first use stops every GeoSpoof install from
- * emitting the exact same default value, but once picked it stays put.
- */
-const DEFAULT_ACCURACY_M = 20;
-let accuracyCache: { configured: number; value: number } | null = null;
-
-function jitterAccuracy(configured?: number): number {
-  const base = configured && configured > 0 ? configured : DEFAULT_ACCURACY_M;
-  if (accuracyCache && accuracyCache.configured === base) {
-    return accuracyCache.value;
-  }
-  // ±2m session-initial randomisation, then stable. Clamp to a sensible
-  // lower bound so a tiny configured value doesn't round to 0.
-  const jitter = Math.round((Math.random() - 0.5) * 4);
-  const value = Math.max(1, Math.round(base + jitter));
-  accuracyCache = { configured: base, value };
-  return value;
 }
 
 /**

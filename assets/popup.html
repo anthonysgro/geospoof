@@ -518,6 +518,68 @@
               could read your real timezone before protection kicks in. Turn it off to revoke the
               permission.
             </div>
+            <div class="accuracy-selector">
+              <label class="select-label" for="accuracySelect">
+                <span data-i18n="advanced_accuracy">Location Accuracy</span>
+                <select id="accuracySelect">
+                  <option value="realistic" data-i18n="advanced_accuracy_realistic">
+                    Realistic
+                  </option>
+                  <option value="custom" data-i18n="advanced_accuracy_custom">Custom</option>
+                </select>
+              </label>
+              <div class="accuracy-custom-edit" id="accuracyCustomEdit" style="display: none">
+                <input
+                  type="number"
+                  id="accuracyCustomInput"
+                  min="1"
+                  max="10000"
+                  step="1"
+                  inputmode="numeric"
+                  aria-label="Accuracy (meters)"
+                  data-i18n-aria-label="advanced_accuracy_customMeters"
+                />
+                <button
+                  type="button"
+                  id="accuracyCustomConfirm"
+                  class="accuracy-custom-confirm"
+                  data-i18n="advanced_accuracy_customSet"
+                >
+                  Set
+                </button>
+              </div>
+              <div class="accuracy-custom-display" id="accuracyCustomDisplay" style="display: none">
+                <span id="accuracyCustomValue"></span>
+                <button
+                  type="button"
+                  id="accuracyCustomEditBtn"
+                  class="accuracy-custom-confirm accuracy-custom-edit-btn"
+                  data-i18n="advanced_accuracy_customEdit"
+                >
+                  Edit
+                </button>
+              </div>
+              <div
+                class="accuracy-custom-hint"
+                id="accuracyCustomHint"
+                role="alert"
+                style="display: none"
+                data-i18n="advanced_accuracy_customHint"
+              >
+                Enter a value between 1 and 10000 meters
+              </div>
+            </div>
+            <hr class="section-divider" />
+            <div class="theme-selector">
+              <label class="select-label" for="themeSelect">
+                <span data-i18n="advanced_theme">Theme</span>
+                <select id="themeSelect">
+                  <option value="system" data-i18n="advanced_theme_system">System</option>
+                  <option value="light" data-i18n="advanced_theme_light">Light</option>
+                  <option value="dark" data-i18n="advanced_theme_dark">Dark</option>
+                </select>
+              </label>
+            </div>
             <label class="toggle-label">
               <span data-i18n="advanced_debugLogging">Debug Logging</span>
               <div class="toggle-wrapper">
@@ -532,16 +594,6 @@
                   <option value="INFO" data-i18n="advanced_verbosity_info">Info</option>
                   <option value="DEBUG" data-i18n="advanced_verbosity_debug">Debug</option>
                   <option value="TRACE" data-i18n="advanced_verbosity_trace">Trace</option>
-                </select>
-              </label>
-            </div>
-            <div class="theme-selector">
-              <label class="select-label" for="themeSelect">
-                <span data-i18n="advanced_theme">Theme</span>
-                <select id="themeSelect">
-                  <option value="system" data-i18n="advanced_theme_system">System</option>
-                  <option value="light" data-i18n="advanced_theme_light">Light</option>
-                  <option value="dark" data-i18n="advanced_theme_dark">Dark</option>
                 </select>
               </label>
             </div>
