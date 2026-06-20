@@ -47,7 +47,7 @@
  */
 
 import type { AccuracySetting } from "@/shared/types/settings";
-import type { SetAccuracyPayload } from "@/shared/types/messages";
+import type { Message, SetAccuracyPayload } from "@/shared/types/messages";
 
 /** Inclusive bounds for a valid custom accuracy value, in metres. */
 export const MIN_ACCURACY_M = 1;
@@ -239,9 +239,12 @@ function setCustomInvalid(invalid: boolean): void {
 
 /** Persist an AccuracySetting via the background. */
 async function sendAccuracy(accuracySetting: AccuracySetting): Promise<void> {
-  const payload: SetAccuracyPayload = { accuracySetting };
+  const message: Message<SetAccuracyPayload> = {
+    type: "SET_ACCURACY",
+    payload: { accuracySetting },
+  };
   try {
-    await browser.runtime.sendMessage({ type: "SET_ACCURACY", payload });
+    await browser.runtime.sendMessage(message);
   } catch (error: unknown) {
     console.error("Failed to set accuracy:", error);
   }
