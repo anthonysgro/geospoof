@@ -4,7 +4,7 @@
     "description": "⚠️ MACHINE-TRANSLATED — needs native-speaker review. 'GeoSpoof' is a brand name; do not translate."
   },
   "extensionDescription": {
-    "message": "Подмена геолокации и часового пояса. Защита от утечек IP через WebRTC. IP не меняется — с VPN.",
+    "message": "Подмена геолокации и часового пояса, автоматическая синхронизация с VPN и блокировка утечек IP через WebRTC.",
     "description": "Extension description shown in the browser and store listing."
   },
   "onboarding_title": {

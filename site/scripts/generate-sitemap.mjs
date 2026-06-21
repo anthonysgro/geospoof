@@ -34,9 +34,9 @@ const staticRoutes = ["/", "/verify", "/blog", "/privacy", "/terms", "/support"]
  */
 const staticPageMeta = {
   "/": {
-    title: "GeoSpoof — Spoof your browser location & timezone",
+    title: "GeoSpoof — Spoof Geolocation & Timezone (Free Extension)",
     description:
-      "Free, open-source browser extension that overrides geolocation, timezone, and WebRTC APIs. Works on Firefox, Chrome, Brave, Edge, and Safari.",
+      "Free, open-source browser extension that spoofs geolocation and timezone, auto-syncs your spoofed location to your VPN exit region, and blocks WebRTC IP leaks. Works on Firefox, Chrome, Brave, Edge, and Safari.",
   },
   "/verify": {
     title: "Browser Location Test",
@@ -121,7 +121,7 @@ function buildLlmsTxt(posts) {
   const lines = [
     "# GeoSpoof",
     "",
-    "> Free, open-source browser extension that spoofs your geolocation, timezone, and WebRTC APIs so websites see a location you choose instead of your real one. Works on Firefox, Chrome, Brave, Edge, and Safari.",
+    "> Free, open-source browser extension that spoofs your geolocation, timezone, and WebRTC APIs so websites see a location you choose instead of your real one. It can automatically sync your spoofed location to your VPN's exit region and keep it matched as you switch servers. Works on Firefox, Chrome, Brave, Edge, and Safari.",
     "",
     "GeoSpoof overrides browser location APIs at the page level. It does not change your IP address and is not a VPN; it complements one. The site includes a free in-browser location test and guides on location privacy.",
     "",

@@ -18,11 +18,11 @@ export const Route = createFileRoute("/support")({
   component: SupportPage,
   head: () => ({
     meta: [
-      { title: "Support | GeoSpoof" },
+      { title: "GeoSpoof Support — Fix Spoofing, VPN Sync & Setup Issues" },
       {
         name: "description",
         content:
-          "GeoSpoof support — find answers to common issues or get in touch.",
+          "Get help with GeoSpoof: fix location spoofing that isn't working, resolve VPN Sync timeouts, WebRTC issues, and browser or mobile setup — or contact our team.",
       },
     ],
     links: [{ rel: "canonical", href: `${SITE_URL}/support` }],

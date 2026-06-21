@@ -19,18 +19,18 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "GeoSpoof — Free Browser Geolocation Spoofer" },
+      { title: "GeoSpoof — Spoof Geolocation & Timezone (Free Extension)" },
       {
         name: "description",
         content:
-          "Spoof your browser's geolocation, timezone, and WebRTC in one extension. Open source, privacy-first, no account required. Works on Chrome, Firefox, Edge, Brave, and Safari.",
+          "Spoof your browser's geolocation, timezone, and WebRTC in one free extension. Open source, privacy-first, no account required. Works on Chrome, Firefox, Edge, Brave, and Safari.",
       },
       // Open Graph
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://geospoof.com" },
       {
         property: "og:title",
-        content: "GeoSpoof — Free Browser Geolocation Spoofer",
+        content: "Your VPN hides your IP. GeoSpoof hides your location.",
       },
       {
         property: "og:description",
@@ -39,16 +39,16 @@ export const Route = createRootRoute({
       },
       {
         property: "og:image",
-        content: "https://geospoof.com/images/social-og.png",
+        content: "https://geospoof.com/images/social-og-home.png",
       },
       { property: "og:image:width", content: "1200" },
-      { property: "og:image:height", content: "630" },
+      { property: "og:image:height", content: "626" },
       // Twitter / X
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:url", content: "https://geospoof.com" },
       {
         name: "twitter:title",
-        content: "GeoSpoof — Free Browser Geolocation Spoofer",
+        content: "Your VPN hides your IP. GeoSpoof hides your location.",
       },
       {
         name: "twitter:description",
@@ -57,7 +57,7 @@ export const Route = createRootRoute({
       },
       {
         name: "twitter:image",
-        content: "https://geospoof.com/images/social-og.png",
+        content: "https://geospoof.com/images/social-og-home.png",
       },
     ],
     links: [

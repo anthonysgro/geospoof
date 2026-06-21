@@ -4,7 +4,7 @@
     "description": "⚠️ MACHINE-TRANSLATED — needs native-speaker review. 'GeoSpoof' is a brand name; do not translate."
   },
   "extensionDescription": {
-    "message": "伪造浏览器的地理位置和时区,防止 WebRTC 泄漏 IP。不更改 IP 地址——与 VPN 配合使用。",
+    "message": "伪造浏览器的地理位置和时区，自动与 VPN 同步，并阻止 WebRTC IP 泄漏。",
     "description": "Extension description shown in the browser and store listing."
   },
   "onboarding_title": {

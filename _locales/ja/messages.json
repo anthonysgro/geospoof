@@ -4,7 +4,7 @@
     "description": "⚠️ MACHINE-TRANSLATED — needs native-speaker review. 'GeoSpoof' is a brand name; do not translate."
   },
   "extensionDescription": {
-    "message": "ブラウザの位置情報とタイムゾーンを偽装します。WebRTC による IP 漏洩を防止します。IP は変更しません — VPN と併用してください。",
+    "message": "ブラウザの位置情報とタイムゾーンを偽装し、VPN に自動同期し、WebRTC による IP 漏洩をブロックします。",
     "description": "Extension description shown in the browser and store listing."
   },
   "onboarding_title": {
