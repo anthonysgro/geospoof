@@ -13,6 +13,7 @@ import { Route as VerifyRouteImport } from './routes/verify'
 import { Route as TestRouteImport } from './routes/test'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SupportRouteImport } from './routes/support'
+import { Route as SpoofTimezoneRouteImport } from './routes/spoof-timezone'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
@@ -36,6 +37,11 @@ const TermsRoute = TermsRouteImport.update({
 const SupportRoute = SupportRouteImport.update({
   id: '/support',
   path: '/support',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SpoofTimezoneRoute = SpoofTimezoneRouteImport.update({
+  id: '/spoof-timezone',
+  path: '/spoof-timezone',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -62,6 +68,7 @@ const BlogSlugRoute = BlogSlugRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/privacy': typeof PrivacyRoute
+  '/spoof-timezone': typeof SpoofTimezoneRoute
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
   '/test': typeof TestRoute
@@ -72,6 +79,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/privacy': typeof PrivacyRoute
+  '/spoof-timezone': typeof SpoofTimezoneRoute
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
   '/test': typeof TestRoute
@@ -83,6 +91,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/privacy': typeof PrivacyRoute
+  '/spoof-timezone': typeof SpoofTimezoneRoute
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
   '/test': typeof TestRoute
@@ -95,6 +104,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/privacy'
+    | '/spoof-timezone'
     | '/support'
     | '/terms'
     | '/test'
@@ -105,6 +115,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/privacy'
+    | '/spoof-timezone'
     | '/support'
     | '/terms'
     | '/test'
@@ -115,6 +126,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/privacy'
+    | '/spoof-timezone'
     | '/support'
     | '/terms'
     | '/test'
@@ -126,6 +138,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   PrivacyRoute: typeof PrivacyRoute
+  SpoofTimezoneRoute: typeof SpoofTimezoneRoute
   SupportRoute: typeof SupportRoute
   TermsRoute: typeof TermsRoute
   TestRoute: typeof TestRoute
@@ -164,6 +177,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SupportRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/spoof-timezone': {
+      id: '/spoof-timezone'
+      path: '/spoof-timezone'
+      fullPath: '/spoof-timezone'
+      preLoaderRoute: typeof SpoofTimezoneRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/privacy': {
       id: '/privacy'
       path: '/privacy'
@@ -198,6 +218,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   PrivacyRoute: PrivacyRoute,
+  SpoofTimezoneRoute: SpoofTimezoneRoute,
   SupportRoute: SupportRoute,
   TermsRoute: TermsRoute,
   TestRoute: TestRoute,

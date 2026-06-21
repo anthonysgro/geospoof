@@ -25,7 +25,7 @@ const llmsFile = path.join(siteRoot, "public/llms.txt")
  * browser probes and isn't useful in search results. `/verify` is included: it
  * targets "browser location test" style queries and has indexable copy/FAQ.
  */
-const staticRoutes = ["/", "/verify", "/blog", "/privacy", "/terms", "/support"]
+const staticRoutes = ["/", "/verify", "/spoof-timezone", "/blog", "/privacy", "/terms", "/support"]
 
 /**
  * One-line descriptions for the key static routes, surfaced in llms.txt so AI
@@ -42,6 +42,11 @@ const staticPageMeta = {
     title: "Browser Location Test",
     description:
       "Free tool that shows the geolocation, timezone, and IP address websites can read about you right now, and flags real-vs-reported location leaks.",
+  },
+  "/spoof-timezone": {
+    title: "Spoof Your Browser Timezone",
+    description:
+      "How to change or spoof your browser's timezone to match any location. GeoSpoof overrides Date, Intl, and Temporal without touching your system clock. Free.",
   },
   "/blog": {
     title: "GeoSpoof Blog",

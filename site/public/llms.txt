@@ -8,6 +8,7 @@ GeoSpoof overrides browser location APIs at the page level. It does not change y
 
 - [GeoSpoof — Spoof Geolocation & Timezone (Free Extension)](https://geospoof.com/): Free, open-source browser extension that spoofs geolocation and timezone, auto-syncs your spoofed location to your VPN exit region, and blocks WebRTC IP leaks. Works on Firefox, Chrome, Brave, Edge, and Safari.
 - [Browser Location Test](https://geospoof.com/verify): Free tool that shows the geolocation, timezone, and IP address websites can read about you right now, and flags real-vs-reported location leaks.
+- [Spoof Your Browser Timezone](https://geospoof.com/spoof-timezone): How to change or spoof your browser's timezone to match any location. GeoSpoof overrides Date, Intl, and Temporal without touching your system clock. Free.
 - [GeoSpoof Blog](https://geospoof.com/blog): Guides on browser location spoofing, timezone privacy, and WebRTC leaks.
 
 ## Blog
