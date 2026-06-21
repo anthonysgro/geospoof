@@ -94,7 +94,7 @@ A VPN changes your IP, but your browser still leaks your real location through t
 
 GeoSpoof overrides every one of those channels so your browser reports a consistent, chosen location instead of your real one. Set it to match your VPN, mismatch it on purpose, or pick anywhere in the world.
 
-- **VPN Region Sync** — detects your VPN exit IP and sets your location to match. One click.
+- **VPN Region Sync** — detects your VPN exit IP and sets your location to match. One click, and it re-syncs automatically as you switch exit servers.
 - **Manual control** — search for a city or enter coordinates directly.
 - **Full signal alignment** — geolocation, timezone, Date APIs, Intl, Temporal, and WebRTC all report the same place.
 - **Anti-fingerprinting** — overrides are disguised to pass native code checks used by real-world fingerprinting scripts.
@@ -146,7 +146,7 @@ MIT — see [LICENSE](LICENSE).
 ## Links
 
 - [Website — geospoof.com](https://geospoof.com/?utm_source=github&utm_medium=readme)
-- [Verify your protection — geospoof.com/test](https://geospoof.com/test?utm_source=github&utm_medium=readme)
+- [Verify your protection — geospoof.com/verify](https://geospoof.com/verify?utm_source=github&utm_medium=readme)
 - [Community — r/GeoSpoof](https://www.reddit.com/r/geospoof)
 - [User Guide](docs/USER_GUIDE.md)
 - [API Documentation](docs/API.md)
