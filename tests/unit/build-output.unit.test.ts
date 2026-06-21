@@ -145,7 +145,7 @@ describe("Chromium manifest structure", () => {
     expect(m.manifest_version).toBe(3);
     // Chromium overrides the name with a literal keyword-rich string for the
     // Chrome Web Store listing (Firefox/Safari keep __MSG_extensionName__).
-    expect(m.name).toBe("GeoSpoof: Spoof Geolocation, Timezone & WebRTC");
+    expect(m.name).toBe("GeoSpoof: Spoof Geolocation & Timezone");
     expect(m.description).toBe("__MSG_extensionDescription__");
     expect(m.default_locale).toBe("en");
   });
@@ -178,7 +178,7 @@ describe("Shared fields preservation", () => {
   // the localized `__MSG_extensionName__` reference (→ "GeoSpoof" on AMO).
   test("name diverges — Firefox localized, Chromium literal", () => {
     expect(firefoxManifest().name).toBe("__MSG_extensionName__");
-    expect(chromiumManifest().name).toBe("GeoSpoof: Spoof Geolocation, Timezone & WebRTC");
+    expect(chromiumManifest().name).toBe("GeoSpoof: Spoof Geolocation & Timezone");
   });
 
   test("Firefox manifest includes the Chromium permission set plus required worker-filter permissions", () => {

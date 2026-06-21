@@ -1,6 +1,6 @@
 import { Link, createFileRoute  } from "@tanstack/react-router"
 import * as React from "react"
-import { Check, ChevronDown, Clock, Globe, Loader2, MapPin, ShieldAlert, ShieldCheck, Wifi, X } from "lucide-react"
+import { Check, ChevronDown, Clock, Globe, Loader2, MapPin, RefreshCw, ShieldAlert, ShieldCheck, Wifi, X } from "lucide-react"
 
 import type {NetworkIdentity} from "@/lib/verification/network-identity";
 import type {WebrtcResult} from "@/lib/verification/webrtc-probe";
@@ -233,6 +233,16 @@ function VerifyInner() {
   // and the first client render this is false, so both produce identical
   // output (no hydration mismatch); real values fill in once the effect runs.
   const [mounted, setMounted] = React.useState(false)
+  // Reloading the whole page is the most reliable way to re-read the spoofed
+  // values: it re-runs SSR + every probe from scratch. The brief spinning
+  // state gives tactile feedback on slower in-app browsers (e.g. Android's
+  // WebView, where there's no address bar to reload from in the first place).
+  const [refreshing, setRefreshing] = React.useState(false)
+  const handleRefresh = React.useCallback(() => {
+    if (typeof window === "undefined") return
+    setRefreshing(true)
+    window.location.reload()
+  }, [])
 
   React.useEffect(() => {
     setMounted(true)
@@ -509,12 +519,26 @@ function VerifyInner() {
   return (
     <section className="mx-auto max-w-3xl px-4 py-10 sm:py-16 md:px-5 md:py-24">
       <div className="mb-6 sm:mb-8">
-        <p className="mb-2 text-sm font-semibold tracking-widest text-(--color-brand) uppercase">
-          Verification
-        </p>
-        <h1 className="mb-3 text-2xl font-bold text-(--color-canvas-foreground) sm:text-3xl md:text-4xl">
-          What websites can see about you
-        </h1>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="mb-2 text-sm font-semibold tracking-widest text-(--color-brand) uppercase">
+              Verification
+            </p>
+            <h1 className="mb-3 text-2xl font-bold text-(--color-canvas-foreground) sm:text-3xl md:text-4xl">
+              What websites can see about you
+            </h1>
+          </div>
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            aria-label="Refresh — reload the page to see your latest values"
+            className="mt-1 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-(--color-canvas-border) bg-(--color-canvas) px-3 py-1.5 text-sm font-medium text-(--color-canvas-foreground) transition-colors hover:border-(--color-brand) hover:text-(--color-brand) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 active:translate-y-px disabled:opacity-60"
+          >
+            <RefreshCw className={cn("size-4", refreshing && "animate-spin")} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+        </div>
         <p className="text-sm text-(--color-canvas-muted) sm:text-base">
           <span className="sm:hidden">
             Live values websites can read about you right now.
@@ -539,7 +563,7 @@ function VerifyInner() {
 
       {allResolved && (
         <p className="mb-6 -mt-2 text-center text-xs italic text-(--color-canvas-muted) sm:text-sm">
-          Using Automatic VPN sync? Changes can take up to 10 seconds — reload to see the latest.
+          Using Automatic VPN sync? Changes can take up to 10 seconds — tap Refresh to see the latest.
         </p>
       )}
 

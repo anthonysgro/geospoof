@@ -338,6 +338,27 @@ export { initialize };
 
 // --- Alarm handler ---
 
+/**
+ * Best-effort per-tab action-badge write for the injection-check alarm path
+ * (the green "✓" / orange "!" states, which aren't part of the scope-based
+ * BadgeState in badge.ts). Feature-detects the action API and swallows any
+ * rejection so a closed tab — or a mobile engine without a toolbar to host a
+ * per-tab badge, e.g. Chromium-based Android browsers like Quetta — can't leak
+ * an "Uncaught (in promise) No tab with id ..." rejection that wedges the
+ * background worker.
+ */
+function setActionBadge(tabId: number, color: string, text: string): void {
+  const action = browser.action;
+  if (!action?.setBadgeText) {
+    return;
+  }
+  const swallow = (error: unknown): void => {
+    logger.debug(`Badge update skipped for tab ${tabId}:`, error);
+  };
+  void action.setBadgeBackgroundColor({ color, tabId }).catch(swallow);
+  void action.setBadgeText({ text, tabId }).catch(swallow);
+}
+
 async function onAlarm(alarm: Alarms.Alarm): Promise<void> {
   const parsed = parseAlarmName(alarm.name);
   if (!parsed) return;
@@ -407,18 +428,15 @@ async function onAlarm(alarm: Alarms.Alarm): Promise<void> {
         // Tab may have closed; ignore
       }
 
-      void browser.action.setBadgeBackgroundColor({ color: "green", tabId });
-      void browser.action.setBadgeText({ text: "✓", tabId });
+      setActionBadge(tabId, "green", "✓");
     } else if (attempt >= MAX_ATTEMPT) {
       // Final attempt failed
-      void browser.action.setBadgeBackgroundColor({ color: "orange", tabId });
-      void browser.action.setBadgeText({ text: "!", tabId });
+      setActionBadge(tabId, "orange", "!");
     }
   } catch {
     // Tab closed during check
     if (attempt >= MAX_ATTEMPT) {
-      void browser.action.setBadgeBackgroundColor({ color: "orange", tabId });
-      void browser.action.setBadgeText({ text: "!", tabId });
+      setActionBadge(tabId, "orange", "!");
     }
   }
 }
