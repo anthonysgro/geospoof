@@ -47,9 +47,15 @@ export function DemoVideoSection({ className }: { className?: string }) {
           aria-label="GeoSpoof demo — setting a spoofed browser location with the extension"
           className="aspect-video w-full rounded-2xl border border-(--color-canvas-border) bg-black"
         >
-          <source src="/video/geospoof-demo-v2.mp4" type="video/mp4" />
+          <source
+            src="https://dsgaoei8r9jiwulf.public.blob.vercel-storage.com/geospoof-demo-v2.mp4"
+            type="video/mp4"
+          />
           Your browser doesn't support embedded video.{" "}
-          <a href="/video/geospoof-demo-v2.mp4">Download the demo</a> instead.
+          <a href="https://dsgaoei8r9jiwulf.public.blob.vercel-storage.com/geospoof-demo-v2.mp4">
+            Download the demo
+          </a>{" "}
+          instead.
         </video>
       </MotionDiv>
     </section>
