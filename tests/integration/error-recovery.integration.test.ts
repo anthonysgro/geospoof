@@ -452,6 +452,8 @@ describe("Error Recovery Integration Tests", () => {
         version: "1.0",
         lastUpdated: Date.now(),
         vpnSyncEnabled: false,
+        autoSyncBlocked: false,
+        proFeaturesBlocked: false,
         debugLogging: false,
         verbosityLevel: "INFO",
         theme: "system" as const,

@@ -7,6 +7,7 @@ import type { Settings } from "@/shared/types/settings";
 import type { UpdateSettingsPayload, InjectionStatus } from "@/shared/types/messages";
 import { createLogger } from "@/shared/utils/debug-logger";
 import { computeEffectiveEnabled } from "@/shared/utils/scope";
+import { computeEffectiveAccuracySetting } from "@/shared/accuracy/resolver";
 import { updateWorkerFilterSettings } from "./worker-request-filter";
 
 const logger = createLogger("BG");
@@ -56,6 +57,7 @@ export async function broadcastSettingsToTabs(settings: Settings): Promise<void>
       scopeMode: settings.scopeMode,
       allowlist: settings.allowlist,
       denylist: settings.denylist,
+      proFeaturesBlocked: settings.proFeaturesBlocked,
       topLevelUrl: tab.url,
       isRestricted: isRestrictedUrl,
     });
@@ -67,7 +69,13 @@ export async function broadcastSettingsToTabs(settings: Settings): Promise<void>
       debugLogging,
       verbosityLevel,
       webrtcProtection,
-      accuracySetting,
+      // Custom accuracy is Pro-gated on iOS Safari: force Realistic ("auto")
+      // for a free user so the page can't receive a pinned accuracy. Fail-open
+      // + Safari-only (no effect on macOS / Chrome / Firefox).
+      accuracySetting: computeEffectiveAccuracySetting(
+        accuracySetting,
+        settings.proFeaturesBlocked
+      ),
       accuracySeed,
     };
 

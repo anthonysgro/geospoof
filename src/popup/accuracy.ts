@@ -371,13 +371,24 @@ export function initAccuracyControl(): void {
  */
 export function restoreAccuracyControl(
   setting: AccuracySetting | undefined | null,
-  resolvedAccuracy?: number
+  resolvedAccuracy?: number,
+  proLocked = false
 ): void {
   const select = getSelect();
   if (!select) return;
 
   if (typeof resolvedAccuracy === "number" && Number.isFinite(resolvedAccuracy)) {
     lastResolvedAccuracy = clampAccuracyMeters(resolvedAccuracy);
+  }
+
+  applyAccuracyLock(proLocked);
+
+  // Locked free iOS users always reflect "Realistic" (what the background
+  // enforces); the disabled control + Pro note explain custom accuracy is Pro.
+  if (proLocked) {
+    select.value = "realistic";
+    hideCustom();
+    return;
   }
 
   const { option, customMeters } = accuracySettingToControlState(setting ?? { mode: "auto" });
@@ -393,4 +404,26 @@ export function restoreAccuracyControl(
     // Preset (or fallback) — hide the inline Custom groups.
     hideCustom();
   }
+}
+
+/**
+ * Enable/disable the accuracy control for the Pro gate. The disabled dropdown
+ * can't be changed (so "Custom" can't be picked) and the Pro note explains why;
+ * toggling it off restores normal interaction.
+ */
+function applyAccuracyLock(locked: boolean): void {
+  const select = getSelect();
+  if (select) select.disabled = locked;
+
+  const input = getCustomInput();
+  if (input) input.disabled = locked;
+
+  const confirm = getCustomConfirm();
+  if (confirm) confirm.disabled = locked;
+
+  const editBtn = getCustomEditBtn();
+  if (editBtn) editBtn.disabled = locked;
+
+  const note = document.getElementById("accuracyProNote");
+  if (note) note.style.display = locked ? "block" : "none";
 }

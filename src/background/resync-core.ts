@@ -122,6 +122,17 @@ async function doCheck(): Promise<void> {
     return;
   }
 
+  // Safari only: automatic background sync is a Pro feature on iOS. The iOS app
+  // sets autoSyncBlocked=true when the user isn't entitled (non-Pro, or the
+  // "Automatic Background Sync" toggle is off). Fail-open — defaults false, so
+  // macOS Safari / Chrome / Firefox / Android Firefox are never affected and a
+  // Pro subscriber is never wrongly blocked. (__SAFARI__ can't tell iOS from
+  // macOS at build time, so the iOS-vs-macOS distinction comes from the app.)
+  if (__SAFARI__ && settings.autoSyncBlocked) {
+    logger.debug("[RESYNC] Automatic sync blocked by app (non-Pro iOS); ignoring trigger");
+    return;
+  }
+
   const now = Date.now();
   if (now < _backoffUntil) {
     logger.debug(

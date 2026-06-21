@@ -35,9 +35,19 @@ struct ResyncIntent: AppIntent {
     func perform() async throws -> some IntentResult {
         Log.vpn.info("[WIDGET] Resync intent invoked")
 
+        // Pro gate (iOS, non-Pro): re-sync is a Pro feature. Don't perform the
+        // sync; flag the paywall so opening the app surfaces it, and bail.
+        // Mirrors the in-app paywall bounce for the other Pro features.
+        let snapshot = SpoofSnapshot.load()
+        guard !snapshot.proLocked else {
+            Log.vpn.debug("[WIDGET] Resync blocked — Pro feature")
+            AppGroupPending.requestPaywall()
+            WidgetCenter.shared.reloadAllTimelines()
+            return .result()
+        }
+
         // Only meaningful when VPN sync is the active mode. If it isn't, treat
         // the tap as a no-op refresh rather than forcing a location change.
-        let snapshot = SpoofSnapshot.load()
         guard snapshot.vpnSync else {
             Log.vpn.debug("[WIDGET] Resync ignored — VPN sync not enabled")
             WidgetCenter.shared.reloadAllTimelines()
@@ -85,6 +95,21 @@ enum AppGroupPending {
         let plistURL = container.appendingPathComponent("Library/Preferences/\(AppGroup.suite).plist")
         var dict: [String: Any] = (NSDictionary(contentsOf: plistURL) as? [String: Any]) ?? [:]
         dict[AppGroup.widgetSyncingAt] = Date().timeIntervalSince1970
+        let prefsDir = plistURL.deletingLastPathComponent()
+        try? FileManager.default.createDirectory(at: prefsDir, withIntermediateDirectories: true)
+        (dict as NSDictionary).write(to: plistURL, atomically: true)
+    }
+
+    /// Stamp a request for the app to present the Pro paywall. Written when a
+    /// non-Pro user taps a locked widget/control surface; the app consumes it on
+    /// next activation (it can't show a sheet from the widget process). Read-
+    /// merge-write so the extension's `region_*` / app's `pending_*` keys survive.
+    static func requestPaywall() {
+        guard let container = FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: AppGroup.suite) else { return }
+        let plistURL = container.appendingPathComponent("Library/Preferences/\(AppGroup.suite).plist")
+        var dict: [String: Any] = (NSDictionary(contentsOf: plistURL) as? [String: Any]) ?? [:]
+        dict[AppGroup.widgetRequestPaywall] = Date().timeIntervalSince1970
         let prefsDir = plistURL.deletingLastPathComponent()
         try? FileManager.default.createDirectory(at: prefsDir, withIntermediateDirectories: true)
         (dict as NSDictionary).write(to: plistURL, atomically: true)
@@ -176,7 +201,17 @@ struct ActivateFavoriteIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        let favorites = SpoofSnapshot.load().favorites
+        // Pro gate (iOS, non-Pro): favorite quick-switch is a Pro widget
+        // feature. Don't change the location; flag the paywall and bail.
+        let snapshot = SpoofSnapshot.load()
+        guard !snapshot.proLocked else {
+            Log.location.debug("[WIDGET] ActivateFavorite blocked — Pro feature")
+            AppGroupPending.requestPaywall()
+            WidgetCenter.shared.reloadAllTimelines()
+            return .result()
+        }
+
+        let favorites = snapshot.favorites
         guard let fav = favorites.first(where: { $0.id == favoriteId }) else {
             Log.location.debug("[WIDGET] ActivateFavorite: id \(favoriteId) not found")
             return .result()
@@ -187,3 +222,4 @@ struct ActivateFavoriteIntent: AppIntent {
         return .result()
     }
 }
+

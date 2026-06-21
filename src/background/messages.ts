@@ -26,7 +26,7 @@ import type {
   SetAccuracyPayload,
 } from "@/shared/types/messages";
 import type { LocationName } from "@/shared/types/settings";
-import { resolveAccuracy } from "@/shared/accuracy/resolver";
+import { resolveAccuracy, computeEffectiveAccuracySetting } from "@/shared/accuracy/resolver";
 import { detectDeviceClass } from "@/shared/accuracy/device-class";
 import { setDebugEnabled, setVerbosityLevel, createLogger } from "@/shared/utils/debug-logger";
 import { computeEffectiveEnabled, normalizeDomain } from "@/shared/utils/scope";
@@ -104,6 +104,7 @@ export async function handleMessage(
           scopeMode: settings.scopeMode,
           allowlist: settings.allowlist,
           denylist: settings.denylist,
+          proFeaturesBlocked: settings.proFeaturesBlocked,
           topLevelUrl: senderTabUrl,
           isRestricted: isRestrictedUrl,
         });
@@ -122,7 +123,12 @@ export async function handleMessage(
           debugLogging: settings.debugLogging,
           verbosityLevel: settings.verbosityLevel,
           webrtcProtection: settings.webrtcProtection,
-          accuracySetting: settings.accuracySetting,
+          // Pro-gate custom accuracy on iOS Safari (force Realistic for a free
+          // user); fail-open + Safari-only, like the scope gate above.
+          accuracySetting: computeEffectiveAccuracySetting(
+            settings.accuracySetting,
+            settings.proFeaturesBlocked
+          ),
           accuracySeed: settings.accuracySeed,
         };
         return scoped;

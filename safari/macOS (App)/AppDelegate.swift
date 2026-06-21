@@ -437,6 +437,7 @@ struct ExtensionStatusBanner: View {
 
 struct MacSettingsView: View {
     @ObservedObject var controller: SpoofController
+    @ObservedObject private var pro = ProStore.shared
     @AppStorage("appearanceMode") private var appearance: AppearanceMode = .system
     #if DEBUG
     @AppStorage(LogSettingsKey.enabled) private var loggingEnabled = false
@@ -458,7 +459,10 @@ struct MacSettingsView: View {
                     Text("Advanced")
                 }
 
-                TipJarView()
+                // Founding supporters only — see iOS SettingsView for rationale.
+                if pro.isFounder {
+                    TipJarView()
+                }
 
                 Section {
                     Link(

@@ -234,6 +234,14 @@ export function validateSettings(settings: Partial<Settings>): Settings {
     validated.vpnSyncEnabled = settings.vpnSyncEnabled;
   }
 
+  if (typeof settings.autoSyncBlocked === "boolean") {
+    validated.autoSyncBlocked = settings.autoSyncBlocked;
+  }
+
+  if (typeof settings.proFeaturesBlocked === "boolean") {
+    validated.proFeaturesBlocked = settings.proFeaturesBlocked;
+  }
+
   if (typeof settings.debugLogging === "boolean") {
     validated.debugLogging = settings.debugLogging;
   }

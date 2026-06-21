@@ -75,7 +75,15 @@ export async function loadSettings(): Promise<void> {
 
     renderFavorites(settings);
 
-    renderScope(settings);
+    // Safari/iOS Pro gate: when the app signals the user isn't entitled to
+    // Pro-only config (per-site filtering, custom accuracy), the popup disables
+    // those controls and explains they're Pro. The background already forces
+    // the safe behavior (scope "all", auto accuracy); this is UI clarity only.
+    // `__SAFARI__` compiles it out on Chrome/Firefox, and proFeaturesBlocked is
+    // only ever true for a non-Pro iOS user (macOS sends false).
+    const proLocked = __SAFARI__ && settings.proFeaturesBlocked === true;
+
+    renderScope(settings, proLocked);
 
     updateDetailsView(settings);
 
@@ -116,7 +124,7 @@ export async function loadSettings(): Promise<void> {
           longitude: settings.location.longitude,
         })
       : DEFAULT_ACCURACY_M;
-    restoreAccuracyControl(settings.accuracySetting, resolvedAccuracy);
+    restoreAccuracyControl(settings.accuracySetting, resolvedAccuracy, proLocked);
 
     // Firefox-only: reveal the "Instant timezone protection" toggle and sync it
     // to whether the optional userScripts permission is currently granted.

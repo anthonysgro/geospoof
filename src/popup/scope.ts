@@ -87,8 +87,13 @@ export function renderScopeLoadError(): void {
 /**
  * Main entry point, called from loadSettings() after the favorites render.
  * Renders the selector + list manager for the loaded settings.
+ *
+ * `proLocked` (Safari/iOS non-Pro) disables the mode selector + add controls
+ * and surfaces the Pro note: per-site filtering is a Pro feature and the
+ * background already forces scope "all" for these users, so the popup reflects
+ * "all" and prevents interaction rather than letting it silently no-op.
  */
-export function renderScope(settings: Settings): void {
+export function renderScope(settings: Settings, proLocked = false): void {
   const loadError = document.getElementById("scopeLoadError");
   if (loadError) loadError.style.display = "none";
 
@@ -96,12 +101,15 @@ export function renderScope(settings: Settings): void {
   hideAddError();
   hideCurrentMsg();
 
-  const mode = resolveScopeMode(settings.scopeMode);
+  // Locked free iOS users always reflect "all" (what the background enforces),
+  // regardless of any stale stored mode from a lapsed subscription.
+  const mode = proLocked ? "all" : resolveScopeMode(settings.scopeMode);
   lastPersistedMode = mode;
 
   reflectModeSelection(mode);
   wireModeSelector();
   wireAddControls(mode);
+  applyScopeLock(proLocked);
 
   const desc = document.getElementById("scopeModeDesc");
   if (desc) desc.textContent = modeDescription(mode);
@@ -115,6 +123,29 @@ export function renderScope(settings: Settings): void {
 
   setListManagerVisible(true);
   renderSiteList(listKey, settings[listKey] ?? []);
+}
+
+/**
+ * Enable/disable the scope controls for the Pro gate. Disabled buttons can't be
+ * clicked (so the mode can't change) and the Pro note explains why; toggling it
+ * off restores normal interaction (loadSettings can run multiple times in one
+ * popup session).
+ */
+function applyScopeLock(locked: boolean): void {
+  const buttons = document.querySelectorAll<HTMLButtonElement>(".scope-mode-btn");
+  buttons.forEach((btn) => {
+    btn.disabled = locked;
+  });
+
+  const note = document.getElementById("scopeProNote");
+  if (note) note.style.display = locked ? "block" : "none";
+
+  // The add controls live inside the list manager (hidden in "all" mode, which
+  // is what a locked user always sees), but disable them defensively too.
+  for (const id of ["scopeAddInput", "scopeAddButton", "scopeAddCurrentButton"]) {
+    const el = document.getElementById(id) as HTMLInputElement | HTMLButtonElement | null;
+    if (el) el.disabled = locked;
+  }
 }
 
 // ── Mode selector ──────────────────────────────────────────────────────────

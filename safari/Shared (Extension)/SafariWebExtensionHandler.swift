@@ -67,6 +67,12 @@ enum RegionKey {
     static let pScopeMode   = "pending_scopeMode"
     static let pAllowlist   = "pending_allowlist"
     static let pDenylist    = "pending_denylist"
+    // App -> Extension: true when the iOS app says automatic background sync is
+    // not allowed (non-Pro / toggle off). Fail-open; only iOS sets it true.
+    static let pAutoSyncBlocked = "pending_autoSyncBlocked"
+    // App -> Extension: true when the iOS app says Pro-only config features
+    // (per-site filtering, custom accuracy) aren't allowed (non-Pro). Fail-open.
+    static let pProFeaturesBlocked = "pending_proFeaturesBlocked"
 }
 
 class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
@@ -243,6 +249,8 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             "vpnSync": (dict[RegionKey.pVpnSync] as? Bool) ?? false,
             "cleared": (dict[RegionKey.pCleared] as? Bool) ?? false,
             "resync": (dict[RegionKey.pResync] as? Bool) ?? false,
+            "autoSyncBlocked": (dict[RegionKey.pAutoSyncBlocked] as? Bool) ?? false,
+            "proFeaturesBlocked": (dict[RegionKey.pProFeaturesBlocked] as? Bool) ?? false,
             "displayName": (dict[RegionKey.pDisplayName] as? String) ?? "",
         ]
         if let lat = dict[RegionKey.pLatitude] as? Double,

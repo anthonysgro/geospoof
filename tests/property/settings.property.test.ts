@@ -52,6 +52,8 @@ const settingsArb: fc.Arbitrary<Settings> = fc.record({
   version: fc.constant("1.0"),
   lastUpdated: fc.integer({ min: 0 }),
   vpnSyncEnabled: fc.boolean(),
+  autoSyncBlocked: fc.boolean(),
+  proFeaturesBlocked: fc.boolean(),
   debugLogging: fc.boolean(),
   verbosityLevel: fc.constantFrom("ERROR", "WARN", "INFO", "DEBUG", "TRACE"),
   theme: fc.constantFrom("system", "light", "dark"),

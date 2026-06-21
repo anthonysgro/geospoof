@@ -100,6 +100,24 @@ export interface Settings {
   lastUpdated: number;
   /** Whether VPN sync mode is the active location method */
   vpnSyncEnabled: boolean;
+  /**
+   * App→extension gate (Safari only): when true, the iOS app has signaled that
+   * this user is NOT entitled to automatic background VPN sync (non-Pro, or the
+   * "Automatic Background Sync" toggle is off). Fail-open: defaults false so
+   * macOS Safari / Chrome / Firefox / Android Firefox are unaffected and a
+   * Pro subscriber is never wrongly blocked. Only the iOS app ever sets it true.
+   */
+  autoSyncBlocked: boolean;
+  /**
+   * App→extension gate (Safari only): when true, the iOS app has signaled this
+   * user isn't entitled to Pro-only *configuration* features — currently
+   * per-site filtering (allowlist/denylist). The extension forces scope "all"
+   * so a free user always spoofs everywhere and can't narrow it. Fail-open:
+   * defaults false, so macOS Safari / Chrome / Firefox are unaffected and only
+   * the iOS app ever sets it true. (Shared across Pro config gates, e.g. custom
+   * accuracy, so we don't grow a flag per feature.)
+   */
+  proFeaturesBlocked: boolean;
   /** Whether debug logging is enabled */
   debugLogging: boolean;
   /** Active verbosity level threshold for the debug logger */
@@ -139,6 +157,8 @@ export const DEFAULT_SETTINGS: Settings = {
   // always stamps Date.now() before persisting, so stored settings are real.
   lastUpdated: 0,
   vpnSyncEnabled: false,
+  autoSyncBlocked: false,
+  proFeaturesBlocked: false,
   debugLogging: false,
   verbosityLevel: "INFO",
   theme: "system",

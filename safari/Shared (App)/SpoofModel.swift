@@ -80,10 +80,29 @@ enum AppGroup {
     static let pendingDenylist    = "pending_denylist"
     static let pendingAccuracySetting = "pending_accuracySetting"
 
+    // App -> Extension: automatic-background-sync gate. `pending_autoSyncBlocked`
+    // is the computed value the extension reads (true = don't auto-sync). It's
+    // an inherent Pro capability now — always on for Pro on iOS, with no user
+    // toggle — so the app no longer bridges a separate user preference.
+    static let pendingAutoSyncBlocked = "pending_autoSyncBlocked"
+    static let pendingProFeaturesBlocked = "pending_proFeaturesBlocked"
+
     // Widget-internal: timestamp of the last widget-initiated re-sync, so the
     // widget button can show a spinner for a minimum window. Written by the
     // resync App Intent.
     static let widgetSyncingAt    = "widget_syncingAt"
+    // Widget/Control -> App: timestamp written when a non-Pro user taps a locked
+    // widget/control surface. The app consumes it on next activation to present
+    // the Pro paywall (the widget can't show a sheet itself). Cleared on read.
+    static let widgetRequestPaywall = "widget_requestPaywall"
+}
+
+extension Notification.Name {
+    /// Posted by ProStore (app target only) whenever Pro entitlement is
+    /// resolved or changes. SpoofController observes it to keep the bridged
+    /// auto-sync gate current. Decoupled via NotificationCenter so SpoofModel
+    /// (which also compiles into the widget target) never references ProStore.
+    static let proEntitlementDidChange = Notification.Name("com.moonloaf.geospoof.proEntitlementDidChange")
 }
 
 // MARK: - Domain models (mirror src/shared/types/settings.ts)
@@ -634,6 +653,13 @@ final class SpoofController: ObservableObject {
     private var pathMonitorQueue: DispatchQueue?
     /// Cancels any in-flight debounce + resync task when a newer change arrives.
     private var vpnResyncTask: Task<Void, Never>?
+    /// Observes Pro entitlement changes so the auto-sync gate bridged to the
+    /// extension stays current (e.g. the moment a user subscribes).
+    private var proObserver: NSObjectProtocol?
+    /// Last known Pro entitlement, fed by `proEntitlementDidChange`. Decouples
+    /// the gate from ProStore (which isn't in the widget target). Defaults
+    /// false — the safe state — until ProStore resolves and broadcasts.
+    private var cachedIsPro = false
     /// Periodic exit-IP check while VPN sync is on. Catches same-tunnel VPN
     /// server switches, which fire no NWPathMonitor event. On macOS it runs
     /// continuously (the app keeps running when not frontmost); on iOS it's
@@ -658,6 +684,7 @@ final class SpoofController: ObservableObject {
         startForegroundObserver()
         startNetworkWatcher()
         startHeartbeat()
+        observeProEntitlement()
     }
 
     /// Refresh from the extension whenever the app returns to the foreground
@@ -728,7 +755,7 @@ final class SpoofController: ObservableObject {
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: UInt64(Self.heartbeatInterval * 1_000_000_000))
                 guard !Task.isCancelled else { return }
-                guard let self, self.vpnSyncEnabled else { continue }
+                guard let self, self.vpnSyncEnabled, !self.autoSyncBlocked else { continue }
                 Log.vpn.trace("Heartbeat tick")
                 self.scheduleVpnResync(initialDelay: 0, pollFor: 0)
             }
@@ -773,7 +800,7 @@ final class SpoofController: ObservableObject {
     /// wait. `initialDelay` gives the VPN a brief head start before the first
     /// sample (0 from the foreground path, where the network is already stable).
     private func scheduleVpnResync(initialDelay: Double, pollFor: Double) {
-        guard vpnSyncEnabled else { return }
+        guard vpnSyncEnabled, !autoSyncBlocked else { return }
         Log.vpn.debug("scheduleVpnResync(initialDelay: \(initialDelay), pollFor: \(pollFor))")
         vpnResyncTask?.cancel()
         vpnResyncTask = Task { [weak self] in
@@ -1265,6 +1292,52 @@ final class SpoofController: ObservableObject {
         }
     }
 
+    /// Whether automatic background sync is *blocked* for this user. Background
+    /// VPN re-sync is an inherent Pro capability (always on for Pro when VPN sync
+    /// is active — there's no user toggle, matching macOS, which always syncs).
+    /// On iOS it's gated purely on Pro; every other platform always allows it
+    /// (macOS app, and the extension on Chrome/Firefox/Android). This single
+    /// value is bridged to the extension as `pending_autoSyncBlocked` — the
+    /// extension can't tell iOS from macOS, so the app is the authority.
+    var autoSyncBlocked: Bool {
+        #if os(iOS)
+        return !cachedIsPro
+        #else
+        return false
+        #endif
+    }
+
+    /// Whether Pro-only *configuration* features (per-site filtering, custom
+    /// accuracy) are blocked for this user. iOS gates them on Pro; macOS and
+    /// all other platforms always allow them. Bridged to the extension as
+    /// `pending_proFeaturesBlocked` so it can enforce (e.g. force scope "all").
+    var proFeaturesBlocked: Bool {
+        #if os(iOS)
+        return !cachedIsPro
+        #else
+        return false
+        #endif
+    }
+
+    /// Re-publish the auto-sync gate to the extension whenever Pro entitlement
+    /// changes (subscribe, founder resolve, lapse). Driven by a NotificationCenter
+    /// broadcast from ProStore — no direct type coupling, so SpoofModel still
+    /// compiles in the widget target (which doesn't include ProStore).
+    private func observeProEntitlement() {
+        proObserver = NotificationCenter.default.addObserver(
+            forName: .proEntitlementDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] note in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.cachedIsPro = (note.userInfo?["isPro"] as? Bool) ?? self.cachedIsPro
+                if self.autoSyncBlocked { self.vpnResyncTask?.cancel() }
+                self.writePending()
+            }
+        }
+    }
+
     private static func displayName(city: String, country: String, lat: Double, lon: Double) -> String {
         let parts = [city, country].filter { !$0.isEmpty }
         return parts.isEmpty ? String(format: "%.5f, %.5f", lat, lon) : parts.joined(separator: ", ")
@@ -1319,6 +1392,8 @@ final class SpoofController: ObservableObject {
         dict[AppGroup.pendingWebrtc] = webrtcProtection
         dict[AppGroup.pendingVpnSync] = vpnSyncEnabled
         dict[AppGroup.pendingResync] = resync
+        dict[AppGroup.pendingAutoSyncBlocked] = autoSyncBlocked
+        dict[AppGroup.pendingProFeaturesBlocked] = proFeaturesBlocked
         dict[AppGroup.pendingUpdatedAt] = now
 
         // Favorites travel as a JSON string (passthrough via the native handler).
@@ -1859,8 +1934,8 @@ enum VpnLookup {
         let headStart: UInt64 = 900_000_000 // 0.9s
 
         if let result = await raceTier(
-            [(delay: 0, fetch: { try await geolocateGeoJs($0) }),
-             (delay: headStart, fetch: { try await geolocateFreeIpApi($0) })],
+            [(delay: 0, fetch: { @Sendable addr in try await geolocateGeoJs(addr) }),
+             (delay: headStart, fetch: { @Sendable addr in try await geolocateFreeIpApi(addr) })],
             ip: ip
         ) {
             Log.vpn.info("[geo] winner \(result.source): \(result.city.isEmpty ? "?" : result.city), \(result.country) (\(result.latitude), \(result.longitude)) tz=\(result.timezoneID.isEmpty ? "?" : result.timezoneID)")
@@ -1869,8 +1944,8 @@ enum VpnLookup {
 
         Log.vpn.warn("[geo] all primary providers failed; consulting fallback tier (reallyfreegeoip, ipinfo)")
         if let result = await raceTier(
-            [(delay: 0, fetch: { try await geolocateReallyFreeGeoIp($0) }),
-             (delay: 0, fetch: { try await geolocateIpInfo($0) })],
+            [(delay: 0, fetch: { @Sendable addr in try await geolocateReallyFreeGeoIp(addr) }),
+             (delay: 0, fetch: { @Sendable addr in try await geolocateIpInfo(addr) })],
             ip: ip
         ) {
             Log.vpn.info("[geo] winner \(result.source) (fallback): \(result.city.isEmpty ? "?" : result.city), \(result.country) (\(result.latitude), \(result.longitude)) tz=\(result.timezoneID.isEmpty ? "?" : result.timezoneID)")
@@ -2140,6 +2215,19 @@ extension View {
             self.glassEffect(.regular, in: Circle())
         } else {
             self.background(.regularMaterial, in: Circle())
+        }
+    }
+
+    /// A capsule Liquid Glass background for a *combined* floating control
+    /// cluster — several stacked controls reading as one cohesive unit (the
+    /// Apple Maps pattern) rather than separate bubbles. Material fallback
+    /// below OS 26.
+    @ViewBuilder
+    func glassCapsule() -> some View {
+        if #available(iOS 26.0, macOS 26.0, *) {
+            self.glassEffect(.regular, in: Capsule())
+        } else {
+            self.background(.regularMaterial, in: Capsule())
         }
     }
 

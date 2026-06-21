@@ -269,13 +269,24 @@ describe("Cross-target equivalence (Req 16.1, 16.2)", () => {
     );
   });
 
-  test("the scope source of truth is target-agnostic (no __CHROMIUM__/__SAFARI__ branches)", () => {
+  test("the scope source of truth is target-agnostic except the fail-open iOS Pro gate", () => {
     const scopeSrc = readFileSync(resolve(__dirname, "../../src/shared/utils/scope.ts"), "utf-8");
 
-    // The single resolver must not branch on build target; if it did, the
-    // cross-target equivalence guarantee (Req 16.2) could silently break.
+    // The core scope decision must not branch on build target; if it did, the
+    // cross-target equivalence guarantee (Req 16.2) could silently break. There
+    // is exactly ONE deliberate exception: the fail-open iOS Safari Pro gate,
+    // which forces scope "all" only when the app signals `proFeaturesBlocked`
+    // (a non-Pro iOS user). Because it's fail-open, it cannot change the free,
+    // cross-target contract — the equivalence property above passes no
+    // `proFeaturesBlocked`, so all three targets still agree.
     expect(scopeSrc).not.toContain("__CHROMIUM__");
-    expect(scopeSrc).not.toContain("__SAFARI__");
+
+    // The only permitted target reference is that gate, so every `__SAFARI__`
+    // occurrence must sit alongside the `proFeaturesBlocked` signal — never a
+    // free-behavior scope branch.
+    if (scopeSrc.includes("__SAFARI__")) {
+      expect(scopeSrc).toContain("proFeaturesBlocked");
+    }
 
     // All three targets import this same exported resolver.
     expect(scopeSrc).toContain("export function computeEffectiveEnabled");

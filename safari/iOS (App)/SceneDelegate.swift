@@ -20,6 +20,28 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         window.rootViewController = UIHostingController(rootView: RootView())
         self.window = window
         window.makeKeyAndVisible()
+
+        // Cold launch via a widget deep link (e.g. a locked free user tapping
+        // "Tap to upgrade", which opens geospoof://paywall).
+        handlePaywallDeepLink(connectionOptions.urlContexts)
+    }
+
+    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        // Warm open via a widget deep link.
+        handlePaywallDeepLink(URLContexts)
+    }
+
+    /// Surface the Pro paywall when a widget's `geospoof://paywall` link opens
+    /// the app. Handled here (not via SwiftUI `.onOpenURL`, which fires
+    /// inconsistently from widgets) and bridged to RootView through AppRouter.
+    private func handlePaywallDeepLink(_ contexts: Set<UIOpenURLContext>) {
+        let wantsPaywall = contexts.contains { ctx in
+            ctx.url.scheme == "geospoof" && ctx.url.host == "paywall"
+        }
+        guard wantsPaywall else { return }
+        Task { @MainActor in
+            AppRouter.shared.showPaywall = true
+        }
     }
 
 }
@@ -28,6 +50,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
 struct RootView: View {
     @StateObject private var controller = SpoofController()
+    @ObservedObject private var router = AppRouter.shared
     @AppStorage("appearanceMode") private var appearance: AppearanceMode = .system
 
     var body: some View {
@@ -52,8 +75,19 @@ struct RootView: View {
                     Label("Settings", systemImage: "gearshape")
                 }
         }
-        .onAppear { applyInterfaceStyle(appearance) }
+        .onAppear {
+            applyInterfaceStyle(appearance)
+            // A locked control (which can't open the app itself) may have left a
+            // paywall request; surface it now.
+            if WidgetPaywallRequest.consume() { router.showPaywall = true }
+        }
         .onChange(of: appearance) { newValue in applyInterfaceStyle(newValue) }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            if WidgetPaywallRequest.consume() { router.showPaywall = true }
+        }
+        .sheet(isPresented: $router.showPaywall) {
+            ProPaywallView()
+        }
     }
 }
 
@@ -118,15 +152,20 @@ struct HomeView: View {
 struct SettingsView: View {
     @ObservedObject var controller: SpoofController
     @StateObject private var iconModel = AppIconModel()
+    @ObservedObject private var pro = ProStore.shared
     @AppStorage("appearanceMode") private var appearance: AppearanceMode = .system
     #if DEBUG
     @AppStorage(LogSettingsKey.enabled) private var loggingEnabled = false
     @AppStorage(LogSettingsKey.level) private var logLevelRaw = AppLogLevel.info.rawValue
+    @State private var showDebugPaywall = false
+    @State private var debugProOverride = ProStore.debugProOverrideSelection()
     #endif
 
     var body: some View {
         NavigationView {
             Form {
+                ProSettingsSection()
+
                 Section {
                     NavigationLink {
                         AppearancePickerView(selection: $appearance)
@@ -167,7 +206,12 @@ struct SettingsView: View {
                     Text("Advanced")
                 }
 
-                TipJarView()
+                // Tips remain available only to founding supporters — they got
+                // Pro free for life, so this is the one way they can chip in.
+                // Everyone else is funneled to the subscription instead.
+                if pro.isFounder {
+                    TipJarView()
+                }
 
                 Section {
                     Link(
@@ -213,12 +257,32 @@ struct SettingsView: View {
                             Label("Log Level", systemImage: "slider.horizontal.3")
                         }
                     }
+                    Button {
+                        showDebugPaywall = true
+                    } label: {
+                        Label("Show Paywall", systemImage: "creditcard")
+                    }
+                    Picker(selection: $debugProOverride) {
+                        Text("Auto (real check)").tag(0)
+                        Text("Force Founder").tag(1)
+                        Text("Force Not Pro").tag(2)
+                    } label: {
+                        Label("Pro Override", systemImage: "wand.and.stars")
+                    }
+                    .onChange(of: debugProOverride) { value in
+                        ProStore.setDebugFounderOverride(value == 1 ? true : (value == 2 ? false : nil))
+                    }
                 } header: {
                     Text("Debug")
+                } footer: {
+                    Text("Founder status normally comes from the App Store original-download version, which isn't available on the simulator. Use Force Founder / Force Not Pro to test both states.")
                 }
                 #endif
             }
             .navigationTitle("Settings")
+            #if DEBUG
+            .sheet(isPresented: $showDebugPaywall) { ProPaywallView() }
+            #endif
         }
         .navigationViewStyle(.stack)
     }

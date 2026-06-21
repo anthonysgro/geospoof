@@ -122,6 +122,16 @@ export function computeEffectiveEnabled(args: {
   denylist: string[];
   topLevelUrl: string | undefined;
   isRestricted: (url: string) => boolean;
+  /**
+   * Safari/iOS Pro gate. When true (set by the iOS app for non-Pro users), the
+   * scope mode is forced to "all" so a free user spoofs everywhere and can't
+   * use the Pro-only allowlist/denylist — regardless of how scope was set (app,
+   * popup, or a stale value after a lapsed subscription). Optional + fail-open:
+   * undefined/false leaves scoping untouched, and the `__SAFARI__` guard
+   * compiles out on other engines, so macOS Safari / Chrome / Firefox / Android
+   * Firefox are unaffected.
+   */
+  proFeaturesBlocked?: boolean;
 }): boolean {
   const { masterEnabled, scopeMode, allowlist, denylist, topLevelUrl, isRestricted } = args;
 
@@ -152,8 +162,13 @@ export function computeEffectiveEnabled(args: {
     return false;
   }
 
+  // Per-site filtering (allowlist/denylist) is Pro-gated on iOS Safari. When
+  // the app signals proFeaturesBlocked, force "all" so a free user always
+  // spoofs everywhere and can't narrow scope. Fail-open + Safari-only.
+  const effectiveMode: ScopeMode =
+    __SAFARI__ && args.proFeaturesBlocked === true ? "all" : scopeMode;
   // Req 6.3/6.4/6.5: resolve against the active scope mode.
-  switch (scopeMode) {
+  switch (effectiveMode) {
     case "all":
       return true;
     case "allowlist":

@@ -30,6 +30,8 @@ function makeSettings(overrides?: Partial<Settings>): Settings {
     version: "1.1",
     lastUpdated: Date.now(),
     vpnSyncEnabled: false,
+    autoSyncBlocked: false,
+    proFeaturesBlocked: false,
     debugLogging: false,
     verbosityLevel: "INFO",
     theme: "system",
