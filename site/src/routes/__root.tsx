@@ -102,6 +102,43 @@ export const Route = createRootRoute({
   shellComponent: RootDocument,
 })
 
+// Inline script — runs before the app bundle to guarantee a usable
+// `window.performance`. Some engines/contexts expose `performance` as `null`
+// (observed on Firefox for Android and other mobile/hardened contexts), so a
+// dependency calling `performance.now()` throws "performance is null" during
+// hydration and freezes the whole page. This shim is a no-op on normal browsers
+// (where `performance.now` already exists) and only fills in the missing API
+// otherwise, using Date.now() as the clock.
+const performanceShim = `
+(function () {
+  try {
+    var origin = Date.now();
+    var p = window.performance;
+    if (!p || typeof p.now !== 'function') {
+      var shim = (p && typeof p === 'object') ? p : {};
+      if (typeof shim.now !== 'function') {
+        shim.now = function () { return Date.now() - origin; };
+      }
+      if (typeof shim.timeOrigin !== 'number') {
+        try { shim.timeOrigin = origin; } catch (e) {}
+      }
+      var noop = function () {};
+      ['mark','measure','clearMarks','clearMeasures','clearResourceTimings','setResourceTimingBufferSize'].forEach(function (m) {
+        if (typeof shim[m] !== 'function') shim[m] = noop;
+      });
+      ['getEntries','getEntriesByName','getEntriesByType'].forEach(function (m) {
+        if (typeof shim[m] !== 'function') shim[m] = function () { return []; };
+      });
+      try {
+        Object.defineProperty(window, 'performance', { value: shim, configurable: true, writable: true });
+      } catch (e) {
+        try { window.performance = shim; } catch (e2) {}
+      }
+    }
+  } catch (e) {}
+})();
+`
+
 // Inline script — runs before React hydrates to apply the correct theme class
 // and prevent a flash of the wrong theme.
 const themeScript = `
@@ -128,6 +165,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
+        <script dangerouslySetInnerHTML={{ __html: performanceShim }} />
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body suppressHydrationWarning>
