@@ -54,6 +54,13 @@ struct SpoofSnapshot {
     /// When the in-flight resync began (used to schedule the spinner→result flip).
     var syncingStartedAt: Date? = nil
 
+    /// True when the iOS app says this user isn't entitled to Pro features
+    /// (non-Pro). Reused from the extension gate `pending_proFeaturesBlocked`,
+    /// so no new bridge key is needed. Drives the widget/control Pro lock.
+    /// Fail-open: absent/false (macOS, or before the app first wrote it) keeps
+    /// the widget fully functional.
+    var proLocked: Bool = false
+
     /// Minimum time the spinner stays visible after a resync starts, so the
     /// loading state always registers even when the work finishes instantly.
     static let minSyncDisplay: TimeInterval = 1.5
@@ -156,6 +163,11 @@ struct SpoofSnapshot {
         let sinceSyncStart = syncingStartedAt.map { Date().timeIntervalSince($0) } ?? .greatestFiniteMagnitude
         let isSyncing = sinceSyncStart < minSyncDisplay
 
+        // Pro gate (iOS, non-Pro). Read directly from the app-authority flag —
+        // it isn't part of the region/pending recency merge, it's just "is this
+        // a free iOS user". Absent ⇒ false (fail-open: macOS / never-launched).
+        let proLocked = (dict[AppGroup.pendingProFeaturesBlocked] as? Bool) ?? false
+
         // Favorites: prefer the app-written pending list, fall back to the
         // extension-confirmed region list.
         let favorites = decodeFavorites(
@@ -183,7 +195,8 @@ struct SpoofSnapshot {
                 extensionLastSeen: extensionLastSeen,
                 favorites: favorites,
                 isSyncing: isSyncing,
-                syncingStartedAt: syncingStartedAt
+                syncingStartedAt: syncingStartedAt,
+                proLocked: proLocked
             )
         }
 
@@ -215,7 +228,8 @@ struct SpoofSnapshot {
             extensionLastSeen: extensionLastSeen,
             favorites: favorites,
             isSyncing: isSyncing,
-            syncingStartedAt: syncingStartedAt
+            syncingStartedAt: syncingStartedAt,
+            proLocked: proLocked
         )
     }
 }

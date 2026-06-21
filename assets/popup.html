@@ -373,6 +373,12 @@
           Spoofing applies to every site.
         </div>
 
+        <!-- Pro lock note (shown for non-Pro iOS users; controls are disabled) -->
+        <div class="pro-lock-note" id="scopeProNote" style="display: none">
+          🔒 Site filtering is a GeoSpoof Pro feature. Upgrade in the GeoSpoof app to limit spoofing
+          to specific sites.
+        </div>
+
         <!-- Mode change error -->
         <div
           class="warning"
@@ -528,6 +534,11 @@
                   <option value="custom" data-i18n="advanced_accuracy_custom">Custom</option>
                 </select>
               </label>
+              <!-- Pro lock note (shown for non-Pro iOS users; control disabled) -->
+              <div class="pro-lock-note" id="accuracyProNote" style="display: none">
+                🔒 Custom accuracy is a GeoSpoof Pro feature. Upgrade in the GeoSpoof app to set a
+                fixed accuracy.
+              </div>
               <div class="accuracy-custom-edit" id="accuracyCustomEdit" style="display: none">
                 <input
                   type="number"

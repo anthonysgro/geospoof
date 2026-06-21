@@ -29,6 +29,8 @@ function makeSettings(overrides: Partial<Settings> = {}): Settings {
     version: "1.1",
     lastUpdated: 0,
     vpnSyncEnabled: false,
+    autoSyncBlocked: false,
+    proFeaturesBlocked: false,
     debugLogging: false,
     verbosityLevel: "INFO",
     theme: "system",

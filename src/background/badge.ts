@@ -72,6 +72,7 @@ export async function updateBadge(): Promise<void> {
         scopeMode: settings.scopeMode,
         allowlist: settings.allowlist,
         denylist: settings.denylist,
+        proFeaturesBlocked: settings.proFeaturesBlocked,
         topLevelUrl: tab.url,
         isRestricted: isRestrictedUrl,
       });

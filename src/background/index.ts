@@ -16,6 +16,7 @@ import { setWebRTCProtection } from "./webrtc";
 import { updateBadge, setBadgeForTab, badgeStateFor } from "./badge";
 import { broadcastSettingsToTabs, isRestrictedUrl, checkTabInjection } from "./tabs";
 import { computeEffectiveEnabled } from "@/shared/utils/scope";
+import { computeEffectiveAccuracySetting } from "@/shared/accuracy/resolver";
 import { handleMessage, handleSetLocation } from "./messages";
 import { syncVpnLocation } from "./vpn-sync";
 import { installProxyWatcher } from "./proxy-watcher";
@@ -262,8 +263,10 @@ async function initialize(): Promise<void> {
 
   await updateBadge();
 
-  // Auto-sync VPN location on startup if enabled
-  if (settings.vpnSyncEnabled) {
+  // Auto-sync VPN location on startup if enabled. On Safari this is gated by
+  // the app's autoSyncBlocked signal — startup re-sync is "automatic", so it's
+  // Pro-only on iOS (fail-open; macOS/Chrome/Firefox unaffected).
+  if (settings.vpnSyncEnabled && !(__SAFARI__ && settings.autoSyncBlocked)) {
     try {
       const result = await syncVpnLocation(false);
       if (!("error" in result)) {
@@ -375,6 +378,7 @@ async function onAlarm(alarm: Alarms.Alarm): Promise<void> {
         scopeMode: settings.scopeMode,
         allowlist: settings.allowlist,
         denylist: settings.denylist,
+        proFeaturesBlocked: settings.proFeaturesBlocked,
         topLevelUrl: tabUrl,
         isRestricted: isRestrictedUrl,
       });
@@ -385,7 +389,12 @@ async function onAlarm(alarm: Alarms.Alarm): Promise<void> {
         debugLogging,
         verbosityLevel,
         webrtcProtection,
-        accuracySetting,
+        // Pro-gate custom accuracy on iOS Safari (force Realistic for a free
+        // user); fail-open + Safari-only, mirroring the scope gate above.
+        accuracySetting: computeEffectiveAccuracySetting(
+          accuracySetting,
+          settings.proFeaturesBlocked
+        ),
         accuracySeed,
       };
 
@@ -533,6 +542,7 @@ if (browser.tabs && browser.tabs.onCreated) {
         scopeMode: settings.scopeMode,
         allowlist: settings.allowlist,
         denylist: settings.denylist,
+        proFeaturesBlocked: settings.proFeaturesBlocked,
         topLevelUrl: tab.url,
         isRestricted: isRestrictedUrl,
       });
@@ -543,7 +553,12 @@ if (browser.tabs && browser.tabs.onCreated) {
         debugLogging,
         verbosityLevel,
         webrtcProtection,
-        accuracySetting,
+        // Pro-gate custom accuracy on iOS Safari (force Realistic for a free
+        // user); fail-open + Safari-only, mirroring the scope gate above.
+        accuracySetting: computeEffectiveAccuracySetting(
+          accuracySetting,
+          settings.proFeaturesBlocked
+        ),
         accuracySeed,
       };
 
@@ -579,6 +594,7 @@ if (browser.tabs && browser.tabs.onUpdated) {
             scopeMode: settings.scopeMode,
             allowlist: settings.allowlist,
             denylist: settings.denylist,
+            proFeaturesBlocked: settings.proFeaturesBlocked,
             topLevelUrl: tab.url,
             isRestricted: isRestrictedUrl,
           });

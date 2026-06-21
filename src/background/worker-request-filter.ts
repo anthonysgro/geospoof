@@ -529,6 +529,7 @@ function classifyRequest(details: WebRequestDetailsWithHeaders): Decision {
     scopeMode: cachedSettings.scopeMode,
     allowlist: cachedSettings.allowlist,
     denylist: cachedSettings.denylist,
+    proFeaturesBlocked: cachedSettings.proFeaturesBlocked,
     topLevelUrl: pageUrl,
     isRestricted: isRestrictedUrl,
   });

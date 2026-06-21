@@ -32,6 +32,18 @@ interface PendingSettings {
   vpnSync?: boolean;
   cleared?: boolean;
   resync?: boolean;
+  /**
+   * App→extension gate: true when the iOS app says this user isn't entitled to
+   * automatic background sync (non-Pro or toggle off). Adopted into
+   * settings.autoSyncBlocked. Absent/false = allowed (fail-open).
+   */
+  autoSyncBlocked?: boolean;
+  /**
+   * App→extension gate: true when the iOS app says Pro-only config features
+   * (per-site filtering, custom accuracy) aren't allowed (non-Pro). Adopted
+   * into settings.proFeaturesBlocked. Absent/false = allowed (fail-open).
+   */
+  proFeaturesBlocked?: boolean;
   latitude?: number;
   longitude?: number;
   displayName?: string;
@@ -98,6 +110,26 @@ export async function adoptPendingSettingsFromApp(): Promise<void> {
     // 1. WebRTC protection — apply only when it actually differs.
     if (typeof pending.webrtc === "boolean" && pending.webrtc !== settings.webrtcProtection) {
       await handleSetWebRTCProtection({ enabled: pending.webrtc });
+    }
+
+    // 1b. Automatic-background-sync gate. The app is the authority on iOS Pro
+    // entitlement (the extension can't tell iOS from macOS), so adopt its
+    // autoSyncBlocked signal whenever it differs. Cheap settings write; takes
+    // effect on the next resync trigger / startup.
+    if (typeof pending.autoSyncBlocked === "boolean") {
+      const latest = await loadSettings();
+      if (latest.autoSyncBlocked !== pending.autoSyncBlocked) {
+        await updateSettings({ autoSyncBlocked: pending.autoSyncBlocked });
+      }
+    }
+
+    // 1c. Pro-only config gate (per-site filtering, custom accuracy). Same
+    // app-as-authority rationale as 1b.
+    if (typeof pending.proFeaturesBlocked === "boolean") {
+      const latest = await loadSettings();
+      if (latest.proFeaturesBlocked !== pending.proFeaturesBlocked) {
+        await updateSettings({ proFeaturesBlocked: pending.proFeaturesBlocked });
+      }
     }
 
     // 2. Location source: VPN sync, explicit clear, or a manual location.

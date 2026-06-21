@@ -18,12 +18,16 @@ import UIKit
 
 struct SpoofControlPanel: View {
     @ObservedObject var controller: SpoofController
+    @ObservedObject private var pro = ProStore.shared
 
     @AppStorage("spoofOnboardingCompleted") private var onboardingCompleted = false
+    @AppStorage("founderWelcomeShown") private var founderWelcomeShown = false
     @State private var showOnboarding = false
     @State private var showTrustInfo = false
     @State private var renaming: SpoofFavorite?
     @State private var reviewToken = 0
+    @State private var showPaywall = false
+    @State private var showFounderWelcome = false
 
     var body: some View {
         Form {
@@ -52,6 +56,15 @@ struct SpoofControlPanel: View {
                 renaming = nil
             }
         }
+        .sheet(isPresented: $showFounderWelcome) {
+            FounderWelcomeSheet {
+                founderWelcomeShown = true
+                showFounderWelcome = false
+            }
+        }
+        .sheet(isPresented: $showPaywall) {
+            ProPaywallView()
+        }
         .requestReview(on: reviewToken)
         .onAppear {
             controller.refreshFromExtension()
@@ -60,12 +73,16 @@ struct SpoofControlPanel: View {
                 ReviewPrompt.shouldRequestReview() {
                 reviewToken += 1
             }
+            if pro.isFounder && !founderWelcomeShown { showFounderWelcome = true }
         }
         .onChange(of: controller.isActiveInSafari) { active in
             if onboardingCompleted && active && controller.hasLocation,
                 ReviewPrompt.shouldRequestReview() {
                 reviewToken += 1
             }
+        }
+        .onChange(of: pro.isFounder) { isFounder in
+            if isFounder && !founderWelcomeShown { showFounderWelcome = true }
         }
     }
 
@@ -219,6 +236,10 @@ struct SpoofControlPanel: View {
             }
 
             if controller.vpnSyncEnabled {
+                #if os(iOS)
+                autoBackgroundSyncRow
+                #endif
+
                 if let ip = controller.lastSyncedIP {
                     LabeledRow(label: "Detected IP", value: ip)
                 }
@@ -243,10 +264,61 @@ struct SpoofControlPanel: View {
             Text("VPN")
         } footer: {
             if controller.vpnSyncEnabled {
+                #if os(iOS)
+                Text("Matches your spoofed location to your current public IP. Automatic Background Sync keeps it matched as your VPN changes — even when the app is closed.")
+                #else
                 Text("Matches your spoofed location to your current public IP.")
+                #endif
             }
         }
     }
+
+    #if os(iOS)
+    /// "Automatic Background Sync" — an inherent Pro capability (no user toggle):
+    /// for Pro it's always on while VPN sync is active, so we show a passive
+    /// "On" status; non-Pro users see a locked PRO row that opens the paywall
+    /// (the manual "Sync Now" below stays free for everyone). The gating + bridge
+    /// to the extension lives in SpoofController.autoSyncBlocked.
+    @ViewBuilder
+    private var autoBackgroundSyncRow: some View {
+        if pro.isPro {
+            // Read-only status, not a toggle: it's always on for Pro. Use the
+            // native label/value row (LabeledContent) so "On" renders at the
+            // standard Settings-row size/treatment; fall back to a matching
+            // HStack on iOS 15 (LabeledContent is iOS 16+).
+            if #available(iOS 16.0, *) {
+                LabeledContent {
+                    Text("On")
+                } label: {
+                    Label("Automatic Background Sync", systemImage: "arrow.triangle.2.circlepath")
+                }
+            } else {
+                HStack {
+                    Label("Automatic Background Sync", systemImage: "arrow.triangle.2.circlepath")
+                    Spacer()
+                    Text("On").foregroundStyle(.secondary)
+                }
+            }
+        } else {
+            Button {
+                showPaywall = true
+            } label: {
+                HStack(spacing: 12) {
+                    Label("Automatic Background Sync", systemImage: "arrow.triangle.2.circlepath")
+                    Spacer(minLength: 8)
+                    Text("PRO")
+                        .font(.caption2.bold())
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color.brand.opacity(0.18), in: Capsule())
+                        .foregroundStyle(Color.brand)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+    }
+    #endif
 
     // MARK: Verification (iOS only on home tab, macOS shows in Test sidebar)
 
@@ -643,7 +715,7 @@ struct LocationMapPane: View {
             .frame(maxWidth: .infinity)
         }
         .modifier(MapPresentation(isPresented: $fullScreen) {
-            FullScreenMapView(latitude: latitude, longitude: longitude, timezone: controller.timezone)
+            FullScreenMapView(controller: controller, latitude: latitude, longitude: longitude, timezone: controller.timezone)
         })
         .onAppear { TimezoneShapeStore.shared.preload() }
     }
@@ -671,11 +743,32 @@ private struct MapPresentation<MapContent: View>: ViewModifier {
 /// the toggle shows a globe (tap → 3D) or map (tap → 2D). The 3D tilt needs the
 /// iOS 17 / macOS 14 camera API.
 struct FullScreenMapView: View {
+    var controller: SpoofController
     let latitude: Double
     let longitude: Double
     var timezone: SpoofTimezone?
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var pro = ProStore.shared
     @State private var is3D = true
+
+    /// Pro "pick a spot" placement mode: a fixed center reticle stays put while
+    /// the user pans the map underneath it; confirming drops the spoofed
+    /// location at the map center. This is a pure convenience over the normal
+    /// `setLocation` path — no extension-specific behavior.
+    @State private var isPicking = false
+    @State private var pickedCenter: CLLocationCoordinate2D?
+    @State private var lastTickAt: Date = .distantPast
+    @State private var showPaywall = false
+
+    /// Placement is Pro on iOS; macOS keeps it free (matches the app's other Pro
+    /// gates). The dropped coordinate flows through the normal setLocation path.
+    private var placementLocked: Bool {
+        #if os(iOS)
+        return !pro.isPro
+        #else
+        return false
+        #endif
+    }
 
     private var tzTitle: String {
         guard let tz = timezone else { return "" }
@@ -690,30 +783,166 @@ struct FullScreenMapView: View {
                         latitude: latitude,
                         longitude: longitude,
                         is3D: is3D,
-                        timezoneID: timezone?.identifier
+                        isPicking: isPicking,
+                        timezoneID: timezone?.identifier,
+                        onCenterChange: handleCenterChange
                     )
-                    .toolbar {
-                        closeToolbarItem
-                        ToolbarItem(placement: .primaryAction) {
-                            Button {
-                                withAnimation(.easeInOut(duration: 0.6)) { is3D.toggle() }
-                            } label: {
-                                Image(systemName: is3D ? "map" : "globe.americas.fill")
-                            }
-                            .accessibilityLabel(is3D ? "Switch to 2D" : "Switch to 3D")
-                        }
-                    }
+                    // Map controls float over the map as a vertical glass
+                    // cluster (the Apple Maps / Flighty pattern) instead of
+                    // crowding the nav bar title. Hidden during placement.
+                    .overlay(alignment: .topTrailing) { if !isPicking { floatingControls } }
+                    .overlay { if isPicking { placementReticle } }
+                    .overlay(alignment: .top) { if isPicking { placementHint } }
                 } else {
                     SpoofMap(latitude: latitude, longitude: longitude, span: 6, interactive: true)
-                        .toolbar { closeToolbarItem }
                 }
             }
             .ignoresSafeArea(edges: .bottom)
-            .navigationTitle(tzTitle)
+            // Placement confirm lives in a bottom action bar (the idiomatic
+            // pin-drop pattern), sitting above the home indicator via the inset.
+            .safeAreaInset(edge: .bottom) {
+                if isPicking { placementConfirmBar }
+            }
+            .navigationTitle(isPicking ? "" : tzTitle)
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
+            .toolbar { closeToolbarItem }
         }
+        .sheet(isPresented: $showPaywall) { ProPaywallView() }
+    }
+
+    /// Floating control cluster (top-trailing) — a single combined glass capsule
+    /// with the map-style and placement buttons stacked and divided, matching
+    /// Apple Maps' grouped controls rather than two separate glass bubbles.
+    private var floatingControls: some View {
+        VStack(spacing: 0) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.6)) { is3D.toggle() }
+            } label: {
+                Image(systemName: is3D ? "map" : "globe.americas.fill")
+                    .font(.system(size: 17, weight: .semibold))
+                    .frame(width: 46, height: 46)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(is3D ? "Switch to 2D" : "Switch to 3D")
+
+            Divider().frame(width: 30)
+
+            Button {
+                if placementLocked {
+                    showPaywall = true
+                } else {
+                    enterPicking()
+                }
+            } label: {
+                Image(systemName: "mappin.and.ellipse")
+                    .font(.system(size: 17, weight: .semibold))
+                    .frame(width: 46, height: 46)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Pick a spot on the map")
+        }
+        .glassCapsule()
+        .padding(.top, 8)
+        .padding(.trailing, 12)
+    }
+
+    /// Bottom action shown while placing: a full-width primary "Set Location
+    /// Here" commit (the pin-drop pattern) plus a secondary Cancel. Each is its
+    /// own glass button, so they stay legible over the map without a heavy bar.
+    private var placementConfirmBar: some View {
+        VStack(spacing: 10) {
+            Button {
+                confirmPlacement()
+            } label: {
+                Text("Set Location Here")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+            }
+            .glassButtonStyle(prominent: true)
+            .tint(.brand)
+
+            Button {
+                cancelPicking()
+            } label: {
+                Text("Cancel")
+                    .font(.subheadline.weight(.medium))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 4)
+            }
+            .glassButtonStyle()
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 10)
+        .padding(.bottom, 8)
+    }
+
+    /// A pin fixed at the map center, with a precise dot at the exact point the
+    /// coordinate will be dropped. Non-interactive so panning passes through.
+    private var placementReticle: some View {
+        ZStack {
+            Image(systemName: "mappin")
+                .font(.system(size: 36, weight: .semibold))
+                .foregroundStyle(Color.brand)
+                .shadow(color: .black.opacity(0.45), radius: 2, y: 1)
+                .offset(y: -16)
+            Circle()
+                .fill(Color.brand)
+                .frame(width: 8, height: 8)
+                .overlay(Circle().stroke(.white, lineWidth: 1.5))
+                .shadow(color: .black.opacity(0.4), radius: 1)
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    private var placementHint: some View {
+        Text("Move the map to place your pin")
+            .font(.footnote.weight(.medium))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(.ultraThinMaterial, in: Capsule())
+            .padding(.top, 10)
+            .allowsHitTesting(false)
+    }
+
+    /// Track the live map center while placing, and emit a light "selection"
+    /// tick as it scrolls (throttled so it reads like a picker, not a buzz).
+    private func handleCenterChange(_ center: CLLocationCoordinate2D) {
+        pickedCenter = center
+        guard isPicking else { return }
+        let now = Date()
+        if now.timeIntervalSince(lastTickAt) > 0.1 {
+            lastTickAt = now
+            Haptics.selection()
+        }
+    }
+
+    /// Enter placement mode, seeded at the currently shown location.
+    private func enterPicking() {
+        Haptics.impact(.rigid)
+        pickedCenter = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+        withAnimation(.easeInOut(duration: 0.25)) { isPicking = true }
+    }
+
+    /// Confirm: drop the spoofed location at the current map center, then close.
+    private func confirmPlacement() {
+        if let c = pickedCenter {
+            Haptics.notify(.success)
+            controller.setLocation(latitude: c.latitude, longitude: c.longitude, name: nil)
+        }
+        isPicking = false
+        dismiss()
+    }
+
+    /// Leave placement mode without changing the location (stay on the map).
+    private func cancelPicking() {
+        Haptics.impact(.light)
+        withAnimation(.easeInOut(duration: 0.25)) { isPicking = false }
     }
 
     @ToolbarContentBuilder
@@ -736,7 +965,9 @@ private struct FullScreenMap3D: View {
     let latitude: Double
     let longitude: Double
     let is3D: Bool
+    var isPicking: Bool = false
     let timezoneID: String?
+    var onCenterChange: ((CLLocationCoordinate2D) -> Void)? = nil
 
     @ObservedObject private var shapes = TimezoneShapeStore.shared
     @State private var camera: MapCameraPosition = .automatic
@@ -753,6 +984,14 @@ private struct FullScreenMap3D: View {
     private var camera3D: MapCameraPosition {
         .camera(MapCamera(centerCoordinate: coordinate, distance: 6_000_000, heading: 0, pitch: 0))
     }
+    /// Tighter, flat region used when entering placement mode so the user starts
+    /// at a usable zoom for picking a precise spot rather than continental.
+    private var pickingRegion: MKCoordinateRegion {
+        MKCoordinateRegion(
+            center: coordinate,
+            span: MKCoordinateSpan(latitudeDelta: 0.2, longitudeDelta: 0.2)
+        )
+    }
     private var rings: [[CLLocationCoordinate2D]] {
         guard let timezoneID, shapes.isReady else { return [] }
         return shapes.rings(for: timezoneID)
@@ -765,9 +1004,17 @@ private struct FullScreenMap3D: View {
                     .foregroundStyle(Color.mapHighlight.opacity(0.28))
                     .stroke(Color.mapHighlight.opacity(0.95), lineWidth: 1.2)
             }
-            Annotation("", coordinate: coordinate, anchor: .bottom) { SpoofMap.pin }
+            // The fixed spoofed-location pin is hidden while picking — the
+            // centered reticle (drawn by FullScreenMapView) is the placement
+            // indicator instead.
+            if !isPicking {
+                Annotation("", coordinate: coordinate, anchor: .bottom) { SpoofMap.pin }
+            }
         }
-        .mapStyle(.hybrid(elevation: is3D ? .realistic : .flat))
+        .mapStyle(.hybrid(elevation: (is3D && !isPicking) ? .realistic : .flat))
+        .onMapCameraChange(frequency: .continuous) { context in
+            onCenterChange?(context.region.center)
+        }
         .onAppear {
             camera = is3D ? camera3D : .region(region)
             shapes.preload()
@@ -775,6 +1022,12 @@ private struct FullScreenMap3D: View {
         .onChange(of: is3D) { _, newValue in
             withAnimation(.easeInOut(duration: 0.6)) {
                 camera = newValue ? camera3D : .region(region)
+            }
+        }
+        .onChange(of: isPicking) { _, picking in
+            // Drop to a flat, usable zoom when entering placement mode.
+            if picking {
+                withAnimation(.easeInOut(duration: 0.4)) { camera = .region(pickingRegion) }
             }
         }
     }
@@ -1213,7 +1466,19 @@ private struct EnvironmentReviewModifier: ViewModifier {
 /// page-context convenience).
 struct SiteFiltersView: View {
     @ObservedObject var controller: SpoofController
+    @ObservedObject private var pro = ProStore.shared
     @State private var showingAdd = false
+    @State private var showPaywall = false
+
+    /// Per-site filtering is Pro on iOS only. macOS (and the extension on
+    /// Chrome/Firefox) keep it free, so the lock never engages there.
+    private var filtersLocked: Bool {
+        #if os(iOS)
+        return !pro.isPro
+        #else
+        return false
+        #endif
+    }
 
     var body: some View {
         AdaptiveNavigationStack {
@@ -1221,7 +1486,13 @@ struct SiteFiltersView: View {
                 Section {
                     Picker("Mode", selection: Binding(
                         get: { controller.scopeMode },
-                        set: { controller.setScopeMode($0) }
+                        set: { newMode in
+                            if filtersLocked && newMode != .all {
+                                showPaywall = true
+                            } else {
+                                controller.setScopeMode(newMode)
+                            }
+                        }
                     )) {
                         ForEach(ScopeMode.allCases) { mode in
                             Text(mode.label).tag(mode)
@@ -1231,7 +1502,9 @@ struct SiteFiltersView: View {
                 } header: {
                     Text("Mode")
                 } footer: {
-                    if controller.scopeMode == .all {
+                    if filtersLocked {
+                        Text("Allowlist and Denylist are a GeoSpoof Pro feature. Upgrade to limit spoofing to specific sites.")
+                    } else if controller.scopeMode == .all {
                         Text("\(controller.scopeMode.detail) Choose Allowlist or Denylist to limit spoofing to specific sites.")
                     } else {
                         Text(controller.scopeMode.detail)
@@ -1251,6 +1524,9 @@ struct SiteFiltersView: View {
                     onAdd: { controller.addScopeSite($0, to: controller.scopeMode) },
                     onRemove: { controller.removeScopeSite($0, from: controller.scopeMode) }
                 )
+            }
+            .sheet(isPresented: $showPaywall) {
+                ProPaywallView()
             }
         }
     }
@@ -1287,7 +1563,7 @@ struct SiteFiltersView: View {
             // state — when the list is empty this accent row is all that shows,
             // inviting the first add, exactly like Apple's "Add VIP…" lists.
             Button {
-                showingAdd = true
+                if filtersLocked { showPaywall = true } else { showingAdd = true }
             } label: {
                 Label(addRowTitle, systemImage: "plus.circle.fill")
             }
@@ -1706,9 +1982,22 @@ private func accuracyPreset(for setting: SpoofAccuracySetting) -> AccuracyPreset
 /// presets; when Custom is selected, a second section reveals a numeric field.
 struct AccuracyPickerView: View {
     @ObservedObject var controller: SpoofController
+    @ObservedObject private var pro = ProStore.shared
     @State private var customText: String = ""
     @State private var customInvalid: Bool = false
+    @State private var showPaywall = false
     @FocusState private var customFocused: Bool
+
+    /// Custom accuracy is Pro on iOS only. macOS (and the extension on
+    /// Chrome/Firefox) keep it free, so the lock never engages there — matching
+    /// `SiteFiltersView.filtersLocked`.
+    private var accuracyLocked: Bool {
+        #if os(iOS)
+        return !pro.isPro
+        #else
+        return false
+        #endif
+    }
 
     private var currentPreset: AccuracyPreset {
         accuracyPreset(for: controller.accuracySetting)
@@ -1731,6 +2020,10 @@ struct AccuracyPickerView: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                }
+            } footer: {
+                if accuracyLocked {
+                    Text("Custom accuracy is a GeoSpoof Pro feature. Upgrade to set a fixed accuracy; free spoofing uses a realistic, device-appropriate value.")
                 }
             }
 
@@ -1765,6 +2058,9 @@ struct AccuracyPickerView: View {
         // commit a valid value (or leave invalid input flagged/uncommitted).
         // commitCustom is idempotent for an already-committed value.
         .onDisappear { commitCustom() }
+        .sheet(isPresented: $showPaywall) {
+            ProPaywallView()
+        }
     }
 
     /// The meters text field. On iOS it uses the numbers-and-punctuation
@@ -1801,6 +2097,14 @@ struct AccuracyPickerView: View {
     /// default, then sync the text field. Selecting a non-custom preset does NOT
     /// auto-dismiss — the user taps Back, matching AppearancePickerView.
     private func selectPreset(_ preset: AccuracyPreset) {
+        // Custom is Pro-gated on iOS: a free user is bounced to the paywall and
+        // the setting stays put (mirrors SiteFiltersView's mode picker). The
+        // extension also forces Realistic for these users, so this is the UI
+        // half of the same gate.
+        if accuracyLocked && preset == .custom {
+            showPaywall = true
+            return
+        }
         switch preset {
         case .realistic:
             controller.setAccuracySetting(.auto)

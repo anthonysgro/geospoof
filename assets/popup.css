@@ -1800,6 +1800,30 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   line-height: 1.4;
 }
 
+/* Pro-lock note + disabled controls (non-Pro iOS users). The feature
+   enforcement lives in the background; this just makes the gated inputs read
+   as unavailable and explains why. */
+.pro-lock-note {
+  font-size: 13px;
+  color: var(--brand);
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.scope-mode-btn:disabled,
+#accuracySelect:disabled,
+#accuracyCustomInput:disabled,
+.accuracy-custom-confirm:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Keep the hover affordance from firing on locked mode buttons. */
+.scope-mode-btn:disabled:hover {
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
 .scope-list-manager {
   margin-top: 4px;
 }

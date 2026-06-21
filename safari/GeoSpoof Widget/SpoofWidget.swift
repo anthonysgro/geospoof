@@ -80,14 +80,58 @@ struct SpoofWidgetEntryView: View {
     private var snap: SpoofSnapshot { entry.snapshot }
 
     var body: some View {
-        switch family {
-        case .systemSmall:
-            smallView
-        case .systemExtraLarge:
-            extraLargeView
-        default:
-            mediumLargeView
+        if snap.proLocked {
+            lockedView
+        } else {
+            switch family {
+            case .systemSmall:
+                smallView
+            case .systemExtraLarge:
+                extraLargeView
+            default:
+                mediumLargeView
+            }
         }
+    }
+
+    // MARK: Pro lock (free iOS user)
+
+    /// Replaces all widget content for a non-Pro iOS user: widgets are a Pro
+    /// feature, so we show an upsell instead of live data or working controls.
+    /// Tapping anywhere opens the app to the paywall via a `geospoof://paywall`
+    /// deep link — widgetURL (not an interactive Button) is what reliably
+    /// launches the app from a widget tap.
+    private var lockedView: some View {
+        lockedCard
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .containerBackgroundCompat()
+            .widgetURL(URL(string: "geospoof://paywall"))
+    }
+
+    private var lockedCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            header
+            Spacer(minLength: 0)
+            Image(systemName: "lock.fill")
+                .font(family == .systemSmall ? .title3 : .title2)
+                .foregroundStyle(brandGreen)
+            Text("GeoSpoof Pro")
+                .font(family == .systemSmall ? .subheadline.weight(.semibold) : .headline)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            if family == .systemSmall {
+                Text("Tap to upgrade")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("Widgets are a Pro feature. Tap to upgrade and keep your spoof status on your Home Screen.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     // MARK: Small

@@ -20,7 +20,11 @@
  */
 
 import type { AccuracySetting } from "@/shared/types/settings";
-import { DEFAULT_ACCURACY_M, ACCURACY_GRID_DP } from "@/shared/types/settings";
+import {
+  DEFAULT_ACCURACY_M,
+  ACCURACY_GRID_DP,
+  DEFAULT_ACCURACY_SETTING,
+} from "@/shared/types/settings";
 import type { DeviceClass } from "@/shared/accuracy/device-class";
 import { BANDS } from "@/shared/accuracy/device-class";
 
@@ -156,4 +160,31 @@ export function resolveAccuracy(ctx: ResolveContext): number {
       return pickInBand(band.min, band.max, ctx);
     }
   }
+}
+
+/**
+ * Safari/iOS Pro gate for custom accuracy. When the iOS app signals
+ * `proFeaturesBlocked` (a non-Pro user), the configured accuracy setting is
+ * forced back to `{ mode: "auto" }` (Realistic) so a free user can't pin a
+ * custom/fixed (or legacy range) accuracy — regardless of how the setting got
+ * there (app, the Safari popup, or a stale value after a lapsed subscription).
+ *
+ * Optional + fail-open: `undefined`/`false` leaves the setting untouched, and
+ * the `__SAFARI__` guard compiles the gate out on Chrome/Firefox. macOS sends
+ * `proFeaturesBlocked=false`, so macOS Safari is unaffected — only iOS Safari
+ * free users are gated. Mirrors `computeEffectiveEnabled`'s scope-mode gate so
+ * both Pro-only config features share one flag and the same enforcement shape.
+ *
+ * Applied in the background at every point that builds a tab-bound payload, so
+ * the resolved accuracy delivered to a page is always device-realistic for a
+ * free user. The content-script Resolver stays unaware of entitlement.
+ */
+export function computeEffectiveAccuracySetting(
+  setting: AccuracySetting,
+  proFeaturesBlocked?: boolean
+): AccuracySetting {
+  if (__SAFARI__ && proFeaturesBlocked === true) {
+    return DEFAULT_ACCURACY_SETTING;
+  }
+  return setting;
 }
