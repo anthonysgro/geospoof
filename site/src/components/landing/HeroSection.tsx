@@ -133,20 +133,21 @@ export function HeroSection({ className }: { className?: string }) {
             variant="outline"
             className="mb-4 border-brand/30 bg-brand/10 tracking-wide text-(--color-brand) uppercase"
           >
-            Browser Extension
+            VPN Companion
           </Badge>
 
           <h1 className="mb-4 text-4xl leading-tight font-bold text-(--color-canvas-foreground) sm:mb-6 md:text-5xl xl:text-[4.5rem]">
-            Your location,{" "}
+            Finish what{" "}
             <span className="whitespace-nowrap text-(--color-brand)">
-              your rules
-            </span>
+              your VPN
+            </span>{" "}
+            started
           </h1>
 
           <p className="mb-6 max-w-xl text-base text-(--color-canvas-muted) sm:mb-8 md:text-lg xl:text-xl">
-            GeoSpoof overrides your browser's geolocation, timezone, and WebRTC
-            APIs so websites see exactly where you want them to — not where you
-            actually are.
+            A VPN changes your IP, but your browser still leaks your real
+            location. GeoSpoof matches it to your VPN automatically — and keeps
+            it matched as you switch servers.
           </p>
 
           <div className="flex w-full flex-col items-center gap-3 xl:w-auto xl:items-start">
