@@ -1,4 +1,5 @@
 import { CheckIcon, MinusIcon } from "lucide-react"
+import { Link } from "@tanstack/react-router"
 import { Section } from "./Section"
 import { cn } from "@/lib/utils"
 import {
@@ -130,6 +131,45 @@ export function CompatibilitySection({ className }: { className?: string }) {
       <p className="mt-4 text-center text-xs text-(--color-canvas-muted)">
         Firefox for Android requires Firefox 140+. Safari requires iOS 16+ or
         macOS 13+.
+      </p>
+
+      <p className="mx-auto mt-6 max-w-2xl text-center text-sm text-(--color-canvas-muted)">
+        Browser-specific setup guides: spoof your location in{" "}
+        <Link
+          to={"/spoof-location/chrome" as "/"}
+          className="font-medium text-(--color-brand) hover:underline"
+        >
+          Chrome
+        </Link>
+        ,{" "}
+        <Link
+          to={"/spoof-location/edge" as "/"}
+          className="font-medium text-(--color-brand) hover:underline"
+        >
+          Edge
+        </Link>
+        ,{" "}
+        <Link
+          to={"/spoof-location/firefox" as "/"}
+          className="font-medium text-(--color-brand) hover:underline"
+        >
+          Firefox
+        </Link>
+        , or{" "}
+        <Link
+          to={"/spoof-location/safari" as "/"}
+          className="font-medium text-(--color-brand) hover:underline"
+        >
+          Safari
+        </Link>
+        . You can also{" "}
+        <Link
+          to={"/spoof-timezone" as "/"}
+          className="font-medium text-(--color-brand) hover:underline"
+        >
+          spoof your browser timezone
+        </Link>
+        .
       </p>
     </Section>
   )

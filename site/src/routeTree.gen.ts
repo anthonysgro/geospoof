@@ -16,7 +16,12 @@ import { Route as SupportRouteImport } from './routes/support'
 import { Route as SpoofTimezoneRouteImport } from './routes/spoof-timezone'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SpoofLocationIndexRouteImport } from './routes/spoof-location.index'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
+import { Route as SpoofLocationSafariRouteImport } from './routes/spoof-location.safari'
+import { Route as SpoofLocationFirefoxRouteImport } from './routes/spoof-location.firefox'
+import { Route as SpoofLocationEdgeRouteImport } from './routes/spoof-location.edge'
+import { Route as SpoofLocationChromeRouteImport } from './routes/spoof-location.chrome'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 
 const VerifyRoute = VerifyRouteImport.update({
@@ -54,9 +59,34 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SpoofLocationIndexRoute = SpoofLocationIndexRouteImport.update({
+  id: '/spoof-location/',
+  path: '/spoof-location/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BlogIndexRoute = BlogIndexRouteImport.update({
   id: '/blog/',
   path: '/blog/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SpoofLocationSafariRoute = SpoofLocationSafariRouteImport.update({
+  id: '/spoof-location/safari',
+  path: '/spoof-location/safari',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SpoofLocationFirefoxRoute = SpoofLocationFirefoxRouteImport.update({
+  id: '/spoof-location/firefox',
+  path: '/spoof-location/firefox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SpoofLocationEdgeRoute = SpoofLocationEdgeRouteImport.update({
+  id: '/spoof-location/edge',
+  path: '/spoof-location/edge',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SpoofLocationChromeRoute = SpoofLocationChromeRouteImport.update({
+  id: '/spoof-location/chrome',
+  path: '/spoof-location/chrome',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BlogSlugRoute = BlogSlugRouteImport.update({
@@ -74,7 +104,12 @@ export interface FileRoutesByFullPath {
   '/test': typeof TestRoute
   '/verify': typeof VerifyRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/spoof-location/chrome': typeof SpoofLocationChromeRoute
+  '/spoof-location/edge': typeof SpoofLocationEdgeRoute
+  '/spoof-location/firefox': typeof SpoofLocationFirefoxRoute
+  '/spoof-location/safari': typeof SpoofLocationSafariRoute
   '/blog/': typeof BlogIndexRoute
+  '/spoof-location/': typeof SpoofLocationIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -85,7 +120,12 @@ export interface FileRoutesByTo {
   '/test': typeof TestRoute
   '/verify': typeof VerifyRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/spoof-location/chrome': typeof SpoofLocationChromeRoute
+  '/spoof-location/edge': typeof SpoofLocationEdgeRoute
+  '/spoof-location/firefox': typeof SpoofLocationFirefoxRoute
+  '/spoof-location/safari': typeof SpoofLocationSafariRoute
   '/blog': typeof BlogIndexRoute
+  '/spoof-location': typeof SpoofLocationIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -97,7 +137,12 @@ export interface FileRoutesById {
   '/test': typeof TestRoute
   '/verify': typeof VerifyRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/spoof-location/chrome': typeof SpoofLocationChromeRoute
+  '/spoof-location/edge': typeof SpoofLocationEdgeRoute
+  '/spoof-location/firefox': typeof SpoofLocationFirefoxRoute
+  '/spoof-location/safari': typeof SpoofLocationSafariRoute
   '/blog/': typeof BlogIndexRoute
+  '/spoof-location/': typeof SpoofLocationIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -110,7 +155,12 @@ export interface FileRouteTypes {
     | '/test'
     | '/verify'
     | '/blog/$slug'
+    | '/spoof-location/chrome'
+    | '/spoof-location/edge'
+    | '/spoof-location/firefox'
+    | '/spoof-location/safari'
     | '/blog/'
+    | '/spoof-location/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -121,7 +171,12 @@ export interface FileRouteTypes {
     | '/test'
     | '/verify'
     | '/blog/$slug'
+    | '/spoof-location/chrome'
+    | '/spoof-location/edge'
+    | '/spoof-location/firefox'
+    | '/spoof-location/safari'
     | '/blog'
+    | '/spoof-location'
   id:
     | '__root__'
     | '/'
@@ -132,7 +187,12 @@ export interface FileRouteTypes {
     | '/test'
     | '/verify'
     | '/blog/$slug'
+    | '/spoof-location/chrome'
+    | '/spoof-location/edge'
+    | '/spoof-location/firefox'
+    | '/spoof-location/safari'
     | '/blog/'
+    | '/spoof-location/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -144,7 +204,12 @@ export interface RootRouteChildren {
   TestRoute: typeof TestRoute
   VerifyRoute: typeof VerifyRoute
   BlogSlugRoute: typeof BlogSlugRoute
+  SpoofLocationChromeRoute: typeof SpoofLocationChromeRoute
+  SpoofLocationEdgeRoute: typeof SpoofLocationEdgeRoute
+  SpoofLocationFirefoxRoute: typeof SpoofLocationFirefoxRoute
+  SpoofLocationSafariRoute: typeof SpoofLocationSafariRoute
   BlogIndexRoute: typeof BlogIndexRoute
+  SpoofLocationIndexRoute: typeof SpoofLocationIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -198,11 +263,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/spoof-location/': {
+      id: '/spoof-location/'
+      path: '/spoof-location'
+      fullPath: '/spoof-location/'
+      preLoaderRoute: typeof SpoofLocationIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/blog/': {
       id: '/blog/'
       path: '/blog'
       fullPath: '/blog/'
       preLoaderRoute: typeof BlogIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/spoof-location/safari': {
+      id: '/spoof-location/safari'
+      path: '/spoof-location/safari'
+      fullPath: '/spoof-location/safari'
+      preLoaderRoute: typeof SpoofLocationSafariRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/spoof-location/firefox': {
+      id: '/spoof-location/firefox'
+      path: '/spoof-location/firefox'
+      fullPath: '/spoof-location/firefox'
+      preLoaderRoute: typeof SpoofLocationFirefoxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/spoof-location/edge': {
+      id: '/spoof-location/edge'
+      path: '/spoof-location/edge'
+      fullPath: '/spoof-location/edge'
+      preLoaderRoute: typeof SpoofLocationEdgeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/spoof-location/chrome': {
+      id: '/spoof-location/chrome'
+      path: '/spoof-location/chrome'
+      fullPath: '/spoof-location/chrome'
+      preLoaderRoute: typeof SpoofLocationChromeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blog/$slug': {
@@ -224,7 +324,12 @@ const rootRouteChildren: RootRouteChildren = {
   TestRoute: TestRoute,
   VerifyRoute: VerifyRoute,
   BlogSlugRoute: BlogSlugRoute,
+  SpoofLocationChromeRoute: SpoofLocationChromeRoute,
+  SpoofLocationEdgeRoute: SpoofLocationEdgeRoute,
+  SpoofLocationFirefoxRoute: SpoofLocationFirefoxRoute,
+  SpoofLocationSafariRoute: SpoofLocationSafariRoute,
   BlogIndexRoute: BlogIndexRoute,
+  SpoofLocationIndexRoute: SpoofLocationIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

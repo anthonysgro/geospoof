@@ -133,7 +133,7 @@ export function HeroSection({ className }: { className?: string }) {
             variant="outline"
             className="mb-4 border-brand/30 bg-brand/10 tracking-wide text-(--color-brand) uppercase"
           >
-            VPN Companion
+            VPN Companion · Extension
           </Badge>
 
           <h1 className="mb-4 text-4xl leading-tight font-bold text-(--color-canvas-foreground) sm:mb-6 md:text-5xl xl:text-[4.5rem]">

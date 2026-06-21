@@ -25,7 +25,20 @@ const llmsFile = path.join(siteRoot, "public/llms.txt")
  * browser probes and isn't useful in search results. `/verify` is included: it
  * targets "browser location test" style queries and has indexable copy/FAQ.
  */
-const staticRoutes = ["/", "/verify", "/spoof-timezone", "/blog", "/privacy", "/terms", "/support"]
+const staticRoutes = [
+  "/",
+  "/verify",
+  "/spoof-timezone",
+  "/spoof-location",
+  "/spoof-location/chrome",
+  "/spoof-location/edge",
+  "/spoof-location/firefox",
+  "/spoof-location/safari",
+  "/blog",
+  "/privacy",
+  "/terms",
+  "/support",
+]
 
 /**
  * One-line descriptions for the key static routes, surfaced in llms.txt so AI
@@ -47,6 +60,31 @@ const staticPageMeta = {
     title: "Spoof Your Browser Timezone",
     description:
       "How to change or spoof your browser's timezone to match any location. GeoSpoof overrides Date, Intl, and Temporal without touching your system clock. Free.",
+  },
+  "/spoof-location": {
+    title: "Spoof Your Browser Location",
+    description:
+      "Spoof your browser location in Chrome, Edge, Firefox, or Safari. GeoSpoof overrides the Geolocation API and timezone so sites see the location you choose.",
+  },
+  "/spoof-location/chrome": {
+    title: "Spoof Your Location in Chrome",
+    description:
+      "How to spoof your location in Chrome (and Brave, Edge, and other Chromium browsers) with the free GeoSpoof extension.",
+  },
+  "/spoof-location/edge": {
+    title: "Spoof Your Location in Edge",
+    description:
+      "How to spoof your location in Microsoft Edge on Windows and macOS with the free GeoSpoof extension.",
+  },
+  "/spoof-location/firefox": {
+    title: "Spoof Your Location in Firefox",
+    description:
+      "How to spoof your location in Firefox on desktop and Android with the free, open-source GeoSpoof add-on.",
+  },
+  "/spoof-location/safari": {
+    title: "Spoof Your Location in Safari",
+    description:
+      "How to spoof your location in Safari on iOS, iPadOS, and macOS with the free GeoSpoof extension from the App Store.",
   },
   "/blog": {
     title: "GeoSpoof Blog",
