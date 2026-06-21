@@ -158,6 +158,8 @@ struct SettingsView: View {
     @AppStorage(LogSettingsKey.enabled) private var loggingEnabled = false
     @AppStorage(LogSettingsKey.level) private var logLevelRaw = AppLogLevel.info.rawValue
     @State private var showDebugPaywall = false
+    @State private var showDebugProPitch = false
+    @State private var showDebugFounderWelcome = false
     @State private var debugProOverride = ProStore.debugProOverrideSelection()
     #endif
 
@@ -262,6 +264,16 @@ struct SettingsView: View {
                     } label: {
                         Label("Show Paywall", systemImage: "creditcard")
                     }
+                    Button {
+                        showDebugProPitch = true
+                    } label: {
+                        Label("Show Pro Pitch", systemImage: "sparkles.rectangle.stack")
+                    }
+                    Button {
+                        showDebugFounderWelcome = true
+                    } label: {
+                        Label("Show Founder Welcome", systemImage: "sparkles")
+                    }
                     Picker(selection: $debugProOverride) {
                         Text("Auto (real check)").tag(0)
                         Text("Force Founder").tag(1)
@@ -282,6 +294,10 @@ struct SettingsView: View {
             .navigationTitle("Settings")
             #if DEBUG
             .sheet(isPresented: $showDebugPaywall) { ProPaywallView() }
+            .sheet(isPresented: $showDebugProPitch) { ProPitchSheet() }
+            .sheet(isPresented: $showDebugFounderWelcome) {
+                FounderWelcomeSheet { showDebugFounderWelcome = false }
+            }
             #endif
         }
         .navigationViewStyle(.stack)

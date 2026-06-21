@@ -22,6 +22,10 @@ struct SpoofControlPanel: View {
 
     @AppStorage("spoofOnboardingCompleted") private var onboardingCompleted = false
     @AppStorage("founderWelcomeShown") private var founderWelcomeShown = false
+    /// Whether the user dismissed the passive Pro discovery card. Persisted so
+    /// it stays gone once dismissed. (Replaces the old auto-presented pitch
+    /// sheet, which interrupted users mid-task — see `proDiscoverySection`.)
+    @AppStorage("proCardDismissed") private var proCardDismissed = false
     @State private var showOnboarding = false
     @State private var showTrustInfo = false
     @State private var renaming: SpoofFavorite?
@@ -40,6 +44,7 @@ struct SpoofControlPanel: View {
             if !controller.favorites.isEmpty {
                 favoritesSection
             }
+            proDiscoverySection
             #if os(iOS)
             verificationSection
             #endif
@@ -69,20 +74,74 @@ struct SpoofControlPanel: View {
         .onAppear {
             controller.refreshFromExtension()
             if !onboardingCompleted { showOnboarding = true }
-            if onboardingCompleted && controller.isActiveInSafari && controller.hasLocation,
-                ReviewPrompt.shouldRequestReview() {
-                reviewToken += 1
-            }
+            evaluateReviewPrompt()
             if pro.isFounder && !founderWelcomeShown { showFounderWelcome = true }
         }
-        .onChange(of: controller.isActiveInSafari) { active in
-            if onboardingCompleted && active && controller.hasLocation,
-                ReviewPrompt.shouldRequestReview() {
-                reviewToken += 1
-            }
+        .onChange(of: controller.isActiveInSafari) { _ in
+            evaluateReviewPrompt()
         }
         .onChange(of: pro.isFounder) { isFounder in
             if isFounder && !founderWelcomeShown { showFounderWelcome = true }
+        }
+    }
+
+    /// Surfaces the App Store review ask at a genuinely positive moment —
+    /// GeoSpoof confirmed running in Safari with a location set — heavily
+    /// throttled by `ReviewPrompt` (several qualifying sessions, once per
+    /// version). Note: we deliberately do *not* pitch Pro here. An interrupting
+    /// modal at this exact moment hijacks the user's first successful spoof
+    /// before they can even see the result; Pro awareness is handled passively
+    /// by `proDiscoverySection` instead.
+    private func evaluateReviewPrompt() {
+        guard onboardingCompleted,
+              controller.isActiveInSafari,
+              controller.hasLocation,
+              ReviewPrompt.shouldRequestReview() else { return }
+        reviewToken += 1
+    }
+
+    // MARK: Pro discovery
+
+    /// A passive, dismissible card introducing GeoSpoof Pro. Shown only to
+    /// non-Pro users once they've actually spoofed a location (so the value is
+    /// already felt), and never again after dismissal. Unlike a modal pitch it
+    /// doesn't cover the screen or interrupt the spoof result — it just sits in
+    /// the list and opens the Pro detail screen on tap. The real conversion
+    /// moments are the contextual gates (locked auto-sync, widgets, per-site
+    /// rules); this only ensures the tier is discoverable.
+    @ViewBuilder
+    private var proDiscoverySection: some View {
+        if !pro.isPro && controller.hasLocation && !proCardDismissed {
+            Section {
+                NavigationLink {
+                    ProDetailView()
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 22))
+                            .foregroundStyle(Color.brand)
+                            .frame(width: 30)
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Do more with GeoSpoof Pro")
+                                .font(.headline)
+                            Text("Automatic VPN sync, per-site rules, widgets, and more.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        proCardDismissed = true
+                    } label: {
+                        Label("Dismiss", systemImage: "xmark")
+                    }
+                }
+            } footer: {
+                Text("Swipe to dismiss.")
+            }
         }
     }
 
@@ -265,7 +324,7 @@ struct SpoofControlPanel: View {
         } footer: {
             if controller.vpnSyncEnabled {
                 #if os(iOS)
-                Text("Matches your spoofed location to your current public IP. Automatic Background Sync keeps it matched as your VPN changes — even when the app is closed.")
+                Text("Matches your spoofed location to your current public IP. Auto Background Sync keeps it matched as your VPN changes — even when the app is closed.")
                 #else
                 Text("Matches your spoofed location to your current public IP.")
                 #endif
@@ -274,7 +333,7 @@ struct SpoofControlPanel: View {
     }
 
     #if os(iOS)
-    /// "Automatic Background Sync" — an inherent Pro capability (no user toggle):
+    /// "Auto Background Sync" — an inherent Pro capability (no user toggle):
     /// for Pro it's always on while VPN sync is active, so we show a passive
     /// "On" status; non-Pro users see a locked PRO row that opens the paywall
     /// (the manual "Sync Now" below stays free for everyone). The gating + bridge
@@ -290,11 +349,11 @@ struct SpoofControlPanel: View {
                 LabeledContent {
                     Text("On")
                 } label: {
-                    Label("Automatic Background Sync", systemImage: "arrow.triangle.2.circlepath")
+                    Label("Auto Background Sync", systemImage: "arrow.triangle.2.circlepath")
                 }
             } else {
                 HStack {
-                    Label("Automatic Background Sync", systemImage: "arrow.triangle.2.circlepath")
+                    Label("Auto Background Sync", systemImage: "arrow.triangle.2.circlepath")
                     Spacer()
                     Text("On").foregroundStyle(.secondary)
                 }
@@ -304,7 +363,7 @@ struct SpoofControlPanel: View {
                 showPaywall = true
             } label: {
                 HStack(spacing: 12) {
-                    Label("Automatic Background Sync", systemImage: "arrow.triangle.2.circlepath")
+                    Label("Auto Background Sync", systemImage: "arrow.triangle.2.circlepath")
                     Spacer(minLength: 8)
                     Text("PRO")
                         .font(.caption2.bold())
@@ -758,6 +817,9 @@ struct FullScreenMapView: View {
     @State private var isPicking = false
     @State private var pickedCenter: CLLocationCoordinate2D?
     @State private var lastTickAt: Date = .distantPast
+    /// Drives the Pro paywall for non-Pro users tapping the locked placement
+    /// control. Presented as a fullScreenCover (see body) rather than a sheet,
+    /// which would auto-dismiss when stacked over this map cover.
     @State private var showPaywall = false
 
     /// Placement is Pro on iOS; macOS keeps it free (matches the app's other Pro
@@ -809,7 +871,22 @@ struct FullScreenMapView: View {
             #endif
             .toolbar { closeToolbarItem }
         }
-        .sheet(isPresented: $showPaywall) { ProPaywallView() }
+        // Present the paywall as a fullScreenCover, not a `.sheet`: a sheet
+        // presented over this fullScreenCover (which hosts a live MapKit view)
+        // hits a UIKit presentation race and auto-dismisses itself. A nested
+        // fullScreenCover is the supported pattern — it animates up natively,
+        // keeps the map mounted underneath, and dismisses cleanly via its own
+        // close button. (macOS has no fullScreenCover and never locks placement,
+        // so it falls back to a sheet that's effectively unreachable.)
+        #if os(iOS)
+        .fullScreenCover(isPresented: $showPaywall) {
+            ProPaywallView()
+        }
+        #else
+        .sheet(isPresented: $showPaywall) {
+            ProPaywallView()
+        }
+        #endif
     }
 
     /// Floating control cluster (top-trailing) — a single combined glass capsule
@@ -912,9 +989,11 @@ struct FullScreenMapView: View {
 
     /// Track the live map center while placing, and emit a light "selection"
     /// tick as it scrolls (throttled so it reads like a picker, not a buzz).
+    /// Skip the work entirely when not picking — `onMapCameraChange(.continuous)`
+    /// fires every frame, and there's nothing to track until placement starts.
     private func handleCenterChange(_ center: CLLocationCoordinate2D) {
-        pickedCenter = center
         guard isPicking else { return }
+        pickedCenter = center
         let now = Date()
         if now.timeIntervalSince(lastTickAt) > 0.1 {
             lastTickAt = now
