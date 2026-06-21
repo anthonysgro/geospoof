@@ -1,21 +1,22 @@
 /**
  * Coordinate → timezone resolution for the /verify page.
  *
- * Uses `browser-geo-tz` against a **same-origin** copy of the boundary data
- * served from `/geo-tz/` (the 29 MB `.dat` + ~900 KB index, copied out of the
- * `geo-tz` npm package into `public/geo-tz/` at build time — see
- * `scripts/copy-geo-tz-data.mjs`). The library only range-fetches the small
- * shard it needs per lookup, so the client stays light while the full dataset
- * lives at the CDN edge.
+ * Uses `browser-geo-tz` against the boundary data served from cdn.geospoof.com —
+ * a CloudFront distribution over a private S3 bucket (provisioned by the CDK app
+ * in cdk/). The library only range-fetches the small shard it needs per lookup,
+ * so the client stays light while the full dataset lives at the CloudFront edge.
  *
- * Why same-origin instead of jsdelivr:
- *   - jsdelivr serves the immutable `.dat` as `200` (whole file) on a cache hit
- *     but `206` on a miss. Safari's range/cache layer mishandles that
- *     inconsistency and intermittently fails the range request with 416, which
- *     silently broke the "does your timezone match your coordinates?" check.
- *     Vercel static serving returns consistent `206` for range requests, and a
- *     same-origin fetch also isn't subject to Safari's cross-site tracker
- *     prevention.
+ * Why cdn.geospoof.com (not jsdelivr, not the Vercel same-origin copy):
+ *   - cdn.geospoof.com is the SAME SITE as the verify page (same eTLD+1,
+ *     geospoof.com), so this cross-origin fetch is NOT subject to Safari's
+ *     cross-site tracking prevention. The distribution returns
+ *     Access-Control-Allow-Origin: * and consistent `206` range responses.
+ *   - jsdelivr served the immutable `.dat` as `200` (whole file) on a cache hit
+ *     but `206` on a miss; Safari's range/cache layer mishandled that
+ *     inconsistency into intermittent 416s that silently broke the
+ *     "does your timezone match your coordinates?" check.
+ *   - Serving from the CDN (rather than the Vercel same-origin /geo-tz/ copy)
+ *     also keeps this data off the main site's bandwidth budget.
  *
  * We use the full `timezones.geojson` dataset (not the `-1970` variant) to match
  * the extension's own resolution (`src/background/timezone.ts`), which avoids
@@ -26,7 +27,7 @@
  * global at import time.
  */
 
-// Same-origin paths to the boundary data copied into `public/geo-tz/` at build.
+// CDN paths to the boundary data (CloudFront over S3, provisioned by cdk/).
 //
 // VERSIONED by the geo-tz data version. The `.index.json` (table of contents)
 // and the `.dat` it indexes are fetched separately and cached `immutable`; if
@@ -36,8 +37,9 @@
 // never mismatch. This literal MUST equal the geo-tz package version; the build
 // (scripts/copy-geo-tz-data.mjs) fails loudly if it drifts.
 const GEO_TZ_DATA_VERSION = "8.1.6"
-const GEO_TZ_DATA_URL = `/geo-tz/${GEO_TZ_DATA_VERSION}/timezones.geojson.geo.dat`
-const GEO_TZ_INDEX_URL = `/geo-tz/${GEO_TZ_DATA_VERSION}/timezones.geojson.index.json`
+const GEO_TZ_BASE = `https://cdn.geospoof.com/geo-tz/${GEO_TZ_DATA_VERSION}`
+const GEO_TZ_DATA_URL = `${GEO_TZ_BASE}/timezones.geojson.geo.dat`
+const GEO_TZ_INDEX_URL = `${GEO_TZ_BASE}/timezones.geojson.index.json`
 
 type GeoTzFinder = { find: (lat: number, lon: number) => Promise<Array<string>> }
 

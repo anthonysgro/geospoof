@@ -1,0 +1,36 @@
+# Compiled output
+dist/
+*.d.ts
+!lib/**/*.d.ts
+
+# Dependencies
+node_modules/
+
+# CDK
+.cdk.staging
+cdk.out
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Test coverage
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+
+# TypeScript cache
+*.tsbuildinfo

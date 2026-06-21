@@ -1,0 +1,40 @@
+{
+  "name": "cdk",
+  "version": "0.1.0",
+  "scripts": {
+    "build": "tsc",
+    "build:full": "npm run format:check && npm run lint && npm run test && npm run build",
+    "cdk": "cdk",
+    "clean": "npm run clean:dist && npm run clean:cdk && npm run clean:node",
+    "clean:dist": "rm -rf dist",
+    "clean:cdk": "rm -rf cdk.out",
+    "clean:node": "rm -rf node_modules package-lock.json",
+    "deploy:dev": "npm run build:full && cdk deploy --all --require-approval never --context env=dev --profile geospoof-dev",
+    "deploy:prod": "npm run build:full && cdk deploy --all --require-approval never --context env=prod --profile geospoof-prod",
+    "diff:dev": "cdk diff --all --context env=dev --profile geospoof-dev",
+    "diff:prod": "cdk diff --all --context env=prod --profile geospoof-prod",
+    "format": "prettier --write \"**/*.{ts,js,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,js,json,md}\"",
+    "lint": "eslint 'lib/**/*.ts' 'test/**/*.ts'",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "watch": "tsc -w"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.10.1",
+    "aws-cdk": "2.1128.0",
+    "eslint": "^10.1.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.8.1",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.57.2",
+    "vitest": "^3"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.260.0",
+    "constructs": "^10.5.0"
+  }
+}
