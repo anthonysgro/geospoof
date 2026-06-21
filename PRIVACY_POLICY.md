@@ -127,10 +127,10 @@ GeoSpoof can set your spoofed location to match your VPN.
 
 ## In-App Purchases and Subscriptions
 
-The iOS, iPadOS, and macOS app offers paid features through Apple's In-App Purchase system:
+The app offers paid options through Apple's In-App Purchase system:
 
-- **GeoSpoof Pro** — an auto-renewable subscription (monthly or annual) that unlocks Pro features such as automatic background VPN sync, per-site allowlist/denylist rules, Home Screen and Control Center widgets, custom accuracy, and the on-map location picker. The subscription renews automatically until cancelled; you can manage or cancel it anytime in your Apple Account settings. A free, fully functional tier remains available without any purchase.
-- **Tips** — optional one-time purchases that let you support development and unlock no features or functionality.
+- **GeoSpoof Pro** — _iOS and iPadOS only._ An auto-renewable subscription (monthly or annual) that unlocks Pro features such as automatic background VPN sync, per-site allowlist/denylist rules, Home Screen and Control Center widgets, custom accuracy, and the on-map location picker. The subscription renews automatically until cancelled; you can manage or cancel it anytime in your Apple Account settings. A free, fully functional tier remains available without any purchase. **On macOS, all of these features are included at no charge — there is no macOS subscription.**
+- **Tips** — _iOS, iPadOS, and macOS._ Optional one-time purchases that let you support development and unlock no features or functionality.
 
 **All payments are processed by Apple via In-App Purchase. The developer never receives your payment details, card information, Apple Account identifier, or any personal data from a purchase or subscription.** Billing, receipts, renewals, and refunds are handled entirely by Apple under its terms. That payment processing is governed by Apple's own privacy policy, and Apple acts as an independent data controller for it.
 
