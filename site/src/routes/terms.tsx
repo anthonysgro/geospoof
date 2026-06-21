@@ -66,7 +66,7 @@ function TermsPage() {
               Terms of Service
             </h1>
             <p className="text-body-base text-(--color-canvas-muted)">
-              Last Updated: June 18, 2026
+              Last Updated: June 20, 2026
             </p>
           </div>
 
@@ -100,12 +100,33 @@ function TermsPage() {
                 anonymity or circumvent server-side detection methods.
               </p>
               <p>
-                GeoSpoof is free to use. The iOS, iPadOS, and macOS app may
-                offer optional "tips" as one-time in-app purchases that let you
-                support development. Tips are entirely voluntary and unlock no
-                features or functionality. All in-app purchases are processed by
-                Apple under its terms; billing, receipts, and any refund
-                requests are handled by Apple, not by the developer.
+                GeoSpoof is free to use. On iOS and iPadOS, the app also offers{" "}
+                <strong>GeoSpoof Pro</strong>, an optional auto-renewable
+                subscription (monthly or annual) that unlocks additional
+                features such as automatic background VPN sync, per-site rules,
+                widgets, custom accuracy, and the on-map location picker; a free
+                tier remains fully functional without it. On macOS these
+                features are included at no charge, so there is no macOS
+                subscription. The iOS, iPadOS, and macOS app may also offer
+                optional one-time "tips" that let you support development and
+                unlock no features.
+              </p>
+              <p>
+                All in-app purchases and subscriptions are processed by Apple
+                under its terms — billing, automatic renewals, receipts,
+                cancellations, and any refund requests are handled by Apple, not
+                by the developer. Auto-renewable subscriptions renew until
+                cancelled, and you can manage or cancel a subscription anytime in
+                your Apple Account settings. Use of in-app purchases is also
+                subject to{" "}
+                <a
+                  href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Apple's Standard End User License Agreement
+                </a>
+                .
               </p>
             </TermsSection>
 

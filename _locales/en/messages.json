@@ -4,7 +4,7 @@
     "description": "Extension name shown in the browser and store listing."
   },
   "extensionDescription": {
-    "message": "Spoof your browser's geolocation and timezone. Prevent WebRTC IP leaks.",
+    "message": "Spoof your browser's geolocation and timezone, auto-sync to your VPN, and block WebRTC IP leaks.",
     "description": "Extension description shown in the browser and store listing."
   },
   "onboarding_title": {

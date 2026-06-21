@@ -143,7 +143,9 @@ describe("Chromium manifest structure", () => {
     expect(m.action).toBeDefined();
     expect(m.icons).toBeDefined();
     expect(m.manifest_version).toBe(3);
-    expect(m.name).toBe("__MSG_extensionName__");
+    // Chromium overrides the name with a literal keyword-rich string for the
+    // Chrome Web Store listing (Firefox/Safari keep __MSG_extensionName__).
+    expect(m.name).toBe("GeoSpoof: Spoof Geolocation & Timezone");
     expect(m.description).toBe("__MSG_extensionDescription__");
     expect(m.default_locale).toBe("en");
   });
@@ -162,7 +164,6 @@ describe("Shared fields preservation", () => {
     "action",
     "icons",
     "manifest_version",
-    "name",
     "description",
   ] as const;
 
@@ -170,6 +171,14 @@ describe("Shared fields preservation", () => {
     const ff = firefoxManifest();
     const cr = chromiumManifest();
     expect(ff[key]).toEqual(cr[key]);
+  });
+
+  // `name` intentionally diverges: Chromium overrides it with a literal
+  // keyword-rich string for the Chrome Web Store listing, while Firefox keeps
+  // the localized `__MSG_extensionName__` reference (→ "GeoSpoof" on AMO).
+  test("name diverges — Firefox localized, Chromium literal", () => {
+    expect(firefoxManifest().name).toBe("__MSG_extensionName__");
+    expect(chromiumManifest().name).toBe("GeoSpoof: Spoof Geolocation & Timezone");
   });
 
   test("Firefox manifest includes the Chromium permission set plus required worker-filter permissions", () => {

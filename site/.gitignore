@@ -9,6 +9,7 @@ count.txt
 .tanstack
 .wrangler
 .output
+.vercel
 .vinxi
 __unconfig*
 todos.json

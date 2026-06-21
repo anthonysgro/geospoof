@@ -9,6 +9,8 @@ interface FooterLink {
 }
 
 const footerLinks: Array<FooterLink> = [
+  { label: "Spoof Location", href: "/spoof-location", internal: true },
+  { label: "Spoof Timezone", href: "/spoof-timezone", internal: true },
   { label: "Blog", href: "/blog", internal: true },
   { label: "Privacy Policy", href: "/privacy", internal: true },
   { label: "Terms of Service", href: "/terms", internal: true },

@@ -184,6 +184,53 @@ describe("Scoped GET_SETTINGS by sender (task 6)", () => {
     });
   });
 
+  // On Android (Quetta, Firefox for Android) the action popup opens as a real
+  // TAB, so `_sender.tab` is populated even though the page is still our own
+  // extension UI. The handler must detect the extension origin and serve the
+  // full Settings object — otherwise the popup receives the content-script
+  // payload (no `onboardingCompleted`, `enabled` from the restricted extension
+  // URL), which re-shows onboarding on every reload and breaks the toggles.
+  describe("popup branch (extension page opened as a tab — Android)", () => {
+    test("returns full Settings when sender.url is the extension popup page", async () => {
+      const s = makeSettings({
+        scopeMode: "allowlist",
+        allowlist: ["allowed.com"],
+        denylist: ["blocked.com"],
+        onboardingCompleted: true,
+      });
+      const { handleMessage } = await importBackgroundWith(s);
+
+      const sender: browser.runtime.MessageSender = {
+        url: browser.runtime.getURL("popup/popup.html"),
+        tab: { id: 99, url: browser.runtime.getURL("popup/popup.html") } as browser.tabs.Tab,
+      };
+      const response = (await handleMessage({ type: "GET_SETTINGS" }, sender)) as Settings;
+
+      // Full Settings shape, not the scoped content-script payload.
+      expect(response.scopeMode).toBe("allowlist");
+      expect(response.allowlist).toEqual(["allowed.com"]);
+      expect(response.denylist).toEqual(["blocked.com"]);
+      expect(response.onboardingCompleted).toBe(true);
+      // `enabled` is the master switch, not the per-(extension)-tab effective value.
+      expect(response.enabled).toBe(true);
+    });
+
+    test("returns full Settings when only sender.tab.url is the extension page", async () => {
+      const s = makeSettings({ scopeMode: "all", onboardingCompleted: true });
+      const { handleMessage } = await importBackgroundWith(s);
+
+      const sender: browser.runtime.MessageSender = {
+        tab: { id: 42, url: browser.runtime.getURL("popup/popup.html") } as browser.tabs.Tab,
+      };
+      const response = (await handleMessage({ type: "GET_SETTINGS" }, sender)) as Settings;
+
+      expect(response).toHaveProperty("onboardingCompleted", true);
+      expect(response).toHaveProperty("scopeMode", "all");
+      expect(response).toHaveProperty("favorites");
+      expect(response.enabled).toBe(true);
+    });
+  });
+
   describe("privacy regression: broadcast payloads contain no list keys", () => {
     test("every per-tab UPDATE_SETTINGS payload omits allowlist/denylist", async () => {
       const s = makeSettings({

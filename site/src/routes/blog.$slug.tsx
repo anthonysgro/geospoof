@@ -25,7 +25,7 @@ export const Route = createFileRoute("/blog/$slug")({
     const ogImage =
       post.cover && /\.(png|jpe?g|webp)$/i.test(post.cover)
         ? `${SITE_URL}${post.cover}`
-        : `${SITE_URL}/images/social-og.png`
+        : `${SITE_URL}/images/social-og-home.png`
     return {
       meta: [
         { title: `${post.title} | GeoSpoof Blog` },
@@ -63,7 +63,7 @@ function BlogPostPage() {
   const socialImage =
     post.cover && /\.(png|jpe?g|webp)$/i.test(post.cover)
       ? `${SITE_URL}${post.cover}`
-      : `${SITE_URL}/images/social-og.png`
+      : `${SITE_URL}/images/social-og-home.png`
 
   const articleSchema = {
     "@context": "https://schema.org",

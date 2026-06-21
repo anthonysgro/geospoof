@@ -38,8 +38,17 @@ const SDP_POLL_MS = 250
 const IFRAME_LOAD_TIMEOUT_MS = 3_000
 
 // ---------------------------------------------------------------------------
-// IP classification (mirrors webrtc-leak.ts)
+// IP classification — IPv4 only
 // ---------------------------------------------------------------------------
+//
+// The /verify verdict compares the IPs WebRTC surfaces against the visitor's
+// connection IP (see network-identity.ts, which resolves over the IPv4-only
+// `ipv4.geojs.io` endpoint). An IPv6 WebRTC candidate can never string-match an
+// IPv4 connection IP, so flagging it produced a false "WebRTC not protected —
+// IPv6 leaking" verdict even when the IPv6 was the same egress. Scoping this
+// probe to IPv4 keeps the comparison apples-to-apples: every surface here
+// (top-level SDP, getStats(), iframe realm) routes through `isPublicAddress`,
+// so IPv6 candidates are uniformly ignored rather than mis-reported as leaks.
 
 function isPublicIpv4(address: string): boolean {
   const parts = address.split(".").map((p) => Number.parseInt(p, 10))
@@ -58,13 +67,10 @@ function isPublicIpv4(address: string): boolean {
 function isPublicAddress(address: string | undefined): boolean {
   if (!address) return false
   if (address.endsWith(".local")) return false
-  if (address.includes(":")) {
-    const lower = address.toLowerCase()
-    if (lower === "::1" || lower === "::") return false
-    if (lower.startsWith("fe80:")) return false
-    if (/^(fc|fd)/.test(lower)) return false
-    return true
-  }
+  // Ignore IPv6 entirely — the connection-IP baseline this probe is compared
+  // against is IPv4-only, so an IPv6 candidate can't be matched and would only
+  // produce a false leak verdict.
+  if (address.includes(":")) return false
   return isPublicIpv4(address)
 }
 

@@ -1,16 +1,25 @@
 # GeoSpoof
 
-> Free, open-source browser extension that spoofs your geolocation, timezone, and WebRTC APIs so websites see a location you choose instead of your real one. Works on Firefox, Chrome, Brave, Edge, and Safari.
+> Free, open-source browser extension that spoofs your geolocation, timezone, and WebRTC APIs so websites see a location you choose instead of your real one. It can automatically sync your spoofed location to your VPN's exit region and keep it matched as you switch servers. Works on Firefox, Chrome, Brave, Edge, and Safari.
 
 GeoSpoof overrides browser location APIs at the page level. It does not change your IP address and is not a VPN; it complements one. The site includes a free in-browser location test and guides on location privacy.
 
 ## Pages
 
-- [GeoSpoof — Spoof your browser location & timezone](https://geospoof.com/): Free, open-source browser extension that overrides geolocation, timezone, and WebRTC APIs. Works on Firefox, Chrome, Brave, Edge, and Safari.
+- [GeoSpoof — Spoof Geolocation & Timezone (Free Extension)](https://geospoof.com/): Free, open-source browser extension that spoofs geolocation and timezone, auto-syncs your spoofed location to your VPN exit region, and blocks WebRTC IP leaks. Works on Firefox, Chrome, Brave, Edge, and Safari.
 - [Browser Location Test](https://geospoof.com/verify): Free tool that shows the geolocation, timezone, and IP address websites can read about you right now, and flags real-vs-reported location leaks.
+- [Spoof Your Browser Timezone](https://geospoof.com/spoof-timezone): How to change or spoof your browser's timezone to match any location. GeoSpoof overrides Date, Intl, and Temporal without touching your system clock. Free.
+- [Spoof Your Browser Location](https://geospoof.com/spoof-location): Spoof your browser location in Chrome, Edge, Firefox, or Safari. GeoSpoof overrides the Geolocation API and timezone so sites see the location you choose.
+- [Spoof Your Location in Chrome](https://geospoof.com/spoof-location/chrome): How to spoof your location in Chrome (and Brave, Edge, and other Chromium browsers) with the free GeoSpoof extension.
+- [Spoof Your Location in Edge](https://geospoof.com/spoof-location/edge): How to spoof your location in Microsoft Edge on Windows and macOS with the free GeoSpoof extension.
+- [Spoof Your Location in Firefox](https://geospoof.com/spoof-location/firefox): How to spoof your location in Firefox on desktop and Android with the free, open-source GeoSpoof add-on.
+- [Spoof Your Location in Safari](https://geospoof.com/spoof-location/safari): How to spoof your location in Safari on iOS, iPadOS, and macOS with the free GeoSpoof extension from the App Store.
 - [GeoSpoof Blog](https://geospoof.com/blog): Guides on browser location spoofing, timezone privacy, and WebRTC leaks.
 
 ## Blog
 
 - [Geoceptor vs GeoSpoof: A Signal-by-Signal Comparison](https://geospoof.com/blog/geoceptor-vs-geospoof): Both extensions spoof your browser location, but a real fingerprint test pulls them apart fast. We ran the same seven checks against each — WebRTC, timezone offsets, Date methods, and exotic worker surfaces — and screenshotted every result.
+- [Why Your Timezone Reveals Your Location](https://geospoof.com/blog/why-your-timezone-reveals-your-location): Your browser's timezone can expose your real location even when geolocation is blocked or spoofed. Here's how the leak works through JavaScript and WebRTC, and how to fix it.
+- [Location Spoofing vs VPN: What's the Difference?](https://geospoof.com/blog/location-spoofing-vs-vpn): Location spoofing and VPNs both change where websites think you are, but they work on completely different signals. Here's what each one hides and why you often want both.
 - [How Websites Actually Know Where You Are](https://geospoof.com/blog/how-websites-know-your-location): Websites pin your location through at least eight independent signals, not just your IP. Here's the full stack, from Wi-Fi positioning to WebRTC, and why a VPN only fixes one of them.
+- [How to Change Your Browser's Location](https://geospoof.com/blog/how-to-change-your-browser-location): A step-by-step guide to changing or spoofing your browser's location in Chrome, Firefox, Safari, Edge, and Brave — and what spoofing does and doesn't hide.

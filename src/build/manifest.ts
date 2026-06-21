@@ -230,6 +230,12 @@ export function generateManifest(target: BrowserTarget, version: string): Record
   // Chromium: service_worker background, injected.js as world: "MAIN" content script
   return {
     ...shared,
+    // Chrome-only store name. The Chrome Web Store reads the name straight from
+    // the manifest, so we override the shared `__MSG_extensionName__` with a
+    // literal, keyword-rich string here. Firefox (AMO) and Safari (App Store)
+    // keep the localized `__MSG_extensionName__` → "GeoSpoof". Description stays
+    // localized on Chrome too — only the name is overridden.
+    name: "GeoSpoof: Spoof Geolocation & Timezone",
     background: {
       service_worker: "background/background.js",
       type: "module",

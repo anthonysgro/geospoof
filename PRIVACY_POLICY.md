@@ -1,6 +1,6 @@
 # Privacy Policy for GeoSpoof
 
-**Last Updated:** June 18, 2026
+**Last Updated:** June 20, 2026
 
 ## Overview
 
@@ -125,9 +125,16 @@ GeoSpoof can set your spoofed location to match your VPN.
 > not your home IP, because the whole point of the feature is that a VPN is
 > already active.
 
-## In-App Purchases (Tips)
+## In-App Purchases and Subscriptions
 
-The iOS, iPadOS, and macOS app offers optional "tips" as one-time in-app purchases, letting you support development if you choose. Tips are entirely voluntary and unlock no features or functionality. All purchases are processed by **Apple** via In-App Purchase — the developer never receives your payment details, card information, or any personal data from a tip. Billing, receipts, and refunds are handled by Apple under its terms.
+The app offers paid options through Apple's In-App Purchase system:
+
+- **GeoSpoof Pro** — _iOS and iPadOS only._ An auto-renewable subscription (monthly or annual) that unlocks Pro features such as automatic background VPN sync, per-site allowlist/denylist rules, Home Screen and Control Center widgets, custom accuracy, and the on-map location picker. The subscription renews automatically until cancelled; you can manage or cancel it anytime in your Apple Account settings. A free, fully functional tier remains available without any purchase. **On macOS, all of these features are included at no charge — there is no macOS subscription.**
+- **Tips** — _iOS, iPadOS, and macOS._ Optional one-time purchases that let you support development and unlock no features or functionality.
+
+**All payments are processed by Apple via In-App Purchase. The developer never receives your payment details, card information, Apple Account identifier, or any personal data from a purchase or subscription.** Billing, receipts, renewals, and refunds are handled entirely by Apple under its terms. That payment processing is governed by Apple's own privacy policy, and Apple acts as an independent data controller for it.
+
+**How your Pro status is determined.** Your entitlement — whether you are a subscriber or a grandfathered "founding" user — is resolved entirely on your device using Apple's StoreKit framework. Founder status is derived from your App Store purchase history (the original app version your Apple Account first downloaded) via StoreKit's `AppTransaction`; this needs no account, no sign-in, and no developer backend, and is read directly from Apple on-device. The resolved status is cached locally on your device only and is **never transmitted to the developer** — there is no developer-side record of who is or isn't a subscriber, and GeoSpoof maintains no user accounts.
 
 ## Permissions Explained
 

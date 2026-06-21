@@ -3,6 +3,7 @@ import { Navigation } from "@/components/landing/Navigation"
 import { HeroSection } from "@/components/landing/HeroSection"
 import { FeaturesSection } from "@/components/landing/FeaturesSection"
 import { ScreenshotsSection } from "@/components/landing/ScreenshotsSection"
+import { DemoVideoSection } from "@/components/landing/DemoVideoSection"
 import { TestimonialsSection } from "@/components/landing/TestimonialsSection"
 import { CompatibilitySection } from "@/components/landing/CompatibilitySection"
 import { FeaturedPostSection } from "@/components/landing/FeaturedPostSection"
@@ -35,6 +36,15 @@ const softwareApplicationSchema = {
   browserRequirements: "Requires Firefox, Chrome, Brave, Edge, or Safari",
   softwareVersion: "latest",
   isAccessibleForFree: true,
+  featureList: [
+    "Spoof browser geolocation via the Geolocation API",
+    "Spoof timezone across Date, Intl, and Temporal",
+    "Automatic VPN sync — match your spoofed location to your VPN exit region",
+    "Auto background sync that follows you as you switch VPN servers",
+    "WebRTC IP leak protection",
+    "Per-site allow and deny filters",
+    "Search 33,000+ cities offline or enter coordinates manually",
+  ],
   offers: {
     "@type": "Offer",
     price: "0",
@@ -57,6 +67,7 @@ function App() {
       <main id="main-content">
         <HeroSection />
         <ScreenshotsSection />
+        <DemoVideoSection />
         <FeaturesSection />
         <TestimonialsSection />
         <CompatibilitySection />

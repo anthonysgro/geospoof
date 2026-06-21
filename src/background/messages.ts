@@ -57,10 +57,23 @@ export async function handleMessage(
 
     switch (message.type) {
       case "GET_SETTINGS": {
-        // Popup branch (no sender.tab): return the full Settings object so the
-        // popup can render the selected scope mode and both site lists
-        // (Req 13.2). Content-script branch returns a scoped, list-free payload.
-        if (_sender.tab == null) {
+        // Popup branch: return the full Settings object so the popup can render
+        // the selected scope mode and both site lists (Req 13.2).
+        // Content-script branch returns a scoped, list-free payload.
+        //
+        // The popup is normally a toolbar panel with no associated tab, so
+        // `_sender.tab` is null. But on Android browsers (Quetta, Firefox for
+        // Android) the action popup opens as an ordinary TAB, so `_sender.tab`
+        // is populated even though the page is still our own extension UI
+        // served from the extension origin. Relying on `_sender.tab == null`
+        // alone would route that popup into the content-script branch, which
+        // returns a payload with NO `onboardingCompleted` (→ falsy → onboarding
+        // re-shows on every settings reload) and an `enabled` computed from the
+        // extension page's own restricted URL (→ always false). Detect our own
+        // pages by origin so the popup always gets the full Settings object.
+        const senderUrl = _sender.url ?? _sender.tab?.url ?? "";
+        const isExtensionPage = senderUrl.startsWith(browser.runtime.getURL(""));
+        if (_sender.tab == null || isExtensionPage) {
           // Safari: adopt the app's pending snapshot first so the popup
           // reflects what the user set in the containing app — without it the
           // popup can show stale "off" state until a tab event triggers

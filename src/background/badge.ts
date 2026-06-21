@@ -29,11 +29,27 @@ const BADGE_STYLE: Record<BadgeState, { color: string; text: string }> = {
 
 /**
  * Apply the mapped color/text for `state` to a single tab's badge.
+ *
+ * Per-tab badge writes are best-effort. They reject with "No tab with id ..."
+ * when the tab has closed between resolving the state and applying it, and they
+ * reject (or the API is entirely absent) on mobile engines that have no toolbar
+ * to host a per-tab action badge — e.g. Chromium-based Android browsers such as
+ * Quetta. Those rejections must never escape as unhandled promise rejections:
+ * on some Android engines a flood of "Uncaught (in promise)" rejections in the
+ * background wedges the worker, leaving the popup toggles unresponsive. So we
+ * feature-detect the API and swallow any rejection (logged at debug only).
  */
 export function setBadgeForTab(tabId: number, state: BadgeState): void {
+  const action = browser.action;
+  if (!action?.setBadgeText) {
+    return;
+  }
   const { color, text } = BADGE_STYLE[state];
-  void browser.action.setBadgeBackgroundColor({ color, tabId });
-  void browser.action.setBadgeText({ text, tabId });
+  const swallow = (error: unknown): void => {
+    logger.debug(`Badge update skipped for tab ${tabId}:`, error);
+  };
+  void action.setBadgeBackgroundColor({ color, tabId }).catch(swallow);
+  void action.setBadgeText({ text, tabId }).catch(swallow);
 }
 
 /**

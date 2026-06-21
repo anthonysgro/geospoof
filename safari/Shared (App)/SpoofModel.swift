@@ -1329,9 +1329,13 @@ final class SpoofController: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] note in
+            // Pull the Sendable value out of the (non-Sendable) Notification
+            // *before* hopping to the MainActor Task — capturing `note` itself
+            // in the @Sendable closure is an error under Swift 6.
+            let isPro = note.userInfo?["isPro"] as? Bool
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                self.cachedIsPro = (note.userInfo?["isPro"] as? Bool) ?? self.cachedIsPro
+                if let isPro { self.cachedIsPro = isPro }
                 if self.autoSyncBlocked { self.vpnResyncTask?.cancel() }
                 self.writePending()
             }

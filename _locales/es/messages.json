@@ -4,7 +4,7 @@
     "description": "⚠️ MACHINE-TRANSLATED — needs native-speaker review. 'GeoSpoof' is a brand name; do not translate."
   },
   "extensionDescription": {
-    "message": "Falsifica geolocalización y zona horaria. Evita fugas de IP WebRTC. No cambia la IP — úsalo con VPN.",
+    "message": "Falsifica la geolocalización y la zona horaria, sincroniza automáticamente con tu VPN y bloquea fugas de IP por WebRTC.",
     "description": "Extension description shown in the browser and store listing."
   },
   "onboarding_title": {

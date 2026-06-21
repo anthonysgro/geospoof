@@ -492,6 +492,31 @@ struct ProSettingsSection: View {
     }
 }
 
+// MARK: - Pro pitch sheet
+
+/// The one-time soft Pro introduction shown after a non-Pro user's first
+/// confirmed spoof (presented from `SpoofControlPanel`). Deliberately routes to
+/// the feature-list detail screen rather than the checkout-first paywall —
+/// awareness over hard sell. The "Upgrade to Pro" button inside `ProDetailView`
+/// is the path to the actual paywall when the user is ready. Wrapped in its own
+/// navigation container (with a close button) since it's presented as a sheet
+/// rather than pushed.
+struct ProPitchSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        AdaptiveNavigationStack {
+            ProDetailView()
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button { dismiss() } label: { Image(systemName: "xmark") }
+                            .accessibilityLabel("Close")
+                    }
+                }
+        }
+    }
+}
+
 // MARK: - Pro detail screen
 
 /// The "click into GeoSpoof Pro" screen. Unifies founders, subscribers, and
