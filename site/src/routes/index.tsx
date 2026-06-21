@@ -3,6 +3,7 @@ import { Navigation } from "@/components/landing/Navigation"
 import { HeroSection } from "@/components/landing/HeroSection"
 import { FeaturesSection } from "@/components/landing/FeaturesSection"
 import { ScreenshotsSection } from "@/components/landing/ScreenshotsSection"
+import { DemoVideoSection } from "@/components/landing/DemoVideoSection"
 import { TestimonialsSection } from "@/components/landing/TestimonialsSection"
 import { CompatibilitySection } from "@/components/landing/CompatibilitySection"
 import { FeaturedPostSection } from "@/components/landing/FeaturedPostSection"
@@ -57,6 +58,7 @@ function App() {
       <main id="main-content">
         <HeroSection />
         <ScreenshotsSection />
+        <DemoVideoSection />
         <FeaturesSection />
         <TestimonialsSection />
         <CompatibilitySection />
