@@ -82,9 +82,25 @@ final class ProStore: ObservableObject {
         static let all: Set<String> = [monthly, annual]
     }
 
-    /// First version that ships paywalled Pro. Anyone whose original download
-    /// is strictly below this gets the free founder grant.
-    static let founderCutoff = AppVersion([1, 22, 0])
+    /// First release that ships paywalled Pro. Anyone whose *original* (first-
+    /// installed) download is strictly below this gets the free founder grant.
+    ///
+    /// ⚠️ `AppTransaction.originalAppVersion` is PLATFORM-SPECIFIC:
+    ///   - iOS/iPadOS: it's `CFBundleVersion` — the BUILD number. 1.22.0 ships
+    ///     as build 39, so the cutoff is the integer build `39`, NOT "1.22.0".
+    ///     Comparing a real build like "30" against [1,22,0] would wrongly
+    ///     evaluate `30 < 1` (component 0) => false, denying every early user.
+    ///   - macOS: it's `CFBundleShortVersionString` — the marketing version,
+    ///     so the cutoff there is "1.22.0".
+    /// Pro is iOS-only today; the macOS branch exists only so a wrong founder
+    /// value can't sneak in if macOS ever starts gating on it.
+    /// (Assumes historical iOS builds used monotonically increasing integer
+    /// CFBundleVersions all < 40 — verify against the build history.)
+    #if os(iOS)
+    static let founderCutoff = AppVersion([40])
+    #else
+    static let founderCutoff = AppVersion([1, 22, 1])
+    #endif
 
     // MARK: App-local cache keys
 
