@@ -32,7 +32,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://vitals.vercel-insights.com; worker-src 'self' blob: data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; media-src 'self' https://dsgaoei8r9jiwulf.public.blob.vercel-storage.com; connect-src 'self' https://vitals.vercel-insights.com https://get.geojs.io https://free.freeipapi.com https://nominatim.openstreetmap.org; frame-ancestors 'none'"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://vitals.vercel-insights.com; worker-src 'self' blob: data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; media-src 'self' https://dsgaoei8r9jiwulf.public.blob.vercel-storage.com; connect-src 'self' https://cdn.geospoof.com https://vitals.vercel-insights.com https://get.geojs.io https://free.freeipapi.com https://nominatim.openstreetmap.org; frame-ancestors 'none'"
         }
       ]
     },
