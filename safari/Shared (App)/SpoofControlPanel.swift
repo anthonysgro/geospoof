@@ -1406,7 +1406,7 @@ struct TipJarView: View {
             Text("Support GeoSpoof")
         } footer: {
             VStack(alignment: .leading, spacing: 6) {
-                Text("GeoSpoof is free and open source. Tips are completely optional and go straight to development. Thank you!")
+                Text("GeoSpoof is an indie, open source project. Tips are completely optional and go straight to development. Thank you!")
                 if let err = store.errorMessage {
                     Text(err).foregroundStyle(.red)
                 }

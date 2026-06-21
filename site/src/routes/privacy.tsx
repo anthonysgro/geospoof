@@ -66,7 +66,7 @@ function PrivacyPage() {
               Privacy Policy
             </h1>
             <p className="text-body-base text-(--color-canvas-muted)">
-              Last Updated: June 18, 2026
+              Last Updated: June 20, 2026
             </p>
           </div>
 
