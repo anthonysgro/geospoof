@@ -86,16 +86,20 @@ final class ProStore: ObservableObject {
     /// installed) download is strictly below this gets the free founder grant.
     ///
     /// ⚠️ `AppTransaction.originalAppVersion` is PLATFORM-SPECIFIC:
-    ///   - iOS/iPadOS: it's `CFBundleVersion` — the BUILD number. 1.22.0 ships
-    ///     as build 39, so the cutoff is the integer build `39`, NOT "1.22.0".
-    ///     Comparing a real build like "30" against [1,22,0] would wrongly
-    ///     evaluate `30 < 1` (component 0) => false, denying every early user.
+    ///   - iOS/iPadOS: it's `CFBundleVersion` — the BUILD number. Pro launches
+    ///     in 1.22.1 = build 40, so the cutoff is the integer build `40`, NOT a
+    ///     marketing string. Comparing a real build like "30" against [1,22,1]
+    ///     would wrongly evaluate `30 < 1` (component 0) => false, denying every
+    ///     early user. Build 40 also grandfathers 1.22.0 (build 39) users, who
+    ///     installed before the paywall existed — intended.
     ///   - macOS: it's `CFBundleShortVersionString` — the marketing version,
-    ///     so the cutoff there is "1.22.0".
+    ///     so the cutoff there is "1.22.1".
     /// Pro is iOS-only today; the macOS branch exists only so a wrong founder
     /// value can't sneak in if macOS ever starts gating on it.
-    /// (Assumes historical iOS builds used monotonically increasing integer
-    /// CFBundleVersions all < 40 — verify against the build history.)
+    /// (Verified against the build history: iOS CFBundleVersions are monotonic
+    /// integers 8→39, so every pre-paywall install is < 40. The shipped build
+    /// MUST have CFBundleVersion = 40 for this to line up — set
+    /// CURRENT_PROJECT_VERSION = 40 before archiving 1.22.1.)
     #if os(iOS)
     static let founderCutoff = AppVersion([40])
     #else
