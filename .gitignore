@@ -43,3 +43,5 @@ npm-debug.log*
 *.mobileprovision
 *.provisionprofile
 *.p8
+
+assets/Proton_Assets/*

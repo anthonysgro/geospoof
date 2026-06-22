@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VpnRouteImport } from './routes/vpn'
 import { Route as VerifyRouteImport } from './routes/verify'
 import { Route as TestRouteImport } from './routes/test'
 import { Route as TermsRouteImport } from './routes/terms'
@@ -24,6 +25,11 @@ import { Route as SpoofLocationEdgeRouteImport } from './routes/spoof-location.e
 import { Route as SpoofLocationChromeRouteImport } from './routes/spoof-location.chrome'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 
+const VpnRoute = VpnRouteImport.update({
+  id: '/vpn',
+  path: '/vpn',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VerifyRoute = VerifyRouteImport.update({
   id: '/verify',
   path: '/verify',
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/test': typeof TestRoute
   '/verify': typeof VerifyRoute
+  '/vpn': typeof VpnRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/spoof-location/chrome': typeof SpoofLocationChromeRoute
   '/spoof-location/edge': typeof SpoofLocationEdgeRoute
@@ -119,6 +126,7 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/test': typeof TestRoute
   '/verify': typeof VerifyRoute
+  '/vpn': typeof VpnRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/spoof-location/chrome': typeof SpoofLocationChromeRoute
   '/spoof-location/edge': typeof SpoofLocationEdgeRoute
@@ -136,6 +144,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/test': typeof TestRoute
   '/verify': typeof VerifyRoute
+  '/vpn': typeof VpnRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/spoof-location/chrome': typeof SpoofLocationChromeRoute
   '/spoof-location/edge': typeof SpoofLocationEdgeRoute
@@ -154,6 +163,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/test'
     | '/verify'
+    | '/vpn'
     | '/blog/$slug'
     | '/spoof-location/chrome'
     | '/spoof-location/edge'
@@ -170,6 +180,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/test'
     | '/verify'
+    | '/vpn'
     | '/blog/$slug'
     | '/spoof-location/chrome'
     | '/spoof-location/edge'
@@ -186,6 +197,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/test'
     | '/verify'
+    | '/vpn'
     | '/blog/$slug'
     | '/spoof-location/chrome'
     | '/spoof-location/edge'
@@ -203,6 +215,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   TestRoute: typeof TestRoute
   VerifyRoute: typeof VerifyRoute
+  VpnRoute: typeof VpnRoute
   BlogSlugRoute: typeof BlogSlugRoute
   SpoofLocationChromeRoute: typeof SpoofLocationChromeRoute
   SpoofLocationEdgeRoute: typeof SpoofLocationEdgeRoute
@@ -214,6 +227,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/vpn': {
+      id: '/vpn'
+      path: '/vpn'
+      fullPath: '/vpn'
+      preLoaderRoute: typeof VpnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/verify': {
       id: '/verify'
       path: '/verify'
@@ -323,6 +343,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   TestRoute: TestRoute,
   VerifyRoute: VerifyRoute,
+  VpnRoute: VpnRoute,
   BlogSlugRoute: BlogSlugRoute,
   SpoofLocationChromeRoute: SpoofLocationChromeRoute,
   SpoofLocationEdgeRoute: SpoofLocationEdgeRoute,
