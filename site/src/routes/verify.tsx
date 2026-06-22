@@ -53,7 +53,7 @@ export const Route = createFileRoute("/verify")({
       {
         name: "description",
         content:
-          "Free browser location test. See the geolocation, timezone, and IP address websites can read about you right now — and check whether your browser is leaking your real location.",
+          "Free browser location test. See the geolocation, timezone, and IP websites read about you right now — and whether your browser leaks your real location.",
       },
     ],
     // Warm up connections to the map tile CDNs before the map mounts, so the

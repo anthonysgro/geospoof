@@ -9,9 +9,15 @@ import { cn } from "@/lib/utils"
  * faststart) served from the same origin, so it's covered by the existing
  * `default-src 'self'` CSP with no extra directive needed.
  *
- * It uses native controls with `preload="none"` and a lightweight poster so
- * the 1.5MB payload only downloads when a visitor actually hits play —
- * keeping it off the critical path for LCP/FCP.
+ * It uses native controls with `preload="none"` and a poster so the 1.5MB
+ * payload only downloads when a visitor actually hits play — keeping it off the
+ * critical path for LCP/FCP.
+ *
+ * The poster intentionally reuses the homepage OG/social image
+ * (`/images/social-og-home.png`). Google selects search-result thumbnails
+ * algorithmically and was picking a frame of this video; pointing the poster at
+ * the social card nudges it toward the branded image instead. (Not guaranteed —
+ * Google may still choose another on-page image.)
  */
 export function DemoVideoSection({ className }: { className?: string }) {
   const prefersReducedMotion = useReducedMotion()
@@ -41,7 +47,7 @@ export function DemoVideoSection({ className }: { className?: string }) {
           controls
           preload="none"
           playsInline
-          poster="/video/geospoof-demo-poster.jpg"
+          poster="/images/social-og-home.png"
           width={1280}
           height={720}
           aria-label="GeoSpoof demo — setting a spoofed browser location with the extension"
