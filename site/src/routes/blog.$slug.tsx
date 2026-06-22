@@ -1,11 +1,18 @@
 import { Link, createFileRoute, notFound } from "@tanstack/react-router"
 import { MDXContent } from "@content-collections/mdx/react"
-import { ArrowLeftIcon } from "lucide-react"
 import { Navigation } from "@/components/landing/Navigation"
 import { Footer } from "@/components/landing/Footer"
 import { SkipLink } from "@/components/landing/SkipLink"
 import { Section } from "@/components/landing/Section"
 import { Badge } from "@/components/ui/badge"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 import { mdxComponents } from "@/components/blog/mdx-components"
 import { SITE_URL, formatDate, getPostBySlug, postUrl } from "@/lib/blog"
 
@@ -86,9 +93,20 @@ function BlogPostPage() {
     keywords: post.keywords.join(", "),
   }
 
-  // FAQPage structured data — only emitted when the post defines FAQs. This is
-  // what makes a comparison post eligible for People-Also-Ask / FAQ rich
-  // results on the competitor-name queries we're targeting.
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+      { "@type": "ListItem", position: 2, name: "Blog", item: `${SITE_URL}/blog` },
+      { "@type": "ListItem", position: 3, name: post.title, item: url },
+    ],
+  }
+
+  // FAQPage structured data — only emitted when the post defines FAQs. Note:
+  // Google restricted FAQ rich results to authoritative gov/health sites in
+  // 2023, so this no longer yields FAQ rich results here — it's kept for
+  // semantic understanding and AI answer engines.
   const faqSchema =
     post.faq.length > 0
       ? {
@@ -108,13 +126,25 @@ function BlogPostPage() {
       <Navigation />
       <main id="main-content">
         <Section narrow className="py-12! md:py-16!">
-          <Link
-            to="/blog"
-            className="text-small mb-8 inline-flex items-center gap-1.5 text-(--color-canvas-muted) transition-colors hover:text-(--color-canvas-foreground)"
-          >
-            <ArrowLeftIcon className="h-4 w-4" />
-            All posts
-          </Link>
+          <Breadcrumb className="mb-8">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link to="/">Home</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link to="/blog">Blog</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>{post.title}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
 
           <article>
             <header className="mb-8">
@@ -190,6 +220,10 @@ function BlogPostPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
       {faqSchema && (
         <script

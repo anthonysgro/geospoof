@@ -7,6 +7,14 @@ import { SkipLink } from "@/components/landing/SkipLink"
 import { Section } from "@/components/landing/Section"
 import { DownloadSection } from "@/components/landing/DownloadSection"
 import { Badge } from "@/components/ui/badge"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 import { cn } from "@/lib/utils"
 import { usePlatform } from "@/hooks/use-platform"
 import { getStoreLink } from "@/lib/store-links"
@@ -123,6 +131,20 @@ function StructuredData() {
     })),
   }
 
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Spoof Timezone",
+        item: PAGE_URL,
+      },
+    ],
+  }
+
   return (
     <script
       type="application/ld+json"
@@ -132,6 +154,7 @@ function StructuredData() {
           softwareApplicationSchema,
           howToSchema,
           faqSchema,
+          breadcrumbSchema,
         ]),
       }}
     />
@@ -174,6 +197,19 @@ function HeroSection({
 }) {
   return (
     <Section className="pt-12! pb-8! md:pt-20! md:pb-12!">
+      <Breadcrumb className="mx-auto mb-8 max-w-3xl">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to="/">Home</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Spoof Timezone</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       <div className="mx-auto max-w-3xl text-center">
         <Badge
           variant="outline"
