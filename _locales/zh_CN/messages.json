@@ -281,6 +281,34 @@
     "message": "需要帮助?",
     "description": "Footer link prompting the user to open the support page."
   },
+  "support_review": {
+    "message": "喜欢 GeoSpoof 吗？",
+    "description": "Footer link that opens a short modal asking the user to leave a store review."
+  },
+  "review_modal_title": {
+    "message": "喜欢 GeoSpoof 吗？❤️",
+    "description": "Heading of the modal that asks the user to leave a review."
+  },
+  "review_modal_body1": {
+    "message": "GeoSpoof 永久免费——不做追踪、无需账户。我利用自己的时间开发和维护它。",
+    "description": "First paragraph of the review-request modal (desktop builds, which are free forever)."
+  },
+  "review_modal_body1_ios": {
+    "message": "GeoSpoof 用心打造——不做追踪、无需账户。我利用自己的时间开发，只为守护你的位置隐私。",
+    "description": "First paragraph of the review-request modal on iOS, where the app is freemium so it does not claim to be free."
+  },
+  "review_modal_body2": {
+    "message": "留下一条评价是最好的支持方式。只需一分钟，就能帮助更多人发现 GeoSpoof。非常感谢！",
+    "description": "Second paragraph of the review-request modal."
+  },
+  "review_modal_cta": {
+    "message": "去评价",
+    "description": "Primary button in the review modal that opens the store review page."
+  },
+  "review_modal_dismiss": {
+    "message": "以后再说",
+    "description": "Secondary button that dismisses the review modal."
+  },
   "webrtc_configFailed": {
     "message": "无法配置 WebRTC 保护。请检查扩展权限。",
     "description": "Error toast shown when WebRTC protection cannot be configured."

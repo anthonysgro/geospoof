@@ -424,6 +424,43 @@ document.getElementById("closeOnboarding")?.addEventListener("click", () => {
   void closeOnboarding();
 });
 
+// "Love GeoSpoof?" review modal — open from the footer link, close via the
+// "Maybe later" button, a tap on the scrim, or the Escape key. The CTA itself
+// is a normal target="_blank" anchor (href set per-platform in init), so
+// clicking it opens the store in a new tab; we just dismiss the modal too.
+function openReviewModal(): void {
+  const overlay = document.getElementById("reviewOverlay");
+  if (overlay) overlay.style.display = "flex";
+}
+
+function closeReviewModal(): void {
+  const overlay = document.getElementById("reviewOverlay");
+  if (overlay) overlay.style.display = "none";
+}
+
+document.getElementById("reviewLink")?.addEventListener("click", (e: Event) => {
+  e.preventDefault();
+  openReviewModal();
+});
+
+document.getElementById("reviewModalDismiss")?.addEventListener("click", () => {
+  closeReviewModal();
+});
+
+document.getElementById("reviewCtaLink")?.addEventListener("click", () => {
+  closeReviewModal();
+});
+
+// Dismiss when tapping the scrim (but not the modal content itself).
+document.getElementById("reviewOverlay")?.addEventListener("click", (e: Event) => {
+  if (e.target === e.currentTarget) closeReviewModal();
+});
+
+// Escape closes the review modal.
+document.addEventListener("keydown", (e: KeyboardEvent) => {
+  if (e.key === "Escape") closeReviewModal();
+});
+
 // VPN Sync info tooltip — tap to toggle on mobile, click on desktop
 document.getElementById("vpnSyncInfo")?.addEventListener("click", (e: Event) => {
   e.preventDefault();
@@ -486,6 +523,39 @@ document.addEventListener("DOMContentLoaded", () => {
   if (__SAFARI__) {
     const coffeeRow = document.getElementById("coffeeRow");
     if (coffeeRow) coffeeRow.style.display = "none";
+  }
+
+  // Point the "Love GeoSpoof?" modal CTA at the current platform's store
+  // review flow. Reviews are our biggest growth lever, so the footer link
+  // opens a short personal ask (see the click handlers above) and this button
+  // deep-links straight to the right store. The HTML ships the Chromium URL
+  // as the static default; override it for Safari/Firefox.
+  const reviewCta = document.getElementById("reviewCtaLink") as HTMLAnchorElement | null;
+  if (reviewCta) {
+    if (__SAFARI__) {
+      // App Store: opens the write-a-review composer directly. pt is our
+      // provider token; ct=ext-popup tags this as the in-popup review prompt
+      // so it shows up under Campaigns in App Store Connect → App Analytics.
+      reviewCta.href =
+        "https://apps.apple.com/app/apple-store/id6765719745?action=write-review&pt=128299974&ct=ext-popup";
+    } else if (__FIREFOX__) {
+      reviewCta.href = "https://addons.mozilla.org/firefox/addon/geo-spoof/reviews/";
+    } else {
+      reviewCta.href =
+        "https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje/reviews";
+    }
+  }
+
+  // Adjust the modal's first line per platform. Desktop builds (Chromium,
+  // Firefox, and Safari on macOS) are genuinely free forever, so the default
+  // "free, forever" copy is accurate. The iOS build is freemium, so swap in a
+  // variant that doesn't claim it's free. The Safari build ships to both iOS
+  // and macOS from one bundle, so we detect iOS at runtime via the user agent.
+  const isIOS = __SAFARI__ && /iPhone|iPad|iPod/.test(navigator.userAgent);
+  if (isIOS) {
+    const body1 = document.getElementById("reviewModalBody1");
+    const iosCopy = t("review_modal_body1_ios");
+    if (body1 && iosCopy) body1.textContent = iosCopy;
   }
 
   void loadSettings();

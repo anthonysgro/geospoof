@@ -34,6 +34,7 @@ const staticRoutes = [
   "/spoof-location/edge",
   "/spoof-location/firefox",
   "/spoof-location/safari",
+  "/vpn",
   "/blog",
   "/privacy",
   "/terms",
@@ -85,6 +86,11 @@ const staticPageMeta = {
     title: "Spoof Your Location in Safari",
     description:
       "How to spoof your location in Safari on iOS, iPadOS, and macOS with the free GeoSpoof extension from the App Store.",
+  },
+  "/vpn": {
+    title: "The No-Log VPN We Recommend for GeoSpoof",
+    description:
+      "GeoSpoof hides your browser's location, timezone, and WebRTC; a no-log VPN hides your real IP. Why we recommend Proton VPN to complete a location-privacy setup, and which plan to pick.",
   },
   "/blog": {
     title: "GeoSpoof Blog",
