@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { Navigation } from "@/components/landing/Navigation"
 import { HeroSection } from "@/components/landing/HeroSection"
 import { FeaturesSection } from "@/components/landing/FeaturesSection"
+import { ComparisonSection } from "@/components/landing/ComparisonSection"
 import { ScreenshotsSection } from "@/components/landing/ScreenshotsSection"
 import { DemoVideoSection } from "@/components/landing/DemoVideoSection"
 import { TestimonialsSection } from "@/components/landing/TestimonialsSection"
@@ -96,6 +97,7 @@ function App() {
         <ScreenshotsSection />
         <DemoVideoSection />
         <FeaturesSection />
+        <ComparisonSection />
         <TestimonialsSection />
         <CompatibilitySection />
         <FeaturedPostSection />

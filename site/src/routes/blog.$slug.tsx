@@ -79,7 +79,7 @@ function BlogPostPage() {
     description: post.description,
     datePublished: post.date,
     dateModified: post.updated ?? post.date,
-    author: { "@type": "Person", name: post.author },
+    author: { "@type": "Person", name: post.author, url: `${SITE_URL}/about` },
     publisher: {
       "@type": "Organization",
       name: "GeoSpoof",
@@ -152,7 +152,12 @@ function BlogPostPage() {
                 {post.title}
               </h1>
               <div className="flex flex-wrap items-center gap-2 text-small text-(--color-canvas-muted)">
-                <span>{post.author}</span>
+                <Link
+                  to="/about"
+                  className="transition-colors hover:text-(--color-canvas-foreground)"
+                >
+                  {post.author}
+                </Link>
                 <span aria-hidden="true">·</span>
                 <time dateTime={post.date}>{formatDate(post.date)}</time>
                 <span aria-hidden="true">·</span>
