@@ -77,13 +77,21 @@ const config = defineConfig({
       // as static assets from the CDN edge — eliminates SSR cold-start
       // latency and improves FCP/TTFB for the landing page and docs.
       //
-      // /test is excluded: it runs live browser API probes that only
-      // make sense in a real browser context, not a prerender environment.
+      // /test and /verify are excluded: they run live browser API probes
+      // that only make sense in a real browser context, not a prerender
+      // environment.
+      //
+      // /go/* is excluded: those are outbound affiliate redirects defined in
+      // vercel.json and only exist at Vercel's edge at runtime. The crawler
+      // discovers them via on-page CTA links, but there's no buildable page to
+      // prerender, so fetching them during build 404s. Skip them.
       prerender: {
         enabled: true,
         crawlLinks: true,
         filter: ({ path: routePath }: { path: string }) =>
-          routePath !== "/test" && routePath !== "/verify",
+          routePath !== "/test" &&
+          routePath !== "/verify" &&
+          !routePath.startsWith("/go/"),
       },
     }),
     viteReact(),
