@@ -2,7 +2,6 @@
   "outputDirectory": ".output/public",
   "buildCommand": "npm run build",
   "installCommand": "npm ci",
-  "comment_redirects": "Single source of truth for Proton VPN affiliate links. Every surface (site, extensions, iOS, macOS) links to geospoof.com/go/proton/<source>/<placement>; only this file knows the real outbound URL + offer/aff IDs, so the destination can change without reshipping any client. 307 (permanent:false) keeps the redirect from being cached permanently.",
   "redirects": [
     {
       "source": "/go/proton/web/vpn-page",
