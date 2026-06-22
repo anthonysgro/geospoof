@@ -40,3 +40,11 @@ export function protonVpnLink(placement: VpnPlacement): string {
  */
 export const PROTON_PLAIN_URL = "https://protonvpn.com"
 
+/**
+ * Proton's standing multi-year savings, shown as an "up to" figure across the
+ * site (2-year VPN Plus vs. paying monthly). Proton changes promos over time —
+ * keep this in sync with (or below) their current offer so the claim stays
+ * accurate and honest. Single source of truth: update here, not in the copy.
+ */
+export const PROTON_DISCOUNT = "70%"
+

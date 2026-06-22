@@ -19,7 +19,7 @@ import { ProtonLogo } from "@/components/ProtonLogo"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { SITE_URL } from "@/lib/blog"
-import { protonVpnLink } from "@/lib/affiliate"
+import { PROTON_DISCOUNT, protonVpnLink } from "@/lib/affiliate"
 
 const PAGE_URL = `${SITE_URL}/vpn`
 const PAGE_TITLE =
@@ -31,12 +31,6 @@ const PAGE_DESCRIPTION =
 // lives behind the /go/proton redirect (see vercel.json), built via
 // @/lib/affiliate so it can change server-side without touching this component.
 const PROTON_LINK = protonVpnLink("vpn-page")
-
-// Proton's standing multi-year savings, surfaced in the plan copy below as an
-// "up to" figure (2-year VPN Plus vs. paying monthly). Proton changes promos
-// over time — keep this in sync with (or below) their current offer so the
-// claim stays accurate and honest. Update this one line, not the copy.
-const PROTON_DISCOUNT = "70%"
 
 export const Route = createFileRoute("/vpn")({
   component: VpnPage,
