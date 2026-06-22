@@ -45,6 +45,36 @@
         </div>
       </div>
 
+      <!-- "Love GeoSpoof?" review modal -->
+      <div class="onboarding-overlay" id="reviewOverlay" style="display: none">
+        <div class="onboarding-content review-modal">
+          <h2 data-i18n="review_modal_title">Love GeoSpoof? ❤️</h2>
+          <p class="review-modal-text" id="reviewModalBody1" data-i18n="review_modal_body1">
+            GeoSpoof is free, forever — no tracking, no accounts. I build and maintain it on my own
+            time.
+          </p>
+          <p class="review-modal-text" data-i18n="review_modal_body2">
+            A quick review is the single best way to support it. It takes a minute and helps more
+            people find GeoSpoof. Thank you so much!
+          </p>
+          <a
+            id="reviewCtaLink"
+            href="https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje/reviews"
+            target="_blank"
+            class="onboarding-button review-modal-cta"
+            data-i18n="review_modal_cta"
+            >Leave a review</a
+          >
+          <button
+            id="reviewModalDismiss"
+            class="review-modal-dismiss"
+            data-i18n="review_modal_dismiss"
+          >
+            Maybe later
+          </button>
+        </div>
+      </div>
+
       <!-- Header -->
       <div class="header">
         <div class="header-title">
@@ -296,6 +326,14 @@
         <!-- Footer links -->
         <div class="support-link">
           <a
+            href="https://www.geospoof.com/support"
+            target="_blank"
+            class="help-link"
+            data-i18n="support_needHelp"
+            >Need help?</a
+          >
+          <span class="test-links-separator">•</span>
+          <a
             href="https://www.geospoof.com/verify"
             target="_blank"
             class="help-link"
@@ -303,12 +341,8 @@
             >Verify Protection</a
           >
           <span class="test-links-separator">•</span>
-          <a
-            href="https://www.geospoof.com/support"
-            target="_blank"
-            class="help-link"
-            data-i18n="support_needHelp"
-            >Need help?</a
+          <a href="#" class="help-link" id="reviewLink" role="button" data-i18n="support_review"
+            >Love GeoSpoof?</a
           >
         </div>
       </div>

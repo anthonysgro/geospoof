@@ -18,3 +18,5 @@ declare module "pbf";
 declare const __SAFARI__: boolean;
 /** Build-time flag: true when building for Firefox. Injected by Vite's define. */
 declare const __FIREFOX__: boolean;
+/** Build-time flag: true when building for Chromium. Injected by Vite's define. */
+declare const __CHROMIUM__: boolean;
