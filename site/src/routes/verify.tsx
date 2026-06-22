@@ -1,6 +1,6 @@
 import { Link, createFileRoute  } from "@tanstack/react-router"
 import * as React from "react"
-import { Check, ChevronDown, Clock, Globe, Loader2, MapPin, RefreshCw, ShieldAlert, ShieldCheck, Wifi, X } from "lucide-react"
+import { ArrowRight, Check, ChevronDown, Clock, Globe, Loader2, MapPin, RefreshCw, ShieldAlert, ShieldCheck, Wifi, X } from "lucide-react"
 
 import type {NetworkIdentity} from "@/lib/verification/network-identity";
 import type {WebrtcResult} from "@/lib/verification/webrtc-probe";
@@ -584,6 +584,34 @@ function VerifyInner() {
         {rows.map((row, i) => (
           <VerifyRow key={row.id} row={row} last={i === rows.length - 1} />
         ))}
+      </div>
+
+      {/* The IP is the one signal an extension can't touch. This is the most
+          honest spot to point at the VPN layer — the user is literally looking
+          at their exposed IP. Links to the /vpn hub (disclosure, "why Proton",
+          and alternatives) rather than straight to the affiliate URL. */}
+      <div className="mt-4 flex flex-col gap-4 rounded-2xl border border-brand/30 bg-brand/5 p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between md:p-6">
+        <div className="flex items-start gap-3">
+          <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-brand/15 text-(--color-brand)">
+            <Wifi className="size-5" aria-hidden="true" />
+          </span>
+          <p className="text-xs leading-relaxed text-(--color-canvas-foreground) sm:text-sm">
+            Your IP address is the one signal GeoSpoof can&rsquo;t change — only
+            a VPN can.
+          </p>
+        </div>
+        <Link
+          to="/vpn"
+          className={cn(
+            "inline-flex shrink-0 items-center justify-center gap-1.5 self-start whitespace-nowrap sm:self-auto",
+            "rounded-brand bg-(--color-brand) px-5 py-2.5 text-sm font-semibold text-white",
+            "shadow-sm transition-all hover:bg-(--color-brand-dark) hover:shadow-md",
+            "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) focus-visible:ring-offset-2"
+          )}
+        >
+          See the no-log VPN we recommend
+          <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
+        </Link>
       </div>
 
       {/* API values — wider on desktop */}

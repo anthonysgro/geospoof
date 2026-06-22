@@ -19,7 +19,6 @@ export type VpnPlacement =
   | "vpnsync" // "Sync with VPN" contextual callouts
   | "verify" // /verify page mention
   | "blog" // in-article links
-  | "privacyguides" // community posts
 
 /**
  * Same-origin path that 307-redirects to the Proton VPN offer for a given
@@ -30,3 +29,14 @@ export type VpnPlacement =
 export function protonVpnLink(placement: VpnPlacement): string {
   return `/go/proton/web/${placement}`
 }
+
+/**
+ * Plain, NON-affiliate Proton VPN URL — no offer_id, no aff_id, no tracking.
+ *
+ * Use this anywhere an affiliate link would be inappropriate or unwelcome:
+ * most importantly, privacy-community spaces like the Privacy Guides forum,
+ * where affiliate links erode trust (and are often against the rules). The
+ * recommendation there should stand on its own, with nothing to gain from it.
+ */
+export const PROTON_PLAIN_URL = "https://protonvpn.com"
+

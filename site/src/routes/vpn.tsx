@@ -1,6 +1,7 @@
 import { Link, createFileRoute } from "@tanstack/react-router"
 import * as React from "react"
 import {
+  ArrowRight,
   ChevronDown,
   Globe2,
   Lock,
@@ -65,11 +66,11 @@ const FAQS: Array<{ q: string; a: string }> = [
   },
   {
     q: "Can I use a different VPN with GeoSpoof?",
-    a: "Yes. GeoSpoof works with any VPN — nothing is locked to Proton. Mullvad and IVPN are other well-regarded no-log providers in the privacy community. We recommend Proton because we use it, it's independently audited, and it pairs cleanly with VPN Sync, but the choice is entirely yours.",
+    a: "Yes. GeoSpoof works with any VPN — nothing is locked to Proton, and VPN Sync works the same with all of them. Mullvad and IVPN are other well-regarded no-log providers in the privacy community. We point to Proton because it's fully open-source, independently audited, and recommended by Privacy Guides, but the choice is entirely yours.",
   },
   {
     q: "Why does GeoSpoof recommend Proton VPN?",
-    a: "Proton is no-logs, based in Switzerland, fully open-source, and has passed repeated independent audits — the same verifiable, privacy-first values GeoSpoof is built on. Its VPN Sync pairing also lets GeoSpoof match your spoofed location to your VPN's exit region automatically.",
+    a: "Proton is no-logs, based in Switzerland, fully open-source, and has passed repeated independent audits — the same verifiable, privacy-first values GeoSpoof is built on. It's also one of the few VPNs recommended by Privacy Guides, an independent resource that takes no affiliate money. VPN Sync works with Proton exactly as it does with any other VPN.",
   },
   {
     q: "Is GeoSpoof free if I don't buy a VPN?",
@@ -77,7 +78,7 @@ const FAQS: Array<{ q: string; a: string }> = [
   },
   {
     q: "Does GeoSpoof make money if I sign up?",
-    a: "If you subscribe to Proton through our link, Proton shares a portion of the sale with us, at no extra cost to you. It helps keep GeoSpoof free, open-source, and ad-free. We recommend Proton because we genuinely use and trust it — the commission doesn't change which plan is actually best for you.",
+    a: "If you subscribe to Proton through our link, Proton shares a portion of the sale with us, at no extra cost to you. It helps keep GeoSpoof free, open-source, and ad-free. We recommend Proton on its merits — open-source, independently audited, and recommended by Privacy Guides — and the commission doesn't change which plan is actually best for you.",
   },
 ]
 
@@ -142,12 +143,25 @@ function CtaButton({ children }: { children: React.ReactNode }) {
     <a
       {...CTA_LINK_PROPS}
       className={cn(
-        "inline-flex min-h-12 w-full items-center justify-center sm:min-h-14 sm:w-auto",
+        "inline-flex min-h-12 w-full items-center justify-center gap-2.5 sm:min-h-14 sm:w-auto",
         "rounded-brand bg-(--color-brand) px-8 text-base font-semibold text-white sm:text-lg",
         "shadow-md transition-all hover:bg-(--color-brand-dark) hover:shadow-lg",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
       )}
     >
+      {/* Proton VPN logomark on a white chip so the gradient mark stays legible
+          on the brand-colored button and is shown unmodified per Proton's brand
+          guidelines (its own clear space). Decorative — the label says Proton. */}
+      <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-md bg-white">
+        <img
+          src="/proton/proton-vpn-logomark.svg"
+          alt=""
+          aria-hidden="true"
+          width={918}
+          height={833}
+          className="size-4 w-auto"
+        />
+      </span>
       {children}
     </a>
   )
@@ -164,10 +178,8 @@ function InlineDisclosure({ className }: { className?: string }) {
         className
       )}
     >
-      Heads up: the Proton links here are affiliate links. If you subscribe
-      through them, Proton shares a small cut with us at no extra cost to you —
-      it helps keep GeoSpoof free and open-source. We only recommend Proton
-      because we actually use it.
+      Proton links here are affiliate links: subscribe through them and Proton
+      shares a small cut with us at no extra cost to you.
     </p>
   )
 }
@@ -175,6 +187,14 @@ function InlineDisclosure({ className }: { className?: string }) {
 function HeroSection() {
   return (
     <Section className="pt-12! pb-8! md:pt-20! md:pb-12!">
+      <div className="mx-auto mb-8 max-w-4xl overflow-hidden rounded-2xl">
+        <img
+          src="/proton/vpn-map.png"
+          alt="Proton VPN hides your IP address"
+          className="h-auto w-full"
+          loading="eager"
+        />
+      </div>
       <div className="mx-auto max-w-3xl text-center">
         <Badge
           variant="outline"
@@ -182,29 +202,29 @@ function HeroSection() {
         >
           Location privacy has two layers
         </Badge>
-        <h1 className="mb-5 text-4xl leading-tight font-bold text-(--color-canvas-foreground) md:text-5xl">
+        <h1 className="mb-4 text-4xl leading-tight font-bold text-(--color-canvas-foreground) md:text-5xl">
           Do you need a VPN with{" "}
           <span className="text-(--color-brand)">GeoSpoof</span>?
         </h1>
-        <p className="mx-auto mb-8 max-w-2xl text-base text-(--color-canvas-muted) md:text-lg">
-          Short answer: for full location privacy, yes — and not because
-          GeoSpoof falls short. GeoSpoof hides the location, timezone, and
-          WebRTC details your browser reports. Your <strong>IP address</strong>{" "}
-          is a separate signal that no extension can change — only a VPN can.
-          Here's how the two layers fit together, and the VPN we trust for the
-          second one.
+        {/* One scannable answer line under the question. NN/g: most visitors
+            scan and read ~20% of words, so the hero must land the whole point
+            for those who never scroll. */}
+        <p className="mx-auto mb-7 max-w-2xl text-lg font-semibold text-(--color-canvas-foreground) md:text-xl">
+          GeoSpoof hides your browser&rsquo;s location. A VPN hides your IP. For
+          full privacy, you want both.
         </p>
         <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
           <a
-            href="#two-layers"
+            href="#why-proton"
             className={cn(
               "inline-flex min-h-12 w-full items-center justify-center gap-2 sm:min-h-14 sm:w-auto",
-              "rounded-brand border border-(--color-canvas-border) px-8 text-base font-semibold text-(--color-canvas-foreground) sm:text-lg",
-              "transition-all hover:bg-(--color-canvas-border)",
+              "rounded-brand bg-(--color-brand) px-8 text-base font-semibold text-white sm:text-lg",
+              "shadow-md transition-all hover:bg-(--color-brand-dark) hover:shadow-lg",
               "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
             )}
           >
-            How the layers work
+            See the VPN we recommend
+            <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
           </a>
           <Link
             to="/verify"
@@ -218,6 +238,20 @@ function HeroSection() {
             Test your protection
           </Link>
         </div>
+        {/* Strongest, most on-brand trust signal, surfaced in the hero instead
+            of buried below the fold. */}
+        <p className="mt-5 text-sm text-(--color-canvas-muted)">
+          The VPN we trust — and one of the few{" "}
+          <a
+            href="https://www.privacyguides.org/en/vpn/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-(--color-brand) hover:underline"
+          >
+            Privacy Guides
+          </a>{" "}
+          recommends.
+        </p>
       </div>
     </Section>
   )
@@ -259,7 +293,7 @@ function TwoLayersSection() {
         {layers.map((l) => (
           <div
             key={l.title}
-            className="rounded-2xl border border-(--color-canvas-border) p-5"
+            className="flex h-full flex-col rounded-2xl border border-(--color-canvas-border) p-5"
           >
             <span className="mb-3 inline-flex size-9 items-center justify-center rounded-full bg-brand/10 text-(--color-brand)">
               {l.icon}
@@ -268,12 +302,25 @@ function TwoLayersSection() {
               {l.title}
             </h3>
             <p className="mt-1 text-sm text-(--color-canvas-muted)">{l.body}</p>
-            <p className="mt-3 text-xs font-semibold tracking-wide text-(--color-brand) uppercase">
+            <p className="mt-auto pt-3 text-xs font-semibold tracking-wide text-(--color-brand) uppercase">
               {l.who}
             </p>
           </div>
         ))}
       </div>
+            <p className="mt-6 text-sm leading-relaxed text-(--color-canvas-muted)">
+        Want a deeper, vendor-neutral take? Jonah Aragon of Privacy Guides has a
+        clear primer on{" "}
+        <a
+          href="https://www.jonaharagon.com/posts/understanding-vpns/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-medium text-(--color-brand) hover:underline"
+        >
+          what a VPN actually does and doesn&rsquo;t do
+        </a>
+        .
+      </p>
     </Section>
   )
 }
@@ -293,21 +340,27 @@ function WhyProtonSection() {
       },
       {
         icon: <ServerCog className="size-5" />,
-        title: "Pairs with VPN Sync",
-        body: "GeoSpoof's VPN Sync matches your spoofed location to your VPN's exit region, and re-aligns automatically as Proton switches servers.",
+        title: "Works with VPN Sync",
+        body: "GeoSpoof's VPN Sync keeps your spoofed location matched to your VPN's exit region automatically — with Proton, or any other VPN you choose.",
       },
     ]
 
   return (
-    <Section narrow className="py-12! md:py-16!">
+    <Section narrow id="why-proton" className="py-12! md:py-16!">
       <div className="mb-8">
         <p className="mb-3 text-sm font-semibold tracking-widest text-(--color-brand) uppercase">
           The VPN we trust
         </p>
         <ProtonLogo className="mb-5 h-8 md:h-9" />
-        <h2 className="text-2xl font-bold text-(--color-canvas-foreground) md:text-3xl">
+        <h2 className="mb-4 text-2xl font-bold text-(--color-canvas-foreground) md:text-3xl">
           Why Proton VPN
         </h2>
+        <p className="text-(--color-canvas-muted)">
+          GeoSpoof is open-source and keeps zero logs — in privacy, the only
+          trust worth having is the kind you can verify. Proton holds itself to
+          the same bar: open-source apps, an independently audited no-logs
+          policy, and Swiss jurisdiction.
+        </p>
       </div>
       <div className="grid gap-4 sm:grid-cols-3">
         {reasons.map((r) => (
@@ -325,15 +378,25 @@ function WhyProtonSection() {
           </div>
         ))}
       </div>
-      <p className="mt-6 text-sm leading-relaxed text-(--color-canvas-muted)">
-        <strong className="text-(--color-canvas-foreground)">
-          Proton isn't the only good option.
-        </strong>{" "}
-        Mullvad and IVPN are also well-regarded no-log providers, and GeoSpoof
-        works with any VPN — you're never locked in. We point to Proton because
-        we use it and it pairs with VPN Sync, but the right call is whichever
-        one you trust.
-      </p>
+      <div className="mt-6 rounded-2xl border border-(--color-canvas-border) bg-brand/5 p-5 md:p-6">
+        <p className="text-sm leading-relaxed text-(--color-canvas-muted)">
+          <strong className="text-(--color-canvas-foreground)">
+            Don&rsquo;t take our word for it.
+          </strong>{" "}
+          Proton is one of the few VPNs recommended by{" "}
+          <a
+            href="https://www.privacyguides.org/en/vpn/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-(--color-brand) hover:underline"
+          >
+            Privacy Guides
+          </a>
+          , an independent, community-run privacy resource. GeoSpoof works with any VPN, so you&rsquo;re never locked
+          in; we point to Proton for the open-source, audited reasons above,
+          but the right call is whichever one you trust.
+        </p>
+      </div>
     </Section>
   )
 }
@@ -341,25 +404,30 @@ function WhyProtonSection() {
 function PlanGuidanceSection() {
   return (
     <Section narrow className="py-12! md:py-16!">
+      <div className="mb-8 overflow-hidden">
+        <img
+          src="/proton/vpn-home.png"
+          alt="Proton VPN app home screen"
+          className="mx-auto h-auto w-full max-w-2xl"
+          loading="lazy"
+        />
+      </div>
       <div className="rounded-2xl border border-(--color-canvas-border) bg-brand/5 p-6 md:p-8">
         <h2 className="mb-3 text-xl font-bold text-(--color-canvas-foreground) md:text-2xl">
-          Which plan should you pick?
+          Start free, upgrade only if you need to
         </h2>
         <p className="text-(--color-canvas-muted)">
-          You don't have to commit to anything. Proton's{" "}
-          <strong>free tier</strong> already covers the IP-hiding job for casual
-          use, and if you want to try the paid features, the{" "}
-          <strong>monthly VPN Plus</strong> plan lets you do that with no
-          long-term tie-in. If you already know you'll keep it, the{" "}
-          <strong>1-year or 2-year VPN Plus</strong> plans are the best value —
-          the same servers, at a much lower price per month. Pick whatever
-          matches how long you actually expect to use it.
+          GeoSpoof is free, and Proton&rsquo;s{" "}
+          <strong className="text-(--color-canvas-foreground)">free tier</strong>{" "}
+          handles casual IP hiding — so you can seal both layers without paying
+          anyone. Want more servers, faster speeds, and VPN Sync? VPN Plus is
+          monthly to try, or 1&ndash;2 years for the best price.
         </p>
-        <InlineDisclosure className="mt-6 mx-0 max-w-2xl text-left" />
+        <InlineDisclosure className="mt-5 mx-0 max-w-2xl text-left" />
         <div className="mt-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-          <CtaButton>Get Proton VPN</CtaButton>
+          <CtaButton>See Proton VPN plans</CtaButton>
           <span className="text-sm text-(--color-canvas-muted)">
-            30-day money-back guarantee on paid plans
+            Free tier available · 30-day money-back guarantee
           </span>
         </div>
       </div>
@@ -410,8 +478,9 @@ function DisclosureSection() {
         with or endorsed by Proton. When you buy a plan through our
         recommendation, Proton shares a portion of the sale with us — at no
         extra cost to you. It helps keep GeoSpoof free, open-source, and
-        ad-free. We recommend Proton because we genuinely use and trust it, not
-        because of the commission, and GeoSpoof works with any VPN you prefer.
+        ad-free. We recommend Proton on its merits — open-source, independently
+        audited, and recommended by Privacy Guides — not because of the
+        commission, and GeoSpoof works with any VPN you prefer.
       </p>
     </Section>
   )
