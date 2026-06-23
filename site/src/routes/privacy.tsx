@@ -273,10 +273,13 @@ function PrivacyPage() {
                 to the region being looked up, so the request can reveal your
                 approximate spoofed region. Your coordinates are never sent as a
                 query. The developer does not use these requests for analytics,
-                tracking, profiling, or accounts, and stores no personal data
-                from them; standard access logs may record the request
-                transiently. The data is cached by your browser, so it is rarely
-                re-fetched.{" "}
+                tracking, profiling, advertising, or accounts, and stores no
+                personal data from them. The developer has not enabled access
+                logging on the CloudFront distribution; Amazon, as the
+                infrastructure operator, processes each request (including your
+                IP and the requested path) transiently to deliver the file and
+                may keep its own operational logs under its own policies. The
+                data is cached by your browser, so it is rarely re-fetched.{" "}
                 <a
                   href="https://github.com/kevmo314/browser-geo-tz"
                   target="_blank"
