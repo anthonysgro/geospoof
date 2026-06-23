@@ -138,14 +138,37 @@ export function TestimonialsSection({ className }: { className?: string }) {
         ))}
       </div>
 
-      <p className="mt-8 text-center text-sm text-(--color-canvas-muted)">
+      <p className="mt-8 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-sm text-(--color-canvas-muted)">
+        <span>Read more reviews on</span>
         <a
           href={AMO_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="text-(--color-brand) hover:underline"
         >
-          Read all reviews on Firefox Add-ons →
+          Firefox Add-ons
+        </a>
+        <span aria-hidden="true" className="opacity-40">
+          ·
+        </span>
+        <a
+          href={CHROME_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-(--color-brand) hover:underline"
+        >
+          Chrome Web Store
+        </a>
+        <span aria-hidden="true" className="opacity-40">
+          ·
+        </span>
+        <a
+          href={APPSTORE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-(--color-brand) hover:underline"
+        >
+          App Store
         </a>
       </p>
     </Section>

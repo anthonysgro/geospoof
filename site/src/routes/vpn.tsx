@@ -1,14 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router"
 import * as React from "react"
 import {
+  Apple,
   ChevronDown,
   Globe2,
   Info,
   Lock,
+  Monitor,
   Network,
   ServerCog,
   ShieldCheck,
+  Smartphone,
   Star,
+  TabletSmartphone,
+  Terminal,
 } from "lucide-react"
 import { Navigation } from "@/components/landing/Navigation"
 import { Footer } from "@/components/landing/Footer"
@@ -186,6 +191,17 @@ function InlineDisclosure({ className }: { className?: string }) {
   )
 }
 
+// Proton VPN ships native apps for all of these. Shown as a quiet, borderless
+// icon+label compatibility line under the hero CTA — keep in sync with Proton's
+// actual platform support.
+const PROTON_PLATFORMS = [
+  { label: "Windows", icon: Monitor },
+  { label: "macOS", icon: Apple },
+  { label: "Linux", icon: Terminal },
+  { label: "iOS", icon: Smartphone },
+  { label: "Android", icon: TabletSmartphone },
+] as const
+
 function HeroSection() {
   // Smooth-scroll the hero CTA to the recommendation instead of a hard jump,
   // honoring reduced-motion. Keeps the href so it still works without JS.
@@ -237,7 +253,7 @@ function HeroSection() {
           />
           <p className="text-xs leading-relaxed text-(--color-canvas-muted)">
             <span className="font-semibold text-(--color-canvas-foreground)">
-              Privacy disclosure:
+              Privacy Disclosure:
             </span>{" "}
             We partner with Proton VPN. If you subscribe through our link, we
             earn a commission at no extra cost to you.
@@ -297,21 +313,40 @@ function HeroSection() {
             <ChevronDown className="size-4 shrink-0" aria-hidden="true" />
           </a>
         </div>
-        {/* The "70% off" basis and affiliate disclosure now live in the
-            disclosure card above the CTA; this line carries only the trust
-            signal so the bottom cluster stays uncluttered. */}
-        <p className="mt-5 text-sm text-(--color-canvas-muted)">
-          The VPN we trust, and one of the few{" "}
-          <a
-            href="https://www.privacyguides.org/en/vpn/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-medium text-(--color-brand) hover:underline"
+        {/* Risk-reversal + platform availability directly under the CTA —
+            answers "is it on my device?" and "is it risk-free?" at the point of
+            decision. The Privacy Guides trust signal isn't lost: it still
+            appears in the "Why Proton" section and the FAQ below. */}
+        <div className="mt-6 flex flex-col items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 text-sm text-(--color-canvas-muted)">
+            <ShieldCheck
+              className="size-4 shrink-0 text-(--color-brand)"
+              aria-hidden="true"
+            />
+            30-day money-back guarantee
+          </span>
+          <ul
+            className="flex flex-wrap items-center justify-center text-xs text-(--color-canvas-muted)"
+            aria-label="Proton VPN is available on Windows, macOS, Linux, iOS, and Android"
           >
-            Privacy Guides
-          </a>{" "}
-          recommends.
-        </p>
+            {PROTON_PLATFORMS.map(({ label, icon: Icon }, i) => (
+              <li key={label} className="inline-flex items-center">
+                {i > 0 && (
+                  <span className="px-3 opacity-40" aria-hidden="true">
+                    |
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1.5">
+                  <Icon
+                    className="size-3.5 shrink-0 opacity-70"
+                    aria-hidden="true"
+                  />
+                  {label}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </Section>
   )
@@ -486,8 +521,18 @@ function PlanGuidanceSection() {
         <InlineDisclosure className="mt-5 mx-0 max-w-2xl text-left" />
         <div className="mt-4 flex flex-col items-center gap-3">
           <CtaButton>See Proton VPN plans</CtaButton>
-          <span className="text-center text-sm text-(--color-canvas-muted)">
-            {PROTON_DISCOUNT} off the 2-year plan · 30-day money-back guarantee
+          <span className="inline-flex flex-wrap items-center justify-center gap-x-1.5 text-center text-sm text-(--color-canvas-muted)">
+            {PROTON_DISCOUNT} off the 2-year plan
+            <span className="opacity-40" aria-hidden="true">
+              ·
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <ShieldCheck
+                className="size-4 shrink-0 text-(--color-brand)"
+                aria-hidden="true"
+              />
+              30-day money-back guarantee
+            </span>
           </span>
         </div>
       </div>
