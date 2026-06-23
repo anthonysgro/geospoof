@@ -25,22 +25,6 @@
 
 const WEB_NAVIGATION_PERMISSION: { permissions: string[] } = { permissions: ["webNavigation"] };
 
-/**
- * Whether *this* runtime actually exposes the `chrome.debugger` API.
- *
- * `__CHROMIUM__` is a build-time flag for the target engine, not a guarantee
- * that the running browser implements the debugger API. Some Chromium browsers
- * don't (mobile Chromium builds like Quetta/Kiwi, WebKit-backed "Chromium"
- * browsers on iOS), and it can also be absent when an enterprise policy blocks
- * it or the user revokes the `debugger` permission from chrome://extensions.
- * In all those cases the background's debugger spoofing no-ops, so the popup
- * must hide the toggle rather than offer a dead control — standard
- * content-script protection still applies.
- */
-function isDebuggerApiAvailable(): boolean {
-  return __CHROMIUM__ && !!chrome.debugger;
-}
-
 /** Narrow access to the optional `browser.permissions` namespace. */
 function permissionsApi(): {
   request: (p: { permissions: string[] }) => Promise<boolean>;
@@ -82,11 +66,10 @@ function showBannerHelp(visible: boolean): void {
  * to the persisted `debuggerModeEnabled` setting. Also reconciles the one-time
  * debugging-bar help note: it shows while the mode is on and hasn't been
  * dismissed for this enablement (the background resets that flag on each
- * enable). Safe to call on every popup load; no-ops on non-Chromium builds or
- * when this runtime lacks the `chrome.debugger` API (the row stays hidden).
+ * enable). Safe to call on every popup load; no-ops on non-Chromium builds.
  */
 export function reflectDebuggerModeState(enabled: boolean): void {
-  if (!isDebuggerApiAvailable()) return;
+  if (!__CHROMIUM__) return;
   const row = document.getElementById("debuggerModeRow");
   const toggle = document.getElementById("debuggerModeToggle") as HTMLInputElement | null;
   if (!row || !toggle) return;
@@ -107,10 +90,10 @@ export function reflectDebuggerModeState(enabled: boolean): void {
  * requests the optional `webNavigation` permission (synchronously, to preserve
  * the user gesture) and enables the mode regardless of the grant result; on
  * disable it turns the mode off and then releases the permission. No-ops on
- * non-Chromium builds or when this runtime lacks the `chrome.debugger` API.
+ * non-Chromium builds.
  */
 export function wireDebuggerModeToggle(): void {
-  if (!isDebuggerApiAvailable()) return;
+  if (!__CHROMIUM__) return;
   const toggle = document.getElementById("debuggerModeToggle") as HTMLInputElement | null;
   if (!toggle) return;
 
