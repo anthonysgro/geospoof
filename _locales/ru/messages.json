@@ -455,6 +455,30 @@
     "message": "Только Firefox. При включении запрашивается необязательное разрешение «userScripts», чтобы GeoSpoof мог запускаться в самом начале загрузки каждой страницы, закрывая короткий промежуток, когда сайт мог бы считать ваш настоящий часовой пояс до срабатывания защиты. Отключите, чтобы отозвать разрешение.",
     "description": "Tooltip explaining the Firefox-only Instant timezone protection toggle and the userScripts permission it requests."
   },
+  "advanced_debuggerMode": {
+    "message": "Спуфинг на уровне движка",
+    "description": "Label for the Chrome-only toggle that spoofs the timezone deeper in the browser (via the chrome.debugger API / Chrome DevTools Protocol) so it also covers background workers and applies before a page loads."
+  },
+  "debuggerMode_infoAriaLabel": {
+    "message": "Подробнее о спуфинге на уровне движка",
+    "description": "Accessible label on the Engine-level Spoofing info icon."
+  },
+  "debuggerMode_tooltip": {
+    "message": "Только Chrome. Подменяет ваш часовой пояс глубже в браузере, поэтому защита также охватывает фоновые воркеры и действует ещё до загрузки страницы. Пока включено, Chrome показывает панель «GeoSpoof начал отладку этого браузера» — это нормально. Оставьте выключенным, чтобы использовать стандартную защиту.",
+    "description": "Tooltip explaining the Chrome-only Engine-level Spoofing toggle and the debugging notification bar it causes."
+  },
+  "debuggerBannerHelp_text": {
+    "message": "Пока это включено, Chrome показывает панель «GeoSpoof начал отладку этого браузера». Чтобы скрыть её, запустите Chrome с этим флагом:",
+    "description": "Intro text of the dismissible note shown when Engine-level Spoofing is enabled, explaining how to hide Chrome's debugging notification bar."
+  },
+  "debuggerBannerHelp_link": {
+    "message": "Как скрыть панель →",
+    "description": "Link to the GeoSpoof help page explaining how to hide Chrome's debugging notification bar."
+  },
+  "debuggerBannerHelp_closeAria": {
+    "message": "Закрыть",
+    "description": "Accessible label for the button that dismisses the debugging-bar help note."
+  },
   "advanced_verbosityLevel": {
     "message": "Уровень подробности",
     "description": "Label for the log-verbosity selector."

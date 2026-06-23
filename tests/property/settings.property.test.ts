@@ -52,6 +52,7 @@ const settingsArb: fc.Arbitrary<Settings> = fc.record({
   version: fc.constant("1.0"),
   lastUpdated: fc.integer({ min: 0 }),
   vpnSyncEnabled: fc.boolean(),
+  debuggerModeEnabled: fc.boolean(),
   autoSyncBlocked: fc.boolean(),
   proFeaturesBlocked: fc.boolean(),
   debugLogging: fc.boolean(),

@@ -7,6 +7,7 @@ export type MessageType =
   | "SET_LOCATION"
   | "SET_PROTECTION_STATUS"
   | "SET_WEBRTC_PROTECTION"
+  | "SET_DEBUGGER_MODE"
   | "ANNOUNCE_WORKER_FETCH"
   | "GEOCODE_QUERY"
   | "GET_SETTINGS"
@@ -48,6 +49,15 @@ export interface SetProtectionStatusPayload {
 }
 
 export interface SetWebRTCProtectionPayload {
+  enabled: boolean;
+}
+
+/**
+ * Toggles browser-level (chrome.debugger / CDP) geo+timezone spoofing.
+ * Chromium only — the popup requests the optional `debugger` permission before
+ * sending `enabled: true`, and revokes it after sending `enabled: false`.
+ */
+export interface SetDebuggerModePayload {
   enabled: boolean;
 }
 

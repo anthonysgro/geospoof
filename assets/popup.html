@@ -558,6 +558,68 @@
               could read your real timezone before protection kicks in. Turn it off to revoke the
               permission.
             </div>
+            <label
+              class="toggle-label"
+              id="debuggerModeRow"
+              for="debuggerModeToggle"
+              style="display: none"
+            >
+              <span class="label-with-info">
+                <span data-i18n="advanced_debuggerMode">Engine-level Spoofing</span>
+                <button
+                  type="button"
+                  class="info-icon"
+                  id="debuggerModeInfo"
+                  aria-label="More info about Engine-level Spoofing"
+                  data-i18n-aria-label="debuggerMode_infoAriaLabel"
+                >
+                  ⓘ
+                </button>
+              </span>
+              <div class="toggle-wrapper">
+                <input type="checkbox" id="debuggerModeToggle" />
+                <span class="toggle-slider"></span>
+              </div>
+            </label>
+            <div
+              class="info-tooltip"
+              id="debuggerModeTooltip"
+              role="tooltip"
+              data-i18n="debuggerMode_tooltip"
+            >
+              Chrome only. Spoofs your timezone deeper in the browser so it also covers background
+              workers and takes effect before a page loads. While it's on, Chrome shows a “GeoSpoof
+              started debugging this browser” bar — that's normal. Leave it off to use standard
+              protection.
+            </div>
+            <div
+              class="setting-disclaimer debugger-banner-help"
+              id="debuggerBannerHelp"
+              style="display: none"
+            >
+              <button
+                type="button"
+                class="debugger-banner-help-close"
+                id="debuggerBannerHelpClose"
+                aria-label="Dismiss"
+                data-i18n-aria-label="debuggerBannerHelp_closeAria"
+              >
+                ×
+              </button>
+              <span data-i18n="debuggerBannerHelp_text"
+                >While this is on, Chrome shows a “GeoSpoof started debugging this browser” bar. To
+                hide it, start Chrome with this flag:</span
+              >
+              <code class="debugger-banner-help-flag">--silent-debugger-extension-api</code>
+              <a
+                href="https://geospoof.com/engine-level-spoofing"
+                target="_blank"
+                rel="noopener"
+                class="debugger-banner-help-link"
+                data-i18n="debuggerBannerHelp_link"
+                >How to hide the bar →</a
+              >
+            </div>
             <div class="accuracy-selector">
               <label class="select-label" for="accuracySelect">
                 <span data-i18n="advanced_accuracy">Location Accuracy</span>

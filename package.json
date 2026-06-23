@@ -33,9 +33,9 @@
     "prepare": "husky",
     "sign:xpi": "bash scripts/sign-xpi.sh",
     "sign:xpi:amo": "bash scripts/sign-xpi.sh --channel listed --source geospoof-source-v$(node -p \"require('./package.json').version\").zip",
-    "test": "vitest run",
+    "test": "vitest run --silent",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "vitest run --silent --coverage",
     "type-check": "tsc --noEmit",
     "validate": "npm run type-check && npm run lint && npm run lint:ext && npm run format:check && npm run test",
     "validate:quiet": "npm run type-check && npm run lint && npm run lint:ext && npm run format:check && npm run test -- --reporter=dot 2>/dev/null"

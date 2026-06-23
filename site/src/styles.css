@@ -165,6 +165,9 @@
   }
   html {
     @apply font-sans;
+    /* Smooth in-page anchor scrolling; the reduced-motion block below forces
+       this back to `auto` for users who prefer reduced motion. */
+    scroll-behavior: smooth;
   }
 }
 

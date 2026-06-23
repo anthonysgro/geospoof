@@ -35,6 +35,7 @@ const staticRoutes = [
   "/spoof-location/firefox",
   "/spoof-location/safari",
   "/vpn",
+  "/engine-level-spoofing",
   "/blog",
   "/privacy",
   "/terms",
@@ -91,6 +92,11 @@ const staticPageMeta = {
     title: "The No-Log VPN We Recommend for GeoSpoof",
     description:
       "GeoSpoof hides your browser's location, timezone, and WebRTC; a no-log VPN hides your real IP. Why we recommend Proton VPN to complete a location-privacy setup, and which plan to pick.",
+  },
+  "/engine-level-spoofing": {
+    title: "Engine-level Spoofing & Hiding Chrome's Debugging Bar",
+    description:
+      "What GeoSpoof's Chrome-only Engine-level Spoofing does, why Chrome shows a “started debugging this browser” bar, and how to hide that bar with the --silent-debugger-extension-api launch flag on Windows, macOS, and Linux.",
   },
   "/blog": {
     title: "GeoSpoof Blog",

@@ -455,6 +455,30 @@
     "message": "Apenas Firefox. Ativar isto solicita a permissão opcional “userScripts” para que o GeoSpoof possa ser executado logo no início de cada carregamento de página, fechando uma breve brecha em que um site poderia ler seu fuso horário real antes de a proteção entrar em ação. Desative para revogar a permissão.",
     "description": "Tooltip explaining the Firefox-only Instant timezone protection toggle and the userScripts permission it requests."
   },
+  "advanced_debuggerMode": {
+    "message": "Spoofing em nível de mecanismo",
+    "description": "Label for the Chrome-only toggle that spoofs the timezone deeper in the browser (via the chrome.debugger API / Chrome DevTools Protocol) so it also covers background workers and applies before a page loads."
+  },
+  "debuggerMode_infoAriaLabel": {
+    "message": "Mais informações sobre o Spoofing em nível de mecanismo",
+    "description": "Accessible label on the Engine-level Spoofing info icon."
+  },
+  "debuggerMode_tooltip": {
+    "message": "Apenas Chrome. Falsifica seu fuso horário em um nível mais profundo do navegador, abrangendo também os workers em segundo plano e sendo aplicado antes de a página carregar. Enquanto está ativo, o Chrome exibe uma barra com «GeoSpoof começou a depurar este navegador» — isso é normal. Deixe desativado para usar a proteção padrão.",
+    "description": "Tooltip explaining the Chrome-only Engine-level Spoofing toggle and the debugging notification bar it causes."
+  },
+  "debuggerBannerHelp_text": {
+    "message": "Enquanto isto está ativo, o Chrome exibe uma barra com «GeoSpoof começou a depurar este navegador». Para ocultá-la, inicie o Chrome com esta flag:",
+    "description": "Intro text of the dismissible note shown when Engine-level Spoofing is enabled, explaining how to hide Chrome's debugging notification bar."
+  },
+  "debuggerBannerHelp_link": {
+    "message": "Como ocultar a barra →",
+    "description": "Link to the GeoSpoof help page explaining how to hide Chrome's debugging notification bar."
+  },
+  "debuggerBannerHelp_closeAria": {
+    "message": "Dispensar",
+    "description": "Accessible label for the button that dismisses the debugging-bar help note."
+  },
   "advanced_verbosityLevel": {
     "message": "Nível de detalhes",
     "description": "Label for the log-verbosity selector."

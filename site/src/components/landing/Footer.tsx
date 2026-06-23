@@ -36,6 +36,7 @@ const footerGroups: Array<FooterGroup> = [
     links: [
       { label: "Do you need a VPN?", href: "/vpn" },
       { label: "Test your protection", href: "/verify" },
+      { label: "Engine-level Spoofing (Chrome)", href: "/engine-level-spoofing" },
       { label: "Blog", href: "/blog" },
       { label: "Support", href: "/support" },
     ],

@@ -1270,11 +1270,14 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   margin-top: 0;
 }
 
-/* The "Instant timezone protection" row is Firefox-only and hidden elsewhere;
-   when it's hidden, the next toggle becomes the first visible row, so drop its
-   top spacing too. Uses the general-sibling combinator because the row's info
-   tooltip sits between it and the next toggle. */
-.advanced-content > #earlyTzRow[style*="display: none"] ~ .toggle-label {
+/* The "Instant timezone protection" row is Firefox-only and hidden elsewhere.
+   When it's hidden, the row that becomes the first visible toggle is the
+   Chromium-only "Browser-level spoofing" row, so drop ITS top spacing. Scoped
+   to that specific row (not a blanket `~ .toggle-label`) so later toggles like
+   Debug Logging — which sit after the section divider and are never first —
+   keep their normal 12px rhythm. Uses the general-sibling combinator because
+   the row's info tooltip sits between it and this one. */
+.advanced-content > #earlyTzRow[style*="display: none"] ~ #debuggerModeRow {
   margin-top: 0;
 }
 
@@ -1317,6 +1320,47 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 
 .setting-disclaimer.unsupported strong {
   color: var(--disclaimer-unsupported-strong);
+}
+
+/* Dismissible "how to hide the debugging bar" note shown when Engine-level
+   Spoofing is enabled. Reuses .setting-disclaimer's styling; adds a close
+   button (top-right) and a selectable monospace flag line. */
+.debugger-banner-help {
+  position: relative;
+  padding-right: 28px;
+}
+
+.debugger-banner-help-close {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  background: transparent;
+  color: var(--disclaimer-text);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.debugger-banner-help-flag {
+  display: block;
+  margin: 6px 0;
+  padding: 4px 6px;
+  font-family: monospace;
+  font-size: 11px;
+  user-select: all;
+  border-radius: 4px;
+  background: var(--disclaimer-strong);
+  color: var(--disclaimer-bg);
+  word-break: break-all;
+}
+
+.debugger-banner-help-link {
+  display: inline-block;
+  font-size: 11px;
 }
 
 /* Theme selector */

@@ -455,6 +455,30 @@
     "message": "仅限 Firefox。开启后会请求可选的「userScripts」权限，使 GeoSpoof 能在每次页面加载的最开始运行，从而消除在保护生效前网站可能读取到您真实时区的短暂空隙。关闭即可撤销该权限。",
     "description": "Tooltip explaining the Firefox-only Instant timezone protection toggle and the userScripts permission it requests."
   },
+  "advanced_debuggerMode": {
+    "message": "引擎级伪装",
+    "description": "Label for the Chrome-only toggle that spoofs the timezone deeper in the browser (via the chrome.debugger API / Chrome DevTools Protocol) so it also covers background workers and applies before a page loads."
+  },
+  "debuggerMode_infoAriaLabel": {
+    "message": "关于引擎级伪装的更多信息",
+    "description": "Accessible label on the Engine-level Spoofing info icon."
+  },
+  "debuggerMode_tooltip": {
+    "message": "仅限 Chrome。在浏览器更深的层级伪装您的时区，因此也会覆盖后台 worker，并在页面加载前生效。开启时，Chrome 会显示“GeoSpoof 已开始调试此浏览器”提示栏——这是正常现象。如需使用标准保护，请保持关闭。",
+    "description": "Tooltip explaining the Chrome-only Engine-level Spoofing toggle and the debugging notification bar it causes."
+  },
+  "debuggerBannerHelp_text": {
+    "message": "开启时，Chrome 会显示“GeoSpoof 已开始调试此浏览器”提示栏。要隐藏它，请使用此标志启动 Chrome：",
+    "description": "Intro text of the dismissible note shown when Engine-level Spoofing is enabled, explaining how to hide Chrome's debugging notification bar."
+  },
+  "debuggerBannerHelp_link": {
+    "message": "如何隐藏提示栏 →",
+    "description": "Link to the GeoSpoof help page explaining how to hide Chrome's debugging notification bar."
+  },
+  "debuggerBannerHelp_closeAria": {
+    "message": "关闭",
+    "description": "Accessible label for the button that dismisses the debugging-bar help note."
+  },
   "advanced_verbosityLevel": {
     "message": "详细级别",
     "description": "Label for the log-verbosity selector."

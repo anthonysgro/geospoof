@@ -13,6 +13,7 @@ import { t } from "./i18n";
 import { renderFavorites } from "./favorites";
 import { renderScope, renderScopeLoadError } from "./scope";
 import { reflectEarlyProtectionState } from "./early-protection";
+import { reflectDebuggerModeState } from "./debugger-mode";
 import { restoreAccuracyControl } from "./accuracy";
 
 /**
@@ -129,6 +130,10 @@ export async function loadSettings(): Promise<void> {
     // Firefox-only: reveal the "Instant timezone protection" toggle and sync it
     // to whether the optional userScripts permission is currently granted.
     void reflectEarlyProtectionState();
+
+    // Chrome-only: reveal the "Browser-level spoofing" toggle and sync it to the
+    // persisted debuggerModeEnabled setting.
+    reflectDebuggerModeState(settings.debuggerModeEnabled);
 
     // Restore VPN sync toggle state (Req 4.1–4.4)
     const vpnSyncToggle = document.getElementById("vpnSyncToggle") as HTMLInputElement | null;

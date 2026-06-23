@@ -16,6 +16,7 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as SpoofTimezoneRouteImport } from './routes/spoof-timezone'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as EngineLevelSpoofingRouteImport } from './routes/engine-level-spoofing'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SpoofLocationIndexRouteImport } from './routes/spoof-location.index'
@@ -59,6 +60,11 @@ const SpoofTimezoneRoute = SpoofTimezoneRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EngineLevelSpoofingRoute = EngineLevelSpoofingRouteImport.update({
+  id: '/engine-level-spoofing',
+  path: '/engine-level-spoofing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -110,6 +116,7 @@ const BlogSlugRoute = BlogSlugRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/engine-level-spoofing': typeof EngineLevelSpoofingRoute
   '/privacy': typeof PrivacyRoute
   '/spoof-timezone': typeof SpoofTimezoneRoute
   '/support': typeof SupportRoute
@@ -128,6 +135,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/engine-level-spoofing': typeof EngineLevelSpoofingRoute
   '/privacy': typeof PrivacyRoute
   '/spoof-timezone': typeof SpoofTimezoneRoute
   '/support': typeof SupportRoute
@@ -147,6 +155,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/engine-level-spoofing': typeof EngineLevelSpoofingRoute
   '/privacy': typeof PrivacyRoute
   '/spoof-timezone': typeof SpoofTimezoneRoute
   '/support': typeof SupportRoute
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/engine-level-spoofing'
     | '/privacy'
     | '/spoof-timezone'
     | '/support'
@@ -185,6 +195,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
+    | '/engine-level-spoofing'
     | '/privacy'
     | '/spoof-timezone'
     | '/support'
@@ -203,6 +214,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/about'
+    | '/engine-level-spoofing'
     | '/privacy'
     | '/spoof-timezone'
     | '/support'
@@ -222,6 +234,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  EngineLevelSpoofingRoute: typeof EngineLevelSpoofingRoute
   PrivacyRoute: typeof PrivacyRoute
   SpoofTimezoneRoute: typeof SpoofTimezoneRoute
   SupportRoute: typeof SupportRoute
@@ -287,6 +300,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/engine-level-spoofing': {
+      id: '/engine-level-spoofing'
+      path: '/engine-level-spoofing'
+      fullPath: '/engine-level-spoofing'
+      preLoaderRoute: typeof EngineLevelSpoofingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -358,6 +378,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  EngineLevelSpoofingRoute: EngineLevelSpoofingRoute,
   PrivacyRoute: PrivacyRoute,
   SpoofTimezoneRoute: SpoofTimezoneRoute,
   SupportRoute: SupportRoute,

@@ -62,10 +62,19 @@ export async function broadcastSettingsToTabs(settings: Settings): Promise<void>
       isRestricted: isRestrictedUrl,
     });
 
+    // When browser-level (chrome.debugger) spoofing is active on Chromium, CDP
+    // owns the TIMEZONE (it covers every frame/worker before first script).
+    // Withhold the timezone from the injected path so its Date/Intl overrides
+    // no-op (they gate on having timezone data) — but keep `enabled` and
+    // `location` so the injected GEOLOCATION override still runs (CDP can't make
+    // geolocation reliably prompt-free). WebRTC is independent. Compiled out on
+    // Firefox/Safari.
+    const debuggerActive = __CHROMIUM__ && settings.debuggerModeEnabled;
+
     const payload: UpdateSettingsPayload = {
       enabled,
       location,
-      timezone,
+      timezone: debuggerActive ? null : timezone,
       debugLogging,
       verbosityLevel,
       webrtcProtection,

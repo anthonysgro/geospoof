@@ -185,8 +185,20 @@ describe("Shared fields preservation", () => {
     const ff = firefoxManifest().permissions as string[];
     const cr = chromiumManifest().permissions as string[];
 
-    // Every Chromium permission must appear on Firefox.
-    for (const p of cr) expect(ff).toContain(p);
+    // Every Chromium permission must appear on Firefox, EXCEPT the Chromium-only
+    // `debugger` permission (it powers the browser-level CDP spoofing mode;
+    // Firefox has no chrome.debugger equivalent, so it's deliberately absent).
+    for (const p of cr) {
+      if (p === "debugger") continue;
+      expect(ff).toContain(p);
+    }
+
+    // `debugger` is Chromium-only. It maps to the "Access your data on all
+    // websites" warning already triggered by `<all_urls>`, so it adds no new
+    // install prompt there; it must be a required (not optional) permission
+    // because Chrome forbids `debugger` in optional_permissions.
+    expect(cr).toContain("debugger");
+    expect(ff).not.toContain("debugger");
 
     // Firefox adds the webRequest.filterResponseData permission set
     // as required permissions so the background can always-on the
@@ -205,11 +217,14 @@ describe("Shared fields preservation", () => {
     // Firefox declares `userScripts` as an optional-only permission (it is
     // requested at runtime from a user gesture to close the synchronous-
     // timezone cold-start race). It must NOT appear under required permissions
-    // — Firefox drops optional-only permissions listed there. Chromium has no
-    // optional_permissions block.
+    // — Firefox drops optional-only permissions listed there. Chromium declares
+    // `webNavigation` as its own optional permission, requested at runtime when
+    // the user enables browser-level (debugger) spoofing for race-free early
+    // attach (onBeforeNavigate); it must not appear under required permissions.
     expect(firefoxManifest().optional_permissions).toEqual(["userScripts"]);
     expect(ff).not.toContain("userScripts");
-    expect(chromiumManifest().optional_permissions).toBeUndefined();
+    expect(chromiumManifest().optional_permissions).toEqual(["webNavigation"]);
+    expect(cr).not.toContain("webNavigation");
   });
 });
 
