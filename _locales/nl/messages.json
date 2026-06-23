@@ -1,0 +1,546 @@
+{
+  "extensionName": {
+    "message": "GeoSpoof",
+    "description": "⚠️ MACHINE-TRANSLATED — needs native-speaker review. 'GeoSpoof' is a brand name; do not translate."
+  },
+  "extensionDescription": {
+    "message": "Vervals je geolocatie en tijdzone, synchroniseer automatisch met je VPN en blokkeer WebRTC-IP-lekken.",
+    "description": "Extension description shown in the browser and store listing."
+  },
+  "onboarding_title": {
+    "message": "Welkom bij GeoSpoof! 🌍",
+    "description": "Onboarding overlay heading."
+  },
+  "onboarding_step1_strong": {
+    "message": "Kies je invoermethode:",
+    "description": "Bolded lead-in for the first onboarding step."
+  },
+  "onboarding_step1_text": {
+    "message": "Zoek naar een stad of voer handmatig coördinaten in via de tabbladen",
+    "description": "Body text of the first onboarding step."
+  },
+  "onboarding_step2_strong": {
+    "message": "Locatiebescherming inschakelen",
+    "description": "Bolded lead-in for the second onboarding step."
+  },
+  "onboarding_step2_text": {
+    "message": "om te beginnen met spoofen",
+    "description": "Body text of the second onboarding step."
+  },
+  "onboarding_step3_strong": {
+    "message": "Optioneel:",
+    "description": "Bolded lead-in for the third onboarding step."
+  },
+  "onboarding_step3_text": {
+    "message": "Schakel WebRTC-bescherming in voor extra privacy",
+    "description": "Body text of the third onboarding step."
+  },
+  "onboarding_button": {
+    "message": "Aan de slag",
+    "description": "Button that closes the onboarding overlay."
+  },
+  "status_disabled": {
+    "message": "Uitgeschakeld",
+    "description": "Status pill shown when location protection is off."
+  },
+  "status_enabled": {
+    "message": "Ingeschakeld",
+    "description": "Status pill shown when location protection is on."
+  },
+  "tab_main": {
+    "message": "Hoofd",
+    "description": "Tab label for the main popup view."
+  },
+  "tab_details": {
+    "message": "Details",
+    "description": "Tab label for the protection details view."
+  },
+  "tab_filters": {
+    "message": "Filters",
+    "description": "Tab label for the site-scoping filters view."
+  },
+  "filters_heading": {
+    "message": "Sitefilters",
+    "description": "Heading for the site-scoping filters panel."
+  },
+  "filters_modeGroupAriaLabel": {
+    "message": "Bereikmodus",
+    "description": "Accessible label for the scope-mode selector group."
+  },
+  "filters_modeAll": {
+    "message": "Alle",
+    "description": "Scope mode option: spoof on every site."
+  },
+  "filters_modeAllowlist": {
+    "message": "Toestaan",
+    "description": "Scope mode option: spoof only on listed sites."
+  },
+  "filters_modeDenylist": {
+    "message": "Blokkeren",
+    "description": "Scope mode option: spoof on every site except listed ones."
+  },
+  "filters_modeAllDesc": {
+    "message": "Spoofing geldt voor elke site.",
+    "description": "Description shown under the selector when 'All' mode is active."
+  },
+  "filters_modeAllowlistDesc": {
+    "message": "Spoofing geldt alleen voor vermelde sites.",
+    "description": "Description shown under the selector when 'Allowlist' mode is active."
+  },
+  "filters_modeDenylistDesc": {
+    "message": "Spoofing geldt voor elke site behalve de vermelde.",
+    "description": "Description shown under the selector when 'Denylist' mode is active."
+  },
+  "filters_addPlaceholder": {
+    "message": "example.com",
+    "description": "Placeholder text in the add-site input."
+  },
+  "filters_addButton": {
+    "message": "Toevoegen",
+    "description": "Button that adds the typed domain to the active list."
+  },
+  "filters_invalidDomain": {
+    "message": "Geen geldig domein",
+    "description": "Inline message shown when the typed domain is invalid."
+  },
+  "filters_emptyList": {
+    "message": "Nog geen sites toegevoegd",
+    "description": "Indicator shown when the active site list is empty."
+  },
+  "filters_notSaved": {
+    "message": "⚠️ Wijziging niet opgeslagen",
+    "description": "Inline message shown when a scope change could not be saved."
+  },
+  "filters_loadError": {
+    "message": "⚠️ Instellingen konden niet worden geladen",
+    "description": "Inline message shown when the popup cannot load settings."
+  },
+  "filters_removeAriaLabel": {
+    "message": "Site verwijderen",
+    "description": "Accessible label prefix on a site's remove button."
+  },
+  "filters_addCurrentButton": {
+    "message": "Huidige site toevoegen",
+    "description": "Button that adds the active tab's site to the active list."
+  },
+  "filters_currentPageRestricted": {
+    "message": "Deze pagina kan niet worden toegevoegd",
+    "description": "Inline message shown when the current page is a restricted URL that cannot be added."
+  },
+  "filters_currentPageInvalid": {
+    "message": "Deze site kan niet worden toegevoegd",
+    "description": "Inline message shown when the current tab's hostname cannot be added to a list."
+  },
+  "filters_allowedSites": {
+    "message": "Toegestane sites",
+    "description": "Header above the list of allowlisted sites."
+  },
+  "filters_blockedSites": {
+    "message": "Geblokkeerde sites",
+    "description": "Header above the list of denylisted sites."
+  },
+  "toggle_locationProtection": {
+    "message": "Locatiebescherming",
+    "description": "Label for the toggle that enables location spoofing."
+  },
+  "toggle_webrtcProtection": {
+    "message": "WebRTC-bescherming",
+    "description": "Label for the toggle that enables WebRTC IP leak protection."
+  },
+  "heading_location": {
+    "message": "Locatie",
+    "description": "Section heading above the spoofed location display."
+  },
+  "heading_protection": {
+    "message": "Bescherming",
+    "description": "Section heading above the protection toggles in the Main tab."
+  },
+  "heading_mode": {
+    "message": "Modus",
+    "description": "Section heading above the scope-mode selector in the Filters tab."
+  },
+  "location_none": {
+    "message": "Geen locatie ingesteld",
+    "description": "Shown when no spoofed location has been configured."
+  },
+  "location_custom": {
+    "message": "Aangepaste locatie",
+    "description": "Shown above a manually entered (non-search) location."
+  },
+  "location_clearTitle": {
+    "message": "Locatie wissen",
+    "description": "Tooltip title on the clear-location button."
+  },
+  "location_clearAriaLabel": {
+    "message": "Locatie wissen",
+    "description": "Accessible label on the clear-location button."
+  },
+  "toggle_syncWithVpn": {
+    "message": "Sync met VPN",
+    "description": "Label for the toggle that syncs location to the user's public IP."
+  },
+  "vpnSync_infoAriaLabel": {
+    "message": "Meer info over Sync met VPN",
+    "description": "Accessible label on the VPN sync info icon."
+  },
+  "vpnSync_tooltip": {
+    "message": "Dit synchroniseert je vervalste locatie met je huidige openbare IP. Het wordt enkele seconden nadat je VPN van server wisselt automatisch bijgewerkt — of gebruik Opnieuw synchroniseren om direct bij te werken.",
+    "description": "Tooltip explaining that VPN sync auto-updates when the VPN changes servers, with a manual Re-sync option."
+  },
+  "vpnSync_syncNow": {
+    "message": "Nu synchroniseren",
+    "description": "Button that performs an initial VPN sync."
+  },
+  "vpnSync_resync": {
+    "message": "Opnieuw sync.",
+    "description": "Button that performs a follow-up VPN sync."
+  },
+  "vpnSync_detectedIp": {
+    "message": "Gedetecteerd IP: $IP$",
+    "description": "Shown after a successful VPN sync. $IP$ is the detected public IP address.",
+    "placeholders": {
+      "ip": {
+        "content": "$1",
+        "example": "203.0.113.42"
+      }
+    }
+  },
+  "vpnSync_networkError": {
+    "message": "Er is een netwerkfout opgetreden. Probeer het opnieuw.",
+    "description": "Error toast shown when the VPN sync network call fails."
+  },
+  "inputTab_searchCity": {
+    "message": "Stad zoeken",
+    "description": "Tab label for the city-search input mode."
+  },
+  "inputTab_enterCoords": {
+    "message": "Coördinaten invoeren",
+    "description": "Tab label for the manual-coordinates input mode."
+  },
+  "search_placeholder": {
+    "message": "Zoek naar een stad...",
+    "description": "Placeholder text in the city search input."
+  },
+  "search_searching": {
+    "message": "Zoeken...",
+    "description": "Status shown while a city search is in flight."
+  },
+  "search_noResults": {
+    "message": "Geen locaties gevonden",
+    "description": "Status shown when a city search returns no matches."
+  },
+  "search_failed": {
+    "message": "Zoeken mislukt. Probeer het opnieuw.",
+    "description": "Error toast shown when a city search request fails."
+  },
+  "search_settingLocation": {
+    "message": "Locatie instellen...",
+    "description": "Status shown while a chosen location is being applied."
+  },
+  "search_setLocationFailed": {
+    "message": "Instellen van locatie mislukt. Probeer het opnieuw.",
+    "description": "Error toast shown when applying a chosen location fails."
+  },
+  "coords_latPlaceholder": {
+    "message": "Breedtegraad (-90 tot 90)",
+    "description": "Placeholder text in the latitude input."
+  },
+  "coords_lonPlaceholder": {
+    "message": "Lengtegraad (-180 tot 180)",
+    "description": "Placeholder text in the longitude input."
+  },
+  "coords_setButton": {
+    "message": "Locatie instellen",
+    "description": "Button that applies the manually entered coordinates."
+  },
+  "coords_invalidLat": {
+    "message": "Ongeldige breedtegraad. Moet tussen -90 en 90 liggen.",
+    "description": "Validation error shown when latitude is out of range."
+  },
+  "coords_invalidLon": {
+    "message": "Ongeldige lengtegraad. Moet tussen -180 en 180 liggen.",
+    "description": "Validation error shown when longitude is out of range."
+  },
+  "warning_noLocationSet": {
+    "message": "⚠️ Bescherming ingeschakeld maar geen locatie ingesteld",
+    "description": "Warning shown when protection is on but no location is configured."
+  },
+  "warning_refreshPage": {
+    "message": "⚠️ Vernieuw deze pagina om de bescherming toe te passen",
+    "description": "Warning shown when the active page must be reloaded for protection to apply."
+  },
+  "notice_restrictedPage": {
+    "message": "ℹ️ Extensies kunnen niet op deze pagina worden uitgevoerd",
+    "description": "Notice shown on browser-internal pages where extensions cannot run."
+  },
+  "testLinks_verify": {
+    "message": "Bescherming verifiëren",
+    "description": "Footer link to the hosted verification page that checks the user's protection."
+  },
+  "support_needHelp": {
+    "message": "Hulp nodig?",
+    "description": "Footer link prompting the user to open the support page."
+  },
+  "support_review": {
+    "message": "Hou je van GeoSpoof?",
+    "description": "Footer link that opens a short modal asking the user to leave a store review."
+  },
+  "review_modal_title": {
+    "message": "Hou je van GeoSpoof? ❤️",
+    "description": "Heading of the modal that asks the user to leave a review."
+  },
+  "review_modal_body1": {
+    "message": "GeoSpoof is met zorg gemaakt — geen tracking, geen accounts. Ik bouw en onderhoud het in mijn eigen tijd.",
+    "description": "First paragraph of the review-request modal (desktop builds)."
+  },
+  "review_modal_body1_ios": {
+    "message": "GeoSpoof is met liefde gemaakt — geen tracking, geen accounts. Ik werk er in mijn eigen tijd aan om jouw locatie privé te houden.",
+    "description": "First paragraph of the review-request modal on iOS, where the app is freemium so it does not claim to be free."
+  },
+  "review_modal_body2": {
+    "message": "Een snelle review is de allerbeste manier om het te steunen. Het kost een minuut en helpt meer mensen GeoSpoof te vinden. Heel erg bedankt!",
+    "description": "Second paragraph of the review-request modal."
+  },
+  "review_modal_cta": {
+    "message": "Een review achterlaten",
+    "description": "Primary button in the review modal that opens the store review page."
+  },
+  "review_modal_dismiss": {
+    "message": "Misschien later",
+    "description": "Secondary button that dismisses the review modal."
+  },
+  "webrtc_configFailed": {
+    "message": "Configureren van WebRTC-bescherming mislukt. Controleer de extensierechten.",
+    "description": "Error toast shown when WebRTC protection cannot be configured."
+  },
+  "details_heading": {
+    "message": "Beschermingsdetails",
+    "description": "Heading for the protection-details panel."
+  },
+  "details_spoofedLocation": {
+    "message": "Vervalste locatie",
+    "description": "Section title for the spoofed-location details."
+  },
+  "details_spoofedTimezone": {
+    "message": "Vervalste tijdzone",
+    "description": "Section title for the spoofed-timezone details."
+  },
+  "details_webrtcProtection": {
+    "message": "WebRTC-bescherming",
+    "description": "Section title for the WebRTC protection details."
+  },
+  "details_overriddenApis": {
+    "message": "Overschreven API's",
+    "description": "Section title for the list of overridden browser APIs."
+  },
+  "details_notConfigured": {
+    "message": "Niet geconfigureerd",
+    "description": "Placeholder shown when a detail field has no value."
+  },
+  "details_none": {
+    "message": "Geen",
+    "description": "Shown when a detail field has no items."
+  },
+  "details_noneDisabled": {
+    "message": "Geen (bescherming uitgeschakeld)",
+    "description": "Shown when a detail field is empty because protection is off."
+  },
+  "details_latitudeLabel": {
+    "message": "Breedtegraad",
+    "description": "Label for the latitude row in the location details."
+  },
+  "details_longitudeLabel": {
+    "message": "Lengtegraad",
+    "description": "Label for the longitude row in the location details."
+  },
+  "details_accuracyLabel": {
+    "message": "Nauwkeurigheid",
+    "description": "Label for the accuracy row in the location details."
+  },
+  "details_locationLabel": {
+    "message": "Locatie",
+    "description": "Label for the location-name row in the location details."
+  },
+  "details_identifierLabel": {
+    "message": "Identifier",
+    "description": "Label for the timezone-identifier row in the timezone details."
+  },
+  "details_offsetLabel": {
+    "message": "Offset",
+    "description": "Label for the UTC-offset row in the timezone details."
+  },
+  "details_dstOffsetLabel": {
+    "message": "Zomertijd-offset",
+    "description": "Label for the DST-offset row in the timezone details."
+  },
+  "details_dstOffsetMinutes": {
+    "message": "$MINUTES$ minuten",
+    "placeholders": {
+      "minutes": {
+        "content": "$1",
+        "example": "60"
+      }
+    },
+    "description": "Formatted DST offset in minutes. $MINUTES$ is the integer minute count."
+  },
+  "details_fallbackNote": {
+    "message": "⚠️ Geschat (API niet beschikbaar)",
+    "description": "Inline note shown when timezone data is estimated rather than authoritative."
+  },
+  "details_webrtcActiveStatus": {
+    "message": "✓ Actief",
+    "description": "Status label shown in the WebRTC details when protection is active."
+  },
+  "details_webrtcInactiveStatus": {
+    "message": "✗ Inactief",
+    "description": "Status label shown in the WebRTC details when protection is inactive."
+  },
+  "details_webrtcInactiveNote": {
+    "message": "WebRTC kan je echte IP-adres lekken, zelfs als je een VPN gebruikt.",
+    "description": "Caption shown under the WebRTC status when protection is inactive."
+  },
+  "details_section_geolocation": {
+    "message": "Geolocatie",
+    "description": "Header for the geolocation overrides section."
+  },
+  "details_section_timezone": {
+    "message": "Tijdzone",
+    "description": "Header for the timezone overrides section."
+  },
+  "details_section_webrtc": {
+    "message": "WebRTC",
+    "description": "Header for the WebRTC overrides section."
+  },
+  "details_section_dateTime": {
+    "message": "Datum en tijd",
+    "description": "Header for the date/time overrides section."
+  },
+  "details_section_temporal": {
+    "message": "Temporal",
+    "description": "Header for the Temporal API overrides section."
+  },
+  "details_section_xslt": {
+    "message": "XSLT / EXSLT",
+    "description": "Header for the XSLT/EXSLT overrides section."
+  },
+  "details_section_workers": {
+    "message": "Workers",
+    "description": "Header for the worker timezone-propagation overrides section."
+  },
+  "details_section_antiFingerprinting": {
+    "message": "Anti-fingerprinting en structureel",
+    "description": "Header for the anti-fingerprinting and structural overrides section."
+  },
+  "details_keyOverrides": {
+    "message": "Belangrijkste overschrijvingen (indien beschikbaar)",
+    "description": "Title of the summary line above the grouped list of overridden APIs."
+  },
+  "advanced_button": {
+    "message": "Geavanceerd",
+    "description": "Button that opens the advanced-settings drawer."
+  },
+  "advanced_debugLogging": {
+    "message": "Debug-logboek",
+    "description": "Label for the debug-logging toggle."
+  },
+  "advanced_earlyTz": {
+    "message": "Directe tijdzonebescherming",
+    "description": "Label for the Firefox-only toggle that grants the userScripts permission to spoof synchronous timezone surfaces from the very first script on a page."
+  },
+  "earlyTz_infoAriaLabel": {
+    "message": "Meer info over Directe tijdzonebescherming",
+    "description": "Accessible label on the Instant timezone protection info icon."
+  },
+  "earlyTz_tooltip": {
+    "message": "Alleen Firefox. Dit inschakelen vraagt de optionele “userScripts”-toestemming aan zodat GeoSpoof helemaal aan het begin van elke pagina kan draaien, waardoor een korte periode wordt gedicht waarin een site je echte tijdzone zou kunnen uitlezen voordat de bescherming actief wordt. Schakel het uit om de toestemming in te trekken.",
+    "description": "Tooltip explaining the Firefox-only Instant timezone protection toggle and the userScripts permission it requests."
+  },
+  "advanced_debuggerMode": {
+    "message": "Spoofing op engineniveau",
+    "description": "Label for the Chrome-only toggle that spoofs the timezone deeper in the browser (via the chrome.debugger API / Chrome DevTools Protocol) so it also covers background workers and applies before a page loads."
+  },
+  "debuggerMode_infoAriaLabel": {
+    "message": "Meer info over Spoofing op engineniveau",
+    "description": "Accessible label on the Engine-level Spoofing info icon."
+  },
+  "debuggerMode_tooltip": {
+    "message": "Alleen Chrome. Vervalst je tijdzone dieper in de browser zodat het ook achtergrondworkers dekt en van kracht wordt voordat een pagina laadt. Als dit aanstaat, toont Chrome een balk “GeoSpoof started debugging this browser” — dat is normaal. Laat het uit voor standaardbescherming.",
+    "description": "Tooltip explaining the Chrome-only Engine-level Spoofing toggle and the debugging notification bar it causes."
+  },
+  "debuggerBannerHelp_text": {
+    "message": "Als dit aanstaat, toont Chrome een balk “GeoSpoof started debugging this browser”. Om deze te verbergen, start je Chrome met deze vlag:",
+    "description": "Intro text of the dismissible note shown when Engine-level Spoofing is enabled, explaining how to hide Chrome's debugging notification bar."
+  },
+  "debuggerBannerHelp_link": {
+    "message": "De balk verbergen →",
+    "description": "Link to the GeoSpoof help page explaining how to hide Chrome's debugging notification bar."
+  },
+  "debuggerBannerHelp_closeAria": {
+    "message": "Sluiten",
+    "description": "Accessible label for the button that dismisses the debugging-bar help note."
+  },
+  "advanced_verbosityLevel": {
+    "message": "Uitgebreidheidsniveau",
+    "description": "Label for the log-verbosity selector."
+  },
+  "advanced_verbosity_info": {
+    "message": "Info",
+    "description": "Verbosity level: only info-level logs."
+  },
+  "advanced_verbosity_debug": {
+    "message": "Debug",
+    "description": "Verbosity level: info and debug logs."
+  },
+  "advanced_verbosity_trace": {
+    "message": "Trace",
+    "description": "Verbosity level: full trace including per-call logs."
+  },
+  "advanced_theme": {
+    "message": "Thema",
+    "description": "Label for the popup theme selector."
+  },
+  "advanced_theme_system": {
+    "message": "Systeem",
+    "description": "Theme option that follows the OS appearance."
+  },
+  "advanced_theme_light": {
+    "message": "Licht",
+    "description": "Theme option that forces the light popup theme."
+  },
+  "advanced_theme_dark": {
+    "message": "Donker",
+    "description": "Theme option that forces the dark popup theme."
+  },
+  "advanced_accuracy": {
+    "message": "Locatienauwkeurigheid",
+    "description": "Label for the accuracy selector that controls how the spoofed GeolocationCoordinates.accuracy value is produced."
+  },
+  "advanced_accuracy_realistic": {
+    "message": "Realistisch",
+    "description": "Accuracy option that picks a device-appropriate value automatically (auto mode)."
+  },
+  "advanced_accuracy_custom": {
+    "message": "Aangepast",
+    "description": "Accuracy option that reveals a numeric input for an exact meter value (fixed mode)."
+  },
+  "advanced_accuracy_customMeters": {
+    "message": "Nauwkeurigheid (meters)",
+    "description": "Label for the numeric input shown when the Custom accuracy option is selected."
+  },
+  "advanced_accuracy_customHint": {
+    "message": "Voer een waarde tussen 1 en 10000 meter in",
+    "description": "Inline hint shown when the custom accuracy value is out of the allowed range."
+  },
+  "advanced_accuracy_customSet": {
+    "message": "Instellen",
+    "description": "Button that commits the typed custom accuracy value (fixed mode). The custom value is applied only when this button is clicked or Enter is pressed."
+  },
+  "advanced_accuracy_customEdit": {
+    "message": "Bewerken",
+    "description": "Button that reopens the custom accuracy editor from the compact display showing the committed value."
+  },
+  "advanced_coffee": {
+    "message": "☕ Trakteer me op een koffie",
+    "description": "Footer link inviting the user to buy the maintainer a coffee."
+  }
+}
