@@ -290,8 +290,8 @@
     "description": "Heading of the modal that asks the user to leave a review."
   },
   "review_modal_body1": {
-    "message": "GeoSpoof 永久免费——不做追踪、无需账户。我利用自己的时间开发和维护它。",
-    "description": "First paragraph of the review-request modal (desktop builds, which are free forever)."
+    "message": "GeoSpoof 用心打造——不做追踪、无需账户。我利用自己的时间开发和维护它。",
+    "description": "First paragraph of the review-request modal (desktop builds)."
   },
   "review_modal_body1_ios": {
     "message": "GeoSpoof 用心打造——不做追踪、无需账户。我利用自己的时间开发，只为守护你的位置隐私。",

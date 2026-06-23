@@ -74,12 +74,12 @@ const FAQS: Array<{ q: string; a: string }> = [
     a: "Proton is no-logs, based in Switzerland, fully open-source, and has passed repeated independent audits. Those are the same verifiable, privacy-first values GeoSpoof is built on. It's also one of the few VPNs recommended by Privacy Guides, an independent resource that takes no affiliate money. VPN Sync works with Proton exactly as it does with any other VPN.",
   },
   {
-    q: "Is GeoSpoof free if I don't buy a VPN?",
-    a: "Yes. GeoSpoof's core spoofing is free and open-source, with no VPN required. A VPN only hides your real IP address — it's a complementary tool, not a requirement to use GeoSpoof.",
+    q: "Do I need a VPN to use GeoSpoof?",
+    a: "No. GeoSpoof's core spoofing works without a VPN. A VPN only hides your real IP address — it's a complementary tool, not a requirement to use GeoSpoof.",
   },
   {
     q: "Does GeoSpoof make money if I sign up?",
-    a: "If you subscribe to Proton through our link, Proton shares a portion of the sale with us, at no extra cost to you. It helps keep GeoSpoof free, open-source, and ad-free. We recommend Proton on its merits (open-source, independently audited, and recommended by Privacy Guides), and the commission doesn't change which plan is actually best for you.",
+    a: "If you subscribe to Proton through our link, Proton shares a portion of the sale with us, at no extra cost to you. It helps keep GeoSpoof open-source and ad-free. We recommend Proton on its merits (open-source, independently audited, and recommended by Privacy Guides), and the commission doesn't change which plan is actually best for you.",
   },
 ]
 
@@ -181,7 +181,7 @@ function InlineDisclosure({ className }: { className?: string }) {
     >
       Heads up — this is an affiliate link. Subscribe through it and Proton
       shares a small cut with us, at no extra cost to you. It&rsquo;s how we
-      keep GeoSpoof open-source and free forever on desktop.
+      help keep GeoSpoof open-source and independent.
     </p>
   )
 }
@@ -276,7 +276,7 @@ function HeroSection() {
         </p>
         <p className="mt-1.5 text-xs text-(--color-canvas-muted)">
           The {PROTON_DISCOUNT} is the 2-year plan vs. monthly, via our
-          affiliate link, which keeps GeoSpoof free and open-source.
+          affiliate link, which keeps GeoSpoof open-source and independent.
         </p>
       </div>
     </Section>
@@ -443,7 +443,7 @@ function PlanGuidanceSection() {
           Pick the plan that fits
         </h2>
         <p className="text-(--color-canvas-muted)">
-          GeoSpoof is free and open-source. For the IP layer, we&rsquo;d point
+          GeoSpoof is open-source. For the IP layer, we&rsquo;d point
           you to Proton&rsquo;s VPN Plus. The 2-year plan runs up to{" "}
           {PROTON_DISCOUNT} cheaper than paying monthly, so it&rsquo;s both the
           lowest price per month and the best overall value. Prefer to try it

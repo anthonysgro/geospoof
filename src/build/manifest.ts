@@ -252,12 +252,15 @@ export function generateManifest(target: BrowserTarget, version: string): Record
     // who never enable debugger mode are never prompted for it. Without the
     // grant we fall back to a `tabs.onUpdated` attach (works, slightly later).
     optional_permissions: ["webNavigation"],
-    // Chrome-only store name. The Chrome Web Store reads the name straight from
-    // the manifest, so we override the shared `__MSG_extensionName__` with a
-    // literal, keyword-rich string here. Firefox (AMO) and Safari (App Store)
-    // keep the localized `__MSG_extensionName__` → "GeoSpoof". Description stays
-    // localized on Chrome too — only the name is overridden.
+    // Chrome-only store name + description. The Chrome Web Store reads both
+    // straight from the manifest, so we override the shared
+    // `__MSG_extensionName__` / `__MSG_extensionDescription__` with literal,
+    // keyword-focused strings here. Firefox (AMO) and Safari (App Store) keep
+    // the localized messages (name → "GeoSpoof", description → the WebRTC
+    // variant). The Chrome description drops WebRTC — it's a low-volume search
+    // term — and leads with the geolocation/timezone + VPN-sync value prop.
     name: "GeoSpoof: Spoof Geolocation & Timezone",
+    description: "Spoof geolocation & timezone, and auto-sync to your VPN.",
     background: {
       service_worker: "background/background.js",
       type: "module",

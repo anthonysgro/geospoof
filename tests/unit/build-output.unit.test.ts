@@ -143,10 +143,11 @@ describe("Chromium manifest structure", () => {
     expect(m.action).toBeDefined();
     expect(m.icons).toBeDefined();
     expect(m.manifest_version).toBe(3);
-    // Chromium overrides the name with a literal keyword-rich string for the
-    // Chrome Web Store listing (Firefox/Safari keep __MSG_extensionName__).
+    // Chromium overrides the name AND description with literal strings for the
+    // Chrome Web Store listing (Firefox/Safari keep the localized __MSG_*__
+    // references).
     expect(m.name).toBe("GeoSpoof: Spoof Geolocation & Timezone");
-    expect(m.description).toBe("__MSG_extensionDescription__");
+    expect(m.description).toBe("Spoof geolocation & timezone, and auto-sync to your VPN.");
     expect(m.default_locale).toBe("en");
   });
 });
@@ -158,14 +159,10 @@ describe("Shared fields preservation", () => {
   // NOTE: `permissions` intentionally diverges between Firefox and Chromium
   // because Firefox needs `webRequest` for worker filterResponseData
   // (Firefox-only in MV3). That divergence is tested below with a
-  // dedicated assertion instead of the identity check.
-  const sharedKeys = [
-    "host_permissions",
-    "action",
-    "icons",
-    "manifest_version",
-    "description",
-  ] as const;
+  // dedicated assertion instead of the identity check. `description` also
+  // diverges (Chromium uses a literal store string), so it's excluded here and
+  // covered by its own divergence test.
+  const sharedKeys = ["host_permissions", "action", "icons", "manifest_version"] as const;
 
   test.each(sharedKeys)("Firefox and Chromium manifests have identical %s", (key) => {
     const ff = firefoxManifest();
@@ -179,6 +176,17 @@ describe("Shared fields preservation", () => {
   test("name diverges — Firefox localized, Chromium literal", () => {
     expect(firefoxManifest().name).toBe("__MSG_extensionName__");
     expect(chromiumManifest().name).toBe("GeoSpoof: Spoof Geolocation & Timezone");
+  });
+
+  // `description` intentionally diverges: Chromium overrides it with a literal
+  // store string that drops WebRTC (a low-volume search term) and leads with
+  // the geolocation/timezone + VPN-sync value prop, while Firefox/Safari keep
+  // the localized `__MSG_extensionDescription__` reference.
+  test("description diverges — Firefox localized, Chromium literal", () => {
+    expect(firefoxManifest().description).toBe("__MSG_extensionDescription__");
+    expect(chromiumManifest().description).toBe(
+      "Spoof geolocation & timezone, and auto-sync to your VPN."
+    );
   });
 
   test("Firefox manifest includes the Chromium permission set plus required worker-filter permissions", () => {

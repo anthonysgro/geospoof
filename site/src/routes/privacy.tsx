@@ -66,7 +66,7 @@ function PrivacyPage() {
               Privacy Policy
             </h1>
             <p className="text-body-base text-(--color-canvas-muted)">
-              Last Updated: June 20, 2026
+              Last Updated: June 22, 2026
             </p>
           </div>
 
@@ -134,7 +134,7 @@ function PrivacyPage() {
                 services. With one exception, the developer operates no server
                 and receives none of this data. The exception is the timezone
                 boundary data, which the extension fetches from the developer's
-                own domain (geospoof.com) — see that entry below.
+                own domain (cdn.geospoof.com) — see that entry below.
               </p>
               <p>
                 <strong>Nominatim (OpenStreetMap)</strong> — Used when you
@@ -257,25 +257,29 @@ function PrivacyPage() {
                 VPN" or switch to a different location input method.
               </p>
               <p>
-                <strong>browser-geo-tz (served from geospoof.com)</strong> —
+                <strong>browser-geo-tz (served from cdn.geospoof.com)</strong> —
                 Makes HTTPS range requests to{" "}
                 <code className="rounded bg-(--color-canvas-border) px-1 text-sm">
-                  geospoof.com
+                  cdn.geospoof.com
                 </code>{" "}
                 to fetch small chunks of timezone boundary data, then resolves
                 your timezone locally on your device. This data is hosted on the
-                developer's own domain (a static-file host, Vercel) rather than
-                a third-party CDN, because the previous CDN truncated the dataset
-                and broke timezone resolution. Because the request reaches the
-                developer's infrastructure, it carries your IP address (your real
-                IP, unless you are behind a VPN) and the byte ranges requested —
-                and those ranges correspond to the region being looked up, so the
-                request can reveal your approximate spoofed region. Your
-                coordinates are never sent as a query. The developer does not use
-                these requests for analytics, tracking, profiling, or accounts,
-                and stores no personal data from them; standard web-server logs
-                may record the request transiently. The data is cached by your
-                browser, so it is rarely re-fetched.{" "}
+                developer's own infrastructure — an Amazon CloudFront
+                distribution in front of a private Amazon S3 bucket (provisioned
+                as code with the AWS CDK), on a subdomain of the developer's own
+                site. Because the request reaches the developer's infrastructure,
+                it carries your IP address (your real IP, unless you are behind a
+                VPN) and the byte ranges requested — and those ranges correspond
+                to the region being looked up, so the request can reveal your
+                approximate spoofed region. Your coordinates are never sent as a
+                query. The developer does not use these requests for analytics,
+                tracking, profiling, advertising, or accounts, and stores no
+                personal data from them. The developer has not enabled access
+                logging on the CloudFront distribution; Amazon, as the
+                infrastructure operator, processes each request (including your
+                IP and the requested path) transiently to deliver the file and
+                may keep its own operational logs under its own policies. The
+                data is cached by your browser, so it is rarely re-fetched.{" "}
                 <a
                   href="https://github.com/kevmo314/browser-geo-tz"
                   target="_blank"
@@ -364,13 +368,14 @@ function PrivacyPage() {
                 <li>
                   The one request that reaches developer-controlled
                   infrastructure — fetching timezone boundary data from
-                  geospoof.com — is a static-file download and is not used to
+                  cdn.geospoof.com — is a static-file download and is not used to
                   track or identify you
                 </li>
                 <li>All third-party API calls use HTTPS encryption</li>
                 <li>
                   The developer maintains no user accounts and runs no backend
-                  application or database; geospoof.com serves only static files
+                  application or database; geospoof.com and its cdn.geospoof.com
+                  subdomain serve only static files
                 </li>
               </ul>
             </PolicySection>
@@ -507,7 +512,7 @@ function PrivacyPage() {
                         analytics. Outbound requests are the optional geocoding /
                         VPN-sync API calls described above (only when you use
                         those features) and fetching timezone boundary data from
-                        geospoof.com when a location is set.
+                        cdn.geospoof.com when a location is set.
                       </td>
                     </tr>
                   </tbody>
@@ -648,8 +653,8 @@ function PrivacyPage() {
                 you give by enabling the feature and can withdraw at any time by
                 disabling "Sync with VPN" in the extension popup. (2) Whenever
                 the extension resolves a timezone, it fetches boundary data from
-                geospoof.com, which — like any web request — transmits your IP to
-                the developer's static-file host; we rely on legitimate interests
+                cdn.geospoof.com, which — like any web request — transmits your IP to
+                the developer's CDN (Amazon CloudFront); we rely on legitimate interests
                 (GDPR Art. 6(1)(f)) in delivering the boundary data needed for
                 the location-spoofing you requested, and the IP is used only to
                 serve the file and is not retained. Withdrawing consent does not
@@ -663,13 +668,14 @@ function PrivacyPage() {
                 Nominatim) are operated outside the EEA, including in the United
                 States; each is an independent controller and determines its own
                 transfer mechanisms. Separately, the timezone boundary data is
-                served from the developer's own domain geospoof.com, hosted on
-                Vercel, whose infrastructure is also outside the EEA, including
-                in the United States. When you use features that contact any of
-                these endpoints, your public IP is transferred to that
-                infrastructure. Apart from serving that static boundary data from
-                geospoof.com, the extension developer operates no server and
-                performs no other cross-border transfer of its own.
+                served from the developer's own domain cdn.geospoof.com, hosted on
+                Amazon Web Services (CloudFront and S3), whose infrastructure is
+                also outside the EEA, including in the United States. When you use
+                features that contact any of these endpoints, your public IP is
+                transferred to that infrastructure. Apart from serving that static
+                boundary data from cdn.geospoof.com, the extension developer
+                operates no server and performs no other cross-border transfer of
+                its own.
               </p>
               <p>
                 <strong>Your rights under GDPR / UK GDPR:</strong> you have the
@@ -712,8 +718,8 @@ function PrivacyPage() {
                 identifier (your public IP address). This happens when you enable
                 "Sync with VPN" (sent to the IP-detection and geolocation
                 services) and when the extension fetches timezone boundary data
-                from geospoof.com (your IP reaches the developer's static-file
-                host as part of an ordinary web request). In both cases it is
+                from cdn.geospoof.com (your IP reaches the developer's CDN as
+                part of an ordinary web request). In both cases it is
                 used only for the purposes described above and is not retained.
               </p>
               <p>

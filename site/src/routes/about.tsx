@@ -10,7 +10,7 @@ import { SITE_URL } from "@/lib/blog"
 const PAGE_URL = `${SITE_URL}/about`
 const PAGE_TITLE = "About GeoSpoof — Who Builds It | GeoSpoof"
 const PAGE_DESCRIPTION =
-  "GeoSpoof is a free, open-source location and timezone spoofer built by Anthony Sgro — no accounts, browser extensions free forever, and honest about what it does."
+  "GeoSpoof is an open-source location and timezone spoofer built by Anthony Sgro — no accounts, no tracking, and honest about what it does."
 
 const GITHUB_PROFILE = "https://github.com/anthonysgro"
 const LINKEDIN_URL = "https://www.linkedin.com/in/sgro"
@@ -134,7 +134,7 @@ function AboutPage() {
               every day, which still kind of amazes me.
             </p>
             <p>
-              It&rsquo;s free and open-source, with{" "}
+              It&rsquo;s open-source, with{" "}
               <strong className="font-semibold text-(--color-canvas-foreground)">
                 no accounts and nothing to sign up for
               </strong>
@@ -150,13 +150,11 @@ function AboutPage() {
               shows you exactly what websites can read about you.
             </p>
             <p>
-              The desktop extensions are{" "}
+              There&rsquo;s an optional Pro tier for the{" "}
               <strong className="font-semibold text-(--color-canvas-foreground)">
-                free and always will be
+                extra power features
               </strong>
-              . On iPhone and iPad there&rsquo;s an optional Pro tier if you want
-              the extra power features, but the everyday spoofing is free there
-              too.
+              , while the everyday spoofing stays free.
             </p>
             <p>
               Got a question, an idea, or just want to <em>say hi</em>? The{" "}
