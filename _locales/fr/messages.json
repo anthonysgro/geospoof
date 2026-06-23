@@ -290,8 +290,8 @@
     "description": "Heading of the modal that asks the user to leave a review."
   },
   "review_modal_body1": {
-    "message": "GeoSpoof est gratuit, pour toujours — sans suivi, sans compte. Je le développe et le maintiens sur mon temps libre.",
-    "description": "First paragraph of the review-request modal (desktop builds, which are free forever)."
+    "message": "GeoSpoof est conçu avec soin — sans suivi, sans compte. Je le développe et le maintiens sur mon temps libre.",
+    "description": "First paragraph of the review-request modal (desktop builds)."
   },
   "review_modal_body1_ios": {
     "message": "GeoSpoof est conçu avec soin — sans suivi, sans compte. J'y travaille sur mon temps libre pour protéger votre localisation.",

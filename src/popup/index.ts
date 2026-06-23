@@ -568,11 +568,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Adjust the modal's first line per platform. Desktop builds (Chromium,
-  // Firefox, and Safari on macOS) are genuinely free forever, so the default
-  // "free, forever" copy is accurate. The iOS build is freemium, so swap in a
-  // variant that doesn't claim it's free. The Safari build ships to both iOS
-  // and macOS from one bundle, so we detect iOS at runtime via the user agent.
+  // Adjust the modal's first line per platform. The default copy speaks to the
+  // desktop builds (Chromium, Firefox, and Safari on macOS); the iOS build is
+  // freemium and gets its own privacy-focused variant. The Safari build ships
+  // to both iOS and macOS from one bundle, so we detect iOS at runtime via the
+  // user agent.
   const isIOS = __SAFARI__ && /iPhone|iPad|iPod/.test(navigator.userAgent);
   if (isIOS) {
     const body1 = document.getElementById("reviewModalBody1");
