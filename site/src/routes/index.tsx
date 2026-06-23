@@ -94,11 +94,11 @@ function App() {
       <Navigation />
       <main id="main-content">
         <HeroSection />
+        <TestimonialsSection />
         <ScreenshotsSection />
         <DemoVideoSection />
         <FeaturesSection />
         <ComparisonSection />
-        <TestimonialsSection />
         <CompatibilitySection />
         <FeaturedPostSection />
         <DownloadSection />
