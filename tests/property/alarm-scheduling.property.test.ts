@@ -23,6 +23,7 @@ function makeSettings(overrides?: Partial<Settings>): Settings {
     version: "1.0",
     lastUpdated: Date.now(),
     vpnSyncEnabled: false,
+    debuggerModeEnabled: false,
     autoSyncBlocked: false,
     proFeaturesBlocked: false,
     debugLogging: false,

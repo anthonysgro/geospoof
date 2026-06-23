@@ -117,7 +117,7 @@ function BlogIndexPage() {
               description: post.description,
               datePublished: post.date,
               dateModified: post.updated ?? post.date,
-              author: { "@type": "Person", name: post.author },
+              author: { "@type": "Person", name: post.author, url: `${SITE_URL}/about` },
               url: postUrl(post.slug),
             })),
           }),

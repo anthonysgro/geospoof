@@ -8,6 +8,7 @@ import type {
   SetLocationPayload,
   SetProtectionStatusPayload,
   SetWebRTCProtectionPayload,
+  SetDebuggerModePayload,
   AnnounceWorkerFetchPayload,
   GeocodeQueryPayload,
   CheckTabInjectionPayload,
@@ -47,6 +48,7 @@ import {
 import { syncVpnLocation, clearIpGeoCache, clearEndpointCooldowns } from "./vpn-sync";
 import { adoptPendingSettingsFromApp } from "./app-bridge";
 import { allowlistWorkerUrl, isSameOriginWorker, tabPageUrlCache } from "./worker-request-filter";
+import { syncDebuggerSpoofing } from "./debugger-spoof";
 
 export async function handleMessage(
   message: Message,
@@ -125,14 +127,23 @@ export async function handleMessage(
         // Badge recovery: a content-script GET_SETTINGS confirms the script is
         // alive. Reflect the per-tab decision via the shared three-state badge
         // mapping using the already-computed Effective_Enabled (Req 12.1–12.3).
+        // The badge reflects whether protection is active for the tab, so it
+        // stays on in debugger mode even though the injected path is suppressed.
         if (senderTabId != null) {
           setBadgeForTab(senderTabId, badgeStateFor(settings.enabled, effectiveEnabled));
         }
 
+        // Suppress only the injected TIMEZONE path when browser-level
+        // (chrome.debugger) spoofing is active on Chromium — CDP owns the
+        // timezone. Keep `enabled` + `location` so the injected geolocation
+        // override still runs (reliably prompt-free, unlike CDP geo). WebRTC is
+        // independent. Mirrors the suppression in broadcastSettingsToTabs.
+        const debuggerActive = __CHROMIUM__ && settings.debuggerModeEnabled;
+
         const scoped: UpdateSettingsPayload = {
           enabled: effectiveEnabled,
           location: settings.location,
-          timezone: settings.timezone,
+          timezone: debuggerActive ? null : settings.timezone,
           debugLogging: settings.debugLogging,
           verbosityLevel: settings.verbosityLevel,
           webrtcProtection: settings.webrtcProtection,
@@ -160,6 +171,11 @@ export async function handleMessage(
       case "SET_WEBRTC_PROTECTION":
         logger.debug("Setting WebRTC protection:", message.payload);
         await handleSetWebRTCProtection(message.payload as SetWebRTCProtectionPayload);
+        return { success: true };
+
+      case "SET_DEBUGGER_MODE":
+        logger.debug("Setting debugger mode:", message.payload);
+        await handleSetDebuggerMode(message.payload as SetDebuggerModePayload);
         return { success: true };
 
       case "ANNOUNCE_WORKER_FETCH": {
@@ -241,6 +257,7 @@ export async function handleMessage(
         });
         const disabledSettings = await loadSettings();
         await broadcastSettingsToTabs(disabledSettings);
+        await syncDebuggerSpoofing(disabledSettings);
         return { success: true };
       }
 
@@ -252,6 +269,7 @@ export async function handleMessage(
           locationName: null,
         });
         await broadcastSettingsToTabs(clearedSettings);
+        await syncDebuggerSpoofing(clearedSettings);
         return { success: true };
       }
 
@@ -364,6 +382,7 @@ export async function handleSetLocation(
     });
     logger.debug("Settings updated with provided locationName:", settings);
     await broadcastSettingsToTabs(settings);
+    await syncDebuggerSpoofing(settings);
     return;
   }
 
@@ -393,6 +412,7 @@ export async function handleSetLocation(
 
   logger.debug("Settings updated after SET_LOCATION:", settings);
   await broadcastSettingsToTabs(settings);
+  await syncDebuggerSpoofing(settings);
 }
 
 export async function handleSetProtectionStatus(
@@ -408,6 +428,37 @@ export async function handleSetProtectionStatus(
   }
 
   await updateBadge();
+
+  await broadcastSettingsToTabs(settings);
+  await syncDebuggerSpoofing(settings);
+}
+
+/**
+ * Toggle browser-level (chrome.debugger / CDP) spoofing. Persists the flag,
+ * reconciles the live debugger state (attach + apply when turning on, detach
+ * when turning off), then re-broadcasts so the content-script geo/timezone
+ * injection is suppressed/restored to match (WebRTC injection is unaffected).
+ * Chromium-only in effect; a no-op spoof sync on other engines.
+ */
+export async function handleSetDebuggerMode(payload: SetDebuggerModePayload): Promise<void> {
+  const { enabled } = payload;
+
+  const settings = await updateSettings({ debuggerModeEnabled: enabled });
+  logger.info("Debugger mode updated:", { enabled });
+
+  // Drive the popup's one-time "how to hide the debugging bar" note: reset it
+  // (show again) on each enable, clear it on disable. Persisted so it survives
+  // the popup closing when Chrome shows the webNavigation permission prompt.
+  try {
+    await browser.storage.local.set({ debuggerBannerHelpDismissed: !enabled });
+  } catch (error) {
+    logger.debug("Failed to set debuggerBannerHelpDismissed flag:", error);
+  }
+
+  // Reconcile CDP attachments first so that, when turning the mode OFF, tabs are
+  // detached before the re-broadcast re-enables the injected path (no gap), and
+  // when turning it ON, overrides are applied before injection is suppressed.
+  await syncDebuggerSpoofing(settings);
 
   await broadcastSettingsToTabs(settings);
 }
@@ -527,6 +578,7 @@ export async function handleSetScopeMode(payload: SetScopeModePayload): Promise<
 
   await broadcastSettingsToTabs(settings);
   await updateBadge();
+  await syncDebuggerSpoofing(settings);
   return { success: true };
 }
 
@@ -560,6 +612,7 @@ export async function handleAddScopeSite(payload: ScopeSitePayload): Promise<Sco
 
   await broadcastSettingsToTabs(updated);
   await updateBadge();
+  await syncDebuggerSpoofing(updated);
   return { success: true };
 }
 
@@ -584,6 +637,7 @@ export async function handleRemoveScopeSite(payload: ScopeSitePayload): Promise<
 
   await broadcastSettingsToTabs(updated);
   await updateBadge();
+  await syncDebuggerSpoofing(updated);
   return { success: true };
 }
 
@@ -607,5 +661,8 @@ export async function handleSetAccuracy(
   }
 
   await broadcastSettingsToTabs(settings);
+  // Re-apply the CDP geolocation override so its accuracy matches the new
+  // setting while debugger mode is active (no-op otherwise).
+  await syncDebuggerSpoofing(settings);
   return { success: true };
 }

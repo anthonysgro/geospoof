@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { Navigation } from "@/components/landing/Navigation"
 import { HeroSection } from "@/components/landing/HeroSection"
 import { FeaturesSection } from "@/components/landing/FeaturesSection"
+import { ComparisonSection } from "@/components/landing/ComparisonSection"
 import { ScreenshotsSection } from "@/components/landing/ScreenshotsSection"
 import { DemoVideoSection } from "@/components/landing/DemoVideoSection"
 import { TestimonialsSection } from "@/components/landing/TestimonialsSection"
@@ -59,6 +60,33 @@ const softwareApplicationSchema = {
   sameAs: ["https://github.com/anthonysgro/geospoof"],
 }
 
+// Organization schema — feeds entity recognition and the logo shown beside
+// results / in knowledge panels. (Previously only present nested as a
+// publisher; this surfaces it as a top-level entity.)
+const organizationSchema = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "GeoSpoof",
+  url: SITE_URL,
+  logo: `${SITE_URL}/icon.png`,
+  sameAs: ["https://github.com/anthonysgro/geospoof"],
+}
+
+// VideoObject schema — describes the homepage demo clip. Beyond video features,
+// the explicit thumbnailUrl tells Google which image represents the video, so
+// it stops pulling an arbitrary frame as the search thumbnail.
+const demoVideoSchema = {
+  "@context": "https://schema.org",
+  "@type": "VideoObject",
+  name: "GeoSpoof demo — spoof your browser location in a few clicks",
+  description:
+    "A short demo of GeoSpoof overriding the browser's geolocation and timezone so websites see the location you choose.",
+  thumbnailUrl: [`${SITE_URL}/images/social-og-home.png`],
+  uploadDate: "2026-06-11",
+  contentUrl:
+    "https://dsgaoei8r9jiwulf.public.blob.vercel-storage.com/geospoof-demo-v2.mp4",
+}
+
 function App() {
   return (
     <div className="min-h-screen bg-(--color-canvas)">
@@ -69,6 +97,7 @@ function App() {
         <ScreenshotsSection />
         <DemoVideoSection />
         <FeaturesSection />
+        <ComparisonSection />
         <TestimonialsSection />
         <CompatibilitySection />
         <FeaturedPostSection />
@@ -82,7 +111,11 @@ function App() {
         type="application/ld+json"
         // Static, app-authored schema (no user input).
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(softwareApplicationSchema),
+          __html: JSON.stringify([
+            softwareApplicationSchema,
+            organizationSchema,
+            demoVideoSchema,
+          ]),
         }}
       />
     </div>

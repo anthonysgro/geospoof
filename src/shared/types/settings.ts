@@ -101,6 +101,20 @@ export interface Settings {
   /** Whether VPN sync mode is the active location method */
   vpnSyncEnabled: boolean;
   /**
+   * Chromium only: when true, GeoSpoof spoofs geolocation and timezone at the
+   * browser level via the chrome.debugger API (Chrome DevTools Protocol's
+   * Emulation domain) instead of the page-world content-script overrides. CDP
+   * overrides apply to every frame and worker, even on the very first
+   * synchronous script, so detection vectors that slip past JS-level patching
+   * are closed. The trade-off is the persistent "GeoSpoof started debugging
+   * this browser" notification bar, so it's strictly opt-in and gated behind
+   * the optional `debugger` permission (requested at runtime from the popup).
+   * While it's on, the content-script geo/timezone injection is suppressed
+   * (redundant); WebRTC protection still runs through the content script.
+   * Always false on Firefox/Safari (no chrome.debugger equivalent).
+   */
+  debuggerModeEnabled: boolean;
+  /**
    * App→extension gate (Safari only): when true, the iOS app has signaled that
    * this user is NOT entitled to automatic background VPN sync (non-Pro, or the
    * "Automatic Background Sync" toggle is off). Fail-open: defaults false so
@@ -157,6 +171,7 @@ export const DEFAULT_SETTINGS: Settings = {
   // always stamps Date.now() before persisting, so stored settings are real.
   lastUpdated: 0,
   vpnSyncEnabled: false,
+  debuggerModeEnabled: false,
   autoSyncBlocked: false,
   proFeaturesBlocked: false,
   debugLogging: false,

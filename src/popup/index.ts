@@ -10,6 +10,7 @@ import { displaySearchResults } from "./search";
 import { updateStatusBadge, renderWebRTCDetails, clearChildren } from "./ui";
 import { handleVpnSync } from "./vpn-sync";
 import { wireEarlyProtectionToggle } from "./early-protection";
+import { wireDebuggerModeToggle } from "./debugger-mode";
 import { applyI18n, t } from "./i18n";
 import { initAccuracyControl } from "./accuracy";
 
@@ -495,6 +496,23 @@ document.addEventListener("click", (e: Event) => {
   }
 });
 
+// Browser-level spoofing info tooltip (Chrome-only row)
+document.getElementById("debuggerModeInfo")?.addEventListener("click", (e: Event) => {
+  e.preventDefault();
+  e.stopPropagation();
+  const tooltip = document.getElementById("debuggerModeTooltip");
+  tooltip?.classList.toggle("visible");
+});
+
+// Dismiss the debugger-mode tooltip when tapping elsewhere
+document.addEventListener("click", (e: Event) => {
+  const tooltip = document.getElementById("debuggerModeTooltip");
+  const infoBtn = document.getElementById("debuggerModeInfo");
+  if (tooltip && e.target !== infoBtn && !infoBtn?.contains(e.target as Node)) {
+    tooltip.classList.remove("visible");
+  }
+});
+
 // Initialize
 document.addEventListener("DOMContentLoaded", () => {
   document.body.classList.add("loaded");
@@ -507,6 +525,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // Wire the Firefox-only "Instant timezone protection" toggle (requests the
   // optional userScripts permission). Compiles out / no-ops elsewhere.
   wireEarlyProtectionToggle();
+
+  // Wire the Chrome-only "Browser-level spoofing" (chrome.debugger) toggle.
+  // Compiles out / no-ops elsewhere.
+  wireDebuggerModeToggle();
 
   // Wire the accuracy control (Advanced accordion). State is restored later in
   // loadSettings() from the stored accuracySetting.

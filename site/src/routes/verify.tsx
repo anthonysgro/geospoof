@@ -10,6 +10,7 @@ import { Footer } from "@/components/landing/Footer"
 import { SkipLink } from "@/components/landing/SkipLink"
 import { DownloadSection } from "@/components/landing/DownloadSection"
 import { cn } from "@/lib/utils"
+import { PROTON_DISCOUNT } from "@/lib/affiliate"
 import {
   Collapsible,
   CollapsibleContent,
@@ -53,7 +54,7 @@ export const Route = createFileRoute("/verify")({
       {
         name: "description",
         content:
-          "Free browser location test. See the geolocation, timezone, and IP address websites can read about you right now — and check whether your browser is leaking your real location.",
+          "Free browser location test. See the geolocation, timezone, and IP websites read about you right now — and whether your browser leaks your real location.",
       },
     ],
     // Warm up connections to the map tile CDNs before the map mounts, so the
@@ -595,10 +596,15 @@ function VerifyInner() {
           <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-brand/15 text-(--color-brand)">
             <Wifi className="size-5" aria-hidden="true" />
           </span>
-          <p className="text-xs leading-relaxed text-(--color-canvas-foreground) sm:text-sm">
-            Your IP address is the one signal GeoSpoof can&rsquo;t change — only
-            a VPN can.
-          </p>
+          <div>
+            <p className="text-xs leading-relaxed text-(--color-canvas-foreground) sm:text-sm">
+              Your IP address is the one signal GeoSpoof can&rsquo;t change. Only
+              a VPN can.
+            </p>
+            <p className="mt-0.5 text-xs text-(--color-canvas-muted)">
+              The one we recommend is up to {PROTON_DISCOUNT} off.
+            </p>
+          </div>
         </div>
         <Link
           to="/vpn"

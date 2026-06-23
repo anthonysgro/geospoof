@@ -24,6 +24,7 @@ import { installActivityWatcher } from "./activity-watcher";
 import { adoptPendingSettingsFromApp } from "./app-bridge";
 import { installBgLogRelay } from "./log-relay";
 import { updateBootstrapRegistration } from "./bootstrap-register";
+import { installDebuggerWatchers, syncDebuggerSpoofing } from "./debugger-spoof";
 import {
   installWorkerRequestFilter,
   updateWorkerFilterSettings,
@@ -261,6 +262,11 @@ async function initialize(): Promise<void> {
     await broadcastSettingsToTabs(settings);
   }
 
+  // Reconcile browser-level (chrome.debugger) spoofing with the persisted
+  // settings: when debugger mode + protection are on, attach to existing tabs
+  // and apply the CDP overrides. No-op on non-Chromium / when the mode is off.
+  await syncDebuggerSpoofing(settings);
+
   await updateBadge();
 
   // Auto-sync VPN location on startup if enabled. On Safari this is gated by
@@ -322,6 +328,13 @@ export { installResyncWatchers };
 // fire — which is what keeps the VPN auto-resync alive across the event-page /
 // service-worker lifecycle.
 installResyncWatchers();
+
+// Register the browser-level (chrome.debugger) spoofing listeners synchronously
+// at module load, for the same MV3 reason as the resync watchers above: the
+// onBeforeNavigate / tabs.onUpdated / debugger.onDetach handlers must be bound
+// on every service-worker (re)spawn to survive idle teardown. Idempotent and
+// compiled out on non-Chromium builds.
+installDebuggerWatchers();
 
 // Register the worker-request-filter webRequest listeners synchronously at
 // module load, for the same reason. These listeners must exist before the

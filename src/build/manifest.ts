@@ -230,6 +230,28 @@ export function generateManifest(target: BrowserTarget, version: string): Record
   // Chromium: service_worker background, injected.js as world: "MAIN" content script
   return {
     ...shared,
+    // `debugger` powers the optional browser-level (Chrome DevTools Protocol)
+    // spoofing mode: when the user turns it on, GeoSpoof attaches via
+    // `chrome.debugger` and drives `Emulation.setTimezoneOverride` /
+    // `setGeolocationOverride`, which apply across every frame and worker before
+    // the first script runs — closing the module/service-worker timezone leaks
+    // the content-script path can't cover on Chromium MV3. It must be a REQUIRED
+    // permission because Chrome forbids `debugger` in `optional_permissions`.
+    // Crucially this adds NO new install warning and does NOT disable the
+    // extension for existing users on update: `debugger` maps to the "Access
+    // your data on all websites" warning, already triggered by the existing
+    // `<all_urls>` host permission (and `proxy`) — same reasoning documented for
+    // `proxy` above. The "started debugging this browser" infobar only appears
+    // when the user actually enables the mode (i.e. when we attach).
+    permissions: [...(shared.permissions as string[]), "debugger"],
+    // `webNavigation` is requested at runtime (from the popup toggle, a user
+    // gesture) only when debugger mode is enabled — it lets us attach on
+    // `onBeforeNavigate`, before a page's first script, for a race-free
+    // override. It's OPTIONAL (unlike `debugger`, it's allowed to be) so it adds
+    // no install-time warning and never disables the extension on update; users
+    // who never enable debugger mode are never prompted for it. Without the
+    // grant we fall back to a `tabs.onUpdated` attach (works, slightly later).
+    optional_permissions: ["webNavigation"],
     // Chrome-only store name. The Chrome Web Store reads the name straight from
     // the manifest, so we override the shared `__MSG_extensionName__` with a
     // literal, keyword-rich string here. Firefox (AMO) and Safari (App Store)

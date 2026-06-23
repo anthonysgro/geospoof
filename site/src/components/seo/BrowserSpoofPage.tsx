@@ -6,6 +6,14 @@ import { SkipLink } from "@/components/landing/SkipLink"
 import { Section } from "@/components/landing/Section"
 import { DownloadSection } from "@/components/landing/DownloadSection"
 import { Badge } from "@/components/ui/badge"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 import { cn } from "@/lib/utils"
 import { usePlatform, type Platform } from "@/hooks/use-platform"
 import { getStoreLink } from "@/lib/store-links"
@@ -144,6 +152,25 @@ export function BrowserSpoofPage({ slug }: { slug: BrowserSlug }) {
       <main id="main-content">
         {/* Hero */}
         <Section className="pt-12! pb-8! md:pt-20! md:pb-12!">
+          <Breadcrumb className="mx-auto mb-8 max-w-3xl">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link to="/">Home</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link to={"/spoof-location" as "/"}>Spoof Location</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>{info.name}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
           <div className="mx-auto max-w-3xl text-center">
             <Badge
               variant="outline"
@@ -337,6 +364,25 @@ export function BrowserSpoofPage({ slug }: { slug: BrowserSlug }) {
                 name: f.q,
                 acceptedAnswer: { "@type": "Answer", text: f.a },
               })),
+            },
+            {
+              "@context": "https://schema.org",
+              "@type": "BreadcrumbList",
+              itemListElement: [
+                { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+                {
+                  "@type": "ListItem",
+                  position: 2,
+                  name: "Spoof Location",
+                  item: `${SITE_URL}/spoof-location`,
+                },
+                {
+                  "@type": "ListItem",
+                  position: 3,
+                  name: info.name,
+                  item: `${SITE_URL}/spoof-location/${slug}`,
+                },
+              ],
             },
           ]),
         }}

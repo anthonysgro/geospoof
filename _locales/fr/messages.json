@@ -455,6 +455,30 @@
     "message": "Firefox uniquement. L'activer demande l'autorisation facultative « userScripts » afin que GeoSpoof puisse s'exécuter dès le tout début du chargement de chaque page, comblant un bref instant où un site pourrait lire votre véritable fuseau horaire avant que la protection n'agisse. Désactivez-le pour révoquer l'autorisation.",
     "description": "Tooltip explaining the Firefox-only Instant timezone protection toggle and the userScripts permission it requests."
   },
+  "advanced_debuggerMode": {
+    "message": "Spoofing au niveau du moteur",
+    "description": "Label for the Chrome-only toggle that spoofs the timezone deeper in the browser (via the chrome.debugger API / Chrome DevTools Protocol) so it also covers background workers and applies before a page loads."
+  },
+  "debuggerMode_infoAriaLabel": {
+    "message": "Plus d'infos sur le Spoofing au niveau du moteur",
+    "description": "Accessible label on the Engine-level Spoofing info icon."
+  },
+  "debuggerMode_tooltip": {
+    "message": "Chrome uniquement. Falsifie votre fuseau horaire plus en profondeur dans le navigateur, ce qui couvre aussi les workers en arrière-plan et s'applique avant le chargement d'une page. Lorsque c'est activé, Chrome affiche une barre « GeoSpoof a commencé à déboguer ce navigateur » : c'est normal. Laissez-le désactivé pour utiliser la protection standard.",
+    "description": "Tooltip explaining the Chrome-only Engine-level Spoofing toggle and the debugging notification bar it causes."
+  },
+  "debuggerBannerHelp_text": {
+    "message": "Tant que c'est activé, Chrome affiche une barre « GeoSpoof a commencé à déboguer ce navigateur ». Pour la masquer, lancez Chrome avec cet indicateur :",
+    "description": "Intro text of the dismissible note shown when Engine-level Spoofing is enabled, explaining how to hide Chrome's debugging notification bar."
+  },
+  "debuggerBannerHelp_link": {
+    "message": "Comment masquer la barre →",
+    "description": "Link to the GeoSpoof help page explaining how to hide Chrome's debugging notification bar."
+  },
+  "debuggerBannerHelp_closeAria": {
+    "message": "Ignorer",
+    "description": "Accessible label for the button that dismisses the debugging-bar help note."
+  },
   "advanced_verbosityLevel": {
     "message": "Niveau de verbosité",
     "description": "Label for the log-verbosity selector."

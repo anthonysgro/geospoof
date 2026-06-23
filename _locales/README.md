@@ -11,7 +11,7 @@ by key via `browser.i18n.getMessage()`.
 | Locale  | Language             | Status                                      |
 | ------- | -------------------- | ------------------------------------------- |
 | `en`    | English              | ✅ Source of truth                          |
-| `ru`    | Russian              | ✅ Reviewed                                 |
+| `ru`    | Russian              | ⚠️ Machine-translated — needs native review |
 | `es`    | Spanish              | ⚠️ Machine-translated — needs native review |
 | `pt_BR` | Brazilian Portuguese | ⚠️ Machine-translated — needs native review |
 | `de`    | German               | ⚠️ Machine-translated — needs native review |

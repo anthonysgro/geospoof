@@ -455,6 +455,30 @@
     "message": "Firefox のみ。オンにするとオプションの「userScripts」権限を要求し、GeoSpoof が各ページ読み込みの最初に実行できるようになります。これにより、保護が有効になる前にサイトが実際のタイムゾーンを読み取れるわずかな隙間を塞ぎます。権限を取り消すにはオフにしてください。",
     "description": "Tooltip explaining the Firefox-only Instant timezone protection toggle and the userScripts permission it requests."
   },
+  "advanced_debuggerMode": {
+    "message": "エンジンレベルのなりすまし",
+    "description": "Label for the Chrome-only toggle that spoofs the timezone deeper in the browser (via the chrome.debugger API / Chrome DevTools Protocol) so it also covers background workers and applies before a page loads."
+  },
+  "debuggerMode_infoAriaLabel": {
+    "message": "エンジンレベルのなりすましについて詳しく",
+    "description": "Accessible label on the Engine-level Spoofing info icon."
+  },
+  "debuggerMode_tooltip": {
+    "message": "Chrome のみ。ブラウザのより深い層でタイムゾーンを偽装するため、バックグラウンドワーカーにも適用され、ページの読み込み前に有効になります。オンの間は Chrome に「GeoSpoof がこのブラウザのデバッグを開始しました」というバーが表示されますが、これは正常です。標準の保護を使う場合はオフのままにしてください。",
+    "description": "Tooltip explaining the Chrome-only Engine-level Spoofing toggle and the debugging notification bar it causes."
+  },
+  "debuggerBannerHelp_text": {
+    "message": "これがオンの間は Chrome に「GeoSpoof がこのブラウザのデバッグを開始しました」というバーが表示されます。非表示にするには、次のフラグを付けて Chrome を起動してください:",
+    "description": "Intro text of the dismissible note shown when Engine-level Spoofing is enabled, explaining how to hide Chrome's debugging notification bar."
+  },
+  "debuggerBannerHelp_link": {
+    "message": "バーを非表示にする方法 →",
+    "description": "Link to the GeoSpoof help page explaining how to hide Chrome's debugging notification bar."
+  },
+  "debuggerBannerHelp_closeAria": {
+    "message": "閉じる",
+    "description": "Accessible label for the button that dismisses the debugging-bar help note."
+  },
   "advanced_verbosityLevel": {
     "message": "詳細レベル",
     "description": "Label for the log-verbosity selector."

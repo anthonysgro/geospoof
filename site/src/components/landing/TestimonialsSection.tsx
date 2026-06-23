@@ -10,25 +10,25 @@ interface Testimonial {
 }
 
 const AMO_URL =
-  "https://addons.mozilla.org/en-US/firefox/addon/geo-spoof/reviews/"
+  "https://addons.mozilla.org/en-US/firefox/addon/geo-spoof/reviews/?utm_source=geospoof.com&utm_medium=website&utm_campaign=testimonials"
 const CHROME_URL =
-  "https://chromewebstore.google.com/detail/geospoof/reviews"
-const APPSTORE_URL = "https://apps.apple.com/app/geospoof"
+  "https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje/reviews?utm_source=geospoof.com&utm_medium=website&utm_campaign=testimonials"
+const APPSTORE_URL =
+  "https://apps.apple.com/us/app/geospoof-spoof-geolocation/id6765719745?pt=128299974&ct=testimonials&mt=8"
 
 const testimonials: Array<Testimonial> = [
+  {
+    quote: "Probably the best and most complete extension of this type.",
+    author: "Vladimir Rađenović",
+    source: "Chrome Web Store",
+    sourceHref: CHROME_URL,
+  },
   {
     quote:
       "Tried it for a specific use case and it worked flawlessly, with no ads or any annoying stuff.",
     author: "Diego",
     source: "Firefox Add-ons",
     sourceHref: AMO_URL,
-  },
-  {
-    quote:
-      "Great extension. Thank you.",
-    author: "Kasander",
-    source: "Firefox Add-ons",
-    sourceHref: CHROME_URL,
   },
   {
     quote: "Works well, easy to use, thanks for making this awesome extension!",
@@ -45,7 +45,7 @@ const testimonials: Array<Testimonial> = [
   },
   {
     quote:
-      "I stumbled upon GeoSpoof nearly a month ago. It's clean, works without any glitches, and truly spoofs your address as good or better than all the spoofing extensions I've used over the years. Absolutely professional extension that works flawlessly. And it's free!",
+      "It's clean, works without any glitches, and truly spoofs your address as good or better than all the spoofing extensions I've used over the years. Absolutely professional extension that works flawlessly. And it's free!",
     author: "Nuc Man",
     source: "Chrome Web Store",
     sourceHref: CHROME_URL,
@@ -53,7 +53,7 @@ const testimonials: Array<Testimonial> = [
   {
     quote:
       "Perfect app — works exactly as expected. Huge shout out to the dev!",
-    author: "App Store user",
+    author: "jq🦄",
     source: "App Store",
     sourceHref: APPSTORE_URL,
   },
