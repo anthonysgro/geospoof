@@ -45,9 +45,7 @@ struct SpoofControlPanel: View {
                 favoritesSection
             }
             proDiscoverySection
-            #if os(iOS)
             verificationSection
-            #endif
         }
         .groupedFormStyle()
         .tint(.brand)
@@ -295,9 +293,7 @@ struct SpoofControlPanel: View {
             }
 
             if controller.vpnSyncEnabled {
-                #if os(iOS)
                 autoBackgroundSyncRow
-                #endif
 
                 if let ip = controller.lastSyncedIP {
                     LabeledRow(label: "Detected IP", value: ip)
@@ -326,18 +322,18 @@ struct SpoofControlPanel: View {
                 #if os(iOS)
                 Text("Matches your spoofed location to your current public IP. Auto Background Sync keeps it matched as your VPN changes — even when the app is closed.")
                 #else
-                Text("Matches your spoofed location to your current public IP.")
+                Text("Matches your spoofed location to your current public IP. Auto Background Sync keeps it matched as your VPN changes — even in the background.")
                 #endif
             }
         }
     }
 
-    #if os(iOS)
     /// "Auto Background Sync" — an inherent Pro capability (no user toggle):
     /// for Pro it's always on while VPN sync is active, so we show a passive
     /// "On" status; non-Pro users see a locked PRO row that opens the paywall
-    /// (the manual "Sync Now" below stays free for everyone). The gating + bridge
-    /// to the extension lives in SpoofController.autoSyncBlocked.
+    /// (the manual "Sync Now" below stays free for everyone). Shown on iOS and
+    /// macOS; the gating + bridge to the extension lives in
+    /// SpoofController.autoSyncBlocked.
     @ViewBuilder
     private var autoBackgroundSyncRow: some View {
         if pro.isPro {
@@ -377,11 +373,8 @@ struct SpoofControlPanel: View {
             .buttonStyle(.plain)
         }
     }
-    #endif
+    // MARK: Verification — "Verify Your Protection" link on the home (iOS + macOS)
 
-    // MARK: Verification (iOS only on home tab, macOS shows in Test sidebar)
-
-    #if os(iOS)
     private var verificationSection: some View {
         Section {
             Link(destination: URL(string: "https://www.geospoof.com/verify")!) {
@@ -395,7 +388,6 @@ struct SpoofControlPanel: View {
             }
         }
     }
-    #endif
 
     // MARK: Favorites
 
@@ -452,30 +444,6 @@ struct SpoofControlPanel: View {
         }
     }
 
-    // MARK: Test links — see ProtectionTestLinks (shared with the macOS Test tab)
-}
-
-/// A single "Verify Your Protection" link to the hosted geospoof.com/verify
-/// page, which runs the location / timezone / IP checks and explains the
-/// results in plain language — friendlier than sending users to raw third-party
-/// test sites. Used inline in the iOS Details tab and the macOS Test sidebar
-/// section. (Help & Support lives in Settings on both platforms.)
-struct ProtectionTestLinks: View {
-    var body: some View {
-        Section {
-            Link(destination: URL(string: "https://www.geospoof.com/verify")!) {
-                HStack {
-                    Label("Verify Your Protection", systemImage: "checkmark.shield")
-                    Spacer()
-                    Image(systemName: "arrow.up.right")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        } footer: {
-            Text("Opens a quick check that confirms your location, timezone, and IP address are masked.")
-        }
-    }
 }
 
 // MARK: - Map
@@ -822,14 +790,11 @@ struct FullScreenMapView: View {
     /// which would auto-dismiss when stacked over this map cover.
     @State private var showPaywall = false
 
-    /// Placement is Pro on iOS; macOS keeps it free (matches the app's other Pro
-    /// gates). The dropped coordinate flows through the normal setLocation path.
+    /// "Pick a spot" placement is a Pro feature on the Apple apps (iOS + macOS);
+    /// founders/subscribers are exempt via `pro.isPro`. The dropped coordinate
+    /// flows through the normal setLocation path.
     private var placementLocked: Bool {
-        #if os(iOS)
         return !pro.isPro
-        #else
-        return false
-        #endif
     }
 
     private var tzTitle: String {
@@ -1549,14 +1514,11 @@ struct SiteFiltersView: View {
     @State private var showingAdd = false
     @State private var showPaywall = false
 
-    /// Per-site filtering is Pro on iOS only. macOS (and the extension on
-    /// Chrome/Firefox) keep it free, so the lock never engages there.
+    /// Per-site filtering is a Pro feature on the Apple apps (iOS + macOS);
+    /// founders/subscribers are exempt via `pro.isPro`. The Chrome/Firefox
+    /// extensions don't run this code and keep it free.
     private var filtersLocked: Bool {
-        #if os(iOS)
         return !pro.isPro
-        #else
-        return false
-        #endif
     }
 
     var body: some View {
@@ -1870,9 +1832,19 @@ private enum AccuracyPreset: String, CaseIterable, Identifiable {
 ///   Realistic → `.auto`, Custom → `.fixed(meters:)`.
 struct AccuracySettingsRows: View {
     @ObservedObject var controller: SpoofController
+    @ObservedObject private var pro = ProStore.shared
     @State private var customText: String = ""
     @State private var customInvalid: Bool = false
+    @State private var showPaywall = false
     @FocusState private var customFocused: Bool
+
+    /// Custom accuracy is a Pro feature on the Apple apps (iOS + macOS);
+    /// founders/subscribers are exempt via `pro.isPro`. Mirrors
+    /// `AccuracyPickerView.accuracyLocked` — the extension also forces Realistic
+    /// for non-Pro users, so this is the macOS UI half of the same gate.
+    private var accuracyLocked: Bool {
+        !pro.isPro
+    }
 
     /// Seed used when switching to Custom from a non-fixed setting. Matches the
     /// extension's DEFAULT_ACCURACY_M.
@@ -1916,6 +1888,15 @@ struct AccuracySettingsRows: View {
         .pickerStyle(.menu)
         .onAppear { syncFromController() }
         .onChange(of: controller.accuracySetting) { _ in syncFromController() }
+        .sheet(isPresented: $showPaywall) {
+            ProPaywallView()
+        }
+
+        if accuracyLocked {
+            Text("Custom accuracy is a GeoSpoof Pro feature. Upgrade to set a fixed accuracy; free spoofing uses a realistic, device-appropriate value.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
 
         if currentPreset == .custom {
             customMetersRow
@@ -1958,6 +1939,13 @@ struct AccuracySettingsRows: View {
     /// controller. For Custom we keep an existing fixed value or seed a sensible
     /// default, then sync the text field.
     private func applyPreset(_ preset: AccuracyPreset) {
+        // Custom is Pro-gated (parity with AccuracyPickerView): a free user is
+        // bounced to the paywall and the setting stays put. The extension also
+        // forces Realistic for these users, so this is the UI half of the gate.
+        if accuracyLocked && preset == .custom {
+            showPaywall = true
+            return
+        }
         switch preset {
         case .realistic:
             controller.setAccuracySetting(.auto)
@@ -2067,15 +2055,12 @@ struct AccuracyPickerView: View {
     @State private var showPaywall = false
     @FocusState private var customFocused: Bool
 
-    /// Custom accuracy is Pro on iOS only. macOS (and the extension on
-    /// Chrome/Firefox) keep it free, so the lock never engages there — matching
-    /// `SiteFiltersView.filtersLocked`.
+    /// Custom accuracy is a Pro feature on the Apple apps (iOS + macOS);
+    /// founders/subscribers are exempt via `pro.isPro` — matching
+    /// `SiteFiltersView.filtersLocked`. The Chrome/Firefox extensions don't run
+    /// this code and keep it free.
     private var accuracyLocked: Bool {
-        #if os(iOS)
         return !pro.isPro
-        #else
-        return false
-        #endif
     }
 
     private var currentPreset: AccuracyPreset {

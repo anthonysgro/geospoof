@@ -105,7 +105,6 @@ struct MacRootView: View {
             case .home: MacHomeView(controller: controller)
             case .filters: SiteFiltersView(controller: controller)
             case .details: DetailsTab(controller: controller)
-            case .test: MacTestView()
             case .settings: MacSettingsView(controller: controller)
             }
         }
@@ -124,7 +123,6 @@ struct MacRootView: View {
 enum MacSection: String, CaseIterable, Identifiable {
     case home = "Home"
     case filters = "Filters"
-    case test = "Test"
     case details = "Details"
     case settings = "Settings"
 
@@ -134,7 +132,6 @@ enum MacSection: String, CaseIterable, Identifiable {
         case .home: return "location.circle"
         case .filters: return "line.3.horizontal.decrease.circle"
         case .details: return "list.bullet.rectangle"
-        case .test: return "checkmark.shield"
         case .settings: return "gearshape"
         }
     }
@@ -392,21 +389,6 @@ struct MacHomeView: View {
     }
 }
 
-/// macOS Test tab — the external "Test Your Protection" links and Help, moved
-/// off the Home screen into their own sidebar section.
-struct MacTestView: View {
-    var body: some View {
-        AdaptiveNavigationStack {
-            Form {
-                ProtectionTestLinks()
-            }
-            .groupedFormStyle()
-            .tint(.brand)
-            .navigationTitle("Test")
-        }
-    }
-}
-
 /// Compact banner shown on macOS when the Safari extension isn't enabled,
 /// guiding the user to turn it on (the extension is what actually applies the
 /// spoof; the app just configures it).
@@ -442,11 +424,17 @@ struct MacSettingsView: View {
     #if DEBUG
     @AppStorage(LogSettingsKey.enabled) private var loggingEnabled = false
     @AppStorage(LogSettingsKey.level) private var logLevelRaw = AppLogLevel.info.rawValue
+    @State private var showDebugPaywall = false
+    @State private var showDebugProPitch = false
+    @State private var showDebugFounderWelcome = false
+    @State private var debugProOverride = ProStore.debugProOverrideSelection()
     #endif
 
     var body: some View {
         AdaptiveNavigationStack {
             Form {
+                ProSettingsSection()
+
                 Section {
                     AppearancePickerView(selection: $appearance)
                 } header: {
@@ -508,13 +496,47 @@ struct MacSettingsView: View {
                             Label("Log Level", systemImage: "slider.horizontal.3")
                         }
                     }
+                    Button {
+                        showDebugPaywall = true
+                    } label: {
+                        Label("Show Paywall", systemImage: "creditcard")
+                    }
+                    Button {
+                        showDebugProPitch = true
+                    } label: {
+                        Label("Show Pro Pitch", systemImage: "sparkles.rectangle.stack")
+                    }
+                    Button {
+                        showDebugFounderWelcome = true
+                    } label: {
+                        Label("Show Founder Welcome", systemImage: "sparkles")
+                    }
+                    Picker(selection: $debugProOverride) {
+                        Text("Auto (real check)").tag(0)
+                        Text("Force Founder").tag(1)
+                        Text("Force Not Pro").tag(2)
+                    } label: {
+                        Label("Pro Override", systemImage: "wand.and.stars")
+                    }
+                    .onChange(of: debugProOverride) { value in
+                        ProStore.setDebugFounderOverride(value == 1 ? true : (value == 2 ? false : nil))
+                    }
                 } header: {
                     Text("Debug")
+                } footer: {
+                    Text("Founder status normally comes from the App Store original-download version, which isn't available in dev builds / the simulator. Use Force Founder / Force Not Pro to test both states.")
                 }
                 #endif
             }
             .groupedFormStyle()
             .navigationTitle("Settings")
+            #if DEBUG
+            .sheet(isPresented: $showDebugPaywall) { ProPaywallView() }
+            .sheet(isPresented: $showDebugProPitch) { ProPitchSheet() }
+            .sheet(isPresented: $showDebugFounderWelcome) {
+                FounderWelcomeSheet { showDebugFounderWelcome = false }
+            }
+            #endif
         }
     }
 }

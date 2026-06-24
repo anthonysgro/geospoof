@@ -6,5 +6,7 @@
 	<array>
 		<string>group.com.moonloaf.geospoof</string>
 	</array>
+	<key>com.apple.developer.ubiquity-kvstore-identifier</key>
+	<string>$(TeamIdentifierPrefix)$(CFBundleIdentifier)</string>
 </dict>
 </plist>

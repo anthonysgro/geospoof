@@ -86,24 +86,30 @@ final class ProStore: ObservableObject {
     /// installed) download is strictly below this gets the free founder grant.
     ///
     /// ⚠️ `AppTransaction.originalAppVersion` is PLATFORM-SPECIFIC:
-    ///   - iOS/iPadOS: it's `CFBundleVersion` — the BUILD number. Pro launches
+    ///   - iOS/iPadOS: it's `CFBundleVersion` — the BUILD number. Pro launched
     ///     in 1.22.1 = build 40, so the cutoff is the integer build `40`, NOT a
-    ///     marketing string. Comparing a real build like "30" against [1,22,1]
-    ///     would wrongly evaluate `30 < 1` (component 0) => false, denying every
-    ///     early user. Build 40 also grandfathers 1.22.0 (build 39) users, who
-    ///     installed before the paywall existed — intended.
-    ///   - macOS: it's `CFBundleShortVersionString` — the marketing version,
-    ///     so the cutoff there is "1.22.1".
-    /// Pro is iOS-only today; the macOS branch exists only so a wrong founder
-    /// value can't sneak in if macOS ever starts gating on it.
-    /// (Verified against the build history: iOS CFBundleVersions are monotonic
-    /// integers 8→39, so every pre-paywall install is < 40. The shipped build
-    /// MUST have CFBundleVersion = 40 for this to line up — set
-    /// CURRENT_PROJECT_VERSION = 40 before archiving 1.22.1.)
+    ///     marketing string. Comparing a real build like "30" against a marketing
+    ///     triple like [1,22,1] would wrongly evaluate `30 < 1` => false, denying
+    ///     every early user. Build 40 also grandfathers 1.22.0 (build 39) users.
+    ///   - macOS: it's `CFBundleShortVersionString` — the MARKETING version. Pro
+    ///     ships on Mac in 1.22.7, so the cutoff is the version triple [1,22,7].
+    ///     The Mac App Store was live at 1.21.10 when Pro launched on Mac, so
+    ///     every existing Mac install is < 1.22.7 ⇒ founder (mirrors the iOS
+    ///     "everyone before the paywall" intent).
+    ///
+    /// ⚠️ The macOS value MUST equal the MARKETING_VERSION of the build that
+    /// actually introduces the paywall. If you ship a gating-OFF catch-up build
+    /// as 1.22.7 and add the paywall in 1.22.8 instead, bump this to [1,22,8] —
+    /// otherwise users who first installed the free 1.22.7 would be wrongly
+    /// paywalled, or new 1.22.7 buyers wrongly granted founder.
+    ///
+    /// Cross-platform note: a founder on one platform is recognized on the other
+    /// via the iCloud-synced `CloudKey.founder` bit — the grant isn't a StoreKit
+    /// purchase, so it can't ride Universal Purchase the way a subscription does.
     #if os(iOS)
     static let founderCutoff = AppVersion([40])
     #else
-    static let founderCutoff = AppVersion([1, 22, 1])
+    static let founderCutoff = AppVersion([1, 22, 7])
     #endif
 
     // MARK: App-local cache keys
@@ -116,6 +122,19 @@ final class ProStore: ObservableObject {
         /// `originalAppVersion` is unreliable. Remove the key to use the real
         /// value. (Never set in production builds.)
         static let debugFounderOverride = "debug_pro_founderOverride"
+    }
+
+    /// Keys in `NSUbiquitousKeyValueStore` (iCloud), synced per-Apple-ID across
+    /// the user's own devices with no backend and no accounts.
+    private enum CloudKey {
+        /// The cross-platform founder bit. We only ever WRITE `true` here; a
+        /// local "not a founder" result (e.g. a fresh post-paywall install on a
+        /// second platform) must NEVER clobber a founder grant set by the user's
+        /// other device. This is what lets an iPhone founder stay Pro when they
+        /// later install the Mac app (and vice versa) — the founder grant isn't a
+        /// StoreKit purchase, so it can't sync over the Universal Purchase
+        /// entitlement rail the way a real subscription does.
+        static let founder = "pro_founderCloud"
     }
 
     // MARK: Published state
@@ -156,12 +175,37 @@ final class ProStore: ObservableObject {
     var annualProduct: Product? { products.first { $0.id == ProductID.annual } }
 
     private let cache = UserDefaults.standard
+
+    /// iCloud key-value store used to sync the founder bit across the user's own
+    /// devices (see `CloudKey.founder`). Backend-free, no accounts. Requires the
+    /// `com.apple.developer.ubiquity-kvstore-identifier` entitlement on the app
+    /// target; without it these calls quietly no-op (founder just stays local).
+    private let cloud = NSUbiquitousKeyValueStore.default
+
+    /// Founder result derived from THIS platform's local `AppTransaction` check.
+    private var localFounder = false
+    /// Founder bit propagated from another of the user's devices via iCloud.
+    private var cloudFounder = false
+
     private var updatesTask: Task<Void, Never>?
 
     private init() {
-        // Seed from cache immediately so the first frame doesn't flash the
-        // wrong state before the async resolution finishes.
-        isFounder = cache.bool(forKey: Key.isFounder)
+        // Seed from caches immediately so the first frame doesn't flash the
+        // wrong state before the async resolution finishes. The published gate
+        // is the OR of the local check and the iCloud-synced bit.
+        localFounder = cache.bool(forKey: Key.isFounder)
+        cloudFounder = cloud.bool(forKey: CloudKey.founder)
+        isFounder = localFounder || cloudFounder
+
+        // React when the founder bit arrives from another device — e.g. the
+        // user was a founder on iPhone and just installed the Mac app fresh.
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(cloudStoreDidChange(_:)),
+            name: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
+            object: cloud
+        )
+        cloud.synchronize()
 
         updatesTask = listenForTransactions()
 
@@ -172,7 +216,10 @@ final class ProStore: ObservableObject {
         }
     }
 
-    deinit { updatesTask?.cancel() }
+    deinit {
+        updatesTask?.cancel()
+        NotificationCenter.default.removeObserver(self)
+    }
 
     // MARK: Founder grant
 
@@ -180,9 +227,16 @@ final class ProStore: ObservableObject {
     /// Falls back to the cached value if `AppTransaction` can't be read (e.g.
     /// offline on a cold first launch).
     func resolveFounderStatus() async {
-        // Debug override wins, for testing both paths.
+        // Debug override wins, for testing both paths. Bypasses iCloud entirely
+        // (read and write) so the non-founder path stays testable even if a
+        // previous run set the cloud bit on this Apple ID.
         if let override = debugFounderOverride() {
-            applyFounder(override, originalVersion: "debug-override")
+            localFounder = override
+            cloudFounder = false
+            isFounder = override
+            cache.set(override, forKey: Key.isFounder)
+            cache.set("debug-override", forKey: Key.originalAppVersion)
+            persistIsPro()
             return
         }
 
@@ -240,10 +294,39 @@ final class ProStore: ObservableObject {
     }
 
     private func applyFounder(_ value: Bool, originalVersion: String) {
-        isFounder = value
-        cache.set(value, forKey: Key.isFounder)
+        localFounder = value
         cache.set(originalVersion, forKey: Key.originalAppVersion)
+        recomputeFounder()
+    }
+
+    /// Fold the local check and the iCloud-synced bit into the published
+    /// `isFounder` gate, cache the local result, and propagate a positive grant
+    /// to the user's other devices. Only ever WRITES `true` to iCloud, so a
+    /// local negative (a fresh post-paywall install on a second platform) can't
+    /// erase a founder grant the user earned on their other device.
+    private func recomputeFounder() {
+        let combined = localFounder || cloudFounder
+        isFounder = combined
+        cache.set(localFounder, forKey: Key.isFounder)
+        if combined && !cloud.bool(forKey: CloudKey.founder) {
+            cloud.set(true, forKey: CloudKey.founder)
+            cloud.synchronize()
+        }
         persistIsPro()
+    }
+
+    /// iCloud reports the KV store changed on another device. Re-read the
+    /// founder bit and only ever let it turn the grant ON (never off). Ignored
+    /// while a debug override is active so it can't fight the override.
+    @objc nonisolated private func cloudStoreDidChange(_ note: Notification) {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            if self.debugFounderOverride() != nil { return }
+            if self.cloud.bool(forKey: CloudKey.founder), !self.cloudFounder {
+                self.cloudFounder = true
+                self.recomputeFounder()
+            }
+        }
     }
 
     private func debugFounderOverride() -> Bool? {
