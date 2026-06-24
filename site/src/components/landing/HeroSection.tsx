@@ -48,23 +48,23 @@ export function HeroSection({ className }: { className?: string }) {
   }
 
   const ios1Webp = isDark
-    ? "/images/hero-ios-1-dark.webp"
-    : "/images/hero-ios-1.webp"
+    ? "/images/hero/ios-1-dark.webp"
+    : "/images/hero/ios-1.webp"
   const ios1Webp640 = isDark
-    ? "/images/hero-ios-1-dark-640.webp"
-    : "/images/hero-ios-1-640.webp"
+    ? "/images/hero/ios-1-dark-640.webp"
+    : "/images/hero/ios-1-640.webp"
   const ios1Png = isDark
-    ? "/images/hero-ios-1-dark.png"
-    : "/images/hero-ios-1.png"
+    ? "/images/hero/ios-1-dark.png"
+    : "/images/hero/ios-1.png"
   const ios2Webp = isDark
-    ? "/images/hero-ios-2-dark.webp"
-    : "/images/hero-ios-2.webp"
+    ? "/images/hero/ios-2-dark.webp"
+    : "/images/hero/ios-2.webp"
   const ios2Webp640 = isDark
-    ? "/images/hero-ios-2-dark-640.webp"
-    : "/images/hero-ios-2-640.webp"
+    ? "/images/hero/ios-2-dark-640.webp"
+    : "/images/hero/ios-2-640.webp"
   const ios2Png = isDark
-    ? "/images/hero-ios-2-dark.png"
-    : "/images/hero-ios-2.png"
+    ? "/images/hero/ios-2-dark.png"
+    : "/images/hero/ios-2.png"
 
   return (
     <Section
