@@ -98,7 +98,7 @@ Use the built-in test links at the bottom of the extension:
 When you enable GeoSpoof in Safari, you'll see a prompt warning that the extension can "read and alter webpages" and "see your browsing history," possibly including "passwords, phone numbers, and credit cards." This is alarming the first time you see it. Here's what's actually going on.
 
 <p align="center">
-  <img src="../assets/github/safari-permissions.png" alt="Safari permission prompt shown when enabling GeoSpoof, warning that the extension can read and alter webpages" width="480" />
+  <img src="../assets/store-listings/github/safari-permissions.png" alt="Safari permission prompt shown when enabling GeoSpoof, warning that the extension can read and alter webpages" width="480" />
 </p>
 
 **Why does Safari say GeoSpoof can read and alter webpages?**
