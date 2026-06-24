@@ -18,6 +18,8 @@ by key via `browser.i18n.getMessage()`.
 | `fr`    | French               | ⚠️ Machine-translated — needs native review |
 | `zh_CN` | Simplified Chinese   | ⚠️ Machine-translated — needs native review |
 | `ja`    | Japanese             | ⚠️ Machine-translated — needs native review |
+| `nl`    | Dutch                | ⚠️ Machine-translated — needs native review |
+| `vi`    | Vietnamese           | ⚠️ Machine-translated — needs native review |
 
 Files marked machine-translated were produced by an LLM and intentionally
 merged without native review because any localization is better than none

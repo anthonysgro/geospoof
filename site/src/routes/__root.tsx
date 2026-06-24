@@ -67,13 +67,13 @@ export const Route = createRootRoute({
       // dark variants load on demand after theme detection).
       {
         rel: "preload",
-        href: "/images/hero-ios-1-640.webp",
+        href: "/images/hero/ios-1-640.webp",
         as: "image",
         type: "image/webp",
       },
       {
         rel: "preload",
-        href: "/images/hero-ios-2-640.webp",
+        href: "/images/hero/ios-2-640.webp",
         as: "image",
         type: "image/webp",
       },

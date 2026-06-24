@@ -1,14 +1,19 @@
-import { Link, createFileRoute } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
 import * as React from "react"
 import {
-  ArrowRight,
+  Apple,
   ChevronDown,
   Globe2,
+  Info,
   Lock,
+  Monitor,
   Network,
   ServerCog,
   ShieldCheck,
+  Smartphone,
   Star,
+  TabletSmartphone,
+  Terminal,
 } from "lucide-react"
 import { Navigation } from "@/components/landing/Navigation"
 import { Footer } from "@/components/landing/Footer"
@@ -186,6 +191,17 @@ function InlineDisclosure({ className }: { className?: string }) {
   )
 }
 
+// Proton VPN ships native apps for all of these. Shown as a quiet, borderless
+// icon+label compatibility line under the hero CTA — keep in sync with Proton's
+// actual platform support.
+const PROTON_PLATFORMS = [
+  { label: "Windows", icon: Monitor },
+  { label: "macOS", icon: Apple },
+  { label: "Linux", icon: Terminal },
+  { label: "iOS", icon: Smartphone },
+  { label: "Android", icon: TabletSmartphone },
+] as const
+
 function HeroSection() {
   // Smooth-scroll the hero CTA to the recommendation instead of a hard jump,
   // honoring reduced-motion. Keeps the href so it still works without JS.
@@ -225,30 +241,67 @@ function HeroSection() {
           GeoSpoof hides your browser&rsquo;s location. A VPN hides your IP. For
           full privacy, you want both.
         </p>
+        {/* Affiliate disclosure card, placed ABOVE the CTA so it is seen before
+            the click (FTC "clear and conspicuous" — a disclosure only below the
+            button is inadequate because the link can be clicked first). The
+            "Up to 70% off" badge needs no qualifier here: it mirrors Proton's
+            own advertised 2-year discount off their standard rate. */}
+        <div className="mx-auto mb-6 flex max-w-xl items-start gap-2.5 rounded-xl border border-(--color-canvas-border) bg-(--color-canvas) px-4 py-3 text-left">
+          <Info
+            className="mt-0.5 size-4 shrink-0 text-(--color-canvas-muted)"
+            aria-hidden="true"
+          />
+          <p className="text-xs leading-relaxed text-(--color-canvas-muted)">
+            <span className="font-semibold text-(--color-canvas-foreground)">
+              Privacy Disclosure:
+            </span>{" "}
+            We partner with Proton VPN. If you subscribe through our link, we
+            earn a commission at no extra cost to you.
+          </p>
+        </div>
         <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
           <span className="relative inline-flex w-full sm:w-auto">
+            {/* Primary CTA links straight to Proton (affiliate) to cut the
+                clicks-to-conversion. Honest by design: the label matches the
+                destination, and the affiliate disclosure card sits directly
+                above it (FTC "clear and conspicuous" before the click). */}
             <a
-              href="#why-proton"
-              onClick={scrollToProton}
+              {...CTA_LINK_PROPS}
               className={cn(
-                "inline-flex min-h-12 w-full items-center justify-center gap-2 sm:min-h-14 sm:w-auto",
+                "inline-flex min-h-12 w-full items-center justify-center gap-2.5 sm:min-h-14 sm:w-auto",
                 "rounded-brand bg-(--color-brand) px-8 text-base font-semibold text-white sm:text-lg",
                 "shadow-md transition-all hover:bg-(--color-brand-dark) hover:shadow-lg",
                 "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
               )}
             >
-              See the VPN we recommend
-              <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
+              {/* Proton logomark on a white chip — shown unmodified per Proton's
+                  brand guidelines. Decorative; the label carries the meaning. */}
+              <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-md bg-white">
+                <img
+                  src="/proton/proton-vpn-logomark.svg"
+                  alt=""
+                  aria-hidden="true"
+                  width={918}
+                  height={833}
+                  className="size-4 w-auto"
+                />
+              </span>
+              See Proton VPN plans
             </a>
-            {/* "Deal" sticker — eye-catching hook for the discount. The honest
-                detail ("2-year vs. monthly") sits in the line just below. */}
+            {/* "Deal" sticker — eye-catching hook for Proton's own advertised
+                headline discount (2-year plan, ~70% off their standard rate).
+                "Up to" because the CTA lands on the plan chooser where shorter
+                plans discount less (1-yr ~65%, 1-mo ~50%). */}
             <span className="pointer-events-none absolute -top-3 -right-3 z-10 inline-flex items-center gap-0.5 rounded-full bg-amber-400 px-2 py-0.5 text-xs font-bold text-amber-950 shadow-md ring-2 ring-(--color-canvas)">
               <Star className="size-3 fill-current" aria-hidden="true" />
-              {PROTON_DISCOUNT} off
+              Up to {PROTON_DISCOUNT} off
             </span>
           </span>
-          <Link
-            to="/verify"
+          {/* Secondary CTA — stays on-page, smooth-scrolls to the "Why Proton"
+              explainer for people who want the reasoning before clicking out. */}
+          <a
+            href="#why-proton"
+            onClick={scrollToProton}
             className={cn(
               "inline-flex min-h-12 w-full items-center justify-center gap-2 sm:min-h-14 sm:w-auto",
               "rounded-brand border border-(--color-canvas-border) px-8 text-base font-semibold text-(--color-canvas-foreground) sm:text-lg",
@@ -256,28 +309,44 @@ function HeroSection() {
               "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
             )}
           >
-            Test your protection
-          </Link>
+            Learn more
+            <ChevronDown className="size-4 shrink-0" aria-hidden="true" />
+          </a>
         </div>
-        {/* The prominent "70% off" lives on the CTA badge above; these two
-            quiet lines carry the trust signal and the honest fine print
-            (accurate 2-year-vs-monthly framing + affiliate disclosure). */}
-        <p className="mt-5 text-sm text-(--color-canvas-muted)">
-          The VPN we trust, and one of the few{" "}
-          <a
-            href="https://www.privacyguides.org/en/vpn/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-medium text-(--color-brand) hover:underline"
+        {/* Risk-reversal + platform availability directly under the CTA —
+            answers "is it on my device?" and "is it risk-free?" at the point of
+            decision. The Privacy Guides trust signal isn't lost: it still
+            appears in the "Why Proton" section and the FAQ below. */}
+        <div className="mt-6 flex flex-col items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 text-sm text-(--color-canvas-muted)">
+            <ShieldCheck
+              className="size-4 shrink-0 text-(--color-brand)"
+              aria-hidden="true"
+            />
+            30-day money-back guarantee
+          </span>
+          <ul
+            className="flex flex-wrap items-center justify-center text-xs text-(--color-canvas-muted)"
+            aria-label="Proton VPN is available on Windows, macOS, Linux, iOS, and Android"
           >
-            Privacy Guides
-          </a>{" "}
-          recommends.
-        </p>
-        <p className="mt-1.5 text-xs text-(--color-canvas-muted)">
-          The {PROTON_DISCOUNT} is the 2-year plan vs. monthly, via our
-          affiliate link, which keeps GeoSpoof open-source and independent.
-        </p>
+            {PROTON_PLATFORMS.map(({ label, icon: Icon }, i) => (
+              <li key={label} className="inline-flex items-center">
+                {i > 0 && (
+                  <span className="px-3 opacity-40" aria-hidden="true">
+                    |
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1.5">
+                  <Icon
+                    className="size-3.5 shrink-0 opacity-70"
+                    aria-hidden="true"
+                  />
+                  {label}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </Section>
   )
@@ -444,17 +513,26 @@ function PlanGuidanceSection() {
         </h2>
         <p className="text-(--color-canvas-muted)">
           GeoSpoof is open-source. For the IP layer, we&rsquo;d point
-          you to Proton&rsquo;s VPN Plus. The 2-year plan runs up to{" "}
-          {PROTON_DISCOUNT} cheaper than paying monthly, so it&rsquo;s both the
-          lowest price per month and the best overall value. Prefer to try it
-          first? The monthly plan works too.
+          you to Proton&rsquo;s VPN Plus. The 2-year plan is{" "}
+          {PROTON_DISCOUNT} off Proton&rsquo;s standard rate — the lowest price
+          per month and the best overall value. Prefer to try it first? The
+          monthly plan works too.
         </p>
         <InlineDisclosure className="mt-5 mx-0 max-w-2xl text-left" />
         <div className="mt-4 flex flex-col items-center gap-3">
           <CtaButton>See Proton VPN plans</CtaButton>
-          <span className="text-center text-sm text-(--color-canvas-muted)">
-            Up to {PROTON_DISCOUNT} off the 2-year plan · 30-day money-back
-            guarantee
+          <span className="inline-flex flex-wrap items-center justify-center gap-x-1.5 text-center text-sm text-(--color-canvas-muted)">
+            {PROTON_DISCOUNT} off the 2-year plan
+            <span className="opacity-40" aria-hidden="true">
+              ·
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <ShieldCheck
+                className="size-4 shrink-0 text-(--color-brand)"
+                aria-hidden="true"
+              />
+              30-day money-back guarantee
+            </span>
           </span>
         </div>
       </div>

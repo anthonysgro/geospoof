@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GeoSpoof — API Overrides</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell,
+          sans-serif;
+        background: #f5f5f5;
+        color: #333;
+        display: flex;
+        justify-content: center;
+        padding: 48px 24px;
+      }
+
+      .card {
+        width: 1280px;
+        background: #fff;
+        border-radius: 24px;
+        padding: 56px 64px;
+        box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      }
+
+      /* Header */
+      .header {
+        text-align: center;
+        margin-bottom: 48px;
+      }
+
+      .header h1 {
+        font-size: 42px;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 8px;
+        letter-spacing: -0.5px;
+      }
+
+      .header h1 span {
+        color: #4caf50;
+      }
+
+      .header p {
+        font-size: 18px;
+        color: #666;
+        font-weight: 400;
+      }
+
+      .count-badge {
+        display: inline-block;
+        background: #4caf50;
+        color: #fff;
+        font-size: 14px;
+        font-weight: 600;
+        padding: 6px 16px;
+        border-radius: 20px;
+        margin-top: 16px;
+      }
+
+      /* Grid */
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+      }
+
+      /* Category Card */
+      .category {
+        background: #f5f5f5;
+        border: 1px solid rgba(76, 175, 80, 0.3);
+        border-radius: 16px;
+        padding: 28px;
+      }
+
+      .category-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      .category-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        flex-shrink: 0;
+      }
+
+      .category-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #2c3e50;
+      }
+
+      .category-count {
+        font-size: 12px;
+        color: #666;
+        font-weight: 400;
+      }
+
+      /* Color themes per category */
+      .cat-geo .category-icon {
+        background: rgba(76, 175, 80, 0.15);
+      }
+      .cat-date .category-icon {
+        background: rgba(66, 165, 245, 0.15);
+      }
+      .cat-intl .category-icon {
+        background: rgba(171, 71, 188, 0.15);
+      }
+      .cat-temporal .category-icon {
+        background: rgba(255, 167, 38, 0.15);
+      }
+      .cat-stealth .category-icon {
+        background: rgba(239, 83, 80, 0.15);
+      }
+      .cat-dom .category-icon {
+        background: rgba(38, 198, 218, 0.15);
+      }
+
+      /* API list */
+      .api-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .api-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .api-check {
+        color: #4caf50;
+        font-size: 14px;
+        flex-shrink: 0;
+        margin-top: 1px;
+      }
+
+      .api-name {
+        font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+        color: #555;
+        font-size: 12.5px;
+      }
+
+      .api-name .method {
+        color: #2e7d32;
+      }
+
+      .api-name .object {
+        color: #78909c;
+      }
+
+      /* Footer */
+      .footer {
+        text-align: center;
+        margin-top: 40px;
+        padding-top: 32px;
+        border-top: 1px solid #e0e0e0;
+      }
+
+      .footer p {
+        font-size: 14px;
+        color: #999;
+      }
+
+      .footer p span {
+        color: #4caf50;
+      }
+
+      .tagline {
+        font-size: 16px;
+        color: #666;
+        margin-bottom: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="header">
+        <h1>Geo<span>Spoof</span> API Coverage</h1>
+        <p>Every browser API we intercept to protect your real location</p>
+        <div class="count-badge">35+ APIs overridden</div>
+      </div>
+
+      <div class="grid">
+        <!-- Geolocation -->
+        <div class="category cat-geo">
+          <div class="category-header">
+            <div class="category-icon">📍</div>
+            <div>
+              <div class="category-title">Geolocation</div>
+              <div class="category-count">4 APIs</div>
+            </div>
+          </div>
+          <ul class="api-list">
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">navigator.geolocation.</span
+                ><span class="method">getCurrentPosition</span></span
+              >
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">navigator.geolocation.</span
+                ><span class="method">watchPosition</span></span
+              >
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">navigator.geolocation.</span
+                ><span class="method">clearWatch</span></span
+              >
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">navigator.permissions.</span
+                ><span class="method">query</span></span
+              >
+            </li>
+          </ul>
+        </div>
+
+        <!-- Date Constructor & Parsing -->
+        <div class="category cat-date">
+          <div class="category-header">
+            <div class="category-icon">📅</div>
+            <div>
+              <div class="category-title">Date Constructor & Parsing</div>
+              <div class="category-count">4 APIs</div>
+            </div>
+          </div>
+          <ul class="api-list">
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="method">new Date</span><span class="object">(string)</span> —
+                ambiguous strings</span
+              >
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="method">new Date</span><span class="object">(y, m, d, ...)</span> —
+                multi-arg</span
+              >
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">Date.</span><span class="method">parse</span></span
+              >
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">Date.prototype.</span
+                ><span class="method">getTimezoneOffset</span></span
+              >
+            </li>
+          </ul>
+        </div>
+
+        <!-- Date Formatting -->
+        <div class="category cat-intl">
+          <div class="category-header">
+            <div class="category-icon">🕐</div>
+            <div>
+              <div class="category-title">Date Formatting</div>
+              <div class="category-count">6 APIs</div>
+            </div>
+          </div>
+          <ul class="api-list">
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">Date.prototype.</span
+                ><span class="method">toString</span></span
+              >
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">Date.prototype.</span
+                ><span class="method">toDateString</span></span
+              >
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">Date.prototype.</span
+                ><span class="method">toTimeString</span></span
+              >
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">Date.prototype.</span
+                ><span class="method">toLocaleString</span></span
+              >
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">Date.prototype.</span
+                ><span class="method">toLocaleDateString</span></span
+              >
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">Date.prototype.</span
+                ><span class="method">toLocaleTimeString</span></span
+              >
+            </li>
+          </ul>
+        </div>
+
+        <!-- Date Getters -->
+        <div class="category cat-date">
+          <div class="category-header">
+            <div class="category-icon">🔢</div>
+            <div>
+              <div class="category-title">Date Getters</div>
+              <div class="category-count">6 APIs</div>
+            </div>
+          </div>
+          <ul class="api-list">
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">Date.prototype.</span
+                ><span class="method">getHours</span></span
+              >
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">Date.prototype.</span
+                ><span class="method">getMinutes</span></span
+              >
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">Date.prototype.</span
+                ><span class="method">getSeconds</span></span
+              >
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">Date.prototype.</span><span class="method">getDate</span> /
+                <span class="method">getDay</span></span
+              >
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">Date.prototype.</span
+                ><span class="method">getMonth</span></span
+              >
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">Date.prototype.</span
+                ><span class="method">getFullYear</span></span
+              >
+            </li>
+          </ul>
+        </div>
+
+        <!-- Intl & Temporal -->
+        <div class="category cat-temporal">
+          <div class="category-header">
+            <div class="category-icon">🌐</div>
+            <div>
+              <div class="category-title">Intl & Temporal</div>
+              <div class="category-count">7 APIs</div>
+            </div>
+          </div>
+          <ul class="api-list">
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">Intl.</span
+                ><span class="method">DateTimeFormat</span> constructor</span
+              >
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">Intl.DateTimeFormat.</span
+                ><span class="method">resolvedOptions</span></span
+              >
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">Temporal.Now.</span
+                ><span class="method">timeZoneId</span></span
+              >
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">Temporal.Now.</span
+                ><span class="method">plainDateTimeISO</span></span
+              >
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">Temporal.Now.</span
+                ><span class="method">plainDateISO</span></span
+              >
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">Temporal.Now.</span
+                ><span class="method">plainTimeISO</span></span
+              >
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">Temporal.Now.</span
+                ><span class="method">zonedDateTimeISO</span></span
+              >
+            </li>
+          </ul>
+        </div>
+
+        <!-- Anti-Fingerprinting & DOM -->
+        <div class="category cat-stealth">
+          <div class="category-header">
+            <div class="category-icon">🛡️</div>
+            <div>
+              <div class="category-title">Stealth & DOM</div>
+              <div class="category-count">8+ APIs</div>
+            </div>
+          </div>
+          <ul class="api-list">
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">Function.prototype.</span
+                ><span class="method">toString</span> masking</span
+              >
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"><span class="object">WebRTC</span> IP leak protection</span>
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">HTMLIFrameElement.</span
+                ><span class="method">contentWindow</span></span
+              >
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">HTMLIFrameElement.</span
+                ><span class="method">contentDocument</span></span
+              >
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name">11 DOM insertion methods patched</span>
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="object">MutationObserver</span> iframe fallback</span
+              >
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                >All overrides pass <span class="method">toString</span> checks</span
+              >
+            </li>
+            <li class="api-item">
+              <span class="api-check">✓</span>
+              <span class="api-name"
+                ><span class="method">[[Construct]]</span> removed from methods</span
+              >
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer">
+        <p class="tagline">
+          Every override is undetectable — returns <span>native code</span> on inspection
+        </p>
+        <p>GeoSpoof — Open source location privacy for Firefox & Chromium</p>
+      </div>
+    </div>
+  </body>
+</html>

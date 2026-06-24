@@ -14,11 +14,11 @@ export function ScreenshotsSection({ className }: { className?: string }) {
   // displayed width at 1× DPR. The image is constrained to 1600px by
   // its container, so 1800w covers 2× retina up to ~900px viewport.
   const desktopSrcSet = isDark
-    ? "/images/hero-desktop-1-dark-800.webp 800w, /images/hero-desktop-1-dark-1200.webp 1200w, /images/hero-desktop-1-dark-1800.webp 1800w, /images/hero-desktop-1-dark.webp 3012w"
-    : "/images/hero-desktop-1-800.webp 800w, /images/hero-desktop-1-1200.webp 1200w, /images/hero-desktop-1-1800.webp 1800w, /images/hero-desktop-1.webp 3012w"
+    ? "/images/hero/desktop-1-dark-800.webp 800w, /images/hero/desktop-1-dark-1200.webp 1200w, /images/hero/desktop-1-dark-1800.webp 1800w, /images/hero/desktop-1-dark.webp 3012w"
+    : "/images/hero/desktop-1-800.webp 800w, /images/hero/desktop-1-1200.webp 1200w, /images/hero/desktop-1-1800.webp 1800w, /images/hero/desktop-1.webp 3012w"
   const desktopPng = isDark
-    ? "/images/hero-desktop-1-dark.png"
-    : "/images/hero-desktop-1.png"
+    ? "/images/hero/desktop-1-dark.png"
+    : "/images/hero/desktop-1.png"
 
   return (
     <section className={cn("w-full py-16 md:py-24", className)}>

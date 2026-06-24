@@ -227,7 +227,7 @@ function EngineLevelSpoofingPage() {
 
 function CodeBlock({ children }: { children: string }) {
   return (
-    <pre className="mt-3 overflow-x-auto rounded-lg border border-(--color-canvas-border) bg-(--color-canvas-foreground)/[0.04] p-3">
+    <pre className="mt-3 overflow-x-auto rounded-lg border border-(--color-canvas-border) bg-canvas-foreground/4 p-3">
       <code className="font-mono text-sm break-all text-(--color-canvas-foreground) select-all">
         {children}
       </code>
