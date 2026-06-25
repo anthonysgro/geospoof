@@ -4,91 +4,91 @@
     "description": "⚠️ MACHINE-TRANSLATED — needs native-speaker review. 'GeoSpoof' is a brand name; do not translate."
   },
   "extensionDescription": {
-    "message": "Подмена геолокации и часового пояса, автоматическая синхронизация с VPN и блокировка утечек IP через WebRTC.",
+    "message": "Förfalska din geolokalisering och tidszon, synka automatiskt med ditt VPN och blockera WebRTC-IP-läckor.",
     "description": "Extension description shown in the browser and store listing."
   },
   "onboarding_title": {
-    "message": "Добро пожаловать в GeoSpoof! 🌍",
+    "message": "Välkommen till GeoSpoof! 🌍",
     "description": "Onboarding overlay heading."
   },
   "onboarding_step1_strong": {
-    "message": "Выберите способ ввода:",
+    "message": "Välj din inmatningsmetod:",
     "description": "Bolded lead-in for the first onboarding step."
   },
   "onboarding_step1_text": {
-    "message": "Найдите город или введите координаты вручную через вкладки",
+    "message": "Sök efter en stad eller ange koordinater manuellt med flikarna",
     "description": "Body text of the first onboarding step."
   },
   "onboarding_step2_strong": {
-    "message": "Включите защиту геолокации,",
+    "message": "Aktivera platsskydd",
     "description": "Bolded lead-in for the second onboarding step."
   },
   "onboarding_step2_text": {
-    "message": "чтобы начать подмену",
+    "message": "för att börja förfalska",
     "description": "Body text of the second onboarding step."
   },
   "onboarding_step3_strong": {
-    "message": "По желанию:",
+    "message": "Valfritt:",
     "description": "Bolded lead-in for the third onboarding step."
   },
   "onboarding_step3_text": {
-    "message": "включите защиту WebRTC для дополнительной приватности",
+    "message": "Aktivera WebRTC-skydd för extra integritet",
     "description": "Body text of the third onboarding step."
   },
   "onboarding_button": {
-    "message": "Начать",
+    "message": "Kom igång",
     "description": "Button that closes the onboarding overlay."
   },
   "status_disabled": {
-    "message": "Отключено",
+    "message": "Inaktiverad",
     "description": "Status pill shown when location protection is off."
   },
   "status_enabled": {
-    "message": "Включено",
+    "message": "Aktiverad",
     "description": "Status pill shown when location protection is on."
   },
   "tab_main": {
-    "message": "Главная",
+    "message": "Huvud",
     "description": "Tab label for the main popup view."
   },
   "tab_details": {
-    "message": "Подробности",
+    "message": "Detaljer",
     "description": "Tab label for the protection details view."
   },
   "tab_filters": {
-    "message": "Фильтры",
+    "message": "Filter",
     "description": "Tab label for the site-scoping filters view."
   },
   "filters_heading": {
-    "message": "Фильтры сайтов",
+    "message": "Webbplatsfilter",
     "description": "Heading for the site-scoping filters panel."
   },
   "filters_modeGroupAriaLabel": {
-    "message": "Режим области",
+    "message": "Omfattningsläge",
     "description": "Accessible label for the scope-mode selector group."
   },
   "filters_modeAll": {
-    "message": "Все",
+    "message": "Alla",
     "description": "Scope mode option: spoof on every site."
   },
   "filters_modeAllowlist": {
-    "message": "Белый список",
+    "message": "Tillåtlista",
     "description": "Scope mode option: spoof only on listed sites."
   },
   "filters_modeDenylist": {
-    "message": "Чёрный список",
+    "message": "Blocklista",
     "description": "Scope mode option: spoof on every site except listed ones."
   },
   "filters_modeAllDesc": {
-    "message": "Подмена применяется ко всем сайтам.",
+    "message": "Förfalskning gäller alla webbplatser.",
     "description": "Description shown under the selector when 'All' mode is active."
   },
   "filters_modeAllowlistDesc": {
-    "message": "Подмена применяется только к перечисленным сайтам.",
+    "message": "Förfalskning gäller endast listade webbplatser.",
     "description": "Description shown under the selector when 'Allowlist' mode is active."
   },
   "filters_modeDenylistDesc": {
-    "message": "Подмена применяется ко всем сайтам, кроме перечисленных.",
+    "message": "Förfalskning gäller alla webbplatser utom de listade.",
     "description": "Description shown under the selector when 'Denylist' mode is active."
   },
   "filters_addPlaceholder": {
@@ -96,285 +96,293 @@
     "description": "Placeholder text in the add-site input."
   },
   "filters_addButton": {
-    "message": "Добавить",
+    "message": "Lägg till",
     "description": "Button that adds the typed domain to the active list."
   },
   "filters_invalidDomain": {
-    "message": "Недопустимый домен",
+    "message": "Inte en giltig domän",
     "description": "Inline message shown when the typed domain is invalid."
   },
   "filters_emptyList": {
-    "message": "Сайты ещё не добавлены",
+    "message": "Inga webbplatser tillagda ännu",
     "description": "Indicator shown when the active site list is empty."
   },
   "filters_notSaved": {
-    "message": "⚠️ Изменение не сохранено",
+    "message": "⚠️ Ändringen sparades inte",
     "description": "Inline message shown when a scope change could not be saved."
   },
   "filters_loadError": {
-    "message": "⚠️ Не удалось загрузить настройки",
+    "message": "⚠️ Inställningarna kunde inte läsas in",
     "description": "Inline message shown when the popup cannot load settings."
   },
   "filters_removeAriaLabel": {
-    "message": "Удалить сайт",
+    "message": "Ta bort webbplats",
     "description": "Accessible label prefix on a site's remove button."
   },
   "filters_addCurrentButton": {
-    "message": "Добавить текущий сайт",
+    "message": "Lägg till aktuell webbplats",
     "description": "Button that adds the active tab's site to the active list."
   },
   "filters_currentPageRestricted": {
-    "message": "Эту страницу нельзя добавить",
+    "message": "Den här sidan kan inte läggas till",
     "description": "Inline message shown when the current page is a restricted URL that cannot be added."
   },
   "filters_currentPageInvalid": {
-    "message": "Этот сайт нельзя добавить",
+    "message": "Den här webbplatsen kan inte läggas till",
     "description": "Inline message shown when the current tab's hostname cannot be added to a list."
   },
   "filters_allowedSites": {
-    "message": "Разрешённые сайты",
+    "message": "Tillåtna webbplatser",
     "description": "Header above the list of allowlisted sites."
   },
   "filters_blockedSites": {
-    "message": "Заблокированные сайты",
+    "message": "Blockerade webbplatser",
     "description": "Header above the list of denylisted sites."
   },
   "toggle_locationProtection": {
-    "message": "Защита геолокации",
+    "message": "Platsskydd",
     "description": "Label for the toggle that enables location spoofing."
   },
   "toggle_webrtcProtection": {
-    "message": "Защита WebRTC",
+    "message": "WebRTC-skydd",
     "description": "Label for the toggle that enables WebRTC IP leak protection."
   },
   "heading_location": {
-    "message": "Местоположение",
+    "message": "Plats",
     "description": "Section heading above the spoofed location display."
   },
   "heading_protection": {
-    "message": "Защита",
+    "message": "Skydd",
     "description": "Section heading above the protection toggles in the Main tab."
   },
   "heading_mode": {
-    "message": "Режим",
+    "message": "Läge",
     "description": "Section heading above the scope-mode selector in the Filters tab."
   },
   "location_none": {
-    "message": "Местоположение не задано",
+    "message": "Ingen plats angiven",
     "description": "Shown when no spoofed location has been configured."
   },
   "location_custom": {
-    "message": "Пользовательское местоположение",
+    "message": "Anpassad plats",
     "description": "Shown above a manually entered (non-search) location."
   },
   "location_clearTitle": {
-    "message": "Очистить местоположение",
+    "message": "Rensa plats",
     "description": "Tooltip title on the clear-location button."
   },
   "location_clearAriaLabel": {
-    "message": "Очистить местоположение",
+    "message": "Rensa plats",
     "description": "Accessible label on the clear-location button."
   },
   "toggle_syncWithVpn": {
-    "message": "Синхронизация с VPN",
+    "message": "Synka med VPN",
     "description": "Label for the toggle that syncs location to the user's public IP."
   },
   "vpnSync_infoAriaLabel": {
-    "message": "Подробнее о синхронизации с VPN",
+    "message": "Mer information om Synka med VPN",
     "description": "Accessible label on the VPN sync info icon."
   },
   "vpnSync_tooltip": {
-    "message": "Синхронизирует подменяемую геолокацию с вашим текущим публичным IP. Обновляется автоматически через несколько секунд после смены сервера VPN — или используйте «Пересинхронизировать», чтобы обновить сразу.",
+    "message": "Detta synkar din förfalskade plats med din nuvarande publika IP. Den uppdateras automatiskt några sekunder efter att ditt VPN byter server — eller använd Synka om för att uppdatera direkt.",
     "description": "Tooltip explaining that VPN sync auto-updates when the VPN changes servers, with a manual Re-sync option."
   },
   "vpnSync_syncNow": {
-    "message": "Синхронизировать",
+    "message": "Synka nu",
     "description": "Button that performs an initial VPN sync."
   },
   "vpnSync_resync": {
-    "message": "Пересинхронизировать",
+    "message": "Synka om",
     "description": "Button that performs a follow-up VPN sync."
   },
   "vpnSync_detectedIp": {
-    "message": "Обнаружен IP: $IP$",
+    "message": "Upptäckt IP: $IP$",
+    "description": "Shown after a successful VPN sync. $IP$ is the detected public IP address.",
     "placeholders": {
       "ip": {
         "content": "$1",
         "example": "203.0.113.42"
       }
-    },
-    "description": "Shown after a successful VPN sync. $IP$ is the detected public IP address."
+    }
   },
   "vpnSync_networkError": {
-    "message": "Произошла сетевая ошибка. Пожалуйста, попробуйте ещё раз.",
+    "message": "Ett nätverksfel uppstod. Försök igen.",
     "description": "Error toast shown when the VPN sync network call fails."
   },
   "inputTab_searchCity": {
-    "message": "Поиск города",
+    "message": "Sök stad",
     "description": "Tab label for the city-search input mode."
   },
   "inputTab_enterCoords": {
-    "message": "Ввести координаты",
+    "message": "Ange koordinater",
     "description": "Tab label for the manual-coordinates input mode."
   },
   "search_placeholder": {
-    "message": "Поиск города...",
+    "message": "Sök efter en stad...",
     "description": "Placeholder text in the city search input."
   },
   "search_searching": {
-    "message": "Поиск...",
+    "message": "Söker...",
     "description": "Status shown while a city search is in flight."
   },
   "search_noResults": {
-    "message": "Места не найдены",
+    "message": "Inga platser hittades",
     "description": "Status shown when a city search returns no matches."
   },
   "search_failed": {
-    "message": "Поиск не удался. Пожалуйста, попробуйте ещё раз.",
+    "message": "Sökningen misslyckades. Försök igen.",
     "description": "Error toast shown when a city search request fails."
   },
   "search_settingLocation": {
-    "message": "Установка местоположения...",
+    "message": "Ställer in plats...",
     "description": "Status shown while a chosen location is being applied."
   },
   "search_setLocationFailed": {
-    "message": "Не удалось установить местоположение. Пожалуйста, попробуйте ещё раз.",
+    "message": "Det gick inte att ställa in platsen. Försök igen.",
     "description": "Error toast shown when applying a chosen location fails."
   },
   "coords_latPlaceholder": {
-    "message": "Широта (-90 до 90)",
+    "message": "Latitud (-90 till 90)",
     "description": "Placeholder text in the latitude input."
   },
   "coords_lonPlaceholder": {
-    "message": "Долгота (-180 до 180)",
+    "message": "Longitud (-180 till 180)",
     "description": "Placeholder text in the longitude input."
   },
   "coords_setButton": {
-    "message": "Установить",
+    "message": "Ställ in plats",
     "description": "Button that applies the manually entered coordinates."
   },
   "coords_invalidLat": {
-    "message": "Неверная широта. Должна быть от -90 до 90.",
+    "message": "Ogiltig latitud. Måste vara mellan -90 och 90.",
     "description": "Validation error shown when latitude is out of range."
   },
   "coords_invalidLon": {
-    "message": "Неверная долгота. Должна быть от -180 до 180.",
+    "message": "Ogiltig longitud. Måste vara mellan -180 och 180.",
     "description": "Validation error shown when longitude is out of range."
   },
   "warning_noLocationSet": {
-    "message": "⚠️ Защита включена, но местоположение не задано",
+    "message": "⚠️ Skyddet är aktiverat men ingen plats är angiven",
     "description": "Warning shown when protection is on but no location is configured."
   },
   "warning_refreshPage": {
-    "message": "⚠️ Обновите страницу, чтобы применить защиту",
+    "message": "⚠️ Uppdatera den här sidan för att tillämpa skyddet",
     "description": "Warning shown when the active page must be reloaded for protection to apply."
   },
   "notice_restrictedPage": {
-    "message": "ℹ️ Расширения не работают на этой странице",
+    "message": "ℹ️ Tillägg kan inte köras på den här sidan",
     "description": "Notice shown on browser-internal pages where extensions cannot run."
   },
   "testLinks_verify": {
-    "message": "Проверить защиту",
+    "message": "Verifiera skydd",
     "description": "Footer link to the hosted verification page that checks the user's protection."
   },
   "support_needHelp": {
-    "message": "Нужна помощь?",
+    "message": "Behöver du hjälp?",
     "description": "Footer link prompting the user to open the support page."
   },
   "support_review": {
-    "message": "Нравится GeoSpoof?",
+    "message": "Gillar du GeoSpoof?",
     "description": "Footer link that opens a short modal asking the user to leave a store review."
   },
+  "iosPromo_text": {
+    "message": "Nu på iPhone, iPad och Mac",
+    "description": "Footer cross-link label announcing the GeoSpoof app is now available across Apple platforms, linking to the App Store."
+  },
+  "iosPromo_ariaLabel": {
+    "message": "GeoSpoof är nu tillgänglig på iPhone, iPad och Mac",
+    "description": "Accessible label for the footer cross-link to the GeoSpoof Apple app (the visible text sits next to an Apple logo glyph)."
+  },
   "review_modal_title": {
-    "message": "Нравится GeoSpoof? ❤️",
+    "message": "Gillar du GeoSpoof? ❤️",
     "description": "Heading of the modal that asks the user to leave a review."
   },
   "review_modal_body1": {
-    "message": "GeoSpoof создаётся с заботой — без отслеживания и аккаунтов. Я разрабатываю и поддерживаю его в своё свободное время.",
+    "message": "GeoSpoof är byggd med omsorg — ingen spårning, inga konton. Jag bygger och underhåller den på min egen tid.",
     "description": "First paragraph of the review-request modal (desktop builds)."
   },
   "review_modal_body1_ios": {
-    "message": "GeoSpoof создаётся с любовью — без отслеживания и аккаунтов. Я работаю над ним в свободное время, чтобы сохранить вашу геолокацию приватной.",
+    "message": "GeoSpoof är byggd med kärlek — ingen spårning, inga konton. Jag arbetar med den på min egen tid för att hålla din plats privat.",
     "description": "First paragraph of the review-request modal on iOS, where the app is freemium so it does not claim to be free."
   },
   "review_modal_body2": {
-    "message": "Короткий отзыв — лучший способ поддержать проект. Это займёт минуту и поможет другим найти GeoSpoof. Большое спасибо!",
+    "message": "En snabb recension är det bästa sättet att stödja den. Det tar en minut och hjälper fler att hitta GeoSpoof. Tack så mycket!",
     "description": "Second paragraph of the review-request modal."
   },
   "review_modal_cta": {
-    "message": "Оставить отзыв",
+    "message": "Lämna en recension",
     "description": "Primary button in the review modal that opens the store review page."
   },
   "review_modal_dismiss": {
-    "message": "Может быть, позже",
+    "message": "Kanske senare",
     "description": "Secondary button that dismisses the review modal."
   },
   "webrtc_configFailed": {
-    "message": "Не удалось настроить защиту WebRTC. Проверьте разрешения расширения.",
+    "message": "Det gick inte att konfigurera WebRTC-skydd. Kontrollera tilläggets behörigheter.",
     "description": "Error toast shown when WebRTC protection cannot be configured."
   },
   "details_heading": {
-    "message": "Детали защиты",
+    "message": "Skyddsdetaljer",
     "description": "Heading for the protection-details panel."
   },
   "details_spoofedLocation": {
-    "message": "Подменённое местоположение",
+    "message": "Förfalskad plats",
     "description": "Section title for the spoofed-location details."
   },
   "details_spoofedTimezone": {
-    "message": "Подменённый часовой пояс",
+    "message": "Förfalskad tidszon",
     "description": "Section title for the spoofed-timezone details."
   },
   "details_webrtcProtection": {
-    "message": "Защита WebRTC",
+    "message": "WebRTC-skydd",
     "description": "Section title for the WebRTC protection details."
   },
   "details_overriddenApis": {
-    "message": "Переопределённые API",
+    "message": "Åsidosatta API:er",
     "description": "Section title for the list of overridden browser APIs."
   },
   "details_notConfigured": {
-    "message": "Не настроено",
+    "message": "Inte konfigurerad",
     "description": "Placeholder shown when a detail field has no value."
   },
   "details_none": {
-    "message": "Нет",
+    "message": "Ingen",
     "description": "Shown when a detail field has no items."
   },
   "details_noneDisabled": {
-    "message": "Нет (защита отключена)",
+    "message": "Ingen (skydd inaktiverat)",
     "description": "Shown when a detail field is empty because protection is off."
   },
   "details_latitudeLabel": {
-    "message": "Широта",
+    "message": "Latitud",
     "description": "Label for the latitude row in the location details."
   },
   "details_longitudeLabel": {
-    "message": "Долгота",
+    "message": "Longitud",
     "description": "Label for the longitude row in the location details."
   },
   "details_accuracyLabel": {
-    "message": "Точность",
+    "message": "Noggrannhet",
     "description": "Label for the accuracy row in the location details."
   },
   "details_locationLabel": {
-    "message": "Местоположение",
+    "message": "Plats",
     "description": "Label for the location-name row in the location details."
   },
   "details_identifierLabel": {
-    "message": "Идентификатор",
+    "message": "Identifierare",
     "description": "Label for the timezone-identifier row in the timezone details."
   },
   "details_offsetLabel": {
-    "message": "Смещение",
+    "message": "Förskjutning",
     "description": "Label for the UTC-offset row in the timezone details."
   },
   "details_dstOffsetLabel": {
-    "message": "Смещение DST",
+    "message": "Sommartidsförskjutning",
     "description": "Label for the DST-offset row in the timezone details."
   },
   "details_dstOffsetMinutes": {
-    "message": "$MINUTES$ мин.",
+    "message": "$MINUTES$ minuter",
     "placeholders": {
       "minutes": {
         "content": "$1",
@@ -384,27 +392,27 @@
     "description": "Formatted DST offset in minutes. $MINUTES$ is the integer minute count."
   },
   "details_fallbackNote": {
-    "message": "⚠️ Приблизительно (API недоступен)",
+    "message": "⚠️ Uppskattad (API otillgängligt)",
     "description": "Inline note shown when timezone data is estimated rather than authoritative."
   },
   "details_webrtcActiveStatus": {
-    "message": "✓ Активна",
+    "message": "✓ Aktiv",
     "description": "Status label shown in the WebRTC details when protection is active."
   },
   "details_webrtcInactiveStatus": {
-    "message": "✗ Неактивна",
+    "message": "✗ Inaktiv",
     "description": "Status label shown in the WebRTC details when protection is inactive."
   },
   "details_webrtcInactiveNote": {
-    "message": "WebRTC может раскрыть ваш настоящий IP даже при использовании VPN.",
+    "message": "WebRTC kan läcka din riktiga IP-adress även när du använder ett VPN.",
     "description": "Caption shown under the WebRTC status when protection is inactive."
   },
   "details_section_geolocation": {
-    "message": "Геолокация",
+    "message": "Geolokalisering",
     "description": "Header for the geolocation overrides section."
   },
   "details_section_timezone": {
-    "message": "Часовой пояс",
+    "message": "Tidszon",
     "description": "Header for the timezone overrides section."
   },
   "details_section_webrtc": {
@@ -412,7 +420,7 @@
     "description": "Header for the WebRTC overrides section."
   },
   "details_section_dateTime": {
-    "message": "Дата и время",
+    "message": "Datum & tid",
     "description": "Header for the date/time overrides section."
   },
   "details_section_temporal": {
@@ -428,127 +436,119 @@
     "description": "Header for the worker timezone-propagation overrides section."
   },
   "details_section_antiFingerprinting": {
-    "message": "Антифингерпринтинг и структура",
+    "message": "Anti-fingeravtryck & strukturellt",
     "description": "Header for the anti-fingerprinting and structural overrides section."
   },
   "details_keyOverrides": {
-    "message": "Основные переопределения (если доступно)",
+    "message": "Viktiga åsidosättanden (där tillgängligt)",
     "description": "Title of the summary line above the grouped list of overridden APIs."
   },
   "advanced_button": {
-    "message": "Дополнительно",
+    "message": "Avancerat",
     "description": "Button that opens the advanced-settings drawer."
   },
   "advanced_debugLogging": {
-    "message": "Отладочное логирование",
+    "message": "Felsökningsloggning",
     "description": "Label for the debug-logging toggle."
   },
   "advanced_earlyTz": {
-    "message": "Мгновенная защита часового пояса",
+    "message": "Omedelbart tidszonsskydd",
     "description": "Label for the Firefox-only toggle that grants the userScripts permission to spoof synchronous timezone surfaces from the very first script on a page."
   },
   "earlyTz_infoAriaLabel": {
-    "message": "Подробнее о мгновенной защите часового пояса",
+    "message": "Mer information om Omedelbart tidszonsskydd",
     "description": "Accessible label on the Instant timezone protection info icon."
   },
   "earlyTz_tooltip": {
-    "message": "Только Firefox. При включении запрашивается необязательное разрешение «userScripts», чтобы GeoSpoof мог запускаться в самом начале загрузки каждой страницы, закрывая короткий промежуток, когда сайт мог бы считать ваш настоящий часовой пояс до срабатывания защиты. Отключите, чтобы отозвать разрешение.",
+    "message": "Endast Firefox. När detta aktiveras begärs den valfria behörigheten ”userScripts” så att GeoSpoof kan köras allra först vid varje sidladdning, vilket täpper till en kort lucka där en webbplats kan läsa din riktiga tidszon innan skyddet träder i kraft. Stäng av för att återkalla behörigheten.",
     "description": "Tooltip explaining the Firefox-only Instant timezone protection toggle and the userScripts permission it requests."
   },
   "advanced_debuggerMode": {
-    "message": "Спуфинг на уровне движка",
+    "message": "Förfalskning på motornivå",
     "description": "Label for the Chrome-only toggle that spoofs the timezone deeper in the browser (via the chrome.debugger API / Chrome DevTools Protocol) so it also covers background workers and applies before a page loads."
   },
   "debuggerMode_infoAriaLabel": {
-    "message": "Подробнее о спуфинге на уровне движка",
+    "message": "Mer information om Förfalskning på motornivå",
     "description": "Accessible label on the Engine-level Spoofing info icon."
   },
   "debuggerMode_tooltip": {
-    "message": "Только Chrome. Подменяет ваш часовой пояс глубже в браузере, поэтому защита также охватывает фоновые воркеры и действует ещё до загрузки страницы. Пока включено, Chrome показывает панель «GeoSpoof начал отладку этого браузера» — это нормально. Оставьте выключенным, чтобы использовать стандартную защиту.",
+    "message": "Endast Chrome. Förfalskar din tidszon djupare i webbläsaren så att den även täcker bakgrundsworkers och träder i kraft innan en sida laddas. När den är på visar Chrome en rad ”GeoSpoof började felsöka den här webbläsaren” — det är normalt. Lämna av för att använda standardskyddet.",
     "description": "Tooltip explaining the Chrome-only Engine-level Spoofing toggle and the debugging notification bar it causes."
   },
   "debuggerBannerHelp_text": {
-    "message": "Пока это включено, Chrome показывает панель «GeoSpoof начал отладку этого браузера». Чтобы скрыть её, запустите Chrome с этим флагом:",
+    "message": "När detta är på visar Chrome en rad ”GeoSpoof började felsöka den här webbläsaren”. För att dölja den, starta Chrome med denna flagga:",
     "description": "Intro text of the dismissible note shown when Engine-level Spoofing is enabled, explaining how to hide Chrome's debugging notification bar."
   },
   "debuggerBannerHelp_link": {
-    "message": "Как скрыть панель →",
+    "message": "Så döljer du raden →",
     "description": "Link to the GeoSpoof help page explaining how to hide Chrome's debugging notification bar."
   },
   "debuggerBannerHelp_closeAria": {
-    "message": "Закрыть",
+    "message": "Stäng",
     "description": "Accessible label for the button that dismisses the debugging-bar help note."
   },
   "advanced_verbosityLevel": {
-    "message": "Уровень подробности",
+    "message": "Detaljnivå",
     "description": "Label for the log-verbosity selector."
   },
   "advanced_verbosity_info": {
-    "message": "Инфо",
+    "message": "Info",
     "description": "Verbosity level: only info-level logs."
   },
   "advanced_verbosity_debug": {
-    "message": "Отладка",
+    "message": "Debug",
     "description": "Verbosity level: info and debug logs."
   },
   "advanced_verbosity_trace": {
-    "message": "Трассировка",
+    "message": "Trace",
     "description": "Verbosity level: full trace including per-call logs."
   },
   "advanced_theme": {
-    "message": "Тема",
+    "message": "Tema",
     "description": "Label for the popup theme selector."
   },
   "advanced_theme_system": {
-    "message": "Системная",
+    "message": "System",
     "description": "Theme option that follows the OS appearance."
   },
   "advanced_theme_light": {
-    "message": "Светлая",
+    "message": "Ljust",
     "description": "Theme option that forces the light popup theme."
   },
   "advanced_theme_dark": {
-    "message": "Тёмная",
+    "message": "Mörkt",
     "description": "Theme option that forces the dark popup theme."
   },
   "advanced_accuracy": {
-    "message": "Точность местоположения",
+    "message": "Platsnoggrannhet",
     "description": "Label for the accuracy selector that controls how the spoofed GeolocationCoordinates.accuracy value is produced."
   },
   "advanced_accuracy_realistic": {
-    "message": "Реалистичная",
+    "message": "Realistisk",
     "description": "Accuracy option that picks a device-appropriate value automatically (auto mode)."
   },
   "advanced_accuracy_custom": {
-    "message": "Пользовательская",
+    "message": "Anpassad",
     "description": "Accuracy option that reveals a numeric input for an exact meter value (fixed mode)."
   },
   "advanced_accuracy_customMeters": {
-    "message": "Точность (метры)",
+    "message": "Noggrannhet (meter)",
     "description": "Label for the numeric input shown when the Custom accuracy option is selected."
   },
   "advanced_accuracy_customHint": {
-    "message": "Введите значение от 1 до 10000 метров",
+    "message": "Ange ett värde mellan 1 och 10000 meter",
     "description": "Inline hint shown when the custom accuracy value is out of the allowed range."
   },
   "advanced_accuracy_customSet": {
-    "message": "Задать",
+    "message": "Ställ in",
     "description": "Button that commits the typed custom accuracy value (fixed mode). The custom value is applied only when this button is clicked or Enter is pressed."
   },
   "advanced_accuracy_customEdit": {
-    "message": "Изменить",
+    "message": "Redigera",
     "description": "Button that reopens the custom accuracy editor from the compact display showing the committed value."
   },
   "advanced_coffee": {
-    "message": "☕ Поддержать автора",
+    "message": "☕ Bjud mig på en kaffe",
     "description": "Footer link inviting the user to buy the maintainer a coffee."
-  },
-  "iosPromo_text": {
-    "message": "Теперь на iPhone, iPad и Mac",
-    "description": "Footer cross-link label announcing the GeoSpoof app is now available across Apple platforms, linking to the App Store."
-  },
-  "iosPromo_ariaLabel": {
-    "message": "GeoSpoof теперь доступен на iPhone, iPad и Mac",
-    "description": "Accessible label for the footer cross-link to the GeoSpoof Apple app (the visible text sits next to an Apple logo glyph)."
   }
 }

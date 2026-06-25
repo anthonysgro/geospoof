@@ -42,6 +42,7 @@ struct ProPaywallView: View {
             ScrollView {
                 VStack(spacing: 24) {
                     header
+                    universalPurchaseLine
                     featureList
                     trustLine
                     planPicker
@@ -114,6 +115,20 @@ struct ProPaywallView: View {
         }
         .font(.caption)
         .foregroundStyle(.secondary)
+    }
+
+    /// Universal Purchase reassurance: one subscription unlocks every Apple
+    /// device, synced automatically via the App Store (no account, no extra
+    /// cost). A genuine differentiator worth surfacing right before the ask.
+    private var universalPurchaseLine: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "ipad.and.iphone")
+                .accessibilityHidden(true)
+            Text("One membership for all your devices — iPhone, iPad & Mac, synced automatically")
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .multilineTextAlignment(.center)
     }
 
     // MARK: Features
@@ -572,6 +587,8 @@ struct ProDetailView: View {
                           title: "GeoSpoof Pro",
                           subtitle: "Unlock automatic VPN sync and every power-user feature.")
             }
+        } footer: {
+            Label("Works on all your devices — iPhone, iPad & Mac, synced automatically.", systemImage: "ipad.and.iphone")
         }
     }
 

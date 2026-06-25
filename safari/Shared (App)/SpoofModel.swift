@@ -1292,31 +1292,26 @@ final class SpoofController: ObservableObject {
         }
     }
 
-    /// Whether automatic background sync is *blocked* for this user. Background
-    /// VPN re-sync is an inherent Pro capability (always on for Pro when VPN sync
-    /// is active — there's no user toggle, matching macOS, which always syncs).
-    /// On iOS it's gated purely on Pro; every other platform always allows it
-    /// (macOS app, and the extension on Chrome/Firefox/Android). This single
-    /// value is bridged to the extension as `pending_autoSyncBlocked` — the
-    /// extension can't tell iOS from macOS, so the app is the authority.
+    /// Whether automatic background VPN re-sync is *blocked* for this user.
+    /// Background re-sync is a Pro capability on the Apple apps (iOS + macOS):
+    /// when VPN sync is active it auto-follows the exit IP, but only for Pro
+    /// (founders/subscribers, via `cachedIsPro`). The browser extensions on
+    /// Chrome/Firefox/Android don't run this code and are unaffected (their flag
+    /// defaults false). This single value is bridged to the extension as
+    /// `pending_autoSyncBlocked` — the extension can't tell iOS from macOS, so
+    /// the app is the authority.
     var autoSyncBlocked: Bool {
-        #if os(iOS)
         return !cachedIsPro
-        #else
-        return false
-        #endif
     }
 
     /// Whether Pro-only *configuration* features (per-site filtering, custom
-    /// accuracy) are blocked for this user. iOS gates them on Pro; macOS and
-    /// all other platforms always allow them. Bridged to the extension as
+    /// accuracy) are blocked for this user. Gated on Pro across the Apple apps
+    /// (iOS + macOS); founders/subscribers are exempt via `cachedIsPro`. The
+    /// Chrome/Firefox/Android extensions don't run this code and keep these
+    /// features free (their flag defaults false). Bridged to the extension as
     /// `pending_proFeaturesBlocked` so it can enforce (e.g. force scope "all").
     var proFeaturesBlocked: Bool {
-        #if os(iOS)
         return !cachedIsPro
-        #else
-        return false
-        #endif
     }
 
     /// Re-publish the auto-sync gate to the extension whenever Pro entitlement
