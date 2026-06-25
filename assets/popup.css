@@ -830,6 +830,28 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   color: var(--brand);
 }
 
+/* Ecosystem cross-link: same typography as the support links, but its own
+   row with a hairline divider so it reads as a distinct category (links out
+   to the wider GeoSpoof app ecosystem rather than in-product help). */
+.ecosystem-link {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+  text-align: center;
+  font-size: 11px;
+}
+
+.ecosystem-link .help-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ecosystem-link-glyph {
+  flex: none;
+  margin-top: -1px;
+}
+
 /* Meta footer: "☕ Buy me a coffee · v1.21.7" as small subtext, centered, with
    a single divider separating it from the settings above. */
 .advanced-footer {

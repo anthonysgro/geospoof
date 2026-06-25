@@ -542,5 +542,13 @@
   "advanced_coffee": {
     "message": "☕ 请我喝咖啡",
     "description": "Footer link inviting the user to buy the maintainer a coffee."
+  },
+  "iosPromo_text": {
+    "message": "现已登陆 iPhone、iPad 和 Mac",
+    "description": "Footer cross-link label announcing the GeoSpoof app is now available across Apple platforms, linking to the App Store."
+  },
+  "iosPromo_ariaLabel": {
+    "message": "GeoSpoof 现已支持 iPhone、iPad 和 Mac",
+    "description": "Accessible label for the footer cross-link to the GeoSpoof Apple app (the visible text sits next to an Apple logo glyph)."
   }
 }
