@@ -14,7 +14,7 @@
 [![Reddit](https://img.shields.io/badge/Reddit-r%2FGeoSpoof-FF4500.svg?logo=reddit&logoColor=white)](https://www.reddit.com/r/geospoof)
 
   <p>
-    <img src="assets/store-listings/chrome/screenshot1.png" alt="GeoSpoof main view" width="960" />
+    <img src="assets/store-listings/github/screenshot1.png" alt="GeoSpoof main view" width="960" />
   </p>
 </div>
 
