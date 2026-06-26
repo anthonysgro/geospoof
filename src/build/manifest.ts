@@ -260,11 +260,13 @@ export function generateManifest(target: BrowserTarget, version: string): Record
     // variant).
     //
     // ASO notes (Chrome Web Store search ranking):
-    // - `name` is the listing TITLE and the highest-weighted ranking field, so
-    //   it claims the two highest-volume queries we compete on: "spoof
-    //   geolocation" and "location changer". Timezone is a lower-volume query
-    //   and is covered heavily in the short + long description instead. Kept
-    //   under the 75-char manifest limit (currently 46 chars).
+    // - `name` is the listing TITLE and the highest-weighted ranking field. It
+    //   leads with the exact "spoof geolocation" query, then "timezone" — a
+    //   genuine secondary feature and query, and a clean parallel object after
+    //   the "&" (two different things you spoof, no "location…location" repeat).
+    //   The location-changer intent isn't in the title because it's already at
+    //   the keyword cap inside the long description. Kept under the 75-char
+    //   manifest limit (currently 38 chars).
     // - `description` is the 132-char SHORT description (the snippet shown under
     //   the name and in search results). It front-loads "spoof geolocation",
     //   "fake GPS location", and "change your location" (the "location changer"
@@ -272,8 +274,9 @@ export function generateManifest(target: BrowserTarget, version: string): Record
     //   low-volume search term — to spend characters on higher-volume keywords.
     //   Currently 123 chars (must stay <= 132).
     // - The long/detailed listing description lives in the Web Store Developer
-    //   Dashboard (no manifest field exists for it); see store-listing.md.
-    name: "GeoSpoof: Spoof Geolocation & Location Changer",
+    //   Dashboard (no manifest field exists for it); see
+    //   assets/store-listings/listing-copy.md.
+    name: "GeoSpoof: Spoof Geolocation & Timezone",
     description:
       "Spoof geolocation, fake your GPS location & timezone — change your location to any city or sync it to your VPN. No account.",
     background: {
