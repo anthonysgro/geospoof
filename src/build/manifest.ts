@@ -257,10 +257,25 @@ export function generateManifest(target: BrowserTarget, version: string): Record
     // `__MSG_extensionName__` / `__MSG_extensionDescription__` with literal,
     // keyword-focused strings here. Firefox (AMO) and Safari (App Store) keep
     // the localized messages (name → "GeoSpoof", description → the WebRTC
-    // variant). The Chrome description drops WebRTC — it's a low-volume search
-    // term — and leads with the geolocation/timezone + VPN-sync value prop.
-    name: "GeoSpoof: Spoof Geolocation & Timezone",
-    description: "Spoof geolocation & timezone, and auto-sync to your VPN.",
+    // variant).
+    //
+    // ASO notes (Chrome Web Store search ranking):
+    // - `name` is the listing TITLE and the highest-weighted ranking field, so
+    //   it claims the two highest-volume queries we compete on: "spoof
+    //   geolocation" and "location changer". Timezone is a lower-volume query
+    //   and is covered heavily in the short + long description instead. Kept
+    //   under the 75-char manifest limit (currently 46 chars).
+    // - `description` is the 132-char SHORT description (the snippet shown under
+    //   the name and in search results). It front-loads "spoof geolocation",
+    //   "fake GPS location", and "change your location" (the "location changer"
+    //   intent), plus timezone + VPN sync. It deliberately drops WebRTC — a
+    //   low-volume search term — to spend characters on higher-volume keywords.
+    //   Currently 123 chars (must stay <= 132).
+    // - The long/detailed listing description lives in the Web Store Developer
+    //   Dashboard (no manifest field exists for it); see store-listing.md.
+    name: "GeoSpoof: Spoof Geolocation & Location Changer",
+    description:
+      "Spoof geolocation, fake your GPS location & timezone — change your location to any city or sync it to your VPN. No account.",
     background: {
       service_worker: "background/background.js",
       type: "module",
