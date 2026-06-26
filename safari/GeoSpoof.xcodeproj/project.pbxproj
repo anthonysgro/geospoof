@@ -621,7 +621,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "export PATH=\"/usr/local/bin:/opt/homebrew/bin:$PATH\"\ncd \"${SRCROOT}/..\"\nnpm run build:safari\n";
+			shellScript = "export PATH=\"/usr/local/bin:/opt/homebrew/bin:$PATH\"\n\n# Load nvm so node/npm are found in Xcode's minimal PATH (local dev).\nexport NVM_DIR=\"$HOME/.nvm\"\nif [ -s \"$NVM_DIR/nvm.sh\" ]; then\n  . \"$NVM_DIR/nvm.sh\"\nfi\n\n# Fallback: if npm still isn't on PATH, use the newest nvm-installed node.\nif ! command -v npm >/dev/null 2>&1 && [ -d \"$NVM_DIR/versions/node\" ]; then\n  NODE_BIN=\"$NVM_DIR/versions/node/$(ls -1 \"$NVM_DIR/versions/node\" | sort -V | tail -1)/bin\"\n  export PATH=\"$NODE_BIN:$PATH\"\nfi\n\ncd \"${SRCROOT}/..\"\nnpm run build:safari\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
