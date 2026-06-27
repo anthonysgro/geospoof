@@ -101,15 +101,16 @@ function TermsPage() {
               </p>
               <p>
                 GeoSpoof is free to use. On iOS and iPadOS, the app also offers{" "}
-                <strong>GeoSpoof Pro</strong>, an optional auto-renewable
-                subscription (monthly or annual) that unlocks additional
-                features such as automatic background VPN sync, per-site rules,
-                widgets, custom accuracy, and the on-map location picker; a free
-                tier remains fully functional without it. On macOS these
-                features are included at no charge, so there is no macOS
-                subscription. The iOS, iPadOS, and macOS app may also offer
-                optional one-time "tips" that let you support development and
-                unlock no features.
+                <strong>GeoSpoof Pro</strong>, which unlocks additional features
+                such as automatic background VPN sync, per-site rules, widgets,
+                custom accuracy, and the on-map location picker. Pro is available
+                either as an optional auto-renewable subscription (monthly or
+                annual) or as a one-time "lifetime" purchase that unlocks the
+                same features permanently and does not renew; a free tier remains
+                fully functional without either. On macOS these features are
+                included at no charge, so there is no macOS subscription. The
+                iOS, iPadOS, and macOS app may also offer optional one-time
+                "tips" that let you support development and unlock no features.
               </p>
               <p>
                 All in-app purchases and subscriptions are processed by Apple
@@ -117,7 +118,8 @@ function TermsPage() {
                 cancellations, and any refund requests are handled by Apple, not
                 by the developer. Auto-renewable subscriptions renew until
                 cancelled, and you can manage or cancel a subscription anytime in
-                your Apple Account settings. Use of in-app purchases is also
+                your Apple Account settings. The lifetime purchase is a one-time
+                charge that does not renew. Use of in-app purchases is also
                 subject to{" "}
                 <a
                   href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"

@@ -42,9 +42,9 @@ struct ProPaywallView: View {
             ScrollView {
                 VStack(spacing: 24) {
                     header
-                    universalPurchaseLine
+                    socialProof
                     featureList
-                    trustLine
+                    universalPurchaseNote
                     planPicker
                     VStack(spacing: 8) {
                         ctaButton
@@ -89,80 +89,148 @@ struct ProPaywallView: View {
 
     private var header: some View {
         VStack(spacing: 12) {
-            Image("LargeIcon")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 84, height: 84)
-                .clipShape(RoundedRectangle(cornerRadius: 19, style: .continuous))
-                .shadow(color: .black.opacity(0.12), radius: 8, y: 3)
-                .padding(.top, 4)
-                .accessibilityHidden(true)
+            heroCluster
             Text("GeoSpoof Pro")
                 .font(.largeTitle.bold())
-            Text("Spoof smarter — automatic VPN sync, per-site rules, and more.")
-                .font(.subheadline)
+            (Text(Image(systemName: "lock.shield")) + Text("  No account · No tracking · Open source"))
+                .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
     }
 
-    /// Low-key trust strip — GeoSpoof's differentiators reassure before the ask.
-    private var trustLine: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "lock.shield")
-                .accessibilityHidden(true)
-            Text("No account · No tracking · Open source")
+    // MARK: Hero
+
+    /// Decorative icon cluster: the app icon with the signals GeoSpoof controls
+    /// (location, timezone, privacy, network) floating around it — echoes the
+    /// "scattered icons" hero from high-converting paywalls. Purely cosmetic and
+    /// hidden from accessibility; the title + subtitle below carry the meaning.
+    /// Offsets are tuned to stay within a small-phone content width (~280pt).
+    private var heroCluster: some View {
+        ZStack {
+            ForEach(Self.heroSatellites) { sat in
+                Image(systemName: sat.symbol)
+                    .font(.system(size: sat.size, weight: .semibold))
+                    .foregroundStyle(sat.tint)
+                    .frame(width: sat.tile, height: sat.tile)
+                    .background(.ultraThinMaterial, in: Circle())
+                    .overlay(Circle().strokeBorder(sat.tint.opacity(0.18), lineWidth: 1))
+                    .shadow(color: .black.opacity(0.10), radius: 5, y: 2)
+                    .offset(x: sat.x, y: sat.y)
+            }
+
+            Image("LargeIcon")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 88, height: 88)
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .shadow(color: .black.opacity(0.15), radius: 10, y: 4)
         }
-        .font(.caption)
-        .foregroundStyle(.secondary)
+        .frame(height: 176)
+        .frame(maxWidth: .infinity)
+        .accessibilityHidden(true)
     }
 
-    /// Universal Purchase reassurance: one subscription unlocks every Apple
-    /// device, synced automatically via the App Store (no account, no extra
-    /// cost). A genuine differentiator worth surfacing right before the ask.
-    private var universalPurchaseLine: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "ipad.and.iphone")
-                .accessibilityHidden(true)
-            Text("One membership for all your devices — iPhone, iPad & Mac, synced automatically")
-        }
-        .font(.caption)
-        .foregroundStyle(.secondary)
-        .multilineTextAlignment(.center)
-    }
+    /// Satellite icons for `heroCluster`. Tints reuse the feature palette.
+    private static let heroSatellites: [HeroSatellite] = [
+        HeroSatellite(symbol: "globe.americas.fill", tint: .blue,   size: 22, tile: 44, x: -92, y: -46),
+        HeroSatellite(symbol: "clock.fill",          tint: .orange, size: 19, tile: 38, x:  90, y: -50),
+        HeroSatellite(symbol: "lock.shield.fill",    tint: .purple, size: 19, tile: 38, x: -110, y: 22),
+        HeroSatellite(symbol: "mappin.and.ellipse",  tint: .pink,   size: 21, tile: 44, x:  106, y: 16),
+        HeroSatellite(symbol: "wifi",                 tint: .teal,   size: 17, tile: 34, x: -60, y: 64),
+        HeroSatellite(symbol: "location.fill",        tint: .brand,  size: 19, tile: 40, x:  68, y: 60),
+    ]
 
     // MARK: Features
 
     private var featureList: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 18) {
             ForEach(ProFeatures.all) { feature in
                 HStack(alignment: .top, spacing: 14) {
                     Image(systemName: feature.icon)
-                        .font(.system(size: 20))
-                        .foregroundStyle(Color.brand)
-                        .frame(width: 28)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(feature.tint)
+                        .frame(width: 40, height: 40)
+                        .background(feature.tint.opacity(0.15),
+                                    in: RoundedRectangle(cornerRadius: 11, style: .continuous))
                         .accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(feature.title).font(.headline)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(feature.title)
+                            .font(.headline)
                         Text(feature.detail)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
                     Spacer(minLength: 0)
                 }
             }
 
-            // Closing line: keeps the bullet list short while signalling that a
-            // subscription is an evolving bundle — and quietly covers smaller
-            // additions (e.g. the map pin picker) without a dedicated row.
-            Text("Plus every new Pro feature, the moment it ships.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.leading, 42)
+            // Closing row: signals Pro is an evolving bundle. Uses the same
+            // tile + title + detail layout as the features (with a sparkles
+            // accent) so it doesn't read as an orphaned line.
+            HStack(alignment: .top, spacing: 14) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(.pink)
+                    .frame(width: 40, height: 40)
+                    .background(Color.pink.opacity(0.15),
+                                in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("And More to Come")
+                        .font(.headline)
+                    Text("New Pro features, as they ship.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+                Spacer(minLength: 0)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Universal Purchase reassurance, kept out of the (capped at 5) feature
+    /// rows but still surfaced as a small icon note under the list.
+    private var universalPurchaseNote: some View {
+        (Text(Image(systemName: "ipad.and.iphone")) + Text("  One purchase unlocks iPhone, iPad & Mac"))
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
+    }
+
+    // MARK: Social proof
+
+    /// Compact, honest social proof, placed just under the header (between the
+    /// trust line and the feature list) to build credibility before the pitch.
+    /// The 5 stars represent the quoted review (a real 5-star App Store review),
+    /// NOT a claimed store-wide average — keep it that way (App Review 2.3 + our
+    /// own honesty positioning). Update the count only to a figure you can defend.
+    private var socialProof: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 2) {
+                ForEach(0..<5, id: \.self) { _ in
+                    Image(systemName: "star.fill")
+                        .font(.caption)
+                        .foregroundStyle(Color.brand)
+                }
+            }
+            .accessibilityElement()
+            .accessibilityLabel("Five-star App Store review")
+            Text("“Perfect app — works exactly as expected.”")
+                .font(.callout)
+                .italic()
+                .multilineTextAlignment(.center)
+            Text("jq🦄 · App Store · trusted by 5,000+ users")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: Plan picker
@@ -173,11 +241,25 @@ struct ProPaywallView: View {
             ProgressView().padding(.vertical, 24)
         } else {
             VStack(spacing: 12) {
+                // Lead with lifetime — the anchor we want to convert toward:
+                // one payment, no subscription, yours forever.
+                if let lifetime = store.lifetimeProduct {
+                    PlanCard(
+                        product: lifetime,
+                        isSelected: selectedProductID == lifetime.id,
+                        periodText: "lifetime",
+                        priceCaption: "one-time",
+                        trialText: nil,
+                        badgeText: "Best value",
+                        subPriceText: nil
+                    ) { selectedProductID = lifetime.id }
+                }
                 if let annual = store.annualProduct {
                     PlanCard(
                         product: annual,
                         isSelected: selectedProductID == annual.id,
                         periodText: periodText(annual),
+                        priceCaption: "per \(periodText(annual))",
                         trialText: trialText(annual),
                         badgeText: savingsText,
                         subPriceText: monthlyEquivalent(annual)
@@ -188,7 +270,8 @@ struct ProPaywallView: View {
                         product: monthly,
                         isSelected: selectedProductID == monthly.id,
                         periodText: periodText(monthly),
-                        trialText: trialText(monthly),
+                        priceCaption: "per \(periodText(monthly))",
+                        trialText: nil,
                         badgeText: nil,
                         subPriceText: nil
                     ) { selectedProductID = monthly.id }
@@ -223,9 +306,9 @@ struct ProPaywallView: View {
     }
 
     private var ctaTitle: String {
-        if let product = selectedProduct, trialText(product) != nil {
-            return "Start Free Trial"
-        }
+        guard let product = selectedProduct else { return "Subscribe" }
+        if isLifetime(product) { return "Unlock Lifetime Access" }
+        if trialText(product) != nil { return "Start Free Trial" }
         return "Subscribe"
     }
 
@@ -234,11 +317,20 @@ struct ProPaywallView: View {
     private var ctaSubtitle: String {
         guard let product = selectedProduct else { return "" }
         let price = product.displayPrice
+        if isLifetime(product) {
+            return "\(price) once. Yours forever — no subscription."
+        }
         let period = periodText(product)
         if let days = trialDays(product) {
             return "\(days) days free, then \(price)/\(period). Cancel anytime."
         }
         return "\(price)/\(period). Cancel anytime."
+    }
+
+    /// True for the one-time, non-consumable lifetime unlock (which has no
+    /// subscription metadata and never renews).
+    private func isLifetime(_ product: Product) -> Bool {
+        product.id == ProStore.ProductID.lifetime
     }
 
     private var restoreButton: some View {
@@ -271,12 +363,10 @@ struct ProPaywallView: View {
     }
 
     private var disclosureText: String {
-        """
-        Payment is charged to your Apple Account at confirmation of purchase. \
-        Subscriptions renew automatically unless canceled at least 24 hours before \
-        the end of the current period. Manage or cancel anytime in Settings. \
-        Any unused portion of a free trial is forfeited when you purchase a subscription.
-        """
+        if let product = selectedProduct, isLifetime(product) {
+            return "A one-time purchase billed to your Apple Account. Not a subscription — it doesn't renew."
+        }
+        return "Billed to your Apple Account. Auto-renews unless canceled at least 24 hours before the period ends — manage in Settings. Unused free-trial time is forfeited on purchase."
     }
 
     // MARK: Pricing helpers
@@ -333,12 +423,30 @@ struct ProPaywallView: View {
     }
 }
 
+// MARK: - Hero satellite model
+
+/// One floating icon in the paywall's hero cluster. `size` is the SF Symbol
+/// point size; `tile` the diameter of its circular background; `x`/`y` the
+/// offset from the centered app icon.
+private struct HeroSatellite: Identifiable {
+    let id = UUID()
+    let symbol: String
+    let tint: Color
+    let size: CGFloat
+    let tile: CGFloat
+    let x: CGFloat
+    let y: CGFloat
+}
+
 // MARK: - Plan card
 
 private struct PlanCard: View {
     let product: Product
     let isSelected: Bool
     let periodText: String
+    /// Caption under the price, e.g. "per year" for a subscription or
+    /// "one-time" for the lifetime non-consumable.
+    let priceCaption: String
     let trialText: String?
     let badgeText: String?
     let subPriceText: String?
@@ -377,7 +485,7 @@ private struct PlanCard: View {
                 VStack(alignment: .trailing, spacing: 1) {
                     Text(product.displayPrice)
                         .font(.headline)
-                    Text("per \(periodText)")
+                    Text(priceCaption)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     if let subPriceText {
@@ -487,18 +595,23 @@ struct ProSettingsSection: View {
     private var summaryIcon: String {
         switch store.status {
         case .founder: return "sparkles"
+        case .lifetime: return "infinity"
         case .subscribed: return "checkmark.seal.fill"
         case .none: return "location.fill.viewfinder"
         }
     }
 
     private var summaryTint: Color {
-        store.status == .subscribed ? .green : .brand
+        switch store.status {
+        case .subscribed, .lifetime: return .green
+        case .founder, .none: return .brand
+        }
     }
 
     private var summarySubtitle: String {
         switch store.status {
         case .founder: return "Founding Supporter — free for life"
+        case .lifetime: return "Lifetime — yours forever"
         case .subscribed:
             if let plan = store.subscriptionDetails?.planName { return "\(plan) plan" }
             return "Active"
@@ -560,7 +673,7 @@ struct ProDetailView: View {
         .sheet(isPresented: $showPaywall) { ProPaywallView() }
         #if os(iOS)
         .manageSubscriptionsSheet(isPresented: $showManageSubscriptions)
-        .refundRequestSheet(for: store.subscriptionDetails?.transactionID ?? 0, isPresented: $showRefund)
+        .refundRequestSheet(for: refundTransactionID, isPresented: $showRefund)
         #endif
         .task {
             if store.products.isEmpty { await store.loadProducts() }
@@ -578,6 +691,10 @@ struct ProDetailView: View {
                 statusRow(icon: "sparkles", tint: .brand,
                           title: "Founding Supporter",
                           subtitle: "You have GeoSpoof Pro free, for life — thanks for being an early user.")
+            case .lifetime:
+                statusRow(icon: "infinity", tint: .green,
+                          title: "Lifetime",
+                          subtitle: "You own GeoSpoof Pro — yours forever, on all your Apple devices. No subscription.")
             case .subscribed:
                 statusRow(icon: "checkmark.seal.fill", tint: .green,
                           title: "\(store.subscriptionDetails?.planName ?? "Pro") plan",
@@ -662,6 +779,14 @@ struct ProDetailView: View {
                 Text("Manage or cancel your subscription anytime. Cancelling keeps Pro active until the end of the current period.")
             }
 
+        case .lifetime:
+            Section {
+                refundRow
+                restoreButton
+            } footer: {
+                Text("Lifetime is a one-time purchase tied to your Apple Account — it restores automatically when you reinstall or set up a new device. There's no subscription to manage.")
+            }
+
         case .founder:
             Section {
                 restoreButton
@@ -709,6 +834,14 @@ struct ProDetailView: View {
         }
         #endif
     }
+
+    #if os(iOS)
+    /// Transaction to refund — the lifetime purchase if owned, otherwise the
+    /// active subscription. `0` when there's nothing refundable.
+    private var refundTransactionID: UInt64 {
+        store.lifetimeTransactionID ?? store.subscriptionDetails?.transactionID ?? 0
+    }
+    #endif
 }
 
 // MARK: - Shared feature catalog
@@ -718,20 +851,24 @@ struct ProFeatureItem: Identifiable {
     let icon: String
     let title: String
     let detail: String
+    let tint: Color
 }
 
 enum ProFeatures {
-    /// Feature list shown on the paywall (icon + title + detail) and the Pro
-    /// detail screen (icon + title). Edit here to change copy in both places.
+    /// Feature list shown on the paywall (colored tile + title + one-line
+    /// detail) and the Pro detail screen (icon + title). Keep each `detail` to
+    /// a single short line of similar length so the rows stay visually even —
+    /// uneven description lengths are what make the list look ragged. Edit here
+    /// to change copy in both places.
     static let all: [ProFeatureItem] = [
         ProFeatureItem(icon: "arrow.triangle.2.circlepath", title: "Automatic VPN Sync",
-                       detail: "Your spoofed location follows your VPN's exit IP automatically — even in the background."),
-        ProFeatureItem(icon: "list.bullet.rectangle", title: "Per-Site Allowlist & Denylist",
-                       detail: "Choose exactly which sites get the spoofed location."),
+                       detail: "Follows your VPN automatically.", tint: .brand),
+        ProFeatureItem(icon: "list.bullet.rectangle", title: "Per-Site Rules",
+                       detail: "Spoof only the sites you pick.", tint: .blue),
         ProFeatureItem(icon: "square.grid.2x2", title: "Widgets & Controls",
-                       detail: "Switch locations from your Home Screen and Control Center."),
+                       detail: "Switch from your Home Screen.", tint: .orange),
         ProFeatureItem(icon: "scope", title: "Custom Accuracy",
-                       detail: "Fine-tune the accuracy value your location reports."),
+                       detail: "Set the accuracy you report.", tint: .purple),
     ]
 }
 

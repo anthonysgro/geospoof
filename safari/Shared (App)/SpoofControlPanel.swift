@@ -40,11 +40,11 @@ struct SpoofControlPanel: View {
             #endif
             protectionSection
             locationSection
+            proDiscoverySection
             vpnSyncSection
             if !controller.favorites.isEmpty {
                 favoritesSection
             }
-            proDiscoverySection
             verificationSection
         }
         .groupedFormStyle()
@@ -111,25 +111,44 @@ struct SpoofControlPanel: View {
     private var proDiscoverySection: some View {
         if !pro.isPro && controller.hasLocation && !proCardDismissed {
             Section {
-                NavigationLink {
-                    ProDetailView()
-                } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 22))
-                            .foregroundStyle(Color.brand)
-                            .frame(width: 30)
-                            .accessibilityHidden(true)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Do more with GeoSpoof Pro")
-                                .font(.headline)
-                            Text("Automatic VPN sync, per-site rules, widgets, and more.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 12) {
+                    NavigationLink {
+                        ProDetailView()
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 22))
+                                .foregroundStyle(Color.brand)
+                                .frame(width: 30)
+                                .accessibilityHidden(true)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Do more with GeoSpoof Pro")
+                                    .font(.headline)
+                                Text("Automatic VPN sync, per-site rules, widgets, and more.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
                         }
                     }
+
+                    Spacer(minLength: 8)
+
+                    // Visible dismiss — works on macOS (no swipe in a Form) and
+                    // iOS alike. `.borderless` keeps it a discrete tap target so
+                    // it doesn't trigger the NavigationLink.
+                    Button {
+                        proCardDismissed = true
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title3)
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Dismiss")
                 }
+                #if os(iOS)
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     Button(role: .destructive) {
                         proCardDismissed = true
@@ -137,8 +156,7 @@ struct SpoofControlPanel: View {
                         Label("Dismiss", systemImage: "xmark")
                     }
                 }
-            } footer: {
-                Text("Swipe to dismiss.")
+                #endif
             }
         }
     }

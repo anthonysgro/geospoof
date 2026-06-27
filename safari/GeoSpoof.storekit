@@ -46,6 +46,21 @@
       "productID" : "com.moonloaf.geospoof.tip.large",
       "referenceName" : "Large Tip",
       "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "49.99",
+      "familyShareable" : false,
+      "internalID" : "1000000004",
+      "localizations" : [
+        {
+          "description" : "Unlock every GeoSpoof Pro feature forever with a single one-time purchase. No subscription.",
+          "displayName" : "Pro Lifetime",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.moonloaf.geospoof.pro.lifetime",
+      "referenceName" : "Pro Lifetime",
+      "type" : "NonConsumable"
     }
   ],
   "settings" : {
@@ -59,7 +74,7 @@
         {
           "adHocOffers" : [],
           "codeOffers" : [],
-          "displayPrice" : "4.99",
+          "displayPrice" : "2.99",
           "familyShareable" : false,
           "groupNumber" : 1,
           "internalID" : "2000000001",
@@ -81,7 +96,7 @@
         {
           "adHocOffers" : [],
           "codeOffers" : [],
-          "displayPrice" : "24.99",
+          "displayPrice" : "19.99",
           "familyShareable" : false,
           "groupNumber" : 1,
           "internalID" : "2000000002",

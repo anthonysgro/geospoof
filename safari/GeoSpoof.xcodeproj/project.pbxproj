@@ -621,7 +621,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "export PATH=\"/usr/local/bin:/opt/homebrew/bin:$PATH\"\ncd \"${SRCROOT}/..\"\nnpm run build:safari\n";
+			shellScript = "export PATH=\"/usr/local/bin:/opt/homebrew/bin:$PATH\"\n\n# Load nvm so node/npm are found in Xcode's minimal PATH (local dev).\nexport NVM_DIR=\"$HOME/.nvm\"\nif [ -s \"$NVM_DIR/nvm.sh\" ]; then\n  . \"$NVM_DIR/nvm.sh\"\nfi\n\n# Fallback: if npm still isn't on PATH, use the newest nvm-installed node.\nif ! command -v npm >/dev/null 2>&1 && [ -d \"$NVM_DIR/versions/node\" ]; then\n  NODE_BIN=\"$NVM_DIR/versions/node/$(ls -1 \"$NVM_DIR/versions/node\" | sort -V | tail -1)/bin\"\n  export PATH=\"$NODE_BIN:$PATH\"\nfi\n\ncd \"${SRCROOT}/..\"\nnpm run build:safari\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -745,7 +745,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = "GeoSpoof WidgetExtensionDebug.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 44;
+				CURRENT_PROJECT_VERSION = 45;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "GeoSpoof Widget/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "GeoSpoof Widget";
@@ -756,7 +756,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.22.10;
+				MARKETING_VERSION = 1.22.11;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.moonloaf.geospoof.GeoSpoof-Widget";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -777,7 +777,7 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
 				CODE_SIGN_ENTITLEMENTS = "GeoSpoof WidgetExtensionRelease.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 44;
+				CURRENT_PROJECT_VERSION = 45;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "GeoSpoof Widget/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "GeoSpoof Widget";
@@ -788,7 +788,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.22.10;
+				MARKETING_VERSION = 1.22.11;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.moonloaf.geospoof.GeoSpoof-Widget";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -928,7 +928,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "GeoSpoof Extension (iOS)Release.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 44;
+				CURRENT_PROJECT_VERSION = 45;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "iOS (Extension)/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "GeoSpoof Extension";
@@ -939,7 +939,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.22.10;
+				MARKETING_VERSION = 1.22.11;
 				OTHER_LDFLAGS = (
 					"-framework",
 					SafariServices,
@@ -963,7 +963,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "GeoSpoof Extension (iOS)Release.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 44;
+				CURRENT_PROJECT_VERSION = 45;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "iOS (Extension)/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "GeoSpoof Extension";
@@ -974,7 +974,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.22.10;
+				MARKETING_VERSION = 1.22.11;
 				OTHER_LDFLAGS = (
 					"-framework",
 					SafariServices,
@@ -1002,7 +1002,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = "GeoSpoof (iOS)Release.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 44;
+				CURRENT_PROJECT_VERSION = 45;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "iOS (App)/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = GeoSpoof;
@@ -1016,7 +1016,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.22.10;
+				MARKETING_VERSION = 1.22.11;
 				OTHER_LDFLAGS = (
 					"-framework",
 					SafariServices,
@@ -1045,7 +1045,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = "GeoSpoof (iOS)Release.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 44;
+				CURRENT_PROJECT_VERSION = 45;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "iOS (App)/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = GeoSpoof;
@@ -1059,7 +1059,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.22.10;
+				MARKETING_VERSION = 1.22.11;
 				OTHER_LDFLAGS = (
 					"-framework",
 					SafariServices,
@@ -1087,7 +1087,7 @@
 				CODE_SIGN_ENTITLEMENTS = "GeoSpoof Extension (macOS)Release.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 44;
+				CURRENT_PROJECT_VERSION = 45;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1102,7 +1102,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.22.10;
+				MARKETING_VERSION = 1.22.11;
 				OTHER_LDFLAGS = (
 					"-framework",
 					SafariServices,
@@ -1127,7 +1127,7 @@
 				CODE_SIGN_ENTITLEMENTS = "GeoSpoof Extension (macOS)Release.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 44;
+				CURRENT_PROJECT_VERSION = 45;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1142,7 +1142,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.22.10;
+				MARKETING_VERSION = 1.22.11;
 				OTHER_LDFLAGS = (
 					"-framework",
 					SafariServices,
@@ -1169,7 +1169,7 @@
 				CODE_SIGN_ENTITLEMENTS = "GeoSpoof (macOS)Release.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 44;
+				CURRENT_PROJECT_VERSION = 45;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1185,7 +1185,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.22.10;
+				MARKETING_VERSION = 1.22.11;
 				OTHER_LDFLAGS = (
 					"-framework",
 					SafariServices,
@@ -1214,7 +1214,7 @@
 				CODE_SIGN_ENTITLEMENTS = "GeoSpoof (macOS)Release.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 44;
+				CURRENT_PROJECT_VERSION = 45;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1230,7 +1230,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.22.10;
+				MARKETING_VERSION = 1.22.11;
 				OTHER_LDFLAGS = (
 					"-framework",
 					SafariServices,

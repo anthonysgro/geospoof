@@ -4,15 +4,18 @@
 //
 //  GeoSpoof Pro entitlement + purchase layer (StoreKit 2).
 //
-//  Two ways to be Pro:
+//  Three ways to be Pro:
 //    1. Founder grant — anyone whose *first* downloaded version is below
 //       `founderCutoff` (1.22.0) gets Pro free forever. Resolved from
 //       `AppTransaction.originalAppVersion`, so it needs no sign-in, no
 //       backend, and survives reinstalls (it's tied to the Apple ID's
 //       purchase history). This is our thank-you to early users.
 //    2. Active subscription — monthly or annual auto-renewable.
+//    3. Lifetime unlock — a one-time non-consumable purchase. Never expires,
+//       and rides Apple's Universal Purchase rail across iOS/iPadOS/macOS on
+//       its own (no iCloud-sync workaround, unlike the founder grant).
 //
-//  `isPro = isFounder || hasActiveSubscription`.
+//  `isPro = isFounder || ownsLifetime || hasActiveSubscription`.
 //
 //  The resolved entitlement is cached in app-local UserDefaults (so a cold
 //  launch keeps the last founder value) and broadcast via NotificationCenter
@@ -79,7 +82,15 @@ final class ProStore: ObservableObject {
     enum ProductID {
         static let monthly = "com.moonloaf.geospoof.pro.monthly"
         static let annual  = "com.moonloaf.geospoof.pro.annual"
-        static let all: Set<String> = [monthly, annual]
+        /// One-time, non-consumable. Unlike the subscriptions it never expires
+        /// and — being a real purchase, not the founder *grant* — it rides
+        /// Apple's Universal Purchase rail across iOS/iPadOS/macOS with no
+        /// iCloud-sync workaround.
+        static let lifetime = "com.moonloaf.geospoof.pro.lifetime"
+        /// Auto-renewable subscriptions only (used to filter subscription
+        /// entitlements). The lifetime non-consumable is handled separately.
+        static let subscriptions: Set<String> = [monthly, annual]
+        static let all: Set<String> = [monthly, annual, lifetime]
     }
 
     /// First release that ships paywalled Pro. Anyone whose *original* (first-
@@ -141,21 +152,33 @@ final class ProStore: ObservableObject {
 
     @Published private(set) var products: [Product] = []
     @Published private(set) var activeProductIDs: Set<String> = []
+    /// Whether the user owns the one-time lifetime unlock (non-consumable).
+    @Published private(set) var ownsLifetime = false
     @Published private(set) var isFounder = false
     @Published private(set) var isLoadingProducts = false
     @Published private(set) var purchaseInFlight = false
     @Published private(set) var subscriptionDetails: SubscriptionDetails?
+    /// Transaction id of the lifetime purchase, for the refund-request sheet.
+    /// `nil` unless the user bought lifetime.
+    @Published private(set) var lifetimeTransactionID: UInt64?
     @Published var lastError: String?
 
     /// The single gate the rest of the app should read.
-    var isPro: Bool { isFounder || !activeProductIDs.isEmpty }
+    var isPro: Bool { isFounder || ownsLifetime || !activeProductIDs.isEmpty }
 
     /// Where the user's Pro access comes from. Drives the management screen:
-    /// founders have no Apple subscription to manage, subscribers do.
-    enum ProStatus { case none, founder, subscribed }
+    /// founders have no Apple purchase to manage, lifetime owners have a one-
+    /// time purchase (refundable, nothing to cancel), subscribers have a
+    /// cancelable subscription.
+    enum ProStatus { case none, founder, lifetime, subscribed }
 
     var status: ProStatus {
+        // Precedence: a founder grant and a lifetime purchase both mean "Pro
+        // forever, nothing to cancel", so they outrank an active subscription
+        // for what the management screen shows. Founder wins over lifetime
+        // (it's free — never steer a founder toward managing a purchase).
         if isFounder { return .founder }
+        if ownsLifetime { return .lifetime }
         if !activeProductIDs.isEmpty { return .subscribed }
         return .none
     }
@@ -173,6 +196,7 @@ final class ProStore: ObservableObject {
     /// Convenience accessors for the paywall.
     var monthlyProduct: Product? { products.first { $0.id == ProductID.monthly } }
     var annualProduct: Product? { products.first { $0.id == ProductID.annual } }
+    var lifetimeProduct: Product? { products.first { $0.id == ProductID.lifetime } }
 
     private let cache = UserDefaults.standard
 
@@ -422,16 +446,28 @@ final class ProStore: ObservableObject {
 
     // MARK: Entitlement resolution
 
-    /// Recompute active subscriptions from the current entitlements and cache
-    /// the result. Safe to call repeatedly.
+    /// Recompute active entitlements (subscriptions + the lifetime non-
+    /// consumable) from StoreKit and cache the result. Safe to call repeatedly.
     func refreshEntitlements() async {
         var active: Set<String> = []
         var activeTransaction: StoreKit.Transaction?
+        var lifetimeOwned = false
+        var lifetimeTxnID: UInt64?
         for await result in Transaction.currentEntitlements {
             guard case .verified(let transaction) = result else { continue }
+            guard transaction.revocationDate == nil else { continue }
+
+            // The one-time lifetime unlock: a non-consumable, so it has no
+            // expiry and isn't part of the subscription set.
+            if transaction.productID == ProductID.lifetime {
+                lifetimeOwned = true
+                lifetimeTxnID = transaction.id
+                continue
+            }
+
+            // Auto-renewable subscriptions.
             guard transaction.productType == .autoRenewable,
-                  ProductID.all.contains(transaction.productID),
-                  transaction.revocationDate == nil else { continue }
+                  ProductID.subscriptions.contains(transaction.productID) else { continue }
             // currentEntitlements already excludes lapsed subs, but guard the
             // expiration date too for belt-and-suspenders.
             if let expiry = transaction.expirationDate, expiry < .now { continue }
@@ -439,6 +475,8 @@ final class ProStore: ObservableObject {
             activeTransaction = transaction
         }
         activeProductIDs = active
+        ownsLifetime = lifetimeOwned
+        lifetimeTransactionID = lifetimeTxnID
         await updateSubscriptionDetails(from: activeTransaction)
         persistIsPro()
     }
