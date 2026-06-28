@@ -393,6 +393,10 @@ enum Log {
     static let timezone = AppLogger("Timezone")
     /// Bundled data loading (city catalog, timezone boundaries).
     static let data = AppLogger("Data")
+    /// Pro entitlement: founder grant resolution, the CloudKit/KVS sync rails,
+    /// product loading, purchase + restore. Never log PII here (no Apple ID,
+    /// receipt, or account data) — `AppLogger` emits `.public`.
+    static let pro = AppLogger("Pro")
 }
 
 /// A geocoding-style search hit. Bundled offline sample data for now.

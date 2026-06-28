@@ -1531,6 +1531,12 @@ struct SiteFiltersView: View {
     @ObservedObject private var pro = ProStore.shared
     @State private var showingAdd = false
     @State private var showPaywall = false
+    /// Mirror of `controller.scopeMode` that backs the segmented Picker. A
+    /// `@State` selection can be forcibly reverted (a get/set Binding can't be
+    /// reliably snapped back on macOS when we reject a locked selection), and
+    /// driving the gate from `.onChange` keeps us from mutating published state
+    /// during a view update.
+    @State private var pickerMode: ScopeMode = .all
 
     /// Per-site filtering is a Pro feature on the Apple apps (iOS + macOS);
     /// founders/subscribers are exempt via `pro.isPro`. The Chrome/Firefox
@@ -1543,21 +1549,28 @@ struct SiteFiltersView: View {
         AdaptiveNavigationStack {
             Form {
                 Section {
-                    Picker("Mode", selection: Binding(
-                        get: { controller.scopeMode },
-                        set: { newMode in
-                            if filtersLocked && newMode != .all {
-                                showPaywall = true
-                            } else {
-                                controller.setScopeMode(newMode)
-                            }
-                        }
-                    )) {
+                    Picker("Mode", selection: $pickerMode) {
                         ForEach(ScopeMode.allCases) { mode in
                             Text(mode.label).tag(mode)
                         }
                     }
                     .pickerStyle(.segmented)
+                    .onChange(of: pickerMode) { newMode in
+                        if filtersLocked && newMode != .all {
+                            // Locked: pitch Pro and reject the change by snapping
+                            // the control back to the real (still-.all) mode.
+                            showPaywall = true
+                            if pickerMode != controller.scopeMode {
+                                pickerMode = controller.scopeMode
+                            }
+                        } else if newMode != controller.scopeMode {
+                            controller.setScopeMode(newMode)
+                        }
+                    }
+                    // Keep the mirror in sync with the source of truth (e.g. an
+                    // update synced in from the extension).
+                    .onChange(of: controller.scopeMode) { pickerMode = $0 }
+                    .onAppear { pickerMode = controller.scopeMode }
                 } header: {
                     Text("Mode")
                 } footer: {
