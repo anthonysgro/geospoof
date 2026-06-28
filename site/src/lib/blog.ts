@@ -16,6 +16,20 @@ export function getPostBySlug(slug: string): Post | undefined {
 }
 
 /**
+ * Adjacent posts for foot-of-article navigation. `posts` is newest-first, so
+ * the *newer* neighbour sits at the lower index and the *older* one at the
+ * higher index. Either side may be `undefined` at the ends of the list.
+ */
+export function getAdjacentPosts(slug: string): {
+  newer: Post | undefined
+  older: Post | undefined
+} {
+  const i = posts.findIndex((p) => p.slug === slug)
+  if (i === -1) return { newer: undefined, older: undefined }
+  return { newer: posts[i - 1], older: posts[i + 1] }
+}
+
+/**
  * The post to feature on the home page: the first one flagged `featured`,
  * falling back to the newest post. `undefined` only if there are no posts.
  */
