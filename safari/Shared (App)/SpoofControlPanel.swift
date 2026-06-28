@@ -361,23 +361,8 @@ struct SpoofControlPanel: View {
     @ViewBuilder
     private var autoBackgroundSyncRow: some View {
         if pro.isPro {
-            // Read-only status, not a toggle: it's always on for Pro. Use the
-            // native label/value row (LabeledContent) so "On" renders at the
-            // standard Settings-row size/treatment; fall back to a matching
-            // HStack on iOS 15 (LabeledContent is iOS 16+).
-            if #available(iOS 16.0, *) {
-                LabeledContent {
-                    Text("On")
-                } label: {
-                    Label("Auto Background Sync", systemImage: "arrow.triangle.2.circlepath")
-                }
-            } else {
-                HStack {
-                    Label("Auto Background Sync", systemImage: "arrow.triangle.2.circlepath")
-                    Spacer()
-                    Text("On").foregroundStyle(.secondary)
-                }
-            }
+            // Read-only status, not a toggle: it's always on for Pro.
+            autoBackgroundSyncStatusRow
         } else {
             Button {
                 showPaywall = true
@@ -395,6 +380,33 @@ struct SpoofControlPanel: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+        }
+    }
+
+    /// The Pro "On" status row. Uses the native label/value row
+    /// (LabeledContent) so "On" renders at the standard Settings-row treatment,
+    /// falling back to a matching HStack on iOS 15 (LabeledContent is iOS 16+ /
+    /// macOS 13+). The `#available` check lives here — not in a `@ViewBuilder` —
+    /// and returns `AnyView` explicitly so SwiftUI never synthesizes
+    /// `ViewBuilder.buildLimitedAvailability`, whose return type only conforms
+    /// to `View` on macOS 26 (this app targets macOS 13).
+    private var autoBackgroundSyncStatusRow: some View {
+        if #available(iOS 16.0, *) {
+            return AnyView(
+                LabeledContent {
+                    Text("On")
+                } label: {
+                    Label("Auto Background Sync", systemImage: "arrow.triangle.2.circlepath")
+                }
+            )
+        } else {
+            return AnyView(
+                HStack {
+                    Label("Auto Background Sync", systemImage: "arrow.triangle.2.circlepath")
+                    Spacer()
+                    Text("On").foregroundStyle(.secondary)
+                }
+            )
         }
     }
     // MARK: Verification — "Verify Your Protection" link on the home (iOS + macOS)
