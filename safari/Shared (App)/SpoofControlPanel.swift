@@ -78,6 +78,12 @@ struct SpoofControlPanel: View {
         .onChange(of: controller.isActiveInSafari) { _ in
             evaluateReviewPrompt()
         }
+        .onChange(of: controller.hasLocation) { _ in
+            // Setting a location is the strongest "it's working" signal. Without
+            // this, a user who opens the app and *then* spoofs wouldn't count as
+            // a qualifying session until a later relaunch.
+            evaluateReviewPrompt()
+        }
         .onChange(of: pro.isFounder) { isFounder in
             if isFounder && !founderWelcomeShown { showFounderWelcome = true }
         }
@@ -1416,8 +1422,9 @@ enum ReviewPrompt {
     private static let eventCountKey = "reviewSignificantEventCount"
     private static let lastPromptedVersionKey = "reviewLastPromptedVersion"
     /// Qualifying sessions before we ask. Small, since the trigger is already a
-    /// strong "it's working" signal.
-    private static let threshold = 3
+    /// strong "it's working" signal. Kept at 2 (not 1) so we don't ask on the
+    /// very first success, but still surface early while goodwill is high.
+    private static let threshold = 2
 
     /// Only count one significant event per process launch, so navigating back
     /// to the panel within a session can't inflate the counter.
