@@ -1,6 +1,6 @@
 ---
 title: "GeoSpoof vs Spoof Geolocation: A Signal-by-Signal Comparison"
-description: "Spoof Geolocation moves the map pin but only tells the truth at UTC. See the timezone, Date, Intl, and worker checks it fails — and that GeoSpoof passes."
+description: "Spoof Geolocation moves the map pin but leaves your real timezone in place, so its Date, Intl, and worker signals leak where you actually are. GeoSpoof doesn't."
 date: "2026-06-27"
 author: "Anthony Sgro"
 tags: ["Privacy", "Comparison"]
@@ -12,18 +12,18 @@ keywords:
   - "best location spoofing extension"
   - "browser location spoofer comparison"
   - "spoof geolocation timezone leak"
-answer: "Spoof Geolocation and GeoSpoof both change your browser's reported location, but on a full fingerprint test GeoSpoof keeps every signal consistent while Spoof Geolocation only stays correct at UTC. In our runs Spoof Geolocation set the geolocation correctly but failed every non-UTC timezone check, returned wrong values from getDate, getDay, getHours, and getTimezoneOffset, got every Date string wrong except the UTC one, failed all Intl formatting, and failed every advanced worker surface. GeoSpoof passed all of them."
+answer: "Spoof Geolocation and GeoSpoof both change your browser's reported location, but on a full fingerprint test GeoSpoof keeps every signal consistent while Spoof Geolocation only moves the map pin. In our runs it set the geolocation correctly but left your real timezone untouched, so it failed every zone-specific timezone check, returned your real local values from getDate, getDay, getHours, and getTimezoneOffset, got every Date string wrong except the absolute UTC one, failed all Intl formatting, and failed every advanced worker surface. GeoSpoof passed all of them."
 faq:
   - question: "Is GeoSpoof a good Spoof Geolocation alternative?"
-    answer: "Yes. In our signal-by-signal test both extensions moved the map pin, but GeoSpoof also kept the timezone offsets, the Date methods, Intl formatting, and worker surfaces consistent with the spoofed location. Spoof Geolocation only stayed correct at UTC, so every other zone leaked. If you want an alternative that holds up to a full fingerprint check rather than just moving the pin, GeoSpoof is the stronger option."
-  - question: "Why does Spoof Geolocation only work at UTC?"
-    answer: "In our test Spoof Geolocation set the geolocation coordinates correctly but did not shift the clock to the target timezone, so the only place its time signals lined up was UTC. Set a location in any other zone and the timezone offset, the Date methods, the Date strings, and Intl formatting all reported UTC instead of the zone you picked, which is exactly the contradiction a site looks for."
+    answer: "Yes. In our signal-by-signal test both extensions moved the map pin, but GeoSpoof also kept the timezone offsets, the Date methods, Intl formatting, and worker surfaces consistent with the spoofed location. Spoof Geolocation left your real timezone in place, so every time-based signal still pointed at your actual region. If you want an alternative that holds up to a full fingerprint check rather than just moving the pin, GeoSpoof is the stronger option."
+  - question: "Does Spoof Geolocation change your timezone?"
+    answer: "No. In our test it set the geolocation coordinates but left your real timezone untouched, so the timezone offset, the Date methods, the Date strings, and Intl formatting all still reported your real zone instead of the location you set. The only value that matched was the absolute UTC time (toISOString and toUTCString), which is identical for everyone regardless of timezone — so it tells a site nothing and proves nothing."
   - question: "What is the best location spoofing extension?"
-    answer: "The best location spoofing extension keeps every fingerprinting signal consistent, not just the geolocation API. On our test GeoSpoof passed all of them; Spoof Geolocation moved the pin but reported UTC time everywhere, leaking the timezone, Date methods, Intl formatting, and worker contexts — and a single mismatch is enough to flag a spoof."
+    answer: "The best location spoofing extension keeps every fingerprinting signal consistent, not just the geolocation API. On our test GeoSpoof passed all of them; Spoof Geolocation moved the pin but left your real timezone in place, leaking your true region through the Date methods, Intl formatting, and worker contexts — and a single mismatch is enough to flag a spoof."
   - question: "Can a website tell that you are spoofing your location?"
-    answer: "Yes, if any signal disagrees. Sites cross-check the geolocation API against the timezone offset, individual Date methods, Intl formatting, and code running in workers; one contradiction reveals the spoof. A map pin in Tokyo paired with a UTC clock is a contradiction, which is why moving only the coordinates is not enough."
+    answer: "Yes, if any signal disagrees. Sites cross-check the geolocation API against the timezone offset, individual Date methods, Intl formatting, and code running in workers; one contradiction reveals the spoof. A map pin in Tokyo paired with your real New York timezone is a contradiction — and worse, it hands the site your actual region — which is why moving only the coordinates is not enough."
   - question: "Why do timezone offsets matter when spoofing your location?"
-    answer: "Websites read your timezone and UTC offset straight from JavaScript. If they point at a different region than your spoofed geolocation, that contradiction flags you. An extension that reports UTC while the map says Paris has already given itself away, no matter how accurate the coordinates are."
+    answer: "Websites read your timezone and UTC offset straight from JavaScript. If they point at a different region than your spoofed geolocation, that contradiction flags you. An extension that leaves your real timezone in place while the map says Paris has already given itself away — and revealed roughly where you really are — no matter how accurate the coordinates are."
   - question: "What browsers does GeoSpoof support?"
     answer: "GeoSpoof is free on Firefox (desktop and Android), Chrome and other Chromium browsers like Brave and Edge, and on the App Store for Safari on iPhone, iPad, and Mac. So whichever browser you were running Spoof Geolocation in, there's a GeoSpoof build for it."
 ---
@@ -40,12 +40,12 @@ So instead of comparing feature lists, we put Spoof Geolocation and
 real fingerprinting script would check. Same browser, same target location, same
 checks. Every screenshot below is a live result.
 
-[Spoof Geolocation](https://chromewebstore.google.com/detail/spoof-geolocation/ihdobppgelceaoeojmhpmbnaljhhmhlc) is the natural
-benchmark here: with over 100,000 users on the Chrome Web Store, it's the most
-widely used location spoofer on both Chrome and Firefox. If you've searched for
-a way to change your browser's location, it's probably the first extension you
-found — which is exactly why it's worth holding to a full fingerprint test
-rather than taking "it moves the map pin" at face value.
+[Spoof Geolocation](https://chromewebstore.google.com/detail/spoof-geolocation/ihdobppgelceaoeojmhpmbnaljhhmhlc)
+is the natural benchmark here: with over 100,000 users on the Chrome Web Store,
+it's the most widely used location spoofer on both Chrome and Firefox. If you've
+searched for a way to change your browser's location, it's probably the first
+extension you found — which is exactly why it's worth holding to a full
+fingerprint test rather than taking "it moves the map pin" at face value.
 
 ## How the test works
 
@@ -110,9 +110,10 @@ A closer look at the main signals the page reads first.
 />
 
 The pattern that runs through the whole comparison is already visible here:
-Spoof Geolocation gets the coordinates right and then reports UTC for everything
-that involves time. GeoSpoof keeps the clock pinned to the spoofed location, so
-the supporting signals match the pin.
+Spoof Geolocation gets the coordinates right and then leaves your *real* timezone
+in place for everything that involves time. So those signals don't just disagree
+with the pin — they keep pointing at where you actually are. GeoSpoof shifts the
+clock to match the spoofed location, so the supporting signals follow the pin.
 
 ## 3. Geolocation
 
@@ -138,9 +139,9 @@ this pin, and that's where the two extensions split.
 
 ## 4. Timezone and offsets
 
-Setting the timezone *name* is easy. The trap is the **offset**. The UTC offset
-for a zone has to match the location the pin is sitting in, and it has to be
-right for *any* date, since daylight-saving rules have changed over the years.
+A spoofed location is only believable if the timezone matches it. The reported
+UTC offset has to line up with where the pin sits, and it has to be right for
+*any* date, since daylight-saving rules have changed over the years.
 
 <Compare
   leftLabel="GeoSpoof"
@@ -150,20 +151,22 @@ right for *any* date, since daylight-saving rules have changed over the years.
   rightLight="/images/blog/geospoof-vs-spoof-geolocation/spoof-geolocation-results/sg-04-timezone-light.png"
   rightDark="/images/blog/geospoof-vs-spoof-geolocation/spoof-geolocation-results/sg-04-timezone-dark.png"
   alt="Timezone and offset results, including historical dates"
-  caption="GeoSpoof matches the zone the pin sits in; Spoof Geolocation only stays correct at UTC."
+  caption="GeoSpoof matches the zone the pin sits in; Spoof Geolocation reports your real timezone instead."
 />
 
-This is where Spoof Geolocation comes apart. It fails every non-UTC timezone
-check — the offset it reports is UTC's, not the spoofed location's. So the map
-says one place and the clock says Greenwich. GeoSpoof computes the offset from
-the zone's full history, so it stays consistent no matter where the pin is or
-which date a script picks.
+This is where Spoof Geolocation comes apart. It doesn't touch the timezone at
+all, so `getTimezoneOffset` returns *your real offset* — not the spoofed
+location's. The map says one place and the clock says wherever you actually are.
+That's not just an inconsistency a site can flag; it's your real region leaking
+straight through the spoof. GeoSpoof computes the offset from the target zone's
+full history, so it stays consistent no matter where the pin is or which date a
+script picks.
 
 ## 5. Date components
 
 Scripts can read the clock through individual `Date` methods like `getHours()`,
-`getDate()`, and `getTimezoneOffset()`. Each one has to reflect the spoofed
-timezone, not just the moment in UTC.
+`getDate()`, and `getDay()`. Each one has to reflect the spoofed timezone, not
+the machine the browser is actually running on.
 
 <Compare
   leftLabel="GeoSpoof"
@@ -173,14 +176,17 @@ timezone, not just the moment in UTC.
   rightLight="/images/blog/geospoof-vs-spoof-geolocation/spoof-geolocation-results/sg-05-date-light.png"
   rightDark="/images/blog/geospoof-vs-spoof-geolocation/spoof-geolocation-results/sg-05-date-dark.png"
   alt="Date component method results"
-  caption="GeoSpoof returns the right local-time components; Spoof Geolocation reports UTC."
+  caption="GeoSpoof returns the spoofed location's local time; Spoof Geolocation returns your real local time."
 />
 
 Spoof Geolocation gets `getDate`, `getDay`, `getHours`, and `getTimezoneOffset`
-wrong. Because it never shifts the clock off UTC, the local-time components don't
-line up with the location — and when the UTC offset crosses midnight, even the
-day of the week and the calendar date come back wrong. GeoSpoof returns the
-correct values across all of them.
+wrong. Because it never changes your timezone, these come back in *your* real
+local time rather than the spoofed location's — and when the gap between the two
+crosses midnight, even the day of the week and the calendar date are wrong. The
+`getUTC*` counterparts (`getUTCHours`, `getUTCDate`, and friends) do read
+correctly, but only because UTC is the same no matter where you spoof to — they
+say nothing about the location on the map. GeoSpoof returns the correct values
+across all of them.
 
 ## 6. Date and time strings
 
@@ -196,12 +202,14 @@ name and offset in plain text. `toString()`, `toTimeString()`, and
   rightLight="/images/blog/geospoof-vs-spoof-geolocation/spoof-geolocation-results/sg-06-date-strings-light.png"
   rightDark="/images/blog/geospoof-vs-spoof-geolocation/spoof-geolocation-results/sg-06-date-strings-dark.png"
   alt="Date and time string method results"
-  caption="GeoSpoof's Date strings match the spoofed zone; Spoof Geolocation only gets the UTC string right."
+  caption="GeoSpoof's Date strings match the spoofed zone; Spoof Geolocation only gets the absolute UTC string right."
 />
 
-Every date and time string comes back wrong for Spoof Geolocation except the UTC
-one (`toUTCString` / `toISOString`) — which makes sense, because UTC is the only
-zone it's actually reporting. A script doesn't have to call a special API for
+Every date and time string comes back wrong for Spoof Geolocation except the
+absolute UTC one (`toUTCString` / `toISOString`) — and that one only matches
+because it's the same for everyone regardless of timezone, so it proves nothing.
+Every zone-aware string (`toString`, `toTimeString`, `toLocaleTimeString`) still
+carries your real timezone. A script doesn't even have to call a special API for
 this; it just formats a date and reads the offset out of the text. GeoSpoof gets
 all of them right.
 
@@ -218,13 +226,13 @@ modern apps format dates and numbers.
   rightLight="/images/blog/geospoof-vs-spoof-geolocation/spoof-geolocation-results/sg-07-intl-light.png"
   rightDark="/images/blog/geospoof-vs-spoof-geolocation/spoof-geolocation-results/sg-07-intl-dark.png"
   alt="Intl formatting results"
-  caption="GeoSpoof reports the spoofed zone through Intl; Spoof Geolocation fails every Intl check."
+  caption="GeoSpoof reports the spoofed zone through Intl; Spoof Geolocation reports your real one."
 />
 
 Spoof Geolocation fails all of the `Intl` formatting checks. `Intl.DateTimeFormat`
-resolves to UTC instead of the spoofed zone, so anything an app renders through
-it carries the wrong timezone. GeoSpoof returns correct `Intl` formatting that
-matches the pin.
+resolves to your real timezone instead of the spoofed zone, so anything an app
+renders through it quietly carries your actual location. GeoSpoof returns correct
+`Intl` formatting that matches the pin.
 
 ## 8. Advanced surfaces
 
@@ -254,29 +262,30 @@ a lot of extensions stop. GeoSpoof handles all three.
 | Signal | GeoSpoof | Spoof Geolocation |
 | --- | --- | --- |
 | Geolocation (the map pin) | Pass | Pass |
-| Timezone & offsets | Correct for every zone | Only correct at UTC |
-| Date components (`getDate`/`getDay`/`getHours`/`getTimezoneOffset`) | Correct | Wrong |
-| Date & time strings | Correct | Only the UTC string is right |
-| Intl formatting | Pass | Fails all |
-| Advanced surfaces (blob/data/workers) | Covered | Fails all |
+| Timezone & offsets | Correct for the spoofed zone | Reports your real timezone |
+| Date components (`getDate`/`getDay`/`getHours`/`getTimezoneOffset`) | Correct | Your real local time |
+| Date & time strings | Correct | Only the absolute UTC string matches |
+| Intl formatting | Pass | Reports your real zone |
+| Advanced surfaces (blob/data/workers) | Covered | Leaks the real environment |
 
 ## Why this matters
 
 Spoof Geolocation's failures all trace back to one root cause: it moves the
-coordinates but never shifts the clock off UTC. That single gap cascades through
-every time-based signal — the offset, the `Date` methods, the string methods, and
-`Intl` all inherit it. The result is a map pin in one place and a clock in
-Greenwich, which is the exact contradiction
-[a site cross-checks for](/blog/how-websites-know-your-location). Unless you
-happen to be spoofing to a location that's actually on UTC, the disagreement is
-there for any script to read.
+coordinates but never changes your timezone, so every time-based signal — the
+offset, the `Date` methods, the string methods, and `Intl` — keeps reporting the
+machine you're really on. That's worse than a simple mismatch. It's not just that
+the clock disagrees with the map; it's that the clock is actively broadcasting
+your real region. A site doesn't only learn that you're spoofing
+([the contradiction it cross-checks for](/blog/how-websites-know-your-location)),
+it gets a strong hint about where you actually are.
 
-That's the difference the test surfaces: Spoof Geolocation changes the location,
-but the supporting signals stay on UTC. GeoSpoof's whole design goal is that they
-follow the pin, so a site checking any of them sees one coherent location instead
-of a seam. If you're shopping for a Spoof Geolocation alternative, that
-consistency — not the length of a feature list — is what separates the best
-location spoofing extension from one that just moves the map pin.
+That's the difference the test surfaces: Spoof Geolocation changes the location
+on the map but leaves the rest of the browser telling the truth about you.
+GeoSpoof's whole design goal is that every signal follows the pin, so a site
+checking any of them sees one coherent location instead of a seam. If you're
+shopping for a Spoof Geolocation alternative, that consistency — not the length
+of a feature list — is what separates the best location spoofing extension from
+one that just moves the map pin.
 
 We ran the same test against another popular extension in our
 [Geoceptor vs GeoSpoof comparison](/blog/geoceptor-vs-geospoof). It failed a
@@ -286,9 +295,10 @@ around it are where a spoof gets caught.
 
 ## Try it yourself
 
-Don't take our screenshots for it. Install GeoSpoof, point it somewhere off UTC,
-and run the [browser location test](/verify). The page checks the same signals
-against whatever you have active and shows you exactly which ones hold up.
+Don't take our screenshots for it. Install GeoSpoof, point it at a location
+outside your own timezone, and run the [browser location test](/verify). The page
+checks the same signals against whatever you have active and shows you exactly
+which ones hold up.
 
 GeoSpoof is free on Firefox, Chrome (and Brave/Edge), and the App Store for
 iPhone, iPad, and Mac:
