@@ -254,24 +254,42 @@ GeoSpoof - Fake GPS Location   (higher-volume "fake gps" query, but risks mislea
 GeoSpoof: Spoof Location       (shorter; "spoof location")
 ```
 
-## Subtitle (30 chars)
+## Subtitle (29 chars)
 
 ```
-Fake GPS & timezone for Safari
+Safari GPS & Timezone Changer
 ```
 
-Uses tokens not in the name (fake, gps, timezone, safari) and "for Safari" sets
-honest scope.
+Leads with "Safari" so scope is honest up front (this spoofs Safari, not the
+device's system GPS), which keeps out the wrong installs and the 1-star "doesn't
+work in Pokémon GO" reviews. Keeps the high-value `changer` token (→ "location
+changer") plus `gps` and `timezone`, with no wasted stop words. `fake` and
+`safari`'s extra reach are carried by the keyword field instead.
 
-## Keywords field (96 chars — no spaces, no name/subtitle repeats)
+## Keywords field (100 chars — no spaces, no name/subtitle repeats)
 
 ```
-changer,geolocation,vpn,faker,teleport,region,virtual,mock,coordinates,privacy,map,emulator,hide
+fake,spoof,geolocation,vpn,teleport,region,virtual,mock,coordinates,privacy,map,emulator,hide,change
 ```
 
-Phrases Apple can form by combining with name/subtitle tokens: location changer,
-fake location, spoof location, gps location, location privacy, hide location,
-vpn location, fake gps, location emulator, teleport location.
+Reasoning notes:
+
+- `spoof` is included on purpose. "Spoofer" (name) → "spoof" is a derivational
+  change, NOT a singular/plural pair, and Apple only reliably matches
+  singular↔plural. So the standalone `spoof` token is what actually earns
+  "spoof location" / "spoof gps".
+- `change` (same logic vs. "Changer") captures the high-volume "change location",
+  "change gps", "change timezone" queries.
+- `geolocation` stays so "spoof geolocation" can still form, without spending
+  title characters on the low-volume `geolocation` token.
+- Deliberately excluded: `faker` (low search volume; "fake \_\_\_" phrases already
+  covered by `fake`), and `ip` (would imply IP-changing, which contradicts the
+  "not a VPN" scope and pulls the wrong installs).
+
+Phrases Apple can form by combining with name/subtitle tokens: location spoofer,
+location changer, change location, fake location, spoof location, fake gps,
+spoof gps, gps location, location privacy, hide location, vpn location, fake gps,
+spoof geolocation, location emulator, teleport location.
 
 ## Promotional text (137 chars)
 
