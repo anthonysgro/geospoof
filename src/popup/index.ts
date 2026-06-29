@@ -561,10 +561,11 @@ document.addEventListener("DOMContentLoaded", () => {
       reviewCta.href =
         "https://apps.apple.com/app/apple-store/id6765719745?action=write-review&pt=128299974&ct=ext-popup";
     } else if (__FIREFOX__) {
-      reviewCta.href = "https://addons.mozilla.org/firefox/addon/geo-spoof/reviews/";
+      reviewCta.href =
+        "https://addons.mozilla.org/firefox/addon/geo-spoof/reviews/?utm_source=extension&utm_medium=popup&utm_campaign=ext-popup";
     } else {
       reviewCta.href =
-        "https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje/reviews";
+        "https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje/reviews?utm_source=extension&utm_medium=popup&utm_campaign=ext-popup";
     }
   }
 

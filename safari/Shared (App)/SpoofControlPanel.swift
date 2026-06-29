@@ -251,7 +251,7 @@ struct SpoofControlPanel: View {
         // activation heartbeat. Note: iOS has no public API to force Safari
         // specifically; this opens the user's default browser, which is Safari
         // for the vast majority.
-        if let url = URL(string: "https://geospoof.com/verify") {
+        if let url = URL(string: "https://geospoof.com/verify?utm_source=ios-app&utm_medium=app&utm_campaign=verify-setup") {
             UIApplication.shared.open(url)
         }
     }
@@ -413,7 +413,7 @@ struct SpoofControlPanel: View {
 
     private var verificationSection: some View {
         Section {
-            Link(destination: URL(string: "https://www.geospoof.com/verify")!) {
+            Link(destination: verifyURL) {
                 HStack {
                     Label("Verify Your Protection", systemImage: "checkmark.shield")
                     Spacer()
@@ -423,6 +423,17 @@ struct SpoofControlPanel: View {
                 }
             }
         }
+    }
+
+    /// The verify-page URL, UTM-tagged so visits attribute to the right native
+    /// app surface (iOS vs macOS) in analytics rather than landing in "unknown".
+    private var verifyURL: URL {
+        #if os(iOS)
+        let source = "ios-app"
+        #else
+        let source = "macos-app"
+        #endif
+        return URL(string: "https://www.geospoof.com/verify?utm_source=\(source)&utm_medium=app&utm_campaign=verify")!
     }
 
     // MARK: Favorites
