@@ -14,8 +14,8 @@ export function ScreenshotsSection({ className }: { className?: string }) {
   // displayed width at 1× DPR. The image is constrained to 1600px by
   // its container, so 1800w covers 2× retina up to ~900px viewport.
   const desktopSrcSet = isDark
-    ? "/images/hero/desktop-1-dark-800.webp 800w, /images/hero/desktop-1-dark-1200.webp 1200w, /images/hero/desktop-1-dark-1800.webp 1800w, /images/hero/desktop-1-dark.webp 3012w"
-    : "/images/hero/desktop-1-800.webp 800w, /images/hero/desktop-1-1200.webp 1200w, /images/hero/desktop-1-1800.webp 1800w, /images/hero/desktop-1.webp 3012w"
+    ? "/images/hero/desktop-1-dark-800.webp 800w, /images/hero/desktop-1-dark-1200.webp 1200w, /images/hero/desktop-1-dark-1800.webp 1800w, /images/hero/desktop-1-dark.webp 3058w"
+    : "/images/hero/desktop-1-800.webp 800w, /images/hero/desktop-1-1200.webp 1200w, /images/hero/desktop-1-1800.webp 1800w, /images/hero/desktop-1.webp 3058w"
   const desktopPng = isDark
     ? "/images/hero/desktop-1-dark.png"
     : "/images/hero/desktop-1.png"
@@ -52,8 +52,8 @@ export function ScreenshotsSection({ className }: { className?: string }) {
             <img
               src={desktopPng}
               alt="GeoSpoof browser extension running on desktop — showing location spoofing in action"
-              width={3012}
-              height={2130}
+              width={3058}
+              height={1906}
               loading="lazy"
               className="w-full rounded-2xl"
             />

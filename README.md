@@ -121,15 +121,16 @@ When protection is enabled, GeoSpoof overrides browser APIs synchronously at `do
 - **Intl** — `Intl.DateTimeFormat` constructor and `resolvedOptions`
 - **Temporal** — `Temporal.Now.*` (feature-detected)
 - **XSLT / EXSLT** — `XSLTProcessor.prototype.transformToFragment/transformToDocument` rewrite EXSLT `date:date-time()` output (Firefox, where available)
-- **Workers** — `Worker`, `SharedWorker`, and `navigator.serviceWorker.register` wrapped to propagate the spoofed timezone into worker scopes
+- **Workers** — `Worker`, `SharedWorker`, and `navigator.serviceWorker.register` wrapped to propagate the spoofed timezone into worker scopes (URL-based worker coverage is the Firefox `webRequest.filterResponseData` path; inline/blob workers are covered on every engine)
 - **WebRTC** — via browser privacy API, no script injection needed
 - **Anti-fingerprinting** — `Function.prototype.toString` returns `[native code]` for all overrides; iframes patched on insertion
+- **Engine-level Spoofing** (Chrome/Chromium, opt-in) — an optional mode that drives the timezone override through the Chrome DevTools Protocol (`chrome.debugger` → `Emulation.setTimezoneOverride`) instead of page-world injection. It covers background/module/service workers and applies before a page's first script, closing the worker and cold-start timezone leaks the content-script path can't reach on Chromium MV3. Off by default; while on, Chrome shows a "started debugging this browser" notice. Geolocation stays on the injected path.
 
 For the full API reference, see [docs/API.md](docs/API.md). For the VPN sync and auto-resync architecture, see [docs/VPN_SYNC.md](docs/VPN_SYNC.md).
 
 ## External Services
 
-GeoSpoof runs no backend application and sends no data to the developer for collection or analytics. Some features — city search and the optional "Sync with VPN" — make requests directly from your device to third-party services. Timezone resolution downloads boundary data from the developer's own domain (`geospoof.com`, a static-file host), which transmits your IP as part of that request. The developer does **not** use these requests for analytics, tracking, profiling, advertising, or user accounts, and stores no personal data from them. Exactly what is sent, when, and to whom (for both the Safari extension and the companion apps) is documented in the [Privacy Policy](PRIVACY_POLICY.md).
+GeoSpoof runs no backend application and sends no data to the developer for collection or analytics. Some features — city search and the optional "Sync with VPN" — make requests directly from your device to third-party services. Timezone resolution downloads boundary data from the developer's own CDN (`cdn.geospoof.com`, hosted on AWS), which transmits your IP as part of that request. The developer does **not** use these requests for analytics, tracking, profiling, advertising, or user accounts, and stores no personal data from them. Exactly what is sent, when, and to whom (for both the Safari extension and the companion apps) is documented in the [Privacy Policy](PRIVACY_POLICY.md).
 
 ## Development
 
