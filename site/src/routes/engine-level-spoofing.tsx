@@ -23,7 +23,7 @@ import { SITE_URL } from "@/lib/blog"
 const PAGE_URL = `${SITE_URL}/engine-level-spoofing`
 const PAGE_TITLE = "Hide Chrome's “Started Debugging This Browser” Bar | GeoSpoof"
 const PAGE_DESCRIPTION =
-  "GeoSpoof's Engine-level Spoofing uses Chrome's debugger API, so Chrome shows a “GeoSpoof started debugging this browser” bar. Here's what it means, why it's safe, and how to hide it with one launch flag on Windows, macOS, and Linux."
+  "GeoSpoof's Engine-level Spoofing uses Chrome's debugger API, so Chrome shows a debugging bar. Here's what it means, why it's safe, and how to hide it."
 
 /** The launch flag that suppresses Chrome's extension-debugger notification bar. */
 const FLAG = "--silent-debugger-extension-api"

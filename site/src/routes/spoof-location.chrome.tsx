@@ -4,7 +4,7 @@ import { SITE_URL } from "@/lib/blog"
 
 const PAGE_URL = `${SITE_URL}/spoof-location/chrome`
 const DESCRIPTION =
-  "Spoof your location in Chrome with a free extension. GeoSpoof overrides the Geolocation API and timezone so sites see the location you choose. Works in Brave and other Chromium browsers too."
+  "Spoof your location in Chrome with a free extension. GeoSpoof overrides the Geolocation API and timezone so sites see the location you choose. Brave too."
 
 export const Route = createFileRoute("/spoof-location/chrome")({
   component: () => <BrowserSpoofPage slug="chrome" />,

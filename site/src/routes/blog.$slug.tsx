@@ -14,7 +14,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { mdxComponents } from "@/components/blog/mdx-components"
-import { SITE_URL, formatDate, getAdjacentPosts, getPostBySlug, postUrl } from "@/lib/blog"
+import { SITE_URL, blogPageTitle, formatDate, getAdjacentPosts, getPostBySlug, postUrl } from "@/lib/blog"
 
 export const Route = createFileRoute("/blog/$slug")({
   loader: ({ params }) => {
@@ -36,7 +36,7 @@ export const Route = createFileRoute("/blog/$slug")({
     const ogImageAlt = post.coverAlt ?? post.title
     return {
       meta: [
-        { title: `${post.title} | GeoSpoof Blog` },
+        { title: blogPageTitle(post.title) },
         { name: "description", content: post.description },
         ...(post.keywords.length > 0
           ? [{ name: "keywords", content: post.keywords.join(", ") }]

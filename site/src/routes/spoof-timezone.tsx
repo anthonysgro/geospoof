@@ -23,7 +23,7 @@ import { SITE_URL } from "@/lib/blog"
 const PAGE_URL = `${SITE_URL}/spoof-timezone`
 const PAGE_TITLE = "Spoof Your Browser Timezone — Free Extension | GeoSpoof"
 const PAGE_DESCRIPTION =
-  "Change or spoof your browser's timezone to match any location. GeoSpoof overrides Date, Intl, and Temporal so sites can't use your clock to reveal your real region. Free."
+  "Change or spoof your browser's timezone to match any location. GeoSpoof overrides Date, Intl, and Temporal so your clock can't reveal your real region."
 
 export const Route = createFileRoute("/spoof-timezone")({
   component: SpoofTimezonePage,
