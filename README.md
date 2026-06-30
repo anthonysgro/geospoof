@@ -143,6 +143,7 @@ GeoSpoof runs no backend application and sends no data to the developer for coll
 ## Featured in
 
 - [Privacy Guides community forum](https://discuss.privacyguides.net/t/geospoof-a-firefox-add-on-for-convenient-geolocation-privacy/36159) — "GeoSpoof: a Firefox add-on for convenient geolocation privacy"
+- [Korben](https://korben.info/geospoof-vpn-navigateur-localisation.html) — "GeoSpoof - Le VPN cache votre IP mais le navigateur vous trahit" (FR)
 
 ## Development
 
