@@ -147,6 +147,18 @@
     "message": "Bảo vệ WebRTC",
     "description": "Label for the toggle that enables WebRTC IP leak protection."
   },
+  "toggle_preserveGeoPrompt": {
+    "message": "Giữ lời nhắc vị trí",
+    "description": "Label for the toggle that makes GeoSpoof show the browser's native geolocation permission prompt (and only substitute the spoofed location after the user allows) instead of silently auto-granting it to every site."
+  },
+  "preserveGeoPrompt_infoAriaLabel": {
+    "message": "Thông tin thêm về Giữ lời nhắc vị trí",
+    "description": "Accessible label on the Preserve location prompts info icon."
+  },
+  "preserveGeoPrompt_tooltip": {
+    "message": "Chỉ áp dụng cho các trang mà GeoSpoof đang giả mạo (theo danh sách cho phép/chặn của bạn). Khi bật, các trang đó hiển thị lời nhắc xin quyền vị trí thông thường của trình duyệt và chỉ nhận vị trí giả mạo nếu bạn cho phép. Khi tắt, chúng tự động nhận mà không cần lời nhắc.",
+    "description": "Tooltip explaining the Preserve location prompts toggle: native permission prompt with spoofed coordinates vs. silent auto-grant. Notes that it only affects sites in spoofing scope (allow/deny list)."
+  },
   "heading_location": {
     "message": "Vị trí",
     "description": "Section heading above the spoofed location display."
