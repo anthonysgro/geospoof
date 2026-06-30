@@ -61,5 +61,8 @@ export const fr: Dictionary = {
   },
   languageSwitcher: {
     label: "Langue",
+    suggestion: "Cette page est disponible en français.",
+    switchAction: "Voir en français",
+    dismiss: "Fermer",
   },
 }

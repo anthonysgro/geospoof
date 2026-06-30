@@ -102,3 +102,23 @@ export const localizedBasePaths: ReadonlyArray<string> = ["/"]
 export function hasLocalizedVariants(pathname: string): boolean {
   return localizedBasePaths.includes(stripLocalePrefix(pathname))
 }
+
+/**
+ * Pick the visitor's preferred locale from their ordered browser languages
+ * (`navigator.languages`), matched against the locales we actually support.
+ *
+ * Matching is by primary subtag, so "fr-CA" and "fr" both map to "fr". Returns
+ * the first supported match in preference order, or `null` if none of their
+ * languages are available. Fully generic — add a locale to `locales` and it's
+ * considered automatically, no per-language code.
+ */
+export function detectPreferredLocale(
+  languages: ReadonlyArray<string>
+): Locale | null {
+  for (const lang of languages) {
+    const primary = lang.toLowerCase().split("-")[0]
+    const match = locales.find((l) => l === primary)
+    if (match) return match
+  }
+  return null
+}

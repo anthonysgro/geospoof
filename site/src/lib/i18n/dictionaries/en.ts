@@ -62,6 +62,11 @@ export const en = {
   },
   languageSwitcher: {
     label: "Language",
+    // Shown when we detect the visitor may prefer this language. Phrased IN
+    // this locale, since the hint speaks the language being offered.
+    suggestion: "This page is available in English.",
+    switchAction: "View in English",
+    dismiss: "Dismiss",
   },
 } as const
 

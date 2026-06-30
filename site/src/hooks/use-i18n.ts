@@ -1,6 +1,7 @@
+import * as React from "react"
 import { useRouterState } from "@tanstack/react-router"
 import type { Dictionary, Locale } from "@/lib/i18n"
-import { getDictionary, localeFromPathname } from "@/lib/i18n"
+import { detectPreferredLocale, getDictionary, localeFromPathname } from "@/lib/i18n"
 
 /**
  * The active locale, derived from the current URL pathname.
@@ -28,4 +29,30 @@ export function useLocale(): Locale {
 export function useTranslations(): { locale: Locale; t: Dictionary } {
   const locale = useLocale()
   return { locale, t: getDictionary(locale) }
+}
+
+/**
+ * The locale the visitor likely prefers (from `navigator.languages`) when it
+ * differs from what they're currently viewing AND we support it — otherwise
+ * `null`. Used to offer a non-intrusive "switch language" nudge.
+ *
+ * Resolves to `null` on the server and first client render (no `navigator`),
+ * then updates after mount, so it never causes a hydration mismatch and only
+ * ever *adds* an optional hint.
+ */
+export function useSuggestedLocale(): Locale | null {
+  const activeLocale = useLocale()
+  const [suggested, setSuggested] = React.useState<Locale | null>(null)
+
+  React.useEffect(() => {
+    if (typeof navigator === "undefined") return
+    const languages =
+      navigator.languages.length > 0
+        ? navigator.languages
+        : [navigator.language]
+    const preferred = detectPreferredLocale(languages)
+    setSuggested(preferred && preferred !== activeLocale ? preferred : null)
+  }, [activeLocale])
+
+  return suggested
 }
