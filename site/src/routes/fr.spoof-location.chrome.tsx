@@ -4,7 +4,7 @@ import {
   buildSpoofLocationHead,
 } from "@/components/seo/BrowserSpoofPage"
 
-export const Route = createFileRoute("/spoof-location/chrome")({
+export const Route = createFileRoute("/fr/spoof-location/chrome")({
   component: () => <BrowserSpoofPage slug="chrome" />,
-  head: () => buildSpoofLocationHead("chrome", "en"),
+  head: () => buildSpoofLocationHead("chrome", "fr"),
 })

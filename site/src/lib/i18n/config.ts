@@ -96,7 +96,15 @@ export function stripLocalePrefix(pathname: string): string {
  * locale. The language switcher only appears on these, so it never links to a
  * page that hasn't been localized yet. Add paths here as they're translated.
  */
-export const localizedBasePaths: ReadonlyArray<string> = ["/"]
+export const localizedBasePaths: ReadonlyArray<string> = [
+  "/",
+  "/vpn",
+  "/spoof-location",
+  "/spoof-location/chrome",
+  "/spoof-location/edge",
+  "/spoof-location/firefox",
+  "/spoof-location/safari",
+]
 
 /** Does the given pathname's base route have localized variants? */
 export function hasLocalizedVariants(pathname: string): boolean {

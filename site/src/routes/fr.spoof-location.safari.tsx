@@ -4,7 +4,7 @@ import {
   buildSpoofLocationHead,
 } from "@/components/seo/BrowserSpoofPage"
 
-export const Route = createFileRoute("/spoof-location/safari")({
+export const Route = createFileRoute("/fr/spoof-location/safari")({
   component: () => <BrowserSpoofPage slug="safari" />,
-  head: () => buildSpoofLocationHead("safari", "en"),
+  head: () => buildSpoofLocationHead("safari", "fr"),
 })

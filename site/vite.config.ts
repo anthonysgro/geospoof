@@ -75,7 +75,15 @@ const config = defineConfig({
       // anchor (the language switcher is a portaled dropdown, so its links
       // aren't in the closed-menu DOM). Enumerate them explicitly so they're
       // always prerendered. Add new localized pages here as they're created.
-      pages: [{ path: "/fr" }],
+      pages: [
+        { path: "/fr" },
+        { path: "/fr/vpn" },
+        { path: "/fr/spoof-location" },
+        { path: "/fr/spoof-location/chrome" },
+        { path: "/fr/spoof-location/edge" },
+        { path: "/fr/spoof-location/firefox" },
+        { path: "/fr/spoof-location/safari" },
+      ],
       // Prerender all static routes at build time so Vercel serves them
       // as static assets from the CDN edge — eliminates SSR cold-start
       // latency and improves FCP/TTFB for the landing page and docs.

@@ -54,7 +54,15 @@ const LOCALE_PREFIXES = { fr: "/fr" }
  * (plus `x-default` -> the English bare path) so Google clusters them.
  * Keep in sync with `localizedBasePaths` in `src/lib/i18n/config.ts`.
  */
-const localizedBasePaths = ["/"]
+const localizedBasePaths = [
+  "/",
+  "/vpn",
+  "/spoof-location",
+  "/spoof-location/chrome",
+  "/spoof-location/edge",
+  "/spoof-location/firefox",
+  "/spoof-location/safari",
+]
 
 /**
  * One-line descriptions for the key static routes, surfaced in llms.txt so AI

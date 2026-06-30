@@ -21,12 +21,19 @@ import { Route as EngineLevelSpoofingRouteImport } from './routes/engine-level-s
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SpoofLocationIndexRouteImport } from './routes/spoof-location.index'
+import { Route as FrIndexRouteImport } from './routes/fr.index'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as SpoofLocationSafariRouteImport } from './routes/spoof-location.safari'
 import { Route as SpoofLocationFirefoxRouteImport } from './routes/spoof-location.firefox'
 import { Route as SpoofLocationEdgeRouteImport } from './routes/spoof-location.edge'
 import { Route as SpoofLocationChromeRouteImport } from './routes/spoof-location.chrome'
+import { Route as FrVpnRouteImport } from './routes/fr.vpn'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
+import { Route as FrSpoofLocationIndexRouteImport } from './routes/fr.spoof-location.index'
+import { Route as FrSpoofLocationSafariRouteImport } from './routes/fr.spoof-location.safari'
+import { Route as FrSpoofLocationFirefoxRouteImport } from './routes/fr.spoof-location.firefox'
+import { Route as FrSpoofLocationEdgeRouteImport } from './routes/fr.spoof-location.edge'
+import { Route as FrSpoofLocationChromeRouteImport } from './routes/fr.spoof-location.chrome'
 
 const VpnRoute = VpnRouteImport.update({
   id: '/vpn',
@@ -88,6 +95,11 @@ const SpoofLocationIndexRoute = SpoofLocationIndexRouteImport.update({
   path: '/spoof-location/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FrIndexRoute = FrIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => FrRoute,
+} as any)
 const BlogIndexRoute = BlogIndexRouteImport.update({
   id: '/blog/',
   path: '/blog/',
@@ -113,17 +125,47 @@ const SpoofLocationChromeRoute = SpoofLocationChromeRouteImport.update({
   path: '/spoof-location/chrome',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FrVpnRoute = FrVpnRouteImport.update({
+  id: '/vpn',
+  path: '/vpn',
+  getParentRoute: () => FrRoute,
+} as any)
 const BlogSlugRoute = BlogSlugRouteImport.update({
   id: '/blog/$slug',
   path: '/blog/$slug',
   getParentRoute: () => rootRouteImport,
+} as any)
+const FrSpoofLocationIndexRoute = FrSpoofLocationIndexRouteImport.update({
+  id: '/spoof-location/',
+  path: '/spoof-location/',
+  getParentRoute: () => FrRoute,
+} as any)
+const FrSpoofLocationSafariRoute = FrSpoofLocationSafariRouteImport.update({
+  id: '/spoof-location/safari',
+  path: '/spoof-location/safari',
+  getParentRoute: () => FrRoute,
+} as any)
+const FrSpoofLocationFirefoxRoute = FrSpoofLocationFirefoxRouteImport.update({
+  id: '/spoof-location/firefox',
+  path: '/spoof-location/firefox',
+  getParentRoute: () => FrRoute,
+} as any)
+const FrSpoofLocationEdgeRoute = FrSpoofLocationEdgeRouteImport.update({
+  id: '/spoof-location/edge',
+  path: '/spoof-location/edge',
+  getParentRoute: () => FrRoute,
+} as any)
+const FrSpoofLocationChromeRoute = FrSpoofLocationChromeRouteImport.update({
+  id: '/spoof-location/chrome',
+  path: '/spoof-location/chrome',
+  getParentRoute: () => FrRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/engine-level-spoofing': typeof EngineLevelSpoofingRoute
-  '/fr': typeof FrRoute
+  '/fr': typeof FrRouteWithChildren
   '/privacy': typeof PrivacyRoute
   '/spoof-timezone': typeof SpoofTimezoneRoute
   '/support': typeof SupportRoute
@@ -132,18 +174,24 @@ export interface FileRoutesByFullPath {
   '/verify': typeof VerifyRoute
   '/vpn': typeof VpnRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/fr/vpn': typeof FrVpnRoute
   '/spoof-location/chrome': typeof SpoofLocationChromeRoute
   '/spoof-location/edge': typeof SpoofLocationEdgeRoute
   '/spoof-location/firefox': typeof SpoofLocationFirefoxRoute
   '/spoof-location/safari': typeof SpoofLocationSafariRoute
   '/blog/': typeof BlogIndexRoute
+  '/fr/': typeof FrIndexRoute
   '/spoof-location/': typeof SpoofLocationIndexRoute
+  '/fr/spoof-location/chrome': typeof FrSpoofLocationChromeRoute
+  '/fr/spoof-location/edge': typeof FrSpoofLocationEdgeRoute
+  '/fr/spoof-location/firefox': typeof FrSpoofLocationFirefoxRoute
+  '/fr/spoof-location/safari': typeof FrSpoofLocationSafariRoute
+  '/fr/spoof-location/': typeof FrSpoofLocationIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/engine-level-spoofing': typeof EngineLevelSpoofingRoute
-  '/fr': typeof FrRoute
   '/privacy': typeof PrivacyRoute
   '/spoof-timezone': typeof SpoofTimezoneRoute
   '/support': typeof SupportRoute
@@ -152,19 +200,26 @@ export interface FileRoutesByTo {
   '/verify': typeof VerifyRoute
   '/vpn': typeof VpnRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/fr/vpn': typeof FrVpnRoute
   '/spoof-location/chrome': typeof SpoofLocationChromeRoute
   '/spoof-location/edge': typeof SpoofLocationEdgeRoute
   '/spoof-location/firefox': typeof SpoofLocationFirefoxRoute
   '/spoof-location/safari': typeof SpoofLocationSafariRoute
   '/blog': typeof BlogIndexRoute
+  '/fr': typeof FrIndexRoute
   '/spoof-location': typeof SpoofLocationIndexRoute
+  '/fr/spoof-location/chrome': typeof FrSpoofLocationChromeRoute
+  '/fr/spoof-location/edge': typeof FrSpoofLocationEdgeRoute
+  '/fr/spoof-location/firefox': typeof FrSpoofLocationFirefoxRoute
+  '/fr/spoof-location/safari': typeof FrSpoofLocationSafariRoute
+  '/fr/spoof-location': typeof FrSpoofLocationIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/engine-level-spoofing': typeof EngineLevelSpoofingRoute
-  '/fr': typeof FrRoute
+  '/fr': typeof FrRouteWithChildren
   '/privacy': typeof PrivacyRoute
   '/spoof-timezone': typeof SpoofTimezoneRoute
   '/support': typeof SupportRoute
@@ -173,12 +228,19 @@ export interface FileRoutesById {
   '/verify': typeof VerifyRoute
   '/vpn': typeof VpnRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/fr/vpn': typeof FrVpnRoute
   '/spoof-location/chrome': typeof SpoofLocationChromeRoute
   '/spoof-location/edge': typeof SpoofLocationEdgeRoute
   '/spoof-location/firefox': typeof SpoofLocationFirefoxRoute
   '/spoof-location/safari': typeof SpoofLocationSafariRoute
   '/blog/': typeof BlogIndexRoute
+  '/fr/': typeof FrIndexRoute
   '/spoof-location/': typeof SpoofLocationIndexRoute
+  '/fr/spoof-location/chrome': typeof FrSpoofLocationChromeRoute
+  '/fr/spoof-location/edge': typeof FrSpoofLocationEdgeRoute
+  '/fr/spoof-location/firefox': typeof FrSpoofLocationFirefoxRoute
+  '/fr/spoof-location/safari': typeof FrSpoofLocationSafariRoute
+  '/fr/spoof-location/': typeof FrSpoofLocationIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -195,18 +257,24 @@ export interface FileRouteTypes {
     | '/verify'
     | '/vpn'
     | '/blog/$slug'
+    | '/fr/vpn'
     | '/spoof-location/chrome'
     | '/spoof-location/edge'
     | '/spoof-location/firefox'
     | '/spoof-location/safari'
     | '/blog/'
+    | '/fr/'
     | '/spoof-location/'
+    | '/fr/spoof-location/chrome'
+    | '/fr/spoof-location/edge'
+    | '/fr/spoof-location/firefox'
+    | '/fr/spoof-location/safari'
+    | '/fr/spoof-location/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/about'
     | '/engine-level-spoofing'
-    | '/fr'
     | '/privacy'
     | '/spoof-timezone'
     | '/support'
@@ -215,12 +283,19 @@ export interface FileRouteTypes {
     | '/verify'
     | '/vpn'
     | '/blog/$slug'
+    | '/fr/vpn'
     | '/spoof-location/chrome'
     | '/spoof-location/edge'
     | '/spoof-location/firefox'
     | '/spoof-location/safari'
     | '/blog'
+    | '/fr'
     | '/spoof-location'
+    | '/fr/spoof-location/chrome'
+    | '/fr/spoof-location/edge'
+    | '/fr/spoof-location/firefox'
+    | '/fr/spoof-location/safari'
+    | '/fr/spoof-location'
   id:
     | '__root__'
     | '/'
@@ -235,19 +310,26 @@ export interface FileRouteTypes {
     | '/verify'
     | '/vpn'
     | '/blog/$slug'
+    | '/fr/vpn'
     | '/spoof-location/chrome'
     | '/spoof-location/edge'
     | '/spoof-location/firefox'
     | '/spoof-location/safari'
     | '/blog/'
+    | '/fr/'
     | '/spoof-location/'
+    | '/fr/spoof-location/chrome'
+    | '/fr/spoof-location/edge'
+    | '/fr/spoof-location/firefox'
+    | '/fr/spoof-location/safari'
+    | '/fr/spoof-location/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   EngineLevelSpoofingRoute: typeof EngineLevelSpoofingRoute
-  FrRoute: typeof FrRoute
+  FrRoute: typeof FrRouteWithChildren
   PrivacyRoute: typeof PrivacyRoute
   SpoofTimezoneRoute: typeof SpoofTimezoneRoute
   SupportRoute: typeof SupportRoute
@@ -350,6 +432,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SpoofLocationIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/fr/': {
+      id: '/fr/'
+      path: '/'
+      fullPath: '/fr/'
+      preLoaderRoute: typeof FrIndexRouteImport
+      parentRoute: typeof FrRoute
+    }
     '/blog/': {
       id: '/blog/'
       path: '/blog'
@@ -385,6 +474,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SpoofLocationChromeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/fr/vpn': {
+      id: '/fr/vpn'
+      path: '/vpn'
+      fullPath: '/fr/vpn'
+      preLoaderRoute: typeof FrVpnRouteImport
+      parentRoute: typeof FrRoute
+    }
     '/blog/$slug': {
       id: '/blog/$slug'
       path: '/blog/$slug'
@@ -392,14 +488,71 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/fr/spoof-location/': {
+      id: '/fr/spoof-location/'
+      path: '/spoof-location'
+      fullPath: '/fr/spoof-location/'
+      preLoaderRoute: typeof FrSpoofLocationIndexRouteImport
+      parentRoute: typeof FrRoute
+    }
+    '/fr/spoof-location/safari': {
+      id: '/fr/spoof-location/safari'
+      path: '/spoof-location/safari'
+      fullPath: '/fr/spoof-location/safari'
+      preLoaderRoute: typeof FrSpoofLocationSafariRouteImport
+      parentRoute: typeof FrRoute
+    }
+    '/fr/spoof-location/firefox': {
+      id: '/fr/spoof-location/firefox'
+      path: '/spoof-location/firefox'
+      fullPath: '/fr/spoof-location/firefox'
+      preLoaderRoute: typeof FrSpoofLocationFirefoxRouteImport
+      parentRoute: typeof FrRoute
+    }
+    '/fr/spoof-location/edge': {
+      id: '/fr/spoof-location/edge'
+      path: '/spoof-location/edge'
+      fullPath: '/fr/spoof-location/edge'
+      preLoaderRoute: typeof FrSpoofLocationEdgeRouteImport
+      parentRoute: typeof FrRoute
+    }
+    '/fr/spoof-location/chrome': {
+      id: '/fr/spoof-location/chrome'
+      path: '/spoof-location/chrome'
+      fullPath: '/fr/spoof-location/chrome'
+      preLoaderRoute: typeof FrSpoofLocationChromeRouteImport
+      parentRoute: typeof FrRoute
+    }
   }
 }
+
+interface FrRouteChildren {
+  FrVpnRoute: typeof FrVpnRoute
+  FrIndexRoute: typeof FrIndexRoute
+  FrSpoofLocationChromeRoute: typeof FrSpoofLocationChromeRoute
+  FrSpoofLocationEdgeRoute: typeof FrSpoofLocationEdgeRoute
+  FrSpoofLocationFirefoxRoute: typeof FrSpoofLocationFirefoxRoute
+  FrSpoofLocationSafariRoute: typeof FrSpoofLocationSafariRoute
+  FrSpoofLocationIndexRoute: typeof FrSpoofLocationIndexRoute
+}
+
+const FrRouteChildren: FrRouteChildren = {
+  FrVpnRoute: FrVpnRoute,
+  FrIndexRoute: FrIndexRoute,
+  FrSpoofLocationChromeRoute: FrSpoofLocationChromeRoute,
+  FrSpoofLocationEdgeRoute: FrSpoofLocationEdgeRoute,
+  FrSpoofLocationFirefoxRoute: FrSpoofLocationFirefoxRoute,
+  FrSpoofLocationSafariRoute: FrSpoofLocationSafariRoute,
+  FrSpoofLocationIndexRoute: FrSpoofLocationIndexRoute,
+}
+
+const FrRouteWithChildren = FrRoute._addFileChildren(FrRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   EngineLevelSpoofingRoute: EngineLevelSpoofingRoute,
-  FrRoute: FrRoute,
+  FrRoute: FrRouteWithChildren,
   PrivacyRoute: PrivacyRoute,
   SpoofTimezoneRoute: SpoofTimezoneRoute,
   SupportRoute: SupportRoute,
