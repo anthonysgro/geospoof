@@ -7,6 +7,9 @@ build
 web-ext-artifacts
 *.zip
 
+# CDK synthesized output (generated CloudFormation templates, asset manifests, bundles)
+cdk/cdk.out
+
 # Coverage
 coverage
 
