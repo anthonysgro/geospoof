@@ -556,6 +556,34 @@
             <span data-i18n="advanced_button">Advanced</span>
           </button>
           <div class="advanced-content" id="advancedContent" style="display: none">
+            <label class="toggle-label" for="preserveGeoPromptToggle">
+              <span class="label-with-info">
+                <span data-i18n="toggle_preserveGeoPrompt">Preserve location prompts</span>
+                <button
+                  type="button"
+                  class="info-icon"
+                  id="preserveGeoPromptInfo"
+                  aria-label="More info about Preserve location prompts"
+                  data-i18n-aria-label="preserveGeoPrompt_infoAriaLabel"
+                >
+                  ⓘ
+                </button>
+              </span>
+              <div class="toggle-wrapper">
+                <input type="checkbox" id="preserveGeoPromptToggle" />
+                <span class="toggle-slider"></span>
+              </div>
+            </label>
+            <div
+              class="info-tooltip"
+              id="preserveGeoPromptTooltip"
+              role="tooltip"
+              data-i18n="preserveGeoPrompt_tooltip"
+            >
+              Applies only to sites GeoSpoof is spoofing (per your allow/deny list). When on, those
+              sites show the browser's normal location permission prompt and receive your spoofed
+              location only if you allow it. When off, they get it automatically, without a prompt.
+            </div>
             <label class="toggle-label" id="earlyTzRow" for="earlyTzToggle" style="display: none">
               <span class="label-with-info">
                 <span data-i18n="advanced_earlyTz">Instant timezone protection</span>

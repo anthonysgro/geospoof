@@ -10,6 +10,7 @@ import {
   spoofingEnabled,
   spoofedLocation,
   settingsReceived,
+  preserveGeolocationPrompt,
   originalGetCurrentPosition,
   originalWatchPosition,
   originalClearWatch,
@@ -307,6 +308,56 @@ function assertGeolocationBrand(self: unknown, method: string): void {
   }
 }
 
+/**
+ * Emit a freshly-built spoofed position to the success callback with a
+ * realistic 10-50ms delay (mirrors a native fresh-fix latency). This is the
+ * seamless, prompt-free path used when "preserve permission prompts" is off.
+ */
+function emitSpoofedPosition(successCallback: PositionCallback): void {
+  const position = createGeolocationPosition(spoofedLocation!);
+  rememberPosition(position);
+  const delay = 10 + Math.random() * 40;
+  logger.debug("getCurrentPosition: returning spoofed coords", {
+    coords: { lat: position.coords.latitude, lon: position.coords.longitude },
+    delay: `${delay.toFixed(1)}ms`,
+  });
+  setTimeout(() => {
+    if (successCallback) {
+      successCallback(position as GeolocationPosition);
+    }
+  }, delay);
+}
+
+/**
+ * "Preserve permission prompts" path: invoke the real geolocation API so the
+ * browser surfaces its native permission prompt. On grant, discard the real
+ * coordinates and hand back spoofed ones (the page still never learns the real
+ * location); on denial / unavailable / timeout, forward the native error
+ * unchanged. The real position is requested only to drive the genuine
+ * permission flow — the user keeps per-site control over which sites get any
+ * location at all, and a denied site is indistinguishable from a normal
+ * browser.
+ */
+function respondViaNativePrompt(
+  successCallback: PositionCallback,
+  errorCallback: PositionErrorCallback | null | undefined,
+  options: PositionOptions | undefined
+): void {
+  logger.debug("getCurrentPosition: preserve-prompt mode, calling real API for native prompt");
+  originalGetCurrentPosition(
+    () => {
+      const position = createGeolocationPosition(spoofedLocation!);
+      rememberPosition(position);
+      logger.debug("getCurrentPosition: prompt granted, substituting spoofed coords");
+      if (successCallback) {
+        successCallback(position as GeolocationPosition);
+      }
+    },
+    errorCallback,
+    options
+  );
+}
+
 /** Override for `navigator.geolocation.getCurrentPosition`. */
 function getCurrentPositionOverride(
   this: unknown,
@@ -343,18 +394,11 @@ function getCurrentPositionOverride(
   if (settingsReceived) {
     // Settings already loaded — respond immediately
     if (spoofingEnabled && spoofedLocation) {
-      const position = createGeolocationPosition(spoofedLocation);
-      rememberPosition(position);
-      const delay = 10 + Math.random() * 40;
-      logger.debug("getCurrentPosition: returning spoofed coords", {
-        coords: { lat: position.coords.latitude, lon: position.coords.longitude },
-        delay: `${delay.toFixed(1)}ms`,
-      });
-      setTimeout(() => {
-        if (successCallback) {
-          successCallback(position as GeolocationPosition);
-        }
-      }, delay);
+      if (preserveGeolocationPrompt) {
+        respondViaNativePrompt(successCallback, errorCallback, options);
+      } else {
+        emitSpoofedPosition(successCallback);
+      }
     } else {
       logger.debug("getCurrentPosition: spoofing disabled, using original");
       originalGetCurrentPosition(successCallback, errorCallback, options);
@@ -386,18 +430,11 @@ function getCurrentPositionOverride(
       }
       logger.debug(`getCurrentPosition: waitForSettings resolved after ${waited.toFixed(1)}ms`);
       if (spoofingEnabled && spoofedLocation) {
-        const position = createGeolocationPosition(spoofedLocation);
-        rememberPosition(position);
-        const delay = 10 + Math.random() * 40;
-        logger.debug("getCurrentPosition (deferred): returning spoofed coords", {
-          coords: { lat: position.coords.latitude, lon: position.coords.longitude },
-          delay: `${delay.toFixed(1)}ms`,
-        });
-        setTimeout(() => {
-          if (successCallback) {
-            successCallback(position as GeolocationPosition);
-          }
-        }, delay);
+        if (preserveGeolocationPrompt) {
+          respondViaNativePrompt(successCallback, errorCallback, options);
+        } else {
+          emitSpoofedPosition(successCallback);
+        }
       } else {
         logger.debug("getCurrentPosition (deferred): spoofing disabled, using original");
         originalGetCurrentPosition(successCallback, errorCallback, options);
@@ -425,6 +462,24 @@ function watchPositionOverride(
 ): number {
   assertGeolocationBrand(this, "watchPosition");
   if (spoofingEnabled && spoofedLocation) {
+    if (preserveGeolocationPrompt) {
+      // Preserve-prompt mode: let the real API drive both the native permission
+      // prompt and the native re-fire cadence, but substitute spoofed coords on
+      // every update so the real location never reaches the page. Denials/errors
+      // flow through untouched. The returned id is the real watch id, so
+      // clearWatch routes it back to the native clearWatch (see below).
+      logger.debug("watchPosition: preserve-prompt mode, delegating to real API");
+      return originalWatchPosition(
+        () => {
+          if (!spoofingEnabled || !spoofedLocation) return;
+          const position = createGeolocationPosition(spoofedLocation);
+          successCallback(position as GeolocationPosition);
+        },
+        errorCallback,
+        options
+      );
+    }
+
     const watchId = watchIdCounter++;
     watchCallbacks.set(watchId, successCallback);
 
@@ -472,7 +527,11 @@ function watchPositionOverride(
 /** Override for `navigator.geolocation.clearWatch`. */
 function clearWatchOverride(this: unknown, watchId: number): void {
   assertGeolocationBrand(this, "clearWatch");
-  if (spoofingEnabled) {
+  // A synthetic (spoofed) watch lives in `watchCallbacks`; clear it locally.
+  // Anything else is a real native watch — either spoofing is off, or we're in
+  // preserve-prompt mode where watchPosition delegates to the real API — so
+  // route it to the native clearWatch.
+  if (watchCallbacks.has(watchId)) {
     watchCallbacks.delete(watchId);
   } else {
     originalClearWatch(watchId);

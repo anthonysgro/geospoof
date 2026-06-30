@@ -39,6 +39,14 @@ let verbosityLevel = "INFO";
  */
 let webrtcProtection = false;
 
+/**
+ * Mirrors `Settings.preserveGeolocationPrompt`. Forwarded into the injected
+ * script via the CustomEvent so its geolocation/permissions overrides know
+ * whether to surface the native permission prompt (and report the real
+ * permission state) rather than auto-granting spoofed coords. Defaults to false.
+ */
+let preserveGeolocationPrompt = false;
+
 // Event name for settings updates (configurable for stealth)
 const EVENT_NAME: string = process.env.EVENT_NAME || "__x_evt";
 
@@ -82,6 +90,7 @@ interface SettingsEventDetail {
   debugLogging: boolean;
   verbosityLevel: string;
   webrtcProtection: boolean;
+  preserveGeolocationPrompt: boolean;
 }
 
 /**
@@ -121,6 +130,7 @@ function buildSettingsEventDetail(): SettingsEventDetail {
     debugLogging,
     verbosityLevel,
     webrtcProtection,
+    preserveGeolocationPrompt,
   };
 }
 
@@ -209,6 +219,7 @@ browser.runtime.onMessage.addListener(
       debugLogging = message.payload.debugLogging;
       verbosityLevel = message.payload.verbosityLevel ?? "INFO";
       webrtcProtection = message.payload.webrtcProtection ?? false;
+      preserveGeolocationPrompt = message.payload.preserveGeolocationPrompt ?? false;
       setDebugEnabled(debugLogging);
       setVerbosityLevel(verbosityLevel);
       logger.debug("Settings updated:", {
@@ -251,6 +262,7 @@ browser.runtime
       debugLogging: boolean;
       verbosityLevel: string;
       webrtcProtection?: boolean;
+      preserveGeolocationPrompt?: boolean;
       accuracySetting?: AccuracySetting;
       accuracySeed?: number;
     }) => {
@@ -266,6 +278,7 @@ browser.runtime
       debugLogging = settings.debugLogging;
       verbosityLevel = settings.verbosityLevel ?? "INFO";
       webrtcProtection = settings.webrtcProtection ?? false;
+      preserveGeolocationPrompt = settings.preserveGeolocationPrompt ?? false;
       setDebugEnabled(debugLogging);
       setVerbosityLevel(verbosityLevel);
       logger.debug("Initial settings loaded:", {

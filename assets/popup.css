@@ -1287,19 +1287,9 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   font-size: 14px;
 }
 
-/* No spacing above the first row. */
+/* No spacing above the first row. The always-visible "Preserve location
+   prompts" toggle is the first child, so this applies to it. */
 .advanced-content > .toggle-label:first-child {
-  margin-top: 0;
-}
-
-/* The "Instant timezone protection" row is Firefox-only and hidden elsewhere.
-   When it's hidden, the row that becomes the first visible toggle is the
-   Chromium-only "Browser-level spoofing" row, so drop ITS top spacing. Scoped
-   to that specific row (not a blanket `~ .toggle-label`) so later toggles like
-   Debug Logging — which sit after the section divider and are never first —
-   keep their normal 12px rhythm. Uses the general-sibling combinator because
-   the row's info tooltip sits between it and this one. */
-.advanced-content > #earlyTzRow[style*="display: none"] ~ #debuggerModeRow {
   margin-top: 0;
 }
 

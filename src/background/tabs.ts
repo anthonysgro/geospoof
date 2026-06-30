@@ -39,6 +39,7 @@ export async function broadcastSettingsToTabs(settings: Settings): Promise<void>
     debugLogging,
     verbosityLevel,
     webrtcProtection,
+    preserveGeolocationPrompt,
     accuracySetting,
     accuracySeed,
   } = settings;
@@ -78,6 +79,7 @@ export async function broadcastSettingsToTabs(settings: Settings): Promise<void>
       debugLogging,
       verbosityLevel,
       webrtcProtection,
+      preserveGeolocationPrompt,
       // Custom accuracy is Pro-gated on iOS Safari: force Realistic ("auto")
       // for a free user so the page can't receive a pinned accuracy. Fail-open
       // + Safari-only (no effect on macOS / Chrome / Firefox).

@@ -25,6 +25,7 @@ function makeSettings(overrides: Partial<Settings> = {}): Settings {
     timezone: null,
     locationName: null,
     webrtcProtection: false,
+    preserveGeolocationPrompt: false,
     onboardingCompleted: true,
     version: "1.1",
     lastUpdated: 0,

@@ -8,6 +8,7 @@ import type {
   SetLocationPayload,
   SetProtectionStatusPayload,
   SetWebRTCProtectionPayload,
+  SetPreserveGeoPromptPayload,
   SetDebuggerModePayload,
   AnnounceWorkerFetchPayload,
   GeocodeQueryPayload,
@@ -147,6 +148,7 @@ export async function handleMessage(
           debugLogging: settings.debugLogging,
           verbosityLevel: settings.verbosityLevel,
           webrtcProtection: settings.webrtcProtection,
+          preserveGeolocationPrompt: settings.preserveGeolocationPrompt,
           // Pro-gate custom accuracy on iOS Safari (force Realistic for a free
           // user); fail-open + Safari-only, like the scope gate above.
           accuracySetting: computeEffectiveAccuracySetting(
@@ -171,6 +173,11 @@ export async function handleMessage(
       case "SET_WEBRTC_PROTECTION":
         logger.debug("Setting WebRTC protection:", message.payload);
         await handleSetWebRTCProtection(message.payload as SetWebRTCProtectionPayload);
+        return { success: true };
+
+      case "SET_PRESERVE_GEO_PROMPT":
+        logger.debug("Setting preserve-geolocation-prompt:", message.payload);
+        await handleSetPreserveGeoPrompt(message.payload as SetPreserveGeoPromptPayload);
         return { success: true };
 
       case "SET_DEBUGGER_MODE":
@@ -474,6 +481,23 @@ export async function handleSetWebRTCProtection(
 
   // Push the new flag to every live content script so the injected
   // RTCPeerConnection wrapper flips state without needing a reload.
+  await broadcastSettingsToTabs(settings);
+}
+
+/**
+ * Toggle the "preserve permission prompts" geolocation behavior. Persists the
+ * flag and re-broadcasts so the injected geolocation/permissions overrides flip
+ * between auto-granting spoofed coords and surfacing the native prompt — no page
+ * reload needed. Engine-independent (pure content-script behavior).
+ */
+export async function handleSetPreserveGeoPrompt(
+  payload: SetPreserveGeoPromptPayload
+): Promise<void> {
+  const { enabled } = payload;
+
+  const settings = await updateSettings({ preserveGeolocationPrompt: enabled });
+  logger.info("Preserve geolocation prompt updated:", { enabled });
+
   await broadcastSettingsToTabs(settings);
 }
 

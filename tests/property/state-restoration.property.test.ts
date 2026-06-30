@@ -43,6 +43,7 @@ const settingsArb: fc.Arbitrary<Settings> = fc.record({
     { nil: null }
   ),
   webrtcProtection: fc.boolean(),
+  preserveGeolocationPrompt: fc.boolean(),
   onboardingCompleted: fc.boolean(),
   version: fc.constant("1.0"),
   lastUpdated: fc.integer({ min: 0, max: Number.MAX_SAFE_INTEGER }),

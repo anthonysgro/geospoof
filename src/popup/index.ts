@@ -100,6 +100,24 @@ document.getElementById("webrtcToggle")?.addEventListener("change", (e: Event) =
   })();
 });
 
+// Preserve permission prompts toggle
+document.getElementById("preserveGeoPromptToggle")?.addEventListener("change", (e: Event) => {
+  const target = e.target as HTMLInputElement;
+  const enabled = target.checked;
+
+  void (async () => {
+    try {
+      await browser.runtime.sendMessage({
+        type: "SET_PRESERVE_GEO_PROMPT",
+        payload: { enabled },
+      });
+    } catch (error: unknown) {
+      console.error("Failed to set preserve-geolocation-prompt:", error);
+      target.checked = !enabled;
+    }
+  })();
+});
+
 // Advanced worker protection is now always-on on Firefox (and a no-op
 // on Chromium / Safari), so there's no toggle to wire up. The feature
 // is gated by manifest-declared webRequest permissions which the user
@@ -468,6 +486,23 @@ document.getElementById("vpnSyncInfo")?.addEventListener("click", (e: Event) => 
   e.stopPropagation();
   const tooltip = document.getElementById("vpnSyncTooltip");
   tooltip?.classList.toggle("visible");
+});
+
+// Preserve-permission-prompts info tooltip
+document.getElementById("preserveGeoPromptInfo")?.addEventListener("click", (e: Event) => {
+  e.preventDefault();
+  e.stopPropagation();
+  const tooltip = document.getElementById("preserveGeoPromptTooltip");
+  tooltip?.classList.toggle("visible");
+});
+
+// Dismiss the preserve-prompt tooltip when tapping elsewhere
+document.addEventListener("click", (e: Event) => {
+  const tooltip = document.getElementById("preserveGeoPromptTooltip");
+  const infoBtn = document.getElementById("preserveGeoPromptInfo");
+  if (tooltip && e.target !== infoBtn && !infoBtn?.contains(e.target as Node)) {
+    tooltip.classList.remove("visible");
+  }
 });
 
 // Dismiss tooltip when tapping elsewhere

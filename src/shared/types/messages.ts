@@ -7,6 +7,7 @@ export type MessageType =
   | "SET_LOCATION"
   | "SET_PROTECTION_STATUS"
   | "SET_WEBRTC_PROTECTION"
+  | "SET_PRESERVE_GEO_PROMPT"
   | "SET_DEBUGGER_MODE"
   | "ANNOUNCE_WORKER_FETCH"
   | "GEOCODE_QUERY"
@@ -49,6 +50,11 @@ export interface SetProtectionStatusPayload {
 }
 
 export interface SetWebRTCProtectionPayload {
+  enabled: boolean;
+}
+
+/** Toggles the "preserve permission prompts" geolocation behavior. */
+export interface SetPreserveGeoPromptPayload {
   enabled: boolean;
 }
 
@@ -138,6 +144,13 @@ export interface UpdateSettingsPayload {
    *   - Safari doesn't expose `browser.privacy` at all.
    */
   webrtcProtection: boolean;
+  /**
+   * When true, the injected geolocation override triggers the browser's native
+   * permission prompt (via the real API) and substitutes spoofed coords only on
+   * grant, and `permissions.query` reports the real state instead of a forced
+   * "granted". Off by default. Engine-independent (content-script behavior).
+   */
+  preserveGeolocationPrompt: boolean;
   /**
    * How the spoofed `GeolocationCoordinates.accuracy` value should be
    * produced. Threaded end-to-end so the injected page-world script

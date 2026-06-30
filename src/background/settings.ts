@@ -200,6 +200,10 @@ export function validateSettings(settings: Partial<Settings>): Settings {
     validated.webrtcProtection = settings.webrtcProtection;
   }
 
+  if (typeof settings.preserveGeolocationPrompt === "boolean") {
+    validated.preserveGeolocationPrompt = settings.preserveGeolocationPrompt;
+  }
+
   if (typeof settings.onboardingCompleted === "boolean") {
     validated.onboardingCompleted = settings.onboardingCompleted;
   }

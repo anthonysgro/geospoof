@@ -34,6 +34,7 @@ function makeSettings(partial: Partial<Settings>): Settings {
     timezone: null,
     locationName: null,
     webrtcProtection: false,
+    preserveGeolocationPrompt: false,
     onboardingCompleted: true,
     version: "1.1",
     lastUpdated: Date.now(),
