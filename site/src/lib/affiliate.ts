@@ -50,4 +50,3 @@ export const PROTON_PLAIN_URL = "https://protonvpn.com"
  * offer so the claim stays accurate. Single source of truth: update here.
  */
 export const PROTON_DISCOUNT = "70%"
-

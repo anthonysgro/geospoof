@@ -92,9 +92,9 @@ function AboutPage() {
             />
             <div>
               <h1 className="text-3xl font-bold text-(--color-canvas-foreground) md:text-4xl">
-               👋 Hi, I&rsquo;m Anthony
+                👋 Hi, I&rsquo;m Anthony
               </h1>
-              <p className="mt-1 text-body-lg text-(--color-canvas-muted)">
+              <p className="text-body-lg mt-1 text-(--color-canvas-muted)">
                 I build GeoSpoof.
               </p>
               <div className="mt-4 flex flex-wrap gap-3">
@@ -122,7 +122,7 @@ function AboutPage() {
             </div>
           </div>
 
-          <div className="mt-10 space-y-5 text-body-lg leading-relaxed text-(--color-canvas-muted)">
+          <div className="text-body-lg mt-10 space-y-5 leading-relaxed text-(--color-canvas-muted)">
             <p>
               I&rsquo;m a software developer, and GeoSpoof started as{" "}
               <strong className="font-semibold text-(--color-canvas-foreground)">
@@ -139,8 +139,8 @@ function AboutPage() {
                 no accounts and nothing to sign up for
               </strong>
               . Your settings just live in your browser. And if you&rsquo;re
-              ever curious what it&rsquo;s actually doing, the code is public and
-              the{" "}
+              ever curious what it&rsquo;s actually doing, the code is public
+              and the{" "}
               <Link
                 to="/verify"
                 className="font-medium text-(--color-brand) hover:underline"

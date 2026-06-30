@@ -4,10 +4,17 @@
  */
 self.onmessage = function () {
   try {
-    var timeZone = new Intl.DateTimeFormat().resolvedOptions().timeZone;
-    var offsetMinutes = new Date().getTimezoneOffset();
-    self.postMessage({ ok: true, timeZone: timeZone, offsetMinutes: offsetMinutes });
+    var timeZone = new Intl.DateTimeFormat().resolvedOptions().timeZone
+    var offsetMinutes = new Date().getTimezoneOffset()
+    self.postMessage({
+      ok: true,
+      timeZone: timeZone,
+      offsetMinutes: offsetMinutes,
+    })
   } catch (err) {
-    self.postMessage({ ok: false, error: err && err.message ? err.message : String(err) });
+    self.postMessage({
+      ok: false,
+      error: err && err.message ? err.message : String(err),
+    })
   }
-};
+}

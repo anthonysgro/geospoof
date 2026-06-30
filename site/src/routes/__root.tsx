@@ -4,10 +4,12 @@ import {
   Outlet,
   Scripts,
   createRootRoute,
+  useRouterState,
 } from "@tanstack/react-router"
 import { Analytics } from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/react"
 import appCss from "../styles.css?url"
+import { localeFromPathname } from "@/lib/i18n"
 import { ThemeProvider } from "@/components/theme-provider"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Toaster } from "@/components/ui/sonner"
@@ -83,14 +85,18 @@ export const Route = createRootRoute({
     <div className="flex min-h-screen flex-col bg-(--color-canvas)">
       <Navigation />
       <main className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-        <p className="text-sm font-semibold tracking-widest text-(--color-brand) uppercase">404</p>
-        <h1 className="text-3xl font-bold text-(--color-canvas-foreground)">Page not found</h1>
+        <p className="text-sm font-semibold tracking-widest text-(--color-brand) uppercase">
+          404
+        </p>
+        <h1 className="text-3xl font-bold text-(--color-canvas-foreground)">
+          Page not found
+        </h1>
         <p className="text-(--color-canvas-muted)">
           This page doesn't exist or has been moved.
         </p>
         <Link
           to="/"
-          className="mt-2 inline-flex min-h-10 items-center justify-center rounded-brand px-6 bg-(--color-brand) text-sm font-semibold text-white transition-all hover:bg-(--color-brand-dark)"
+          className="mt-2 inline-flex min-h-10 items-center justify-center rounded-brand bg-(--color-brand) px-6 text-sm font-semibold text-white transition-all hover:bg-(--color-brand-dark)"
         >
           Back to home
         </Link>
@@ -161,8 +167,13 @@ const themeScript = `
 `
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  // Reflect the active locale on <html lang> for accessibility + SEO. Derived
+  // from the URL (e.g. "/fr" -> "fr") so it stays correct under SSR/prerender.
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const locale = localeFromPathname(pathname)
+
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <head>
         <HeadContent />
         <script dangerouslySetInnerHTML={{ __html: performanceShim }} />

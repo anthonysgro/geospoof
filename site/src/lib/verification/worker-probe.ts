@@ -110,7 +110,8 @@ type WorkerMessage =
 function readMessage(data: unknown): WorkerReading {
   if (data && typeof data === "object" && "ok" in data) {
     const msg = data as WorkerMessage
-    if (msg.ok) return { timeZone: msg.timeZone, offsetMinutes: msg.offsetMinutes }
+    if (msg.ok)
+      return { timeZone: msg.timeZone, offsetMinutes: msg.offsetMinutes }
     throw new Error(msg.error)
   }
   throw new Error("worker returned an unexpected message shape")
@@ -120,7 +121,10 @@ function readMessage(data: unknown): WorkerReading {
 function waitForWorker(worker: Worker): Promise<WorkerReading> {
   return new Promise<WorkerReading>((resolve, reject) => {
     const timer = setTimeout(
-      () => reject(new Error(`worker did not respond within ${WORKER_TIMEOUT_MS}ms`)),
+      () =>
+        reject(
+          new Error(`worker did not respond within ${WORKER_TIMEOUT_MS}ms`)
+        ),
       WORKER_TIMEOUT_MS
     )
     worker.onmessage = (event: MessageEvent<unknown>) => {
@@ -146,8 +150,16 @@ async function probeInlineWorker(source: string): Promise<WorkerReading> {
   try {
     return await waitForWorker(worker)
   } finally {
-    try { worker.terminate() } catch { /* cleanup */ }
-    try { URL.revokeObjectURL(url) } catch { /* cleanup */ }
+    try {
+      worker.terminate()
+    } catch {
+      /* cleanup */
+    }
+    try {
+      URL.revokeObjectURL(url)
+    } catch {
+      /* cleanup */
+    }
   }
 }
 
@@ -174,11 +186,17 @@ export async function readWorkerTimezone(): Promise<string | null> {
 }
 
 async function probeDataWorker(source: string): Promise<WorkerReading> {
-  const worker = new Worker(`data:application/javascript,${encodeURIComponent(source)}`)
+  const worker = new Worker(
+    `data:application/javascript,${encodeURIComponent(source)}`
+  )
   try {
     return await waitForWorker(worker)
   } finally {
-    try { worker.terminate() } catch { /* cleanup */ }
+    try {
+      worker.terminate()
+    } catch {
+      /* cleanup */
+    }
   }
 }
 
@@ -192,7 +210,11 @@ async function probeUrlWorker(scriptUrl: string): Promise<WorkerReading> {
   try {
     return await waitForWorker(worker)
   } finally {
-    try { worker.terminate() } catch { /* cleanup */ }
+    try {
+      worker.terminate()
+    } catch {
+      /* cleanup */
+    }
   }
 }
 
@@ -205,7 +227,11 @@ async function probeModuleWorker(scriptUrl: string): Promise<WorkerReading> {
   try {
     return await waitForWorker(worker)
   } finally {
-    try { worker.terminate() } catch { /* cleanup */ }
+    try {
+      worker.terminate()
+    } catch {
+      /* cleanup */
+    }
   }
 }
 
@@ -214,7 +240,12 @@ function waitForSharedWorker(worker: SharedWorker): Promise<WorkerReading> {
   return new Promise<WorkerReading>((resolve, reject) => {
     const port = worker.port
     const timer = setTimeout(
-      () => reject(new Error(`SharedWorker did not respond within ${WORKER_TIMEOUT_MS}ms`)),
+      () =>
+        reject(
+          new Error(
+            `SharedWorker did not respond within ${WORKER_TIMEOUT_MS}ms`
+          )
+        ),
       WORKER_TIMEOUT_MS
     )
     port.onmessage = (event: MessageEvent<unknown>) => {
@@ -259,7 +290,11 @@ async function probeSharedWorker(scriptUrl: string): Promise<WorkerReading> {
   try {
     return await waitForSharedWorker(worker)
   } finally {
-    try { worker.port.close() } catch { /* cleanup */ }
+    try {
+      worker.port.close()
+    } catch {
+      /* cleanup */
+    }
   }
 }
 
@@ -329,25 +364,27 @@ export async function probeWorkers(): Promise<Array<WorkerProbeResult>> {
   ]
 
   const results = await Promise.all(
-    specs.filter((s): s is ProbeSpec => s !== null).map(async (spec) => {
-      try {
-        const reading = await spec.run()
-        return {
-          id: spec.id,
-          label: spec.label,
-          reading,
-          supported: true,
-        } satisfies WorkerProbeResult
-      } catch (err) {
-        return {
-          id: spec.id,
-          label: spec.label,
-          reading: null,
-          supported: false,
-          detail: err instanceof Error ? err.message : String(err),
-        } satisfies WorkerProbeResult
-      }
-    })
+    specs
+      .filter((s): s is ProbeSpec => s !== null)
+      .map(async (spec) => {
+        try {
+          const reading = await spec.run()
+          return {
+            id: spec.id,
+            label: spec.label,
+            reading,
+            supported: true,
+          } satisfies WorkerProbeResult
+        } catch (err) {
+          return {
+            id: spec.id,
+            label: spec.label,
+            reading: null,
+            supported: false,
+            detail: err instanceof Error ? err.message : String(err),
+          } satisfies WorkerProbeResult
+        }
+      })
   )
 
   return results

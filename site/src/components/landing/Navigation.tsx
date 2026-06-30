@@ -1,43 +1,56 @@
 import { CoffeeIcon, GithubIcon } from "lucide-react"
 import { NavLink } from "./NavLink"
 import { MobileNav } from "./MobileNav"
+import { LanguageSwitcher } from "./LanguageSwitcher"
 import type { NavItem } from "./MobileNav"
+import type { Dictionary } from "@/lib/i18n"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { cn } from "@/lib/utils"
+import { useTranslations } from "@/hooks/use-i18n"
+import { localizedPath } from "@/lib/i18n"
 
-const navItems: Array<NavItem> = [
-  { label: "Home", href: "#" },
-  { label: "Features", href: "#features" },
-  { label: "Blog", href: "/blog" },
-  { label: "Support", href: "/support" },
-]
+/** Build the nav items from the active dictionary (labels are localized). */
+function getNavItems(t: Dictionary): Array<NavItem> {
+  return [
+    { label: t.nav.home, href: "#" },
+    { label: t.nav.features, href: "#features" },
+    { label: t.nav.blog, href: "/blog" },
+    { label: t.nav.support, href: "/support" },
+  ]
+}
 
+/**
+ * Smooth-scroll handler for in-page anchors. `homePath` is the current
+ * locale's home (e.g. "/" or "/fr"), so "Home" and the brand mark return a
+ * French visitor to the French homepage rather than the English one.
+ */
 function handleSmoothScroll(
   e: React.MouseEvent<HTMLAnchorElement>,
-  href: string
+  href: string,
+  homePath: string
 ) {
   if (!href.startsWith("#")) return
   e.preventDefault()
   if (href === "#") {
-    if (window.location.pathname !== "/") {
-      window.location.href = "/"
+    if (window.location.pathname !== homePath) {
+      window.location.href = homePath
     } else {
       window.scrollTo({ top: 0, behavior: "smooth" })
     }
     return
   }
-  if (window.location.pathname !== "/") {
-    window.location.href = "/" + href
+  if (window.location.pathname !== homePath) {
+    window.location.href = homePath === "/" ? "/" + href : homePath + "/" + href
     return
   }
   const el = document.getElementById(href.slice(1))
   el?.scrollIntoView({ behavior: "smooth", block: "start" })
 }
 
-function BrandMark() {
+function BrandMark({ homePath }: { homePath: string }) {
   return (
     <a
-      href="/"
+      href={homePath}
       className={cn(
         "flex items-center gap-2 justify-self-start",
         "text-2xl font-bold md:text-3xl lg:text-[2rem]",
@@ -63,17 +76,25 @@ function BrandMark() {
   )
 }
 
-function CenterNavLinks() {
+function CenterNavLinks({
+  items,
+  homePath,
+  ariaLabel,
+}: {
+  items: Array<NavItem>
+  homePath: string
+  ariaLabel: string
+}) {
   return (
     <nav
       className="hidden items-center gap-6 lg:flex xl:gap-12"
-      aria-label="Main navigation"
+      aria-label={ariaLabel}
     >
-      {navItems.map((item) => (
+      {items.map((item) => (
         <NavLink
           key={item.href}
           href={item.href}
-          onClick={(e) => handleSmoothScroll(e, item.href)}
+          onClick={(e) => handleSmoothScroll(e, item.href, homePath)}
         >
           {item.label}
         </NavLink>
@@ -83,7 +104,10 @@ function CenterNavLinks() {
 }
 
 const iconBtnClass = cn(
-  "hidden items-center justify-center lg:inline-flex",
+  // Deferred to `xl`: at `lg` the bar is already tight with the nav links,
+  // language picker, theme toggle, and CTA, so these secondary icons only
+  // appear once there's room. Below `lg` they live in the mobile menu.
+  "hidden items-center justify-center xl:inline-flex",
   "h-10 min-h-[44px] w-10 min-w-[44px]",
   "rounded-[var(--radius-brand)]",
   "text-(--color-canvas-muted)",
@@ -92,9 +116,19 @@ const iconBtnClass = cn(
   "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
 )
 
-function RightActions() {
+function RightActions({
+  t,
+  items,
+  homePath,
+}: {
+  t: Dictionary
+  items: Array<NavItem>
+  homePath: string
+}) {
   return (
     <>
+      <LanguageSwitcher />
+
       <ThemeToggle />
 
       {/* Buy me a coffee — desktop only */}
@@ -103,7 +137,7 @@ function RightActions() {
         target="_blank"
         rel="noopener noreferrer"
         className={iconBtnClass}
-        aria-label="Buy me a coffee"
+        aria-label={t.nav.buyMeACoffee}
       >
         <CoffeeIcon className="h-5 w-5" />
       </a>
@@ -114,7 +148,7 @@ function RightActions() {
         target="_blank"
         rel="noopener noreferrer"
         className={iconBtnClass}
-        aria-label="GeoSpoof on GitHub"
+        aria-label={t.nav.github}
       >
         <GithubIcon className="h-5 w-5" />
       </a>
@@ -122,7 +156,7 @@ function RightActions() {
       {/* Download CTA — desktop only */}
       <a
         href="#download"
-        onClick={(e) => handleSmoothScroll(e, "#download")}
+        onClick={(e) => handleSmoothScroll(e, "#download", homePath)}
         className={cn(
           "hidden items-center justify-center lg:inline-flex",
           "bg-(--color-brand) text-white",
@@ -132,16 +166,20 @@ function RightActions() {
           "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
         )}
       >
-        Download
+        {t.nav.download}
       </a>
 
       {/* Mobile hamburger */}
-      <MobileNav items={navItems} className="lg:hidden" />
+      <MobileNav items={items} homePath={homePath} className="lg:hidden" />
     </>
   )
 }
 
 export function Navigation({ className }: { className?: string }) {
+  const { locale, t } = useTranslations()
+  const homePath = localizedPath("/", locale)
+  const items = getNavItems(t)
+
   return (
     <header
       role="banner"
@@ -156,14 +194,18 @@ export function Navigation({ className }: { className?: string }) {
         className={cn(
           "mx-auto w-full",
           "px-6 md:px-10 xl:px-16",
-          "flex items-center justify-between lg:grid lg:grid-cols-[1fr_auto_1fr]",
+          "flex items-center justify-between lg:grid lg:grid-cols-[1fr_auto_1fr] lg:gap-x-6",
           "h-18 md:h-20"
         )}
       >
-        <BrandMark />
-        <CenterNavLinks />
+        <BrandMark homePath={homePath} />
+        <CenterNavLinks
+          items={items}
+          homePath={homePath}
+          ariaLabel={t.nav.mainNavAria}
+        />
         <div className="flex items-center gap-3 justify-self-end">
-          <RightActions />
+          <RightActions t={t} items={items} homePath={homePath} />
         </div>
       </nav>
     </header>

@@ -152,8 +152,7 @@ export function DeeperChecks() {
   // environment-dependent (e.g. Firefox denying geolocation inside a fresh
   // iframe) and read as noise on a conversion page, not as GeoSpoof signals.
   const visible = states.filter(
-    (s) =>
-      s.result.status !== "skipped" && s.result.status !== "error"
+    (s) => s.result.status !== "skipped" && s.result.status !== "error"
   )
 
   if (phase === "done" && visible.length === 0) return null
@@ -185,7 +184,9 @@ export function DeeperChecks() {
                     <p className="text-sm font-medium text-(--color-canvas-foreground)">
                       {definition.name}
                     </p>
-                    <span className={`shrink-0 text-xs font-semibold ${meta.tone}`}>
+                    <span
+                      className={`shrink-0 text-xs font-semibold ${meta.tone}`}
+                    >
                       {meta.label}
                     </span>
                   </div>

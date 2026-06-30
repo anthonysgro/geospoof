@@ -80,8 +80,20 @@ export function ThemeImage({
   return (
     <span className={cn("my-6 block", wrapperClassName)}>
       <span className="block overflow-hidden rounded-md-brand border border-(--color-canvas-border) bg-card p-2 shadow-md ring-1 ring-black/5 sm:p-3 dark:ring-white/10">
-        <img src={light} alt={alt} loading="lazy" decoding="async" className={cn(imgClass, "dark:hidden")} />
-        <img src={dark} alt={alt} loading="lazy" decoding="async" className={cn(imgClass, "hidden dark:block")} />
+        <img
+          src={light}
+          alt={alt}
+          loading="lazy"
+          decoding="async"
+          className={cn(imgClass, "dark:hidden")}
+        />
+        <img
+          src={dark}
+          alt={alt}
+          loading="lazy"
+          decoding="async"
+          className={cn(imgClass, "hidden dark:block")}
+        />
       </span>
       {caption && (
         <span className="text-small mt-2 block text-center text-(--color-canvas-muted)">
@@ -127,7 +139,12 @@ export function Compare({
       <span className="text-small mb-2 block text-center font-semibold text-(--color-canvas-foreground)">
         {label}
       </span>
-      <ThemeImage light={light} dark={dark} alt={`${label}: ${alt}`} wrapperClassName="my-0" />
+      <ThemeImage
+        light={light}
+        dark={dark}
+        alt={`${label}: ${alt}`}
+        wrapperClassName="my-0"
+      />
     </span>
   )
   return (
@@ -224,12 +241,9 @@ export function ImagePair({
  * branding stays compliant with Apple's marketing guidelines. The `campaign`
  * prop feeds App Store Connect's `ct` attribution token.
  */
-export function AppStoreBadges({
-  campaign = "blog",
-}: {
-  campaign?: string
-}) {
-  const base = "https://apps.apple.com/app/apple-store/id6765719745?pt=128299974"
+export function AppStoreBadges({ campaign = "blog" }: { campaign?: string }) {
+  const base =
+    "https://apps.apple.com/app/apple-store/id6765719745?pt=128299974"
   const linkClass =
     "transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) focus-visible:ring-offset-2 rounded-md-brand"
   return (
@@ -355,7 +369,9 @@ function DownloadCTA({ campaign = "blog" }: { campaign?: string }) {
             <span className="text-sm font-bold text-(--color-canvas-foreground)">
               {s.name}
             </span>
-            <span className="text-xs text-(--color-canvas-muted)">{s.detail}</span>
+            <span className="text-xs text-(--color-canvas-muted)">
+              {s.detail}
+            </span>
             <span className="mt-1 inline-block text-xs font-semibold text-(--color-brand)">
               {s.cta} →
             </span>

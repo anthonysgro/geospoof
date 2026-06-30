@@ -32,7 +32,7 @@ export function DashboardTier({
   children,
 }: DashboardTierProps) {
   return (
-    <section id={id} aria-labelledby={id} className="space-y-5 scroll-mt-24">
+    <section id={id} aria-labelledby={id} className="scroll-mt-24 space-y-5">
       <header className="mx-auto w-full max-w-4xl space-y-1">
         <h2
           id={id}

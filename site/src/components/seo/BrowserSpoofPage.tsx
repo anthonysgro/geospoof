@@ -132,7 +132,9 @@ function steps(info: BrowserInfo) {
     {
       name: `${info.name} reports your chosen location`,
       text: `GeoSpoof overrides the Geolocation API and timezone (Date, Intl, Temporal) so every site sees the location you picked${
-        info.webrtc ? ", and WebRTC protection blocks your real IP from leaking" : ""
+        info.webrtc
+          ? ", and WebRTC protection blocks your real IP from leaking"
+          : ""
       }.`,
     },
   ]
@@ -188,7 +190,9 @@ export function BrowserSpoofPage({ slug }: { slug: BrowserSlug }) {
             <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
               <a
                 href={store ? store.href : "#download"}
-                {...(store ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                {...(store
+                  ? { target: "_blank", rel: "noopener noreferrer" }
+                  : {})}
                 className={cn(
                   "inline-flex min-h-12 w-full items-center justify-center sm:min-h-14 sm:w-auto",
                   "rounded-brand bg-(--color-brand) px-8 text-base font-semibold text-white sm:text-lg",
@@ -279,7 +283,11 @@ export function BrowserSpoofPage({ slug }: { slug: BrowserSlug }) {
         </Section>
 
         {/* FAQ */}
-        <Section narrow className="py-12! md:py-16!" aria-labelledby="faq-heading">
+        <Section
+          narrow
+          className="py-12! md:py-16!"
+          aria-labelledby="faq-heading"
+        >
           <h2
             id="faq-heading"
             className="mb-6 text-2xl font-bold text-(--color-canvas-foreground) md:text-3xl"
@@ -292,7 +300,8 @@ export function BrowserSpoofPage({ slug }: { slug: BrowserSlug }) {
                 key={faq.q}
                 className={cn(
                   "group bg-(--color-canvas) px-5 py-4",
-                  i < faqs.length - 1 && "border-b border-(--color-canvas-border)"
+                  i < faqs.length - 1 &&
+                    "border-b border-(--color-canvas-border)"
                 )}
               >
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-medium text-(--color-canvas-foreground)">
@@ -369,7 +378,12 @@ export function BrowserSpoofPage({ slug }: { slug: BrowserSlug }) {
               "@context": "https://schema.org",
               "@type": "BreadcrumbList",
               itemListElement: [
-                { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+                {
+                  "@type": "ListItem",
+                  position: 1,
+                  name: "Home",
+                  item: SITE_URL,
+                },
                 {
                   "@type": "ListItem",
                   position: 2,

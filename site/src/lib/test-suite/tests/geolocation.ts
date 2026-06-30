@@ -57,7 +57,7 @@ const getCurrentPositionReturnsCoords = buildBehavioralTest<boolean>({
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       throw new SkipTestError(
-        `getCurrentPosition could not be resolved: ${message}`,
+        `getCurrentPosition could not be resolved: ${message}`
       )
     }
     const { latitude, longitude } = pos.coords

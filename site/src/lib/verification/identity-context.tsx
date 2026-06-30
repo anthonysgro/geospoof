@@ -297,11 +297,7 @@ function getLocation(signal: AbortSignal): Promise<AsyncField<LocationValue>> {
   // Allow" issue the noise is useful.
   const t0 = monotonicNow()
   const tlog = (...args: Array<unknown>): void => {
-     
-    console.log(
-      `[geo-debug +${Math.round(monotonicNow() - t0)}ms]`,
-      ...args,
-    )
+    console.log(`[geo-debug +${Math.round(monotonicNow() - t0)}ms]`, ...args)
   }
   tlog("getLocation called")
 
@@ -324,7 +320,7 @@ function getLocation(signal: AbortSignal): Promise<AsyncField<LocationValue>> {
       tlog(
         "resolveOnce",
         field.status,
-        field.error ?? (field.value ? "got coords" : ""),
+        field.error ?? (field.value ? "got coords" : "")
       )
       resolve(field)
     }
@@ -342,14 +338,14 @@ function getLocation(signal: AbortSignal): Promise<AsyncField<LocationValue>> {
     const callGetCurrentPosition = (): void => {
       tlog(
         "callGetCurrentPosition: invoking navigator.geolocation.getCurrentPosition with timeout",
-        GEOLOCATION_TIMEOUT_MS,
+        GEOLOCATION_TIMEOUT_MS
       )
       let timeoutId: ReturnType<typeof setTimeout> | null = null
       timeoutId = setTimeout(() => {
         tlog(
           "JS-level timeout fired after",
           GEOLOCATION_TIMEOUT_MS,
-          "ms — getCurrentPosition never called back",
+          "ms — getCurrentPosition never called back"
         )
         resolveOnce({
           status: "error",
@@ -388,7 +384,10 @@ function getLocation(signal: AbortSignal): Promise<AsyncField<LocationValue>> {
             })
           },
           (err) => {
-            tlog("error callback fired", { code: err.code, message: err.message })
+            tlog("error callback fired", {
+              code: err.code,
+              message: err.message,
+            })
             if (timeoutId !== null) clearTimeout(timeoutId)
             // Map W3C error codes to human-readable reasons.
             // code 1 = PERMISSION_DENIED, 2 = POSITION_UNAVAILABLE, 3 = TIMEOUT
@@ -423,7 +422,7 @@ function getLocation(signal: AbortSignal): Promise<AsyncField<LocationValue>> {
             enableHighAccuracy: true,
             timeout: GEOLOCATION_TIMEOUT_MS,
             maximumAge: 0,
-          },
+          }
         )
         tlog("getCurrentPosition returned (callbacks pending)")
       } catch (err) {

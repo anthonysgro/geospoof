@@ -33,9 +33,7 @@ export const EMPTY_FILTER: FilterCriteria = {
  * pass through unchanged. Callers can use this to skip unnecessary copies.
  */
 export function isFilterEmpty(filter: FilterCriteria): boolean {
-  return (
-    filter.query.trim().length === 0 && filter.hiddenStatuses.size === 0
-  )
+  return filter.query.trim().length === 0 && filter.hiddenStatuses.size === 0
 }
 
 /**
@@ -45,7 +43,7 @@ export function isFilterEmpty(filter: FilterCriteria): boolean {
  */
 export function matchesFilter(
   state: TestState,
-  filter: FilterCriteria,
+  filter: FilterCriteria
 ): boolean {
   if (filter.hiddenStatuses.has(state.result.status)) {
     return false
@@ -64,7 +62,7 @@ export function matchesFilter(
 
 export function applyFilter(
   states: ReadonlyArray<TestState>,
-  filter: FilterCriteria,
+  filter: FilterCriteria
 ): ReadonlyArray<TestState> {
   if (isFilterEmpty(filter)) return states
   return states.filter((s) => matchesFilter(s, filter))

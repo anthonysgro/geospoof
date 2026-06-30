@@ -23,14 +23,40 @@ const rows: Array<{
   /** Pro on iOS/iPadOS — free on desktop browsers and Safari. */
   iosPro?: boolean
 }> = [
-  { feature: "Spoof geolocation by coordinates", geospoof: "yes", typical: "yes" },
-  { feature: "One consistent identity across dozens of browser APIs", geospoof: "yes", typical: "no" },
-  { feature: "Set your location by city search", geospoof: "yes", typical: "no" },
+  {
+    feature: "Spoof geolocation by coordinates",
+    geospoof: "yes",
+    typical: "yes",
+  },
+  {
+    feature: "One consistent identity across dozens of browser APIs",
+    geospoof: "yes",
+    typical: "no",
+  },
+  {
+    feature: "Set your location by city search",
+    geospoof: "yes",
+    typical: "no",
+  },
   { feature: "WebRTC IP leak protection", geospoof: "yes", typical: "no" },
-  { feature: "Every major browser + full Apple ecosystem", geospoof: "yes", typical: "no" },
-    { feature: "Built-in verification page", geospoof: "yes", typical: "no" },
-  { feature: "VPN Sync with automatic re-sync", geospoof: "yes", typical: "no", iosPro: true },
-  { feature: "Per-site rules & saved favorites", geospoof: "yes", typical: "no", iosPro: true },
+  {
+    feature: "Every major browser + full Apple ecosystem",
+    geospoof: "yes",
+    typical: "no",
+  },
+  { feature: "Built-in verification page", geospoof: "yes", typical: "no" },
+  {
+    feature: "VPN Sync with automatic re-sync",
+    geospoof: "yes",
+    typical: "no",
+    iosPro: true,
+  },
+  {
+    feature: "Per-site rules & saved favorites",
+    geospoof: "yes",
+    typical: "no",
+    iosPro: true,
+  },
 ]
 
 function StatusCell({ state }: { state: Cell }) {
@@ -143,7 +169,10 @@ export function ComparisonSection({ className }: { className?: string }) {
       </div>
 
       <p className="mx-auto mt-4 flex max-w-2xl items-center justify-center gap-1.5 text-center text-xs text-(--color-canvas-muted)">
-        <SparklesIcon className="size-3.5 shrink-0 text-(--color-brand)" aria-hidden="true" />
+        <SparklesIcon
+          className="size-3.5 shrink-0 text-(--color-brand)"
+          aria-hidden="true"
+        />
         Pro on iPhone &amp; iPad. Free on desktop browsers and Safari.
       </p>
 

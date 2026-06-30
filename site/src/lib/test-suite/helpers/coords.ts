@@ -108,7 +108,7 @@ export function haversineMeters(a: Coords, b: Coords): number {
 export function coordsMatchWithin(
   a: Coords,
   b: Coords,
-  toleranceMeters: number = DEFAULT_TOLERANCE_M,
+  toleranceMeters: number = DEFAULT_TOLERANCE_M
 ): boolean {
   if (
     !Number.isFinite(a.latitude) ||

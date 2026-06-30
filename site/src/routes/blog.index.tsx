@@ -70,7 +70,7 @@ function BlogIndexPage() {
                       />
                     )}
                     <div className="p-6">
-                      <div className="mb-2 flex flex-wrap items-center gap-2 text-small text-(--color-canvas-muted)">
+                      <div className="text-small mb-2 flex flex-wrap items-center gap-2 text-(--color-canvas-muted)">
                         <time dateTime={post.date}>
                           {formatDate(post.date)}
                         </time>
@@ -117,7 +117,11 @@ function BlogIndexPage() {
               description: post.description,
               datePublished: post.date,
               dateModified: post.updated ?? post.date,
-              author: { "@type": "Person", name: post.author, url: `${SITE_URL}/about` },
+              author: {
+                "@type": "Person",
+                name: post.author,
+                url: `${SITE_URL}/about`,
+              },
               url: postUrl(post.slug),
             })),
           }),

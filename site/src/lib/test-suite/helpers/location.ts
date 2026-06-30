@@ -71,7 +71,7 @@ const IDENTITY_LOCATION_WAIT_MS = 20_000
  * and "known-limitation" (unfixable architectural gap).
  */
 export async function requireLocationSnapshot(
-  ctx: TestRunContext,
+  ctx: TestRunContext
 ): Promise<LocationValue> {
   const field = await ctx.awaitIdentity("location", IDENTITY_LOCATION_WAIT_MS)
   if (field.status !== "ready" || !field.value) {

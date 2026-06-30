@@ -1,9 +1,22 @@
-import { Link, createFileRoute  } from "@tanstack/react-router"
+import { Link, createFileRoute } from "@tanstack/react-router"
 import * as React from "react"
-import { ArrowRight, Check, ChevronDown, Clock, Globe, Loader2, MapPin, RefreshCw, ShieldAlert, ShieldCheck, Wifi, X } from "lucide-react"
+import {
+  ArrowRight,
+  Check,
+  ChevronDown,
+  Clock,
+  Globe,
+  Loader2,
+  MapPin,
+  RefreshCw,
+  ShieldAlert,
+  ShieldCheck,
+  Wifi,
+  X,
+} from "lucide-react"
 
-import type {NetworkIdentity} from "@/lib/verification/network-identity";
-import type {WebrtcResult} from "@/lib/verification/webrtc-probe";
+import type { NetworkIdentity } from "@/lib/verification/network-identity"
+import type { WebrtcResult } from "@/lib/verification/webrtc-probe"
 import type { WorkerProbeResult } from "@/lib/verification/worker-probe"
 import { Navigation } from "@/components/landing/Navigation"
 import { Footer } from "@/components/landing/Footer"
@@ -31,13 +44,15 @@ import {
   useIdentity,
 } from "@/lib/verification/identity-context"
 import {
-  
   haversineKm,
   resolveNetworkIdentity,
 } from "@/lib/verification/network-identity"
-import {  probeWebrtc } from "@/lib/verification/webrtc-probe"
+import { probeWebrtc } from "@/lib/verification/webrtc-probe"
 import { probeWorkers } from "@/lib/verification/worker-probe"
-import { LeafletMap, prefetchLeaflet } from "@/components/verification/LeafletMap"
+import {
+  LeafletMap,
+  prefetchLeaflet,
+} from "@/components/verification/LeafletMap"
 import { Skeleton } from "@/components/ui/skeleton"
 import { usePlatform } from "@/hooks/use-platform"
 import { getStoreLink } from "@/lib/store-links"
@@ -50,7 +65,10 @@ export const Route = createFileRoute("/verify")({
   component: VerifyPage,
   head: () => ({
     meta: [
-      { title: "Browser Location Test — See What Websites Know About You | GeoSpoof" },
+      {
+        title:
+          "Browser Location Test — See What Websites Know About You | GeoSpoof",
+      },
       {
         name: "description",
         content:
@@ -106,14 +124,20 @@ function VerifyPage() {
         <IdentityProvider>
           <VerifyInner />
         </IdentityProvider>
-        <DownloadSection campaign="verify" className="border-t border-(--color-canvas-border)" />
+        <DownloadSection
+          campaign="verify"
+          className="border-t border-(--color-canvas-border)"
+        />
       </main>
       <Footer />
     </div>
   )
 }
 
-async function reverseGeocode(lat: number, lon: number): Promise<string | null> {
+async function reverseGeocode(
+  lat: number,
+  lon: number
+): Promise<string | null> {
   try {
     const url = new URL("https://nominatim.openstreetmap.org/reverse")
     url.searchParams.set("lat", String(lat))
@@ -155,7 +179,9 @@ function useReverseGeocode(
     void reverseGeocode(lat, lon).then((result) => {
       if (!cancelled) setPlace(result)
     })
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [lat, lon])
   return place
 }
@@ -189,10 +215,7 @@ type GeoTzState =
   | { status: "unavailable" }
 
 /** Resolve the timezone the given coordinates should map to (and its offset). */
-function useGeoTimezone(
-  lat: number | null,
-  lon: number | null
-): GeoTzState {
+function useGeoTimezone(lat: number | null, lon: number | null): GeoTzState {
   const [tz, setTz] = React.useState<GeoTzState>({ status: "loading" })
   React.useEffect(() => {
     if (lat == null || lon == null) {
@@ -227,9 +250,13 @@ function useGeoTimezone(
 
 function VerifyInner() {
   const { snapshot } = useIdentity()
-  const [network, setNetwork] = React.useState<NetworkState>({ status: "pending" })
+  const [network, setNetwork] = React.useState<NetworkState>({
+    status: "pending",
+  })
   const [webrtc, setWebrtc] = React.useState<WebrtcState>({ status: "pending" })
-  const [workers, setWorkers] = React.useState<WorkerState>({ status: "pending" })
+  const [workers, setWorkers] = React.useState<WorkerState>({
+    status: "pending",
+  })
   // Gate all live Date/Intl-derived rendering until after mount. On the server
   // and the first client render this is false, so both produce identical
   // output (no hydration mismatch); real values fill in once the effect runs.
@@ -268,7 +295,9 @@ function VerifyInner() {
     void probeWorkers().then((value) => {
       if (!cancelled) setWorkers({ status: "ready", value })
     })
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const net = network.status === "ready" ? network.value : null
@@ -276,8 +305,10 @@ function VerifyInner() {
   const tz = snapshot.timezone
 
   const geoLat = loc.status === "ready" && loc.value ? loc.value.latitude : null
-  const geoLon = loc.status === "ready" && loc.value ? loc.value.longitude : null
-  const geoAccuracy = loc.status === "ready" && loc.value ? loc.value.accuracy : null
+  const geoLon =
+    loc.status === "ready" && loc.value ? loc.value.longitude : null
+  const geoAccuracy =
+    loc.status === "ready" && loc.value ? loc.value.accuracy : null
   const geoPlace = useReverseGeocode(geoLat, geoLon)
   const permissionState = useGeolocationPermission()
   const geoTz = useGeoTimezone(geoLat, geoLon)
@@ -310,14 +341,19 @@ function VerifyInner() {
     loc.value != null &&
     net?.latitude != null &&
     net?.longitude != null &&
-    haversineKm(loc.value.latitude, loc.value.longitude, net.latitude, net.longitude) >
-      200
+    haversineKm(
+      loc.value.latitude,
+      loc.value.longitude,
+      net.latitude,
+      net.longitude
+    ) > 200
 
   // Prefer the provider's own timezone string (geojs supplies one); otherwise
   // use the zone resolved from the IP's coordinates. Compare both the full IANA
   // identifier and the UTC offset — a mismatch on either means the browser's
   // timezone doesn't match what the IP location expects.
-  const ipTimezone = net?.timezone ?? (ipTz.status === "ready" ? ipTz.zone : null)
+  const ipTimezone =
+    net?.timezone ?? (ipTz.status === "ready" ? ipTz.zone : null)
   const ipOffsetMins = ipTz.status === "ready" ? ipTz.offsetMins : null
   const tzVsIpMismatch =
     !!tz.identifier &&
@@ -381,7 +417,7 @@ function VerifyInner() {
         icon: <MapPin className="size-4" />,
         label: "Geolocation",
         value: coordStr,
-        status: (geoVsIpMismatch ? "bad" : "info"),
+        status: geoVsIpMismatch ? "bad" : "info",
         note: noteparts.length > 0 ? noteparts.join(" · ") : undefined,
       }
     })(),
@@ -398,7 +434,7 @@ function VerifyInner() {
         icon: <Clock className="size-4" />,
         label: "Timezone",
         value: tz.identifier || "—",
-        status: (tzVsIpMismatch ? "bad" : tz.identifier ? "info" : "pending"),
+        status: tzVsIpMismatch ? "bad" : tz.identifier ? "info" : "pending",
         note: noteParts.length > 0 ? noteParts.join(" · ") : undefined,
       }
     })(),
@@ -409,7 +445,7 @@ function VerifyInner() {
       icon: <Clock className="size-4" />,
       label: "Current time",
       value: mounted ? new Date().toString() : "—",
-      status: (mounted ? "info" : "pending"),
+      status: mounted ? "info" : "pending",
     },
 
     // IP address
@@ -429,10 +465,9 @@ function VerifyInner() {
           : network.status === "error"
             ? "bad"
             : "info",
-      note:
-        net
-          ? [net.city, net.countryName].filter(Boolean).join(", ") || undefined
-          : undefined,
+      note: net
+        ? [net.city, net.countryName].filter(Boolean).join(", ") || undefined
+        : undefined,
     },
 
     // WebRTC
@@ -490,7 +525,9 @@ function VerifyInner() {
         label: "WebRTC",
         value: webrtcLeakedIps.join(", ") || "IP leaked",
         status: "bad",
-        note: webrtc.value.leakDetail || "Real IP exposed via WebRTC — bypassing your VPN",
+        note:
+          webrtc.value.leakDetail ||
+          "Real IP exposed via WebRTC — bypassing your VPN",
       }
     })(),
   ]
@@ -534,7 +571,7 @@ function VerifyInner() {
             onClick={handleRefresh}
             disabled={refreshing}
             aria-label="Refresh — reload the page to see your latest values"
-            className="mt-1 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-(--color-canvas-border) bg-(--color-canvas) px-3 py-1.5 text-sm font-medium text-(--color-canvas-foreground) transition-colors hover:border-(--color-brand) hover:text-(--color-brand) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 active:translate-y-px disabled:opacity-60"
+            className="mt-1 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-(--color-canvas-border) bg-(--color-canvas) px-3 py-1.5 text-sm font-medium text-(--color-canvas-foreground) transition-colors hover:border-(--color-brand) hover:text-(--color-brand) focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:outline-none active:translate-y-px disabled:opacity-60"
           >
             <RefreshCw className={cn("size-4", refreshing && "animate-spin")} />
             <span className="hidden sm:inline">Refresh</span>
@@ -545,9 +582,9 @@ function VerifyInner() {
             Live values websites can read about you right now.
           </span>
           <span className="hidden sm:inline">
-            Live values from your browser right now — the location, timezone, and IP
-            websites can read. With GeoSpoof active, they reflect your spoofed location
-            instead of your real one.
+            Live values from your browser right now — the location, timezone,
+            and IP websites can read. With GeoSpoof active, they reflect your
+            spoofed location instead of your real one.
           </span>
         </p>
       </div>
@@ -563,8 +600,9 @@ function VerifyInner() {
       />
 
       {allResolved && (
-        <p className="mb-6 -mt-2 text-center text-xs italic text-(--color-canvas-muted) sm:text-sm">
-          Using Automatic VPN sync? Changes can take up to 10 seconds — tap Refresh to see the latest.
+        <p className="-mt-2 mb-6 text-center text-xs text-(--color-canvas-muted) italic sm:text-sm">
+          Using Automatic VPN sync? Changes can take up to 10 seconds — tap
+          Refresh to see the latest.
         </p>
       )}
 
@@ -577,7 +615,12 @@ function VerifyInner() {
         </div>
       ) : geoLat != null && geoLon != null ? (
         <div className="mb-6 overflow-hidden rounded-2xl">
-          <LeafletMap lat={geoLat} lon={geoLon} zoom={5} className="rounded-none! h-[220px] sm:h-[260px]" />
+          <LeafletMap
+            lat={geoLat}
+            lon={geoLon}
+            zoom={5}
+            className="h-[220px] rounded-none! sm:h-[260px]"
+          />
         </div>
       ) : null}
 
@@ -598,8 +641,8 @@ function VerifyInner() {
           </span>
           <div>
             <p className="text-xs leading-relaxed text-(--color-canvas-foreground) sm:text-sm">
-              Your IP address is the one signal GeoSpoof can&rsquo;t change. Only
-              a VPN can.
+              Your IP address is the one signal GeoSpoof can&rsquo;t change.
+              Only a VPN can.
             </p>
             <p className="mt-0.5 text-xs text-(--color-canvas-muted)">
               The one we recommend is up to {PROTON_DISCOUNT} off.
@@ -626,8 +669,8 @@ function VerifyInner() {
           Browser API surface
         </p>
         <p className="mb-6 text-sm text-(--color-canvas-muted)">
-          Key fingerprinting surfaces attackers check. Expand any group to see the
-          values they get — they should all tell the same story.
+          Key fingerprinting surfaces attackers check. Expand any group to see
+          the values they get — they should all tell the same story.
         </p>
         <ApiChecks groups={apiGroups} mounted={mounted} />
       </div>
@@ -796,17 +839,23 @@ function safe(fn: () => string): string {
 function normalizeZone(tz: string): string {
   const cleaned = tz.trim()
   try {
-    const resolved = new Intl.DateTimeFormat("en-US", { timeZone: cleaned }).resolvedOptions()
-      .timeZone
+    const resolved = new Intl.DateTimeFormat("en-US", {
+      timeZone: cleaned,
+    }).resolvedOptions().timeZone
     if (resolved) return resolved
   } catch {
     // fall through to manual aliases below
   }
-  return cleaned.replace(/Katmandu$/, "Kathmandu").replace(/Calcutta$/, "Kolkata")
+  return cleaned
+    .replace(/Katmandu$/, "Kathmandu")
+    .replace(/Calcutta$/, "Kolkata")
 }
 
 /** True when two timezone identifiers refer to the same zone. */
-function zonesMatch(a: string | null | undefined, b: string | null | undefined): boolean {
+function zonesMatch(
+  a: string | null | undefined,
+  b: string | null | undefined
+): boolean {
   if (!a || !b) return false
   return a === b || normalizeZone(a) === normalizeZone(b)
 }
@@ -837,7 +886,11 @@ function offsetFromString(s: string): number | null {
 function parseIsoDate(s: string): { y: number; mo: number; d: number } | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s)
   if (!m) return null
-  return { y: parseInt(m[1], 10), mo: parseInt(m[2], 10) - 1, d: parseInt(m[3], 10) }
+  return {
+    y: parseInt(m[1], 10),
+    mo: parseInt(m[2], 10) - 1,
+    d: parseInt(m[3], 10),
+  }
 }
 
 /** Parse the time portion of an ISO string ("…HH:MM…" or "HH:MM…"). */
@@ -855,7 +908,10 @@ function parseLastModified(
   // sometimes with a comma after the date and with 1- or 2-digit components.
   // Be lenient about separators/padding so a genuine leak is never silently
   // dropped just because the format wasn't the one the strict regex expected.
-  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4}),?\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(s.trim())
+  const m =
+    /^(\d{1,2})\/(\d{1,2})\/(\d{4}),?\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(
+      s.trim()
+    )
   if (!m) return null
   return {
     mo: parseInt(m[1], 10) - 1,
@@ -880,7 +936,9 @@ function buildValueGroups(
   const groups: Array<ValueGroup> = []
 
   // The browser's own claimed zone (what a fingerprinter reads from Intl).
-  const intlZone = safe(() => new Intl.DateTimeFormat().resolvedOptions().timeZone)
+  const intlZone = safe(
+    () => new Intl.DateTimeFormat().resolvedOptions().timeZone
+  )
 
   // The zone we grade every surface against — the "source of truth". When the
   // coordinates resolved to a zone, THAT is the truth: each surface must report
@@ -962,7 +1020,13 @@ function buildValueGroups(
       parts.h ?? nowParts.h,
       parts.mi ?? nowParts.mi
     )
-    const expected = Date.UTC(nowParts.y, nowParts.mo, nowParts.d, nowParts.h, nowParts.mi)
+    const expected = Date.UTC(
+      nowParts.y,
+      nowParts.mo,
+      nowParts.d,
+      nowParts.h,
+      nowParts.mi
+    )
     return Math.abs(actual - expected) <= NOW_TOLERANCE_MS ? "ok" : "leak"
   }
 
@@ -1005,9 +1069,15 @@ function buildValueGroups(
   // True UTC components, to confirm the getUTC* / ISO surfaces stay on real
   // UTC rather than drifting toward the spoofed local zone.
   const utcParts = (() => {
-    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(safe(() => now.toISOString()))
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(
+      safe(() => now.toISOString())
+    )
     if (!m) return null
-    return { year: parseInt(m[1], 10), day: parseInt(m[3], 10), hour: parseInt(m[4], 10) }
+    return {
+      year: parseInt(m[1], 10),
+      day: parseInt(m[3], 10),
+      hour: parseInt(m[4], 10),
+    }
   })()
 
   // ── Geolocation ─────────────────────────────────────────────────────────
@@ -1075,7 +1145,8 @@ function buildValueGroups(
   // pointing at the user's real region. Compared by IANA identifier so that
   // zones with the same offset but different names (e.g. America/New_York vs
   // America/Toronto) are still flagged.
-  const geoMismatch = geoTz.status === "ready" && !zonesMatch(geoTz.zone, intlZone)
+  const geoMismatch =
+    geoTz.status === "ready" && !zonesMatch(geoTz.zone, intlZone)
   const geoUnavailable = geoTz.status === "unavailable"
   const geoNote =
     geoTz.status === "ready" && geoMismatch
@@ -1101,7 +1172,10 @@ function buildValueGroups(
   const expectedOffsets: Record<number, number | null> = {}
   if (truthZone) {
     for (const year of historicalYears) {
-      expectedOffsets[year] = getTimezoneOffsetConvention(truthZone, new Date(year, 0, 1))
+      expectedOffsets[year] = getTimezoneOffsetConvention(
+        truthZone,
+        new Date(year, 0, 1)
+      )
     }
   }
 
@@ -1113,18 +1187,26 @@ function buildValueGroups(
   // so anything within a minute is a match; a real leak (wrong zone) is off by
   // 15+ minutes.
   const HISTORICAL_OFFSET_TOLERANCE = 1.5
-  const offsetsMatch = (a: number, b: number) => Math.abs(a - b) < HISTORICAL_OFFSET_TOLERANCE
+  const offsetsMatch = (a: number, b: number) =>
+    Math.abs(a - b) < HISTORICAL_OFFSET_TOLERANCE
   const historicalMismatch = historicalYears.some(
-    (year) => expectedOffsets[year] != null && !offsetsMatch(browserOffsets[year], expectedOffsets[year])
+    (year) =>
+      expectedOffsets[year] != null &&
+      !offsetsMatch(browserOffsets[year], expectedOffsets[year])
   )
 
   const EXPECTED_UTC_2024 = 1704067200000
   const tzRows: Array<ValueRow> = [
-    { api: "Intl…resolvedOptions().timeZone", value: intlZone, verdict: vOf(!geoMismatch) },
+    {
+      api: "Intl…resolvedOptions().timeZone",
+      value: intlZone,
+      verdict: vOf(!geoMismatch),
+    },
     {
       api: "Date.getTimezoneOffset()",
       value: `${fmtOffset(offsetMins)} (${offsetMins})`,
-      verdict: expectedOffset == null ? undefined : vOf(expectedOffset === offsetMins),
+      verdict:
+        expectedOffset == null ? undefined : vOf(expectedOffset === offsetMins),
     },
     {
       api: "Date.now()",
@@ -1188,22 +1270,117 @@ function buildValueGroups(
   })
 
   // ── Date components (getters) ───────────────────────────────────────────
-  const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"]
-  const DAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"]
+  const MONTHS = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ]
+  const DAYS = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ]
   const componentRows: Array<ValueRow> = [
-    { api: "getFullYear()", value: safe(() => String(now.getFullYear())), verdict: localFmtParts ? vOf(now.getFullYear() === localFmtParts.year) : undefined },
-    { api: "getMonth()", value: safe(() => `${now.getMonth()} (${MONTHS[now.getMonth()]})`), verdict: localFmtParts ? vOf(now.getMonth() === localFmtParts.month) : undefined },
-    { api: "getDate()", value: safe(() => String(now.getDate())), verdict: localFmtParts ? vOf(now.getDate() === localFmtParts.day) : undefined },
-    { api: "getDay()", value: safe(() => `${now.getDay()} (${DAYS[now.getDay()]})`), verdict: localFmtParts ? vOf(DAYS[now.getDay()] === localFmtParts.weekday) : undefined },
-    { api: "getHours()", value: safe(() => String(now.getHours())), verdict: localFmtParts ? vOf(now.getHours() === localFmtParts.hour) : undefined },
-    { api: "getMinutes()", value: safe(() => String(now.getMinutes())), verdict: localFmtParts ? vOf(now.getMinutes() === localFmtParts.minute) : undefined },
-    { api: "getSeconds()", value: safe(() => String(now.getSeconds())), verdict: localFmtParts ? vOf(now.getSeconds() === localFmtParts.second) : undefined },
-    { api: "getTimezoneOffset()", value: safe(() => `${now.getTimezoneOffset()} mins`), verdict: expectedOffset == null ? undefined : vOf(expectedOffset === offsetMins) },
-    { api: "getTime()", value: safe(() => String(now.getTime())), utc: true, verdict: vOf(now.getTime() === now.valueOf()) },
-    { api: "valueOf()", value: safe(() => String(now.valueOf())), utc: true, verdict: vOf(now.getTime() === now.valueOf()) },
-    { api: "getUTCFullYear()", value: safe(() => String(now.getUTCFullYear())), utc: true, verdict: utcParts ? vOf(now.getUTCFullYear() === utcParts.year) : undefined },
-    { api: "getUTCHours()", value: safe(() => String(now.getUTCHours())), utc: true, verdict: utcParts ? vOf(now.getUTCHours() === utcParts.hour) : undefined },
-    { api: "getUTCDate()", value: safe(() => String(now.getUTCDate())), utc: true, verdict: utcParts ? vOf(now.getUTCDate() === utcParts.day) : undefined },
+    {
+      api: "getFullYear()",
+      value: safe(() => String(now.getFullYear())),
+      verdict: localFmtParts
+        ? vOf(now.getFullYear() === localFmtParts.year)
+        : undefined,
+    },
+    {
+      api: "getMonth()",
+      value: safe(() => `${now.getMonth()} (${MONTHS[now.getMonth()]})`),
+      verdict: localFmtParts
+        ? vOf(now.getMonth() === localFmtParts.month)
+        : undefined,
+    },
+    {
+      api: "getDate()",
+      value: safe(() => String(now.getDate())),
+      verdict: localFmtParts
+        ? vOf(now.getDate() === localFmtParts.day)
+        : undefined,
+    },
+    {
+      api: "getDay()",
+      value: safe(() => `${now.getDay()} (${DAYS[now.getDay()]})`),
+      verdict: localFmtParts
+        ? vOf(DAYS[now.getDay()] === localFmtParts.weekday)
+        : undefined,
+    },
+    {
+      api: "getHours()",
+      value: safe(() => String(now.getHours())),
+      verdict: localFmtParts
+        ? vOf(now.getHours() === localFmtParts.hour)
+        : undefined,
+    },
+    {
+      api: "getMinutes()",
+      value: safe(() => String(now.getMinutes())),
+      verdict: localFmtParts
+        ? vOf(now.getMinutes() === localFmtParts.minute)
+        : undefined,
+    },
+    {
+      api: "getSeconds()",
+      value: safe(() => String(now.getSeconds())),
+      verdict: localFmtParts
+        ? vOf(now.getSeconds() === localFmtParts.second)
+        : undefined,
+    },
+    {
+      api: "getTimezoneOffset()",
+      value: safe(() => `${now.getTimezoneOffset()} mins`),
+      verdict:
+        expectedOffset == null ? undefined : vOf(expectedOffset === offsetMins),
+    },
+    {
+      api: "getTime()",
+      value: safe(() => String(now.getTime())),
+      utc: true,
+      verdict: vOf(now.getTime() === now.valueOf()),
+    },
+    {
+      api: "valueOf()",
+      value: safe(() => String(now.valueOf())),
+      utc: true,
+      verdict: vOf(now.getTime() === now.valueOf()),
+    },
+    {
+      api: "getUTCFullYear()",
+      value: safe(() => String(now.getUTCFullYear())),
+      utc: true,
+      verdict: utcParts
+        ? vOf(now.getUTCFullYear() === utcParts.year)
+        : undefined,
+    },
+    {
+      api: "getUTCHours()",
+      value: safe(() => String(now.getUTCHours())),
+      utc: true,
+      verdict: utcParts ? vOf(now.getUTCHours() === utcParts.hour) : undefined,
+    },
+    {
+      api: "getUTCDate()",
+      value: safe(() => String(now.getUTCDate())),
+      utc: true,
+      verdict: utcParts ? vOf(now.getUTCDate() === utcParts.day) : undefined,
+    },
   ]
 
   // Consistency: local getters agree with the Intl-formatted equivalents.
@@ -1215,7 +1392,10 @@ function buildValueGroups(
       )
       const normalised = localeH === 24 ? 0 : localeH
       if (now.getHours() !== normalised) return false
-      const intlYear = parseInt(now.toLocaleDateString("en-US", { year: "numeric" }), 10)
+      const intlYear = parseInt(
+        now.toLocaleDateString("en-US", { year: "numeric" }),
+        10
+      )
       if (now.getFullYear() !== intlYear) return false
       const weekday = now.toLocaleDateString("en-US", { weekday: "long" })
       if (DAYS[now.getDay()] !== weekday) return false
@@ -1234,7 +1414,10 @@ function buildValueGroups(
       () =>
         `${MONTHS[now.getMonth()].slice(0, 3)} ${now.getDate()}, ${now.getFullYear()} · ${pad2(now.getHours())}:${pad2(now.getMinutes())}`
     ),
-    consistent: componentsConsistent && !geoMismatch && componentRows.every((r) => r.verdict !== "leak"),
+    consistent:
+      componentsConsistent &&
+      !geoMismatch &&
+      componentRows.every((r) => r.verdict !== "leak"),
     note: geoMismatch ? geoNote : undefined,
     rows: componentRows,
   })
@@ -1245,7 +1428,10 @@ function buildValueGroups(
   // the hour the truth zone has right now. A leaked zone shows a different hour.
   const localeHourMatches = (() => {
     try {
-      const h = parseInt(now.toLocaleTimeString("en-US", { hour: "numeric", hour12: false }), 10)
+      const h = parseInt(
+        now.toLocaleTimeString("en-US", { hour: "numeric", hour12: false }),
+        10
+      )
       const norm = h === 24 ? 0 : h
       return localFmtParts ? norm === localFmtParts.hour : true
     } catch {
@@ -1288,7 +1474,9 @@ function buildValueGroups(
     try {
       return (
         now.toLocaleDateString() ===
-        new Intl.DateTimeFormat(undefined, { timeZone: truthZone || undefined }).format(now)
+        new Intl.DateTimeFormat(undefined, {
+          timeZone: truthZone || undefined,
+        }).format(now)
       )
     } catch {
       return true
@@ -1298,26 +1486,56 @@ function buildValueGroups(
     {
       api: "Date.toString()",
       value: safe(() => now.toString()),
-      verdict: toStringOffset == null ? undefined : vOf(toStringOffset === expectedOffset),
+      verdict:
+        toStringOffset == null
+          ? undefined
+          : vOf(toStringOffset === expectedOffset),
     },
     {
       api: "Date.toDateString()",
       value: safe(() => now.toDateString()),
-      verdict: expectedDateString == null ? undefined : vOf(safe(() => now.toDateString()) === expectedDateString),
+      verdict:
+        expectedDateString == null
+          ? undefined
+          : vOf(safe(() => now.toDateString()) === expectedDateString),
     },
     {
       api: "Date.toTimeString()",
       value: safe(() => now.toTimeString()),
-      verdict: offsetFromString(safe(() => now.toTimeString())) == null ? undefined : vOf(offsetFromString(safe(() => now.toTimeString())) === expectedOffset),
+      verdict:
+        offsetFromString(safe(() => now.toTimeString())) == null
+          ? undefined
+          : vOf(
+              offsetFromString(safe(() => now.toTimeString())) ===
+                expectedOffset
+            ),
     },
-    { api: "Date.toLocaleString()", value: safe(() => now.toLocaleString()), verdict: vOf(localeStringConsistent) },
-    { api: "Date.toLocaleDateString()", value: safe(() => now.toLocaleDateString()), verdict: vOf(localeDateStringConsistent) },
-    { api: "Date.toLocaleTimeString()", value: safe(() => now.toLocaleTimeString()), verdict: vOf(localeHourMatches) },
-    { api: "Date.toISOString()", value: safe(() => now.toISOString()), utc: true, verdict: utcParts ? "ok" : undefined },
+    {
+      api: "Date.toLocaleString()",
+      value: safe(() => now.toLocaleString()),
+      verdict: vOf(localeStringConsistent),
+    },
+    {
+      api: "Date.toLocaleDateString()",
+      value: safe(() => now.toLocaleDateString()),
+      verdict: vOf(localeDateStringConsistent),
+    },
+    {
+      api: "Date.toLocaleTimeString()",
+      value: safe(() => now.toLocaleTimeString()),
+      verdict: vOf(localeHourMatches),
+    },
+    {
+      api: "Date.toISOString()",
+      value: safe(() => now.toISOString()),
+      utc: true,
+      verdict: utcParts ? "ok" : undefined,
+    },
   ]
 
   const dateConsistent =
-    localeHourMatches && (toStringOffset == null || toStringOffset === expectedOffset)
+    localeHourMatches &&
+    (toStringOffset == null || toStringOffset === expectedOffset)
 
   groups.push({
     id: "datetime",
@@ -1325,7 +1543,10 @@ function buildValueGroups(
     headline: safe(() =>
       now.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
     ),
-    consistent: dateConsistent && !geoMismatch && dateRows.every((r) => r.verdict !== "leak"),
+    consistent:
+      dateConsistent &&
+      !geoMismatch &&
+      dateRows.every((r) => r.verdict !== "leak"),
     note: geoMismatch ? geoNote : undefined,
     rows: dateRows,
   })
@@ -1344,7 +1565,10 @@ function buildValueGroups(
     {
       api: "…formatToParts() (joined)",
       value: safe(() =>
-        new Intl.DateTimeFormat(undefined, { dateStyle: "full", timeStyle: "long" })
+        new Intl.DateTimeFormat(undefined, {
+          dateStyle: "full",
+          timeStyle: "long",
+        })
           .formatToParts(now)
           .map((p) => p.value)
           .join("")
@@ -1370,10 +1594,10 @@ function buildValueGroups(
     // the same range rendered in the truth zone. A leaked zone shifts the range.
     const later = new Date(now.getTime() + 3 * 60 * 60 * 1000)
     const fmtRange = (tz: string | undefined) =>
-      new Intl.DateTimeFormat(undefined, { timeStyle: "short", timeZone: tz }).formatRange(
-        now,
-        later
-      )
+      new Intl.DateTimeFormat(undefined, {
+        timeStyle: "short",
+        timeZone: tz,
+      }).formatRange(now, later)
     const measuredRange = safe(() => fmtRange(undefined))
     const expectedRange = safe(() => fmtRange(truthZone || undefined))
     intlRows.push({
@@ -1388,13 +1612,19 @@ function buildValueGroups(
 
   const intlConsistent = (() => {
     try {
-      const opts: Intl.DateTimeFormatOptions = { dateStyle: "medium", timeStyle: "short" }
+      const opts: Intl.DateTimeFormatOptions = {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }
       // Browser-zone formatting (toLocaleString) must match the same instant
       // formatted in the truth zone. If the browser's zone differs from the
       // coordinates', the rendered date/time diverges and the surface leaks.
       return (
         now.toLocaleString("en-US", opts) ===
-        new Intl.DateTimeFormat("en-US", { ...opts, timeZone: truthZone || undefined }).format(now)
+        new Intl.DateTimeFormat("en-US", {
+          ...opts,
+          timeZone: truthZone || undefined,
+        }).format(now)
       )
     } catch {
       return false
@@ -1404,7 +1634,10 @@ function buildValueGroups(
   // The format() / formatToParts() rows are the surfaces intlConsistent
   // actually validates, so reflect its result on them.
   for (const row of intlRows) {
-    if (row.api === "Intl.DateTimeFormat().format()" || row.api === "…formatToParts() (joined)") {
+    if (
+      row.api === "Intl.DateTimeFormat().format()" ||
+      row.api === "…formatToParts() (joined)"
+    ) {
       row.verdict = vOf(intlConsistent)
     }
   }
@@ -1413,23 +1646,28 @@ function buildValueGroups(
     id: "intl",
     title: "Intl formatting",
     headline: safe(() => new Intl.DateTimeFormat().resolvedOptions().locale),
-    consistent: intlConsistent && !geoMismatch && intlRows.every((r) => r.verdict !== "leak"),
+    consistent:
+      intlConsistent &&
+      !geoMismatch &&
+      intlRows.every((r) => r.verdict !== "leak"),
     note: geoMismatch ? geoNote : undefined,
     rows: intlRows,
   })
 
   // ── Temporal (feature-detected) ─────────────────────────────────────────
-  const temporal = (globalThis as unknown as {
-    Temporal?: {
-      Now?: {
-        timeZoneId?: () => string
-        plainDateISO?: () => { toString: () => string }
-        plainTimeISO?: () => { toString: () => string }
-        plainDateTimeISO?: () => { toString: () => string }
-        zonedDateTimeISO?: () => { toString: () => string }
+  const temporal = (
+    globalThis as unknown as {
+      Temporal?: {
+        Now?: {
+          timeZoneId?: () => string
+          plainDateISO?: () => { toString: () => string }
+          plainTimeISO?: () => { toString: () => string }
+          plainDateTimeISO?: () => { toString: () => string }
+          zonedDateTimeISO?: () => { toString: () => string }
+        }
       }
     }
-  }).Temporal
+  ).Temporal
   const temporalRows: Array<ValueRow> = []
   if (temporal?.Now) {
     const tNow = temporal.Now
@@ -1438,7 +1676,12 @@ function buildValueGroups(
       temporalRows.push({
         api: "Temporal.Now.timeZoneId()",
         value: zone,
-        verdict: zone === "unavailable" ? undefined : zonesMatch(zone, truthZone) ? "ok" : "leak",
+        verdict:
+          zone === "unavailable"
+            ? undefined
+            : zonesMatch(zone, truthZone)
+              ? "ok"
+              : "leak",
       })
     }
     if (tNow.plainDateISO) {
@@ -1447,7 +1690,10 @@ function buildValueGroups(
       temporalRows.push({
         api: "Temporal.Now.plainDateISO()",
         value: v,
-        verdict: v === "unavailable" || !p ? undefined : gradeAgainstNow({ y: p.y, mo: p.mo, d: p.d }),
+        verdict:
+          v === "unavailable" || !p
+            ? undefined
+            : gradeAgainstNow({ y: p.y, mo: p.mo, d: p.d }),
       })
     }
     if (tNow.plainTimeISO) {
@@ -1456,7 +1702,10 @@ function buildValueGroups(
       temporalRows.push({
         api: "Temporal.Now.plainTimeISO()",
         value: v,
-        verdict: v === "unavailable" || !p ? undefined : gradeAgainstNow({ h: p.h, mi: p.mi }),
+        verdict:
+          v === "unavailable" || !p
+            ? undefined
+            : gradeAgainstNow({ h: p.h, mi: p.mi }),
       })
     }
     if (tNow.plainDateTimeISO) {
@@ -1469,7 +1718,13 @@ function buildValueGroups(
         verdict:
           v === "unavailable" || !pd || !pt
             ? undefined
-            : gradeAgainstNow({ y: pd.y, mo: pd.mo, d: pd.d, h: pt.h, mi: pt.mi }),
+            : gradeAgainstNow({
+                y: pd.y,
+                mo: pd.mo,
+                d: pd.d,
+                h: pt.h,
+                mi: pt.mi,
+              }),
       })
     }
     if (tNow.zonedDateTimeISO) {
@@ -1505,12 +1760,17 @@ function buildValueGroups(
     // DOMParser — parseFromString mints an in-memory document whose
     // lastModified is the current instant, so it's a strict "now" reference.
     if (typeof DOMParser !== "undefined") {
-      const v = safe(() => new DOMParser().parseFromString("", "text/html").lastModified)
+      const v = safe(
+        () => new DOMParser().parseFromString("", "text/html").lastModified
+      )
       freshParts = parseLastModified(v)
       documentRows.push({
         api: "DOMParser().parseFromString('','text/html').lastModified",
         value: v,
-        verdict: v === "unavailable" || !freshParts ? undefined : gradeAgainstNow(freshParts),
+        verdict:
+          v === "unavailable" || !freshParts
+            ? undefined
+            : gradeAgainstNow(freshParts),
       })
     }
 
@@ -1545,7 +1805,13 @@ function buildValueGroups(
       !!freshParts &&
       Math.abs(
         Date.UTC(lmParts.y, lmParts.mo, lmParts.d, lmParts.h, lmParts.mi) -
-          Date.UTC(freshParts.y, freshParts.mo, freshParts.d, freshParts.h, freshParts.mi)
+          Date.UTC(
+            freshParts.y,
+            freshParts.mo,
+            freshParts.d,
+            freshParts.h,
+            freshParts.mi
+          )
       ) <= NOW_TOLERANCE_MS
     documentRows.unshift({
       api: "document.lastModified",
@@ -1563,14 +1829,19 @@ function buildValueGroups(
 
   // ── Same-origin iframe ──────────────────────────────────────────────────
   const iframeRows: Array<ValueRow> = []
-  if (typeof document !== "undefined" && typeof HTMLIFrameElement !== "undefined") {
+  if (
+    typeof document !== "undefined" &&
+    typeof HTMLIFrameElement !== "undefined"
+  ) {
     try {
       const iframe = document.createElement("iframe")
       iframe.style.display = "none"
       document.body.appendChild(iframe)
       // The iframe's own realm has its own Date / Intl globals — that's the
       // point of the test (does the spoofing reach into child realms?).
-      const iframeWin = iframe.contentWindow as (Window & typeof globalThis) | null
+      const iframeWin = iframe.contentWindow as
+        | (Window & typeof globalThis)
+        | null
       if (iframeWin) {
         const iframeDate = new iframeWin.Date()
         const iframeDateStr = safe(() => iframeDate.toString())
@@ -1592,7 +1863,11 @@ function buildValueGroups(
           api: "iframe Intl.DateTimeFormat().resolvedOptions().timeZone",
           value: iframeZone,
           verdict:
-            iframeZone === "unavailable" ? undefined : zonesMatch(iframeZone, truthZone) ? "ok" : "leak",
+            iframeZone === "unavailable"
+              ? undefined
+              : zonesMatch(iframeZone, truthZone)
+                ? "ok"
+                : "leak",
         })
         // The iframe's contentDocument is freshly minted (about:blank), so its
         // lastModified is the current instant — a strict "now" reference. A
@@ -1624,7 +1899,10 @@ function buildValueGroups(
   // (FF151+). GeoSpoof patches this surface (via the XSLTProcessor wrapper),
   // so it's now graded: the offset must match the spoofed Date offset.
   const exsltRows: Array<ValueRow> = []
-  if (typeof DOMParser !== "undefined" && typeof XSLTProcessor !== "undefined") {
+  if (
+    typeof DOMParser !== "undefined" &&
+    typeof XSLTProcessor !== "undefined"
+  ) {
     const exsltValue = safe(() => {
       const xslText =
         '<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"' +
@@ -1641,12 +1919,15 @@ function buildValueGroups(
     // Only grade when the engine actually produced an EXSLT timestamp carrying
     // an offset. Elsewhere (Chromium/Safari, or XSLT disabled) we skip the row
     // rather than show a permanent "unavailable" that reads like a failure.
-    const exsltOffset = exsltValue === "unavailable" ? null : offsetFromString(exsltValue)
+    const exsltOffset =
+      exsltValue === "unavailable" ? null : offsetFromString(exsltValue)
     if (exsltOffset != null) {
       const exsltLeaks = exsltOffset !== expectedOffset
       exsltRows.push({
         api: "EXSLT date:date-time() (XSLTProcessor)",
-        value: exsltLeaks ? `${exsltValue} (offset ${exsltOffset} vs ${expectedOffset})` : exsltValue,
+        value: exsltLeaks
+          ? `${exsltValue} (offset ${exsltOffset} vs ${expectedOffset})`
+          : exsltValue,
         verdict: exsltLeaks ? "leak" : "ok",
       })
     }
@@ -1664,7 +1945,11 @@ function buildValueGroups(
   const workerRows: Array<ValueRow> = []
   if (typeof Worker !== "undefined") {
     if (workers == null) {
-      workerRows.push({ api: "Worker timeZone", value: "Probing…", verdict: "pending" })
+      workerRows.push({
+        api: "Worker timeZone",
+        value: "Probing…",
+        verdict: "pending",
+      })
     } else {
       for (const w of workers) {
         if (!w.supported) {
@@ -1678,7 +1963,9 @@ function buildValueGroups(
         const matches = zonesMatch(reported, truthZone)
         workerRows.push({
           api: w.label,
-          value: matches ? reported : `${reported} (leaked — expected ${truthZone})`,
+          value: matches
+            ? reported
+            : `${reported} (leaked — expected ${truthZone})`,
           verdict: matches ? "ok" : "leak",
         })
       }
@@ -1767,9 +2054,19 @@ function ApiChecks({
  */
 function RowVerdictIcon({ verdict }: { verdict?: RowVerdict }) {
   if (verdict === "ok")
-    return <Check className="mt-0.5 size-3.5 shrink-0 text-green-600 dark:text-green-400" aria-label="consistent" />
+    return (
+      <Check
+        className="mt-0.5 size-3.5 shrink-0 text-green-600 dark:text-green-400"
+        aria-label="consistent"
+      />
+    )
   if (verdict === "leak")
-    return <X className="mt-0.5 size-3.5 shrink-0 text-destructive" aria-label="leaked" />
+    return (
+      <X
+        className="mt-0.5 size-3.5 shrink-0 text-destructive"
+        aria-label="leaked"
+      />
+    )
   if (verdict === "limitation")
     return (
       <ShieldAlert
@@ -1778,7 +2075,12 @@ function RowVerdictIcon({ verdict }: { verdict?: RowVerdict }) {
       />
     )
   if (verdict === "pending")
-    return <Loader2 className="mt-0.5 size-3.5 shrink-0 animate-spin text-(--color-canvas-muted)" aria-label="probing" />
+    return (
+      <Loader2
+        className="mt-0.5 size-3.5 shrink-0 animate-spin text-(--color-canvas-muted)"
+        aria-label="probing"
+      />
+    )
   return <span className="mt-0.5 size-3.5 shrink-0" aria-hidden />
 }
 
@@ -1804,7 +2106,10 @@ function VerdictBanner({
   if (!ready) {
     return (
       <div className="mb-6 flex items-center gap-4 rounded-2xl border border-(--color-canvas-border) bg-(--color-canvas) px-6 py-5">
-        <Loader2 className="size-7 shrink-0 animate-spin text-(--color-canvas-muted)" aria-hidden />
+        <Loader2
+          className="size-7 shrink-0 animate-spin text-(--color-canvas-muted)"
+          aria-hidden
+        />
         <div>
           <p className="font-semibold text-(--color-canvas-foreground)">
             Running checks…
@@ -1848,7 +2153,9 @@ function VerdictBanner({
   if (geoVsIpMismatch) problems.push("Location doesn't match IP")
   if (tzVsIpMismatch) problems.push("Timezone doesn't match IP")
   if (failingGroupTitles.length > 0)
-    problems.push(`${failingGroupTitles.join(", ")} ${failingGroupTitles.length === 1 ? "doesn't" : "don't"} line up`)
+    problems.push(
+      `${failingGroupTitles.join(", ")} ${failingGroupTitles.length === 1 ? "doesn't" : "don't"} line up`
+    )
 
   return (
     <div className="mb-6 flex items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/8 px-4 py-4 sm:gap-5 sm:px-6 sm:py-6">
@@ -1918,10 +2225,14 @@ function VerdictBanner({
               <ul className="space-y-3 text-sm text-(--color-canvas-foreground)">
                 {(geoVsIpMismatch || tzVsIpMismatch) && (
                   <li className="flex gap-2.5">
-                    <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-amber-500" aria-hidden />
+                    <span
+                      className="mt-1.5 size-1.5 shrink-0 rounded-full bg-amber-500"
+                      aria-hidden
+                    />
                     <span>
                       <span className="font-semibold">
-                        IP doesn&apos;t match your {geoVsIpMismatch ? "location" : "timezone"}?
+                        IP doesn&apos;t match your{" "}
+                        {geoVsIpMismatch ? "location" : "timezone"}?
                       </span>{" "}
                       That&apos;s expected when VPN sync is off — GeoSpoof only
                       aligns your IP when you turn it on. If you meant to keep
@@ -1931,18 +2242,29 @@ function VerdictBanner({
                 )}
                 {(geoVsIpMismatch || tzVsIpMismatch) && (
                   <li className="flex gap-2.5">
-                    <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-amber-500" aria-hidden />
+                    <span
+                      className="mt-1.5 size-1.5 shrink-0 rounded-full bg-amber-500"
+                      aria-hidden
+                    />
                     <span>
-                      <span className="font-semibold">Just turned on auto VPN sync?</span>{" "}
-                      Give it up to ~10 seconds after a refresh to catch up, then
-                      re-check — auto sync isn&apos;t instant the way manual sync is.
+                      <span className="font-semibold">
+                        Just turned on auto VPN sync?
+                      </span>{" "}
+                      Give it up to ~10 seconds after a refresh to catch up,
+                      then re-check — auto sync isn&apos;t instant the way
+                      manual sync is.
                     </span>
                   </li>
                 )}
                 <li className="flex gap-2.5">
-                  <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-(--color-brand)" aria-hidden />
+                  <span
+                    className="mt-1.5 size-1.5 shrink-0 rounded-full bg-(--color-brand)"
+                    aria-hidden
+                  />
                   <span>
-                    <span className="font-semibold">Update to the latest version.</span>{" "}
+                    <span className="font-semibold">
+                      Update to the latest version.
+                    </span>{" "}
                     New fingerprinting tricks get patched continuously.{" "}
                     {storeLink ? (
                       <a
@@ -1960,7 +2282,10 @@ function VerdictBanner({
                           e.preventDefault()
                           document
                             .getElementById("download")
-                            ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                            ?.scrollIntoView({
+                              behavior: "smooth",
+                              block: "start",
+                            })
                         }}
                         className="font-medium text-(--color-brand) underline underline-offset-4 hover:text-(--color-brand-dark)"
                       >
@@ -1971,17 +2296,27 @@ function VerdictBanner({
                   </span>
                 </li>
                 <li className="flex gap-2.5">
-                  <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-(--color-brand)" aria-hidden />
+                  <span
+                    className="mt-1.5 size-1.5 shrink-0 rounded-full bg-(--color-brand)"
+                    aria-hidden
+                  />
                   <span>
-                    <span className="font-semibold">Check it's on for this site.</span>{" "}
+                    <span className="font-semibold">
+                      Check it's on for this site.
+                    </span>{" "}
                     Look at the toolbar icon; if you scope by allowlist or
                     denylist, include this site.
                   </span>
                 </li>
                 <li className="flex gap-2.5">
-                  <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-(--color-brand)" aria-hidden />
+                  <span
+                    className="mt-1.5 size-1.5 shrink-0 rounded-full bg-(--color-brand)"
+                    aria-hidden
+                  />
                   <span>
-                    <span className="font-semibold">Reload after enabling or updating.</span>{" "}
+                    <span className="font-semibold">
+                      Reload after enabling or updating.
+                    </span>{" "}
                     Some surfaces only apply on a fresh page load.
                   </span>
                 </li>
@@ -2033,7 +2368,11 @@ function ValueGroupCard({ group }: { group: ValueGroup }) {
           )}
           aria-hidden
         >
-          {group.consistent ? <Check className="size-5" /> : <X className="size-5" />}
+          {group.consistent ? (
+            <Check className="size-5" />
+          ) : (
+            <X className="size-5" />
+          )}
         </span>
 
         <div className="min-w-0 flex-1">
@@ -2070,7 +2409,7 @@ function ValueGroupCard({ group }: { group: ValueGroup }) {
                       "border-b border-(--color-canvas-border)"
                   )}
                 >
-                  <td className="w-[45%] px-4 py-2 align-top font-mono text-xs text-(--color-canvas-muted) break-all sm:px-5 sm:py-2.5">
+                  <td className="w-[45%] px-4 py-2 align-top font-mono text-xs break-all text-(--color-canvas-muted) sm:px-5 sm:py-2.5">
                     {row.api}
                     {row.utc && (
                       <span className="ml-2 rounded bg-canvas-border/60 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-(--color-canvas-muted) uppercase">
@@ -2142,14 +2481,16 @@ function VerifyRow({ row, last }: { row: Row; last: boolean }) {
         </p>
         <p
           className={cn(
-            "mt-0.5 break-all font-mono text-[13px] font-medium sm:text-sm",
+            "mt-0.5 font-mono text-[13px] font-medium break-all sm:text-sm",
             statusColor[row.status]
           )}
         >
           {row.value}
         </p>
         {row.note && (
-          <p className="mt-0.5 text-[11px] text-(--color-canvas-muted) sm:text-xs">{row.note}</p>
+          <p className="mt-0.5 text-[11px] text-(--color-canvas-muted) sm:text-xs">
+            {row.note}
+          </p>
         )}
       </div>
     </div>

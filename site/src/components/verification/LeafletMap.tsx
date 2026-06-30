@@ -84,8 +84,8 @@ function greatCirclePoints(
 }
 
 const COLORS = {
-  browser: { fill: "#4ade80", stroke: "#ffffff" },  // green
-  network: { fill: "#fb923c", stroke: "#ffffff" },  // amber
+  browser: { fill: "#4ade80", stroke: "#ffffff" }, // green
+  network: { fill: "#fb923c", stroke: "#ffffff" }, // amber
 }
 
 // Cached promise for the Leaflet JS + CSS chunks. Kept at module scope so the
@@ -114,14 +114,17 @@ export function LeafletMap(props: LeafletMapProps) {
   const primary: MapPoint =
     "lat" in props && props.lat !== undefined
       ? { lat: props.lat, lon: props.lon, label: "", kind: "browser" }
-      : (props.primary)
+      : props.primary
   const secondary = "secondary" in props ? props.secondary : undefined
-  const initialZoom = "zoom" in props && props.zoom !== undefined ? props.zoom : 6
+  const initialZoom =
+    "zoom" in props && props.zoom !== undefined ? props.zoom : 6
   const { className } = props
 
   const containerRef = React.useRef<HTMLDivElement | null>(null)
   const mapRef = React.useRef<LeafletMapInstance | null>(null)
-  const tileLayerRef = React.useRef<ReturnType<(typeof Leaflet)["tileLayer"]> | null>(null)
+  const tileLayerRef = React.useRef<ReturnType<
+    (typeof Leaflet)["tileLayer"]
+  > | null>(null)
   const animFrameRef = React.useRef<number | null>(null)
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === "dark"
@@ -168,13 +171,12 @@ export function LeafletMap(props: LeafletMapProps) {
       if (disposal.disposed || !container) return
 
       // Fit bounds to include both points when secondary is present.
-      const bounds =
-        secondary
-          ? L.latLngBounds(
-              [primary.lat, primary.lon],
-              [secondary.lat, secondary.lon]
-            ).pad(0.3)
-          : undefined
+      const bounds = secondary
+        ? L.latLngBounds(
+            [primary.lat, primary.lon],
+            [secondary.lat, secondary.lon]
+          ).pad(0.3)
+        : undefined
 
       const map = L.map(container, {
         center: bounds ? bounds.getCenter() : [primary.lat, primary.lon],
@@ -196,7 +198,9 @@ export function LeafletMap(props: LeafletMapProps) {
 
       // Helper: labeled circle marker with a tooltip.
       // Browser-kind markers get a pulsing sonar ring via a DivIcon.
-      const addMarker = (pt: MapPoint): CircleMarker | ReturnType<typeof L.marker> => {
+      const addMarker = (
+        pt: MapPoint
+      ): CircleMarker | ReturnType<typeof L.marker> => {
         const c = COLORS[pt.kind]
 
         if (pt.kind === "browser" && !reducedMotion) {

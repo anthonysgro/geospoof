@@ -104,8 +104,7 @@ export function VerificationSummary({
   let pill: React.ReactNode
   let clarifier: React.ReactNode = null
 
-  const headlineClass =
-    "text-lg font-semibold text-(--color-canvas-foreground)"
+  const headlineClass = "text-lg font-semibold text-(--color-canvas-foreground)"
 
   if (isRunning || completed < total) {
     headline = (

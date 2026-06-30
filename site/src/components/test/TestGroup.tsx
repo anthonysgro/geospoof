@@ -148,9 +148,7 @@ function GroupSummaryChips({
 
   return (
     <span className="flex flex-wrap items-center gap-1.5 text-[11px] font-medium">
-      {failed > 0 ? (
-        <CountChip tone="fail" label={`${failed} fail`} />
-      ) : null}
+      {failed > 0 ? <CountChip tone="fail" label={`${failed} fail`} /> : null}
       {errored > 0 ? (
         <CountChip tone="fail" label={`${errored} error`} />
       ) : null}
@@ -160,9 +158,7 @@ function GroupSummaryChips({
       {skipped > 0 ? (
         <CountChip tone="info" label={`${skipped} skipped`} />
       ) : null}
-      {passed > 0 ? (
-        <CountChip tone="pass" label={`${passed} pass`} />
-      ) : null}
+      {passed > 0 ? <CountChip tone="pass" label={`${passed} pass`} /> : null}
     </span>
   )
 }
@@ -178,9 +174,9 @@ function CountChip({
     <span
       className={cn(
         "inline-flex items-center rounded-sm border px-1.5 py-0.5",
-        tone === "pass" &&
-          "border-brand/30 bg-brand/10 text-(--color-brand)",
-        tone === "fail" && "border-destructive/30 bg-destructive/10 text-destructive",
+        tone === "pass" && "border-brand/30 bg-brand/10 text-(--color-brand)",
+        tone === "fail" &&
+          "border-destructive/30 bg-destructive/10 text-destructive",
         tone === "warn" &&
           "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400",
         tone === "info" &&

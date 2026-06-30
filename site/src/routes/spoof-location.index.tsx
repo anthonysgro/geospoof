@@ -84,7 +84,8 @@ function SpoofLocationHub() {
                     Spoof your location in {info.name}
                   </span>
                   <span className="text-sm text-(--color-canvas-muted)">
-                    {info.storeName.replace(/^the /, "")} · {info.operatingSystem}
+                    {info.storeName.replace(/^the /, "")} ·{" "}
+                    {info.operatingSystem}
                   </span>
                   <span className="mt-2 text-sm font-semibold text-(--color-brand)">
                     Open guide →

@@ -131,7 +131,7 @@ export function ObservedValuesPanel() {
               </div>
             </AccordionTrigger>
             <AccordionContent className="pt-1 pb-4">
-              <dl className="grid grid-cols-1 gap-y-2 gap-x-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+              <dl className="grid grid-cols-1 gap-x-4 gap-y-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                 {facet.rows.map((row, i) => (
                   <Row key={`${facet.id}-${i}`} row={row} />
                 ))}

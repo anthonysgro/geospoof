@@ -10,6 +10,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
+import { useTranslations } from "@/hooks/use-i18n"
 
 export interface NavItem {
   label: string
@@ -18,11 +19,18 @@ export interface NavItem {
 
 interface MobileNavProps {
   items: Array<NavItem>
+  /** Current locale's home path (e.g. "/" or "/fr"). */
+  homePath?: string
   className?: string
 }
 
-export function MobileNav({ items, className }: MobileNavProps) {
+export function MobileNav({
+  items,
+  homePath = "/",
+  className,
+}: MobileNavProps) {
   const [open, setOpen] = React.useState(false)
+  const { t } = useTranslations()
 
   const handleLinkClick = (
     e: React.MouseEvent<HTMLAnchorElement>,
@@ -32,15 +40,16 @@ export function MobileNav({ items, className }: MobileNavProps) {
     if (!href.startsWith("#")) return
     e.preventDefault()
     if (href === "#") {
-      if (window.location.pathname !== "/") {
-        window.location.href = "/"
+      if (window.location.pathname !== homePath) {
+        window.location.href = homePath
       } else {
         window.scrollTo({ top: 0, behavior: "smooth" })
       }
       return
     }
-    if (window.location.pathname !== "/") {
-      window.location.href = "/" + href
+    if (window.location.pathname !== homePath) {
+      window.location.href =
+        homePath === "/" ? "/" + href : homePath + "/" + href
       return
     }
     const el = document.getElementById(href.slice(1))
@@ -54,7 +63,7 @@ export function MobileNav({ items, className }: MobileNavProps) {
           variant="ghost"
           size="icon"
           className={cn("min-h-12 min-w-12", className)}
-          aria-label="Open navigation menu"
+          aria-label={t.nav.openMenu}
         >
           <MenuIcon className="size-6" />
         </Button>
@@ -74,7 +83,7 @@ export function MobileNav({ items, className }: MobileNavProps) {
         </SheetHeader>
         <nav
           className="flex flex-1 flex-col gap-2 py-6"
-          aria-label="Mobile navigation"
+          aria-label={t.nav.mainNavAria}
         >
           {items.map((item) => (
             <SheetClose asChild key={item.href}>
@@ -109,7 +118,7 @@ export function MobileNav({ items, className }: MobileNavProps) {
             )}
           >
             <CoffeeIcon className="h-4 w-4" />
-            Buy me a coffee
+            {t.nav.buyMeACoffee}
           </a>
           <a
             href="https://github.com/anthonysgro/geospoof"

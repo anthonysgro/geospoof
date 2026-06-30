@@ -190,11 +190,7 @@ function SpoofTimezonePage() {
   )
 }
 
-function HeroSection({
-  store,
-}: {
-  store: ReturnType<typeof getStoreLink>
-}) {
+function HeroSection({ store }: { store: ReturnType<typeof getStoreLink> }) {
   return (
     <Section className="pt-12! pb-8! md:pt-20! md:pb-12!">
       <Breadcrumb className="mx-auto mb-8 max-w-3xl">
@@ -230,9 +226,7 @@ function HeroSection({
         <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
           <a
             href={store ? store.href : "#download"}
-            {...(store
-              ? { target: "_blank", rel: "noopener noreferrer" }
-              : {})}
+            {...(store ? { target: "_blank", rel: "noopener noreferrer" } : {})}
             className={cn(
               "inline-flex min-h-12 w-full items-center justify-center sm:min-h-14 sm:w-auto",
               "rounded-brand bg-(--color-brand) px-8 text-base font-semibold text-white sm:text-lg",
@@ -260,24 +254,27 @@ function HeroSection({
 }
 
 function WhatLeaksSection() {
-  const surfaces: Array<{ icon: React.ReactNode; api: string; reveals: string }> =
-    [
-      {
-        icon: <Clock className="size-5" />,
-        api: "Intl.DateTimeFormat().resolvedOptions().timeZone",
-        reveals: "Returns an IANA name like America/New_York.",
-      },
-      {
-        icon: <Clock className="size-5" />,
-        api: "new Date().getTimezoneOffset()",
-        reveals: "Returns your UTC offset in minutes.",
-      },
-      {
-        icon: <Globe className="size-5" />,
-        api: "Temporal & document timestamps",
-        reveals: "Newer time APIs and page timestamps expose the same zone.",
-      },
-    ]
+  const surfaces: Array<{
+    icon: React.ReactNode
+    api: string
+    reveals: string
+  }> = [
+    {
+      icon: <Clock className="size-5" />,
+      api: "Intl.DateTimeFormat().resolvedOptions().timeZone",
+      reveals: "Returns an IANA name like America/New_York.",
+    },
+    {
+      icon: <Clock className="size-5" />,
+      api: "new Date().getTimezoneOffset()",
+      reveals: "Returns your UTC offset in minutes.",
+    },
+    {
+      icon: <Globe className="size-5" />,
+      api: "Temporal & document timestamps",
+      reveals: "Newer time APIs and page timestamps expose the same zone.",
+    },
+  ]
 
   return (
     <Section narrow className="py-12! md:py-16!">
@@ -286,8 +283,8 @@ function WhatLeaksSection() {
       </h2>
       <p className="mb-8 text-(--color-canvas-muted)">
         Unlike the Geolocation API, the timezone surfaces never ask permission —
-        they answer the moment a page loads. A single mismatched clock can undo a
-        spoofed GPS location.
+        they answer the moment a page loads. A single mismatched clock can undo
+        a spoofed GPS location.
       </p>
       <div className="overflow-hidden rounded-2xl border border-(--color-canvas-border)">
         {surfaces.map((s, i) => (

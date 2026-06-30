@@ -36,9 +36,7 @@ import contentCollections from "@content-collections/vite"
  * silently falls back to HTTP (so the repo still works for anyone
  * who hasn't run the setup yet).
  */
-function resolveDevHttpsOptions():
-  | { cert: Buffer; key: Buffer }
-  | undefined {
+function resolveDevHttpsOptions(): { cert: Buffer; key: Buffer } | undefined {
   try {
     const certPath = path.resolve(__dirname, "certs/dev-cert.pem")
     const keyPath = path.resolve(__dirname, "certs/dev-key.pem")
@@ -73,6 +71,11 @@ const config = defineConfig({
     }),
     tailwindcss(),
     tanstackStart({
+      // Localized routes that the link crawler can't discover from a static
+      // anchor (the language switcher is a portaled dropdown, so its links
+      // aren't in the closed-menu DOM). Enumerate them explicitly so they're
+      // always prerendered. Add new localized pages here as they're created.
+      pages: [{ path: "/fr" }],
       // Prerender all static routes at build time so Vercel serves them
       // as static assets from the CDN edge — eliminates SSR cold-start
       // latency and improves FCP/TTFB for the landing page and docs.

@@ -77,15 +77,7 @@ function safe<T>(fn: () => T, map?: (v: T) => string): string {
   }
 }
 
-const WEEKDAYS = [
-  "Sun",
-  "Mon",
-  "Tue",
-  "Wed",
-  "Thu",
-  "Fri",
-  "Sat",
-] as const
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const
 const MONTHS = [
   "Jan",
   "Feb",
@@ -109,15 +101,16 @@ function timezoneFacet(now: Date): ObservedFacet {
   const rows: Array<ObservedRow> = [
     {
       label: "Intl.DateTimeFormat().resolvedOptions().timeZone",
-      value: safe(
-        () => new Intl.DateTimeFormat().resolvedOptions().timeZone
-      ),
+      value: safe(() => new Intl.DateTimeFormat().resolvedOptions().timeZone),
       description:
         "The canonical IANA timezone identifier the JavaScript engine thinks it is in. Every other timezone surface ultimately flows from this value.",
     },
     {
       label: "new Date().getTimezoneOffset()",
-      value: safe(() => now.getTimezoneOffset(), (n) => `${n}`),
+      value: safe(
+        () => now.getTimezoneOffset(),
+        (n) => `${n}`
+      ),
       description:
         "Minutes WEST of UTC (so -120 means UTC+02:00). Negated from the human-readable offset because it's computed as UTC-minus-local.",
     },
@@ -548,12 +541,9 @@ export interface BuildFacetsInput {
 export function buildSyncFacets(input: BuildFacetsInput): Array<ObservedFacet> {
   const now = new Date()
   const { latitude, longitude, accuracy } = input.location
-  const latStr =
-    latitude === null ? UNAVAILABLE : latitude.toFixed(6)
-  const lonStr =
-    longitude === null ? UNAVAILABLE : longitude.toFixed(6)
-  const accStr =
-    accuracy === null ? UNAVAILABLE : `${accuracy.toFixed(0)} m`
+  const latStr = latitude === null ? UNAVAILABLE : latitude.toFixed(6)
+  const lonStr = longitude === null ? UNAVAILABLE : longitude.toFixed(6)
+  const accStr = accuracy === null ? UNAVAILABLE : `${accuracy.toFixed(0)} m`
 
   return [
     timezoneFacet(now),
@@ -570,9 +560,7 @@ export function buildSyncFacets(input: BuildFacetsInput): Array<ObservedFacet> {
  * Resolve the async document-level probes and return the additional
  * rows. The caller merges them into the document facet.
  */
-export async function resolveAsyncDocumentRows(): Promise<
-  Array<ObservedRow>
-> {
+export async function resolveAsyncDocumentRows(): Promise<Array<ObservedRow>> {
   const [iframeLastModified] = await Promise.all([probeIframeLastModified()])
   const rows: Array<ObservedRow> = []
   rows.push({

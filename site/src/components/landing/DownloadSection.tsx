@@ -118,7 +118,7 @@ export function DownloadSection({
                 "cursor-pointer hover:border-(--color-brand) hover:shadow-lg",
                 "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)",
                 isRecommended
-                  ? "border-(--color-brand) ring-1 ring-(--color-brand)/40 shadow-md"
+                  ? "border-(--color-brand) shadow-md ring-1 ring-(--color-brand)/40"
                   : "border-(--color-canvas-border)"
               )}
             >
@@ -161,42 +161,42 @@ export function DownloadSection({
           Other ways to download
         </h3>
         <div className="space-y-3">
-        {selfHosted.map((option) => (
-          <div
-            key={option.name}
-            className="flex flex-col gap-3 rounded-xl border border-(--color-canvas-border) px-6 py-4 md:flex-row md:items-center"
-          >
-            <img
-              src={option.icon}
-              alt=""
-              aria-hidden="true"
-              className="hidden h-8 w-8 object-contain md:block"
-              width={32}
-              height={32}
-            />
-            <div className="flex-1">
-              <span className="text-sm font-semibold text-(--color-canvas-foreground)">
-                {option.name}
-              </span>
-              <p className="mt-0.5 text-xs text-(--color-canvas-muted)">
-                {option.description}
-              </p>
-            </div>
-            <a
-              href={option.href(campaign)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={cn(
-                "shrink-0 rounded-lg border border-(--color-canvas-border) px-4 py-2",
-                "text-sm font-medium text-(--color-canvas-foreground)",
-                "transition-colors hover:border-(--color-brand) hover:text-(--color-brand)",
-                "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
-              )}
+          {selfHosted.map((option) => (
+            <div
+              key={option.name}
+              className="flex flex-col gap-3 rounded-xl border border-(--color-canvas-border) px-6 py-4 md:flex-row md:items-center"
             >
-              {option.cta} →
-            </a>
-          </div>
-        ))}
+              <img
+                src={option.icon}
+                alt=""
+                aria-hidden="true"
+                className="hidden h-8 w-8 object-contain md:block"
+                width={32}
+                height={32}
+              />
+              <div className="flex-1">
+                <span className="text-sm font-semibold text-(--color-canvas-foreground)">
+                  {option.name}
+                </span>
+                <p className="mt-0.5 text-xs text-(--color-canvas-muted)">
+                  {option.description}
+                </p>
+              </div>
+              <a
+                href={option.href(campaign)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                  "shrink-0 rounded-lg border border-(--color-canvas-border) px-4 py-2",
+                  "text-sm font-medium text-(--color-canvas-foreground)",
+                  "transition-colors hover:border-(--color-brand) hover:text-(--color-brand)",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+                )}
+              >
+                {option.cta} →
+              </a>
+            </div>
+          ))}
         </div>
       </div>
     </Section>

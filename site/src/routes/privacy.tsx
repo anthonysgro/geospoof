@@ -267,19 +267,20 @@ function PrivacyPage() {
                 developer's own infrastructure — an Amazon CloudFront
                 distribution in front of a private Amazon S3 bucket (provisioned
                 as code with the AWS CDK), on a subdomain of the developer's own
-                site. Because the request reaches the developer's infrastructure,
-                it carries your IP address (your real IP, unless you are behind a
-                VPN) and the byte ranges requested — and those ranges correspond
-                to the region being looked up, so the request can reveal your
-                approximate spoofed region. Your coordinates are never sent as a
-                query. The developer does not use these requests for analytics,
-                tracking, profiling, advertising, or accounts, and stores no
-                personal data from them. The developer has not enabled access
-                logging on the CloudFront distribution; Amazon, as the
-                infrastructure operator, processes each request (including your
-                IP and the requested path) transiently to deliver the file and
-                may keep its own operational logs under its own policies. The
-                data is cached by your browser, so it is rarely re-fetched.{" "}
+                site. Because the request reaches the developer's
+                infrastructure, it carries your IP address (your real IP, unless
+                you are behind a VPN) and the byte ranges requested — and those
+                ranges correspond to the region being looked up, so the request
+                can reveal your approximate spoofed region. Your coordinates are
+                never sent as a query. The developer does not use these requests
+                for analytics, tracking, profiling, advertising, or accounts,
+                and stores no personal data from them. The developer has not
+                enabled access logging on the CloudFront distribution; Amazon,
+                as the infrastructure operator, processes each request
+                (including your IP and the requested path) transiently to
+                deliver the file and may keep its own operational logs under its
+                own policies. The data is cached by your browser, so it is
+                rarely re-fetched.{" "}
                 <a
                   href="https://github.com/kevmo314/browser-geo-tz"
                   target="_blank"
@@ -316,8 +317,11 @@ function PrivacyPage() {
                   subscription renews automatically until cancelled; you can
                   manage or cancel it anytime in your Apple Account settings. A
                   free, fully functional tier remains available without any
-                  purchase. <strong>On macOS, all of these features are included
-                  at no charge — there is no macOS subscription.</strong>
+                  purchase.{" "}
+                  <strong>
+                    On macOS, all of these features are included at no charge —
+                    there is no macOS subscription.
+                  </strong>
                 </li>
                 <li>
                   <strong>Tips</strong> (iOS, iPadOS, and macOS) — optional
@@ -334,8 +338,8 @@ function PrivacyPage() {
                 </strong>{" "}
                 Billing, receipts, renewals, and refunds are handled entirely by
                 Apple under its terms. That payment processing is governed by
-                Apple's own privacy policy, and Apple acts as an independent data
-                controller for it.
+                Apple's own privacy policy, and Apple acts as an independent
+                data controller for it.
               </p>
               <p>
                 <strong>How your Pro status is determined.</strong> Your
@@ -358,7 +362,8 @@ function PrivacyPage() {
 
             <PolicySection title="Data Security">
               <ul>
-                <li>All settings are stored locally using the browser's secure
+                <li>
+                  All settings are stored locally using the browser's secure
                   storage API
                 </li>
                 <li>
@@ -368,8 +373,8 @@ function PrivacyPage() {
                 <li>
                   The one request that reaches developer-controlled
                   infrastructure — fetching timezone boundary data from
-                  cdn.geospoof.com — is a static-file download and is not used to
-                  track or identify you
+                  cdn.geospoof.com — is a static-file download and is not used
+                  to track or identify you
                 </li>
                 <li>All third-party API calls use HTTPS encryption</li>
                 <li>
@@ -509,8 +514,8 @@ function PrivacyPage() {
                       <td>Transmit data externally</td>
                       <td>
                         Sends nothing to the developer for collection or
-                        analytics. Outbound requests are the optional geocoding /
-                        VPN-sync API calls described above (only when you use
+                        analytics. Outbound requests are the optional geocoding
+                        / VPN-sync API calls described above (only when you use
                         those features) and fetching timezone boundary data from
                         cdn.geospoof.com when a location is set.
                       </td>
@@ -653,13 +658,13 @@ function PrivacyPage() {
                 you give by enabling the feature and can withdraw at any time by
                 disabling "Sync with VPN" in the extension popup. (2) Whenever
                 the extension resolves a timezone, it fetches boundary data from
-                cdn.geospoof.com, which — like any web request — transmits your IP to
-                the developer's CDN (Amazon CloudFront); we rely on legitimate interests
-                (GDPR Art. 6(1)(f)) in delivering the boundary data needed for
-                the location-spoofing you requested, and the IP is used only to
-                serve the file and is not retained. Withdrawing consent does not
-                affect the lawfulness of processing based on consent before its
-                withdrawal.
+                cdn.geospoof.com, which — like any web request — transmits your
+                IP to the developer's CDN (Amazon CloudFront); we rely on
+                legitimate interests (GDPR Art. 6(1)(f)) in delivering the
+                boundary data needed for the location-spoofing you requested,
+                and the IP is used only to serve the file and is not retained.
+                Withdrawing consent does not affect the lawfulness of processing
+                based on consent before its withdrawal.
               </p>
               <p>
                 <strong>International transfers:</strong> The third-party
@@ -668,14 +673,14 @@ function PrivacyPage() {
                 Nominatim) are operated outside the EEA, including in the United
                 States; each is an independent controller and determines its own
                 transfer mechanisms. Separately, the timezone boundary data is
-                served from the developer's own domain cdn.geospoof.com, hosted on
-                Amazon Web Services (CloudFront and S3), whose infrastructure is
-                also outside the EEA, including in the United States. When you use
-                features that contact any of these endpoints, your public IP is
-                transferred to that infrastructure. Apart from serving that static
-                boundary data from cdn.geospoof.com, the extension developer
-                operates no server and performs no other cross-border transfer of
-                its own.
+                served from the developer's own domain cdn.geospoof.com, hosted
+                on Amazon Web Services (CloudFront and S3), whose infrastructure
+                is also outside the EEA, including in the United States. When
+                you use features that contact any of these endpoints, your
+                public IP is transferred to that infrastructure. Apart from
+                serving that static boundary data from cdn.geospoof.com, the
+                extension developer operates no server and performs no other
+                cross-border transfer of its own.
               </p>
               <p>
                 <strong>Your rights under GDPR / UK GDPR:</strong> you have the
@@ -715,12 +720,12 @@ function PrivacyPage() {
               <p>
                 <strong>Categories collected:</strong> The only category of
                 personal information touched by the extension is an internet
-                identifier (your public IP address). This happens when you enable
-                "Sync with VPN" (sent to the IP-detection and geolocation
+                identifier (your public IP address). This happens when you
+                enable "Sync with VPN" (sent to the IP-detection and geolocation
                 services) and when the extension fetches timezone boundary data
                 from cdn.geospoof.com (your IP reaches the developer's CDN as
-                part of an ordinary web request). In both cases it is
-                used only for the purposes described above and is not retained.
+                part of an ordinary web request). In both cases it is used only
+                for the purposes described above and is not retained.
               </p>
               <p>
                 <strong>Your rights:</strong> You have the right to know what

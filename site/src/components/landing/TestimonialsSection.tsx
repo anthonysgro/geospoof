@@ -128,7 +128,8 @@ export function TestimonialsSection({ className }: { className?: string }) {
           Loved by privacy-minded users
         </h2>
         <p className="mx-auto max-w-xl text-(--color-canvas-muted)">
-          Real reviews from the Chrome Web Store, Firefox Add-ons, and App Store.
+          Real reviews from the Chrome Web Store, Firefox Add-ons, and App
+          Store.
         </p>
       </div>
 

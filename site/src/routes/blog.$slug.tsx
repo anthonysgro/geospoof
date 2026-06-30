@@ -14,7 +14,14 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { mdxComponents } from "@/components/blog/mdx-components"
-import { SITE_URL, blogPageTitle, formatDate, getAdjacentPosts, getPostBySlug, postUrl } from "@/lib/blog"
+import {
+  SITE_URL,
+  blogPageTitle,
+  formatDate,
+  getAdjacentPosts,
+  getPostBySlug,
+  postUrl,
+} from "@/lib/blog"
 
 export const Route = createFileRoute("/blog/$slug")({
   loader: ({ params }) => {
@@ -116,7 +123,12 @@ function BlogPostPage() {
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
-      { "@type": "ListItem", position: 2, name: "Blog", item: `${SITE_URL}/blog` },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Blog",
+        item: `${SITE_URL}/blog`,
+      },
       { "@type": "ListItem", position: 3, name: post.title, item: url },
     ],
   }
@@ -169,7 +181,7 @@ function BlogPostPage() {
               <h1 className="mb-4 text-4xl font-bold text-(--color-canvas-foreground)">
                 {post.title}
               </h1>
-              <div className="flex flex-wrap items-center gap-2 text-small text-(--color-canvas-muted)">
+              <div className="text-small flex flex-wrap items-center gap-2 text-(--color-canvas-muted)">
                 <Link
                   to="/about"
                   className="transition-colors hover:text-(--color-canvas-foreground)"

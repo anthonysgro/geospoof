@@ -36,7 +36,10 @@ import { now } from "./safe-time"
  */
 export const EARLY_TIMEZONE_PROBE: string | null = (() => {
   try {
-    if (typeof Intl === "undefined" || typeof Intl.DateTimeFormat !== "function") {
+    if (
+      typeof Intl === "undefined" ||
+      typeof Intl.DateTimeFormat !== "function"
+    ) {
       return null
     }
     return new Intl.DateTimeFormat().resolvedOptions().timeZone

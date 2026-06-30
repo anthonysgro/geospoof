@@ -54,7 +54,7 @@ export function FeaturedPostSection({ className }: { className?: string }) {
           />
         )}
         <div className="flex flex-col justify-center p-6 md:p-8">
-          <div className="mb-3 flex flex-wrap items-center gap-2 text-small text-(--color-canvas-muted)">
+          <div className="text-small mb-3 flex flex-wrap items-center gap-2 text-(--color-canvas-muted)">
             <time dateTime={post.date}>{formatDate(post.date)}</time>
             <span aria-hidden="true">·</span>
             <span>{post.readingTime} min read</span>

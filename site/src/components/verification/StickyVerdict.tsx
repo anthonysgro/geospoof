@@ -100,8 +100,8 @@ export function StickyVerdict({
         "[--nav-offset:5rem] md:[--nav-offset:5.5rem]",
         "transition-all duration-150 ease-out",
         show
-          ? "opacity-100 translate-y-0"
-          : "pointer-events-none opacity-0 -translate-y-2"
+          ? "translate-y-0 opacity-100"
+          : "pointer-events-none -translate-y-2 opacity-0"
       )}
     >
       <div

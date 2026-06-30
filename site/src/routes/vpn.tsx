@@ -403,7 +403,7 @@ function TwoLayersSection() {
           </div>
         ))}
       </div>
-            <p className="mt-6 text-sm leading-relaxed text-(--color-canvas-muted)">
+      <p className="mt-6 text-sm leading-relaxed text-(--color-canvas-muted)">
         Want a deeper, vendor-neutral take? Jonah Aragon of Privacy Guides has a
         clear primer on{" "}
         <a
@@ -487,9 +487,10 @@ function WhyProtonSection() {
           >
             Privacy Guides
           </a>
-          , an independent, community-run privacy resource. GeoSpoof works with any VPN, so you&rsquo;re never locked
-          in; we point to Proton for the open-source, audited reasons above,
-          but the right call is whichever one you trust.
+          , an independent, community-run privacy resource. GeoSpoof works with
+          any VPN, so you&rsquo;re never locked in; we point to Proton for the
+          open-source, audited reasons above, but the right call is whichever
+          one you trust.
         </p>
       </div>
     </Section>
@@ -512,13 +513,12 @@ function PlanGuidanceSection() {
           Pick the plan that fits
         </h2>
         <p className="text-(--color-canvas-muted)">
-          GeoSpoof is open-source. For the IP layer, we&rsquo;d point
-          you to Proton&rsquo;s VPN Plus. The 2-year plan is{" "}
-          {PROTON_DISCOUNT} off Proton&rsquo;s standard rate — the lowest price
-          per month and the best overall value. Prefer to try it first? The
-          monthly plan works too.
+          GeoSpoof is open-source. For the IP layer, we&rsquo;d point you to
+          Proton&rsquo;s VPN Plus. The 2-year plan is {PROTON_DISCOUNT} off
+          Proton&rsquo;s standard rate — the lowest price per month and the best
+          overall value. Prefer to try it first? The monthly plan works too.
         </p>
-        <InlineDisclosure className="mt-5 mx-0 max-w-2xl text-left" />
+        <InlineDisclosure className="mx-0 mt-5 max-w-2xl text-left" />
         <div className="mt-4 flex flex-col items-center gap-3">
           <CtaButton>See Proton VPN plans</CtaButton>
           <span className="inline-flex flex-wrap items-center justify-center gap-x-1.5 text-center text-sm text-(--color-canvas-muted)">
@@ -581,11 +581,11 @@ function DisclosureSection() {
         </strong>{" "}
         GeoSpoof is an independent, open-source utility and is not affiliated
         with or endorsed by Proton. When you buy a plan through our
-        recommendation, Proton shares a portion of the sale with us, at no
-        extra cost to you. It helps keep GeoSpoof free, open-source, and
-        ad-free. We recommend Proton on its merits (open-source, independently
-        audited, and recommended by Privacy Guides), not because of the
-        commission, and GeoSpoof works with any VPN you prefer.
+        recommendation, Proton shares a portion of the sale with us, at no extra
+        cost to you. It helps keep GeoSpoof free, open-source, and ad-free. We
+        recommend Proton on its merits (open-source, independently audited, and
+        recommended by Privacy Guides), not because of the commission, and
+        GeoSpoof works with any VPN you prefer.
       </p>
     </Section>
   )

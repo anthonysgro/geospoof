@@ -152,7 +152,11 @@ async function gatherOnce(
     } as RTCOfferOptions)
     await pc.setLocalDescription(offer)
   } catch {
-    try { pc.close() } catch { /* ignore */ }
+    try {
+      pc.close()
+    } catch {
+      /* ignore */
+    }
     return { sdpLeaks: [], statsLeaks: [] }
   }
 
@@ -166,7 +170,11 @@ async function gatherOnce(
     // Firefox's disable_non_proxied_udp protection signature:
     // iceConnectionState jumps straight to "failed" without gathering.
     const onConnState = (): void => {
-      if (pc.iceConnectionState === "failed" || pc.iceConnectionState === "closed") finish()
+      if (
+        pc.iceConnectionState === "failed" ||
+        pc.iceConnectionState === "closed"
+      )
+        finish()
     }
 
     const finish = (): void => {
@@ -213,7 +221,11 @@ async function gatherOnce(
     // stats unavailable — not a problem
   }
 
-  try { pc.close() } catch { /* ignore */ }
+  try {
+    pc.close()
+  } catch {
+    /* ignore */
+  }
 
   return {
     sdpLeaks: Array.from(sdpPublicIps),
@@ -234,13 +246,21 @@ async function gatherViaIframe(): Promise<Array<string>> {
 
   await new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => {
-      try { iframe.remove() } catch { /* ignore */ }
+      try {
+        iframe.remove()
+      } catch {
+        /* ignore */
+      }
       reject(new Error("iframe timed out"))
     }, IFRAME_LOAD_TIMEOUT_MS)
-    iframe.addEventListener("load", () => {
-      clearTimeout(timer)
-      resolve()
-    }, { once: true })
+    iframe.addEventListener(
+      "load",
+      () => {
+        clearTimeout(timer)
+        resolve()
+      },
+      { once: true }
+    )
     document.body.appendChild(iframe)
     if (iframe.contentDocument?.readyState === "complete") {
       clearTimeout(timer)
@@ -251,12 +271,20 @@ async function gatherViaIframe(): Promise<Array<string>> {
   try {
     const win = iframe.contentWindow
     if (!win) return []
-    const IframeCtor = (win as unknown as { RTCPeerConnection?: new (c?: RTCConfiguration) => RTCPeerConnection }).RTCPeerConnection
+    const IframeCtor = (
+      win as unknown as {
+        RTCPeerConnection?: new (c?: RTCConfiguration) => RTCPeerConnection
+      }
+    ).RTCPeerConnection
     if (typeof IframeCtor !== "function") return []
     const { sdpLeaks } = await gatherOnce(IframeCtor)
     return sdpLeaks
   } finally {
-    try { iframe.remove() } catch { /* ignore */ }
+    try {
+      iframe.remove()
+    } catch {
+      /* ignore */
+    }
   }
 }
 

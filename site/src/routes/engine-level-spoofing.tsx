@@ -21,7 +21,8 @@ import { getStoreLink } from "@/lib/store-links"
 import { SITE_URL } from "@/lib/blog"
 
 const PAGE_URL = `${SITE_URL}/engine-level-spoofing`
-const PAGE_TITLE = "Hide Chrome's “Started Debugging This Browser” Bar | GeoSpoof"
+const PAGE_TITLE =
+  "Hide Chrome's “Started Debugging This Browser” Bar | GeoSpoof"
 const PAGE_DESCRIPTION =
   "GeoSpoof's Engine-level Spoofing uses Chrome's debugger API, so Chrome shows a debugging bar. Here's what it means, why it's safe, and how to hide it."
 
@@ -313,23 +314,24 @@ function HeroSection({ store }: { store: ReturnType<typeof getStoreLink> }) {
 }
 
 function WhatTheBarIsSection() {
-  const points: Array<{ icon: React.ReactNode; title: string; body: string }> = [
-    {
-      icon: <Info className="size-5" />,
-      title: "It's a standard Chrome notice",
-      body: "Chrome shows the bar for any extension that uses the debugger API — the same API DevTools use. It appears the moment GeoSpoof attaches, not because anything went wrong.",
-    },
-    {
-      icon: <ShieldCheck className="size-5" />,
-      title: "GeoSpoof only sets a timezone override",
-      body: "The debugger connection is used solely to apply your spoofed timezone across frames and workers. It doesn't read your page content, keystrokes, or browsing — and the code is open source.",
-    },
-    {
-      icon: <EyeOff className="size-5" />,
-      title: "The bar is cosmetic",
-      body: "It changes nothing about how sites see you. Hiding it is purely about removing the strip at the top of the window.",
-    },
-  ]
+  const points: Array<{ icon: React.ReactNode; title: string; body: string }> =
+    [
+      {
+        icon: <Info className="size-5" />,
+        title: "It's a standard Chrome notice",
+        body: "Chrome shows the bar for any extension that uses the debugger API — the same API DevTools use. It appears the moment GeoSpoof attaches, not because anything went wrong.",
+      },
+      {
+        icon: <ShieldCheck className="size-5" />,
+        title: "GeoSpoof only sets a timezone override",
+        body: "The debugger connection is used solely to apply your spoofed timezone across frames and workers. It doesn't read your page content, keystrokes, or browsing — and the code is open source.",
+      },
+      {
+        icon: <EyeOff className="size-5" />,
+        title: "The bar is cosmetic",
+        body: "It changes nothing about how sites see you. Hiding it is purely about removing the strip at the top of the window.",
+      },
+    ]
 
   return (
     <Section narrow className="py-12! md:py-16!">
@@ -356,7 +358,9 @@ function WhatTheBarIsSection() {
               <h3 className="font-semibold text-(--color-canvas-foreground)">
                 {p.title}
               </h3>
-              <p className="mt-1 text-sm text-(--color-canvas-muted)">{p.body}</p>
+              <p className="mt-1 text-sm text-(--color-canvas-muted)">
+                {p.body}
+              </p>
             </div>
           </div>
         ))}
@@ -423,10 +427,11 @@ function PermanentSection() {
         <p className="text-(--color-canvas-muted)">
           The flag only applies to launches that include it, so the bar returns
           if you open Chrome a different way. To keep it hidden for good, add{" "}
-          <code className="text-(--color-canvas-foreground)">{FLAG}</code> to the
-          shortcut or launcher you open Chrome from every day — the Windows
+          <code className="text-(--color-canvas-foreground)">{FLAG}</code> to
+          the shortcut or launcher you open Chrome from every day — the Windows
           shortcut Target, a macOS launcher app, or your Linux{" "}
-          <code className="text-(--color-canvas-foreground)">.desktop</code> file.
+          <code className="text-(--color-canvas-foreground)">.desktop</code>{" "}
+          file.
         </p>
         <p className="mt-4 text-sm text-(--color-canvas-muted)">
           Prefer not to bother? Leave Engine-level Spoofing off — GeoSpoof's
