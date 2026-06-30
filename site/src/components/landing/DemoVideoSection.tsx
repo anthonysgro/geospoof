@@ -1,6 +1,7 @@
 import { motion } from "motion/react"
 import { useReducedMotion } from "@/hooks/use-reduced-motion"
 import { cn } from "@/lib/utils"
+import { useTranslations } from "@/hooks/use-i18n"
 
 /**
  * Product demo video.
@@ -22,15 +23,16 @@ import { cn } from "@/lib/utils"
 export function DemoVideoSection({ className }: { className?: string }) {
   const prefersReducedMotion = useReducedMotion()
   const MotionDiv = prefersReducedMotion ? "div" : motion.div
+  const { t } = useTranslations()
 
   return (
     <section className={cn("w-full py-16 md:py-24", className)}>
       <div className="mx-auto mb-10 max-w-[1200px] px-6 text-center md:px-12 lg:px-16">
         <p className="mb-3 text-sm font-semibold tracking-widest text-(--color-brand) uppercase">
-          Watch it work
+          {t.demo.eyebrow}
         </p>
         <h2 className="text-3xl font-bold text-(--color-canvas-foreground) md:text-4xl">
-          Spoof your location in a few clicks
+          {t.demo.heading}
         </h2>
       </div>
 
@@ -50,18 +52,18 @@ export function DemoVideoSection({ className }: { className?: string }) {
           poster="/images/social-og-home.png"
           width={1280}
           height={720}
-          aria-label="GeoSpoof demo — setting a spoofed browser location with the extension"
+          aria-label={t.demo.videoAria}
           className="aspect-video w-full rounded-2xl border border-(--color-canvas-border) bg-black"
         >
           <source
             src="https://dsgaoei8r9jiwulf.public.blob.vercel-storage.com/geospoof-demo-v2.mp4"
             type="video/mp4"
           />
-          Your browser doesn't support embedded video.{" "}
+          {t.demo.unsupported}{" "}
           <a href="https://dsgaoei8r9jiwulf.public.blob.vercel-storage.com/geospoof-demo-v2.mp4">
-            Download the demo
+            {t.demo.downloadInstead}
           </a>{" "}
-          instead.
+          {t.demo.insteadSuffix}
         </video>
       </MotionDiv>
     </section>

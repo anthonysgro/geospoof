@@ -97,7 +97,7 @@ export function HeroSection({ className }: { className?: string }) {
               />
               <img
                 src={ios2Png}
-                alt="GeoSpoof app — secondary view"
+                alt={t.hero.secondaryPhoneAlt}
                 width={1070}
                 height={2185}
                 className="w-full"
@@ -112,7 +112,7 @@ export function HeroSection({ className }: { className?: string }) {
               />
               <img
                 src={ios1Png}
-                alt="GeoSpoof app — main view"
+                alt={t.hero.mainPhoneAlt}
                 width={1070}
                 height={2185}
                 className="w-full"

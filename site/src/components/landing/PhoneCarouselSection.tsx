@@ -1,14 +1,17 @@
 import * as React from "react"
+import type {CarouselApi} from "@/components/ui/carousel";
 import {
   Carousel,
+  
   CarouselContent,
   CarouselItem,
   CarouselNext,
-  CarouselPrevious,
-  type CarouselApi,
+  CarouselPrevious
 } from "@/components/ui/carousel"
 import { useTheme } from "@/hooks/use-theme"
 import { cn } from "@/lib/utils"
+import { useTranslations } from "@/hooks/use-i18n"
+import { format } from "@/lib/i18n"
 
 const SHOTS = ["ss1", "ss2", "ss3", "ss4", "ss5", "ss6"] as const
 
@@ -27,6 +30,7 @@ export function PhoneCarouselSection({
 }) {
   const { resolvedTheme } = useTheme()
   const variant = resolvedTheme === "dark" ? "dark" : "light"
+  const { t } = useTranslations()
 
   const [api, setApi] = React.useState<CarouselApi>()
   const [selected, setSelected] = React.useState(0)
@@ -52,11 +56,11 @@ export function PhoneCarouselSection({
       <div className="mx-auto mb-10 max-w-[1200px] px-6 text-center md:px-12 lg:px-16">
         {embedded ? (
           <h3 className="text-2xl font-bold text-(--color-canvas-foreground) md:text-3xl">
-            And native on iPhone &amp; iPad
+            {t.phoneCarousel.embeddedHeading}
           </h3>
         ) : (
           <h2 className="text-3xl font-bold text-(--color-canvas-foreground) md:text-4xl">
-            GeoSpoof on iOS &amp; iPadOS
+            {t.phoneCarousel.standaloneHeading}
           </h2>
         )}
       </div>
@@ -79,7 +83,7 @@ export function PhoneCarouselSection({
                     />
                     <img
                       src={`/screenshots/${id}-${variant}.png`}
-                      alt={`GeoSpoof on iOS — screenshot ${i + 1}`}
+                      alt={format(t.phoneCarousel.screenshotAlt, { n: i + 1 })}
                       width={1070}
                       height={2185}
                       loading="lazy"
@@ -106,7 +110,7 @@ export function PhoneCarouselSection({
             <button
               key={id}
               type="button"
-              aria-label={`Go to slide ${i + 1}`}
+              aria-label={format(t.phoneCarousel.goToSlide, { n: i + 1 })}
               aria-current={i === selected}
               onClick={() => api?.scrollTo(i)}
               className={cn(
@@ -122,19 +126,19 @@ export function PhoneCarouselSection({
         {/* Store badges */}
         <div className="mt-12 flex flex-col items-center gap-5">
           <p className="text-sm font-semibold tracking-widest text-(--color-brand) uppercase">
-            Get the app
+            {t.phoneCarousel.getTheApp}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4">
             <a
               href={IOS_APP_STORE_URL}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="Download on the App Store"
+              aria-label={t.phoneCarousel.appStore}
               className="transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) focus-visible:ring-offset-2"
             >
               <img
                 src="/images/stores/ios-store-icon.svg"
-                alt="Download on the App Store"
+                alt={t.phoneCarousel.appStore}
                 className="h-12 w-auto"
               />
             </a>
@@ -142,12 +146,12 @@ export function PhoneCarouselSection({
               href={MAC_APP_STORE_URL}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="Download on the Mac App Store"
+              aria-label={t.phoneCarousel.macAppStore}
               className="transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) focus-visible:ring-offset-2"
             >
               <img
                 src="/images/stores/mac-store-icon.svg"
-                alt="Download on the Mac App Store"
+                alt={t.phoneCarousel.macAppStore}
                 className="h-12 w-auto"
               />
             </a>

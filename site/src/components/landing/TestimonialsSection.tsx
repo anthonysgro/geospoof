@@ -1,6 +1,7 @@
 import { StarIcon } from "lucide-react"
 import { Section } from "./Section"
 import { cn } from "@/lib/utils"
+import { useTranslations } from "@/hooks/use-i18n"
 
 interface Testimonial {
   quote: string
@@ -60,10 +61,11 @@ const testimonials: Array<Testimonial> = [
 ]
 
 function Stars() {
+  const { t } = useTranslations()
   return (
     <div
       className="flex items-center gap-0.5"
-      aria-label="5 out of 5 stars"
+      aria-label={t.testimonials.starsAria}
       role="img"
     >
       {Array.from({ length: 5 }).map((_, i) => (
@@ -111,6 +113,7 @@ function TestimonialCard({ testimonial }: { testimonial: Testimonial }) {
 }
 
 export function TestimonialsSection({ className }: { className?: string }) {
+  const { t } = useTranslations()
   return (
     <Section
       id="testimonials"
@@ -119,28 +122,27 @@ export function TestimonialsSection({ className }: { className?: string }) {
     >
       <div className="mb-12 text-center">
         <p className="mb-3 text-sm font-semibold tracking-widest text-(--color-brand) uppercase">
-          What users are saying
+          {t.testimonials.eyebrow}
         </p>
         <h2
           id="testimonials-heading"
           className="mb-4 text-3xl font-bold text-(--color-canvas-foreground) md:text-4xl"
         >
-          Loved by privacy-minded users
+          {t.testimonials.heading}
         </h2>
         <p className="mx-auto max-w-xl text-(--color-canvas-muted)">
-          Real reviews from the Chrome Web Store, Firefox Add-ons, and App
-          Store.
+          {t.testimonials.subhead}
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-6">
-        {testimonials.map((t) => (
-          <TestimonialCard key={t.author} testimonial={t} />
+        {testimonials.map((item) => (
+          <TestimonialCard key={item.author} testimonial={item} />
         ))}
       </div>
 
       <p className="mt-8 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-sm text-(--color-canvas-muted)">
-        <span>Read more reviews on</span>
+        <span>{t.testimonials.readMoreOn}</span>
         <a
           href={AMO_URL}
           target="_blank"

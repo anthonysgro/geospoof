@@ -47,7 +47,13 @@ function handleSmoothScroll(
   el?.scrollIntoView({ behavior: "smooth", block: "start" })
 }
 
-function BrandMark({ homePath }: { homePath: string }) {
+function BrandMark({
+  homePath,
+  ariaLabel,
+}: {
+  homePath: string
+  ariaLabel: string
+}) {
   return (
     <a
       href={homePath}
@@ -58,7 +64,7 @@ function BrandMark({ homePath }: { homePath: string }) {
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)",
         "rounded-sm-brand"
       )}
-      aria-label="GeoSpoof - Home"
+      aria-label={ariaLabel}
     >
       <picture className="hidden md:block">
         <source srcSet="/icon.webp" type="image/webp" />
@@ -198,7 +204,7 @@ export function Navigation({ className }: { className?: string }) {
           "h-18 md:h-20"
         )}
       >
-        <BrandMark homePath={homePath} />
+        <BrandMark homePath={homePath} ariaLabel={t.nav.brandAria} />
         <CenterNavLinks
           items={items}
           homePath={homePath}

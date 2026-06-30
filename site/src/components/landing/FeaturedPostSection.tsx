@@ -4,13 +4,18 @@ import { Section } from "./Section"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { featuredPost, formatDate } from "@/lib/blog"
+import { useTranslations } from "@/hooks/use-i18n"
 
 /**
  * Home page "From the blog" section. Surfaces a single featured post (see
  * `featuredPost` in lib/blog) as a large card, with a link through to the full
  * blog index. Renders nothing if there are no posts.
+ *
+ * Post title/description/tags come from MDX content and stay in their authored
+ * language; only the section framing is localized.
  */
 export function FeaturedPostSection({ className }: { className?: string }) {
+  const { t } = useTranslations()
   const post = featuredPost
   if (!post) return null
 
@@ -19,17 +24,17 @@ export function FeaturedPostSection({ className }: { className?: string }) {
       <div className="mb-10 flex items-end justify-between gap-4">
         <div>
           <p className="mb-3 text-sm font-semibold tracking-widest text-(--color-brand) uppercase">
-            From the blog
+            {t.featuredPost.eyebrow}
           </p>
           <h2 className="text-3xl font-bold text-(--color-canvas-foreground) md:text-4xl">
-            Worth a read
+            {t.featuredPost.heading}
           </h2>
         </div>
         <Link
           to="/blog"
           className="hidden shrink-0 items-center gap-1.5 text-sm font-medium text-(--color-brand) hover:underline sm:inline-flex"
         >
-          All posts
+          {t.featuredPost.allPosts}
           <ArrowRightIcon className="h-4 w-4" />
         </Link>
       </div>
@@ -57,7 +62,9 @@ export function FeaturedPostSection({ className }: { className?: string }) {
           <div className="text-small mb-3 flex flex-wrap items-center gap-2 text-(--color-canvas-muted)">
             <time dateTime={post.date}>{formatDate(post.date)}</time>
             <span aria-hidden="true">·</span>
-            <span>{post.readingTime} min read</span>
+            <span>
+              {post.readingTime} {t.featuredPost.minRead}
+            </span>
           </div>
           <h3 className="mb-3 text-2xl font-bold text-(--color-canvas-foreground)">
             {post.title}
@@ -73,7 +80,7 @@ export function FeaturedPostSection({ className }: { className?: string }) {
             ))}
           </div>
           <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-(--color-brand)">
-            Read more
+            {t.featuredPost.readMore}
             <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
           </span>
         </div>

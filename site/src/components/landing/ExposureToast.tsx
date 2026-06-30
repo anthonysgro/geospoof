@@ -1,7 +1,7 @@
 import * as React from "react"
 import { toast } from "sonner"
 import { Link } from "@tanstack/react-router"
-import { MapPinIcon, ClockIcon, RadioIcon, XIcon } from "lucide-react"
+import { ClockIcon, MapPinIcon, RadioIcon, XIcon } from "lucide-react"
 import { usePlatform } from "@/hooks/use-platform"
 import { getStoreLink } from "@/lib/store-links"
 import {
@@ -11,6 +11,7 @@ import {
 import { readWorkerTimezone } from "@/lib/verification/worker-probe"
 import { probeWebrtc } from "@/lib/verification/webrtc-probe"
 import { cn } from "@/lib/utils"
+import { useTranslations } from "@/hooks/use-i18n"
 
 const STORAGE_KEY = "gs-exposure-toast-shown"
 const REVEAL_DELAY_MS = 1400
@@ -98,11 +99,12 @@ function ExposureCard({
 }) {
   const platform = usePlatform()
   const store = getStoreLink(platform, "exposure-toast")
+  const { t } = useTranslations()
 
   const place =
     data.city && data.country
       ? `${data.city}, ${data.country}`
-      : (data.country ?? "your area")
+      : (data.country ?? t.exposureToast.yourArea)
 
   const status = consistencyStatus(data.timezone, data.ipTimezone)
   const webrtcLeak = data.webrtc === "leak"
@@ -110,13 +112,13 @@ function ExposureCard({
 
   const pill = flagged
     ? {
-        label: "Exposed",
+        label: t.exposureToast.exposed,
         dot: "bg-amber-500",
         text: "text-amber-600 dark:text-amber-400",
         bg: "bg-amber-500/12",
       }
     : {
-        label: "Visible to sites",
+        label: t.exposureToast.visibleToSites,
         dot: "bg-rose-500",
         text: "text-rose-600 dark:text-rose-400",
         bg: "bg-rose-500/12",
@@ -131,7 +133,7 @@ function ExposureCard({
     >
       <div className="flex items-center justify-between gap-2">
         <span className="text-[11px] font-semibold tracking-wider text-(--color-canvas-muted) uppercase">
-          What every site sees
+          {t.exposureToast.header}
         </span>
         <div className="flex shrink-0 items-center gap-2">
           <span
@@ -146,7 +148,7 @@ function ExposureCard({
           </span>
           <button
             type="button"
-            aria-label="Dismiss"
+            aria-label={t.exposureToast.dismiss}
             onClick={() => toast.dismiss(toastId)}
             className="text-(--color-canvas-muted) transition-colors hover:text-(--color-canvas-foreground)"
           >
@@ -158,19 +160,19 @@ function ExposureCard({
       <div className="mt-2.5 flex flex-col sm:mt-3">
         <Row
           icon={<MapPinIcon className="size-3.5" />}
-          label="Location"
+          label={t.exposureToast.location}
           value={place}
         />
         <Row
           icon={<ClockIcon className="size-3.5" />}
-          label="Timezone"
+          label={t.exposureToast.timezone}
           value={data.timezone}
         />
         {data.ip ? (
           <div className="hidden sm:contents">
             <Row
               icon={<span className="font-mono text-[11px]">IP</span>}
-              label="Address"
+              label={t.exposureToast.address}
               value={maskIp(data.ip)}
             />
           </div>
@@ -178,8 +180,8 @@ function ExposureCard({
         {data.webrtc !== "unsupported" ? (
           <Row
             icon={<RadioIcon className="size-3.5" />}
-            label="WebRTC"
-            value={webrtcLeak ? "Public IP leaking" : "No leak"}
+            label={t.exposureToast.webrtc}
+            value={webrtcLeak ? t.exposureToast.publicIpLeaking : t.exposureToast.noLeak}
             valueClassName={
               webrtcLeak ? "text-amber-600 dark:text-amber-400" : undefined
             }
@@ -199,14 +201,14 @@ function ExposureCard({
             "transition-colors hover:bg-(--color-brand-dark)"
           )}
         >
-          {store ? "Hide my location" : "Get GeoSpoof"}
+          {store ? t.exposureToast.hideMyLocation : t.exposureToast.getGeospoof}
         </a>
         <Link
           to="/verify"
           onClick={() => toast.dismiss(toastId)}
           className="text-xs font-medium text-(--color-canvas-muted) underline-offset-4 hover:text-(--color-canvas-foreground) hover:underline"
         >
-          Full report →
+          {t.exposureToast.fullReport} →
         </Link>
       </div>
     </div>
