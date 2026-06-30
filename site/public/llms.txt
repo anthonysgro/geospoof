@@ -20,6 +20,7 @@ GeoSpoof overrides browser location APIs at the page level. It does not change y
 
 ## Blog
 
+- [GeoSpoof vs Spoof Geolocation: A Signal-by-Signal Comparison](https://geospoof.com/blog/geospoof-vs-spoof-geolocation): Spoof Geolocation moves the map pin but leaves your real timezone in place, so its Date, Intl, and worker signals leak where you actually are. GeoSpoof doesn't.
 - [Geoceptor vs GeoSpoof: A Signal-by-Signal Comparison](https://geospoof.com/blog/geoceptor-vs-geospoof): Both extensions spoof your browser location, but a real fingerprint test pulls them apart fast. We ran the same seven checks against each — WebRTC, timezone offsets, Date methods, and exotic worker surfaces — and screenshotted every result.
 - [Why Your Timezone Reveals Your Location](https://geospoof.com/blog/why-your-timezone-reveals-your-location): Your browser's timezone can expose your real location even when geolocation is blocked or spoofed. Here's how the leak works through JavaScript and WebRTC, and how to fix it.
 - [Location Spoofing vs VPN: What's the Difference?](https://geospoof.com/blog/location-spoofing-vs-vpn): Location spoofing and VPNs both change where websites think you are, but they work on completely different signals. Here's what each one hides and why you often want both.

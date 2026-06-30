@@ -18,6 +18,13 @@ Technical documentation for the GeoSpoof browser extension (Firefox + Chromium +
 
 All overrides are injected synchronously at `document_start` before any page JavaScript runs.
 
+> **Chromium note:** the tables below describe the page-world content-script
+> injection path, which is the default on every engine. Chromium also ships an
+> optional **Engine-level Spoofing** mode that instead drives the _timezone_
+> override through the Chrome DevTools Protocol (`chrome.debugger`) — see
+> [Engine-level Spoofing (Chromium)](#engine-level-spoofing-chromium). It is
+> off by default; geolocation always stays on the injected path.
+
 ### Geolocation (`Geolocation.prototype`)
 
 Overrides are installed on `Geolocation.prototype` (not on the per-window `navigator.geolocation` instance), preserving the WebIDL-specified native descriptor shape (`writable: true, configurable: true, enumerable: true`). This matches native layout: `Object.getOwnPropertyDescriptor(navigator.geolocation, "getCurrentPosition")` correctly returns `undefined` because the method is inherited from the prototype.
@@ -158,6 +165,33 @@ Wrapped to synchronously scan inserted subtrees for iframes and patch them befor
 | `Element.prototype.insertAdjacentElement` | Calls original, then scans inserted element      |
 | `Element.prototype.insertAdjacentHTML`    | Calls original, then scans parent subtree        |
 | `Element.prototype.innerHTML` (setter)    | Calls original setter, then scans target subtree |
+
+## Engine-level Spoofing (Chromium)
+
+An optional, off-by-default Chromium mode (`Settings.debuggerModeEnabled`,
+implemented in `src/background/debugger-spoof.ts`) that applies the **timezone**
+override through the Chrome DevTools Protocol instead of page-world injection.
+It exists to close two gaps the content-script path cannot cover on Chromium
+MV3 (which has no `webRequest.filterResponseData`):
+
+- **Workers** — `Emulation.setTimezoneOverride` applies across every frame _and_
+  worker, including module and service workers, so URL-based workers that run
+  unpatched under the injection path on Chromium are covered.
+- **Cold-start race** — the override is attached on
+  `webNavigation.onBeforeNavigate`, before the document's first script runs, so
+  there is no early window where the real zone leaks.
+
+| Aspect             | Behavior                                                                                                                                                                                                                                                                                       |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Trigger            | Opt-in only (`debuggerModeEnabled`); no-op when off, on non-Chromium builds, or when `chrome.debugger` is unavailable                                                                                                                                                                          |
+| Mechanism          | `chrome.debugger.attach` per in-scope http/https tab, then `Emulation.setTimezoneOverride` with the spoofed IANA id                                                                                                                                                                            |
+| Early attach       | `webNavigation.onBeforeNavigate` (runtime `webNavigation` permission); falls back to `tabs.onUpdated` when that permission isn't granted                                                                                                                                                       |
+| Scope              | Honors the same per-site all/allowlist/denylist scope as the injection path; out-of-scope or denylisted tabs are detached                                                                                                                                                                      |
+| Geolocation        | **Not** handled here — CDP geolocation override races the first `getCurrentPosition` grant, so geolocation stays on the prompt-free injected path                                                                                                                                              |
+| Timezone injection | While CDP owns the timezone, the page-world timezone overrides no-op (the broadcast withholds `timezone`); `Date`/`Intl` still report the spoofed zone, now from the engine                                                                                                                    |
+| Teardown           | Reverts explicitly (`setTimezoneOverride` with empty id) then detaches; never persists a stale session                                                                                                                                                                                         |
+| Permission         | `debugger` is declared **required** (Chrome forbids it in `optional_permissions`) but maps to the existing "access your data on all websites" warning, so it adds no new install prompt. Chrome shows a "GeoSpoof started debugging this browser" bar only while the mode is actually attached |
+| State              | Stateless across MV3 service-worker respawns — `chrome.debugger.getTargets()` is the source of truth; settings are read fresh per event                                                                                                                                                        |
 
 ## Stealth Properties Verified by Test Suite
 
@@ -663,7 +697,7 @@ Timeout: 10s (IP detection), 5s per geo service | Retry: 2x exponential backoff 
 ## Known Limitations
 
 1. **Web Workers** — Content scripts cannot directly inject into Worker/SharedWorker/ServiceWorker contexts because they run in separate global scopes. The extension takes different paths for different URL schemes to balance protection coverage with site-breakage risk:
-   - **URL-based workers** (`new Worker("/foo.js")`, module workers, SharedWorker with a URL, `navigator.serviceWorker.register(url)`) — the content script announces the URL to the background and passes the original URL through to the real constructor. On Firefox the background's `webRequest.filterResponseData` listener prepends the spoofing payload to the response bytes, but **only for workers whose registrable domain (eTLD+1) matches the tab's page origin**. Cross-origin workers — such as Cloudflare Turnstile (`challenges.cloudflare.com`), Stripe (`js.stripe.com`), or any other third-party worker loaded from a different domain — are classified as `"pass"` and left completely unmodified. This is an accepted limitation analogous to the cross-origin iframe limitation: the timezone leak in cross-origin workers is not closed by this extension. On Chromium and Safari nothing listens (the API doesn't exist on those engines) and URL-based workers run unpatched — a documented engine limit, not a site-breakage path.
+   - **URL-based workers** (`new Worker("/foo.js")`, module workers, SharedWorker with a URL, `navigator.serviceWorker.register(url)`) — the content script announces the URL to the background and passes the original URL through to the real constructor. On Firefox the background's `webRequest.filterResponseData` listener prepends the spoofing payload to the response bytes, but **only for workers whose registrable domain (eTLD+1) matches the tab's page origin**. Cross-origin workers — such as Cloudflare Turnstile (`challenges.cloudflare.com`), Stripe (`js.stripe.com`), or any other third-party worker loaded from a different domain — are classified as `"pass"` and left completely unmodified. This is an accepted limitation analogous to the cross-origin iframe limitation: the timezone leak in cross-origin workers is not closed by this extension. On Chromium and Safari nothing listens (the API doesn't exist on those engines) and URL-based workers run unpatched on the injection path — a documented engine limit, not a site-breakage path. **On Chromium this is closed when the user enables the opt-in Engine-level Spoofing mode** (`chrome.debugger` → `Emulation.setTimezoneOverride`), which applies across workers including module/service workers (see [Engine-level Spoofing (Chromium)](#engine-level-spoofing-chromium)); Safari has no equivalent.
 
    - **Inline workers** (`new Worker(URL.createObjectURL(new Blob([...])))` or `new Worker("data:application/javascript,...")`) — blob-wrapped on every engine. The site already committed to an inline URL and its CSP necessarily allows it, so our replacement blob stays within the same allowance.
 
@@ -673,7 +707,7 @@ Timeout: 10s (IP detection), 5s per geo service | Retry: 2x exponential backoff 
 
 2. **XSLT/EXSLT datetime (Firefox only) — closed, with edges.** `XSLTProcessor` runs inside a C++ engine (libxslt on Gecko) that doesn't round-trip through JavaScript date machinery, so EXSLT's `date:date-time()` emits an ISO datetime carrying the real system UTC offset, bypassing every Date/Intl/Temporal override — the ground-truth surface arkenfox's TZP uses. The result is still delivered back through the JS `XSLTProcessor` API, so GeoSpoof wraps `transformToFragment` / `transformToDocument` (`src/content/injected/xslt-overrides.ts`), walks the result's text nodes, and rewrites any offset-bearing ISO datetime within ~10s of the current instant into the spoofed zone (the tight "is it now?" gate avoids corrupting legitimate datetimes in transformed content). The iframe patcher installs the same wrap on each same-origin iframe realm's `XSLTProcessor`. Residual edges: cross-origin iframe XSLT can't be reached (see #4). Chromium/WebKit don't ship EXSLT, and Firefox is winding XSLT down behind `dom.xslt.enabled` (FF151+; when off, no EXSLT date is produced and this no-ops), so the surface is shrinking regardless.
 
-3. **Extension initialization race** — Browser extensions install overrides at `document_start`, but spoofing settings arrive asynchronously (typically 50-250ms on cold page loads). A fingerprinting script that reads timezone synchronously in `<head>` can win that race and learn the real zone. This is a fundamental MV3 limitation that requires browser-level fixes to eliminate (see Tor Browser, which patches C++ directly).
+3. **Extension initialization race** — Browser extensions install overrides at `document_start`, but spoofing settings arrive asynchronously (typically 50-250ms on cold page loads). A fingerprinting script that reads timezone synchronously in `<head>` can win that race and learn the real zone. This is a fundamental MV3 limitation for the content-script path and requires browser-level fixes to eliminate (see Tor Browser, which patches C++ directly). **On Chromium, the opt-in Engine-level Spoofing mode closes this for the timezone**: it attaches via `webNavigation.onBeforeNavigate` before the document's first script runs (see [Engine-level Spoofing (Chromium)](#engine-level-spoofing-chromium)). Geolocation still uses the injected path on every engine, so its cold-start window remains.
 
 4. **Cross-origin iframes** — `SecurityError` prevents any access from the content script to cross-origin iframes, so `patchIframeWindow` silently skips them. Additionally, the injected script runs in every frame context including cross-origin ones — Worker patching, iframe patching, and DOM insertion wrapping are skipped in cross-origin frame contexts to avoid interfering with third-party scripts (e.g. Cloudflare Turnstile) that perform self-integrity checks and break when their execution environment is modified. Timing side-channels can reveal discrepancies between the parent's spoofed view and the cross-origin iframe's real view.
 

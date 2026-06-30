@@ -218,7 +218,7 @@ struct SettingsView: View {
                 Section {
                     Link(
                         destination: URL(
-                            string: "https://apps.apple.com/app/id6765719745?action=write-review")!
+                            string: "https://apps.apple.com/app/id6765719745?action=write-review&pt=128299974&ct=ios-app-settings")!
                     ) {
                         Label("Rate GeoSpoof", systemImage: "star")
                     }
@@ -228,13 +228,13 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    Link(destination: URL(string: "https://www.geospoof.com/support")!) {
+                    Link(destination: URL(string: "https://www.geospoof.com/support?utm_source=ios-app&utm_medium=app&utm_campaign=support")!) {
                         Label("Help & Support", systemImage: "questionmark.circle")
                     }
-                    Link(destination: URL(string: "https://www.geospoof.com/privacy")!) {
+                    Link(destination: URL(string: "https://www.geospoof.com/privacy?utm_source=ios-app&utm_medium=app&utm_campaign=privacy")!) {
                         Label("Privacy Policy", systemImage: "hand.raised")
                     }
-                    Link(destination: URL(string: "https://www.geospoof.com/terms")!) {
+                    Link(destination: URL(string: "https://www.geospoof.com/terms?utm_source=ios-app&utm_medium=app&utm_campaign=terms")!) {
                         Label("Terms of Service", systemImage: "doc.text")
                     }
                 } header: {

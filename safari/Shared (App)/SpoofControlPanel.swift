@@ -78,6 +78,12 @@ struct SpoofControlPanel: View {
         .onChange(of: controller.isActiveInSafari) { _ in
             evaluateReviewPrompt()
         }
+        .onChange(of: controller.hasLocation) { _ in
+            // Setting a location is the strongest "it's working" signal. Without
+            // this, a user who opens the app and *then* spoofs wouldn't count as
+            // a qualifying session until a later relaunch.
+            evaluateReviewPrompt()
+        }
         .onChange(of: pro.isFounder) { isFounder in
             if isFounder && !founderWelcomeShown { showFounderWelcome = true }
         }
@@ -245,7 +251,7 @@ struct SpoofControlPanel: View {
         // activation heartbeat. Note: iOS has no public API to force Safari
         // specifically; this opens the user's default browser, which is Safari
         // for the vast majority.
-        if let url = URL(string: "https://geospoof.com/verify") {
+        if let url = URL(string: "https://geospoof.com/verify?utm_source=ios-app&utm_medium=app&utm_campaign=verify-setup") {
             UIApplication.shared.open(url)
         }
     }
@@ -355,23 +361,8 @@ struct SpoofControlPanel: View {
     @ViewBuilder
     private var autoBackgroundSyncRow: some View {
         if pro.isPro {
-            // Read-only status, not a toggle: it's always on for Pro. Use the
-            // native label/value row (LabeledContent) so "On" renders at the
-            // standard Settings-row size/treatment; fall back to a matching
-            // HStack on iOS 15 (LabeledContent is iOS 16+).
-            if #available(iOS 16.0, *) {
-                LabeledContent {
-                    Text("On")
-                } label: {
-                    Label("Auto Background Sync", systemImage: "arrow.triangle.2.circlepath")
-                }
-            } else {
-                HStack {
-                    Label("Auto Background Sync", systemImage: "arrow.triangle.2.circlepath")
-                    Spacer()
-                    Text("On").foregroundStyle(.secondary)
-                }
-            }
+            // Read-only status, not a toggle: it's always on for Pro.
+            autoBackgroundSyncStatusRow
         } else {
             Button {
                 showPaywall = true
@@ -391,11 +382,38 @@ struct SpoofControlPanel: View {
             .buttonStyle(.plain)
         }
     }
+
+    /// The Pro "On" status row. Uses the native label/value row
+    /// (LabeledContent) so "On" renders at the standard Settings-row treatment,
+    /// falling back to a matching HStack on iOS 15 (LabeledContent is iOS 16+ /
+    /// macOS 13+). The `#available` check lives here — not in a `@ViewBuilder` —
+    /// and returns `AnyView` explicitly so SwiftUI never synthesizes
+    /// `ViewBuilder.buildLimitedAvailability`, whose return type only conforms
+    /// to `View` on macOS 26 (this app targets macOS 13).
+    private var autoBackgroundSyncStatusRow: some View {
+        if #available(iOS 16.0, *) {
+            return AnyView(
+                LabeledContent {
+                    Text("On")
+                } label: {
+                    Label("Auto Background Sync", systemImage: "arrow.triangle.2.circlepath")
+                }
+            )
+        } else {
+            return AnyView(
+                HStack {
+                    Label("Auto Background Sync", systemImage: "arrow.triangle.2.circlepath")
+                    Spacer()
+                    Text("On").foregroundStyle(.secondary)
+                }
+            )
+        }
+    }
     // MARK: Verification — "Verify Your Protection" link on the home (iOS + macOS)
 
     private var verificationSection: some View {
         Section {
-            Link(destination: URL(string: "https://www.geospoof.com/verify")!) {
+            Link(destination: verifyURL) {
                 HStack {
                     Label("Verify Your Protection", systemImage: "checkmark.shield")
                     Spacer()
@@ -405,6 +423,17 @@ struct SpoofControlPanel: View {
                 }
             }
         }
+    }
+
+    /// The verify-page URL, UTM-tagged so visits attribute to the right native
+    /// app surface (iOS vs macOS) in analytics rather than landing in "unknown".
+    private var verifyURL: URL {
+        #if os(iOS)
+        let source = "ios-app"
+        #else
+        let source = "macos-app"
+        #endif
+        return URL(string: "https://www.geospoof.com/verify?utm_source=\(source)&utm_medium=app&utm_campaign=verify")!
     }
 
     // MARK: Favorites
@@ -1416,8 +1445,9 @@ enum ReviewPrompt {
     private static let eventCountKey = "reviewSignificantEventCount"
     private static let lastPromptedVersionKey = "reviewLastPromptedVersion"
     /// Qualifying sessions before we ask. Small, since the trigger is already a
-    /// strong "it's working" signal.
-    private static let threshold = 3
+    /// strong "it's working" signal. Kept at 2 (not 1) so we don't ask on the
+    /// very first success, but still surface early while goodwill is high.
+    private static let threshold = 2
 
     /// Only count one significant event per process launch, so navigating back
     /// to the panel within a session can't inflate the counter.
@@ -1531,6 +1561,12 @@ struct SiteFiltersView: View {
     @ObservedObject private var pro = ProStore.shared
     @State private var showingAdd = false
     @State private var showPaywall = false
+    /// Mirror of `controller.scopeMode` that backs the segmented Picker. A
+    /// `@State` selection can be forcibly reverted (a get/set Binding can't be
+    /// reliably snapped back on macOS when we reject a locked selection), and
+    /// driving the gate from `.onChange` keeps us from mutating published state
+    /// during a view update.
+    @State private var pickerMode: ScopeMode = .all
 
     /// Per-site filtering is a Pro feature on the Apple apps (iOS + macOS);
     /// founders/subscribers are exempt via `pro.isPro`. The Chrome/Firefox
@@ -1543,21 +1579,28 @@ struct SiteFiltersView: View {
         AdaptiveNavigationStack {
             Form {
                 Section {
-                    Picker("Mode", selection: Binding(
-                        get: { controller.scopeMode },
-                        set: { newMode in
-                            if filtersLocked && newMode != .all {
-                                showPaywall = true
-                            } else {
-                                controller.setScopeMode(newMode)
-                            }
-                        }
-                    )) {
+                    Picker("Mode", selection: $pickerMode) {
                         ForEach(ScopeMode.allCases) { mode in
                             Text(mode.label).tag(mode)
                         }
                     }
                     .pickerStyle(.segmented)
+                    .onChange(of: pickerMode) { newMode in
+                        if filtersLocked && newMode != .all {
+                            // Locked: pitch Pro and reject the change by snapping
+                            // the control back to the real (still-.all) mode.
+                            showPaywall = true
+                            if pickerMode != controller.scopeMode {
+                                pickerMode = controller.scopeMode
+                            }
+                        } else if newMode != controller.scopeMode {
+                            controller.setScopeMode(newMode)
+                        }
+                    }
+                    // Keep the mirror in sync with the source of truth (e.g. an
+                    // update synced in from the extension).
+                    .onChange(of: controller.scopeMode) { pickerMode = $0 }
+                    .onAppear { pickerMode = controller.scopeMode }
                 } header: {
                     Text("Mode")
                 } footer: {

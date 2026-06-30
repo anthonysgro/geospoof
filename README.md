@@ -7,16 +7,24 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Website](https://img.shields.io/badge/Website-geospoof.com-4caf50.svg?logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABTElEQVQ4T41TS1LDMAyV3AXZsGPJJbgGC5qkoXG5Vi/AsAAS8uMi3AdmYiE5dRK7LoMzGSey9J70JCNcWLpNaSQDG1RA/FS7T4y5nhnL5oGQgxARiMjusuR7NAQfjz6QB6DbLQHgEnQ6Rba6NRqAuujnOA/g0GXWldiqFMDrdnI89IXwgwO6SW6T4/3xW85mAN1n5Bze8oVhXbcjEG3qkyYLAIvm2Kt8iAomAKKFZOh8Zsc918/SgWHFHXqouu6YhGmiAOWQk2KV1+mFAHMJ3Jk66yy53wXWwabIb5iFblJCNWW4LtED2FshufeSJu9VMfV87g7bzEZBnU7sZxmIwWkRDpKchexRADGWLJYI6ibRgcXaG22XbnZ3qMyXAxDVE7r+ec5frkJhowDi9DTwVHKkvQN8N+qs/d9l8iaPWysA71l8Mi9qEKb51/8vRNquEc5KgXwAAAAQZGVCRzg1RUVEM0EzRkYzNEI0MzTcy3bJAAAAAElFTkSuQmCC)](https://geospoof.com/?utm_source=github&utm_medium=readme)
-[![Firefox](https://img.shields.io/badge/Firefox-140%2B-FF7139.svg?logo=firefox-browser)](https://addons.mozilla.org/firefox/addon/geo-spoof/?utm_source=github&utm_medium=readme&utm_campaign=readme)
-[![Chrome](https://img.shields.io/badge/Chrome-available-4285F4.svg?logo=googlechrome)](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje?utm_source=github&utm_medium=readme&utm_campaign=readme)
-[![Safari](https://img.shields.io/badge/Safari-available-006CFF.svg?logo=safari)](https://apps.apple.com/app/apple-store/id6765719745?pt=128299974&ct=github&mt=8)
 [![Version](https://img.shields.io/github/package-json/v/anthonysgro/geospoof?color=green)](https://github.com/anthonysgro/geospoof/releases)
+[![Firefox users](https://img.shields.io/amo/users/geo-spoof?logo=firefox-browser&label=Firefox%20users)](https://addons.mozilla.org/firefox/addon/geo-spoof/?utm_source=github&utm_medium=readme&utm_campaign=readme)
+[![Chrome users](https://img.shields.io/chrome-web-store/users/dgdbdodafgaeifgajaajohkjjgobcgje?logo=googlechrome&label=Chrome%20users)](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje?utm_source=github&utm_medium=readme&utm_campaign=readme)
 [![Reddit](https://img.shields.io/badge/Reddit-r%2FGeoSpoof-FF4500.svg?logo=reddit&logoColor=white)](https://www.reddit.com/r/geospoof)
 
   <p>
     <img src="assets/store-listings/github/hero.png" alt="GeoSpoof main view" width="960" />
   </p>
 </div>
+
+## Contents
+
+- [Getting started](#getting-started) — [Install](#install) · [Usage](#usage)
+- [Why GeoSpoof?](#why-geospoof) — [What it does NOT do](#what-this-does-not-do)
+- [Overridden APIs](#overridden-apis)
+- [External Services](#external-services)
+- [Featured in](#featured-in)
+- [Development](#development)
 
 ## Getting started
 
@@ -121,15 +129,21 @@ When protection is enabled, GeoSpoof overrides browser APIs synchronously at `do
 - **Intl** — `Intl.DateTimeFormat` constructor and `resolvedOptions`
 - **Temporal** — `Temporal.Now.*` (feature-detected)
 - **XSLT / EXSLT** — `XSLTProcessor.prototype.transformToFragment/transformToDocument` rewrite EXSLT `date:date-time()` output (Firefox, where available)
-- **Workers** — `Worker`, `SharedWorker`, and `navigator.serviceWorker.register` wrapped to propagate the spoofed timezone into worker scopes
+- **Workers** — `Worker`, `SharedWorker`, and `navigator.serviceWorker.register` wrapped to propagate the spoofed timezone into worker scopes (URL-based worker coverage is the Firefox `webRequest.filterResponseData` path; inline/blob workers are covered on every engine)
 - **WebRTC** — via browser privacy API, no script injection needed
 - **Anti-fingerprinting** — `Function.prototype.toString` returns `[native code]` for all overrides; iframes patched on insertion
+- **Engine-level Spoofing** (Chrome/Chromium, opt-in) — an optional mode that drives the timezone override through the Chrome DevTools Protocol (`chrome.debugger` → `Emulation.setTimezoneOverride`) instead of page-world injection. It covers background/module/service workers and applies before a page's first script, closing the worker and cold-start timezone leaks the content-script path can't reach on Chromium MV3. Off by default; while on, Chrome shows a "started debugging this browser" notice. Geolocation stays on the injected path.
 
 For the full API reference, see [docs/API.md](docs/API.md). For the VPN sync and auto-resync architecture, see [docs/VPN_SYNC.md](docs/VPN_SYNC.md).
 
 ## External Services
 
-GeoSpoof runs no backend application and sends no data to the developer for collection or analytics. Some features — city search and the optional "Sync with VPN" — make requests directly from your device to third-party services. Timezone resolution downloads boundary data from the developer's own domain (`geospoof.com`, a static-file host), which transmits your IP as part of that request. The developer does **not** use these requests for analytics, tracking, profiling, advertising, or user accounts, and stores no personal data from them. Exactly what is sent, when, and to whom (for both the Safari extension and the companion apps) is documented in the [Privacy Policy](PRIVACY_POLICY.md).
+GeoSpoof runs no backend application and sends no data to the developer for collection or analytics. Some features — city search and the optional "Sync with VPN" — make requests directly from your device to third-party services. Timezone resolution downloads boundary data from the developer's own CDN (`cdn.geospoof.com`, hosted on AWS), which transmits your IP as part of that request. The developer does **not** use these requests for analytics, tracking, profiling, advertising, or user accounts, and stores no personal data from them. Exactly what is sent, when, and to whom (for both the Safari extension and the companion apps) is documented in the [Privacy Policy](PRIVACY_POLICY.md).
+
+## Featured in
+
+- [Privacy Guides community forum](https://discuss.privacyguides.net/t/geospoof-a-firefox-add-on-for-convenient-geolocation-privacy/36159) — "GeoSpoof: a Firefox add-on for convenient geolocation privacy"
+- [Korben](https://korben.info/geospoof-vpn-navigateur-localisation.html) — "GeoSpoof - Le VPN cache votre IP mais le navigateur vous trahit" (FR)
 
 ## Development
 
@@ -157,8 +171,29 @@ MIT — see [LICENSE](LICENSE).
 - [Report Issues](https://github.com/anthonysgro/geospoof/issues)
 - [Buy me a coffee](https://buymeacoffee.com/sgro)
 
+## Star History
+
+<a href="https://www.star-history.com/?repos=anthonysgro%2Fgeospoof&type=date&legend=top-left">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=anthonysgro/geospoof&type=date&theme=dark&legend=top-left" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=anthonysgro/geospoof&type=date&legend=top-left" />
+    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=anthonysgro/geospoof&type=date&legend=top-left" />
+  </picture>
+</a>
+
 ## Acknowledgments
 
 - [Nominatim](https://nominatim.org/) for geocoding
 - [browser-geo-tz](https://github.com/kevmo314/browser-geo-tz) for timezone boundary-data lookup
 - [BrowserLeaks](https://browserleaks.com/) for testing tools
+- [arkenfox TZP](https://arkenfox.github.io/TZP/tzp.html) for timezone/geolocation fingerprint testing
+- [CreepJS](https://abrahamjuliot.github.io/creepjs/) for fingerprint testing
+- [webbrowsertools](https://webbrowsertools.com/) for testing tools
+
+### Contributors
+
+Thanks to everyone who has contributed to GeoSpoof.
+
+<a href="https://github.com/anthonysgro/geospoof/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=anthonysgro/geospoof" alt="GeoSpoof contributors" />
+</a>

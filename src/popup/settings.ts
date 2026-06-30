@@ -41,12 +41,18 @@ export async function loadSettings(): Promise<void> {
 
     const protectionToggle = document.getElementById("protectionToggle") as HTMLInputElement | null;
     const webrtcToggle = document.getElementById("webrtcToggle") as HTMLInputElement | null;
+    const preserveGeoPromptToggle = document.getElementById(
+      "preserveGeoPromptToggle"
+    ) as HTMLInputElement | null;
 
     if (protectionToggle) {
       protectionToggle.checked = settings.enabled;
     }
     if (webrtcToggle) {
       webrtcToggle.checked = settings.webrtcProtection;
+    }
+    if (preserveGeoPromptToggle) {
+      preserveGeoPromptToggle.checked = settings.preserveGeolocationPrompt;
     }
 
     // WebRTC Protection is now implemented at the content-script layer

@@ -20,6 +20,7 @@ function makeSettings(overrides?: Partial<Settings>): Settings {
     timezone: { identifier: "America/Los_Angeles", offset: 480, dstOffset: 60 },
     locationName: { city: "San Francisco", country: "US", displayName: "San Francisco, US" },
     webrtcProtection: false,
+    preserveGeolocationPrompt: false,
     onboardingCompleted: true,
     version: "1.0",
     lastUpdated: Date.now(),

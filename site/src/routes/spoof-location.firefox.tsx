@@ -4,7 +4,7 @@ import { SITE_URL } from "@/lib/blog"
 
 const PAGE_URL = `${SITE_URL}/spoof-location/firefox`
 const DESCRIPTION =
-  "Spoof your location in Firefox with a free, open-source add-on. GeoSpoof overrides the Geolocation API and timezone so sites see the location you choose. Works on Firefox for Android too."
+  "Spoof your location in Firefox with a free, open-source add-on. GeoSpoof overrides the Geolocation API and timezone so sites see the location you choose."
 
 export const Route = createFileRoute("/spoof-location/firefox")({
   component: () => <BrowserSpoofPage slug="firefox" />,

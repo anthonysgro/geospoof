@@ -176,6 +176,24 @@ export let settingsReceived = false;
  */
 export let webrtcProtectionEnabled = false;
 
+/**
+ * Content-script-level "preserve permission prompts" flag.
+ *
+ * When false (default), the geolocation override answers `getCurrentPosition`
+ * / `watchPosition` directly with spoofed coordinates and forces
+ * `permissions.query` to report `"granted"` — so a site silently receives a
+ * location and never sees the native browser prompt.
+ *
+ * When true, the override instead calls the real geolocation API to surface
+ * the browser's own permission prompt; it substitutes spoofed coordinates only
+ * after the user grants, and forwards denials/errors unchanged. The
+ * `permissions.query` override also stops forcing `"granted"` and reports the
+ * real permission state. This trades the seamless VPN-companion experience for
+ * lower fingerprinting entropy (denied sites behave like a normal browser) and
+ * genuine per-site user control. Set from the settings CustomEvent.
+ */
+export let preserveGeolocationPrompt = false;
+
 // Setter functions for state mutation from other modules
 export function setSpoofingEnabled(v: boolean): void {
   spoofingEnabled = v;
@@ -199,4 +217,8 @@ export function setDebugEnabled(v: boolean): void {
 
 export function setWebRTCProtectionEnabled(v: boolean): void {
   webrtcProtectionEnabled = v;
+}
+
+export function setPreserveGeolocationPrompt(v: boolean): void {
+  preserveGeolocationPrompt = v;
 }

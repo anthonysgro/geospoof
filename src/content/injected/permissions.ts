@@ -5,7 +5,12 @@
  * geolocation permission when spoofing is enabled.
  */
 
-import { spoofingEnabled, settingsReceived, originalPermissionsQuery } from "./state";
+import {
+  spoofingEnabled,
+  settingsReceived,
+  preserveGeolocationPrompt,
+  originalPermissionsQuery,
+} from "./state";
 import { installOverride } from "./function-masking";
 import { waitForSettings } from "./settings-listener";
 import { createLogger } from "@/shared/utils/debug-logger";
@@ -97,16 +102,21 @@ export function installPermissionsOverride(): void {
         logger.debug("permissions.query: intercepted geolocation check", {
           spoofingEnabled,
           settingsReceived,
+          preserveGeolocationPrompt,
         });
         if (settingsReceived) {
-          if (spoofingEnabled) {
+          // In preserve-prompt mode we never fake "granted" — the page should
+          // see the genuine permission state so a yet-to-be-prompted site reads
+          // "prompt" (and a denied site "denied"), matching a normal browser and
+          // shedding the always-granted fingerprinting signal.
+          if (spoofingEnabled && !preserveGeolocationPrompt) {
             return Promise.resolve(createSpoofedPermissionStatus());
           }
           return originalPermissionsQuery(descriptor);
         }
         // Defer until settings arrive
         return waitForSettings().then(() => {
-          if (spoofingEnabled) {
+          if (spoofingEnabled && !preserveGeolocationPrompt) {
             return createSpoofedPermissionStatus();
           }
           return originalPermissionsQuery(descriptor);

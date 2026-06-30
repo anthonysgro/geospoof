@@ -14,7 +14,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { mdxComponents } from "@/components/blog/mdx-components"
-import { SITE_URL, formatDate, getPostBySlug, postUrl } from "@/lib/blog"
+import { SITE_URL, blogPageTitle, formatDate, getAdjacentPosts, getPostBySlug, postUrl } from "@/lib/blog"
 
 export const Route = createFileRoute("/blog/$slug")({
   loader: ({ params }) => {
@@ -33,30 +33,43 @@ export const Route = createFileRoute("/blog/$slug")({
       post.cover && /\.(png|jpe?g|webp)$/i.test(post.cover)
         ? `${SITE_URL}${post.cover}`
         : `${SITE_URL}/images/social-og-home.png`
+    const ogImageAlt = post.coverAlt ?? post.title
     return {
       meta: [
-        { title: `${post.title} | GeoSpoof Blog` },
+        { title: blogPageTitle(post.title) },
         { name: "description", content: post.description },
         ...(post.keywords.length > 0
           ? [{ name: "keywords", content: post.keywords.join(", ") }]
           : []),
         { name: "author", content: post.author },
+        // Let Google use large image previews + full snippets in results.
+        {
+          name: "robots",
+          content: "index, follow, max-image-preview:large, max-snippet:-1",
+        },
         // Open Graph (article)
         { property: "og:type", content: "article" },
+        { property: "og:site_name", content: "GeoSpoof" },
+        { property: "og:locale", content: "en_US" },
         { property: "og:url", content: url },
         { property: "og:title", content: post.title },
         { property: "og:description", content: post.description },
         { property: "og:image", content: ogImage },
+        { property: "og:image:width", content: "1200" },
+        { property: "og:image:height", content: "630" },
+        { property: "og:image:alt", content: ogImageAlt },
         { property: "article:published_time", content: post.date },
         ...(post.updated
           ? [{ property: "article:modified_time", content: post.updated }]
           : []),
         { property: "article:author", content: post.author },
+        ...post.tags.map((tag) => ({ property: "article:tag", content: tag })),
         // Twitter / X
         { name: "twitter:card", content: "summary_large_image" },
         { name: "twitter:title", content: post.title },
         { name: "twitter:description", content: post.description },
         { name: "twitter:image", content: ogImage },
+        { name: "twitter:image:alt", content: ogImageAlt },
       ],
       links: [{ rel: "canonical", href: url }],
     }
@@ -67,6 +80,7 @@ export const Route = createFileRoute("/blog/$slug")({
 function BlogPostPage() {
   const post = Route.useLoaderData()
   const url = postUrl(post.slug)
+  const { newer, older } = getAdjacentPosts(post.slug)
   const socialImage =
     post.cover && /\.(png|jpe?g|webp)$/i.test(post.cover)
       ? `${SITE_URL}${post.cover}`
@@ -89,7 +103,11 @@ function BlogPostPage() {
       },
     },
     image: socialImage,
+    url,
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
+    inLanguage: "en-US",
+    isAccessibleForFree: true,
+    ...(post.tags.length > 0 ? { articleSection: post.tags } : {}),
     keywords: post.keywords.join(", "),
   }
 
@@ -180,6 +198,9 @@ function BlogPostPage() {
                 alt={post.coverAlt ?? ""}
                 width={1200}
                 height={630}
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
                 className="mb-8 aspect-1200/630 w-full rounded-brand border border-(--color-canvas-border) object-cover"
               />
             )}
@@ -217,6 +238,55 @@ function BlogPostPage() {
                 </dl>
               </section>
             )}
+
+            {(newer || older) && (
+              <nav
+                aria-label="More blog posts"
+                className="mt-12 grid gap-4 border-t border-(--color-canvas-border) pt-8 sm:grid-cols-2"
+              >
+                {older ? (
+                  <Link
+                    to="/blog/$slug"
+                    params={{ slug: older.slug }}
+                    className="group flex flex-col rounded-md-brand border border-(--color-canvas-border) p-4 transition-colors hover:border-(--color-brand)"
+                  >
+                    <span className="text-small text-(--color-canvas-muted)">
+                      ← Older post
+                    </span>
+                    <span className="mt-1 font-semibold text-(--color-canvas-foreground) group-hover:text-(--color-brand)">
+                      {older.title}
+                    </span>
+                  </Link>
+                ) : (
+                  <span aria-hidden="true" className="hidden sm:block" />
+                )}
+                {newer ? (
+                  <Link
+                    to="/blog/$slug"
+                    params={{ slug: newer.slug }}
+                    className="group flex flex-col rounded-md-brand border border-(--color-canvas-border) p-4 text-right transition-colors hover:border-(--color-brand) sm:items-end"
+                  >
+                    <span className="text-small text-(--color-canvas-muted)">
+                      Newer post →
+                    </span>
+                    <span className="mt-1 font-semibold text-(--color-canvas-foreground) group-hover:text-(--color-brand)">
+                      {newer.title}
+                    </span>
+                  </Link>
+                ) : (
+                  <span aria-hidden="true" className="hidden sm:block" />
+                )}
+              </nav>
+            )}
+
+            <div className="mt-10 text-center">
+              <Link
+                to="/blog"
+                className="text-small font-medium text-(--color-brand) hover:underline"
+              >
+                ← Back to all posts
+              </Link>
+            </div>
           </article>
         </Section>
       </main>

@@ -28,9 +28,9 @@ import { PROTON_DISCOUNT, protonVpnLink } from "@/lib/affiliate"
 
 const PAGE_URL = `${SITE_URL}/vpn`
 const PAGE_TITLE =
-  "Do You Need a VPN With GeoSpoof? The Two Layers of Location Privacy | GeoSpoof"
+  "Do You Need a VPN With GeoSpoof? Two Layers of Privacy | GeoSpoof"
 const PAGE_DESCRIPTION =
-  "GeoSpoof hides the location, timezone, and WebRTC your browser reports. A no-log VPN hides your IP — the one signal an extension can't change. Here's how the two layers fit together, and the VPN we trust for the second (and why)."
+  "GeoSpoof hides the location, timezone, and WebRTC your browser reports. A no-log VPN hides your IP — the one signal an extension can't change."
 
 // Single CTA destination for this page. Defined once; the actual outbound URL
 // lives behind the /go/proton redirect (see vercel.json), built via

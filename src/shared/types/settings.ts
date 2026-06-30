@@ -92,6 +92,17 @@ export interface Settings {
   locationName: LocationName | null;
   /** Whether WebRTC IP leak protection is enabled */
   webrtcProtection: boolean;
+  /**
+   * When true, GeoSpoof surfaces the browser's native geolocation permission
+   * prompt instead of silently auto-granting spoofed coordinates: the injected
+   * override calls the real API to trigger the prompt and only swaps in spoofed
+   * coords after the user grants (denials pass through), and `permissions.query`
+   * reports the real state rather than a forced "granted". Off by default to
+   * preserve the seamless VPN-companion experience; turning it on gives per-site
+   * control and reduces the always-granted fingerprinting signal. Applies on
+   * every engine (it's a content-script behavior, independent of debugger mode).
+   */
+  preserveGeolocationPrompt: boolean;
   /** Whether the user has completed onboarding */
   onboardingCompleted: boolean;
   /** Settings schema version (for migrations) */
@@ -101,17 +112,45 @@ export interface Settings {
   /** Whether VPN sync mode is the active location method */
   vpnSyncEnabled: boolean;
   /**
-   * Chromium only: when true, GeoSpoof spoofs geolocation and timezone at the
-   * browser level via the chrome.debugger API (Chrome DevTools Protocol's
-   * Emulation domain) instead of the page-world content-script overrides. CDP
-   * overrides apply to every frame and worker, even on the very first
-   * synchronous script, so detection vectors that slip past JS-level patching
-   * are closed. The trade-off is the persistent "GeoSpoof started debugging
-   * this browser" notification bar, so it's strictly opt-in and gated behind
-   * the optional `debugger` permission (requested at runtime from the popup).
-   * While it's on, the content-script geo/timezone injection is suppressed
-   * (redundant); WebRTC protection still runs through the content script.
-   * Always false on Firefox/Safari (no chrome.debugger equivalent).
+   * Chromium only: when true, GeoSpoof spoofs the TIMEZONE at the browser level
+   * via the chrome.debugger API (Chrome DevTools Protocol's Emulation domain,
+   * `setTimezoneOverride`) instead of the page-world content-script override.
+   * The CDP override applies to every frame AND worker — including module /
+   * service workers — even on the very first synchronous script, closing the
+   * worker-timezone leaks the Chromium content-script path can't cover (no
+   * `webRequest.filterResponseData` on Chromium MV3). The trade-off is the
+   * persistent "GeoSpoof started debugging this browser" notification bar, so
+   * it's strictly opt-in and gated behind the optional `debugger` permission
+   * (requested at runtime from the popup). While it's on, only the injected
+   * TIMEZONE override is suppressed (redundant); WebRTC protection still runs
+   * through the content script. Always false on Firefox/Safari (no
+   * chrome.debugger equivalent).
+   *
+   * GEOLOCATION is deliberately NOT driven through CDP, even in this mode — it
+   * stays on the injected content-script path. Reasons:
+   *   1. Minimal upside. `navigator.geolocation` is a Window-only API (not
+   *      exposed to workers), so the worker-coverage benefit that justifies CDP
+   *      for timezone doesn't exist for geolocation. The only edge CDP would buy
+   *      is cold start: it could answer the very first `getCurrentPosition` at
+   *      native latency instead of after the injected path defers for the
+   *      settings round-trip (see `waitForSettings`). But that's a timing-
+   *      fidelity nicety, not correctness — the injected deferral already
+   *      guarantees no real-location leak at cold start — and it's negated by
+   *      reason 2 (early readiness doesn't make geo prompt-free).
+   *   2. Real downside. CDP's `setGeolocationOverride` only takes effect once
+   *      the origin already holds the geolocation permission, so making it
+   *      prompt-free requires `Browser.grantPermissions`, which grants the
+   *      origin geolocation while DENYING all its other permissions — clobbering
+   *      unrelated site state — and mixes a Browser-domain (global) command into
+   *      a per-tab attach, complicating teardown.
+   *   3. The injected path is already strictly better here: it replaces
+   *      `getCurrentPosition` outright, so it's reliably prompt-free, race-free,
+   *      and per-tab scope-aware, with no debugging bar. (See
+   *      `Settings.preserveGeolocationPrompt` for opting back into the native
+   *      prompt — that's a separate, engine-independent content-script toggle.)
+   * The injected geolocation override therefore keeps running in debugger mode;
+   * see the timezone-only suppression in background `broadcastSettingsToTabs` /
+   * the GET_SETTINGS scoped payload, and `src/background/debugger-spoof.ts`.
    */
   debuggerModeEnabled: boolean;
   /**
@@ -161,6 +200,7 @@ export const DEFAULT_SETTINGS: Settings = {
   timezone: null,
   locationName: null,
   webrtcProtection: false,
+  preserveGeolocationPrompt: false,
   onboardingCompleted: false,
   version: "1.1",
   // Epoch 0 (not Date.now()): a never-saved settings object hasn't been

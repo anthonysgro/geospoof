@@ -879,26 +879,41 @@ function buildValueGroups(
   const now = new Date()
   const groups: Array<ValueGroup> = []
 
-  // Spoofed-local wall-clock "now", used to grade surfaces that should
-  // report the current instant in the spoofed zone (Temporal plain* and
-  // freshly-minted document lastModified values). A timezone leak shifts
-  // the reported wall-clock by the real-vs-spoofed offset (tens of minutes
-  // to hours), well outside this tolerance; the slack only absorbs the
-  // sub-second gap between capturing `now` and reading each surface.
+  // The browser's own claimed zone (what a fingerprinter reads from Intl).
+  const intlZone = safe(() => new Intl.DateTimeFormat().resolvedOptions().timeZone)
+
+  // The zone we grade every surface against — the "source of truth". When the
+  // coordinates resolved to a zone, THAT is the truth: each surface must report
+  // the time / offset / zone the coordinates imply, not merely agree with the
+  // browser's other surfaces. A "bad spoofer" that moves geolocation but leaves
+  // the real zone in place reports a consistent-but-wrong zone everywhere; grading
+  // against the coordinates is what catches it.
   //
-  // CRITICAL: this reference is derived from `Intl`, NOT from `Date`'s own
-  // getters. Intl converts the real epoch (Date's underlying timestamp, which a
-  // timezone spoof never shifts) into the target zone on its own, so it stays a
-  // trustworthy "spoofed now" even when an extension leaks the real zone
-  // through the Date getters. Grading against `now.getHours()` etc. was a
-  // false-pass bug: an extension that leaked the real zone in BOTH the Date
-  // getters AND `lastModified` would agree with itself and grade "ok" (this is
-  // exactly how a competitor that doesn't patch the Document lastModified
-  // getter slipped through as a pass). Falls back to Date getters only if Intl
-  // is unavailable.
+  // When we have no coordinates (permission denied, or the boundary data didn't
+  // load) we fall back to the browser's own claimed zone, so the checks degrade
+  // to pure surface-vs-surface internal consistency rather than going dark.
+  const truthZone = geoTz.status === "ready" ? geoTz.zone : intlZone
+
+  // Expected wall-clock "now", i.e. the current instant rendered in the truth
+  // zone. Surfaces that should report "now" in that zone (Temporal plain*,
+  // freshly-minted document lastModified, the local Date getters) are graded
+  // against this. A timezone leak shifts the reported wall-clock by the
+  // real-vs-truth offset (tens of minutes to hours), well outside the tolerance
+  // used below; the slack only absorbs the sub-second gap between capturing
+  // `now` and reading each surface.
+  //
+  // CRITICAL: this reference is derived from `Intl` with an explicit
+  // `timeZone: truthZone`, NOT from `Date`'s own getters. Intl converts the real
+  // epoch (Date's underlying timestamp, which a timezone spoof never shifts) into
+  // the requested zone itself, so it stays a trustworthy reference even when an
+  // extension leaks the real zone through the Date getters. Grading against
+  // `now.getHours()` etc. would be a false-pass bug: an extension that leaked the
+  // real zone in BOTH the Date getters AND `lastModified` would agree with itself
+  // and grade "ok". Falls back to Date getters only if Intl is unavailable.
   const nowParts = (() => {
     try {
       const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: truthZone || undefined,
         year: "numeric",
         month: "numeric",
         day: "numeric",
@@ -954,12 +969,13 @@ function buildValueGroups(
   /** Boolean → check / X verdict. */
   const vOf = (ok: boolean): RowVerdict => (ok ? "ok" : "leak")
 
-  // Local wall-clock components as Intl sees them (in the spoofed zone). Used
-  // to confirm Date's own getters agree with Intl formatting — a disagreement
-  // means some surface wasn't spoofed in lockstep with the others.
+  // Wall-clock components as they should read in the truth zone. Used to grade
+  // Date's own local getters and the locale string surfaces — a surface that
+  // reports a different wall-clock leaked a zone other than the coordinates'.
   const localFmtParts = (() => {
     try {
       const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: truthZone || undefined,
         year: "numeric",
         month: "numeric",
         day: "numeric",
@@ -1030,15 +1046,18 @@ function buildValueGroups(
   }
 
   // ── Timezone ────────────────────────────────────────────────────────────
-  const intlZone = safe(() => new Intl.DateTimeFormat().resolvedOptions().timeZone)
   const offsetMins = now.getTimezoneOffset()
 
-  // The offset Intl reports for the (spoofed) zone, used to confirm
-  // Date.getTimezoneOffset() agrees with Intl. Null when it can't be read.
-  const intlOffset = (() => {
+  // The offset the truth zone has at `now`, expressed in getTimezoneOffset()
+  // convention (positive = west of UTC). The browser's own Date.getTimezoneOffset()
+  // and every other offset-bearing surface must match it. When we have
+  // coordinates this is the offset the coordinates imply; without them it's the
+  // browser's own claimed zone, so the comparison degrades to self-consistency.
+  // Null when it can't be read.
+  const expectedOffset = (() => {
     try {
       const fmt = new Intl.DateTimeFormat("en", {
-        timeZone: intlZone || undefined,
+        timeZone: truthZone || undefined,
         timeZoneName: "shortOffset",
       })
       const part = fmt.formatToParts(now).find((p) => p.type === "timeZoneName")
@@ -1072,16 +1091,17 @@ function buildValueGroups(
     browserOffsets[year] = new Date(year, 0, 1).getTimezoneOffset()
   }
 
-  // Compute *expected* offsets for the browser's own claimed timezone
-  // (`intlZone`) across the same historical dates. If the browser's Date
-  // offsets don't match what its claimed zone should have had historically,
-  // the timezone spoofing is incomplete (the historical offsets leak the real
-  // zone's DST history). This works without geolocation since it grades
-  // against the claimed zone, not the coordinates.
+  // Compute *expected* offsets for the truth zone across the same historical
+  // dates. If the browser's Date offsets don't match what the truth zone should
+  // have had historically, the timezone is wrong — either spoofing is
+  // incomplete (the historical offsets leak the real zone's DST history) or the
+  // claimed zone doesn't match the coordinates. Without geolocation this grades
+  // against the browser's own claimed zone, so it still catches incomplete
+  // historical spoofing.
   const expectedOffsets: Record<number, number | null> = {}
-  if (intlZone) {
+  if (truthZone) {
     for (const year of historicalYears) {
-      expectedOffsets[year] = getTimezoneOffsetConvention(intlZone, new Date(year, 0, 1))
+      expectedOffsets[year] = getTimezoneOffsetConvention(truthZone, new Date(year, 0, 1))
     }
   }
 
@@ -1104,11 +1124,7 @@ function buildValueGroups(
     {
       api: "Date.getTimezoneOffset()",
       value: `${fmtOffset(offsetMins)} (${offsetMins})`,
-      verdict: geoMismatch
-        ? "leak"
-        : intlOffset == null
-          ? undefined
-          : vOf(intlOffset === offsetMins),
+      verdict: expectedOffset == null ? undefined : vOf(expectedOffset === offsetMins),
     },
     {
       api: "Date.now()",
@@ -1139,21 +1155,21 @@ function buildValueGroups(
       api: `new Date(${year},0,1).getTimezoneOffset()`,
       value:
         expected != null && !match
-          ? `${browser} mins (expected ${Math.round(expected)} for ${intlZone})`
+          ? `${browser} mins (expected ${Math.round(expected)} for ${truthZone})`
           : `${browser} mins`,
       verdict: expected != null ? vOf(match) : undefined,
     })
   }
 
   const tzConsistent = (() => {
-    // Intl offset must agree with Date, and the UTC statics must be canonical.
-    if (intlOffset != null && intlOffset !== offsetMins) return false
+    // The truth-zone offset must agree with Date, and the UTC statics must be canonical.
+    if (expectedOffset != null && expectedOffset !== offsetMins) return false
     if (Date.UTC(2024, 0, 1) !== EXPECTED_UTC_2024) return false
     return true
   })()
 
   const historicalNote = historicalMismatch
-    ? `Historical offsets don't match ${intlZone} — timezone spoofing may be incomplete`
+    ? `Historical offsets don't match ${truthZone} — timezone spoofing may be incomplete`
     : geoMismatch || geoUnavailable
       ? geoNote
       : undefined
@@ -1182,7 +1198,7 @@ function buildValueGroups(
     { api: "getHours()", value: safe(() => String(now.getHours())), verdict: localFmtParts ? vOf(now.getHours() === localFmtParts.hour) : undefined },
     { api: "getMinutes()", value: safe(() => String(now.getMinutes())), verdict: localFmtParts ? vOf(now.getMinutes() === localFmtParts.minute) : undefined },
     { api: "getSeconds()", value: safe(() => String(now.getSeconds())), verdict: localFmtParts ? vOf(now.getSeconds() === localFmtParts.second) : undefined },
-    { api: "getTimezoneOffset()", value: safe(() => `${now.getTimezoneOffset()} mins`), verdict: geoMismatch ? "leak" : intlOffset == null ? undefined : vOf(intlOffset === offsetMins) },
+    { api: "getTimezoneOffset()", value: safe(() => `${now.getTimezoneOffset()} mins`), verdict: expectedOffset == null ? undefined : vOf(expectedOffset === offsetMins) },
     { api: "getTime()", value: safe(() => String(now.getTime())), utc: true, verdict: vOf(now.getTime() === now.valueOf()) },
     { api: "valueOf()", value: safe(() => String(now.valueOf())), utc: true, verdict: vOf(now.getTime() === now.valueOf()) },
     { api: "getUTCFullYear()", value: safe(() => String(now.getUTCFullYear())), utc: true, verdict: utcParts ? vOf(now.getUTCFullYear() === utcParts.year) : undefined },
@@ -1225,29 +1241,37 @@ function buildValueGroups(
 
   // ── Date & time strings ─────────────────────────────────────────────────
   const toStringOffset = offsetFromString(safe(() => now.toString()))
+  // toLocaleTimeString() renders in the browser's own zone; its hour must match
+  // the hour the truth zone has right now. A leaked zone shows a different hour.
   const localeHourMatches = (() => {
     try {
       const h = parseInt(now.toLocaleTimeString("en-US", { hour: "numeric", hour12: false }), 10)
       const norm = h === 24 ? 0 : h
-      return now.getHours() === norm
+      return localFmtParts ? norm === localFmtParts.hour : true
     } catch {
       return true
     }
   })()
-  // toDateString() emits a fixed English "Www Mmm DD YYYY" in local time, so
-  // we can rebuild the expected string from the spoofed-zone components.
+  // toDateString() emits a fixed English "Www Mmm DD YYYY" in the browser's
+  // zone, so we rebuild the expected string from the truth-zone components and
+  // compare. (Near midnight the calendar date legitimately differs between
+  // zones, so a wrong zone is caught here too.)
   const expectedDateString =
     localFmtParts != null
       ? `${localFmtParts.weekday.slice(0, 3)} ${MONTHS[localFmtParts.month].slice(0, 3)} ${pad2(localFmtParts.day)} ${localFmtParts.year}`
       : null
-  // toLocaleString() / toLocaleDateString() should agree with the equivalent
-  // Intl.DateTimeFormat output for the same instant — the two formatting paths
-  // diverging means one wasn't spoofed in step with the other.
+  // toLocaleString() / toLocaleDateString() render in the browser's own zone;
+  // they must match the equivalent Intl output rendered IN THE TRUTH ZONE for
+  // the same instant. If the browser's zone differs from the coordinates', the
+  // two diverge and the surface is flagged. When there are no coordinates the
+  // reference falls back to the browser's claimed zone, so this degrades to a
+  // self-consistency check between the two formatting paths.
   const localeStringConsistent = (() => {
     try {
       return (
         now.toLocaleString() ===
         new Intl.DateTimeFormat(undefined, {
+          timeZone: truthZone || undefined,
           year: "numeric",
           month: "numeric",
           day: "numeric",
@@ -1262,7 +1286,10 @@ function buildValueGroups(
   })()
   const localeDateStringConsistent = (() => {
     try {
-      return now.toLocaleDateString() === new Intl.DateTimeFormat().format(now)
+      return (
+        now.toLocaleDateString() ===
+        new Intl.DateTimeFormat(undefined, { timeZone: truthZone || undefined }).format(now)
+      )
     } catch {
       return true
     }
@@ -1271,7 +1298,7 @@ function buildValueGroups(
     {
       api: "Date.toString()",
       value: safe(() => now.toString()),
-      verdict: geoMismatch ? "leak" : toStringOffset == null ? undefined : vOf(toStringOffset === offsetMins),
+      verdict: toStringOffset == null ? undefined : vOf(toStringOffset === expectedOffset),
     },
     {
       api: "Date.toDateString()",
@@ -1281,7 +1308,7 @@ function buildValueGroups(
     {
       api: "Date.toTimeString()",
       value: safe(() => now.toTimeString()),
-      verdict: geoMismatch ? "leak" : offsetFromString(safe(() => now.toTimeString())) == null ? undefined : vOf(offsetFromString(safe(() => now.toTimeString())) === offsetMins),
+      verdict: offsetFromString(safe(() => now.toTimeString())) == null ? undefined : vOf(offsetFromString(safe(() => now.toTimeString())) === expectedOffset),
     },
     { api: "Date.toLocaleString()", value: safe(() => now.toLocaleString()), verdict: vOf(localeStringConsistent) },
     { api: "Date.toLocaleDateString()", value: safe(() => now.toLocaleDateString()), verdict: vOf(localeDateStringConsistent) },
@@ -1290,7 +1317,7 @@ function buildValueGroups(
   ]
 
   const dateConsistent =
-    localeHourMatches && (toStringOffset == null || toStringOffset === offsetMins)
+    localeHourMatches && (toStringOffset == null || toStringOffset === expectedOffset)
 
   groups.push({
     id: "datetime",
@@ -1339,24 +1366,35 @@ function buildValueGroups(
     formatRange?: (a: Date, b: Date) => string
   }
   if (typeof dtfProto.formatRange === "function") {
+    // formatRange renders a local time range; grade the browser's output against
+    // the same range rendered in the truth zone. A leaked zone shifts the range.
+    const later = new Date(now.getTime() + 3 * 60 * 60 * 1000)
+    const fmtRange = (tz: string | undefined) =>
+      new Intl.DateTimeFormat(undefined, { timeStyle: "short", timeZone: tz }).formatRange(
+        now,
+        later
+      )
+    const measuredRange = safe(() => fmtRange(undefined))
+    const expectedRange = safe(() => fmtRange(truthZone || undefined))
     intlRows.push({
       api: "…formatRange()",
-      value: safe(() => {
-        const later = new Date(now.getTime() + 3 * 60 * 60 * 1000)
-        return new Intl.DateTimeFormat(undefined, { timeStyle: "short" }).formatRange(
-          now,
-          later
-        )
-      }),
+      value: measuredRange,
+      verdict:
+        measuredRange === "unavailable" || expectedRange === "unavailable"
+          ? undefined
+          : vOf(measuredRange === expectedRange),
     })
   }
 
   const intlConsistent = (() => {
     try {
       const opts: Intl.DateTimeFormatOptions = { dateStyle: "medium", timeStyle: "short" }
+      // Browser-zone formatting (toLocaleString) must match the same instant
+      // formatted in the truth zone. If the browser's zone differs from the
+      // coordinates', the rendered date/time diverges and the surface leaks.
       return (
         now.toLocaleString("en-US", opts) ===
-        new Intl.DateTimeFormat("en-US", opts).format(now)
+        new Intl.DateTimeFormat("en-US", { ...opts, timeZone: truthZone || undefined }).format(now)
       )
     } catch {
       return false
@@ -1400,7 +1438,7 @@ function buildValueGroups(
       temporalRows.push({
         api: "Temporal.Now.timeZoneId()",
         value: zone,
-        verdict: zone === "unavailable" ? undefined : zonesMatch(zone, intlZone) ? "ok" : "leak",
+        verdict: zone === "unavailable" ? undefined : zonesMatch(zone, truthZone) ? "ok" : "leak",
       })
     }
     if (tNow.plainDateISO) {
@@ -1437,8 +1475,8 @@ function buildValueGroups(
     if (tNow.zonedDateTimeISO) {
       const zoned = safe(() => tNow.zonedDateTimeISO!().toString())
       // zonedDateTimeISO embeds both an offset and a [Zone] suffix, e.g.
-      // "2024-01-01T12:00:00+05:30[Asia/Kolkata]". Grade against the
-      // spoofed main-thread offset.
+      // "2024-01-01T12:00:00+05:30[Asia/Kolkata]". Grade its offset against the
+      // offset the truth zone has right now.
       const zonedOffset = offsetFromString(zoned)
       temporalRows.push({
         api: "Temporal.Now.zonedDateTimeISO()",
@@ -1446,7 +1484,7 @@ function buildValueGroups(
         verdict:
           zoned === "unavailable" || zonedOffset == null
             ? undefined
-            : zonedOffset === offsetMins
+            : zonedOffset === expectedOffset
               ? "ok"
               : "leak",
       })
@@ -1543,7 +1581,7 @@ function buildValueGroups(
           verdict:
             iframeDateStr === "unavailable" || iframeOffset == null
               ? undefined
-              : iframeOffset === offsetMins
+              : iframeOffset === expectedOffset
                 ? "ok"
                 : "leak",
         })
@@ -1554,7 +1592,7 @@ function buildValueGroups(
           api: "iframe Intl.DateTimeFormat().resolvedOptions().timeZone",
           value: iframeZone,
           verdict:
-            iframeZone === "unavailable" ? undefined : zonesMatch(iframeZone, intlZone) ? "ok" : "leak",
+            iframeZone === "unavailable" ? undefined : zonesMatch(iframeZone, truthZone) ? "ok" : "leak",
         })
         // The iframe's contentDocument is freshly minted (about:blank), so its
         // lastModified is the current instant — a strict "now" reference. A
@@ -1605,10 +1643,10 @@ function buildValueGroups(
     // rather than show a permanent "unavailable" that reads like a failure.
     const exsltOffset = exsltValue === "unavailable" ? null : offsetFromString(exsltValue)
     if (exsltOffset != null) {
-      const exsltLeaks = exsltOffset !== offsetMins
+      const exsltLeaks = exsltOffset !== expectedOffset
       exsltRows.push({
         api: "EXSLT date:date-time() (XSLTProcessor)",
-        value: exsltLeaks ? `${exsltValue} (offset ${exsltOffset} vs ${offsetMins})` : exsltValue,
+        value: exsltLeaks ? `${exsltValue} (offset ${exsltOffset} vs ${expectedOffset})` : exsltValue,
         verdict: exsltLeaks ? "leak" : "ok",
       })
     }
@@ -1637,10 +1675,10 @@ function buildValueGroups(
           continue
         }
         const reported = w.reading?.timeZone ?? ""
-        const matches = zonesMatch(reported, intlZone)
+        const matches = zonesMatch(reported, truthZone)
         workerRows.push({
           api: w.label,
-          value: matches ? reported : `${reported} (leaked — expected ${intlZone})`,
+          value: matches ? reported : `${reported} (leaked — expected ${truthZone})`,
           verdict: matches ? "ok" : "leak",
         })
       }

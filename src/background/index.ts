@@ -385,6 +385,7 @@ async function onAlarm(alarm: Alarms.Alarm): Promise<void> {
     debugLogging,
     verbosityLevel,
     webrtcProtection,
+    preserveGeolocationPrompt,
     accuracySetting,
     accuracySeed,
   } = settings;
@@ -423,6 +424,7 @@ async function onAlarm(alarm: Alarms.Alarm): Promise<void> {
         debugLogging,
         verbosityLevel,
         webrtcProtection,
+        preserveGeolocationPrompt,
         // Pro-gate custom accuracy on iOS Safari (force Realistic for a free
         // user); fail-open + Safari-only, mirroring the scope gate above.
         accuracySetting: computeEffectiveAccuracySetting(
@@ -561,6 +563,7 @@ if (browser.tabs && browser.tabs.onCreated) {
         debugLogging,
         verbosityLevel,
         webrtcProtection,
+        preserveGeolocationPrompt,
         accuracySetting,
         accuracySeed,
       } = settings;
@@ -584,6 +587,7 @@ if (browser.tabs && browser.tabs.onCreated) {
         debugLogging,
         verbosityLevel,
         webrtcProtection,
+        preserveGeolocationPrompt,
         // Pro-gate custom accuracy on iOS Safari (force Realistic for a free
         // user); fail-open + Safari-only, mirroring the scope gate above.
         accuracySetting: computeEffectiveAccuracySetting(

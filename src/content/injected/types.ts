@@ -46,6 +46,14 @@ export interface SettingsEventDetail {
    * Safari (which doesn't expose browser.privacy at all).
    */
   webrtcProtection: boolean;
+  /**
+   * When true, the geolocation override surfaces the browser's native
+   * permission prompt (calling the real API) and only substitutes spoofed
+   * coordinates after the user grants — forwarding denials/errors — instead of
+   * silently answering with spoofed coords. Also stops `permissions.query` from
+   * forcing `"granted"`. Off by default (seamless prompt-free spoofing).
+   */
+  preserveGeolocationPrompt: boolean;
 }
 
 export interface SpoofedGeolocationPosition {

@@ -147,7 +147,9 @@ describe("Chromium manifest structure", () => {
     // Chrome Web Store listing (Firefox/Safari keep the localized __MSG_*__
     // references).
     expect(m.name).toBe("GeoSpoof: Spoof Geolocation & Timezone");
-    expect(m.description).toBe("Spoof geolocation & timezone, and auto-sync to your VPN.");
+    expect(m.description).toBe(
+      "Spoof geolocation, fake your GPS location & timezone — change your location to any city or sync it to your VPN. No account."
+    );
     expect(m.default_locale).toBe("en");
   });
 });
@@ -185,7 +187,7 @@ describe("Shared fields preservation", () => {
   test("description diverges — Firefox localized, Chromium literal", () => {
     expect(firefoxManifest().description).toBe("__MSG_extensionDescription__");
     expect(chromiumManifest().description).toBe(
-      "Spoof geolocation & timezone, and auto-sync to your VPN."
+      "Spoof geolocation, fake your GPS location & timezone — change your location to any city or sync it to your VPN. No account."
     );
   });
 

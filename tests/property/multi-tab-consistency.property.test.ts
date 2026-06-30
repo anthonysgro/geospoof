@@ -25,6 +25,7 @@ function makeSettings(partial: Partial<Settings>): Settings {
     timezone: null,
     locationName: null,
     webrtcProtection: false,
+    preserveGeolocationPrompt: false,
     onboardingCompleted: true,
     version: "1.0",
     lastUpdated: Date.now(),
@@ -116,6 +117,7 @@ describe("Property 23: Multi-Tab Consistency", () => {
             debugLogging: settings.debugLogging,
             verbosityLevel: settings.verbosityLevel,
             webrtcProtection: settings.webrtcProtection,
+            preserveGeolocationPrompt: settings.preserveGeolocationPrompt,
             // Accuracy resolution inputs are threaded end-to-end so the
             // injected Resolver uses the user's chosen setting/seed.
             accuracySetting: settings.accuracySetting,

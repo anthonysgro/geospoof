@@ -48,6 +48,7 @@ const settingsArb: fc.Arbitrary<Settings> = fc.record({
     { nil: null }
   ),
   webrtcProtection: fc.boolean(),
+  preserveGeolocationPrompt: fc.boolean(),
   onboardingCompleted: fc.boolean(),
   version: fc.constant("1.0"),
   lastUpdated: fc.integer({ min: 0 }),
@@ -94,6 +95,10 @@ const REQUIRED_KEYS: (keyof UpdateSettingsPayload)[] = [
   // the content-script layer (closes the gap where Firefox's
   // `disable_non_proxied_udp` policy only works behind a proxy).
   "webrtcProtection",
+  // Whether the injected geolocation override surfaces the native permission
+  // prompt instead of auto-granting spoofed coords. Threaded to the page so the
+  // behavior flips without a reload.
+  "preserveGeolocationPrompt",
   // Accuracy resolution inputs threaded end-to-end so the injected
   // Resolver uses the user's chosen setting/seed rather than always
   // falling back to auto/0.
@@ -147,8 +152,8 @@ test("Property 4: Broadcast Payload Contains Only Scoped Fields", async () => {
         expect(payload).not.toHaveProperty(key);
       }
 
-      // Payload must have exactly 8 scoped keys.
-      expect(Object.keys(payload)).toHaveLength(8);
+      // Payload must have exactly 9 scoped keys.
+      expect(Object.keys(payload)).toHaveLength(9);
 
       // `enabled` is now resolved per tab via the shared source of truth
       // (background-authoritative per-tab scoping), not the raw master flag.
@@ -166,6 +171,7 @@ test("Property 4: Broadcast Payload Contains Only Scoped Fields", async () => {
       expect(payload.timezone).toEqual(settings.timezone);
       expect(payload.debugLogging).toBe(settings.debugLogging);
       expect(payload.webrtcProtection).toBe(settings.webrtcProtection);
+      expect(payload.preserveGeolocationPrompt).toBe(settings.preserveGeolocationPrompt);
       expect(payload.accuracySetting).toEqual(settings.accuracySetting);
       expect(payload.accuracySeed).toBe(settings.accuracySeed);
     }),

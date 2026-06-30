@@ -20,7 +20,7 @@ export const Route = createFileRoute("/test")({
       {
         name: "description",
         content:
-          "See what your browser is reporting as your identity and check whether any site could detect that GeoSpoof is active. Everything is computed locally — nothing leaves your device.",
+          "See what your browser reports as your identity and whether sites can detect GeoSpoof. Everything is computed locally — nothing leaves your device.",
       },
       // No-index while the suite is in internal review (Req 22.7)
       { name: "robots", content: "noindex,nofollow" },

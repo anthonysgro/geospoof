@@ -3,6 +3,54 @@ import type { Platform } from "@/hooks/use-platform"
 import { cn } from "@/lib/utils"
 import { usePlatform } from "@/hooks/use-platform"
 
+/** Recursively extract the plain-text content of a React node, for slug ids. */
+function nodeText(node: React.ReactNode): string {
+  if (node == null || typeof node === "boolean") return ""
+  if (typeof node === "string" || typeof node === "number") return String(node)
+  if (Array.isArray(node)) return node.map(nodeText).join("")
+  if (React.isValidElement(node)) {
+    return nodeText((node.props as { children?: React.ReactNode }).children)
+  }
+  return ""
+}
+
+/** GitHub-style slug: lowercase, strip punctuation, collapse spaces to dashes. */
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+}
+
+/**
+ * Heading with a stable, deep-linkable `id` derived from its text and a “#”
+ * anchor that appears on hover/focus. Sections become shareable URLs and the
+ * existing `scroll-mt` offset keeps the target clear of the sticky nav.
+ */
+function Heading({
+  as: Tag,
+  className,
+  children,
+  ...props
+}: { as: "h2" | "h3" } & React.ComponentProps<"h2">) {
+  const id = props.id ?? slugify(nodeText(children))
+  return (
+    <Tag id={id} className={cn("group relative", className)} {...props}>
+      <a
+        href={`#${id}`}
+        aria-label="Direct link to this section"
+        className="absolute top-1/2 -left-5 hidden -translate-y-1/2 text-(--color-canvas-muted) no-underline opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 lg:inline"
+      >
+        #
+      </a>
+      {children}
+    </Tag>
+  )
+}
+
 /**
  * Theme-aware screenshot. Renders both the light and dark variant and lets CSS
  * pick which one shows, keyed off the `.dark` class the theme script puts on
@@ -32,8 +80,8 @@ export function ThemeImage({
   return (
     <span className={cn("my-6 block", wrapperClassName)}>
       <span className="block overflow-hidden rounded-md-brand border border-(--color-canvas-border) bg-card p-2 shadow-md ring-1 ring-black/5 sm:p-3 dark:ring-white/10">
-        <img src={light} alt={alt} loading="lazy" className={cn(imgClass, "dark:hidden")} />
-        <img src={dark} alt={alt} loading="lazy" className={cn(imgClass, "hidden dark:block")} />
+        <img src={light} alt={alt} loading="lazy" decoding="async" className={cn(imgClass, "dark:hidden")} />
+        <img src={dark} alt={alt} loading="lazy" decoding="async" className={cn(imgClass, "hidden dark:block")} />
       </span>
       {caption && (
         <span className="text-small mt-2 block text-center text-(--color-canvas-muted)">
@@ -83,10 +131,75 @@ export function Compare({
     </span>
   )
   return (
-    <span className="my-6 block">
+    // Break out of the article's narrow (720px) text column so the paired
+    // screenshots render large enough to read. The text stays at a comfortable
+    // reading width; only the figure widens — centered on the viewport via
+    // `ml-[50%]` + `-translate-x-1/2` — up to the same 1200px the wide page
+    // sections use. Gated at `lg` because narrower viewports have no room to
+    // gain (and the panes stack on mobile anyway).
+    <span className="my-6 block lg:ml-[50%] lg:w-[min(1200px,92vw)] lg:-translate-x-1/2">
       <span className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {figure(leftLabel, leftLight, leftDark)}
         {figure(rightLabel, rightLight, rightDark)}
+      </span>
+      {caption && (
+        <span className="text-small mt-3 block text-center text-(--color-canvas-muted)">
+          {caption}
+        </span>
+      )}
+    </span>
+  )
+}
+
+/**
+ * Two plain (non-theme-aware) images shown side by side — built for the small
+ * extension-popup screenshots, which only exist as single PNGs. Always two
+ * columns so the pair reads as a direct comparison, each image framed like
+ * `ThemeImage` and capped so the tall popups stay compact and centered. Use as:
+ *
+ *   <ImagePair
+ *     leftLabel="GeoSpoof"  leftSrc="/a.png"
+ *     rightLabel="Spoof Geolocation"  rightSrc="/b.png"
+ *     alt="What both screens show"
+ *     caption="Optional shared caption"
+ *   />
+ */
+export function ImagePair({
+  leftLabel,
+  leftSrc,
+  rightLabel,
+  rightSrc,
+  alt,
+  caption,
+}: {
+  leftLabel: string
+  leftSrc: string
+  rightLabel: string
+  rightSrc: string
+  alt: string
+  caption?: string
+}) {
+  const figure = (label: string, src: string) => (
+    <span className="block">
+      <span className="text-small mb-2 block text-center font-semibold text-(--color-canvas-foreground)">
+        {label}
+      </span>
+      <span className="block overflow-hidden rounded-md-brand border border-(--color-canvas-border) bg-card p-2 shadow-md ring-1 ring-black/5 sm:p-3 dark:ring-white/10">
+        <img
+          src={src}
+          alt={`${label}: ${alt}`}
+          loading="lazy"
+          decoding="async"
+          className="mx-auto block h-auto w-full max-w-[260px] rounded-sm-brand"
+        />
+      </span>
+    </span>
+  )
+  return (
+    <span className="mx-auto my-6 block max-w-[640px]">
+      <span className="grid grid-cols-2 gap-4">
+        {figure(leftLabel, leftSrc)}
+        {figure(rightLabel, rightSrc)}
       </span>
       {caption && (
         <span className="text-small mt-3 block text-center text-(--color-canvas-muted)">
@@ -256,16 +369,19 @@ function DownloadCTA({ campaign = "blog" }: { campaign?: string }) {
 export const mdxComponents = {
   ThemeImage,
   Compare,
+  ImagePair,
   AppStoreBadges,
   DownloadCTA,
   h2: (props: React.ComponentProps<"h2">) => (
-    <h2
+    <Heading
+      as="h2"
       className="mt-12 mb-4 scroll-mt-24 text-2xl font-bold text-(--color-canvas-foreground)"
       {...props}
     />
   ),
   h3: (props: React.ComponentProps<"h3">) => (
-    <h3
+    <Heading
+      as="h3"
       className="mt-8 mb-3 scroll-mt-24 text-xl font-semibold text-(--color-canvas-foreground)"
       {...props}
     />

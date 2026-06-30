@@ -4,7 +4,7 @@ import { SITE_URL } from "@/lib/blog"
 
 const PAGE_URL = `${SITE_URL}/spoof-location/edge`
 const DESCRIPTION =
-  "Spoof your location in Microsoft Edge with a free extension. GeoSpoof overrides the Geolocation API and timezone so sites see the location you choose. Works on Windows and macOS."
+  "Spoof your location in Microsoft Edge with a free extension. GeoSpoof overrides the Geolocation API and timezone so sites see the location you choose."
 
 export const Route = createFileRoute("/spoof-location/edge")({
   component: () => <BrowserSpoofPage slug="edge" />,

@@ -11,7 +11,7 @@ import { SITE_URL } from "@/lib/blog"
 
 const PAGE_URL = `${SITE_URL}/spoof-location`
 const DESCRIPTION =
-  "Spoof your browser location in Chrome, Edge, Firefox, or Safari. GeoSpoof overrides the Geolocation API and timezone so websites see the location you choose. Free and open source."
+  "Spoof your browser location in Chrome, Edge, Firefox, or Safari. GeoSpoof overrides the Geolocation API and timezone so sites see the location you choose."
 
 export const Route = createFileRoute("/spoof-location/")({
   component: SpoofLocationHub,

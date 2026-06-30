@@ -6,10 +6,12 @@
 //
 //  Three ways to be Pro:
 //    1. Founder grant — anyone whose *first* downloaded version is below
-//       `founderCutoff` (1.22.0) gets Pro free forever. Resolved from
-//       `AppTransaction.originalAppVersion`, so it needs no sign-in, no
-//       backend, and survives reinstalls (it's tied to the Apple ID's
-//       purchase history). This is our thank-you to early users.
+//       `founderCutoff` (iOS build 40 / macOS 1.22.7) gets Pro free forever.
+//       Resolved from `AppTransaction.originalAppVersion`, synced across the
+//       user's devices via CloudKit (with iCloud KVS kept as a redundant
+//       fallback rail), and made PERMANENT once seen (never revoked, even if a
+//       later read is flaky). Needs no sign-in and no backend of our own. This
+//       is our thank-you to early users.
 //    2. Active subscription — monthly or annual auto-renewable.
 //    3. Lifetime unlock — a one-time non-consumable purchase. Never expires,
 //       and rides Apple's Universal Purchase rail across iOS/iPadOS/macOS on
@@ -31,6 +33,12 @@ import Foundation
 import Combine
 import StoreKit
 import SwiftUI
+import CloudKit
+#if os(iOS)
+import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
 
 // MARK: - Semantic version
 
@@ -115,8 +123,9 @@ final class ProStore: ObservableObject {
     /// paywalled, or new 1.22.7 buyers wrongly granted founder.
     ///
     /// Cross-platform note: a founder on one platform is recognized on the other
-    /// via the iCloud-synced `CloudKey.founder` bit — the grant isn't a StoreKit
-    /// purchase, so it can't ride Universal Purchase the way a subscription does.
+    /// via the synced founder grant (CloudKit private DB, with KVS as a fallback
+    /// rail) — the grant isn't a StoreKit purchase, so it can't ride Universal
+    /// Purchase the way a subscription does.
     #if os(iOS)
     static let founderCutoff = AppVersion([40])
     #else
@@ -208,8 +217,17 @@ final class ProStore: ObservableObject {
 
     /// Founder result derived from THIS platform's local `AppTransaction` check.
     private var localFounder = false
-    /// Founder bit propagated from another of the user's devices via iCloud.
+    /// Founder bit propagated from another of the user's devices via iCloud KVS.
     private var cloudFounder = false
+    /// Founder bit propagated via the CloudKit private database — the durable
+    /// cross-device channel. KVS (`cloudFounder`) is kept in parallel as a
+    /// redundant, best-effort fallback: both are OR'd into the grant and we
+    /// write `true` to both, so a value that fails to propagate on one rail can
+    /// still arrive on the other.
+    private var cloudKitFounder = false
+    /// Set once we've pushed a positive grant to CloudKit this launch, so a
+    /// frequently-called `recomputeFounder()` doesn't spam the network.
+    private var cloudKitGrantPushed = false
 
     private var updatesTask: Task<Void, Never>?
 
@@ -231,7 +249,25 @@ final class ProStore: ObservableObject {
         )
         cloud.synchronize()
 
+        // Re-pull the founder bit whenever the app comes to the foreground.
+        // iCloud KVS is eventually-consistent, so a single init-time read can
+        // miss a bit another device wrote (notably on beta OSes, where this
+        // first surfaced). A foreground re-sync gives the grant another chance
+        // to arrive without the user doing anything.
+        #if os(iOS)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(appBecameActive),
+            name: UIApplication.didBecomeActiveNotification, object: nil)
+        #elseif os(macOS)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(appBecameActive),
+            name: NSApplication.didBecomeActiveNotification, object: nil)
+        #endif
+
         updatesTask = listenForTransactions()
+
+        // Pull the durable CloudKit grant in parallel with the KVS read above.
+        refreshCloudKitFounder()
 
         Task {
             await resolveFounderStatus()
@@ -274,7 +310,7 @@ final class ProStore: ObservableObject {
             // later accumulates data isn't retroactively promoted.
             if cache.object(forKey: Key.isFounder) == nil {
                 let founder = hasLegacyInstallData()
-                Log.app.info("Founder check (iOS 15 heuristic): legacyData => \(founder)")
+                Log.pro.info("Founder check (iOS 15 heuristic): legacyData => \(founder)")
                 applyFounder(founder, originalVersion: "ios15-heuristic")
             }
         }
@@ -286,23 +322,23 @@ final class ProStore: ObservableObject {
             let result = try await AppTransaction.shared
             guard case .verified(let appTransaction) = result else {
                 // Couldn't verify — keep cached value rather than revoking.
-                Log.app.warn("AppTransaction unverified; keeping cached founder=\(self.isFounder)")
+                Log.pro.warn("AppTransaction unverified; keeping cached founder=\(self.isFounder)")
                 return
             }
 
             let originalString = appTransaction.originalAppVersion
             guard let original = AppVersion(string: originalString) else {
-                Log.app.warn("Unparseable originalAppVersion '\(originalString)'; founder=false")
+                Log.pro.warn("Unparseable originalAppVersion '\(originalString)'; founder=false")
                 applyFounder(false, originalVersion: originalString)
                 return
             }
 
             let founder = original < Self.founderCutoff
-            Log.app.info("Founder check: original \(original) < cutoff \(Self.founderCutoff) => \(founder)")
+            Log.pro.info("Founder check: original \(original) < cutoff \(Self.founderCutoff) => \(founder)")
             applyFounder(founder, originalVersion: originalString)
         } catch {
             // Network/StoreKit hiccup. Don't downgrade an existing grant.
-            Log.app.warn("AppTransaction.shared failed (\(error.localizedDescription)); keeping cached founder=\(self.isFounder)")
+            Log.pro.warn("AppTransaction.shared failed (\(error.localizedDescription)); keeping cached founder=\(self.isFounder)")
         }
     }
 
@@ -323,18 +359,38 @@ final class ProStore: ObservableObject {
         recomputeFounder()
     }
 
-    /// Fold the local check and the iCloud-synced bit into the published
-    /// `isFounder` gate, cache the local result, and propagate a positive grant
-    /// to the user's other devices. Only ever WRITES `true` to iCloud, so a
-    /// local negative (a fresh post-paywall install on a second platform) can't
-    /// erase a founder grant the user earned on their other device.
+    /// Fold the local check, both synced bits (KVS + CloudKit), and any prior
+    /// grant into the published `isFounder` gate, then propagate a positive
+    /// grant to the user's other devices over both rails. Founder is PERMANENT:
+    /// once a device has ever seen the grant we OR it back in, so a later flaky
+    /// read can't revoke it — `AppTransaction` going unverified on a beta OS, a
+    /// regenerated macOS receipt reporting a recent `originalAppVersion`, or a
+    /// sync that hasn't landed yet. We only ever WRITE `true`, never `false`.
     private func recomputeFounder() {
-        let combined = localFounder || cloudFounder
+        let everGranted = cache.bool(forKey: Key.isFounder)
+        let combined = localFounder || cloudFounder || cloudKitFounder || everGranted
+        let was = isFounder
         isFounder = combined
-        cache.set(localFounder, forKey: Key.isFounder)
-        if combined && !cloud.bool(forKey: CloudKey.founder) {
-            cloud.set(true, forKey: CloudKey.founder)
-            cloud.synchronize()
+        cache.set(combined, forKey: Key.isFounder)
+        // Make the decision observable: the local check logs its own line, but
+        // the grant can also come from a synced rail or the cached prior grant,
+        // which otherwise looks like founder appearing "from nowhere". Log the
+        // inputs whenever the resolved status flips.
+        if combined != was {
+            Log.pro.info("Founder status → \(combined) (local=\(localFounder) kvs=\(cloudFounder) cloudKit=\(cloudKitFounder) cached=\(everGranted))")
+        }
+        if combined {
+            // KVS rail.
+            if !cloud.bool(forKey: CloudKey.founder) {
+                cloud.set(true, forKey: CloudKey.founder)
+                cloud.synchronize()
+            }
+            // CloudKit rail — push at most once per launch (the helper also
+            // no-ops if the record already exists).
+            if !cloudKitGrantPushed {
+                cloudKitGrantPushed = true
+                Task { await FounderCloud.setGranted() }
+            }
         }
         persistIsPro()
     }
@@ -348,6 +404,40 @@ final class ProStore: ObservableObject {
             if self.debugFounderOverride() != nil { return }
             if self.cloud.bool(forKey: CloudKey.founder), !self.cloudFounder {
                 self.cloudFounder = true
+                self.recomputeFounder()
+            }
+        }
+    }
+
+    /// App returned to the foreground — nudge iCloud and re-read the founder
+    /// bit, in case it was written by another device while we were backgrounded
+    /// or hadn't synced down yet at launch.
+    @objc nonisolated private func appBecameActive() {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            if self.debugFounderOverride() != nil { return }
+            self.cloud.synchronize()
+            if self.cloud.bool(forKey: CloudKey.founder), !self.cloudFounder {
+                self.cloudFounder = true
+                self.recomputeFounder()
+            }
+            // Also re-pull the durable CloudKit grant.
+            self.refreshCloudKitFounder()
+        }
+    }
+
+    /// Fetch the founder grant from the CloudKit private database (off the main
+    /// actor) and, if present, OR it into the gate. Only ever turns the grant
+    /// ON. Silent on no-account / network failure — the grant just stays at
+    /// whatever the local check and KVS produced.
+    private func refreshCloudKitFounder() {
+        if debugFounderOverride() != nil { return }
+        Task { [weak self] in
+            let granted = await FounderCloud.fetchGranted()
+            guard granted else { return }
+            guard let self else { return }
+            if !self.cloudKitFounder {
+                self.cloudKitFounder = true
                 self.recomputeFounder()
             }
         }
@@ -391,10 +481,10 @@ final class ProStore: ObservableObject {
             let loaded = try await Product.products(for: ProductID.all)
             // Stable order: annual first (the plan we want to anchor), monthly second.
             products = loaded.sorted { lhs, _ in lhs.id == ProductID.annual }
-            Log.app.info("Loaded \(self.products.count) Pro products")
+            Log.pro.info("Loaded \(self.products.count) Pro products")
         } catch {
             lastError = error.localizedDescription
-            Log.app.error("Product load failed: \(error.localizedDescription)")
+            Log.pro.error("Product load failed: \(error.localizedDescription)")
         }
     }
 
@@ -428,18 +518,43 @@ final class ProStore: ObservableObject {
             }
         } catch {
             lastError = error.localizedDescription
-            Log.app.error("Purchase failed: \(error.localizedDescription)")
+            Log.pro.error("Purchase failed: \(error.localizedDescription)")
             return false
         }
     }
 
-    /// Restore purchases. Required by App Review for any non-restoring product.
+    /// Restore purchases / re-check access. Required by App Review for any
+    /// non-restoring product, and doubles as a founder re-check: a founder has
+    /// no StoreKit purchase to restore, but their grant lives in the iCloud bit,
+    /// so we force a sync and re-resolve first.
     func restore() async {
-        do {
-            try await AppStore.sync()
-        } catch {
-            lastError = error.localizedDescription
-            Log.app.warn("AppStore.sync failed: \(error.localizedDescription)")
+        // Re-pull the cross-device founder bit and re-run the local check.
+        cloud.synchronize()
+        if cloud.bool(forKey: CloudKey.founder), !cloudFounder {
+            cloudFounder = true
+            recomputeFounder()
+        }
+        refreshCloudKitFounder()
+        await resolveFounderStatus()
+
+        // Cap AppStore.sync() — it can hang indefinitely (notably on beta OSes),
+        // which is what froze the "Restore" button in the field. The entitlement
+        // refresh below reflects whatever actually synced.
+        let didSync = await withTaskGroup(of: Bool.self) { group -> Bool in
+            group.addTask {
+                do { try await AppStore.sync(); return true } catch { return false }
+            }
+            group.addTask {
+                try? await Task.sleep(nanoseconds: 20_000_000_000)
+                return false
+            }
+            let first = await group.next() ?? false
+            group.cancelAll()
+            return first
+        }
+        if !didSync {
+            Log.pro.warn("AppStore.sync failed or timed out during restore")
+            lastError = "Couldn't reach the App Store. Your Pro access is unaffected; try again later."
         }
         await refreshEntitlements()
     }
@@ -541,5 +656,83 @@ final class ProStore: ObservableObject {
             object: nil,
             userInfo: ["isPro": isPro]
         )
+    }
+}
+
+// MARK: - FounderCloud (CloudKit)
+
+/// Durable cross-device transport for the founder grant, backed by the user's
+/// private CloudKit database (per-Apple-ID, no backend of ours, no accounts).
+///
+/// This is the primary cross-device rail; `NSUbiquitousKeyValueStore` is kept in
+/// parallel as a best-effort fallback. CloudKit is preferred because KVS is
+/// eventually-consistent and silently evicts values — the exact failure that
+/// stranded macOS founders whose local receipt check can't see the grant.
+///
+/// The grant is a single well-known record (`ProGrant/founderGrant`) holding
+/// `granted = 1`. We only ever WRITE `true`: the grant is permanent, so there's
+/// no negative to propagate. Every call is best-effort and never throws to the
+/// caller — no iCloud account, no network, or a missing record all resolve to
+/// "not granted here", leaving the local check and KVS to decide.
+///
+/// NOTE: before an App Store / TestFlight release, the `ProGrant` record type
+/// must be deployed to the CloudKit **Production** environment in the CloudKit
+/// Dashboard. The Development environment auto-creates it on first write; the
+/// Production environment does not.
+enum FounderCloud {
+    private static let container = CKContainer(identifier: "iCloud.com.moonloaf.geospoof")
+    private static var database: CKDatabase { container.privateCloudDatabase }
+    private static let recordType = "ProGrant"
+    private static let recordID = CKRecord.ID(recordName: "founderGrant")
+    private static let grantedKey = "granted"
+
+    /// True only if a granted founder record exists in the private database.
+    /// Any failure (no account, offline, missing record) resolves to false.
+    static func fetchGranted() async -> Bool {
+        guard await isAvailable() else { return false }
+        do {
+            let record = try await database.record(for: recordID)
+            return (record[grantedKey] as? Int64) == 1
+        } catch let error as CKError where error.code == .unknownItem {
+            return false // no grant written yet
+        } catch {
+            // Transient (offline / CloudKit blip). This runs on every foreground
+            // and self-heals on the next pull, so keep it at info to avoid
+            // always-on warn noise for users who are simply offline.
+            Log.pro.info("CloudKit founder fetch failed: \(error.localizedDescription)")
+            return false
+        }
+    }
+
+    /// Write the founder grant. Monotonic — we only ever write `true`, and a
+    /// record that already exists is left untouched. Safe to call repeatedly and
+    /// best-effort: failures are logged and swallowed.
+    static func setGranted() async {
+        guard await isAvailable() else { return }
+        do {
+            // Already present? Nothing to do (the value only ever goes true).
+            if let existing = try? await database.record(for: recordID),
+               (existing[grantedKey] as? Int64) == 1 {
+                return
+            }
+            let record = CKRecord(recordType: recordType, recordID: recordID)
+            record[grantedKey] = 1 as Int64
+            _ = try await database.save(record)
+            Log.pro.info("CloudKit founder grant written")
+        } catch let error as CKError where error.code == .serverRecordChanged {
+            // Another device wrote it first — fine, the value is identical.
+        } catch {
+            Log.pro.warn("CloudKit founder save failed: \(error.localizedDescription)")
+        }
+    }
+
+    /// Whether the iCloud account is usable for CloudKit right now. Guards every
+    /// call so a signed-out user just falls back to the local/KVS path.
+    private static func isAvailable() async -> Bool {
+        do {
+            return try await container.accountStatus() == .available
+        } catch {
+            return false
+        }
     }
 }
