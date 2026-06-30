@@ -158,6 +158,16 @@ MIT — see [LICENSE](LICENSE).
 - [Report Issues](https://github.com/anthonysgro/geospoof/issues)
 - [Buy me a coffee](https://buymeacoffee.com/sgro)
 
+## Star History
+
+<a href="https://www.star-history.com/?repos=anthonysgro%2Fgeospoof&type=date&legend=top-left">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=anthonysgro/geospoof&type=date&theme=dark&legend=top-left" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=anthonysgro/geospoof&type=date&legend=top-left" />
+    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=anthonysgro/geospoof&type=date&legend=top-left" />
+  </picture>
+</a>
+
 ## Acknowledgments
 
 - [Nominatim](https://nominatim.org/) for geocoding
