@@ -537,12 +537,28 @@ describe("Timezone Offset Consistency with Intl.DateTimeFormat (Property 3)", ()
   });
 
   test("Invalid timezone identifiers fall back to provided offset", () => {
+    // A random lowercase string is *usually* not a valid timezone, but a few
+    // collide with legacy IANA aliases that Intl resolves case-insensitively
+    // (e.g. "nz" → NZ → Pacific/Auckland, "gb" → GB, "prc", "cuba", "utc").
+    // Those are genuinely valid, so exclude them — this test is specifically
+    // about identifiers Intl REJECTS falling back to the provided offset.
+    const isResolvableTimeZone = (tz: string): boolean => {
+      try {
+        new Intl.DateTimeFormat("en-US", { timeZone: tz });
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
     fc.assert(
       fc.property(
-        fc.stringOf(fc.constantFrom(..."abcdefghijklmnopqrstuvwxyz"), {
-          minLength: 1,
-          maxLength: 20,
-        }),
+        fc
+          .stringOf(fc.constantFrom(..."abcdefghijklmnopqrstuvwxyz"), {
+            minLength: 1,
+            maxLength: 20,
+          })
+          .filter((s) => !isResolvableTimeZone(s)),
         fc.integer({ min: -720, max: 840 }),
         fc.date(),
         (invalidTz, fallback, date) => {
