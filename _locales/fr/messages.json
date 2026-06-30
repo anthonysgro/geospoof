@@ -147,6 +147,18 @@
     "message": "Protection WebRTC",
     "description": "Label for the toggle that enables WebRTC IP leak protection."
   },
+  "toggle_preserveGeoPrompt": {
+    "message": "Conserver les invites de localisation",
+    "description": "Label for the toggle that makes GeoSpoof show the browser's native geolocation permission prompt (and only substitute the spoofed location after the user allows) instead of silently auto-granting it to every site."
+  },
+  "preserveGeoPrompt_infoAriaLabel": {
+    "message": "Plus d'informations sur Conserver les invites de localisation",
+    "description": "Accessible label on the Preserve location prompts info icon."
+  },
+  "preserveGeoPrompt_tooltip": {
+    "message": "S'applique uniquement aux sites que GeoSpoof falsifie (selon votre liste d'autorisation/de blocage). Activé, ces sites affichent l'invite de localisation normale du navigateur et ne reçoivent votre position falsifiée que si vous l'autorisez. Désactivé, ils la reçoivent automatiquement, sans invite.",
+    "description": "Tooltip explaining the Preserve location prompts toggle: native permission prompt with spoofed coordinates vs. silent auto-grant. Notes that it only affects sites in spoofing scope (allow/deny list)."
+  },
   "heading_location": {
     "message": "Localisation",
     "description": "Section heading above the spoofed location display."
