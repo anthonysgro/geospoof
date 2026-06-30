@@ -237,42 +237,6 @@ export function HeroSection({ className }: { className?: string }) {
                 Firefox
               </span>
             </span>
-            <span
-              className="hidden h-3.5 w-px bg-(--color-canvas-border) sm:block"
-              aria-hidden="true"
-            />
-            <span className="flex items-center gap-1 text-sm text-(--color-canvas-muted)">
-              <span className="text-amber-500" aria-hidden="true">
-                ★★★★
-              </span>
-              <span className="text-(--color-canvas-border)" aria-hidden="true">
-                ★
-              </span>
-              <span>
-                <span className="font-semibold text-(--color-canvas-foreground)">
-                  4.3
-                </span>{" "}
-                Chrome
-              </span>
-            </span>
-            <span
-              className="hidden h-3.5 w-px bg-(--color-canvas-border) sm:block"
-              aria-hidden="true"
-            />
-            <span className="flex items-center gap-1 text-sm text-(--color-canvas-muted)">
-              <span className="text-amber-500" aria-hidden="true">
-                ★★★★
-              </span>
-              <span className="text-(--color-canvas-border)" aria-hidden="true">
-                ★
-              </span>
-              <span>
-                <span className="font-semibold text-(--color-canvas-foreground)">
-                  4.2
-                </span>{" "}
-                iOS
-              </span>
-            </span>
           </div>
         </MotionDiv>
       </div>
