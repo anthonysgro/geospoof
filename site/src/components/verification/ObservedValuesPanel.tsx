@@ -165,7 +165,7 @@ function Row({ row }: { row: ObservedRow }) {
               side="top"
               className="w-80 max-w-[90vw] space-y-2"
             >
-              <p className="font-mono text-[11px] leading-snug wrap-break-word text-(--color-canvas-foreground)">
+              <p className="font-mono text-[0.6875rem] leading-snug wrap-break-word text-(--color-canvas-foreground)">
                 {row.label}
               </p>
               <p className="text-sm leading-relaxed text-(--color-canvas-muted)">

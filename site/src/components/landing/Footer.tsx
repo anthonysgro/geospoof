@@ -92,7 +92,7 @@ export function Footer({ className, ...props }: FooterProps) {
       )}
       {...props}
     >
-      <div className="mx-auto max-w-[1200px]">
+      <div className="mx-auto max-w-300">
         <nav
           aria-label={t.footer.footerNavAria}
           className="grid grid-cols-2 gap-8 md:grid-cols-3"

@@ -7,6 +7,28 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ============================================================
+   Breakpoint scale — coupled to the global zoom
+   ============================================================
+   These are Tailwind's default breakpoints multiplied by 1.125 to match the
+   `html { font-size: 112.5% }` zoom below. Media-query `rem` is measured
+   against the browser's default 16px (NOT the html font-size), so scaling the
+   content without scaling these would leave the layout holding its desktop
+   arrangement at widths where the enlarged content no longer fits. Keeping the
+   two in lockstep makes the whole site behave like a true 112.5% browser zoom:
+   content is larger AND the responsive switches (header → hamburger, hero
+   stacking, etc.) trigger proportionally earlier.
+
+   If you change the zoom factor below, scale these by the same factor
+   (default rem × factor): sm 40, md 48, lg 64, xl 80, 2xl 96. */
+@theme {
+  --breakpoint-sm: 45rem;
+  --breakpoint-md: 54rem;
+  --breakpoint-lg: 72rem;
+  --breakpoint-xl: 90rem;
+  --breakpoint-2xl: 108rem;
+}
+
 @theme inline {
   /* Typography */
   --font-sans:
@@ -165,6 +187,14 @@
   }
   html {
     @apply font-sans;
+    /* Global "zoom": scales every rem-based size (text, spacing, images, and
+       the rem-based container widths) proportionally. The breakpoint scale at
+       the top of this file is multiplied by the SAME factor so the responsive
+       switches move in lockstep — together they reproduce a true browser zoom
+       (larger content + earlier breakpoint switches), not just bigger text in
+       a same-width layout. Tune this one number, then scale the breakpoints to
+       match. 100% = original, 112.5% ≈ +12.5%. */
+    font-size: 112.5%;
     /* Smooth in-page anchor scrolling; the reduced-motion block below forces
        this back to `auto` for users who prefer reduced motion. */
     scroll-behavior: smooth;

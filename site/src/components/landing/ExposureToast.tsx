@@ -127,7 +127,7 @@ function ExposureCard({
   return (
     <div
       className={cn(
-        "relative mx-auto w-[360px] max-w-[calc(100vw-2rem)] rounded-xl border p-3 shadow-lg sm:p-4",
+        "relative mx-auto w-90 max-w-[calc(100vw-2rem)] rounded-xl border p-3 shadow-lg sm:p-4",
         "border-(--color-canvas-border) bg-(--color-canvas)"
       )}
     >

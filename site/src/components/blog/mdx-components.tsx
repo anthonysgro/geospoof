@@ -154,7 +154,7 @@ export function Compare({
     // `ml-[50%]` + `-translate-x-1/2` — up to the same 1200px the wide page
     // sections use. Gated at `lg` because narrower viewports have no room to
     // gain (and the panes stack on mobile anyway).
-    <span className="my-6 block lg:ml-[50%] lg:w-[min(1200px,92vw)] lg:-translate-x-1/2">
+    <span className="my-6 block lg:ml-[50%] lg:w-[min(75rem,92vw)] lg:-translate-x-1/2">
       <span className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {figure(leftLabel, leftLight, leftDark)}
         {figure(rightLabel, rightLight, rightDark)}
@@ -207,13 +207,13 @@ export function ImagePair({
           alt={`${label}: ${alt}`}
           loading="lazy"
           decoding="async"
-          className="mx-auto block h-auto w-full max-w-[260px] rounded-sm-brand"
+          className="mx-auto block h-auto w-full max-w-65 rounded-sm-brand"
         />
       </span>
     </span>
   )
   return (
-    <span className="mx-auto my-6 block max-w-[640px]">
+    <span className="mx-auto my-6 block max-w-160">
       <span className="grid grid-cols-2 gap-4">
         {figure(leftLabel, leftSrc)}
         {figure(rightLabel, rightSrc)}

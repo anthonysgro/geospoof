@@ -52,7 +52,7 @@ export function PhoneCarouselSection({
     <Wrapper
       className={cn(embedded ? "mt-16 md:mt-20" : "py-16 md:py-24", className)}
     >
-      <div className="mx-auto mb-10 max-w-[1200px] px-6 text-center md:px-12 lg:px-16">
+      <div className="mx-auto mb-10 max-w-300 px-6 text-center md:px-12 lg:px-16">
         {embedded ? (
           <h3 className="text-2xl font-bold text-(--color-canvas-foreground) md:text-3xl">
             {t.phoneCarousel.embeddedHeading}
@@ -64,7 +64,7 @@ export function PhoneCarouselSection({
         )}
       </div>
 
-      <div className="mx-auto w-full max-w-[1380px] px-12 sm:px-16">
+      <div className="mx-auto w-full max-w-345 px-12 sm:px-16">
         <Carousel setApi={setApi} opts={{ loop: true, align: "center" }}>
           <CarouselContent className="-ml-4 pt-8 pb-20 sm:-ml-8">
             {SHOTS.map((id, i) => {

@@ -27,7 +27,7 @@ export function DemoVideoSection({ className }: { className?: string }) {
 
   return (
     <section className={cn("w-full py-16 md:py-24", className)}>
-      <div className="mx-auto mb-10 max-w-[1200px] px-6 text-center md:px-12 lg:px-16">
+      <div className="mx-auto mb-10 max-w-300 px-6 text-center md:px-12 lg:px-16">
         <p className="mb-3 text-sm font-semibold tracking-widest text-(--color-brand) uppercase">
           {t.demo.eyebrow}
         </p>
@@ -37,7 +37,7 @@ export function DemoVideoSection({ className }: { className?: string }) {
       </div>
 
       <MotionDiv
-        className="mx-auto w-full max-w-[1100px] px-4 md:px-6"
+        className="mx-auto w-full max-w-275 px-4 md:px-6"
         {...(!prefersReducedMotion && {
           initial: { opacity: 0, y: 32 },
           whileInView: { opacity: 1, y: 0 },
