@@ -35,6 +35,7 @@ export const defaultLocale = "en"
  */
 export const localeList = [
   { code: "en", name: "English", shortLabel: "EN", ogLocale: "en_US" },
+  { code: "de", name: "Deutsch", shortLabel: "DE", ogLocale: "de_DE" },
   { code: "es", name: "Español", shortLabel: "ES", ogLocale: "es_ES" },
   { code: "fr", name: "Français", shortLabel: "FR", ogLocale: "fr_FR" },
   { code: "ru", name: "Русский", shortLabel: "RU", ogLocale: "ru_RU" },

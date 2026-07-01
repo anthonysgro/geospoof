@@ -67,6 +67,12 @@ const localeMeta: Record<Locale, { title: string; description: string }> = {
     description:
       "Spoof your browser's geolocation, timezone, and WebRTC in one free extension. No account required. Works on Chrome, Firefox, Edge, Brave, and Safari.",
   },
+  de: {
+    title:
+      "GeoSpoof — Standort und Zeitzone fälschen (kostenlose Erweiterung)",
+    description:
+      "Fälsche Geolocation, Zeitzone und WebRTC deines Browsers mit einer einzigen kostenlosen Erweiterung. Kein Konto nötig. Funktioniert in Chrome, Firefox, Edge, Brave und Safari.",
+  },
   fr: {
     title:
       "GeoSpoof — Simulez votre position et fuseau horaire (extension gratuite)",

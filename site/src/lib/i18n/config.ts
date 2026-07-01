@@ -22,7 +22,7 @@ import {
  * in `locale-data.mjs`, then add its code to this union (the single type edit)
  * and register its dictionary in `index.ts`.
  */
-export type Locale = "en" | "es" | "fr" | "ru" | "zh-CN"
+export type Locale = "en" | "de" | "es" | "fr" | "ru" | "zh-CN"
 
 /** All locale codes at runtime (default first), sourced from `locale-data`. */
 export const locales = localeList.map((l) => l.code) as ReadonlyArray<Locale>

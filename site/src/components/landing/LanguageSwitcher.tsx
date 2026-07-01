@@ -92,7 +92,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
           aria-label={t.languageSwitcher.label}
           className={cn(
             "relative inline-flex items-center gap-1.5",
-            "h-10 min-h-[44px] rounded-(--radius-brand) px-2.5",
+            "h-10 min-h-[44px] rounded-brand px-2.5",
             "text-sm font-medium transition-all duration-200",
             "hover:bg-canvas-muted/10 hover:text-(--color-canvas-foreground)",
             "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)",
