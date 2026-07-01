@@ -76,10 +76,7 @@ export function buildVerifyHead(locale: Locale) {
   const m = getDictionary(locale).verify.meta
   const canonical = `${SITE_URL}${localizedPath("/verify", locale)}`
   return {
-    meta: [
-      { title: m.title },
-      { name: "description", content: m.description },
-    ],
+    meta: [{ title: m.title }, { name: "description", content: m.description }],
     links: [
       { rel: "canonical", href: canonical },
       { rel: "alternate", hrefLang: "en", href: `${SITE_URL}/verify` },
@@ -727,7 +724,8 @@ function FaqSection() {
             key={faq.q}
             className={cn(
               "group bg-(--color-canvas) px-5 py-4",
-              i < d.items.length - 1 && "border-b border-(--color-canvas-border)"
+              i < d.items.length - 1 &&
+                "border-b border-(--color-canvas-border)"
             )}
           >
             <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-medium text-(--color-canvas-foreground)">
@@ -2255,12 +2253,10 @@ function VerdictBanner({
                         href="#download"
                         onClick={(e) => {
                           e.preventDefault()
-                          document
-                            .getElementById("download")
-                            ?.scrollIntoView({
-                              behavior: "smooth",
-                              block: "start",
-                            })
+                          document.getElementById("download")?.scrollIntoView({
+                            behavior: "smooth",
+                            block: "start",
+                          })
                         }}
                         className="font-medium text-(--color-brand) underline underline-offset-4 hover:text-(--color-brand-dark)"
                       >

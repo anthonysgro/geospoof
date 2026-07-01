@@ -39,7 +39,9 @@ export function ThemeToggle({ className }: { className?: string }) {
           "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)",
           className
         )}
-        aria-label={isDark ? t.themeToggle.switchToLight : t.themeToggle.switchToDark}
+        aria-label={
+          isDark ? t.themeToggle.switchToLight : t.themeToggle.switchToDark
+        }
       >
         {isDark ? (
           <Sun className="h-5 w-5" aria-hidden="true" />

@@ -181,7 +181,11 @@ function ExposureCard({
           <Row
             icon={<RadioIcon className="size-3.5" />}
             label={t.exposureToast.webrtc}
-            value={webrtcLeak ? t.exposureToast.publicIpLeaking : t.exposureToast.noLeak}
+            value={
+              webrtcLeak
+                ? t.exposureToast.publicIpLeaking
+                : t.exposureToast.noLeak
+            }
             valueClassName={
               webrtcLeak ? "text-amber-600 dark:text-amber-400" : undefined
             }

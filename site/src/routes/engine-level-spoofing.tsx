@@ -128,7 +128,10 @@ function StructuredData() {
     description: format(s.howToDesc, { flag: FLAG }),
     step: [
       { name: s.howToStep1Name, text: s.howToStep1Text },
-      { name: s.howToStep2Name, text: format(s.howToStep2Text, { flag: FLAG }) },
+      {
+        name: s.howToStep2Name,
+        text: format(s.howToStep2Text, { flag: FLAG }),
+      },
       { name: s.howToStep3Name, text: s.howToStep3Text },
       { name: s.howToStep4Name, text: s.howToStep4Text },
     ].map((step) => ({ "@type": "HowToStep", ...step })),
@@ -298,13 +301,21 @@ function WhatTheBarIsSection() {
   const { t } = useTranslations()
   const d = t.engineLevel.whatBar
   const points = [
-    { icon: <Info className="size-5" />, title: d.point1Title, body: d.point1Body },
+    {
+      icon: <Info className="size-5" />,
+      title: d.point1Title,
+      body: d.point1Body,
+    },
     {
       icon: <ShieldCheck className="size-5" />,
       title: d.point2Title,
       body: d.point2Body,
     },
-    { icon: <EyeOff className="size-5" />, title: d.point3Title, body: d.point3Body },
+    {
+      icon: <EyeOff className="size-5" />,
+      title: d.point3Title,
+      body: d.point3Body,
+    },
   ]
 
   return (

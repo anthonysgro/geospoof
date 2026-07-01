@@ -186,9 +186,18 @@ function TimezoneVisual() {
 function PrivacyVisual() {
   const { t } = useTranslations()
   const items = [
-    { icon: <WifiOffIcon className="h-4 w-4" />, label: t.features.visual.noIpLeak },
-    { icon: <BarChart2Icon className="h-4 w-4" />, label: t.features.visual.noTracking },
-    { icon: <MegaphoneOffIcon className="h-4 w-4" />, label: t.features.visual.noTelemetry },
+    {
+      icon: <WifiOffIcon className="h-4 w-4" />,
+      label: t.features.visual.noIpLeak,
+    },
+    {
+      icon: <BarChart2Icon className="h-4 w-4" />,
+      label: t.features.visual.noTracking,
+    },
+    {
+      icon: <MegaphoneOffIcon className="h-4 w-4" />,
+      label: t.features.visual.noTelemetry,
+    },
   ]
   return (
     <div className="mt-4 flex justify-around">

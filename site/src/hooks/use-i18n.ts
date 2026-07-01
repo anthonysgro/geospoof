@@ -1,7 +1,11 @@
 import * as React from "react"
 import { useRouterState } from "@tanstack/react-router"
 import type { Dictionary, Locale } from "@/lib/i18n"
-import { detectPreferredLocale, getDictionary, localeFromPathname } from "@/lib/i18n"
+import {
+  detectPreferredLocale,
+  getDictionary,
+  localeFromPathname,
+} from "@/lib/i18n"
 
 /**
  * The active locale, derived from the current URL pathname.

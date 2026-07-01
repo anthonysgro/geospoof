@@ -167,7 +167,8 @@ export const fr: Dictionary = {
     noAria: "Non",
     features: {
       coordinates: "Falsifier la position par coordonnées",
-      oneIdentity: "Une identité cohérente sur des dizaines d'API du navigateur",
+      oneIdentity:
+        "Une identité cohérente sur des dizaines d'API du navigateur",
       citySearch: "Définir votre position par recherche de ville",
       webrtc: "Protection contre les fuites d'IP WebRTC",
       everyBrowser: "Tous les grands navigateurs + tout l'écosystème Apple",
@@ -203,7 +204,8 @@ export const fr: Dictionary = {
     },
     footnote:
       "Firefox pour Android nécessite Firefox 140+. Safari nécessite iOS 16+ ou macOS 13+.",
-    setupLead: "Guides d'installation par navigateur : falsifiez votre position dans ",
+    setupLead:
+      "Guides d'installation par navigateur : falsifiez votre position dans ",
     or: " ou ",
     alsoLead: ". Vous pouvez aussi ",
     timezoneLink: "falsifier le fuseau horaire de votre navigateur",
@@ -672,7 +674,8 @@ export const fr: Dictionary = {
       heading: "Une position falsifiée a besoin d'une horloge cohérente",
       body: "Un VPN déplace votre IP et GeoSpoof déplace vos coordonnées GPS — mais si votre fuseau horaire indique encore votre véritable région, l'incohérence vous trahit. GeoSpoof garde votre fuseau horaire aligné sur la position que vous avez choisie, automatiquement, et le réaligne quand votre VPN change de serveur de sortie, pour que votre géolocalisation, votre fuseau horaire et votre IP racontent tous la même histoire.",
       blogLinkLead: "Vous voulez l'analyse technique détaillée ? ",
-      blogLinkText: "Découvrez pourquoi votre fuseau horaire révèle votre position",
+      blogLinkText:
+        "Découvrez pourquoi votre fuseau horaire révèle votre position",
     },
     faq: {
       heading: "Questions fréquentes",
@@ -710,7 +713,8 @@ export const fr: Dictionary = {
     eyebrow: "Vérification",
     heading: "Ce que les sites peuvent voir de vous",
     refresh: "Actualiser",
-    refreshAria: "Actualiser — rechargez la page pour voir vos valeurs les plus récentes",
+    refreshAria:
+      "Actualiser — rechargez la page pour voir vos valeurs les plus récentes",
     introMobile:
       "Les valeurs en direct que les sites peuvent lire sur vous en ce moment.",
     introDesktop:
@@ -733,7 +737,8 @@ export const fr: Dictionary = {
     vpnCard: {
       line1:
         "Votre adresse IP est le seul signal que GeoSpoof ne peut pas changer. Seul un VPN le peut.",
-      line2: "Celui que nous recommandons est à jusqu'à {discount} de réduction.",
+      line2:
+        "Celui que nous recommandons est à jusqu'à {discount} de réduction.",
       cta: "Voir le VPN sans journaux que nous recommandons",
     },
     apiSection: {
@@ -752,8 +757,7 @@ export const fr: Dictionary = {
       problemWebrtc: "WebRTC dévoile votre véritable IP",
       problemGeo: "La position ne correspond pas à l'IP",
       problemTz: "Le fuseau horaire ne correspond pas à l'IP",
-      crossRef:
-        "Un site qui recoupe ces signaux pourrait vous repérer.",
+      crossRef: "Un site qui recoupe ces signaux pourrait vous repérer.",
       installFree: "Installer GeoSpoof gratuitement",
       alreadyHave: "Vous avez déjà GeoSpoof ?",
     },

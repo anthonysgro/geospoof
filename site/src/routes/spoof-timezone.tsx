@@ -46,7 +46,11 @@ export function buildSpoofTimezoneHead(locale: Locale) {
     links: [
       { rel: "canonical", href: canonical },
       { rel: "alternate", hrefLang: "en", href: `${SITE_URL}/spoof-timezone` },
-      { rel: "alternate", hrefLang: "fr", href: `${SITE_URL}/fr/spoof-timezone` },
+      {
+        rel: "alternate",
+        hrefLang: "fr",
+        href: `${SITE_URL}/fr/spoof-timezone`,
+      },
       {
         rel: "alternate",
         hrefLang: "x-default",

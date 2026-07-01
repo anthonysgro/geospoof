@@ -22,10 +22,7 @@ export function buildSupportHead(locale: Locale) {
   const m = getDictionary(locale).support.meta
   const canonical = `${SITE_URL}${localizedPath("/support", locale)}`
   return {
-    meta: [
-      { title: m.title },
-      { name: "description", content: m.description },
-    ],
+    meta: [{ title: m.title }, { name: "description", content: m.description }],
     links: [
       { rel: "canonical", href: canonical },
       { rel: "alternate", hrefLang: "en", href: `${SITE_URL}/support` },

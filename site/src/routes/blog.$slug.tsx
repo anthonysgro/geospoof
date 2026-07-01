@@ -1,6 +1,6 @@
 import { Link, createFileRoute, notFound } from "@tanstack/react-router"
 import { MDXContent } from "@content-collections/mdx/react"
-import type {Post} from "@/lib/blog";
+import type { Post } from "@/lib/blog"
 import { Navigation } from "@/components/landing/Navigation"
 import { Footer } from "@/components/landing/Footer"
 import { SkipLink } from "@/components/landing/SkipLink"
@@ -17,13 +17,12 @@ import {
 } from "@/components/ui/breadcrumb"
 import { mdxComponents } from "@/components/blog/mdx-components"
 import {
-  
   SITE_URL,
   blogPageTitle,
   formatDate,
   getAdjacentPosts,
   getPostBySlug,
-  postUrl
+  postUrl,
 } from "@/lib/blog"
 import { useTranslations } from "@/hooks/use-i18n"
 

@@ -1,12 +1,11 @@
 import * as React from "react"
-import type {CarouselApi} from "@/components/ui/carousel";
+import type { CarouselApi } from "@/components/ui/carousel"
 import {
   Carousel,
-  
   CarouselContent,
   CarouselItem,
   CarouselNext,
-  CarouselPrevious
+  CarouselPrevious,
 } from "@/components/ui/carousel"
 import { useTheme } from "@/hooks/use-theme"
 import { cn } from "@/lib/utils"

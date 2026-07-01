@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router"
 import { ChevronDown, Globe, ShieldAlert, ShieldCheck } from "lucide-react"
 import type { Locale } from "@/lib/i18n"
-import type {Platform} from "@/hooks/use-platform";
+import type { Platform } from "@/hooks/use-platform"
 import { Navigation } from "@/components/landing/Navigation"
 import { Footer } from "@/components/landing/Footer"
 import { SkipLink } from "@/components/landing/SkipLink"
@@ -17,7 +17,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { cn } from "@/lib/utils"
-import {  usePlatform } from "@/hooks/use-platform"
+import { usePlatform } from "@/hooks/use-platform"
 import { getStoreLink } from "@/lib/store-links"
 import { SITE_URL } from "@/lib/blog"
 import { useTranslations } from "@/hooks/use-i18n"
@@ -200,7 +200,9 @@ export function BrowserSpoofPage({ slug }: { slug: BrowserSlug }) {
                   "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
                 )}
               >
-                {store ? t.storeCta[store.key] : format(p.ctaFallback, { name })}
+                {store
+                  ? t.storeCta[store.key]
+                  : format(p.ctaFallback, { name })}
               </a>
               <LocaleLink
                 to="/verify"

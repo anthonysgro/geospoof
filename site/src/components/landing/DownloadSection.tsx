@@ -1,8 +1,8 @@
 import { Section } from "./Section"
-import type {Platform} from "@/hooks/use-platform";
+import type { Platform } from "@/hooks/use-platform"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
-import {  usePlatform } from "@/hooks/use-platform"
+import { usePlatform } from "@/hooks/use-platform"
 import { useTranslations } from "@/hooks/use-i18n"
 
 interface DownloadOption {
@@ -50,7 +50,11 @@ const downloads: Array<DownloadOption> = [
   },
 ]
 
-const selfHosted: Array<{ id: "dmg" | "xpi"; icon: string; href: () => string }> = [
+const selfHosted: Array<{
+  id: "dmg" | "xpi"
+  icon: string
+  href: () => string
+}> = [
   {
     id: "dmg",
     icon: "/images/stores/dmg-install-icon.png",

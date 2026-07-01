@@ -639,8 +639,7 @@ export const en = {
       reveals1: "Returns an IANA name like America/New_York.",
       reveals2: "Returns your UTC offset in minutes.",
       surface3Api: "Temporal & document timestamps",
-      reveals3:
-        "Newer time APIs and page timestamps expose the same zone.",
+      reveals3: "Newer time APIs and page timestamps expose the same zone.",
     },
     howTo: {
       heading: "How to spoof your timezone",
@@ -840,7 +839,8 @@ export const en = {
     howTo: {
       heading: "How to hide the bar",
       introPre: "Launch Chrome with the ",
-      introPost: " flag. Quit Chrome first, then follow the steps for your system.",
+      introPost:
+        " flag. Quit Chrome first, then follow the steps for your system.",
     },
     guides: {
       win: {

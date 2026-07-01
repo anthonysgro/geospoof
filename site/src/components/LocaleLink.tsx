@@ -14,7 +14,6 @@ type LinkProps = ComponentProps<typeof Link>
  */
 export function LocaleLink({ to, ...props }: LinkProps) {
   const locale = useLocale()
-  const href =
-    typeof to === "string" ? localizedHref(to, locale) : to
+  const href = typeof to === "string" ? localizedHref(to, locale) : to
   return <Link to={href as LinkProps["to"]} {...props} />
 }

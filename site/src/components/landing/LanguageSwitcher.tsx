@@ -97,9 +97,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
             "hover:bg-canvas-muted/10 hover:text-(--color-canvas-foreground)",
             "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)",
             "data-[state=open]:text-(--color-canvas-foreground)",
-            showNudge
-              ? "text-(--color-brand)"
-              : "text-(--color-canvas-muted)"
+            showNudge ? "text-(--color-brand)" : "text-(--color-canvas-muted)"
           )}
         >
           <GlobeIcon className="h-5 w-5" aria-hidden="true" />
@@ -134,8 +132,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
                 >
                   <span
                     className={cn(
-                      isActive &&
-                        "font-medium text-(--color-canvas-foreground)"
+                      isActive && "font-medium text-(--color-canvas-foreground)"
                     )}
                   >
                     {localeNames[locale]}
