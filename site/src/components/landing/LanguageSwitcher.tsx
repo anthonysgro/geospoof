@@ -91,7 +91,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
         <DropdownMenuTrigger
           aria-label={t.languageSwitcher.label}
           className={cn(
-            "relative inline-flex items-center gap-1.5",
+            "relative inline-flex cursor-pointer items-center gap-1.5",
             "h-10 min-h-[44px] rounded-brand px-2.5",
             "text-sm font-medium transition-all duration-200",
             "hover:bg-canvas-muted/10 hover:text-(--color-canvas-foreground)",
@@ -129,7 +129,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
                   locale={locale}
                   hrefLang={locale}
                   aria-current={isActive ? "true" : undefined}
-                  className="flex items-center justify-between gap-6"
+                  className="flex cursor-pointer items-center justify-between gap-6"
                 >
                   <span
                     className={cn(
@@ -175,7 +175,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
                     type="button"
                     onClick={dismissNudge}
                     aria-label={d.languageSwitcher.dismiss}
-                    className="shrink-0 text-(--color-canvas-muted) transition-colors hover:text-(--color-canvas-foreground)"
+                    className="shrink-0 cursor-pointer text-(--color-canvas-muted) transition-colors hover:text-(--color-canvas-foreground)"
                   >
                     <XIcon className="size-3.5" />
                   </button>
@@ -186,7 +186,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
                   hrefLang={nudgeLocale}
                   onClick={dismissNudge}
                   className={cn(
-                    "mt-2.5 inline-flex min-h-9 w-full items-center justify-center rounded-lg px-3",
+                    "mt-2.5 inline-flex min-h-9 w-full cursor-pointer items-center justify-center rounded-lg px-3",
                     "bg-(--color-brand) text-sm font-semibold text-white",
                     "transition-colors hover:bg-(--color-brand-dark)"
                   )}
