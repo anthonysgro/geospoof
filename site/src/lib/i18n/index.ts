@@ -2,6 +2,7 @@ import { en } from "./dictionaries/en"
 import { de } from "./dictionaries/de"
 import { es } from "./dictionaries/es"
 import { fr } from "./dictionaries/fr"
+import { ptBR } from "./dictionaries/pt-BR"
 import { ru } from "./dictionaries/ru"
 import { zhCN } from "./dictionaries/zh-CN"
 import type { Locale } from "./config"
@@ -16,6 +17,7 @@ const dictionaries: Record<Locale, Dictionary> = {
   de,
   es,
   fr,
+  "pt-BR": ptBR,
   ru,
   "zh-CN": zhCN,
 }
