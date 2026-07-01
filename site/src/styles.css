@@ -187,17 +187,24 @@
   }
   html {
     @apply font-sans;
-    /* Global "zoom": scales every rem-based size (text, spacing, images, and
-       the rem-based container widths) proportionally. The breakpoint scale at
-       the top of this file is multiplied by the SAME factor so the responsive
-       switches move in lockstep — together they reproduce a true browser zoom
-       (larger content + earlier breakpoint switches), not just bigger text in
-       a same-width layout. Tune this one number, then scale the breakpoints to
-       match. 100% = original, 112.5% ≈ +12.5%. */
-    font-size: 112.5%;
+    /* Phones stay at 100% — 112.5% is too large at ~390px. The global "zoom"
+       turns on from 640px up (see media query below), which covers small
+       tablets, resized desktop windows, and larger, where it reads well. */
+    font-size: 100%;
     /* Smooth in-page anchor scrolling; the reduced-motion block below forces
        this back to `auto` for users who prefer reduced motion. */
     scroll-behavior: smooth;
+  }
+  /* Global "zoom": scales every rem-based size (text, spacing, images, and the
+     rem-based container widths) proportionally. The breakpoint scale at the top
+     of this file is multiplied by the SAME factor so the responsive switches
+     move in lockstep — together they reproduce a true browser zoom (larger
+     content + earlier breakpoint switches). Gated at 640px so phones opt out.
+     Tune the factor here, then scale the breakpoints to match. */
+  @media (min-width: 40rem) {
+    html {
+      font-size: 112.5%;
+    }
   }
 }
 
