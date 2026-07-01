@@ -1,4 +1,4 @@
-import { Link, createFileRoute, notFound } from "@tanstack/react-router"
+import { createFileRoute, notFound } from "@tanstack/react-router"
 import { MDXContent } from "@content-collections/mdx/react"
 import type { Post } from "@/lib/blog"
 import { Navigation } from "@/components/landing/Navigation"
@@ -83,7 +83,7 @@ export function buildBlogPostHead(post: Post) {
   }
 }
 
-export const Route = createFileRoute("/blog/$slug")({
+export const Route = createFileRoute("/{-$locale}/blog/$slug")({
   loader: ({ params }) => {
     const post = getPostBySlug(params.slug)
     if (!post) throw notFound()
@@ -287,9 +287,8 @@ export function BlogPostView({ post }: { post: Post }) {
                 className="mt-12 grid gap-4 border-t border-(--color-canvas-border) pt-8 sm:grid-cols-2"
               >
                 {older ? (
-                  <Link
-                    to={locale === "en" ? "/blog/$slug" : "/fr/blog/$slug"}
-                    params={{ slug: older.slug }}
+                  <LocaleLink
+                    to={`/blog/${older.slug}`}
                     className="group flex flex-col rounded-md-brand border border-(--color-canvas-border) p-4 transition-colors hover:border-(--color-brand)"
                   >
                     <span className="text-small text-(--color-canvas-muted)">
@@ -298,14 +297,13 @@ export function BlogPostView({ post }: { post: Post }) {
                     <span className="mt-1 font-semibold text-(--color-canvas-foreground) group-hover:text-(--color-brand)">
                       {older.title}
                     </span>
-                  </Link>
+                  </LocaleLink>
                 ) : (
                   <span aria-hidden="true" className="hidden sm:block" />
                 )}
                 {newer ? (
-                  <Link
-                    to={locale === "en" ? "/blog/$slug" : "/fr/blog/$slug"}
-                    params={{ slug: newer.slug }}
+                  <LocaleLink
+                    to={`/blog/${newer.slug}`}
                     className="group flex flex-col rounded-md-brand border border-(--color-canvas-border) p-4 text-right transition-colors hover:border-(--color-brand) sm:items-end"
                   >
                     <span className="text-small text-(--color-canvas-muted)">
@@ -314,7 +312,7 @@ export function BlogPostView({ post }: { post: Post }) {
                     <span className="mt-1 font-semibold text-(--color-canvas-foreground) group-hover:text-(--color-brand)">
                       {newer.title}
                     </span>
-                  </Link>
+                  </LocaleLink>
                 ) : (
                   <span aria-hidden="true" className="hidden sm:block" />
                 )}

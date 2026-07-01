@@ -53,7 +53,9 @@ async function ping(urls) {
     return
   }
 
-  console.log(`[indexnow] submitting ${urls.length} URLs to ${INDEXNOW_ENDPOINT}`)
+  console.log(
+    `[indexnow] submitting ${urls.length} URLs to ${INDEXNOW_ENDPOINT}`
+  )
 
   const res = await fetch(INDEXNOW_ENDPOINT, {
     method: "POST",
@@ -73,7 +75,9 @@ async function ping(urls) {
 
 const urls = extractUrls()
 if (urls.length === 0) {
-  console.error("[indexnow] no URLs found in sitemap.xml — run `npm run sitemap` first")
+  console.error(
+    "[indexnow] no URLs found in sitemap.xml — run `npm run sitemap` first"
+  )
   process.exitCode = 1
 } else {
   await ping(urls)

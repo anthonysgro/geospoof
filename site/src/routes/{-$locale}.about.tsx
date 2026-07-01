@@ -1,6 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router"
 import * as React from "react"
 import type { Locale } from "@/lib/i18n"
+import {
+  buildOgLocaleMeta,
+  getDictionary,
+  localizedPath,
+  toLocale,
+} from "@/lib/i18n"
 import { LocaleLink } from "@/components/LocaleLink"
 import { Navigation } from "@/components/landing/Navigation"
 import { Footer } from "@/components/landing/Footer"
@@ -9,7 +15,6 @@ import { Section } from "@/components/landing/Section"
 import { cn } from "@/lib/utils"
 import { SITE_URL } from "@/lib/blog"
 import { useTranslations } from "@/hooks/use-i18n"
-import { buildOgLocaleMeta, getDictionary, localizedPath } from "@/lib/i18n"
 
 const GITHUB_PROFILE = "https://github.com/anthonysgro"
 const LINKEDIN_URL = "https://www.linkedin.com/in/sgro"
@@ -43,9 +48,9 @@ export function buildAboutHead(locale: Locale) {
   }
 }
 
-export const Route = createFileRoute("/about")({
+export const Route = createFileRoute("/{-$locale}/about")({
   component: AboutPage,
-  head: () => buildAboutHead("en"),
+  head: ({ params }) => buildAboutHead(toLocale(params.locale)),
 })
 
 // ProfilePage + Person structured data. Establishes the author as a real,

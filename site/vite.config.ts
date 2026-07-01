@@ -8,6 +8,11 @@ import viteTsConfigPaths from "vite-tsconfig-paths"
 import tailwindcss from "@tailwindcss/vite"
 import { nitro } from "nitro/vite"
 import contentCollections from "@content-collections/vite"
+import {
+  localizedBasePaths,
+  noPrerenderBasePaths,
+  nonDefaultLocaleCodes,
+} from "./src/lib/i18n/locale-data.mjs"
 
 /**
  * Resolve the mkcert-generated HTTPS cert pair for the dev server if it
@@ -54,6 +59,20 @@ function resolveDevHttpsOptions(): { cert: Buffer; key: Buffer } | undefined {
 
 const devHttps = resolveDevHttpsOptions()
 
+/**
+ * Localized pages to prerender, derived from the locale config so it never
+ * drifts: every non-default locale × every localized base path, minus the
+ * paths that must render live (e.g. /verify runs browser probes). English
+ * (bare-path) pages are discovered by the link crawler.
+ *
+ *   fr × ["/", "/about", …]  ->  [{ path: "/fr" }, { path: "/fr/about" }, …]
+ */
+const localizedPrerenderPages = nonDefaultLocaleCodes.flatMap((code) =>
+  localizedBasePaths
+    .filter((base) => !noPrerenderBasePaths.includes(base))
+    .map((base) => ({ path: base === "/" ? `/${code}` : `/${code}${base}` }))
+)
+
 const config = defineConfig({
   base: "/",
   server: {
@@ -73,24 +92,10 @@ const config = defineConfig({
     tanstackStart({
       // Localized routes that the link crawler can't discover from a static
       // anchor (the language switcher is a portaled dropdown, so its links
-      // aren't in the closed-menu DOM). Enumerate them explicitly so they're
-      // always prerendered. Add new localized pages here as they're created.
-      pages: [
-        { path: "/fr" },
-        { path: "/fr/about" },
-        { path: "/fr/support" },
-        { path: "/fr/privacy" },
-        { path: "/fr/terms" },
-        { path: "/fr/engine-level-spoofing" },
-        { path: "/fr/vpn" },
-        { path: "/fr/spoof-timezone" },
-        { path: "/fr/spoof-location" },
-        { path: "/fr/spoof-location/chrome" },
-        { path: "/fr/spoof-location/edge" },
-        { path: "/fr/spoof-location/firefox" },
-        { path: "/fr/spoof-location/safari" },
-        { path: "/fr/blog" },
-      ],
+      // aren't in the closed-menu DOM). Enumerated from the locale config
+      // (see `localizedPrerenderPages`) so new locales/pages are covered with
+      // no edit here.
+      pages: localizedPrerenderPages,
       // Prerender all static routes at build time so Vercel serves them
       // as static assets from the CDN edge — eliminates SSR cold-start
       // latency and improves FCP/TTFB for the landing page and docs.

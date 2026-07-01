@@ -2,6 +2,12 @@ import * as React from "react"
 import { createFileRoute } from "@tanstack/react-router"
 import { FileTextIcon } from "lucide-react"
 import type { Locale } from "@/lib/i18n"
+import {
+  buildOgLocaleMeta,
+  getDictionary,
+  localizedPath,
+  toLocale,
+} from "@/lib/i18n"
 import { Navigation } from "@/components/landing/Navigation"
 import { Footer } from "@/components/landing/Footer"
 import { SkipLink } from "@/components/landing/SkipLink"
@@ -9,7 +15,6 @@ import { Section } from "@/components/landing/Section"
 import { cn } from "@/lib/utils"
 import { SITE_URL } from "@/lib/blog"
 import { useTranslations } from "@/hooks/use-i18n"
-import { buildOgLocaleMeta, getDictionary, localizedPath } from "@/lib/i18n"
 
 /**
  * Head for the Terms page. Only the page chrome is localized; the legal body
@@ -33,9 +38,9 @@ export function buildTermsHead(locale: Locale) {
   }
 }
 
-export const Route = createFileRoute("/terms")({
+export const Route = createFileRoute("/{-$locale}/terms")({
   component: TermsPage,
-  head: () => buildTermsHead("en"),
+  head: ({ params }) => buildTermsHead(toLocale(params.locale)),
 })
 
 function TermsSection({
@@ -76,7 +81,7 @@ export function TermsPage() {
         <Section narrow className="py-12! md:py-16!">
           {/* Header */}
           <div className="mb-12 text-center">
-            <div className="mb-8 inline-flex h-16 w-16 items-center justify-center rounded-full bg-(--color-brand)/10">
+            <div className="mb-8 inline-flex h-16 w-16 items-center justify-center rounded-full bg-brand/10">
               <FileTextIcon className="h-8 w-8 text-(--color-brand)" />
             </div>
             <h1 className="mb-4 text-4xl font-bold text-(--color-canvas-foreground)">

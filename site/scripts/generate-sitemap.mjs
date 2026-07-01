@@ -11,6 +11,10 @@
 import { readFileSync, readdirSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
+import {
+  nonDefaultLocaleCodes,
+  localizedBasePaths,
+} from "../src/lib/i18n/locale-data.mjs"
 
 const SITE_URL = "https://geospoof.com"
 
@@ -43,34 +47,18 @@ const staticRoutes = [
 ]
 
 /**
- * Non-default locales served under a URL prefix. English is the default and
- * lives at the bare path. Keep in sync with `src/lib/i18n/config.ts`.
+ * Non-default locales served under a URL prefix, derived from the shared locale
+ * config so it can't drift: e.g. `["fr"]` -> `{ fr: "/fr" }`. English is the
+ * default and lives at the bare path.
  */
-const LOCALE_PREFIXES = { fr: "/fr" }
+const LOCALE_PREFIXES = Object.fromEntries(
+  nonDefaultLocaleCodes.map((code) => [code, `/${code}`])
+)
 
-/**
- * Unprefixed base paths that have a translated variant for every locale above.
- * Each gets one `<url>` per locale, all cross-linked with `hreflang` alternates
- * (plus `x-default` -> the English bare path) so Google clusters them.
- * Keep in sync with `localizedBasePaths` in `src/lib/i18n/config.ts`.
- */
-const localizedBasePaths = [
-  "/",
-  "/about",
-  "/support",
-  "/verify",
-  "/privacy",
-  "/terms",
-  "/engine-level-spoofing",
-  "/vpn",
-  "/spoof-timezone",
-  "/spoof-location",
-  "/spoof-location/chrome",
-  "/spoof-location/edge",
-  "/spoof-location/firefox",
-  "/spoof-location/safari",
-  "/blog",
-]
+// `localizedBasePaths` (the unprefixed paths with a translated variant for
+// every locale) is imported from the shared locale config above. Each gets one
+// `<url>` per locale, all cross-linked with `hreflang` alternates (plus
+// `x-default` -> the English bare path) so Google clusters them.
 
 /**
  * One-line descriptions for the key static routes, surfaced in llms.txt so AI
@@ -274,7 +262,9 @@ function buildLlmsTxt(posts) {
   lines.push("", "## Blog", "")
   for (const post of posts) {
     const desc = post.description ? `: ${post.description}` : ""
-    lines.push(`- [${post.title ?? post.slug}](${SITE_URL}/blog/${post.slug})${desc}`)
+    lines.push(
+      `- [${post.title ?? post.slug}](${SITE_URL}/blog/${post.slug})${desc}`
+    )
   }
 
   return lines.join("\n") + "\n"

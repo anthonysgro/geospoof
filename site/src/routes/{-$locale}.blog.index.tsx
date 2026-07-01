@@ -1,5 +1,12 @@
-import { Link, createFileRoute } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
 import type { Locale } from "@/lib/i18n"
+import { LocaleLink } from "@/components/LocaleLink"
+import {
+  buildOgLocaleMeta,
+  getDictionary,
+  localizedPath,
+  toLocale,
+} from "@/lib/i18n"
 import { Navigation } from "@/components/landing/Navigation"
 import { Footer } from "@/components/landing/Footer"
 import { SkipLink } from "@/components/landing/SkipLink"
@@ -7,7 +14,6 @@ import { Section } from "@/components/landing/Section"
 import { Badge } from "@/components/ui/badge"
 import { SITE_URL, formatDate, postUrl, posts } from "@/lib/blog"
 import { useTranslations } from "@/hooks/use-i18n"
-import { buildOgLocaleMeta, getDictionary, localizedPath } from "@/lib/i18n"
 
 /**
  * Build the `head` payload for the blog index in a given locale: localized
@@ -37,9 +43,9 @@ export function buildBlogIndexHead(locale: Locale) {
   }
 }
 
-export const Route = createFileRoute("/blog/")({
+export const Route = createFileRoute("/{-$locale}/blog/")({
   component: BlogIndexView,
-  head: () => buildBlogIndexHead("en"),
+  head: ({ params }) => buildBlogIndexHead(toLocale(params.locale)),
 })
 
 /**
@@ -49,7 +55,7 @@ export const Route = createFileRoute("/blog/")({
  * were written in (English) — only the page framing is localized.
  */
 export function BlogIndexView() {
-  const { locale, t } = useTranslations()
+  const { t } = useTranslations()
   const b = t.blog.index
   return (
     <div className="min-h-screen bg-(--color-canvas)">
@@ -72,9 +78,8 @@ export function BlogIndexView() {
             <ul className="space-y-4">
               {posts.map((post) => (
                 <li key={post.slug}>
-                  <Link
-                    to={locale === "en" ? "/blog/$slug" : "/fr/blog/$slug"}
-                    params={{ slug: post.slug }}
+                  <LocaleLink
+                    to={`/blog/${post.slug}`}
                     className="block overflow-hidden rounded-brand border border-(--color-canvas-border) transition-colors hover:border-(--color-brand) focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
                   >
                     {post.cover && (
@@ -113,7 +118,7 @@ export function BlogIndexView() {
                         </div>
                       )}
                     </div>
-                  </Link>
+                  </LocaleLink>
                 </li>
               ))}
             </ul>

@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Link, useRouterState } from "@tanstack/react-router"
+import { useRouterState } from "@tanstack/react-router"
 import { CheckIcon, GlobeIcon, XIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
@@ -9,11 +9,11 @@ import {
   localeNames,
   localeShortLabels,
   locales,
-  localizedPath,
   stripLocalePrefix,
 } from "@/lib/i18n"
 import { useSuggestedLocale, useTranslations } from "@/hooks/use-i18n"
 import { useReducedMotion } from "@/hooks/use-reduced-motion"
+import { LocaleLink } from "@/components/LocaleLink"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -124,8 +124,9 @@ export function LanguageSwitcher({ className }: { className?: string }) {
             const isActive = locale === activeLocale
             return (
               <DropdownMenuItem key={locale} asChild>
-                <Link
-                  to={localizedPath(basePath, locale) as "/"}
+                <LocaleLink
+                  to={basePath}
+                  locale={locale}
                   hrefLang={locale}
                   aria-current={isActive ? "true" : undefined}
                   className="flex items-center justify-between gap-6"
@@ -143,7 +144,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
                       aria-hidden="true"
                     />
                   ) : null}
-                </Link>
+                </LocaleLink>
               </DropdownMenuItem>
             )
           })}
@@ -179,8 +180,9 @@ export function LanguageSwitcher({ className }: { className?: string }) {
                     <XIcon className="size-3.5" />
                   </button>
                 </div>
-                <Link
-                  to={localizedPath(basePath, nudgeLocale) as "/"}
+                <LocaleLink
+                  to={basePath}
+                  locale={nudgeLocale}
                   hrefLang={nudgeLocale}
                   onClick={dismissNudge}
                   className={cn(
@@ -190,7 +192,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
                   )}
                 >
                   {d.languageSwitcher.switchAction}
-                </Link>
+                </LocaleLink>
               </>
             )
           })()}

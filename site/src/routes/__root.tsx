@@ -1,6 +1,5 @@
 import {
   HeadContent,
-  Link,
   Outlet,
   Scripts,
   createRootRoute,
@@ -10,6 +9,7 @@ import { Analytics } from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/react"
 import appCss from "../styles.css?url"
 import { localeFromPathname } from "@/lib/i18n"
+import { LocaleLink } from "@/components/LocaleLink"
 import { ThemeProvider } from "@/components/theme-provider"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Toaster } from "@/components/ui/sonner"
@@ -94,12 +94,12 @@ export const Route = createRootRoute({
         <p className="text-(--color-canvas-muted)">
           This page doesn't exist or has been moved.
         </p>
-        <Link
+        <LocaleLink
           to="/"
           className="mt-2 inline-flex min-h-10 items-center justify-center rounded-brand bg-(--color-brand) px-6 text-sm font-semibold text-white transition-all hover:bg-(--color-brand-dark)"
         >
           Back to home
-        </Link>
+        </LocaleLink>
       </main>
       <Footer />
     </div>

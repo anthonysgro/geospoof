@@ -1,4 +1,3 @@
-import { Link } from "@tanstack/react-router"
 import { ChevronDown, Globe, ShieldAlert, ShieldCheck } from "lucide-react"
 import type { Locale } from "@/lib/i18n"
 import type { Platform } from "@/hooks/use-platform"
@@ -160,17 +159,15 @@ export function BrowserSpoofPage({ slug }: { slug: BrowserSlug }) {
             <BreadcrumbList>
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
-                  <Link to={localizedPath("/", locale) as "/"}>
-                    {p.breadcrumbHome}
-                  </Link>
+                  <LocaleLink to="/">{p.breadcrumbHome}</LocaleLink>
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
-                  <Link to={localizedPath("/spoof-location", locale) as "/"}>
+                  <LocaleLink to="/spoof-location">
                     {p.breadcrumbHub}
-                  </Link>
+                  </LocaleLink>
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
@@ -324,12 +321,12 @@ export function BrowserSpoofPage({ slug }: { slug: BrowserSlug }) {
           <p className="mt-6 text-sm text-(--color-canvas-muted)">
             <Globe className="mr-1.5 inline size-4 align-text-bottom" />
             {p.crossLinkLead}
-            <Link
-              to={localizedPath("/spoof-location", locale) as "/"}
+            <LocaleLink
+              to="/spoof-location"
               className="font-medium text-(--color-brand) hover:underline"
             >
               {p.crossLinkText}
-            </Link>
+            </LocaleLink>
             .
           </p>
         </Section>
@@ -415,7 +412,7 @@ export function BrowserSpoofPage({ slug }: { slug: BrowserSlug }) {
  * `useTranslations`; shared by the English and French routes.
  */
 export function SpoofLocationHub() {
-  const { locale, t } = useTranslations()
+  const { t } = useTranslations()
   const h = t.spoofLocation.hub
 
   return (
@@ -446,9 +443,9 @@ export function SpoofLocationHub() {
               const info = BROWSER_META[slug]
               const b = t.spoofLocation.browsers[slug]
               return (
-                <Link
+                <LocaleLink
                   key={slug}
-                  to={localizedPath(`/spoof-location/${slug}`, locale) as "/"}
+                  to={`/spoof-location/${slug}`}
                   className={cn(
                     "flex flex-col gap-1 rounded-2xl border border-(--color-canvas-border) p-6",
                     "transition-all hover:border-(--color-brand) hover:shadow-lg",
@@ -464,7 +461,7 @@ export function SpoofLocationHub() {
                   <span className="mt-2 text-sm font-semibold text-(--color-brand)">
                     {h.openGuide} →
                   </span>
-                </Link>
+                </LocaleLink>
               )
             })}
           </div>

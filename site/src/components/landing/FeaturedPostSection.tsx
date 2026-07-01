@@ -1,6 +1,6 @@
-import { Link } from "@tanstack/react-router"
 import { ArrowRightIcon } from "lucide-react"
 import { Section } from "./Section"
+import { LocaleLink } from "@/components/LocaleLink"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { featuredPost, formatDate } from "@/lib/blog"
@@ -30,18 +30,17 @@ export function FeaturedPostSection({ className }: { className?: string }) {
             {t.featuredPost.heading}
           </h2>
         </div>
-        <Link
+        <LocaleLink
           to="/blog"
           className="hidden shrink-0 items-center gap-1.5 text-sm font-medium text-(--color-brand) hover:underline sm:inline-flex"
         >
           {t.featuredPost.allPosts}
           <ArrowRightIcon className="h-4 w-4" />
-        </Link>
+        </LocaleLink>
       </div>
 
-      <Link
-        to="/blog/$slug"
-        params={{ slug: post.slug }}
+      <LocaleLink
+        to={`/blog/${post.slug}`}
         className={cn(
           "group grid overflow-hidden rounded-brand border border-(--color-canvas-border)",
           "transition-colors hover:border-(--color-brand)",
@@ -84,7 +83,7 @@ export function FeaturedPostSection({ className }: { className?: string }) {
             <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
           </span>
         </div>
-      </Link>
+      </LocaleLink>
     </Section>
   )
 }

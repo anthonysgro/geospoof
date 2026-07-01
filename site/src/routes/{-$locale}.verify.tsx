@@ -19,6 +19,13 @@ import type { NetworkIdentity } from "@/lib/verification/network-identity"
 import type { WebrtcResult } from "@/lib/verification/webrtc-probe"
 import type { WorkerProbeResult } from "@/lib/verification/worker-probe"
 import type { Locale } from "@/lib/i18n"
+import {
+  buildOgLocaleMeta,
+  format,
+  getDictionary,
+  localizedPath,
+  toLocale,
+} from "@/lib/i18n"
 import { Navigation } from "@/components/landing/Navigation"
 import { Footer } from "@/components/landing/Footer"
 import { SkipLink } from "@/components/landing/SkipLink"
@@ -64,12 +71,6 @@ import {
 } from "@/lib/verification/geo-timezone"
 import { useTranslations } from "@/hooks/use-i18n"
 import { LocaleLink } from "@/components/LocaleLink"
-import {
-  buildOgLocaleMeta,
-  format,
-  getDictionary,
-  localizedPath,
-} from "@/lib/i18n"
 
 /**
  * Build the `head` payload for the verify page in a given locale. This route is
@@ -102,9 +103,9 @@ export function buildVerifyHead(locale: Locale) {
   }
 }
 
-export const Route = createFileRoute("/verify")({
+export const Route = createFileRoute("/{-$locale}/verify")({
   component: VerifyPage,
-  head: () => buildVerifyHead("en"),
+  head: ({ params }) => buildVerifyHead(toLocale(params.locale)),
 })
 
 type NetworkState =
@@ -207,8 +208,13 @@ function useGeolocationPermission(): string | null {
   const [state, setState] = React.useState<string | null>(null)
   React.useEffect(() => {
     let cancelled = false
-    if (typeof navigator !== "undefined" && navigator.permissions?.query) {
-      navigator.permissions.query({ name: "geolocation" }).then(
+    // `navigator.permissions` is typed as always-present, but it's genuinely
+    // absent in some hardened/older browsers — treat it as optional so the
+    // feature check is real rather than statically-dead.
+    const permissions: Permissions | undefined =
+      typeof navigator !== "undefined" ? navigator.permissions : undefined
+    if (permissions?.query) {
+      permissions.query({ name: "geolocation" }).then(
         (status) => {
           if (!cancelled) setState(status.state)
         },
@@ -358,7 +364,7 @@ function VerifyInner() {
     loc.status === "ready" &&
     loc.value != null &&
     net?.latitude != null &&
-    net?.longitude != null &&
+    net.longitude != null &&
     haversineKm(
       loc.value.latitude,
       loc.value.longitude,
@@ -1124,7 +1130,7 @@ function buildValueGroups(
       const m = /GMT([+-])(\d+)(?::(\d+))?/.exec(part?.value ?? "")
       if (!m) return null
       const sign = m[1] === "+" ? -1 : 1
-      return sign * (parseInt(m[2], 10) * 60 + parseInt(m[3] ?? "0", 10))
+      return sign * (parseInt(m[2], 10) * 60 + parseInt(m.at(3) ?? "0", 10))
     } catch {
       return null
     }
@@ -1903,7 +1909,12 @@ function buildValueGroups(
       const xslDoc = new DOMParser().parseFromString(xslText, "text/xml")
       const proc = new XSLTProcessor()
       proc.importStylesheet(xslDoc)
-      const fragment = proc.transformToFragment(xslDoc, document)
+      // `transformToFragment` is typed non-null but returns null when the
+      // transform fails (e.g. XSLT disabled) — cast so the guard below is real.
+      const fragment = proc.transformToFragment(
+        xslDoc,
+        document
+      ) as DocumentFragment | null
       return fragment?.firstChild?.nodeValue || "unavailable"
     })
     // Only grade when the engine actually produced an EXSLT timestamp carrying

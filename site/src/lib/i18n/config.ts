@@ -10,35 +10,44 @@
  * user picks via a visible switcher.
  */
 
-/** Every locale the site can render. The first entry is the default. */
-export const locales = ["en", "fr"] as const
+import {
+  defaultLocale as defaultLocaleCode,
+  localeList,
+  localizedBasePaths as localizedBasePathList,
+  localizedSubtrees as localizedSubtreeList,
+} from "./locale-data.mjs"
 
-export type Locale = (typeof locales)[number]
+/**
+ * Every locale the site can render. To add one: add an entry to `localeList`
+ * in `locale-data.mjs`, then add its code to this union (the single type edit)
+ * and register its dictionary in `index.ts`.
+ */
+export type Locale = "en" | "fr"
+
+/** All locale codes at runtime (default first), sourced from `locale-data`. */
+export const locales = localeList.map((l) => l.code) as ReadonlyArray<Locale>
 
 /** Default locale — served at the bare path with no URL prefix. */
-export const defaultLocale: Locale = "en"
+export const defaultLocale = defaultLocaleCode as Locale
 
 /** Human-readable names for each locale, shown in the language switcher. */
-export const localeNames: Record<Locale, string> = {
-  en: "English",
-  fr: "Français",
-}
+export const localeNames = Object.fromEntries(
+  localeList.map((l) => [l.code, l.name] as const)
+) as Record<Locale, string>
 
 /** Short labels (uppercased ISO code) for compact switcher UI. */
-export const localeShortLabels: Record<Locale, string> = {
-  en: "EN",
-  fr: "FR",
-}
+export const localeShortLabels = Object.fromEntries(
+  localeList.map((l) => [l.code, l.shortLabel] as const)
+) as Record<Locale, string>
 
 /**
  * Open Graph locale codes (`language_TERRITORY`) for each locale, used in the
  * `og:locale` / `og:locale:alternate` tags so social and messaging previews
  * render in the right language. Keep in sync with `locales`.
  */
-export const ogLocales: Record<Locale, string> = {
-  en: "en_US",
-  fr: "fr_FR",
-}
+export const ogLocales = Object.fromEntries(
+  localeList.map((l) => [l.code, l.ogLocale] as const)
+) as Record<Locale, string>
 
 /**
  * Build the Open Graph locale meta tags for a page: `og:locale` for the active
@@ -64,6 +73,17 @@ export function isLocale(value: string | undefined): value is Locale {
   return (
     value !== undefined && (locales as ReadonlyArray<string>).includes(value)
   )
+}
+
+/**
+ * Coerce an optional path-param locale (from the `{-$locale}` routes) to a
+ * concrete `Locale`. An absent param means the bare path, i.e. the default
+ * locale; the default-locale code itself and any unknown value also fall back
+ * to the default. Callers reach `head` only after the `{-$locale}` layout's
+ * guard has validated the segment, so the fallback is just belt-and-braces.
+ */
+export function toLocale(value: string | undefined): Locale {
+  return isLocale(value) ? value : defaultLocale
 }
 
 /**
@@ -125,23 +145,7 @@ export function stripLocalePrefix(pathname: string): string {
  * locale. The language switcher only appears on these, so it never links to a
  * page that hasn't been localized yet. Add paths here as they're translated.
  */
-export const localizedBasePaths: ReadonlyArray<string> = [
-  "/",
-  "/about",
-  "/support",
-  "/verify",
-  "/privacy",
-  "/terms",
-  "/engine-level-spoofing",
-  "/vpn",
-  "/spoof-timezone",
-  "/spoof-location",
-  "/spoof-location/chrome",
-  "/spoof-location/edge",
-  "/spoof-location/firefox",
-  "/spoof-location/safari",
-  "/blog",
-]
+export const localizedBasePaths: ReadonlyArray<string> = localizedBasePathList
 
 /**
  * Base paths whose *entire subtree* is localized, including dynamic children.
@@ -150,7 +154,7 @@ export const localizedBasePaths: ReadonlyArray<string> = [
  * anything under `/blog/` as localized too. Article bodies stay English, but
  * the surrounding chrome is translated and the URL keeps the visitor's locale.
  */
-export const localizedSubtrees: ReadonlyArray<string> = ["/blog"]
+export const localizedSubtrees: ReadonlyArray<string> = localizedSubtreeList
 
 /**
  * Does this unprefixed base path have localized variants? True when it's an

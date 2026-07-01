@@ -1,6 +1,12 @@
 import * as React from "react"
 import { createFileRoute } from "@tanstack/react-router"
 import type { Locale } from "@/lib/i18n"
+import {
+  buildOgLocaleMeta,
+  getDictionary,
+  localizedPath,
+  toLocale,
+} from "@/lib/i18n"
 import { Navigation } from "@/components/landing/Navigation"
 import { Footer } from "@/components/landing/Footer"
 import { SkipLink } from "@/components/landing/SkipLink"
@@ -15,7 +21,6 @@ import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { SITE_URL } from "@/lib/blog"
 import { useTranslations } from "@/hooks/use-i18n"
-import { buildOgLocaleMeta, getDictionary, localizedPath } from "@/lib/i18n"
 
 /** Build the `head` payload for the Support page in a given locale. */
 export function buildSupportHead(locale: Locale) {
@@ -36,9 +41,9 @@ export function buildSupportHead(locale: Locale) {
   }
 }
 
-export const Route = createFileRoute("/support")({
+export const Route = createFileRoute("/{-$locale}/support")({
   component: SupportPage,
-  head: () => buildSupportHead("en"),
+  head: ({ params }) => buildSupportHead(toLocale(params.locale)),
 })
 
 function CopyEmailButton() {
@@ -59,7 +64,7 @@ function CopyEmailButton() {
         "inline-flex items-center gap-1 rounded-md px-3 py-1.5",
         "text-sm font-medium transition-colors",
         copied
-          ? "bg-(--color-brand)/10 text-(--color-brand)"
+          ? "bg-brand/10 text-(--color-brand)"
           : "bg-(--color-canvas-border) text-(--color-canvas-muted) hover:text-(--color-canvas-foreground)",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
       )}
