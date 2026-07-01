@@ -340,7 +340,7 @@ export const ru: Dictionary = {
     },
     page: {
       browserBadge: "Расширение для {name}",
-      headingPre: "Подмена геолокации в ",
+      headingPre: "Подмена геолокации в {name}",
       ctaFallback: "Установить GeoSpoof для {name}",
       testLocation: "Проверить местоположение",
       breadcrumbHome: "Главная",

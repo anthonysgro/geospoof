@@ -22,7 +22,7 @@ import {
  * in `locale-data.mjs`, then add its code to this union (the single type edit)
  * and register its dictionary in `index.ts`.
  */
-export type Locale = "en" | "fr" | "ru"
+export type Locale = "en" | "fr" | "ru" | "zh-CN"
 
 /** All locale codes at runtime (default first), sourced from `locale-data`. */
 export const locales = localeList.map((l) => l.code) as ReadonlyArray<Locale>
@@ -232,7 +232,10 @@ export function detectPreferredLocale(
 ): Locale | null {
   for (const lang of languages) {
     const primary = lang.toLowerCase().split("-")[0]
-    const match = locales.find((l) => l === primary)
+    // Match on primary subtag on both sides so a regional locale code (e.g.
+    // "zh-CN") still matches a browser language of "zh", "zh-CN", or
+    // "zh-Hans-CN". Plain codes like "en"/"fr" are unaffected.
+    const match = locales.find((l) => l.toLowerCase().split("-")[0] === primary)
     if (match) return match
   }
   return null

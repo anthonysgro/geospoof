@@ -37,6 +37,7 @@ export const localeList = [
   { code: "en", name: "English", shortLabel: "EN", ogLocale: "en_US" },
   { code: "fr", name: "Français", shortLabel: "FR", ogLocale: "fr_FR" },
   { code: "ru", name: "Русский", shortLabel: "RU", ogLocale: "ru_RU" },
+  { code: "zh-CN", name: "简体中文", shortLabel: "中文", ogLocale: "zh_CN" },
 ]
 
 /** All locale codes, default first. */

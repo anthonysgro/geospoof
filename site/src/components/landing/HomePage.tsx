@@ -79,6 +79,11 @@ const localeMeta: Record<Locale, { title: string; description: string }> = {
     description:
       "Подмена геолокации, часового пояса и WebRTC браузера в одном бесплатном расширении. Без аккаунта. Работает в Chrome, Firefox, Edge, Brave и Safari.",
   },
+  "zh-CN": {
+    title: "GeoSpoof — 伪造地理位置和时区（免费扩展）",
+    description:
+      "用一款免费扩展伪造浏览器的地理位置、时区和 WebRTC。无需账户。支持 Chrome、Firefox、Edge、Brave 和 Safari。",
+  },
 }
 
 /**

@@ -179,8 +179,17 @@ export function BrowserSpoofPage({ slug }: { slug: BrowserSlug }) {
               {format(p.browserBadge, { name })}
             </Badge>
             <h1 className="mb-5 text-4xl leading-tight font-bold text-(--color-canvas-foreground) md:text-5xl">
-              {p.headingPre}
-              <span className="text-(--color-brand)">{name}</span>
+              {/* Interpolate the (highlighted) browser name wherever the
+                  locale places it — end for EN/FR/RU ("…in Chrome"), middle
+                  for ZH ("在 Chrome 中…"). */}
+              {p.headingPre.split("{name}").map((part, i) => (
+                <span key={i}>
+                  {i > 0 && (
+                    <span className="text-(--color-brand)">{name}</span>
+                  )}
+                  {part}
+                </span>
+              ))}
             </h1>
             <p className="mx-auto mb-8 max-w-2xl text-base text-(--color-canvas-muted) md:text-lg">
               {b.intro}

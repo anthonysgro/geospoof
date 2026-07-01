@@ -330,7 +330,7 @@ export const fr: Dictionary = {
     },
     page: {
       browserBadge: "Extension {name}",
-      headingPre: "Simulez votre position dans ",
+      headingPre: "Simulez votre position dans {name}",
       ctaFallback: "Obtenir GeoSpoof pour {name}",
       testLocation: "Tester votre position",
       breadcrumbHome: "Accueil",

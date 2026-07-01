@@ -334,7 +334,7 @@ export const en = {
     },
     page: {
       browserBadge: "{name} Extension",
-      headingPre: "Spoof your location in ",
+      headingPre: "Spoof your location in {name}",
       ctaFallback: "Get GeoSpoof for {name}",
       testLocation: "Test your location",
       breadcrumbHome: "Home",
