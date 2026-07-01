@@ -1,26 +1,40 @@
 import * as React from "react"
 import { createFileRoute } from "@tanstack/react-router"
 import { FileTextIcon } from "lucide-react"
+import type { Locale } from "@/lib/i18n"
 import { Navigation } from "@/components/landing/Navigation"
 import { Footer } from "@/components/landing/Footer"
 import { SkipLink } from "@/components/landing/SkipLink"
 import { Section } from "@/components/landing/Section"
 import { cn } from "@/lib/utils"
 import { SITE_URL } from "@/lib/blog"
+import { useTranslations } from "@/hooks/use-i18n"
+import { getDictionary, localizedPath } from "@/lib/i18n"
+
+/**
+ * Head for the Terms page. Only the page chrome is localized; the legal body
+ * below stays in English (the authoritative version).
+ */
+export function buildTermsHead(locale: Locale) {
+  const m = getDictionary(locale).legal.terms
+  const canonical = `${SITE_URL}${localizedPath("/terms", locale)}`
+  return {
+    meta: [
+      { title: m.metaTitle },
+      { name: "description", content: m.metaDescription },
+    ],
+    links: [
+      { rel: "canonical", href: canonical },
+      { rel: "alternate", hrefLang: "en", href: `${SITE_URL}/terms` },
+      { rel: "alternate", hrefLang: "fr", href: `${SITE_URL}/fr/terms` },
+      { rel: "alternate", hrefLang: "x-default", href: `${SITE_URL}/terms` },
+    ],
+  }
+}
 
 export const Route = createFileRoute("/terms")({
   component: TermsPage,
-  head: () => ({
-    meta: [
-      { title: "Terms of Service | GeoSpoof" },
-      {
-        name: "description",
-        content:
-          "Terms of Service for GeoSpoof — understand the terms governing your use of the extension.",
-      },
-    ],
-    links: [{ rel: "canonical", href: `${SITE_URL}/terms` }],
-  }),
+  head: () => buildTermsHead("en"),
 })
 
 function TermsSection({
@@ -50,7 +64,9 @@ function TermsSection({
   )
 }
 
-function TermsPage() {
+export function TermsPage() {
+  const { locale, t } = useTranslations()
+  const d = t.legal.terms
   return (
     <div className="min-h-screen bg-(--color-canvas)">
       <SkipLink />
@@ -63,11 +79,16 @@ function TermsPage() {
               <FileTextIcon className="h-8 w-8 text-(--color-brand)" />
             </div>
             <h1 className="mb-4 text-4xl font-bold text-(--color-canvas-foreground)">
-              Terms of Service
+              {d.heading}
             </h1>
             <p className="text-body-base text-(--color-canvas-muted)">
-              Last Updated: June 20, 2026
+              {d.lastUpdated}
             </p>
+            {locale !== "en" && (
+              <p className="mx-auto mt-4 max-w-md rounded-lg border border-(--color-canvas-border) bg-(--color-canvas) px-4 py-2 text-sm text-(--color-canvas-muted)">
+                {t.legal.englishNote}
+              </p>
+            )}
           </div>
 
           <div className="space-y-8">

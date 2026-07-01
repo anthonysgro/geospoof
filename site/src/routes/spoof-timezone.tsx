@@ -1,6 +1,6 @@
 import { Link, createFileRoute } from "@tanstack/react-router"
-import * as React from "react"
 import { ChevronDown, Clock, Globe, ShieldCheck } from "lucide-react"
+import type { Locale } from "@/lib/i18n"
 import { Navigation } from "@/components/landing/Navigation"
 import { Footer } from "@/components/landing/Footer"
 import { SkipLink } from "@/components/landing/SkipLink"
@@ -19,86 +19,64 @@ import { cn } from "@/lib/utils"
 import { usePlatform } from "@/hooks/use-platform"
 import { getStoreLink } from "@/lib/store-links"
 import { SITE_URL } from "@/lib/blog"
+import { useTranslations } from "@/hooks/use-i18n"
+import { LocaleLink } from "@/components/LocaleLink"
+import { getDictionary, localizedPath } from "@/lib/i18n"
 
-const PAGE_URL = `${SITE_URL}/spoof-timezone`
-const PAGE_TITLE = "Spoof Your Browser Timezone — Free Extension | GeoSpoof"
-const PAGE_DESCRIPTION =
-  "Change or spoof your browser's timezone to match any location. GeoSpoof overrides Date, Intl, and Temporal so your clock can't reveal your real region."
+/**
+ * Build the `head` payload for the timezone page in a given locale: localized
+ * title/description/OG + self-canonical + hreflang cluster. `head()` can't use
+ * hooks, so the route passes its locale explicitly.
+ */
+export function buildSpoofTimezoneHead(locale: Locale) {
+  const m = getDictionary(locale).spoofTimezone.meta
+  const canonical = `${SITE_URL}${localizedPath("/spoof-timezone", locale)}`
+  return {
+    meta: [
+      { title: m.title },
+      { name: "description", content: m.description },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: canonical },
+      { property: "og:title", content: m.ogTitle },
+      { property: "og:description", content: m.description },
+      { name: "twitter:url", content: canonical },
+      { name: "twitter:title", content: m.ogTitle },
+      { name: "twitter:description", content: m.description },
+    ],
+    links: [
+      { rel: "canonical", href: canonical },
+      { rel: "alternate", hrefLang: "en", href: `${SITE_URL}/spoof-timezone` },
+      { rel: "alternate", hrefLang: "fr", href: `${SITE_URL}/fr/spoof-timezone` },
+      {
+        rel: "alternate",
+        hrefLang: "x-default",
+        href: `${SITE_URL}/spoof-timezone`,
+      },
+    ],
+  }
+}
 
 export const Route = createFileRoute("/spoof-timezone")({
   component: SpoofTimezonePage,
-  head: () => ({
-    meta: [
-      { title: PAGE_TITLE },
-      { name: "description", content: PAGE_DESCRIPTION },
-      // Page-specific Open Graph / Twitter (overrides the root defaults so a
-      // share of this URL shows timezone-relevant copy and the right URL).
-      { property: "og:type", content: "website" },
-      { property: "og:url", content: PAGE_URL },
-      { property: "og:title", content: "Spoof your browser's timezone" },
-      { property: "og:description", content: PAGE_DESCRIPTION },
-      { name: "twitter:url", content: PAGE_URL },
-      { name: "twitter:title", content: "Spoof your browser's timezone" },
-      { name: "twitter:description", content: PAGE_DESCRIPTION },
-    ],
-    links: [{ rel: "canonical", href: PAGE_URL }],
-  }),
+  head: () => buildSpoofTimezoneHead("en"),
 })
 
 // ---------------------------------------------------------------------------
-// Structured data — SoftwareApplication (what GeoSpoof is), HowTo (the steps),
-// and FAQPage (the Q&A). Feeds Google rich results and AI answer engines.
+// Structured data — SoftwareApplication, HowTo, and FAQPage. Built from the
+// active dictionary so it's localized per route.
 // ---------------------------------------------------------------------------
 
-const HOW_TO_STEPS: Array<{ name: string; text: string }> = [
-  {
-    name: "Install GeoSpoof",
-    text: "Add the free GeoSpoof extension for your browser — Firefox, Chrome, Brave, Edge, or Safari.",
-  },
-  {
-    name: "Set your location",
-    text: "Search for a city, enter coordinates, or use VPN Sync to match your VPN's exit region.",
-  },
-  {
-    name: "Timezone aligns automatically",
-    text: "GeoSpoof overrides Date, Intl.DateTimeFormat, and Temporal so every clock-based API reports the timezone of your chosen location.",
-  },
-  {
-    name: "Verify it worked",
-    text: "Open the GeoSpoof verification page to confirm your reported timezone matches your spoofed location.",
-  },
-]
-
-const FAQS: Array<{ q: string; a: string }> = [
-  {
-    q: "How do I change my browser's timezone?",
-    a: "Browsers take their timezone from your operating system, and most don't let you override it per-site. GeoSpoof changes the timezone your browser reports to websites without touching your system clock: install the extension, set a location, and it overrides the JavaScript timezone APIs to match.",
-  },
-  {
-    q: "Can I spoof my timezone without changing my system clock?",
-    a: "Yes. GeoSpoof works at the browser API level, so it changes what websites read (Intl.DateTimeFormat, Date, Temporal) while your computer's actual clock and system settings stay exactly as they are.",
-  },
-  {
-    q: "Does a VPN change my browser's timezone?",
-    a: "No. A VPN only changes your IP address. Your browser still reports its own timezone from your operating system, so a VPN in another country with your home timezone is an easy mismatch to detect. GeoSpoof aligns the timezone to your spoofed location to close that gap.",
-  },
-  {
-    q: "Why does my timezone need to match my location?",
-    a: "If you spoof your GPS location or use a VPN but leave your timezone on your real region, the two disagree — and that mismatch is a common, easily detected tell. Aligning your timezone to your chosen location keeps every signal telling the same story.",
-  },
-  {
-    q: "Does GeoSpoof spoof the timezone automatically?",
-    a: "Yes. When you set a location or sync to your VPN, GeoSpoof resolves the correct timezone for those coordinates and applies it automatically — including as your VPN switches exit servers.",
-  },
-]
-
 function StructuredData() {
+  const { locale, t } = useTranslations()
+  const tz = t.spoofTimezone
+  const pageUrl = `${SITE_URL}${localizedPath("/spoof-timezone", locale)}`
+
   const softwareApplicationSchema = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     name: "GeoSpoof",
-    description: PAGE_DESCRIPTION,
-    url: PAGE_URL,
+    description: tz.meta.description,
+    url: pageUrl,
     image: `${SITE_URL}/icon.png`,
     applicationCategory: "BrowserApplication",
     operatingSystem: "Windows, macOS, Linux, iOS, iPadOS, Android",
@@ -111,10 +89,9 @@ function StructuredData() {
   const howToSchema = {
     "@context": "https://schema.org",
     "@type": "HowTo",
-    name: "How to spoof your browser's timezone",
-    description:
-      "Change the timezone your browser reports to websites, without changing your system clock, using the free GeoSpoof extension.",
-    step: HOW_TO_STEPS.map((s) => ({
+    name: tz.howTo.schemaName,
+    description: tz.howTo.schemaDesc,
+    step: tz.howTo.steps.map((s) => ({
       "@type": "HowToStep",
       name: s.name,
       text: s.text,
@@ -124,7 +101,7 @@ function StructuredData() {
   const faqSchema = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: FAQS.map((f) => ({
+    mainEntity: tz.faq.items.map((f) => ({
       "@type": "Question",
       name: f.q,
       acceptedAnswer: { "@type": "Answer", text: f.a },
@@ -135,12 +112,17 @@ function StructuredData() {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: tz.hero.breadcrumbHome,
+        item: `${SITE_URL}${localizedPath("/", locale)}`,
+      },
       {
         "@type": "ListItem",
         position: 2,
-        name: "Spoof Timezone",
-        item: PAGE_URL,
+        name: tz.hero.breadcrumb,
+        item: pageUrl,
       },
     ],
   }
@@ -165,7 +147,7 @@ function StructuredData() {
 // Page
 // ---------------------------------------------------------------------------
 
-function SpoofTimezonePage() {
+export function SpoofTimezonePage() {
   const platform = usePlatform()
   const store = getStoreLink(platform, "spoof-timezone")
 
@@ -191,18 +173,23 @@ function SpoofTimezonePage() {
 }
 
 function HeroSection({ store }: { store: ReturnType<typeof getStoreLink> }) {
+  const { locale, t } = useTranslations()
+  const d = t.spoofTimezone.hero
+
   return (
     <Section className="pt-12! pb-8! md:pt-20! md:pb-12!">
       <Breadcrumb className="mx-auto mb-8 max-w-3xl">
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/">Home</Link>
+              <Link to={localizedPath("/", locale) as "/"}>
+                {d.breadcrumbHome}
+              </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Spoof Timezone</BreadcrumbPage>
+            <BreadcrumbPage>{d.breadcrumb}</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -211,17 +198,18 @@ function HeroSection({ store }: { store: ReturnType<typeof getStoreLink> }) {
           variant="outline"
           className="mb-4 border-brand/30 bg-brand/10 tracking-wide text-(--color-brand) uppercase"
         >
-          Timezone Spoofing
+          {d.badge}
         </Badge>
         <h1 className="mb-5 text-4xl leading-tight font-bold text-(--color-canvas-foreground) md:text-5xl">
-          Spoof your browser's{" "}
-          <span className="text-(--color-brand)">timezone</span>
+          {d.headingPre}
+          <span className="text-(--color-brand)">{d.headingEmphasis}</span>
         </h1>
         <p className="mx-auto mb-8 max-w-2xl text-base text-(--color-canvas-muted) md:text-lg">
-          Websites read your timezone the instant a page loads — no permission
-          prompt — through <code>Intl.DateTimeFormat</code> and{" "}
-          <code>Date</code>. GeoSpoof overrides them so your clock matches the
-          location you choose, not where you really are.
+          {d.introPre}
+          <code>Intl.DateTimeFormat</code>
+          {d.introMid}
+          <code>Date</code>
+          {d.introPost}
         </p>
         <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
           <a
@@ -234,9 +222,9 @@ function HeroSection({ store }: { store: ReturnType<typeof getStoreLink> }) {
               "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
             )}
           >
-            {store ? store.cta : "Get GeoSpoof free"}
+            {store ? t.storeCta[store.key] : d.ctaFallback}
           </a>
-          <Link
+          <LocaleLink
             to="/verify"
             className={cn(
               "inline-flex min-h-12 w-full items-center justify-center gap-2 sm:min-h-14 sm:w-auto",
@@ -245,8 +233,8 @@ function HeroSection({ store }: { store: ReturnType<typeof getStoreLink> }) {
               "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
             )}
           >
-            Test your timezone
-          </Link>
+            {d.testTimezone}
+          </LocaleLink>
         </div>
       </div>
     </Section>
@@ -254,38 +242,32 @@ function HeroSection({ store }: { store: ReturnType<typeof getStoreLink> }) {
 }
 
 function WhatLeaksSection() {
-  const surfaces: Array<{
-    icon: React.ReactNode
-    api: string
-    reveals: string
-  }> = [
+  const { t } = useTranslations()
+  const d = t.spoofTimezone.whatLeaks
+  const surfaces = [
     {
       icon: <Clock className="size-5" />,
       api: "Intl.DateTimeFormat().resolvedOptions().timeZone",
-      reveals: "Returns an IANA name like America/New_York.",
+      reveals: d.reveals1,
     },
     {
       icon: <Clock className="size-5" />,
       api: "new Date().getTimezoneOffset()",
-      reveals: "Returns your UTC offset in minutes.",
+      reveals: d.reveals2,
     },
     {
       icon: <Globe className="size-5" />,
-      api: "Temporal & document timestamps",
-      reveals: "Newer time APIs and page timestamps expose the same zone.",
+      api: d.surface3Api,
+      reveals: d.reveals3,
     },
   ]
 
   return (
     <Section narrow className="py-12! md:py-16!">
       <h2 className="mb-3 text-2xl font-bold text-(--color-canvas-foreground) md:text-3xl">
-        What your browser gives away
+        {d.heading}
       </h2>
-      <p className="mb-8 text-(--color-canvas-muted)">
-        Unlike the Geolocation API, the timezone surfaces never ask permission —
-        they answer the moment a page loads. A single mismatched clock can undo
-        a spoofed GPS location.
-      </p>
+      <p className="mb-8 text-(--color-canvas-muted)">{d.intro}</p>
       <div className="overflow-hidden rounded-2xl border border-(--color-canvas-border)">
         {surfaces.map((s, i) => (
           <div
@@ -313,13 +295,16 @@ function WhatLeaksSection() {
 }
 
 function HowToSection() {
+  const { t } = useTranslations()
+  const d = t.spoofTimezone.howTo
+
   return (
     <Section narrow className="py-12! md:py-16!">
       <h2 className="mb-8 text-2xl font-bold text-(--color-canvas-foreground) md:text-3xl">
-        How to spoof your timezone
+        {d.heading}
       </h2>
       <ol className="space-y-5">
-        {HOW_TO_STEPS.map((step, i) => (
+        {d.steps.map((step, i) => (
           <li key={step.name} className="flex gap-4">
             <span
               className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand/10 text-sm font-bold text-(--color-brand)"
@@ -343,28 +328,25 @@ function HowToSection() {
 }
 
 function WhyItMattersSection() {
+  const { t } = useTranslations()
+  const d = t.spoofTimezone.whyItMatters
+
   return (
     <Section narrow className="py-12! md:py-16!">
       <div className="rounded-2xl border border-(--color-canvas-border) bg-brand/5 p-6 md:p-8">
         <ShieldCheck className="mb-3 size-6 text-(--color-brand)" />
         <h2 className="mb-3 text-xl font-bold text-(--color-canvas-foreground) md:text-2xl">
-          A spoofed location needs a matching clock
+          {d.heading}
         </h2>
-        <p className="text-(--color-canvas-muted)">
-          A VPN moves your IP and GeoSpoof moves your GPS coordinates — but if
-          your timezone still reads your real region, the mismatch gives you
-          away. GeoSpoof keeps your timezone aligned to your chosen location
-          automatically, and re-aligns it as your VPN switches exit servers, so
-          your geolocation, timezone, and IP all tell the same story.
-        </p>
+        <p className="text-(--color-canvas-muted)">{d.body}</p>
         <p className="mt-4 text-sm text-(--color-canvas-muted)">
-          Want the technical deep dive?{" "}
+          {d.blogLinkLead}
           <Link
             to="/blog/$slug"
             params={{ slug: "why-your-timezone-reveals-your-location" }}
             className="font-medium text-(--color-brand) hover:underline"
           >
-            Read why your timezone reveals your location
+            {d.blogLinkText}
           </Link>
           .
         </p>
@@ -374,21 +356,25 @@ function WhyItMattersSection() {
 }
 
 function FaqSection() {
+  const { t } = useTranslations()
+  const d = t.spoofTimezone.faq
+
   return (
     <Section narrow className="py-12! md:py-16!" aria-labelledby="faq-heading">
       <h2
         id="faq-heading"
         className="mb-6 text-2xl font-bold text-(--color-canvas-foreground) md:text-3xl"
       >
-        Frequently asked questions
+        {d.heading}
       </h2>
       <div className="overflow-hidden rounded-2xl border border-(--color-canvas-border)">
-        {FAQS.map((faq, i) => (
+        {d.items.map((faq, i) => (
           <details
             key={faq.q}
             className={cn(
               "group bg-(--color-canvas) px-5 py-4",
-              i < FAQS.length - 1 && "border-b border-(--color-canvas-border)"
+              i < d.items.length - 1 &&
+                "border-b border-(--color-canvas-border)"
             )}
           >
             <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-medium text-(--color-canvas-foreground)">

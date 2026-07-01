@@ -77,12 +77,19 @@ const config = defineConfig({
       // always prerendered. Add new localized pages here as they're created.
       pages: [
         { path: "/fr" },
+        { path: "/fr/about" },
+        { path: "/fr/support" },
+        { path: "/fr/privacy" },
+        { path: "/fr/terms" },
+        { path: "/fr/engine-level-spoofing" },
         { path: "/fr/vpn" },
+        { path: "/fr/spoof-timezone" },
         { path: "/fr/spoof-location" },
         { path: "/fr/spoof-location/chrome" },
         { path: "/fr/spoof-location/edge" },
         { path: "/fr/spoof-location/firefox" },
         { path: "/fr/spoof-location/safari" },
+        { path: "/fr/blog" },
       ],
       // Prerender all static routes at build time so Vercel serves them
       // as static assets from the CDN edge — eliminates SSR cold-start
@@ -100,8 +107,8 @@ const config = defineConfig({
         enabled: true,
         crawlLinks: true,
         filter: ({ path: routePath }: { path: string }) =>
-          routePath !== "/test" &&
-          routePath !== "/verify" &&
+          !routePath.endsWith("/test") &&
+          !routePath.endsWith("/verify") &&
           !routePath.startsWith("/go/"),
       },
     }),

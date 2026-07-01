@@ -1,6 +1,5 @@
 import * as React from "react"
 import { toast } from "sonner"
-import { Link } from "@tanstack/react-router"
 import { ClockIcon, MapPinIcon, RadioIcon, XIcon } from "lucide-react"
 import { usePlatform } from "@/hooks/use-platform"
 import { getStoreLink } from "@/lib/store-links"
@@ -12,6 +11,7 @@ import { readWorkerTimezone } from "@/lib/verification/worker-probe"
 import { probeWebrtc } from "@/lib/verification/webrtc-probe"
 import { cn } from "@/lib/utils"
 import { useTranslations } from "@/hooks/use-i18n"
+import { LocaleLink } from "@/components/LocaleLink"
 
 const STORAGE_KEY = "gs-exposure-toast-shown"
 const REVEAL_DELAY_MS = 1400
@@ -203,13 +203,13 @@ function ExposureCard({
         >
           {store ? t.exposureToast.hideMyLocation : t.exposureToast.getGeospoof}
         </a>
-        <Link
+        <LocaleLink
           to="/verify"
           onClick={() => toast.dismiss(toastId)}
           className="text-xs font-medium text-(--color-canvas-muted) underline-offset-4 hover:text-(--color-canvas-foreground) hover:underline"
         >
           {t.exposureToast.fullReport} →
-        </Link>
+        </LocaleLink>
       </div>
     </div>
   )

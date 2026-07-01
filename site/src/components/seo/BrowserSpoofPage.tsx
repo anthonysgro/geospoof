@@ -21,6 +21,7 @@ import {  usePlatform } from "@/hooks/use-platform"
 import { getStoreLink } from "@/lib/store-links"
 import { SITE_URL } from "@/lib/blog"
 import { useTranslations } from "@/hooks/use-i18n"
+import { LocaleLink } from "@/components/LocaleLink"
 import { format, getDictionary, localizedPath } from "@/lib/i18n"
 
 export type BrowserSlug = "chrome" | "edge" | "firefox" | "safari"
@@ -199,9 +200,9 @@ export function BrowserSpoofPage({ slug }: { slug: BrowserSlug }) {
                   "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
                 )}
               >
-                {store ? store.cta : format(p.ctaFallback, { name })}
+                {store ? t.storeCta[store.key] : format(p.ctaFallback, { name })}
               </a>
-              <Link
+              <LocaleLink
                 to="/verify"
                 className={cn(
                   "inline-flex min-h-12 w-full items-center justify-center gap-2 sm:min-h-14 sm:w-auto",
@@ -211,7 +212,7 @@ export function BrowserSpoofPage({ slug }: { slug: BrowserSlug }) {
                 )}
               >
                 {p.testLocation}
-              </Link>
+              </LocaleLink>
             </div>
           </div>
         </Section>

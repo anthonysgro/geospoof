@@ -1,47 +1,62 @@
-import { Link, createFileRoute } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
 import * as React from "react"
+import type { Locale } from "@/lib/i18n"
+import { LocaleLink } from "@/components/LocaleLink"
 import { Navigation } from "@/components/landing/Navigation"
 import { Footer } from "@/components/landing/Footer"
 import { SkipLink } from "@/components/landing/SkipLink"
 import { Section } from "@/components/landing/Section"
 import { cn } from "@/lib/utils"
 import { SITE_URL } from "@/lib/blog"
-
-const PAGE_URL = `${SITE_URL}/about`
-const PAGE_TITLE = "About GeoSpoof — Who Builds It | GeoSpoof"
-const PAGE_DESCRIPTION =
-  "GeoSpoof is an open-source location and timezone spoofer built by Anthony Sgro — no accounts, no tracking, and honest about what it does."
+import { useTranslations } from "@/hooks/use-i18n"
+import { getDictionary, localizedPath } from "@/lib/i18n"
 
 const GITHUB_PROFILE = "https://github.com/anthonysgro"
 const LINKEDIN_URL = "https://www.linkedin.com/in/sgro"
 
+/**
+ * Build the `head` payload for the About page in a given locale: localized
+ * title/description/OG + self-canonical + hreflang cluster.
+ */
+export function buildAboutHead(locale: Locale) {
+  const m = getDictionary(locale).about.meta
+  const canonical = `${SITE_URL}${localizedPath("/about", locale)}`
+  return {
+    meta: [
+      { title: m.title },
+      { name: "description", content: m.description },
+      { property: "og:type", content: "profile" },
+      { property: "og:url", content: canonical },
+      { property: "og:title", content: m.ogTitle },
+      { property: "og:description", content: m.description },
+      { name: "twitter:url", content: canonical },
+      { name: "twitter:title", content: m.ogTitle },
+      { name: "twitter:description", content: m.description },
+    ],
+    links: [
+      { rel: "canonical", href: canonical },
+      { rel: "alternate", hrefLang: "en", href: `${SITE_URL}/about` },
+      { rel: "alternate", hrefLang: "fr", href: `${SITE_URL}/fr/about` },
+      { rel: "alternate", hrefLang: "x-default", href: `${SITE_URL}/about` },
+    ],
+  }
+}
+
 export const Route = createFileRoute("/about")({
   component: AboutPage,
-  head: () => ({
-    meta: [
-      { title: PAGE_TITLE },
-      { name: "description", content: PAGE_DESCRIPTION },
-      { property: "og:type", content: "profile" },
-      { property: "og:url", content: PAGE_URL },
-      { property: "og:title", content: "About GeoSpoof" },
-      { property: "og:description", content: PAGE_DESCRIPTION },
-      { name: "twitter:url", content: PAGE_URL },
-      { name: "twitter:title", content: "About GeoSpoof" },
-      { name: "twitter:description", content: PAGE_DESCRIPTION },
-    ],
-    links: [{ rel: "canonical", href: PAGE_URL }],
-  }),
+  head: () => buildAboutHead("en"),
 })
 
 // ProfilePage + Person structured data. Establishes the author as a real,
 // described entity (E-E-A-T) and gives blog bylines a profile to link to.
+// Language-neutral entity data — kept canonical (English /about).
 const profileSchema = {
   "@context": "https://schema.org",
   "@type": "ProfilePage",
   mainEntity: {
     "@type": "Person",
     name: "Anthony Sgro",
-    url: PAGE_URL,
+    url: `${SITE_URL}/about`,
     image: `${SITE_URL}/profile_pic_2.png`,
     jobTitle: "Software developer",
     description:
@@ -74,7 +89,9 @@ const socialLinkClass = cn(
   "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
 )
 
-function AboutPage() {
+export function AboutPage() {
+  const { t } = useTranslations()
+  const d = t.about
   return (
     <div className="min-h-screen bg-(--color-canvas)">
       <SkipLink />
@@ -92,10 +109,10 @@ function AboutPage() {
             />
             <div>
               <h1 className="text-3xl font-bold text-(--color-canvas-foreground) md:text-4xl">
-                👋 Hi, I&rsquo;m Anthony
+                {d.greeting}
               </h1>
               <p className="text-body-lg mt-1 text-(--color-canvas-muted)">
-                I build GeoSpoof.
+                {d.tagline}
               </p>
               <div className="mt-4 flex flex-wrap gap-3">
                 <a
@@ -103,7 +120,7 @@ function AboutPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className={socialLinkClass}
-                  aria-label="Anthony Sgro on GitHub"
+                  aria-label={d.githubAria}
                 >
                   <GitHubIcon className="size-4" />
                   GitHub
@@ -113,7 +130,7 @@ function AboutPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className={socialLinkClass}
-                  aria-label="Anthony Sgro on LinkedIn"
+                  aria-label={d.linkedinAria}
                 >
                   <LinkedInIcon className="size-4" />
                   LinkedIn
@@ -124,48 +141,44 @@ function AboutPage() {
 
           <div className="text-body-lg mt-10 space-y-5 leading-relaxed text-(--color-canvas-muted)">
             <p>
-              I&rsquo;m a software developer, and GeoSpoof started as{" "}
+              {d.p1a}
               <strong className="font-semibold text-(--color-canvas-foreground)">
-                something I wanted for myself
+                {d.p1strong}
               </strong>
-              : an easy way to control the location and timezone my browser was
-              handing out, without signing up for anything or giving my data to
-              yet another company. It grew into a tool a lot of people now use
-              every day, which still kind of amazes me.
+              {d.p1b}
             </p>
             <p>
-              It&rsquo;s open-source, with{" "}
+              {d.p2a}
               <strong className="font-semibold text-(--color-canvas-foreground)">
-                no accounts and nothing to sign up for
+                {d.p2strong}
               </strong>
-              . Your settings just live in your browser. And if you&rsquo;re
-              ever curious what it&rsquo;s actually doing, the code is public
-              and the{" "}
-              <Link
+              {d.p2b}
+              <LocaleLink
                 to="/verify"
                 className="font-medium text-(--color-brand) hover:underline"
               >
-                verify page
-              </Link>{" "}
-              shows you exactly what websites can read about you.
+                {d.verifyLink}
+              </LocaleLink>
+              {d.p2c}
             </p>
             <p>
-              There&rsquo;s an optional Pro tier for the{" "}
+              {d.p3a}
               <strong className="font-semibold text-(--color-canvas-foreground)">
-                extra power features
+                {d.p3strong}
               </strong>
-              , while the everyday spoofing stays free.
+              {d.p3b}
             </p>
             <p>
-              Got a question, an idea, or just want to <em>say hi</em>? The{" "}
-              <Link
+              {d.p4a}
+              <em>{d.p4em}</em>
+              {d.p4b}
+              <LocaleLink
                 to="/support"
                 className="font-medium text-(--color-brand) hover:underline"
               >
-                support page
-              </Link>{" "}
-              reaches me directly, or find me on GitHub and LinkedIn up top.
-              Thanks for stopping by.
+                {d.supportLink}
+              </LocaleLink>
+              {d.p4c}
             </p>
           </div>
         </Section>

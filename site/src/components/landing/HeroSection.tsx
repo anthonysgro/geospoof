@@ -1,5 +1,4 @@
 import { motion } from "motion/react"
-import { Link } from "@tanstack/react-router"
 import { Section } from "./Section"
 import type { MouseEvent } from "react"
 import { cn } from "@/lib/utils"
@@ -9,6 +8,7 @@ import { usePlatform } from "@/hooks/use-platform"
 import { getStoreLink } from "@/lib/store-links"
 import { Badge } from "@/components/ui/badge"
 import { useTranslations } from "@/hooks/use-i18n"
+import { LocaleLink } from "@/components/LocaleLink"
 
 const heroTextVariants = {
   hidden: { opacity: 0, y: 24 },
@@ -166,7 +166,7 @@ export function HeroSection({ className }: { className?: string }) {
                     "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
                   )}
                 >
-                  {store.cta}
+                  {t.storeCta[store.key]}
                 </a>
               ) : (
                 <a
@@ -184,7 +184,7 @@ export function HeroSection({ className }: { className?: string }) {
                   {t.hero.downloadFree}
                 </a>
               )}
-              <Link
+              <LocaleLink
                 to="/verify"
                 className={cn(
                   "group inline-flex items-center justify-center gap-2.5",
@@ -200,7 +200,7 @@ export function HeroSection({ className }: { className?: string }) {
                   <span className="relative inline-flex size-2.5 rounded-full bg-green-500" />
                 </span>
                 {t.hero.seeWhatSitesDetect}
-              </Link>
+              </LocaleLink>
             </div>
             {/* When we've matched a store, still let people reach the others. */}
             {store ? (

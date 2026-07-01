@@ -98,17 +98,62 @@ export function stripLocalePrefix(pathname: string): string {
  */
 export const localizedBasePaths: ReadonlyArray<string> = [
   "/",
+  "/about",
+  "/support",
+  "/verify",
+  "/privacy",
+  "/terms",
+  "/engine-level-spoofing",
   "/vpn",
+  "/spoof-timezone",
   "/spoof-location",
   "/spoof-location/chrome",
   "/spoof-location/edge",
   "/spoof-location/firefox",
   "/spoof-location/safari",
+  "/blog",
 ]
+
+/**
+ * Base paths whose *entire subtree* is localized, including dynamic children.
+ * The blog index lives at `/blog` (an exact `localizedBasePaths` entry) but its
+ * posts live at `/blog/<slug>`, which can't be enumerated here — so we treat
+ * anything under `/blog/` as localized too. Article bodies stay English, but
+ * the surrounding chrome is translated and the URL keeps the visitor's locale.
+ */
+export const localizedSubtrees: ReadonlyArray<string> = ["/blog"]
+
+/**
+ * Does this unprefixed base path have localized variants? True when it's an
+ * exact localized page or falls under a localized subtree (e.g. a blog post).
+ */
+function isLocalizedBase(base: string): boolean {
+  if (localizedBasePaths.includes(base)) return true
+  return localizedSubtrees.some(
+    (root) => base === root || base.startsWith(`${root}/`)
+  )
+}
 
 /** Does the given pathname's base route have localized variants? */
 export function hasLocalizedVariants(pathname: string): boolean {
-  return localizedBasePaths.includes(stripLocalePrefix(pathname))
+  return isLocalizedBase(stripLocalePrefix(pathname))
+}
+
+/**
+ * Locale-aware href for an internal link. Given an (unprefixed) English target
+ * path, returns the URL for the active locale:
+ *   - target has a translation  -> prefixed (`/about` -> `/fr/about`)
+ *   - target has no translation  -> unchanged (`/blog` stays `/blog`)
+ *   - hash anchors / external    -> unchanged (`#features`, `https://…`)
+ *
+ * Use this for every internal link so navigation keeps the visitor's language
+ * instead of dropping them back to English.
+ */
+export function localizedHref(path: string, locale: Locale): string {
+  // Leave anchors, query-only, and absolute/external URLs untouched.
+  if (!path.startsWith("/")) return path
+  const base = stripLocalePrefix(path)
+  return isLocalizedBase(base) ? localizedPath(base, locale) : path
 }
 
 /**

@@ -1,35 +1,55 @@
 import { Link, createFileRoute } from "@tanstack/react-router"
+import type { Locale } from "@/lib/i18n"
 import { Navigation } from "@/components/landing/Navigation"
 import { Footer } from "@/components/landing/Footer"
 import { SkipLink } from "@/components/landing/SkipLink"
 import { Section } from "@/components/landing/Section"
 import { Badge } from "@/components/ui/badge"
 import { SITE_URL, formatDate, postUrl, posts } from "@/lib/blog"
+import { useTranslations } from "@/hooks/use-i18n"
+import { getDictionary, localizedPath } from "@/lib/i18n"
+
+/**
+ * Build the `head` payload for the blog index in a given locale: localized
+ * title/description/OG + self-canonical + hreflang cluster. `head()` can't use
+ * hooks, so the route passes its locale explicitly. Post *bodies* stay English,
+ * but this listing's framing (title, description, headings) is translated.
+ */
+export function buildBlogIndexHead(locale: Locale) {
+  const m = getDictionary(locale).blog.index
+  const canonical = `${SITE_URL}${localizedPath("/blog", locale)}`
+  return {
+    meta: [
+      { title: m.metaTitle },
+      { name: "description", content: m.metaDescription },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: canonical },
+      { property: "og:title", content: m.heading },
+      { property: "og:description", content: m.metaDescription },
+    ],
+    links: [
+      { rel: "canonical", href: canonical },
+      { rel: "alternate", hrefLang: "en", href: `${SITE_URL}/blog` },
+      { rel: "alternate", hrefLang: "fr", href: `${SITE_URL}/fr/blog` },
+      { rel: "alternate", hrefLang: "x-default", href: `${SITE_URL}/blog` },
+    ],
+  }
+}
 
 export const Route = createFileRoute("/blog/")({
-  component: BlogIndexPage,
-  head: () => ({
-    meta: [
-      { title: "Blog | GeoSpoof" },
-      {
-        name: "description",
-        content:
-          "Guides and deep dives on browser location spoofing, timezone privacy, WebRTC leaks, and getting the most out of GeoSpoof.",
-      },
-      { property: "og:type", content: "website" },
-      { property: "og:url", content: `${SITE_URL}/blog` },
-      { property: "og:title", content: "GeoSpoof Blog" },
-      {
-        property: "og:description",
-        content:
-          "Guides and deep dives on browser location spoofing, timezone privacy, and WebRTC leaks.",
-      },
-    ],
-    links: [{ rel: "canonical", href: `${SITE_URL}/blog` }],
-  }),
+  component: BlogIndexView,
+  head: () => buildBlogIndexHead("en"),
 })
 
-function BlogIndexPage() {
+/**
+ * Blog listing. Shared by the English (`/blog`) and French (`/fr/blog`) routes;
+ * the active locale is derived from the URL, so post links keep the visitor's
+ * language via `LocaleLink`. Post titles/descriptions stay in the language they
+ * were written in (English) — only the page framing is localized.
+ */
+export function BlogIndexView() {
+  const { locale, t } = useTranslations()
+  const b = t.blog.index
   return (
     <div className="min-h-screen bg-(--color-canvas)">
       <SkipLink />
@@ -38,24 +58,21 @@ function BlogIndexPage() {
         <Section narrow className="py-12! md:py-16!">
           <div className="mb-12 text-center">
             <h1 className="mb-4 text-4xl font-bold text-(--color-canvas-foreground)">
-              GeoSpoof Blog
+              {b.heading}
             </h1>
             <p className="text-body-lg text-(--color-canvas-muted)">
-              Guides and deep dives on location spoofing, timezone privacy, and
-              browser fingerprinting.
+              {b.subhead}
             </p>
           </div>
 
           {posts.length === 0 ? (
-            <p className="text-center text-(--color-canvas-muted)">
-              No posts yet — check back soon.
-            </p>
+            <p className="text-center text-(--color-canvas-muted)">{b.empty}</p>
           ) : (
             <ul className="space-y-4">
               {posts.map((post) => (
                 <li key={post.slug}>
                   <Link
-                    to="/blog/$slug"
+                    to={locale === "en" ? "/blog/$slug" : "/fr/blog/$slug"}
                     params={{ slug: post.slug }}
                     className="block overflow-hidden rounded-brand border border-(--color-canvas-border) transition-colors hover:border-(--color-brand) focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
                   >
@@ -75,7 +92,9 @@ function BlogIndexPage() {
                           {formatDate(post.date)}
                         </time>
                         <span aria-hidden="true">·</span>
-                        <span>{post.readingTime} min read</span>
+                        <span>
+                          {post.readingTime} {b.minRead}
+                        </span>
                       </div>
                       <h2 className="mb-2 text-xl font-semibold text-(--color-canvas-foreground)">
                         {post.title}

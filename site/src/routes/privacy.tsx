@@ -1,26 +1,40 @@
 import * as React from "react"
 import { createFileRoute } from "@tanstack/react-router"
 import { ShieldCheckIcon } from "lucide-react"
+import type { Locale } from "@/lib/i18n"
 import { Navigation } from "@/components/landing/Navigation"
 import { Footer } from "@/components/landing/Footer"
 import { SkipLink } from "@/components/landing/SkipLink"
 import { Section } from "@/components/landing/Section"
 import { cn } from "@/lib/utils"
 import { SITE_URL } from "@/lib/blog"
+import { useTranslations } from "@/hooks/use-i18n"
+import { getDictionary, localizedPath } from "@/lib/i18n"
+
+/**
+ * Head for the Privacy page. Only the page chrome is localized; the legal body
+ * below stays in English (the authoritative version).
+ */
+export function buildPrivacyHead(locale: Locale) {
+  const m = getDictionary(locale).legal.privacy
+  const canonical = `${SITE_URL}${localizedPath("/privacy", locale)}`
+  return {
+    meta: [
+      { title: m.metaTitle },
+      { name: "description", content: m.metaDescription },
+    ],
+    links: [
+      { rel: "canonical", href: canonical },
+      { rel: "alternate", hrefLang: "en", href: `${SITE_URL}/privacy` },
+      { rel: "alternate", hrefLang: "fr", href: `${SITE_URL}/fr/privacy` },
+      { rel: "alternate", hrefLang: "x-default", href: `${SITE_URL}/privacy` },
+    ],
+  }
+}
 
 export const Route = createFileRoute("/privacy")({
   component: PrivacyPage,
-  head: () => ({
-    meta: [
-      { title: "Privacy Policy | GeoSpoof" },
-      {
-        name: "description",
-        content:
-          "Privacy Policy for GeoSpoof — learn how we protect your data and respect your privacy.",
-      },
-    ],
-    links: [{ rel: "canonical", href: `${SITE_URL}/privacy` }],
-  }),
+  head: () => buildPrivacyHead("en"),
 })
 
 function PolicySection({
@@ -50,7 +64,9 @@ function PolicySection({
   )
 }
 
-function PrivacyPage() {
+export function PrivacyPage() {
+  const { locale, t } = useTranslations()
+  const d = t.legal.privacy
   return (
     <div className="min-h-screen bg-(--color-canvas)">
       <SkipLink />
@@ -63,11 +79,16 @@ function PrivacyPage() {
               <ShieldCheckIcon className="h-8 w-8 text-(--color-brand)" />
             </div>
             <h1 className="mb-4 text-4xl font-bold text-(--color-canvas-foreground)">
-              Privacy Policy
+              {d.heading}
             </h1>
             <p className="text-body-base text-(--color-canvas-muted)">
-              Last Updated: June 22, 2026
+              {d.lastUpdated}
             </p>
+            {locale !== "en" && (
+              <p className="mx-auto mt-4 max-w-md rounded-lg border border-(--color-canvas-border) bg-(--color-canvas) px-4 py-2 text-sm text-(--color-canvas-muted)">
+                {t.legal.englishNote}
+              </p>
+            )}
           </div>
 
           <div className="space-y-8">

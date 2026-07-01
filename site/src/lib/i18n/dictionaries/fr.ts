@@ -67,6 +67,29 @@ export const fr: Dictionary = {
     switchAction: "Voir en français",
     dismiss: "Fermer",
   },
+  storeCta: {
+    firefox: "Ajouter à Firefox",
+    chrome: "Ajouter à Chrome",
+    apple: "Télécharger dans l'App Store",
+  },
+  legal: {
+    englishNote:
+      "Le texte juridique ci-dessous n'est disponible qu'en anglais. La version anglaise fait foi.",
+    privacy: {
+      metaTitle: "Politique de confidentialité | GeoSpoof",
+      metaDescription:
+        "Politique de confidentialité de GeoSpoof — découvrez comment nous protégeons vos données et respectons votre vie privée.",
+      heading: "Politique de confidentialité",
+      lastUpdated: "Dernière mise à jour : 22 juin 2026",
+    },
+    terms: {
+      metaTitle: "Conditions d'utilisation | GeoSpoof",
+      metaDescription:
+        "Conditions d'utilisation de GeoSpoof — comprenez les conditions régissant votre utilisation de l'extension.",
+      heading: "Conditions d'utilisation",
+      lastUpdated: "Dernière mise à jour : 20 juin 2026",
+    },
+  },
   testimonials: {
     eyebrow: "Ce qu'en disent les utilisateurs",
     heading: "Plébiscité par les utilisateurs soucieux de leur vie privée",
@@ -191,6 +214,28 @@ export const fr: Dictionary = {
     allPosts: "Tous les articles",
     minRead: "min de lecture",
     readMore: "Lire la suite",
+  },
+  blog: {
+    index: {
+      metaTitle: "Blog | GeoSpoof",
+      metaDescription:
+        "Guides et analyses approfondies sur la falsification de la localisation du navigateur, la confidentialité du fuseau horaire, les fuites WebRTC et comment tirer le meilleur de GeoSpoof.",
+      heading: "Blog GeoSpoof",
+      subhead:
+        "Guides et analyses approfondies sur la falsification de la localisation, la confidentialité du fuseau horaire et l'empreinte du navigateur.",
+      empty: "Pas encore d'articles — revenez bientôt.",
+      minRead: "min de lecture",
+    },
+    post: {
+      breadcrumbHome: "Accueil",
+      breadcrumbBlog: "Blog",
+      minRead: "min de lecture",
+      faqHeading: "Questions fréquentes",
+      olderPost: "← Article précédent",
+      newerPost: "Article suivant →",
+      backToAll: "← Retour à tous les articles",
+      englishNote: "Cet article n'est disponible qu'en anglais.",
+    },
   },
   download: {
     eyebrow: "Télécharger",
@@ -489,6 +534,413 @@ export const fr: Dictionary = {
     disclosure: {
       label: "Divulgation d'affiliation :",
       body: "GeoSpoof est un utilitaire indépendant et open source, sans aucun lien ni approbation de la part de Proton. Lorsque vous achetez une offre via notre recommandation, Proton nous reverse une partie de la vente, sans coût supplémentaire pour vous. Cela aide à garder GeoSpoof gratuit, open source et sans publicité. Nous recommandons Proton pour ses mérites (open source, audité indépendamment et recommandé par Privacy Guides), non pour la commission, et GeoSpoof fonctionne avec n'importe quel VPN de votre choix.",
+    },
+  },
+  support: {
+    meta: {
+      title: "Assistance GeoSpoof — falsification, Synchro VPN et installation",
+      description:
+        "Obtenez de l'aide sur GeoSpoof : réparez une falsification de position qui ne fonctionne pas, résolvez les délais d'attente de la Synchronisation VPN, les soucis WebRTC et l'installation navigateur ou mobile — ou contactez notre équipe.",
+    },
+    heading: "Comment pouvons-nous vous aider ?",
+    subhead:
+      "Trouvez des réponses aux problèmes courants ci-dessous, ou contactez-nous directement.",
+    commonIssues: "Problèmes courants",
+    faqs: [
+      {
+        q: "La falsification ne fonctionne pas après l'installation de l'extension",
+        a: "L'extension s'injecte dans les pages au moment de leur chargement ; les onglets déjà ouverts lorsque vous l'avez installée ou activée ne sont donc pas encore protégés. Actualisez chaque onglet que vous souhaitez protéger après avoir activé la Protection de position. Si cela ne fonctionne toujours pas, désactivez puis réactivez l'extension, puis actualisez à nouveau.",
+      },
+      {
+        q: "La Synchronisation VPN affiche un délai d'attente ou une erreur réseau",
+        a: "La Synchronisation VPN interroge quelques services publics de géolocalisation d'IP pour détecter la région de sortie de votre VPN. Certains VPN ou pare-feux bloquent les requêtes sortantes vers ces services. Essayez de désactiver temporairement le pare-feu ou le kill switch de votre VPN. Si le problème persiste, utilisez les onglets Rechercher une ville ou Saisir des coordonnées pour définir votre position manuellement.",
+      },
+      {
+        q: "La falsification a cessé de fonctionner après une mise à jour du navigateur",
+        a: "Les mises à jour de navigateur modifient parfois la façon dont les extensions interagissent avec les API de page. Assurez-vous d'utiliser la dernière version de GeoSpoof. Vérifiez la version dans l'onglet Détails de la fenêtre et comparez-la à la dernière version publiée sur GitHub. Si vous êtes en retard, mettez à jour via le gestionnaire d'extensions de votre navigateur.",
+      },
+      {
+        q: "Un site web précis n'est pas falsifié",
+        a: "Certains sites détectent la position côté serveur d'après votre adresse IP plutôt que via l'API de géolocalisation du navigateur. GeoSpoof ne remplace que les API du navigateur — il ne change pas votre adresse IP. Pour une cohérence de position complète, utilisez GeoSpoof avec un VPN pointant vers la même région.",
+      },
+      {
+        q: "L'extension fonctionne sur ordinateur mais pas sur mon téléphone",
+        a: "Sur Firefox pour Android, l'extension est entièrement prise en charge à partir de Firefox 140. Sur Safari iOS et macOS, l'extension est disponible sur l'App Store — appuyez sur l'icône en forme de pièce de puzzle dans la barre d'adresse et activez GeoSpoof pour le site à protéger. Chrome sur iOS et Android ne prend pas en charge les extensions.",
+      },
+      {
+        q: "La Protection WebRTC n'est pas disponible / grisée",
+        a: "La Protection WebRTC utilise une API de confidentialité du navigateur qui n'est pas disponible sur toutes les plateformes. Elle est prise en charge sur Firefox et les navigateurs basés sur Chromium sur ordinateur. Elle n'est pas disponible sur Safari ni sur Firefox pour Android.",
+      },
+      {
+        q: "Le message « Les extensions ne peuvent pas s'exécuter sur cette page » s'affiche",
+        a: "Les navigateurs empêchent les extensions de s'exécuter sur les pages intégrées comme about:blank, chrome://, about:newtab et les pages des boutiques d'extensions. Il s'agit d'une limite de sécurité du navigateur qui ne peut pas être contournée. GeoSpoof fonctionne sur tous les sites web normaux.",
+      },
+    ],
+    copy: "Copier",
+    copied: "✓ Copié",
+    copyAria: "Copier l'adresse e-mail",
+    stillNeedHelp: "Besoin d'aide supplémentaire ?",
+    contactBody:
+      "Envoyez-nous un e-mail et nous vous répondrons sous un jour ou deux.",
+    reportBugsLead: "Vous pouvez aussi signaler des bugs sur ",
+  },
+  about: {
+    meta: {
+      title: "À propos de GeoSpoof — qui le développe | GeoSpoof",
+      description:
+        "GeoSpoof est un outil open source de falsification de position et de fuseau horaire développé par Anthony Sgro — sans compte, sans pistage, et honnête sur ce qu'il fait.",
+      ogTitle: "À propos de GeoSpoof",
+    },
+    greeting: "👋 Salut, je suis Anthony",
+    tagline: "Je développe GeoSpoof.",
+    githubAria: "Anthony Sgro sur GitHub",
+    linkedinAria: "Anthony Sgro sur LinkedIn",
+    p1a: "Je suis développeur logiciel, et GeoSpoof a commencé comme ",
+    p1strong: "quelque chose que je voulais pour moi-même",
+    p1b: " : un moyen simple de contrôler la position et le fuseau horaire que mon navigateur communiquait, sans m'inscrire à quoi que ce soit ni confier mes données à une énième entreprise. C'est devenu un outil que beaucoup de gens utilisent aujourd'hui au quotidien, ce qui m'étonne encore un peu.",
+    p2a: "Il est open source, ",
+    p2strong: "sans compte ni inscription",
+    p2b: ". Vos réglages restent simplement dans votre navigateur. Et si vous êtes curieux de ce qu'il fait réellement, le code est public et la ",
+    verifyLink: "page de vérification",
+    p2c: " vous montre exactement ce que les sites peuvent lire à votre sujet.",
+    p3a: "Il existe une offre Pro optionnelle pour les ",
+    p3strong: "fonctionnalités avancées",
+    p3b: ", tandis que la falsification du quotidien reste gratuite.",
+    p4a: "Une question, une idée, ou juste envie de ",
+    p4em: "dire bonjour",
+    p4b: " ? La ",
+    supportLink: "page d'assistance",
+    p4c: " me joint directement, ou retrouvez-moi sur GitHub et LinkedIn en haut. Merci de votre visite.",
+  },
+  spoofTimezone: {
+    meta: {
+      title:
+        "Falsifiez le fuseau horaire de votre navigateur — extension gratuite | GeoSpoof",
+      description:
+        "Changez ou falsifiez le fuseau horaire de votre navigateur pour qu'il corresponde à n'importe quelle position. GeoSpoof remplace Date, Intl et Temporal pour que votre horloge ne révèle pas votre véritable région.",
+      ogTitle: "Falsifiez le fuseau horaire de votre navigateur",
+    },
+    hero: {
+      breadcrumbHome: "Accueil",
+      breadcrumb: "Falsifier le fuseau horaire",
+      badge: "Falsification du fuseau horaire",
+      headingPre: "Falsifiez le ",
+      headingEmphasis: "fuseau horaire",
+      introPre:
+        "Les sites web lisent votre fuseau horaire dès le chargement d'une page — sans aucune demande d'autorisation — via ",
+      introMid: " et ",
+      introPost:
+        ". GeoSpoof les remplace pour que votre horloge corresponde à la position que vous choisissez, et non à l'endroit où vous êtes réellement.",
+      ctaFallback: "Obtenez GeoSpoof gratuitement",
+      testTimezone: "Tester votre fuseau horaire",
+    },
+    whatLeaks: {
+      heading: "Ce que votre navigateur dévoile",
+      intro:
+        "Contrairement à l'API de géolocalisation, les surfaces de fuseau horaire ne demandent jamais d'autorisation — elles répondent dès le chargement d'une page. Une seule horloge incohérente peut anéantir une position GPS falsifiée.",
+      reveals1: "Renvoie un nom IANA comme America/New_York.",
+      reveals2: "Renvoie votre décalage UTC en minutes.",
+      surface3Api: "Temporal et horodatages de document",
+      reveals3:
+        "Les API de temps plus récentes et les horodatages de page exposent le même fuseau.",
+    },
+    howTo: {
+      heading: "Comment falsifier votre fuseau horaire",
+      schemaName: "Comment falsifier le fuseau horaire de votre navigateur",
+      schemaDesc:
+        "Changez le fuseau horaire que votre navigateur communique aux sites, sans modifier l'horloge de votre système, grâce à l'extension gratuite GeoSpoof.",
+      steps: [
+        {
+          name: "Installer GeoSpoof",
+          text: "Ajoutez l'extension GeoSpoof gratuite pour votre navigateur — Firefox, Chrome, Brave, Edge ou Safari.",
+        },
+        {
+          name: "Définir votre position",
+          text: "Cherchez une ville, saisissez des coordonnées ou utilisez la Synchronisation VPN pour faire correspondre la région de sortie de votre VPN.",
+        },
+        {
+          name: "Le fuseau horaire s'aligne automatiquement",
+          text: "GeoSpoof remplace Date, Intl.DateTimeFormat et Temporal pour que chaque API basée sur l'horloge indique le fuseau horaire de la position que vous avez choisie.",
+        },
+        {
+          name: "Vérifier que ça marche",
+          text: "Ouvrez la page de vérification de GeoSpoof pour confirmer que le fuseau horaire indiqué correspond à votre position falsifiée.",
+        },
+      ],
+    },
+    whyItMatters: {
+      heading: "Une position falsifiée a besoin d'une horloge cohérente",
+      body: "Un VPN déplace votre IP et GeoSpoof déplace vos coordonnées GPS — mais si votre fuseau horaire indique encore votre véritable région, l'incohérence vous trahit. GeoSpoof garde votre fuseau horaire aligné sur la position que vous avez choisie, automatiquement, et le réaligne quand votre VPN change de serveur de sortie, pour que votre géolocalisation, votre fuseau horaire et votre IP racontent tous la même histoire.",
+      blogLinkLead: "Vous voulez l'analyse technique détaillée ? ",
+      blogLinkText: "Découvrez pourquoi votre fuseau horaire révèle votre position",
+    },
+    faq: {
+      heading: "Questions fréquentes",
+      items: [
+        {
+          q: "Comment changer le fuseau horaire de mon navigateur ?",
+          a: "Les navigateurs prennent leur fuseau horaire dans votre système d'exploitation, et la plupart ne permettent pas de le remplacer site par site. GeoSpoof change le fuseau horaire que votre navigateur communique aux sites sans toucher à l'horloge de votre système : installez l'extension, définissez une position, et il remplace les API de fuseau horaire JavaScript en conséquence.",
+        },
+        {
+          q: "Puis-je falsifier mon fuseau horaire sans changer l'horloge de mon système ?",
+          a: "Oui. GeoSpoof agit au niveau des API du navigateur ; il change donc ce que lisent les sites (Intl.DateTimeFormat, Date, Temporal) tandis que l'horloge réelle et les réglages de votre ordinateur restent exactement tels quels.",
+        },
+        {
+          q: "Un VPN change-t-il le fuseau horaire de mon navigateur ?",
+          a: "Non. Un VPN ne change que votre adresse IP. Votre navigateur continue d'indiquer son propre fuseau horaire d'après votre système d'exploitation ; un VPN dans un autre pays avec votre fuseau horaire d'origine est donc une incohérence facile à détecter. GeoSpoof aligne le fuseau horaire sur votre position falsifiée pour combler cet écart.",
+        },
+        {
+          q: "Pourquoi mon fuseau horaire doit-il correspondre à ma position ?",
+          a: "Si vous falsifiez votre position GPS ou utilisez un VPN mais laissez votre fuseau horaire sur votre véritable région, les deux se contredisent — et cette incohérence est un indice courant et facile à détecter. Aligner votre fuseau horaire sur la position choisie fait que chaque signal raconte la même histoire.",
+        },
+        {
+          q: "GeoSpoof falsifie-t-il le fuseau horaire automatiquement ?",
+          a: "Oui. Lorsque vous définissez une position ou synchronisez avec votre VPN, GeoSpoof détermine le bon fuseau horaire pour ces coordonnées et l'applique automatiquement — y compris lorsque votre VPN change de serveur de sortie.",
+        },
+      ],
+    },
+  },
+  verify: {
+    meta: {
+      title:
+        "Test de position du navigateur — voyez ce que les sites savent de vous | GeoSpoof",
+      description:
+        "Test gratuit de position du navigateur. Voyez la géolocalisation, le fuseau horaire et l'IP que les sites lisent sur vous en ce moment — et si votre navigateur dévoile votre véritable position.",
+    },
+    eyebrow: "Vérification",
+    heading: "Ce que les sites peuvent voir de vous",
+    refresh: "Actualiser",
+    refreshAria: "Actualiser — rechargez la page pour voir vos valeurs les plus récentes",
+    introMobile:
+      "Les valeurs en direct que les sites peuvent lire sur vous en ce moment.",
+    introDesktop:
+      "Les valeurs en direct de votre navigateur en ce moment — la position, le fuseau horaire et l'IP que les sites peuvent lire. Avec GeoSpoof actif, elles reflètent votre position falsifiée plutôt que votre véritable position.",
+    vpnSyncNote:
+      "Vous utilisez la Synchronisation VPN automatique ? Les changements peuvent prendre jusqu'à 10 secondes — appuyez sur Actualiser pour voir la dernière valeur.",
+    rows: {
+      geolocation: "Géolocalisation",
+      timezone: "Fuseau horaire",
+      currentTime: "Heure actuelle",
+      ipAddress: "Adresse IP",
+      webrtc: "WebRTC",
+      waitingPermission: "En attente d'autorisation…",
+      blockedDenied: "Bloqué / refusé",
+      lookingUp: "Recherche en cours…",
+      lookupFailed: "Échec de la recherche",
+      probing: "Analyse en cours…",
+      noLeak: "Aucune fuite d'IP détectée",
+    },
+    vpnCard: {
+      line1:
+        "Votre adresse IP est le seul signal que GeoSpoof ne peut pas changer. Seul un VPN le peut.",
+      line2: "Celui que nous recommandons est à jusqu'à {discount} de réduction.",
+      cta: "Voir le VPN sans journaux que nous recommandons",
+    },
+    apiSection: {
+      eyebrow: "Surface des API du navigateur",
+      description:
+        "Les principales surfaces d'empreinte que vérifient les attaquants. Développez un groupe pour voir les valeurs qu'ils obtiennent — elles devraient toutes raconter la même histoire.",
+    },
+    supportLead: "Vous voyez une erreur, ou un résultat inattendu ? ",
+    supportLink: "Obtenir de l'aide",
+    verdict: {
+      running: "Vérifications en cours…",
+      runningSub: "Lecture de votre navigateur et recherche de fuites.",
+      allGood: "Toutes les vérifications sont passées",
+      allGoodSub: "Rien de ce que nous avons vérifié ne vous trahit.",
+      exposed: "Certains signaux sont exposés",
+      problemWebrtc: "WebRTC dévoile votre véritable IP",
+      problemGeo: "La position ne correspond pas à l'IP",
+      problemTz: "Le fuseau horaire ne correspond pas à l'IP",
+      crossRef:
+        "Un site qui recoupe ces signaux pourrait vous repérer.",
+      installFree: "Installer GeoSpoof gratuitement",
+      alreadyHave: "Vous avez déjà GeoSpoof ?",
+    },
+    dialog: {
+      title: "Vous utilisez déjà GeoSpoof ?",
+      description:
+        "Une courte liste de vérifications résout presque chaque signal signalé.",
+      ipMismatchLocation: "L'IP ne correspond pas à votre position ?",
+      ipMismatchTimezone: "L'IP ne correspond pas à votre fuseau horaire ?",
+      ipMismatchBody:
+        "C'est normal lorsque la Synchronisation VPN est désactivée — GeoSpoof n'aligne votre IP que lorsque vous l'activez. Si vous vouliez garder votre véritable IP, c'est le comportement attendu.",
+      autoSyncBold: "Vous venez d'activer la Synchronisation VPN automatique ?",
+      autoSyncBody:
+        "Laissez-lui jusqu'à ~10 secondes après une actualisation pour se mettre à jour, puis revérifiez — la synchro automatique n'est pas instantanée comme la synchro manuelle.",
+      updateBold: "Passez à la dernière version.",
+      updateBody:
+        "De nouvelles techniques d'empreinte sont corrigées en continu. ",
+      downloadOptions: "Voir les options de téléchargement",
+      checkSiteBold: "Vérifiez qu'il est actif pour ce site.",
+      checkSiteBody:
+        "Regardez l'icône dans la barre d'outils ; si vous filtrez par liste d'autorisation ou de blocage, incluez ce site.",
+      reloadBold: "Rechargez après l'activation ou la mise à jour.",
+      reloadBody:
+        "Certaines surfaces ne s'appliquent qu'au chargement d'une nouvelle page.",
+      stillStuck: "Toujours bloqué ? Contactez l'assistance",
+      gotIt: "Compris",
+    },
+    faq: {
+      heading: "Questions fréquentes",
+      items: [
+        {
+          q: "Quelle est la géolocalisation de mon navigateur ?",
+          a: "La géolocalisation de votre navigateur est la latitude et la longitude qu'il transmet aux sites via l'API de géolocalisation JavaScript. La carte et les coordonnées ci-dessus montrent exactement ce que lisent les sites lorsqu'ils demandent où vous êtes. Avec GeoSpoof actif, il s'agit de votre position falsifiée plutôt que de votre véritable position.",
+        },
+        {
+          q: "Les sites peuvent-ils voir ma véritable position même si j'utilise un VPN ?",
+          a: "Oui. Un VPN ne change que votre adresse IP. Votre navigateur continue d'indiquer sa propre géolocalisation de niveau GPS, le fuseau horaire du système et la langue — et WebRTC peut dévoiler entièrement votre véritable IP. Si ces signaux contredisent la position de sortie de votre VPN, un site peut détecter que quelque chose cloche. Cette page signale précisément ces incohérences.",
+        },
+        {
+          q: "Pourquoi mon fuseau horaire ne correspond-il pas à mon adresse IP ?",
+          a: "Votre fuseau horaire provient de votre système d'exploitation, tandis que la position de votre IP provient de votre réseau ou de votre VPN. Si vous vous connectez via un VPN dans un autre pays mais laissez l'horloge de votre système sur votre fuseau d'origine, les deux ne concordent pas — un indice courant et facile à détecter. GeoSpoof aligne votre fuseau horaire sur votre position falsifiée pour combler cet écart.",
+        },
+        {
+          q: "Qu'est-ce qu'une fuite WebRTC ?",
+          a: "WebRTC est une fonctionnalité du navigateur pour l'audio, la vidéo et les données en temps réel. Elle peut révéler vos véritables adresses IP publiques et locales directement à un site web — en contournant votre VPN — à moins d'être bloquée. La vérification WebRTC ci-dessus recherche cette fuite et signale toute adresse qu'elle parvient à exposer.",
+        },
+        {
+          q: "Ce test de position du navigateur est-il gratuit ?",
+          a: "Oui. Le test s'exécute entièrement dans votre navigateur, ne coûte rien et ne nécessite aucun compte. Il lit les mêmes signaux que n'importe quel site web peut lire et vous les montre en langage clair.",
+        },
+      ],
+    },
+  },
+  engineLevel: {
+    meta: {
+      title:
+        "Masquer la barre « débogage de ce navigateur » de Chrome | GeoSpoof",
+      description:
+        "La falsification au niveau du moteur de GeoSpoof utilise l'API de débogage de Chrome ; Chrome affiche donc une barre de débogage. Voici ce que cela signifie, pourquoi c'est sans danger, et comment la masquer.",
+      ogTitle: "Masquer la barre « débogage de ce navigateur » de Chrome",
+    },
+    hero: {
+      breadcrumbHome: "Accueil",
+      breadcrumb: "Falsification au niveau du moteur",
+      badge: "Chrome · Falsification au niveau du moteur",
+      headingPre: "Masquer la barre ",
+      headingEmphasis: "« a démarré le débogage de ce navigateur »",
+      headingPost: " de Chrome",
+      intro:
+        "Chrome affiche une barre « a démarré le débogage de ce navigateur » lorsque la falsification au niveau du moteur est active. Elle est sans danger — voici comment la masquer.",
+      ctaHowTo: "Comment masquer la barre",
+      ctaFallback: "Obtenez GeoSpoof gratuitement",
+      figureAlt:
+        "Chrome affichant une barre de notification « GeoSpoof a démarré le débogage de ce navigateur » en haut de la fenêtre lorsque la falsification au niveau du moteur est active",
+      figCaption:
+        "La barre « a démarré le débogage de ce navigateur » que Chrome affiche lorsque la falsification au niveau du moteur est active.",
+    },
+    whatBar: {
+      heading: "Ce que signifie cette barre",
+      intro:
+        "La falsification au niveau du moteur applique votre fuseau horaire au niveau du navigateur, avant l'exécution du premier script d'une page, et couvre donc aussi les workers en arrière-plan. Pour atteindre ce niveau, GeoSpoof utilise l'API de débogage de Chrome — et Chrome le signale par une barre de notification.",
+      point1Title: "C'est un avis standard de Chrome",
+      point1Body:
+        "Chrome affiche cette barre pour toute extension qui utilise l'API de débogage — la même API que les outils de développement. Elle apparaît dès que GeoSpoof s'y attache, non parce que quelque chose a mal tourné.",
+      point2Title: "GeoSpoof ne définit qu'un remplacement de fuseau horaire",
+      point2Body:
+        "La connexion de débogage sert uniquement à appliquer votre fuseau horaire falsifié à travers les cadres et les workers. Elle ne lit pas le contenu de vos pages, vos frappes au clavier ni votre navigation — et le code est open source.",
+      point3Title: "La barre est purement cosmétique",
+      point3Body:
+        "Elle ne change rien à la façon dont les sites vous voient. La masquer sert uniquement à retirer le bandeau en haut de la fenêtre.",
+    },
+    howTo: {
+      heading: "Comment masquer la barre",
+      introPre: "Lancez Chrome avec l'option ",
+      introPost:
+        ". Quittez d'abord Chrome, puis suivez les étapes correspondant à votre système.",
+    },
+    guides: {
+      win: {
+        step1: "Fermez toutes les fenêtres de Chrome.",
+        step2:
+          "Faites un clic droit sur le raccourci Chrome que vous utilisez (barre des tâches, bureau ou menu Démarrer) et choisissez Propriétés.",
+        step3a: "Dans le champ ",
+        step3strong: "Cible",
+        step3mid: ", laissez le chemin entre guillemets vers ",
+        step3code: "chrome.exe",
+        step3end:
+          " tel quel et ajoutez l'option après le guillemet fermant (notez l'espace initiale).",
+        step4: "Cliquez sur OK, puis ouvrez Chrome depuis ce raccourci.",
+        note: "Répétez l'opération pour chaque raccourci depuis lequel vous lancez Chrome (la barre des tâches et le menu Démarrer sont des raccourcis distincts).",
+      },
+      mac: {
+        step1: "Quittez complètement Chrome (⌘Q).",
+        step2: "Ouvrez le Terminal et exécutez la commande ci-dessous.",
+        step3a:
+          "Chrome se rouvre sans la barre. Pour le lancer ainsi à chaque fois, enregistrez la commande comme une ",
+        step3strong: "application",
+        step3end: " Automator ou un alias shell.",
+      },
+      linux: {
+        step1: "Fermez Chrome.",
+        step2:
+          "Lancez-le avec l'option, ou ajoutez l'option à la ligne Exec= de votre lanceur .desktop de Chrome pour la rendre permanente.",
+        note: "Utilisez chromium à la place de google-chrome si vous utilisez Chromium.",
+      },
+    },
+    permanent: {
+      heading: "Rendre le changement permanent",
+      bodyPre:
+        "L'option ne s'applique qu'aux lancements qui l'incluent ; la barre revient donc si vous ouvrez Chrome d'une autre façon. Pour la garder masquée durablement, ajoutez ",
+      bodyMid:
+        " au raccourci ou au lanceur depuis lequel vous ouvrez Chrome chaque jour — la Cible du raccourci Windows, une application de lancement macOS, ou votre fichier ",
+      bodyDesktopCode: ".desktop",
+      bodyEnd: " Linux.",
+      body2Pre:
+        "Vous préférez ne pas vous en soucier ? Laissez la falsification au niveau du moteur désactivée — la protection standard de GeoSpoof falsifie toujours votre ",
+      locationLink: "position",
+      body2Mid: " et votre ",
+      timezoneLink: "fuseau horaire",
+      body2End: " sans aucune barre de débogage.",
+    },
+    faq: {
+      heading: "Questions fréquentes",
+      items: [
+        {
+          q: "Pourquoi GeoSpoof indique-t-il qu'il « débogue » mon navigateur ?",
+          a: "La falsification au niveau du moteur utilise l'API de débogage de Chrome (le Chrome DevTools Protocol) — le mécanisme même qu'utilisent les outils de développement de votre navigateur — pour définir votre fuseau horaire plus en profondeur qu'une extension normale ne le peut. Dès qu'une extension s'y attache via cette API, Chrome affiche une barre « a démarré le débogage de ce navigateur ». C'est un avis standard de Chrome, pas le signe d'un problème.",
+        },
+        {
+          q: "Est-ce sans danger ? GeoSpoof lit-il mes données ?",
+          a: "GeoSpoof n'utilise la connexion de débogage que pour appliquer un remplacement de fuseau horaire. Il ne lit pas le contenu de vos pages, vos frappes au clavier ni votre navigation. GeoSpoof est open source, vous pouvez donc vérifier exactement ce qu'il envoie sur GitHub. Si vous préférez ne pas l'utiliser, laissez la falsification au niveau du moteur désactivée et la protection standard de GeoSpoof falsifie toujours votre position et votre fuseau horaire.",
+        },
+        {
+          q: "Comment masquer la barre « a démarré le débogage de ce navigateur » ?",
+          a: "Lancez Chrome avec l'option {flag}. Sous Windows, ajoutez-la au champ Cible du raccourci de Chrome ; sur macOS, relancez Chrome depuis le Terminal avec cette option (ou enregistrez-la comme lanceur) ; sous Linux, ajoutez-la à votre commande de lancement de Chrome ou au fichier .desktop. La barre disparaît tandis que la falsification continue de fonctionner.",
+        },
+        {
+          q: "La barre reviendra-t-elle quand je redémarrerai Chrome ?",
+          a: "Oui, à moins d'intégrer l'option au raccourci ou au lanceur que vous utilisez toujours. L'option n'affecte que les lancements qui l'incluent ; ouvrir Chrome d'une autre façon fait donc revenir la barre. Ajoutez-la à votre lanceur habituel pour qu'elle reste masquée.",
+        },
+        {
+          q: "Pourquoi GeoSpoof ne peut-il pas masquer la barre automatiquement pour moi ?",
+          a: "La barre est contrôlée par Chrome lui-même, et seule une option de lancement du navigateur peut la désactiver. Les extensions ne peuvent pas définir les options de ligne de commande de Chrome ; cette étape doit donc être effectuée une fois par vous. C'est une protection délibérée de Chrome autour de l'API de débogage.",
+        },
+        {
+          q: "Qu'est-ce que la falsification au niveau du moteur ?",
+          a: "C'est une option de GeoSpoof réservée à Chrome qui falsifie votre fuseau horaire au niveau du moteur du navigateur plutôt que depuis un script de page. Comme elle s'applique avant l'exécution du premier script d'une page et atteint les workers en arrière-plan, elle comble des fuites de fuseau horaire que la falsification au niveau de la page peut manquer. La géolocalisation continue d'utiliser la méthode standard et sans autorisation de GeoSpoof.",
+        },
+      ],
+    },
+    schema: {
+      howToStep1Name: "Quittez complètement Chrome",
+      howToStep1Text:
+        "Fermez toutes les fenêtres de Chrome pour que le navigateur se ferme entièrement — l'option ne s'applique qu'à un nouveau lancement.",
+      howToStep2Name: "Relancez Chrome avec l'option",
+      howToStep2Text:
+        "Démarrez Chrome avec l'option de ligne de commande {flag} en suivant les étapes propres à votre système d'exploitation.",
+      howToStep3Name: "Rendre le changement permanent (facultatif)",
+      howToStep3Text:
+        "Ajoutez l'option au raccourci ou au lanceur que vous utilisez habituellement, pour que la barre reste masquée à chaque lancement.",
+      howToStep4Name: "Rouvrez GeoSpoof",
+      howToStep4Text:
+        "La falsification au niveau du moteur continue de fonctionner exactement comme avant — seule la barre de notification a disparu.",
+      howToName:
+        "Comment masquer la barre « a démarré le débogage de ce navigateur » de Chrome",
+      howToDesc:
+        "Masquez la barre de notification que Chrome affiche lorsque la falsification au niveau du moteur de GeoSpoof est active, en lançant Chrome avec l'option {flag}.",
     },
   },
 }

@@ -1,9 +1,9 @@
 import { CheckIcon, MinusIcon, SparklesIcon } from "lucide-react"
-import { Link } from "@tanstack/react-router"
 import { Section } from "./Section"
 import type { Dictionary } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { useTranslations } from "@/hooks/use-i18n"
+import { LocaleLink } from "@/components/LocaleLink"
 import {
   Table,
   TableBody,
@@ -157,12 +157,12 @@ export function ComparisonSection({ className }: { className?: string }) {
 
       <p className="mx-auto mt-6 max-w-2xl text-center text-sm text-(--color-canvas-muted)">
         {t.comparison.ctaLead}
-        <Link
+        <LocaleLink
           to="/verify"
           className="font-medium text-(--color-brand) hover:underline"
         >
           {t.comparison.ctaLink}
-        </Link>
+        </LocaleLink>
         {t.comparison.ctaTail}
       </p>
     </Section>

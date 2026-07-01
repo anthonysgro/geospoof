@@ -56,12 +56,20 @@ const LOCALE_PREFIXES = { fr: "/fr" }
  */
 const localizedBasePaths = [
   "/",
+  "/about",
+  "/support",
+  "/verify",
+  "/privacy",
+  "/terms",
+  "/engine-level-spoofing",
   "/vpn",
+  "/spoof-timezone",
   "/spoof-location",
   "/spoof-location/chrome",
   "/spoof-location/edge",
   "/spoof-location/firefox",
   "/spoof-location/safari",
+  "/blog",
 ]
 
 /**

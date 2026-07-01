@@ -1,4 +1,4 @@
-import { Link, createFileRoute } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
 import * as React from "react"
 import {
   ArrowRight,
@@ -18,12 +18,14 @@ import {
 import type { NetworkIdentity } from "@/lib/verification/network-identity"
 import type { WebrtcResult } from "@/lib/verification/webrtc-probe"
 import type { WorkerProbeResult } from "@/lib/verification/worker-probe"
+import type { Locale } from "@/lib/i18n"
 import { Navigation } from "@/components/landing/Navigation"
 import { Footer } from "@/components/landing/Footer"
 import { SkipLink } from "@/components/landing/SkipLink"
 import { DownloadSection } from "@/components/landing/DownloadSection"
 import { cn } from "@/lib/utils"
 import { PROTON_DISCOUNT } from "@/lib/affiliate"
+import { SITE_URL } from "@/lib/blog"
 import {
   Collapsible,
   CollapsibleContent,
@@ -60,27 +62,30 @@ import {
   getTimezoneOffsetConvention,
   timezoneForCoordinates,
 } from "@/lib/verification/geo-timezone"
+import { useTranslations } from "@/hooks/use-i18n"
+import { LocaleLink } from "@/components/LocaleLink"
+import { format, getDictionary, localizedPath } from "@/lib/i18n"
 
-export const Route = createFileRoute("/verify")({
-  component: VerifyPage,
-  head: () => ({
+/**
+ * Build the `head` payload for the verify page in a given locale. This route is
+ * excluded from prerendering (it runs live browser probes), so it's rendered at
+ * runtime — but the meta/canonical/hreflang still matter for the English +
+ * French URLs.
+ */
+export function buildVerifyHead(locale: Locale) {
+  const m = getDictionary(locale).verify.meta
+  const canonical = `${SITE_URL}${localizedPath("/verify", locale)}`
+  return {
     meta: [
-      {
-        title:
-          "Browser Location Test — See What Websites Know About You | GeoSpoof",
-      },
-      {
-        name: "description",
-        content:
-          "Free browser location test. See the geolocation, timezone, and IP websites read about you right now — and whether your browser leaks your real location.",
-      },
+      { title: m.title },
+      { name: "description", content: m.description },
     ],
-    // Warm up connections to the map tile CDNs before the map mounts, so the
-    // first tiles can be fetched without paying for DNS + TLS at paint time.
-    // Light theme (the default) uses Esri's World Topo basemap, so its host
-    // gets a full preconnect; CARTO (dark theme) gets the lighter dns-prefetch.
     links: [
-      { rel: "canonical", href: "https://geospoof.com/verify" },
+      { rel: "canonical", href: canonical },
+      { rel: "alternate", hrefLang: "en", href: `${SITE_URL}/verify` },
+      { rel: "alternate", hrefLang: "fr", href: `${SITE_URL}/fr/verify` },
+      { rel: "alternate", hrefLang: "x-default", href: `${SITE_URL}/verify` },
+      // Warm up connections to the map tile CDNs before the map mounts.
       { rel: "preconnect", href: "https://server.arcgisonline.com" },
       { rel: "dns-prefetch", href: "https://server.arcgisonline.com" },
       { rel: "dns-prefetch", href: "https://a.basemaps.cartocdn.com" },
@@ -88,7 +93,12 @@ export const Route = createFileRoute("/verify")({
       { rel: "dns-prefetch", href: "https://c.basemaps.cartocdn.com" },
       { rel: "dns-prefetch", href: "https://d.basemaps.cartocdn.com" },
     ],
-  }),
+  }
+}
+
+export const Route = createFileRoute("/verify")({
+  component: VerifyPage,
+  head: () => buildVerifyHead("en"),
 })
 
 type NetworkState =
@@ -115,7 +125,7 @@ interface Row {
   note?: string
 }
 
-function VerifyPage() {
+export function VerifyPage() {
   return (
     <div className="min-h-screen bg-(--color-canvas)">
       <SkipLink />
@@ -249,6 +259,8 @@ function useGeoTimezone(lat: number | null, lon: number | null): GeoTzState {
 }
 
 function VerifyInner() {
+  const { t } = useTranslations()
+  const d = t.verify
   const { snapshot } = useIdentity()
   const [network, setNetwork] = React.useState<NetworkState>({
     status: "pending",
@@ -389,8 +401,8 @@ function VerifyInner() {
         return {
           id: "geo",
           icon: <MapPin className="size-4" />,
-          label: "Geolocation",
-          value: "Waiting for permission…",
+          label: d.rows.geolocation,
+          value: d.rows.waitingPermission,
           status: "pending",
         }
       }
@@ -398,8 +410,8 @@ function VerifyInner() {
         return {
           id: "geo",
           icon: <MapPin className="size-4" />,
-          label: "Geolocation",
-          value: "Blocked / denied",
+          label: d.rows.geolocation,
+          value: d.rows.blockedDenied,
           status: "good",
           note: "Location API returned no coordinates",
         }
@@ -415,7 +427,7 @@ function VerifyInner() {
       return {
         id: "geo",
         icon: <MapPin className="size-4" />,
-        label: "Geolocation",
+        label: d.rows.geolocation,
         value: coordStr,
         status: geoVsIpMismatch ? "bad" : "info",
         note: noteparts.length > 0 ? noteparts.join(" · ") : undefined,
@@ -432,7 +444,7 @@ function VerifyInner() {
       return {
         id: "tz",
         icon: <Clock className="size-4" />,
-        label: "Timezone",
+        label: d.rows.timezone,
         value: tz.identifier || "—",
         status: tzVsIpMismatch ? "bad" : tz.identifier ? "info" : "pending",
         note: noteParts.length > 0 ? noteParts.join(" · ") : undefined,
@@ -443,7 +455,7 @@ function VerifyInner() {
     {
       id: "time",
       icon: <Clock className="size-4" />,
-      label: "Current time",
+      label: d.rows.currentTime,
       value: mounted ? new Date().toString() : "—",
       status: mounted ? "info" : "pending",
     },
@@ -452,12 +464,12 @@ function VerifyInner() {
     {
       id: "ip",
       icon: <Globe className="size-4" />,
-      label: "IP Address",
+      label: d.rows.ipAddress,
       value:
         network.status === "pending"
-          ? "Looking up…"
+          ? d.rows.lookingUp
           : network.status === "error"
-            ? "Lookup failed"
+            ? d.rows.lookupFailed
             : (net?.ip ?? "—"),
       status:
         network.status === "pending"
@@ -476,8 +488,8 @@ function VerifyInner() {
         return {
           id: "webrtc",
           icon: <Wifi className="size-4" />,
-          label: "WebRTC",
-          value: "Probing…",
+          label: d.rows.webrtc,
+          value: d.rows.probing,
           status: "pending",
         }
       }
@@ -486,8 +498,8 @@ function VerifyInner() {
         return {
           id: "webrtc",
           icon: <Wifi className="size-4" />,
-          label: "WebRTC",
-          value: "No IP leak detected",
+          label: d.rows.webrtc,
+          value: d.rows.noLeak,
           status: "good",
         }
       }
@@ -498,7 +510,7 @@ function VerifyInner() {
         return {
           id: "webrtc",
           icon: <Wifi className="size-4" />,
-          label: "WebRTC",
+          label: d.rows.webrtc,
           value: webrtcIps.join(", "),
           status: "pending",
           note: "Checking against your IP address…",
@@ -511,7 +523,7 @@ function VerifyInner() {
         return {
           id: "webrtc",
           icon: <Wifi className="size-4" />,
-          label: "WebRTC",
+          label: d.rows.webrtc,
           value: webrtcIps.join(", "),
           status: "good",
           note: "Same as your IP address — no separate leak",
@@ -522,7 +534,7 @@ function VerifyInner() {
       return {
         id: "webrtc",
         icon: <Wifi className="size-4" />,
-        label: "WebRTC",
+        label: d.rows.webrtc,
         value: webrtcLeakedIps.join(", ") || "IP leaked",
         status: "bad",
         note:
@@ -560,32 +572,26 @@ function VerifyInner() {
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="mb-2 text-sm font-semibold tracking-widest text-(--color-brand) uppercase">
-              Verification
+              {d.eyebrow}
             </p>
             <h1 className="mb-3 text-2xl font-bold text-(--color-canvas-foreground) sm:text-3xl md:text-4xl">
-              What websites can see about you
+              {d.heading}
             </h1>
           </div>
           <button
             type="button"
             onClick={handleRefresh}
             disabled={refreshing}
-            aria-label="Refresh — reload the page to see your latest values"
+            aria-label={d.refreshAria}
             className="mt-1 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-(--color-canvas-border) bg-(--color-canvas) px-3 py-1.5 text-sm font-medium text-(--color-canvas-foreground) transition-colors hover:border-(--color-brand) hover:text-(--color-brand) focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:outline-none active:translate-y-px disabled:opacity-60"
           >
             <RefreshCw className={cn("size-4", refreshing && "animate-spin")} />
-            <span className="hidden sm:inline">Refresh</span>
+            <span className="hidden sm:inline">{d.refresh}</span>
           </button>
         </div>
         <p className="text-sm text-(--color-canvas-muted) sm:text-base">
-          <span className="sm:hidden">
-            Live values websites can read about you right now.
-          </span>
-          <span className="hidden sm:inline">
-            Live values from your browser right now — the location, timezone,
-            and IP websites can read. With GeoSpoof active, they reflect your
-            spoofed location instead of your real one.
-          </span>
+          <span className="sm:hidden">{d.introMobile}</span>
+          <span className="hidden sm:inline">{d.introDesktop}</span>
         </p>
       </div>
 
@@ -601,8 +607,7 @@ function VerifyInner() {
 
       {allResolved && (
         <p className="-mt-2 mb-6 text-center text-xs text-(--color-canvas-muted) italic sm:text-sm">
-          Using Automatic VPN sync? Changes can take up to 10 seconds — tap
-          Refresh to see the latest.
+          {d.vpnSyncNote}
         </p>
       )}
 
@@ -641,15 +646,14 @@ function VerifyInner() {
           </span>
           <div>
             <p className="text-xs leading-relaxed text-(--color-canvas-foreground) sm:text-sm">
-              Your IP address is the one signal GeoSpoof can&rsquo;t change.
-              Only a VPN can.
+              {d.vpnCard.line1}
             </p>
             <p className="mt-0.5 text-xs text-(--color-canvas-muted)">
-              The one we recommend is up to {PROTON_DISCOUNT} off.
+              {format(d.vpnCard.line2, { discount: PROTON_DISCOUNT })}
             </p>
           </div>
         </div>
-        <Link
+        <LocaleLink
           to="/vpn"
           className={cn(
             "inline-flex shrink-0 items-center justify-center gap-1.5 self-start whitespace-nowrap sm:self-auto",
@@ -658,19 +662,18 @@ function VerifyInner() {
             "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) focus-visible:ring-offset-2"
           )}
         >
-          See the no-log VPN we recommend
+          {d.vpnCard.cta}
           <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
-        </Link>
+        </LocaleLink>
       </div>
 
       {/* API values — wider on desktop */}
       <div className="mt-12 lg:-mx-20 xl:-mx-36">
         <p className="mb-1 text-sm font-semibold tracking-widest text-(--color-brand) uppercase">
-          Browser API surface
+          {d.apiSection.eyebrow}
         </p>
         <p className="mb-6 text-sm text-(--color-canvas-muted)">
-          Key fingerprinting surfaces attackers check. Expand any group to see
-          the values they get — they should all tell the same story.
+          {d.apiSection.description}
         </p>
         <ApiChecks groups={apiGroups} mounted={mounted} />
       </div>
@@ -678,13 +681,13 @@ function VerifyInner() {
       <FaqSection />
 
       <p className="mt-10 text-center text-sm text-(--color-canvas-muted)">
-        See something wrong, or a result you don&rsquo;t expect?{" "}
-        <Link
+        {d.supportLead}
+        <LocaleLink
           to="/support"
           className="font-medium text-(--color-brand) hover:underline"
         >
-          Get support
-        </Link>
+          {d.supportLink}
+        </LocaleLink>
       </p>
     </section>
   )
@@ -693,37 +696,17 @@ function VerifyInner() {
 // ---------------------------------------------------------------------------
 // FAQ — plain-language answers to the literal questions people search for.
 // Doubles as SEO surface (real indexable copy) and emits FAQPage JSON-LD so
-// the answers are eligible for rich results.
+// the answers are eligible for rich results. Copy lives in the i18n dictionary
+// (t.verify.faq) so it localizes with the rest of the page.
 // ---------------------------------------------------------------------------
 
-const FAQS: Array<{ q: string; a: string }> = [
-  {
-    q: "What is my browser's geolocation?",
-    a: "Your browser's geolocation is the latitude and longitude it hands to websites through the JavaScript Geolocation API. The map and coordinates above show exactly what sites read when they ask where you are. With GeoSpoof active, that's your spoofed location instead of your real one.",
-  },
-  {
-    q: "Can websites see my real location even when I use a VPN?",
-    a: "Yes. A VPN only changes your IP address. Your browser still reports its own GPS-level geolocation, system timezone, and locale — and WebRTC can leak your real IP entirely. If those signals disagree with your VPN's exit location, a site can tell something is off. This page flags exactly those mismatches.",
-  },
-  {
-    q: "Why does my timezone not match my IP address?",
-    a: "Your timezone comes from your operating system, while your IP location comes from your network or VPN. If you connect through a VPN in another country but leave your system clock on your home timezone, the two won't line up — a common, easily detected tell. GeoSpoof aligns your timezone to your spoofed location to close that gap.",
-  },
-  {
-    q: "What is a WebRTC leak?",
-    a: "WebRTC is a browser feature for real-time audio, video, and data. It can reveal your real public and local IP addresses directly to a website — bypassing your VPN — unless it's blocked. The WebRTC check above probes for that leak and reports any address it manages to expose.",
-  },
-  {
-    q: "Is this browser location test free?",
-    a: "Yes. The test runs entirely in your browser, costs nothing, and requires no account. It reads the same signals any website can read and shows them back to you in plain language.",
-  },
-]
-
 function FaqSection() {
+  const { t } = useTranslations()
+  const d = t.verify.faq
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: FAQS.map((f) => ({
+    mainEntity: d.items.map((f) => ({
       "@type": "Question",
       name: f.q,
       acceptedAnswer: { "@type": "Answer", text: f.a },
@@ -736,15 +719,15 @@ function FaqSection() {
         id="faq-heading"
         className="mb-6 text-2xl font-bold text-(--color-canvas-foreground)"
       >
-        Frequently asked questions
+        {d.heading}
       </h2>
       <div className="overflow-hidden rounded-2xl border border-(--color-canvas-border)">
-        {FAQS.map((faq, i) => (
+        {d.items.map((faq, i) => (
           <details
             key={faq.q}
             className={cn(
               "group bg-(--color-canvas) px-5 py-4",
-              i < FAQS.length - 1 && "border-b border-(--color-canvas-border)"
+              i < d.items.length - 1 && "border-b border-(--color-canvas-border)"
             )}
           >
             <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-medium text-(--color-canvas-foreground)">
@@ -2101,6 +2084,9 @@ function VerdictBanner({
 }) {
   const platform = usePlatform()
   const storeLink = getStoreLink(platform, "verify")
+  const { t } = useTranslations()
+  const d = t.verify.verdict
+  const dlg = t.verify.dialog
 
   // Loading state — neutral, calm.
   if (!ready) {
@@ -2112,11 +2098,9 @@ function VerdictBanner({
         />
         <div>
           <p className="font-semibold text-(--color-canvas-foreground)">
-            Running checks…
+            {d.running}
           </p>
-          <p className="text-sm text-(--color-canvas-muted)">
-            Reading your browser and probing for leaks.
-          </p>
+          <p className="text-sm text-(--color-canvas-muted)">{d.runningSub}</p>
         </div>
       </div>
     )
@@ -2137,10 +2121,10 @@ function VerdictBanner({
         </span>
         <div>
           <p className="text-xl font-bold text-(--color-canvas-foreground)">
-            All checks passed
+            {d.allGood}
           </p>
           <p className="mt-0.5 text-sm text-(--color-canvas-muted)">
-            Nothing we checked gives you away.
+            {d.allGoodSub}
           </p>
         </div>
       </div>
@@ -2149,9 +2133,9 @@ function VerdictBanner({
 
   // Something's off.
   const problems: Array<string> = []
-  if (webrtcLeaking) problems.push("WebRTC leaking your real IP")
-  if (geoVsIpMismatch) problems.push("Location doesn't match IP")
-  if (tzVsIpMismatch) problems.push("Timezone doesn't match IP")
+  if (webrtcLeaking) problems.push(d.problemWebrtc)
+  if (geoVsIpMismatch) problems.push(d.problemGeo)
+  if (tzVsIpMismatch) problems.push(d.problemTz)
   if (failingGroupTitles.length > 0)
     problems.push(
       `${failingGroupTitles.join(", ")} ${failingGroupTitles.length === 1 ? "doesn't" : "don't"} line up`
@@ -2164,7 +2148,7 @@ function VerdictBanner({
       </span>
       <div className="flex-1">
         <p className="text-base font-bold text-(--color-canvas-foreground) sm:text-xl">
-          Some signals are exposed
+          {d.exposed}
         </p>
         <ul className="mt-1.5 space-y-0.5 sm:mt-2 sm:space-y-1">
           {problems.map((problem) => (
@@ -2181,7 +2165,7 @@ function VerdictBanner({
           ))}
         </ul>
         <p className="mt-2 hidden text-sm text-(--color-canvas-muted) sm:block">
-          A site cross-referencing these signals could flag you.
+          {d.crossRef}
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 sm:mt-4">
           <a
@@ -2199,7 +2183,7 @@ function VerdictBanner({
               "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
             )}
           >
-            Install GeoSpoof free
+            {d.installFree}
           </a>
 
           <Dialog>
@@ -2212,15 +2196,13 @@ function VerdictBanner({
                   "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
                 )}
               >
-                Already have GeoSpoof?
+                {d.alreadyHave}
               </button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Already running GeoSpoof?</DialogTitle>
-                <DialogDescription>
-                  A quick checklist clears up almost every flagged signal.
-                </DialogDescription>
+                <DialogTitle>{dlg.title}</DialogTitle>
+                <DialogDescription>{dlg.description}</DialogDescription>
               </DialogHeader>
               <ul className="space-y-3 text-sm text-(--color-canvas-foreground)">
                 {(geoVsIpMismatch || tzVsIpMismatch) && (
@@ -2231,12 +2213,11 @@ function VerdictBanner({
                     />
                     <span>
                       <span className="font-semibold">
-                        IP doesn&apos;t match your{" "}
-                        {geoVsIpMismatch ? "location" : "timezone"}?
+                        {geoVsIpMismatch
+                          ? dlg.ipMismatchLocation
+                          : dlg.ipMismatchTimezone}
                       </span>{" "}
-                      That&apos;s expected when VPN sync is off — GeoSpoof only
-                      aligns your IP when you turn it on. If you meant to keep
-                      your real IP, this is working as intended.
+                      {dlg.ipMismatchBody}
                     </span>
                   </li>
                 )}
@@ -2247,12 +2228,8 @@ function VerdictBanner({
                       aria-hidden
                     />
                     <span>
-                      <span className="font-semibold">
-                        Just turned on auto VPN sync?
-                      </span>{" "}
-                      Give it up to ~10 seconds after a refresh to catch up,
-                      then re-check — auto sync isn&apos;t instant the way
-                      manual sync is.
+                      <span className="font-semibold">{dlg.autoSyncBold}</span>{" "}
+                      {dlg.autoSyncBody}
                     </span>
                   </li>
                 )}
@@ -2262,10 +2239,8 @@ function VerdictBanner({
                     aria-hidden
                   />
                   <span>
-                    <span className="font-semibold">
-                      Update to the latest version.
-                    </span>{" "}
-                    New fingerprinting tricks get patched continuously.{" "}
+                    <span className="font-semibold">{dlg.updateBold}</span>{" "}
+                    {dlg.updateBody}
                     {storeLink ? (
                       <a
                         href={storeLink.href}
@@ -2273,7 +2248,7 @@ function VerdictBanner({
                         rel="noopener noreferrer"
                         className="font-medium text-(--color-brand) underline underline-offset-4 hover:text-(--color-brand-dark)"
                       >
-                        {storeLink.cta}
+                        {t.storeCta[storeLink.key]}
                       </a>
                     ) : (
                       <a
@@ -2289,7 +2264,7 @@ function VerdictBanner({
                         }}
                         className="font-medium text-(--color-brand) underline underline-offset-4 hover:text-(--color-brand-dark)"
                       >
-                        See download options
+                        {dlg.downloadOptions}
                       </a>
                     )}
                     .
@@ -2301,11 +2276,8 @@ function VerdictBanner({
                     aria-hidden
                   />
                   <span>
-                    <span className="font-semibold">
-                      Check it's on for this site.
-                    </span>{" "}
-                    Look at the toolbar icon; if you scope by allowlist or
-                    denylist, include this site.
+                    <span className="font-semibold">{dlg.checkSiteBold}</span>{" "}
+                    {dlg.checkSiteBody}
                   </span>
                 </li>
                 <li className="flex gap-2.5">
@@ -2314,20 +2286,18 @@ function VerdictBanner({
                     aria-hidden
                   />
                   <span>
-                    <span className="font-semibold">
-                      Reload after enabling or updating.
-                    </span>{" "}
-                    Some surfaces only apply on a fresh page load.
+                    <span className="font-semibold">{dlg.reloadBold}</span>{" "}
+                    {dlg.reloadBody}
                   </span>
                 </li>
               </ul>
               <DialogFooter className="sm:items-center sm:justify-between">
-                <Link
+                <LocaleLink
                   to="/support"
                   className="text-sm font-medium text-(--color-brand) underline underline-offset-4 hover:text-(--color-brand-dark)"
                 >
-                  Still stuck? Contact support
-                </Link>
+                  {dlg.stillStuck}
+                </LocaleLink>
                 <DialogClose asChild>
                   <button
                     type="button"
@@ -2337,7 +2307,7 @@ function VerdictBanner({
                       "hover:bg-canvas-border/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
                     )}
                   >
-                    Got it
+                    {dlg.gotIt}
                   </button>
                 </DialogClose>
               </DialogFooter>

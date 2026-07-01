@@ -1,8 +1,8 @@
 import { CheckIcon, MinusIcon } from "lucide-react"
-import { Link } from "@tanstack/react-router"
 import { Section } from "./Section"
 import { cn } from "@/lib/utils"
 import { useTranslations } from "@/hooks/use-i18n"
+import { LocaleLink } from "@/components/LocaleLink"
 import {
   Table,
   TableBody,
@@ -136,40 +136,40 @@ export function CompatibilitySection({ className }: { className?: string }) {
 
       <p className="mx-auto mt-6 max-w-2xl text-center text-sm text-(--color-canvas-muted)">
         {t.compatibility.setupLead}
-        <Link
+        <LocaleLink
           to={"/spoof-location/chrome"}
           className="font-medium text-(--color-brand) hover:underline"
         >
           Chrome
-        </Link>
+        </LocaleLink>
         {", "}
-        <Link
+        <LocaleLink
           to={"/spoof-location/edge"}
           className="font-medium text-(--color-brand) hover:underline"
         >
           Edge
-        </Link>
+        </LocaleLink>
         {", "}
-        <Link
+        <LocaleLink
           to={"/spoof-location/firefox"}
           className="font-medium text-(--color-brand) hover:underline"
         >
           Firefox
-        </Link>
+        </LocaleLink>
         {t.compatibility.or}
-        <Link
+        <LocaleLink
           to={"/spoof-location/safari"}
           className="font-medium text-(--color-brand) hover:underline"
         >
           Safari
-        </Link>
+        </LocaleLink>
         {t.compatibility.alsoLead}
-        <Link
+        <LocaleLink
           to={"/spoof-timezone"}
           className="font-medium text-(--color-brand) hover:underline"
         >
           {t.compatibility.timezoneLink}
-        </Link>
+        </LocaleLink>
         .
       </p>
     </Section>

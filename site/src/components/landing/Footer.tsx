@@ -1,9 +1,9 @@
 import * as React from "react"
-import { Link } from "@tanstack/react-router"
 import type { Dictionary } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { useTranslations } from "@/hooks/use-i18n"
 import { format } from "@/lib/i18n"
+import { LocaleLink } from "@/components/LocaleLink"
 
 interface FooterLink {
   label: string
@@ -115,9 +115,9 @@ export function Footer({ className, ...props }: FooterProps) {
                         {link.label}
                       </a>
                     ) : (
-                      <Link to={link.href as "/"} className={linkClass}>
+                      <LocaleLink to={link.href as "/"} className={linkClass}>
                         {link.label}
-                      </Link>
+                      </LocaleLink>
                     )}
                   </li>
                 ))}

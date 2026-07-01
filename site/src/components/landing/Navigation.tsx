@@ -3,19 +3,19 @@ import { NavLink } from "./NavLink"
 import { MobileNav } from "./MobileNav"
 import { LanguageSwitcher } from "./LanguageSwitcher"
 import type { NavItem } from "./MobileNav"
-import type { Dictionary } from "@/lib/i18n"
+import type { Dictionary, Locale } from "@/lib/i18n"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { cn } from "@/lib/utils"
 import { useTranslations } from "@/hooks/use-i18n"
-import { localizedPath } from "@/lib/i18n"
+import { localizedHref, localizedPath } from "@/lib/i18n"
 
 /** Build the nav items from the active dictionary (labels are localized). */
-function getNavItems(t: Dictionary): Array<NavItem> {
+function getNavItems(t: Dictionary, locale: Locale): Array<NavItem> {
   return [
     { label: t.nav.home, href: "#" },
     { label: t.nav.features, href: "#features" },
-    { label: t.nav.blog, href: "/blog" },
-    { label: t.nav.support, href: "/support" },
+    { label: t.nav.blog, href: localizedHref("/blog", locale) },
+    { label: t.nav.support, href: localizedHref("/support", locale) },
   ]
 }
 
@@ -184,7 +184,7 @@ function RightActions({
 export function Navigation({ className }: { className?: string }) {
   const { locale, t } = useTranslations()
   const homePath = localizedPath("/", locale)
-  const items = getNavItems(t)
+  const items = getNavItems(t, locale)
 
   return (
     <header

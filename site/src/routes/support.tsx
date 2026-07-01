@@ -1,5 +1,6 @@
 import * as React from "react"
 import { createFileRoute } from "@tanstack/react-router"
+import type { Locale } from "@/lib/i18n"
 import { Navigation } from "@/components/landing/Navigation"
 import { Footer } from "@/components/landing/Footer"
 import { SkipLink } from "@/components/landing/SkipLink"
@@ -13,54 +14,34 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { SITE_URL } from "@/lib/blog"
+import { useTranslations } from "@/hooks/use-i18n"
+import { getDictionary, localizedPath } from "@/lib/i18n"
+
+/** Build the `head` payload for the Support page in a given locale. */
+export function buildSupportHead(locale: Locale) {
+  const m = getDictionary(locale).support.meta
+  const canonical = `${SITE_URL}${localizedPath("/support", locale)}`
+  return {
+    meta: [
+      { title: m.title },
+      { name: "description", content: m.description },
+    ],
+    links: [
+      { rel: "canonical", href: canonical },
+      { rel: "alternate", hrefLang: "en", href: `${SITE_URL}/support` },
+      { rel: "alternate", hrefLang: "fr", href: `${SITE_URL}/fr/support` },
+      { rel: "alternate", hrefLang: "x-default", href: `${SITE_URL}/support` },
+    ],
+  }
+}
 
 export const Route = createFileRoute("/support")({
   component: SupportPage,
-  head: () => ({
-    meta: [
-      { title: "GeoSpoof Support — Fix Spoofing, VPN Sync & Setup Issues" },
-      {
-        name: "description",
-        content:
-          "Get help with GeoSpoof: fix location spoofing that isn't working, resolve VPN Sync timeouts, WebRTC issues, and browser or mobile setup — or contact our team.",
-      },
-    ],
-    links: [{ rel: "canonical", href: `${SITE_URL}/support` }],
-  }),
+  head: () => buildSupportHead("en"),
 })
 
-const faqs = [
-  {
-    q: "Spoofing isn't working after I installed the extension",
-    a: "The extension injects into pages at load time, so any tabs that were already open when you installed or enabled it won't be protected yet. Refresh every tab you want to protect after enabling Location Protection. If it still doesn't work, try disabling and re-enabling the extension, then refresh again.",
-  },
-  {
-    q: "VPN Sync shows a timeout or network error",
-    a: "VPN Sync calls a few public IP geolocation services to detect your VPN exit region. Some VPNs or firewalls block outbound requests to these services. Try temporarily disabling your VPN's firewall or kill switch. If the issue persists, use the Search City or Enter Coordinates tabs to set your location manually instead.",
-  },
-  {
-    q: "Spoofing stopped working after a browser update",
-    a: "Browser updates occasionally change how extensions interact with page APIs. Make sure you're on the latest version of GeoSpoof. Check the version in the Details tab of the popup and compare it to the latest release on GitHub. If you're behind, update through your browser's extension manager.",
-  },
-  {
-    q: "A specific website isn't being spoofed",
-    a: "Some sites use server-side location detection based on your IP address rather than the browser Geolocation API. GeoSpoof overrides browser APIs only — it does not change your IP address. For full location consistency, use GeoSpoof alongside a VPN pointed at the same region.",
-  },
-  {
-    q: "The extension works on desktop but not on my phone",
-    a: "On Firefox for Android, the extension is fully supported on Firefox 140 and later. On iOS and macOS Safari, the extension is available through the App Store — tap the puzzle piece icon in the address bar and enable GeoSpoof for the site you want to protect. Chrome for iOS and Android does not support extensions.",
-  },
-  {
-    q: "WebRTC Protection isn't available / greyed out",
-    a: "WebRTC Protection uses a browser privacy API that is not available on all platforms. It is supported on Firefox and Chromium-based browsers on desktop. It is not available on Safari or Firefox for Android.",
-  },
-  {
-    q: 'I see "Extensions cannot run on this page"',
-    a: "Browsers restrict extensions from running on built-in pages such as about:blank, chrome://, about:newtab, and extension store pages. This is a browser security boundary that cannot be bypassed. GeoSpoof works on all normal websites.",
-  },
-]
-
 function CopyEmailButton() {
+  const { t } = useTranslations()
   const [copied, setCopied] = React.useState(false)
 
   const handleCopy = async () => {
@@ -81,14 +62,16 @@ function CopyEmailButton() {
           : "bg-(--color-canvas-border) text-(--color-canvas-muted) hover:text-(--color-canvas-foreground)",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
       )}
-      aria-label="Copy email address"
+      aria-label={t.support.copyAria}
     >
-      {copied ? "✓ Copied" : "Copy"}
+      {copied ? t.support.copied : t.support.copy}
     </button>
   )
 }
 
-function SupportPage() {
+export function SupportPage() {
+  const { t } = useTranslations()
+  const d = t.support
   return (
     <div className="min-h-screen bg-(--color-canvas)">
       <SkipLink />
@@ -98,24 +81,24 @@ function SupportPage() {
           {/* Header */}
           <div className="mb-12 text-center">
             <h1 className="mb-4 text-4xl font-bold text-(--color-canvas-foreground)">
-              How can we help?
+              {d.heading}
             </h1>
             <p className="text-body-lg text-(--color-canvas-muted)">
-              Find answers to common issues below, or reach out directly.
+              {d.subhead}
             </p>
           </div>
 
           {/* FAQ — shadcn Accordion */}
           <div className="mb-16">
             <h2 className="mb-6 text-xl font-semibold text-(--color-canvas-foreground)">
-              Common Issues
+              {d.commonIssues}
             </h2>
             <Accordion
               type="single"
               collapsible
               className="divide-y divide-(--color-canvas-border) overflow-hidden rounded-xl border border-(--color-canvas-border)"
             >
-              {faqs.map((faq, i) => (
+              {d.faqs.map((faq, i) => (
                 <AccordionItem
                   key={i}
                   value={`faq-${i}`}
@@ -137,10 +120,10 @@ function SupportPage() {
           {/* Contact */}
           <div className="text-center">
             <h2 className="mb-4 text-2xl font-bold text-(--color-canvas-foreground)">
-              Still need help?
+              {d.stillNeedHelp}
             </h2>
             <p className="text-body-lg mx-auto mb-8 max-w-md text-(--color-canvas-muted)">
-              Send us an email and we'll get back to you within a day or two.
+              {d.contactBody}
             </p>
 
             <div className="mb-4 inline-flex items-center gap-3">
@@ -154,7 +137,7 @@ function SupportPage() {
             </div>
 
             <p className="text-body-base text-(--color-canvas-muted)">
-              You can also report bugs on{" "}
+              {d.reportBugsLead}
               <a
                 href="https://github.com/anthonysgro/geospoof/issues"
                 target="_blank"

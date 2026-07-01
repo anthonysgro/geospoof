@@ -1,9 +1,11 @@
 import { Link, createFileRoute, notFound } from "@tanstack/react-router"
 import { MDXContent } from "@content-collections/mdx/react"
+import type {Post} from "@/lib/blog";
 import { Navigation } from "@/components/landing/Navigation"
 import { Footer } from "@/components/landing/Footer"
 import { SkipLink } from "@/components/landing/SkipLink"
 import { Section } from "@/components/landing/Section"
+import { LocaleLink } from "@/components/LocaleLink"
 import { Badge } from "@/components/ui/badge"
 import {
   Breadcrumb,
@@ -15,13 +17,72 @@ import {
 } from "@/components/ui/breadcrumb"
 import { mdxComponents } from "@/components/blog/mdx-components"
 import {
+  
   SITE_URL,
   blogPageTitle,
   formatDate,
   getAdjacentPosts,
   getPostBySlug,
-  postUrl,
+  postUrl
 } from "@/lib/blog"
+import { useTranslations } from "@/hooks/use-i18n"
+
+/**
+ * Build the `head` for a blog post. The canonical always points at the English
+ * URL (`postUrl`): article bodies aren't translated, so the `/fr/blog/<slug>`
+ * variant is a localized-chrome duplicate that should consolidate its ranking
+ * signals onto the one English article rather than compete with it.
+ */
+export function buildBlogPostHead(post: Post) {
+  const url = postUrl(post.slug)
+  // SVG isn't reliably rendered by social-card scrapers, so only use a cover
+  // as the OG image when it's a raster format; otherwise fall back to the
+  // pre-built social card.
+  const ogImage =
+    post.cover && /\.(png|jpe?g|webp)$/i.test(post.cover)
+      ? `${SITE_URL}${post.cover}`
+      : `${SITE_URL}/images/social-og-home.png`
+  const ogImageAlt = post.coverAlt ?? post.title
+  return {
+    meta: [
+      { title: blogPageTitle(post.title) },
+      { name: "description", content: post.description },
+      ...(post.keywords.length > 0
+        ? [{ name: "keywords", content: post.keywords.join(", ") }]
+        : []),
+      { name: "author", content: post.author },
+      // Let Google use large image previews + full snippets in results.
+      {
+        name: "robots",
+        content: "index, follow, max-image-preview:large, max-snippet:-1",
+      },
+      // Open Graph (article)
+      { property: "og:type", content: "article" },
+      { property: "og:site_name", content: "GeoSpoof" },
+      { property: "og:locale", content: "en_US" },
+      { property: "og:url", content: url },
+      { property: "og:title", content: post.title },
+      { property: "og:description", content: post.description },
+      { property: "og:image", content: ogImage },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: ogImageAlt },
+      { property: "article:published_time", content: post.date },
+      ...(post.updated
+        ? [{ property: "article:modified_time", content: post.updated }]
+        : []),
+      { property: "article:author", content: post.author },
+      ...post.tags.map((tag) => ({ property: "article:tag", content: tag })),
+      // Twitter / X
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: post.title },
+      { name: "twitter:description", content: post.description },
+      { name: "twitter:image", content: ogImage },
+      { name: "twitter:image:alt", content: ogImageAlt },
+    ],
+    links: [{ rel: "canonical", href: url }],
+  }
+}
 
 export const Route = createFileRoute("/blog/$slug")({
   loader: ({ params }) => {
@@ -29,63 +90,26 @@ export const Route = createFileRoute("/blog/$slug")({
     if (!post) throw notFound()
     return post
   },
-  head: ({ loaderData }) => {
-    if (!loaderData) return {}
-    const post = loaderData
-    const url = postUrl(post.slug)
-    // SVG isn't reliably rendered by social-card scrapers, so only use a cover
-    // as the OG image when it's a raster format; otherwise fall back to the
-    // pre-built social card.
-    const ogImage =
-      post.cover && /\.(png|jpe?g|webp)$/i.test(post.cover)
-        ? `${SITE_URL}${post.cover}`
-        : `${SITE_URL}/images/social-og-home.png`
-    const ogImageAlt = post.coverAlt ?? post.title
-    return {
-      meta: [
-        { title: blogPageTitle(post.title) },
-        { name: "description", content: post.description },
-        ...(post.keywords.length > 0
-          ? [{ name: "keywords", content: post.keywords.join(", ") }]
-          : []),
-        { name: "author", content: post.author },
-        // Let Google use large image previews + full snippets in results.
-        {
-          name: "robots",
-          content: "index, follow, max-image-preview:large, max-snippet:-1",
-        },
-        // Open Graph (article)
-        { property: "og:type", content: "article" },
-        { property: "og:site_name", content: "GeoSpoof" },
-        { property: "og:locale", content: "en_US" },
-        { property: "og:url", content: url },
-        { property: "og:title", content: post.title },
-        { property: "og:description", content: post.description },
-        { property: "og:image", content: ogImage },
-        { property: "og:image:width", content: "1200" },
-        { property: "og:image:height", content: "630" },
-        { property: "og:image:alt", content: ogImageAlt },
-        { property: "article:published_time", content: post.date },
-        ...(post.updated
-          ? [{ property: "article:modified_time", content: post.updated }]
-          : []),
-        { property: "article:author", content: post.author },
-        ...post.tags.map((tag) => ({ property: "article:tag", content: tag })),
-        // Twitter / X
-        { name: "twitter:card", content: "summary_large_image" },
-        { name: "twitter:title", content: post.title },
-        { name: "twitter:description", content: post.description },
-        { name: "twitter:image", content: ogImage },
-        { name: "twitter:image:alt", content: ogImageAlt },
-      ],
-      links: [{ rel: "canonical", href: url }],
-    }
-  },
+  head: ({ loaderData }) => (loaderData ? buildBlogPostHead(loaderData) : {}),
   component: BlogPostPage,
 })
 
 function BlogPostPage() {
   const post = Route.useLoaderData()
+  return <BlogPostView post={post} />
+}
+
+/**
+ * Blog post view. Shared by the English (`/blog/$slug`) and French
+ * (`/fr/blog/$slug`) routes; the active locale is derived from the URL. The
+ * article body (`post.mdx`), title, description, and tags stay in the language
+ * they were written in (English) — only the surrounding chrome (breadcrumb,
+ * byline, section headings, prev/next nav) is localized. A note flags the
+ * English-only body on translated routes.
+ */
+export function BlogPostView({ post }: { post: Post }) {
+  const { locale, t } = useTranslations()
+  const bp = t.blog.post
   const url = postUrl(post.slug)
   const { newer, older } = getAdjacentPosts(post.slug)
   const socialImage =
@@ -160,13 +184,13 @@ function BlogPostPage() {
             <BreadcrumbList>
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
-                  <Link to="/">Home</Link>
+                  <LocaleLink to="/">{bp.breadcrumbHome}</LocaleLink>
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
-                  <Link to="/blog">Blog</Link>
+                  <LocaleLink to="/blog">{bp.breadcrumbBlog}</LocaleLink>
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
@@ -182,16 +206,18 @@ function BlogPostPage() {
                 {post.title}
               </h1>
               <div className="text-small flex flex-wrap items-center gap-2 text-(--color-canvas-muted)">
-                <Link
+                <LocaleLink
                   to="/about"
                   className="transition-colors hover:text-(--color-canvas-foreground)"
                 >
                   {post.author}
-                </Link>
+                </LocaleLink>
                 <span aria-hidden="true">·</span>
                 <time dateTime={post.date}>{formatDate(post.date)}</time>
                 <span aria-hidden="true">·</span>
-                <span>{post.readingTime} min read</span>
+                <span>
+                  {post.readingTime} {bp.minRead}
+                </span>
               </div>
               {post.tags.length > 0 && (
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -201,6 +227,11 @@ function BlogPostPage() {
                     </Badge>
                   ))}
                 </div>
+              )}
+              {locale !== "en" && (
+                <p className="mt-4 rounded-lg border border-(--color-canvas-border) bg-(--color-canvas) px-4 py-2 text-sm text-(--color-canvas-muted)">
+                  {bp.englishNote}
+                </p>
               )}
             </header>
 
@@ -234,7 +265,7 @@ function BlogPostPage() {
             {post.faq.length > 0 && (
               <section className="mt-12 border-t border-(--color-canvas-border) pt-8">
                 <h2 className="mb-6 text-2xl font-bold text-(--color-canvas-foreground)">
-                  Frequently asked questions
+                  {bp.faqHeading}
                 </h2>
                 <dl className="space-y-6">
                   {post.faq.map((item) => (
@@ -258,12 +289,12 @@ function BlogPostPage() {
               >
                 {older ? (
                   <Link
-                    to="/blog/$slug"
+                    to={locale === "en" ? "/blog/$slug" : "/fr/blog/$slug"}
                     params={{ slug: older.slug }}
                     className="group flex flex-col rounded-md-brand border border-(--color-canvas-border) p-4 transition-colors hover:border-(--color-brand)"
                   >
                     <span className="text-small text-(--color-canvas-muted)">
-                      ← Older post
+                      {bp.olderPost}
                     </span>
                     <span className="mt-1 font-semibold text-(--color-canvas-foreground) group-hover:text-(--color-brand)">
                       {older.title}
@@ -274,12 +305,12 @@ function BlogPostPage() {
                 )}
                 {newer ? (
                   <Link
-                    to="/blog/$slug"
+                    to={locale === "en" ? "/blog/$slug" : "/fr/blog/$slug"}
                     params={{ slug: newer.slug }}
                     className="group flex flex-col rounded-md-brand border border-(--color-canvas-border) p-4 text-right transition-colors hover:border-(--color-brand) sm:items-end"
                   >
                     <span className="text-small text-(--color-canvas-muted)">
-                      Newer post →
+                      {bp.newerPost}
                     </span>
                     <span className="mt-1 font-semibold text-(--color-canvas-foreground) group-hover:text-(--color-brand)">
                       {newer.title}
@@ -292,12 +323,12 @@ function BlogPostPage() {
             )}
 
             <div className="mt-10 text-center">
-              <Link
+              <LocaleLink
                 to="/blog"
                 className="text-small font-medium text-(--color-brand) hover:underline"
               >
-                ← Back to all posts
-              </Link>
+                {bp.backToAll}
+              </LocaleLink>
             </div>
           </article>
         </Section>

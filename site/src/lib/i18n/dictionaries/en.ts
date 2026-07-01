@@ -70,6 +70,32 @@ export const en = {
     switchAction: "View in English",
     dismiss: "Dismiss",
   },
+  storeCta: {
+    firefox: "Add to Firefox",
+    chrome: "Add to Chrome",
+    apple: "Get on the App Store",
+  },
+  legal: {
+    // Only the page chrome (meta, H1, "last updated") is localized. The legal
+    // body text itself is intentionally left in English (the authoritative
+    // version) and is not translated.
+    englishNote:
+      "The legal text below is available in English only. The English version is authoritative.",
+    privacy: {
+      metaTitle: "Privacy Policy | GeoSpoof",
+      metaDescription:
+        "Privacy Policy for GeoSpoof — learn how we protect your data and respect your privacy.",
+      heading: "Privacy Policy",
+      lastUpdated: "Last Updated: June 22, 2026",
+    },
+    terms: {
+      metaTitle: "Terms of Service | GeoSpoof",
+      metaDescription:
+        "Terms of Service for GeoSpoof — understand the terms governing your use of the extension.",
+      heading: "Terms of Service",
+      lastUpdated: "Last Updated: June 20, 2026",
+    },
+  },
   testimonials: {
     eyebrow: "What users are saying",
     heading: "Loved by privacy-minded users",
@@ -193,6 +219,29 @@ export const en = {
     allPosts: "All posts",
     minRead: "min read",
     readMore: "Read more",
+  },
+  blog: {
+    index: {
+      metaTitle: "Blog | GeoSpoof",
+      metaDescription:
+        "Guides and deep dives on browser location spoofing, timezone privacy, WebRTC leaks, and getting the most out of GeoSpoof.",
+      heading: "GeoSpoof Blog",
+      subhead:
+        "Guides and deep dives on location spoofing, timezone privacy, and browser fingerprinting.",
+      empty: "No posts yet — check back soon.",
+      minRead: "min read",
+    },
+    post: {
+      breadcrumbHome: "Home",
+      breadcrumbBlog: "Blog",
+      minRead: "min read",
+      faqHeading: "Frequently asked questions",
+      olderPost: "← Older post",
+      newerPost: "Newer post →",
+      backToAll: "← Back to all posts",
+      // Shown above translated pages whose article body is still English-only.
+      englishNote: "This article is available in English only.",
+    },
   },
   download: {
     eyebrow: "Download",
@@ -485,6 +534,403 @@ export const en = {
     disclosure: {
       label: "Affiliate disclosure:",
       body: "GeoSpoof is an independent, open-source utility and is not affiliated with or endorsed by Proton. When you buy a plan through our recommendation, Proton shares a portion of the sale with us, at no extra cost to you. It helps keep GeoSpoof free, open-source, and ad-free. We recommend Proton on its merits (open-source, independently audited, and recommended by Privacy Guides), not because of the commission, and GeoSpoof works with any VPN you prefer.",
+    },
+  },
+  support: {
+    meta: {
+      title: "GeoSpoof Support — Fix Spoofing, VPN Sync & Setup Issues",
+      description:
+        "Get help with GeoSpoof: fix location spoofing that isn't working, resolve VPN Sync timeouts, WebRTC issues, and browser or mobile setup — or contact our team.",
+    },
+    heading: "How can we help?",
+    subhead: "Find answers to common issues below, or reach out directly.",
+    commonIssues: "Common Issues",
+    faqs: [
+      {
+        q: "Spoofing isn't working after I installed the extension",
+        a: "The extension injects into pages at load time, so any tabs that were already open when you installed or enabled it won't be protected yet. Refresh every tab you want to protect after enabling Location Protection. If it still doesn't work, try disabling and re-enabling the extension, then refresh again.",
+      },
+      {
+        q: "VPN Sync shows a timeout or network error",
+        a: "VPN Sync calls a few public IP geolocation services to detect your VPN exit region. Some VPNs or firewalls block outbound requests to these services. Try temporarily disabling your VPN's firewall or kill switch. If the issue persists, use the Search City or Enter Coordinates tabs to set your location manually instead.",
+      },
+      {
+        q: "Spoofing stopped working after a browser update",
+        a: "Browser updates occasionally change how extensions interact with page APIs. Make sure you're on the latest version of GeoSpoof. Check the version in the Details tab of the popup and compare it to the latest release on GitHub. If you're behind, update through your browser's extension manager.",
+      },
+      {
+        q: "A specific website isn't being spoofed",
+        a: "Some sites use server-side location detection based on your IP address rather than the browser Geolocation API. GeoSpoof overrides browser APIs only — it does not change your IP address. For full location consistency, use GeoSpoof alongside a VPN pointed at the same region.",
+      },
+      {
+        q: "The extension works on desktop but not on my phone",
+        a: "On Firefox for Android, the extension is fully supported on Firefox 140 and later. On iOS and macOS Safari, the extension is available through the App Store — tap the puzzle piece icon in the address bar and enable GeoSpoof for the site you want to protect. Chrome for iOS and Android does not support extensions.",
+      },
+      {
+        q: "WebRTC Protection isn't available / greyed out",
+        a: "WebRTC Protection uses a browser privacy API that is not available on all platforms. It is supported on Firefox and Chromium-based browsers on desktop. It is not available on Safari or Firefox for Android.",
+      },
+      {
+        q: 'I see "Extensions cannot run on this page"',
+        a: "Browsers restrict extensions from running on built-in pages such as about:blank, chrome://, about:newtab, and extension store pages. This is a browser security boundary that cannot be bypassed. GeoSpoof works on all normal websites.",
+      },
+    ],
+    copy: "Copy",
+    copied: "✓ Copied",
+    copyAria: "Copy email address",
+    stillNeedHelp: "Still need help?",
+    contactBody:
+      "Send us an email and we'll get back to you within a day or two.",
+    reportBugsLead: "You can also report bugs on ",
+  },
+  about: {
+    meta: {
+      title: "About GeoSpoof — Who Builds It | GeoSpoof",
+      description:
+        "GeoSpoof is an open-source location and timezone spoofer built by Anthony Sgro — no accounts, no tracking, and honest about what it does.",
+      ogTitle: "About GeoSpoof",
+    },
+    greeting: "👋 Hi, I'm Anthony",
+    tagline: "I build GeoSpoof.",
+    githubAria: "Anthony Sgro on GitHub",
+    linkedinAria: "Anthony Sgro on LinkedIn",
+    p1a: "I'm a software developer, and GeoSpoof started as ",
+    p1strong: "something I wanted for myself",
+    p1b: ": an easy way to control the location and timezone my browser was handing out, without signing up for anything or giving my data to yet another company. It grew into a tool a lot of people now use every day, which still kind of amazes me.",
+    p2a: "It's open-source, with ",
+    p2strong: "no accounts and nothing to sign up for",
+    p2b: ". Your settings just live in your browser. And if you're ever curious what it's actually doing, the code is public and the ",
+    verifyLink: "verify page",
+    p2c: " shows you exactly what websites can read about you.",
+    p3a: "There's an optional Pro tier for the ",
+    p3strong: "extra power features",
+    p3b: ", while the everyday spoofing stays free.",
+    p4a: "Got a question, an idea, or just want to ",
+    p4em: "say hi",
+    p4b: "? The ",
+    supportLink: "support page",
+    p4c: " reaches me directly, or find me on GitHub and LinkedIn up top. Thanks for stopping by.",
+  },
+  spoofTimezone: {
+    meta: {
+      title: "Spoof Your Browser Timezone — Free Extension | GeoSpoof",
+      description:
+        "Change or spoof your browser's timezone to match any location. GeoSpoof overrides Date, Intl, and Temporal so your clock can't reveal your real region.",
+      ogTitle: "Spoof your browser's timezone",
+    },
+    hero: {
+      breadcrumbHome: "Home",
+      breadcrumb: "Spoof Timezone",
+      badge: "Timezone Spoofing",
+      headingPre: "Spoof your browser's ",
+      headingEmphasis: "timezone",
+      introPre:
+        "Websites read your timezone the instant a page loads — no permission prompt — through ",
+      introMid: " and ",
+      introPost:
+        ". GeoSpoof overrides them so your clock matches the location you choose, not where you really are.",
+      ctaFallback: "Get GeoSpoof free",
+      testTimezone: "Test your timezone",
+    },
+    whatLeaks: {
+      heading: "What your browser gives away",
+      intro:
+        "Unlike the Geolocation API, the timezone surfaces never ask permission — they answer the moment a page loads. A single mismatched clock can undo a spoofed GPS location.",
+      reveals1: "Returns an IANA name like America/New_York.",
+      reveals2: "Returns your UTC offset in minutes.",
+      surface3Api: "Temporal & document timestamps",
+      reveals3:
+        "Newer time APIs and page timestamps expose the same zone.",
+    },
+    howTo: {
+      heading: "How to spoof your timezone",
+      schemaName: "How to spoof your browser's timezone",
+      schemaDesc:
+        "Change the timezone your browser reports to websites, without changing your system clock, using the free GeoSpoof extension.",
+      steps: [
+        {
+          name: "Install GeoSpoof",
+          text: "Add the free GeoSpoof extension for your browser — Firefox, Chrome, Brave, Edge, or Safari.",
+        },
+        {
+          name: "Set your location",
+          text: "Search for a city, enter coordinates, or use VPN Sync to match your VPN's exit region.",
+        },
+        {
+          name: "Timezone aligns automatically",
+          text: "GeoSpoof overrides Date, Intl.DateTimeFormat, and Temporal so every clock-based API reports the timezone of your chosen location.",
+        },
+        {
+          name: "Verify it worked",
+          text: "Open the GeoSpoof verification page to confirm your reported timezone matches your spoofed location.",
+        },
+      ],
+    },
+    whyItMatters: {
+      heading: "A spoofed location needs a matching clock",
+      body: "A VPN moves your IP and GeoSpoof moves your GPS coordinates — but if your timezone still reads your real region, the mismatch gives you away. GeoSpoof keeps your timezone aligned to your chosen location automatically, and re-aligns it as your VPN switches exit servers, so your geolocation, timezone, and IP all tell the same story.",
+      blogLinkLead: "Want the technical deep dive? ",
+      blogLinkText: "Read why your timezone reveals your location",
+    },
+    faq: {
+      heading: "Frequently asked questions",
+      items: [
+        {
+          q: "How do I change my browser's timezone?",
+          a: "Browsers take their timezone from your operating system, and most don't let you override it per-site. GeoSpoof changes the timezone your browser reports to websites without touching your system clock: install the extension, set a location, and it overrides the JavaScript timezone APIs to match.",
+        },
+        {
+          q: "Can I spoof my timezone without changing my system clock?",
+          a: "Yes. GeoSpoof works at the browser API level, so it changes what websites read (Intl.DateTimeFormat, Date, Temporal) while your computer's actual clock and system settings stay exactly as they are.",
+        },
+        {
+          q: "Does a VPN change my browser's timezone?",
+          a: "No. A VPN only changes your IP address. Your browser still reports its own timezone from your operating system, so a VPN in another country with your home timezone is an easy mismatch to detect. GeoSpoof aligns the timezone to your spoofed location to close that gap.",
+        },
+        {
+          q: "Why does my timezone need to match my location?",
+          a: "If you spoof your GPS location or use a VPN but leave your timezone on your real region, the two disagree — and that mismatch is a common, easily detected tell. Aligning your timezone to your chosen location keeps every signal telling the same story.",
+        },
+        {
+          q: "Does GeoSpoof spoof the timezone automatically?",
+          a: "Yes. When you set a location or sync to your VPN, GeoSpoof resolves the correct timezone for those coordinates and applies it automatically — including as your VPN switches exit servers.",
+        },
+      ],
+    },
+  },
+  verify: {
+    meta: {
+      title:
+        "Browser Location Test — See What Websites Know About You | GeoSpoof",
+      description:
+        "Free browser location test. See the geolocation, timezone, and IP websites read about you right now — and whether your browser leaks your real location.",
+    },
+    eyebrow: "Verification",
+    heading: "What websites can see about you",
+    refresh: "Refresh",
+    refreshAria: "Refresh — reload the page to see your latest values",
+    introMobile: "Live values websites can read about you right now.",
+    introDesktop:
+      "Live values from your browser right now — the location, timezone, and IP websites can read. With GeoSpoof active, they reflect your spoofed location instead of your real one.",
+    vpnSyncNote:
+      "Using Automatic VPN sync? Changes can take up to 10 seconds — tap Refresh to see the latest.",
+    rows: {
+      geolocation: "Geolocation",
+      timezone: "Timezone",
+      currentTime: "Current time",
+      ipAddress: "IP Address",
+      webrtc: "WebRTC",
+      waitingPermission: "Waiting for permission…",
+      blockedDenied: "Blocked / denied",
+      lookingUp: "Looking up…",
+      lookupFailed: "Lookup failed",
+      probing: "Probing…",
+      noLeak: "No IP leak detected",
+    },
+    vpnCard: {
+      line1:
+        "Your IP address is the one signal GeoSpoof can't change. Only a VPN can.",
+      line2: "The one we recommend is up to {discount} off.",
+      cta: "See the no-log VPN we recommend",
+    },
+    apiSection: {
+      eyebrow: "Browser API surface",
+      description:
+        "Key fingerprinting surfaces attackers check. Expand any group to see the values they get — they should all tell the same story.",
+    },
+    supportLead: "See something wrong, or a result you don't expect? ",
+    supportLink: "Get support",
+    verdict: {
+      running: "Running checks…",
+      runningSub: "Reading your browser and probing for leaks.",
+      allGood: "All checks passed",
+      allGoodSub: "Nothing we checked gives you away.",
+      exposed: "Some signals are exposed",
+      problemWebrtc: "WebRTC leaking your real IP",
+      problemGeo: "Location doesn't match IP",
+      problemTz: "Timezone doesn't match IP",
+      crossRef: "A site cross-referencing these signals could flag you.",
+      installFree: "Install GeoSpoof free",
+      alreadyHave: "Already have GeoSpoof?",
+    },
+    dialog: {
+      title: "Already running GeoSpoof?",
+      description: "A quick checklist clears up almost every flagged signal.",
+      ipMismatchLocation: "IP doesn't match your location?",
+      ipMismatchTimezone: "IP doesn't match your timezone?",
+      ipMismatchBody:
+        "That's expected when VPN sync is off — GeoSpoof only aligns your IP when you turn it on. If you meant to keep your real IP, this is working as intended.",
+      autoSyncBold: "Just turned on auto VPN sync?",
+      autoSyncBody:
+        "Give it up to ~10 seconds after a refresh to catch up, then re-check — auto sync isn't instant the way manual sync is.",
+      updateBold: "Update to the latest version.",
+      updateBody: "New fingerprinting tricks get patched continuously. ",
+      downloadOptions: "See download options",
+      checkSiteBold: "Check it's on for this site.",
+      checkSiteBody:
+        "Look at the toolbar icon; if you scope by allowlist or denylist, include this site.",
+      reloadBold: "Reload after enabling or updating.",
+      reloadBody: "Some surfaces only apply on a fresh page load.",
+      stillStuck: "Still stuck? Contact support",
+      gotIt: "Got it",
+    },
+    faq: {
+      heading: "Frequently asked questions",
+      items: [
+        {
+          q: "What is my browser's geolocation?",
+          a: "Your browser's geolocation is the latitude and longitude it hands to websites through the JavaScript Geolocation API. The map and coordinates above show exactly what sites read when they ask where you are. With GeoSpoof active, that's your spoofed location instead of your real one.",
+        },
+        {
+          q: "Can websites see my real location even when I use a VPN?",
+          a: "Yes. A VPN only changes your IP address. Your browser still reports its own GPS-level geolocation, system timezone, and locale — and WebRTC can leak your real IP entirely. If those signals disagree with your VPN's exit location, a site can tell something is off. This page flags exactly those mismatches.",
+        },
+        {
+          q: "Why does my timezone not match my IP address?",
+          a: "Your timezone comes from your operating system, while your IP location comes from your network or VPN. If you connect through a VPN in another country but leave your system clock on your home timezone, the two won't line up — a common, easily detected tell. GeoSpoof aligns your timezone to your spoofed location to close that gap.",
+        },
+        {
+          q: "What is a WebRTC leak?",
+          a: "WebRTC is a browser feature for real-time audio, video, and data. It can reveal your real public and local IP addresses directly to a website — bypassing your VPN — unless it's blocked. The WebRTC check above probes for that leak and reports any address it manages to expose.",
+        },
+        {
+          q: "Is this browser location test free?",
+          a: "Yes. The test runs entirely in your browser, costs nothing, and requires no account. It reads the same signals any website can read and shows them back to you in plain language.",
+        },
+      ],
+    },
+  },
+  engineLevel: {
+    meta: {
+      title: "Hide Chrome's “Started Debugging This Browser” Bar | GeoSpoof",
+      description:
+        "GeoSpoof's Engine-level Spoofing uses Chrome's debugger API, so Chrome shows a debugging bar. Here's what it means, why it's safe, and how to hide it.",
+      ogTitle: "Hide Chrome's “started debugging this browser” bar",
+    },
+    hero: {
+      breadcrumbHome: "Home",
+      breadcrumb: "Engine-level Spoofing",
+      badge: "Chrome · Engine-level Spoofing",
+      headingPre: "Hide Chrome's ",
+      headingEmphasis: "“started debugging this browser”",
+      headingPost: " bar",
+      intro:
+        "Chrome shows a “started debugging this browser” bar while Engine-level Spoofing is on. It's harmless — here's how to hide it.",
+      ctaHowTo: "How to hide the bar",
+      ctaFallback: "Get GeoSpoof free",
+      figureAlt:
+        "Chrome showing a “GeoSpoof started debugging this browser” notification bar at the top of the window while Engine-level Spoofing is on",
+      figCaption:
+        "The “started debugging this browser” bar Chrome shows while Engine-level Spoofing is on.",
+    },
+    whatBar: {
+      heading: "What the bar means",
+      intro:
+        "Engine-level Spoofing applies your timezone at the browser level, before a page's first script runs, so it also covers background workers. To reach that deep, GeoSpoof uses Chrome's debugger API — and Chrome announces that with a notification bar.",
+      point1Title: "It's a standard Chrome notice",
+      point1Body:
+        "Chrome shows the bar for any extension that uses the debugger API — the same API DevTools use. It appears the moment GeoSpoof attaches, not because anything went wrong.",
+      point2Title: "GeoSpoof only sets a timezone override",
+      point2Body:
+        "The debugger connection is used solely to apply your spoofed timezone across frames and workers. It doesn't read your page content, keystrokes, or browsing — and the code is open source.",
+      point3Title: "The bar is cosmetic",
+      point3Body:
+        "It changes nothing about how sites see you. Hiding it is purely about removing the strip at the top of the window.",
+    },
+    howTo: {
+      heading: "How to hide the bar",
+      introPre: "Launch Chrome with the ",
+      introPost: " flag. Quit Chrome first, then follow the steps for your system.",
+    },
+    guides: {
+      win: {
+        step1: "Close all Chrome windows.",
+        step2:
+          "Right-click the Chrome shortcut you use (taskbar, desktop, or Start menu) and choose Properties.",
+        step3a: "In the ",
+        step3strong: "Target",
+        step3mid: " field, leave the quoted path to ",
+        step3code: "chrome.exe",
+        step3end:
+          " as-is and add the flag after the closing quote (note the leading space).",
+        step4: "Click OK, then open Chrome from that shortcut.",
+        note: "Repeat for each shortcut you launch Chrome from (taskbar and Start menu are separate shortcuts).",
+      },
+      mac: {
+        step1: "Quit Chrome completely (⌘Q).",
+        step2: "Open Terminal and run the command below.",
+        step3a:
+          "Chrome reopens without the bar. To launch this way every time, save the command as an Automator ",
+        step3strong: "Application",
+        step3end: " or a shell alias.",
+      },
+      linux: {
+        step1: "Close Chrome.",
+        step2:
+          "Launch it with the flag, or add the flag to the Exec= line of your Chrome .desktop launcher to make it permanent.",
+        note: "Use chromium in place of google-chrome if you run Chromium.",
+      },
+    },
+    permanent: {
+      heading: "Make it stick",
+      bodyPre:
+        "The flag only applies to launches that include it, so the bar returns if you open Chrome a different way. To keep it hidden for good, add ",
+      bodyMid:
+        " to the shortcut or launcher you open Chrome from every day — the Windows shortcut Target, a macOS launcher app, or your Linux ",
+      bodyDesktopCode: ".desktop",
+      bodyEnd: " file.",
+      body2Pre:
+        "Prefer not to bother? Leave Engine-level Spoofing off — GeoSpoof's standard protection still spoofs your ",
+      locationLink: "location",
+      body2Mid: " and ",
+      timezoneLink: "timezone",
+      body2End: " without any debugger bar.",
+    },
+    faq: {
+      heading: "Frequently asked questions",
+      items: [
+        {
+          q: "Why does GeoSpoof say it's “debugging” my browser?",
+          a: "Engine-level Spoofing uses Chrome's debugger API (the Chrome DevTools Protocol) — the same mechanism your browser's own DevTools use — to set your timezone deeper in the browser than a normal extension can. Whenever any extension attaches with that API, Chrome shows a “started debugging this browser” bar. It's a standard Chrome notice, not a sign that something is wrong.",
+        },
+        {
+          q: "Is it safe? Is GeoSpoof reading my data?",
+          a: "GeoSpoof uses the debugger connection only to apply a timezone override. It does not read your page content, keystrokes, or browsing. GeoSpoof is open source, so you can review exactly what it sends on GitHub. If you'd rather not use it, leave Engine-level Spoofing off and GeoSpoof's standard protection still spoofs your location and timezone.",
+        },
+        {
+          q: "How do I hide the “started debugging this browser” bar?",
+          a: "Launch Chrome with the {flag} flag. On Windows, add it to your Chrome shortcut's Target field; on macOS, relaunch Chrome from Terminal with that flag (or save it as a launcher); on Linux, add it to your Chrome launch command or the .desktop file. The bar disappears while spoofing keeps working.",
+        },
+        {
+          q: "Will the bar come back when I restart Chrome?",
+          a: "Yes, unless you bake the flag into the shortcut or launcher you always use. The flag only affects launches that include it, so opening Chrome a different way brings the bar back. Add it to your everyday launcher to make it stick.",
+        },
+        {
+          q: "Why can't GeoSpoof hide the bar for me automatically?",
+          a: "The bar is controlled by Chrome itself, and only a browser launch flag can turn it off. Extensions can't set Chrome's command-line flags, so this step has to be done once by you. It's a deliberate Chrome safeguard around the debugger API.",
+        },
+        {
+          q: "What is Engine-level Spoofing?",
+          a: "It's a Chrome-only GeoSpoof option that spoofs your timezone at the browser engine level instead of from a page script. Because it applies before a page's first script runs and reaches background workers, it closes timezone leaks that page-level spoofing can miss. Geolocation continues to use GeoSpoof's standard, prompt-free method.",
+        },
+      ],
+    },
+    schema: {
+      howToStep1Name: "Quit Chrome completely",
+      howToStep1Text:
+        "Close every Chrome window so the browser fully exits — the flag only applies to a fresh launch.",
+      howToStep2Name: "Relaunch Chrome with the flag",
+      howToStep2Text:
+        "Start Chrome with the {flag} command-line flag using the steps for your operating system.",
+      howToStep3Name: "Make it permanent (optional)",
+      howToStep3Text:
+        "Add the flag to the shortcut or launcher you normally use, so the bar stays hidden on every launch.",
+      howToStep4Name: "Reopen GeoSpoof",
+      howToStep4Text:
+        "Engine-level Spoofing keeps working exactly as before — only the notification bar is gone.",
+      howToName: "How to hide Chrome's “started debugging this browser” bar",
+      howToDesc:
+        "Hide the notification bar Chrome shows while GeoSpoof's Engine-level Spoofing is on, by launching Chrome with the {flag} flag.",
     },
   },
 } as const
