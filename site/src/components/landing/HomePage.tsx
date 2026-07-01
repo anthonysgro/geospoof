@@ -13,7 +13,7 @@ import { Footer } from "@/components/landing/Footer"
 import { ExposureToast } from "@/components/landing/ExposureToast"
 import { SkipLink } from "@/components/landing/SkipLink"
 import { SITE_URL } from "@/lib/blog"
-import { localizedPath } from "@/lib/i18n"
+import { buildOgLocaleMeta, localizedPath } from "@/lib/i18n"
 
 /**
  * Shared home page, rendered by both the English route (`/`) and the French
@@ -56,23 +56,18 @@ export function HomePage() {
   )
 }
 
-/** Per-locale homepage SEO copy (title + meta description + og:locale). */
-const localeMeta: Record<
-  Locale,
-  { title: string; description: string; ogLocale: string }
-> = {
+/** Per-locale homepage SEO copy (title + meta description). */
+const localeMeta: Record<Locale, { title: string; description: string }> = {
   en: {
     title: "GeoSpoof — Spoof Geolocation & Timezone (Free Extension)",
     description:
       "Spoof your browser's geolocation, timezone, and WebRTC in one free extension. No account required. Works on Chrome, Firefox, Edge, Brave, and Safari.",
-    ogLocale: "en_US",
   },
   fr: {
     title:
       "GeoSpoof — Falsifiez votre position et fuseau horaire (extension gratuite)",
     description:
       "Falsifiez la géolocalisation, le fuseau horaire et le WebRTC de votre navigateur avec une seule extension gratuite. Sans compte. Compatible Chrome, Firefox, Edge, Brave et Safari.",
-    ogLocale: "fr_FR",
   },
 }
 
@@ -89,7 +84,7 @@ export function buildHomeHead(locale: Locale) {
     meta: [
       { title: meta.title },
       { name: "description", content: meta.description },
-      { property: "og:locale", content: meta.ogLocale },
+      ...buildOgLocaleMeta(locale),
       { property: "og:url", content: canonical },
       { name: "twitter:url", content: canonical },
     ],

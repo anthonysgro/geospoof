@@ -9,7 +9,7 @@ import { Section } from "@/components/landing/Section"
 import { cn } from "@/lib/utils"
 import { SITE_URL } from "@/lib/blog"
 import { useTranslations } from "@/hooks/use-i18n"
-import { getDictionary, localizedPath } from "@/lib/i18n"
+import { buildOgLocaleMeta, getDictionary, localizedPath } from "@/lib/i18n"
 
 /**
  * Head for the Privacy page. Only the page chrome is localized; the legal body
@@ -22,6 +22,7 @@ export function buildPrivacyHead(locale: Locale) {
     meta: [
       { title: m.metaTitle },
       { name: "description", content: m.metaDescription },
+      ...buildOgLocaleMeta(locale),
     ],
     links: [
       { rel: "canonical", href: canonical },

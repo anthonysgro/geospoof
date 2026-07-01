@@ -718,8 +718,12 @@ export function IdentityProvider({ children }: IdentityProviderProps) {
         // Intl/Date overrides are live too. Re-reading here avoids freezing the
         // real native zone captured in the brief pre-settings window at mount
         // (which showed as "spoofed-city geolocation but real-city timezone").
-        const timezone = resolveTimezone()
-        const updated: IdentitySnapshot = { ...current, location, timezone }
+        const resolvedTimezone = resolveTimezone()
+        const updated: IdentitySnapshot = {
+          ...current,
+          location,
+          timezone: resolvedTimezone,
+        }
         publish(updated)
         drainWaiters("location", location)
       })

@@ -22,7 +22,12 @@ import { getStoreLink } from "@/lib/store-links"
 import { SITE_URL } from "@/lib/blog"
 import { useTranslations } from "@/hooks/use-i18n"
 import { LocaleLink } from "@/components/LocaleLink"
-import { format, getDictionary, localizedPath } from "@/lib/i18n"
+import {
+  buildOgLocaleMeta,
+  format,
+  getDictionary,
+  localizedPath,
+} from "@/lib/i18n"
 
 export type BrowserSlug = "chrome" | "edge" | "firefox" | "safari"
 
@@ -91,6 +96,7 @@ export function buildSpoofLocationHead(
       { title: meta.metaTitle },
       { name: "description", content: meta.metaDescription },
       { property: "og:type", content: "website" },
+      ...buildOgLocaleMeta(locale),
       { property: "og:url", content: canonical },
       { property: "og:title", content: meta.ogTitle },
       { property: "og:description", content: meta.metaDescription },

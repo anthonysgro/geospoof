@@ -9,7 +9,7 @@ import { Section } from "@/components/landing/Section"
 import { cn } from "@/lib/utils"
 import { SITE_URL } from "@/lib/blog"
 import { useTranslations } from "@/hooks/use-i18n"
-import { getDictionary, localizedPath } from "@/lib/i18n"
+import { buildOgLocaleMeta, getDictionary, localizedPath } from "@/lib/i18n"
 
 const GITHUB_PROFILE = "https://github.com/anthonysgro"
 const LINKEDIN_URL = "https://www.linkedin.com/in/sgro"
@@ -26,6 +26,7 @@ export function buildAboutHead(locale: Locale) {
       { title: m.title },
       { name: "description", content: m.description },
       { property: "og:type", content: "profile" },
+      ...buildOgLocaleMeta(locale),
       { property: "og:url", content: canonical },
       { property: "og:title", content: m.ogTitle },
       { property: "og:description", content: m.description },

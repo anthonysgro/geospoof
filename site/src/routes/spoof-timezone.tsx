@@ -21,7 +21,7 @@ import { getStoreLink } from "@/lib/store-links"
 import { SITE_URL } from "@/lib/blog"
 import { useTranslations } from "@/hooks/use-i18n"
 import { LocaleLink } from "@/components/LocaleLink"
-import { getDictionary, localizedPath } from "@/lib/i18n"
+import { buildOgLocaleMeta, getDictionary, localizedPath } from "@/lib/i18n"
 
 /**
  * Build the `head` payload for the timezone page in a given locale: localized
@@ -36,6 +36,7 @@ export function buildSpoofTimezoneHead(locale: Locale) {
       { title: m.title },
       { name: "description", content: m.description },
       { property: "og:type", content: "website" },
+      ...buildOgLocaleMeta(locale),
       { property: "og:url", content: canonical },
       { property: "og:title", content: m.ogTitle },
       { property: "og:description", content: m.description },

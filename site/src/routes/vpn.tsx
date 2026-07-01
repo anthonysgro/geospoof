@@ -27,7 +27,12 @@ import { cn } from "@/lib/utils"
 import { SITE_URL } from "@/lib/blog"
 import { PROTON_DISCOUNT, protonVpnLink } from "@/lib/affiliate"
 import { useTranslations } from "@/hooks/use-i18n"
-import { format, getDictionary, localizedPath } from "@/lib/i18n"
+import {
+  buildOgLocaleMeta,
+  format,
+  getDictionary,
+  localizedPath,
+} from "@/lib/i18n"
 
 // Single CTA destination for this page. Defined once; the actual outbound URL
 // lives behind the /go/proton redirect (see vercel.json), built via
@@ -47,6 +52,7 @@ export function buildVpnHead(locale: Locale) {
       { title: m.title },
       { name: "description", content: m.description },
       { property: "og:type", content: "website" },
+      ...buildOgLocaleMeta(locale),
       { property: "og:url", content: canonical },
       { property: "og:title", content: m.ogTitle },
       { property: "og:description", content: m.description },

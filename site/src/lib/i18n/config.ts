@@ -30,6 +30,35 @@ export const localeShortLabels: Record<Locale, string> = {
   fr: "FR",
 }
 
+/**
+ * Open Graph locale codes (`language_TERRITORY`) for each locale, used in the
+ * `og:locale` / `og:locale:alternate` tags so social and messaging previews
+ * render in the right language. Keep in sync with `locales`.
+ */
+export const ogLocales: Record<Locale, string> = {
+  en: "en_US",
+  fr: "fr_FR",
+}
+
+/**
+ * Build the Open Graph locale meta tags for a page: `og:locale` for the active
+ * locale, plus one `og:locale:alternate` for every other supported locale, as
+ * the OG protocol recommends. Spread into a head builder's `meta` array.
+ */
+export function buildOgLocaleMeta(
+  locale: Locale
+): Array<{ property: string; content: string }> {
+  return [
+    { property: "og:locale", content: ogLocales[locale] },
+    ...locales
+      .filter((l) => l !== locale)
+      .map((l) => ({
+        property: "og:locale:alternate",
+        content: ogLocales[l],
+      })),
+  ]
+}
+
 /** Type guard: is this string one of our supported locales? */
 export function isLocale(value: string | undefined): value is Locale {
   return (

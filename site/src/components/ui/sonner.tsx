@@ -1,13 +1,14 @@
 import * as React from "react"
-import { useTheme } from "@/hooks/use-theme"
-import { Toaster as Sonner, type ToasterProps } from "sonner"
+import { Toaster as Sonner  } from "sonner"
 import {
   CircleCheckIcon,
   InfoIcon,
-  TriangleAlertIcon,
-  OctagonXIcon,
   Loader2Icon,
+  OctagonXIcon,
+  TriangleAlertIcon,
 } from "lucide-react"
+import type {ToasterProps} from "sonner";
+import { useTheme } from "@/hooks/use-theme"
 
 const Toaster = ({ position, ...props }: ToasterProps) => {
   const { resolvedTheme } = useTheme()
@@ -29,7 +30,7 @@ const Toaster = ({ position, ...props }: ToasterProps) => {
 
   return (
     <Sonner
-      theme={(resolvedTheme as ToasterProps["theme"]) ?? "system"}
+      theme={(resolvedTheme) ?? "system"}
       position={resolvedPosition}
       className="toaster group"
       icons={{

@@ -7,7 +7,7 @@ import { Section } from "@/components/landing/Section"
 import { Badge } from "@/components/ui/badge"
 import { SITE_URL, formatDate, postUrl, posts } from "@/lib/blog"
 import { useTranslations } from "@/hooks/use-i18n"
-import { getDictionary, localizedPath } from "@/lib/i18n"
+import { buildOgLocaleMeta, getDictionary, localizedPath } from "@/lib/i18n"
 
 /**
  * Build the `head` payload for the blog index in a given locale: localized
@@ -23,6 +23,7 @@ export function buildBlogIndexHead(locale: Locale) {
       { title: m.metaTitle },
       { name: "description", content: m.metaDescription },
       { property: "og:type", content: "website" },
+      ...buildOgLocaleMeta(locale),
       { property: "og:url", content: canonical },
       { property: "og:title", content: m.heading },
       { property: "og:description", content: m.metaDescription },

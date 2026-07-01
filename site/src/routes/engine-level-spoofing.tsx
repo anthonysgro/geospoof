@@ -21,7 +21,12 @@ import { usePlatform } from "@/hooks/use-platform"
 import { getStoreLink } from "@/lib/store-links"
 import { SITE_URL } from "@/lib/blog"
 import { useTranslations } from "@/hooks/use-i18n"
-import { format, getDictionary, localizedPath } from "@/lib/i18n"
+import {
+  buildOgLocaleMeta,
+  format,
+  getDictionary,
+  localizedPath,
+} from "@/lib/i18n"
 
 /** The launch flag that suppresses Chrome's extension-debugger notification bar. */
 const FLAG = "--silent-debugger-extension-api"
@@ -35,6 +40,7 @@ export function buildEngineLevelHead(locale: Locale) {
       { title: m.title },
       { name: "description", content: m.description },
       { property: "og:type", content: "article" },
+      ...buildOgLocaleMeta(locale),
       { property: "og:url", content: canonical },
       { property: "og:title", content: m.ogTitle },
       { property: "og:description", content: m.description },

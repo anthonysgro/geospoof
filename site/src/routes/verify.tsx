@@ -64,7 +64,12 @@ import {
 } from "@/lib/verification/geo-timezone"
 import { useTranslations } from "@/hooks/use-i18n"
 import { LocaleLink } from "@/components/LocaleLink"
-import { format, getDictionary, localizedPath } from "@/lib/i18n"
+import {
+  buildOgLocaleMeta,
+  format,
+  getDictionary,
+  localizedPath,
+} from "@/lib/i18n"
 
 /**
  * Build the `head` payload for the verify page in a given locale. This route is
@@ -76,7 +81,11 @@ export function buildVerifyHead(locale: Locale) {
   const m = getDictionary(locale).verify.meta
   const canonical = `${SITE_URL}${localizedPath("/verify", locale)}`
   return {
-    meta: [{ title: m.title }, { name: "description", content: m.description }],
+    meta: [
+      { title: m.title },
+      { name: "description", content: m.description },
+      ...buildOgLocaleMeta(locale),
+    ],
     links: [
       { rel: "canonical", href: canonical },
       { rel: "alternate", hrefLang: "en", href: `${SITE_URL}/verify` },

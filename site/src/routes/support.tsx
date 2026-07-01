@@ -15,14 +15,18 @@ import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { SITE_URL } from "@/lib/blog"
 import { useTranslations } from "@/hooks/use-i18n"
-import { getDictionary, localizedPath } from "@/lib/i18n"
+import { buildOgLocaleMeta, getDictionary, localizedPath } from "@/lib/i18n"
 
 /** Build the `head` payload for the Support page in a given locale. */
 export function buildSupportHead(locale: Locale) {
   const m = getDictionary(locale).support.meta
   const canonical = `${SITE_URL}${localizedPath("/support", locale)}`
   return {
-    meta: [{ title: m.title }, { name: "description", content: m.description }],
+    meta: [
+      { title: m.title },
+      { name: "description", content: m.description },
+      ...buildOgLocaleMeta(locale),
+    ],
     links: [
       { rel: "canonical", href: canonical },
       { rel: "alternate", hrefLang: "en", href: `${SITE_URL}/support` },
