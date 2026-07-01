@@ -1,4 +1,5 @@
 import { en } from "./dictionaries/en"
+import { es } from "./dictionaries/es"
 import { fr } from "./dictionaries/fr"
 import { ru } from "./dictionaries/ru"
 import { zhCN } from "./dictionaries/zh-CN"
@@ -9,7 +10,7 @@ export type { Dictionary } from "./dictionaries/en"
 export * from "./config"
 
 /** All dictionaries, keyed by locale. */
-const dictionaries: Record<Locale, Dictionary> = { en, fr, ru, "zh-CN": zhCN }
+const dictionaries: Record<Locale, Dictionary> = { en, es, fr, ru, "zh-CN": zhCN }
 
 /** Get the message dictionary for a locale. */
 export function getDictionary(locale: Locale): Dictionary {
