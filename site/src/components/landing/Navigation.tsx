@@ -210,7 +210,7 @@ export function Navigation({ className }: { className?: string }) {
           homePath={homePath}
           ariaLabel={t.nav.mainNavAria}
         />
-        <div className="flex items-center gap-3 justify-self-end">
+        <div className="flex items-center gap-3 justify-self-end lg:gap-3">
           <RightActions t={t} items={items} homePath={homePath} />
         </div>
       </nav>

@@ -101,7 +101,9 @@ export function LanguageSwitcher({ className }: { className?: string }) {
           )}
         >
           <GlobeIcon className="h-5 w-5" aria-hidden="true" />
-          <span>{localeShortLabels[activeLocale]}</span>
+          <span className="hidden lg:inline">
+            {localeShortLabels[activeLocale]}
+          </span>
 
           {/* Attention dot — pings unless reduced motion is requested. */}
           {showNudge ? (

@@ -105,34 +105,53 @@ export function MobileNav({
           ))}
         </nav>
 
-        {/* Footer links */}
-        <div className="flex items-center gap-2 border-t border-(--color-canvas-border) px-4 py-4">
-          <a
-            href="https://buymeacoffee.com/sgro"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              "flex items-center gap-2 rounded-lg px-3 py-2",
-              "text-sm text-(--color-canvas-muted) hover:text-(--color-canvas-foreground)",
-              "transition-colors duration-200"
-            )}
-          >
-            <CoffeeIcon className="h-4 w-4" />
-            {t.nav.buyMeACoffee}
-          </a>
-          <a
-            href="https://github.com/anthonysgro/geospoof"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              "flex items-center gap-2 rounded-lg px-3 py-2",
-              "text-sm text-(--color-canvas-muted) hover:text-(--color-canvas-foreground)",
-              "transition-colors duration-200"
-            )}
-          >
-            <GithubIcon className="h-4 w-4" />
-            GitHub
-          </a>
+        {/* Bottom group: primary CTA + secondary links, one padded section */}
+        <div className="mt-auto flex flex-col gap-3 border-t border-(--color-canvas-border) px-4 py-4">
+          <SheetClose asChild>
+            <a
+              href="#download"
+              onClick={(e) => handleLinkClick(e, "#download")}
+              className={cn(
+                "flex min-h-12 items-center justify-center px-6 py-2.5",
+                "bg-(--color-brand) text-white",
+                "rounded-(--radius-brand)",
+                "text-base font-semibold shadow-md",
+                "transition-all duration-200 hover:bg-(--color-brand-dark) hover:shadow-lg",
+                "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+              )}
+            >
+              {t.nav.download}
+            </a>
+          </SheetClose>
+
+          <div className="flex items-center gap-2">
+            <a
+              href="https://buymeacoffee.com/sgro"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                "flex items-center gap-2 rounded-lg px-3 py-2",
+                "text-sm text-(--color-canvas-muted) hover:text-(--color-canvas-foreground)",
+                "transition-colors duration-200"
+              )}
+            >
+              <CoffeeIcon className="h-4 w-4" />
+              {t.nav.buyMeACoffee}
+            </a>
+            <a
+              href="https://github.com/anthonysgro/geospoof"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                "flex items-center gap-2 rounded-lg px-3 py-2",
+                "text-sm text-(--color-canvas-muted) hover:text-(--color-canvas-foreground)",
+                "transition-colors duration-200"
+              )}
+            >
+              <GithubIcon className="h-4 w-4" />
+              GitHub
+            </a>
+          </div>
         </div>
       </SheetContent>
     </Sheet>
