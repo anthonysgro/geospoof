@@ -20,6 +20,7 @@ import type { WebrtcResult } from "@/lib/verification/webrtc-probe"
 import type { WorkerProbeResult } from "@/lib/verification/worker-probe"
 import type { Locale } from "@/lib/i18n"
 import {
+  buildAlternateLinks,
   buildOgLocaleMeta,
   format,
   getDictionary,
@@ -89,9 +90,7 @@ export function buildVerifyHead(locale: Locale) {
     ],
     links: [
       { rel: "canonical", href: canonical },
-      { rel: "alternate", hrefLang: "en", href: `${SITE_URL}/verify` },
-      { rel: "alternate", hrefLang: "fr", href: `${SITE_URL}/fr/verify` },
-      { rel: "alternate", hrefLang: "x-default", href: `${SITE_URL}/verify` },
+      ...buildAlternateLinks("/verify", SITE_URL),
       // Warm up connections to the map tile CDNs before the map mounts.
       { rel: "preconnect", href: "https://server.arcgisonline.com" },
       { rel: "dns-prefetch", href: "https://server.arcgisonline.com" },

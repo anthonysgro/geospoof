@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { ShieldCheckIcon } from "lucide-react"
 import type { Locale } from "@/lib/i18n"
 import {
+  buildAlternateLinks,
   buildOgLocaleMeta,
   getDictionary,
   localizedPath,
@@ -31,9 +32,7 @@ export function buildPrivacyHead(locale: Locale) {
     ],
     links: [
       { rel: "canonical", href: canonical },
-      { rel: "alternate", hrefLang: "en", href: `${SITE_URL}/privacy` },
-      { rel: "alternate", hrefLang: "fr", href: `${SITE_URL}/fr/privacy` },
-      { rel: "alternate", hrefLang: "x-default", href: `${SITE_URL}/privacy` },
+      ...buildAlternateLinks("/privacy", SITE_URL),
     ],
   }
 }

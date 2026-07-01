@@ -3,6 +3,7 @@ import * as React from "react"
 import { ChevronDown, EyeOff, Info, ShieldCheck, Terminal } from "lucide-react"
 import type { Dictionary, Locale } from "@/lib/i18n"
 import {
+  buildAlternateLinks,
   buildOgLocaleMeta,
   format,
   getDictionary,
@@ -52,21 +53,7 @@ export function buildEngineLevelHead(locale: Locale) {
     ],
     links: [
       { rel: "canonical", href: canonical },
-      {
-        rel: "alternate",
-        hrefLang: "en",
-        href: `${SITE_URL}/engine-level-spoofing`,
-      },
-      {
-        rel: "alternate",
-        hrefLang: "fr",
-        href: `${SITE_URL}/fr/engine-level-spoofing`,
-      },
-      {
-        rel: "alternate",
-        hrefLang: "x-default",
-        href: `${SITE_URL}/engine-level-spoofing`,
-      },
+      ...buildAlternateLinks("/engine-level-spoofing", SITE_URL),
     ],
   }
 }

@@ -17,6 +17,7 @@ import {
 } from "lucide-react"
 import type { Locale } from "@/lib/i18n"
 import {
+  buildAlternateLinks,
   buildOgLocaleMeta,
   format,
   getDictionary,
@@ -63,9 +64,7 @@ export function buildVpnHead(locale: Locale) {
     ],
     links: [
       { rel: "canonical", href: canonical },
-      { rel: "alternate", hrefLang: "en", href: `${SITE_URL}/vpn` },
-      { rel: "alternate", hrefLang: "fr", href: `${SITE_URL}/fr/vpn` },
-      { rel: "alternate", hrefLang: "x-default", href: `${SITE_URL}/vpn` },
+      ...buildAlternateLinks("/vpn", SITE_URL),
     ],
   }
 }

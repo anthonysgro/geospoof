@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import * as React from "react"
 import type { Locale } from "@/lib/i18n"
 import {
+  buildAlternateLinks,
   buildOgLocaleMeta,
   getDictionary,
   localizedPath,
@@ -41,9 +42,7 @@ export function buildAboutHead(locale: Locale) {
     ],
     links: [
       { rel: "canonical", href: canonical },
-      { rel: "alternate", hrefLang: "en", href: `${SITE_URL}/about` },
-      { rel: "alternate", hrefLang: "fr", href: `${SITE_URL}/fr/about` },
-      { rel: "alternate", hrefLang: "x-default", href: `${SITE_URL}/about` },
+      ...buildAlternateLinks("/about", SITE_URL),
     ],
   }
 }

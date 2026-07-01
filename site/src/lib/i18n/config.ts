@@ -22,7 +22,7 @@ import {
  * in `locale-data.mjs`, then add its code to this union (the single type edit)
  * and register its dictionary in `index.ts`.
  */
-export type Locale = "en" | "fr"
+export type Locale = "en" | "fr" | "ru"
 
 /** All locale codes at runtime (default first), sourced from `locale-data`. */
 export const locales = localeList.map((l) => l.code) as ReadonlyArray<Locale>
@@ -118,6 +118,35 @@ export function localizedPath(path: string, locale: Locale): string {
   const clean = path.startsWith("/") ? path : `/${path}`
   if (locale === defaultLocale) return clean
   return clean === "/" ? `/${locale}` : `/${locale}${clean}`
+}
+
+/**
+ * Build the `hreflang` alternate `<link>`s for a page: one per locale, plus an
+ * `x-default` pointing at the default-locale (bare) URL. Generated from
+ * `locales`, so a new language appears in every page's cluster automatically —
+ * no per-head-builder edits. Spread into a head builder's `links` array.
+ *
+ *   ...buildAlternateLinks("/about", SITE_URL)
+ */
+export function buildAlternateLinks(
+  basePath: string,
+  siteUrl: string
+): Array<{ rel: "alternate"; hrefLang: string; href: string }> {
+  const alternates: Array<{
+    rel: "alternate"
+    hrefLang: string
+    href: string
+  }> = locales.map((locale) => ({
+    rel: "alternate" as const,
+    hrefLang: locale,
+    href: `${siteUrl}${localizedPath(basePath, locale)}`,
+  }))
+  alternates.push({
+    rel: "alternate" as const,
+    hrefLang: "x-default",
+    href: `${siteUrl}${localizedPath(basePath, defaultLocale)}`,
+  })
+  return alternates
 }
 
 /**

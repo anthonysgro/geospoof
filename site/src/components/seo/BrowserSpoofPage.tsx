@@ -22,6 +22,7 @@ import { SITE_URL } from "@/lib/blog"
 import { useTranslations } from "@/hooks/use-i18n"
 import { LocaleLink } from "@/components/LocaleLink"
 import {
+  buildAlternateLinks,
   buildOgLocaleMeta,
   format,
   getDictionary,
@@ -105,13 +106,7 @@ export function buildSpoofLocationHead(
     ],
     links: [
       { rel: "canonical", href: canonical },
-      { rel: "alternate", hrefLang: "en", href: `${SITE_URL}${basePath}` },
-      { rel: "alternate", hrefLang: "fr", href: `${SITE_URL}/fr${basePath}` },
-      {
-        rel: "alternate",
-        hrefLang: "x-default",
-        href: `${SITE_URL}${basePath}`,
-      },
+      ...buildAlternateLinks(basePath, SITE_URL),
     ],
   }
 }

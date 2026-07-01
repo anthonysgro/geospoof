@@ -36,6 +36,7 @@ export const defaultLocale = "en"
 export const localeList = [
   { code: "en", name: "English", shortLabel: "EN", ogLocale: "en_US" },
   { code: "fr", name: "Français", shortLabel: "FR", ogLocale: "fr_FR" },
+  { code: "ru", name: "Русский", shortLabel: "RU", ogLocale: "ru_RU" },
 ]
 
 /** All locale codes, default first. */

@@ -13,7 +13,11 @@ import { Footer } from "@/components/landing/Footer"
 import { ExposureToast } from "@/components/landing/ExposureToast"
 import { SkipLink } from "@/components/landing/SkipLink"
 import { SITE_URL } from "@/lib/blog"
-import { buildOgLocaleMeta, localizedPath } from "@/lib/i18n"
+import {
+  buildAlternateLinks,
+  buildOgLocaleMeta,
+  localizedPath,
+} from "@/lib/i18n"
 
 /**
  * Shared home page, rendered by both the English route (`/`) and the French
@@ -65,9 +69,15 @@ const localeMeta: Record<Locale, { title: string; description: string }> = {
   },
   fr: {
     title:
-      "GeoSpoof — Falsifiez votre position et fuseau horaire (extension gratuite)",
+      "GeoSpoof — Simulez votre position et fuseau horaire (extension gratuite)",
     description:
-      "Falsifiez la géolocalisation, le fuseau horaire et le WebRTC de votre navigateur avec une seule extension gratuite. Sans compte. Compatible Chrome, Firefox, Edge, Brave et Safari.",
+      "Simulez la géolocalisation, le fuseau horaire et le WebRTC de votre navigateur avec une seule extension gratuite. Sans compte. Compatible Chrome, Firefox, Edge, Brave et Safari.",
+  },
+  ru: {
+    title:
+      "GeoSpoof — подмена геолокации и часового пояса (бесплатное расширение)",
+    description:
+      "Подмена геолокации, часового пояса и WebRTC браузера в одном бесплатном расширении. Без аккаунта. Работает в Chrome, Firefox, Edge, Brave и Safari.",
   },
 }
 
@@ -90,9 +100,7 @@ export function buildHomeHead(locale: Locale) {
     ],
     links: [
       { rel: "canonical", href: canonical },
-      { rel: "alternate", hrefLang: "en", href: SITE_URL },
-      { rel: "alternate", hrefLang: "fr", href: `${SITE_URL}/fr` },
-      { rel: "alternate", hrefLang: "x-default", href: SITE_URL },
+      ...buildAlternateLinks("/", SITE_URL),
     ],
   }
 }
