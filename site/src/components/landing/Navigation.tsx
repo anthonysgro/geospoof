@@ -1,4 +1,5 @@
 import { CoffeeIcon, GithubIcon } from "lucide-react"
+import navLogo from "@/assets/nav-logo.webp"
 import { NavLink } from "./NavLink"
 import { MobileNav } from "./MobileNav"
 import { LanguageSwitcher } from "./LanguageSwitcher"
@@ -66,17 +67,14 @@ function BrandMark({
       )}
       aria-label={ariaLabel}
     >
-      <picture className="hidden md:block">
-        <source srcSet="/icon.webp" type="image/webp" />
-        <img
-          src="/icon.png"
-          alt=""
-          width={36}
-          height={36}
-          className="h-9 w-9"
-          aria-hidden="true"
-        />
-      </picture>
+      <img
+        src={navLogo}
+        alt=""
+        width={36}
+        height={36}
+        className="hidden h-9 w-9 md:block"
+        aria-hidden="true"
+      />
       <span className="whitespace-nowrap text-(--color-brand)">GeoSpoof</span>
     </a>
   )
