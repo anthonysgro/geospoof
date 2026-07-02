@@ -11,6 +11,7 @@ import {
   WifiOffIcon,
 } from "lucide-react"
 import { Section } from "./Section"
+import type { Dictionary } from "@/lib/i18n"
 import { BentoGrid, BentoGridItem } from "@/components/ui/bento-grid"
 import {
   Card,
@@ -21,6 +22,7 @@ import {
 } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { useReducedMotion } from "@/hooks/use-reduced-motion"
+import { useTranslations } from "@/hooks/use-i18n"
 
 const gridItemVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -182,10 +184,20 @@ function TimezoneVisual() {
 }
 
 function PrivacyVisual() {
+  const { t } = useTranslations()
   const items = [
-    { icon: <WifiOffIcon className="h-4 w-4" />, label: "No IP leak" },
-    { icon: <BarChart2Icon className="h-4 w-4" />, label: "No tracking" },
-    { icon: <MegaphoneOffIcon className="h-4 w-4" />, label: "No telemetry" },
+    {
+      icon: <WifiOffIcon className="h-4 w-4" />,
+      label: t.features.visual.noIpLeak,
+    },
+    {
+      icon: <BarChart2Icon className="h-4 w-4" />,
+      label: t.features.visual.noTracking,
+    },
+    {
+      icon: <MegaphoneOffIcon className="h-4 w-4" />,
+      label: t.features.visual.noTelemetry,
+    },
   ]
   return (
     <div className="mt-4 flex justify-around">
@@ -202,20 +214,27 @@ function PrivacyVisual() {
 }
 
 function VpnSyncVisual() {
+  const { t } = useTranslations()
   return (
     <div className="mt-4 flex items-center justify-center gap-3">
       <div className="rounded-xl border border-(--color-canvas-border) bg-canvas-border/30 px-4 py-3 text-center">
-        <div className="mb-1 text-xs text-(--color-canvas-muted)">VPN exit</div>
+        <div className="mb-1 text-xs text-(--color-canvas-muted)">
+          {t.features.visual.vpnExit}
+        </div>
         <div className="text-sm font-semibold text-(--color-canvas-foreground)">
           🇩🇪 Frankfurt
         </div>
       </div>
       <div className="flex flex-col items-center gap-1">
         <RefreshCwIcon className="h-4 w-4 text-(--color-brand)" />
-        <span className="text-[10px] text-(--color-canvas-muted)">synced</span>
+        <span className="text-[10px] text-(--color-canvas-muted)">
+          {t.features.visual.synced}
+        </span>
       </div>
       <div className="rounded-xl border border-brand/40 bg-(--color-brand)/10 px-4 py-3 text-center">
-        <div className="mb-1 text-xs text-(--color-canvas-muted)">Spoofed</div>
+        <div className="mb-1 text-xs text-(--color-canvas-muted)">
+          {t.features.visual.spoofed}
+        </div>
         <div className="text-sm font-semibold text-(--color-brand)">
           🇩🇪 Frankfurt
         </div>
@@ -225,6 +244,7 @@ function VpnSyncVisual() {
 }
 
 function ApiPillsVisual() {
+  const { t } = useTranslations()
   const apis = [
     "navigator.geolocation",
     "Date.prototype",
@@ -243,7 +263,7 @@ function ApiPillsVisual() {
         </span>
       ))}
       <span className="rounded-full border border-(--color-canvas-border) px-3 py-1 text-xs text-(--color-canvas-muted)">
-        & more
+        {t.features.visual.andMore}
       </span>
     </div>
   )
@@ -251,68 +271,67 @@ function ApiPillsVisual() {
 
 // ── Feature data ──────────────────────────────────────────────────────────────
 
-const features: Array<Feature> = [
-  {
-    id: "geolocation",
-    icon: <MapPinIcon className="h-5 w-5" />,
-    title: "Location spoofing",
-    description:
-      "Override navigator.geolocation so websites see your chosen coordinates. Search by city, enter coordinates manually, or sync with your VPN.",
-    colSpan: 2,
-    visual: <CoordsVisual />,
-  },
-  {
-    id: "timezone",
-    icon: <ClockIcon className="h-5 w-5" />,
-    title: "Timezone spoofing",
-    description:
-      "Spoof Date, Intl.DateTimeFormat, and the Temporal API so your timezone matches your chosen location.",
-    visual: <TimezoneVisual />,
-  },
-  {
-    id: "webrtc",
-    icon: <ShieldIcon className="h-5 w-5" />,
-    title: "WebRTC protection",
-    description:
-      "Prevent IP leaks through WebRTC on Firefox and Chromium using the browser privacy API.",
-    visual: <PrivacyVisual />,
-  },
-  {
-    id: "vpn-sync",
-    icon: <RefreshCwIcon className="h-5 w-5" />,
-    title: "VPN sync",
-    description:
-      "Detect your VPN exit region automatically and set your spoofed location to match — one click.",
-    visual: <VpnSyncVisual />,
-  },
-  {
-    id: "apis",
-    icon: <GlobeIcon className="h-5 w-5" />,
-    title: "Full API coverage",
-    description:
-      "Every browser API that leaks your location is covered — injected at document_start before any page script runs.",
-    visual: <ApiPillsVisual />,
-  },
-]
+function getFeatures(t: Dictionary): Array<Feature> {
+  const items = t.features.items
+  return [
+    {
+      id: "geolocation",
+      icon: <MapPinIcon className="h-5 w-5" />,
+      title: items.geolocation.title,
+      description: items.geolocation.description,
+      colSpan: 2,
+      visual: <CoordsVisual />,
+    },
+    {
+      id: "timezone",
+      icon: <ClockIcon className="h-5 w-5" />,
+      title: items.timezone.title,
+      description: items.timezone.description,
+      visual: <TimezoneVisual />,
+    },
+    {
+      id: "webrtc",
+      icon: <ShieldIcon className="h-5 w-5" />,
+      title: items.webrtc.title,
+      description: items.webrtc.description,
+      visual: <PrivacyVisual />,
+    },
+    {
+      id: "vpn-sync",
+      icon: <RefreshCwIcon className="h-5 w-5" />,
+      title: items.vpnSync.title,
+      description: items.vpnSync.description,
+      visual: <VpnSyncVisual />,
+    },
+    {
+      id: "apis",
+      icon: <GlobeIcon className="h-5 w-5" />,
+      title: items.apis.title,
+      description: items.apis.description,
+      visual: <ApiPillsVisual />,
+    },
+  ]
+}
 
 // ── Section ───────────────────────────────────────────────────────────────────
 
 export function FeaturesSection({ className }: { className?: string }) {
   const prefersReducedMotion = useReducedMotion()
   const MotionDiv = prefersReducedMotion ? "div" : motion.div
+  const { t } = useTranslations()
+  const features = getFeatures(t)
 
   return (
     <Section id="features" className={cn("py-16! md:py-24!", className)}>
       <div className="mb-12 text-center">
         <p className="mb-3 text-sm font-semibold tracking-widest text-(--color-brand) uppercase">
-          Features
+          {t.features.eyebrow}
         </p>
         <h2 className="text-3xl font-bold text-(--color-canvas-foreground) md:text-4xl">
-          Every signal, covered
+          {t.features.heading}
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-(--color-canvas-muted)">
-          Websites use multiple browser APIs to detect your location. GeoSpoof
-          overrides all of them — consistently, before any page script runs.
+          {t.features.subhead}
         </p>
       </div>
 

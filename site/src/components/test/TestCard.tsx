@@ -105,7 +105,7 @@ export function TestCard({ state, defaultOpen = false }: TestCardProps) {
           result.status !== "pending" ? (
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="shrink-0 font-mono text-[11px] tabular-nums text-(--color-canvas-muted)">
+                <span className="shrink-0 font-mono text-[11px] text-(--color-canvas-muted) tabular-nums">
                   {formatDuration(result.durationMs)}
                 </span>
               </TooltipTrigger>

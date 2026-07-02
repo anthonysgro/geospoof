@@ -19,7 +19,7 @@ export function Section({
       <div
         className={cn(
           "mx-auto w-full",
-          narrow ? "max-w-[720px]" : "max-w-[1200px]"
+          narrow ? "max-w-180" : "max-w-300"
         )}
       >
         {children}

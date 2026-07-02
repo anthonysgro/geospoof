@@ -20,7 +20,10 @@
  */
 
 import { createServerFn } from "@tanstack/react-start"
-import { getRequestHeader, setResponseHeader } from "@tanstack/react-start/server"
+import {
+  getRequestHeader,
+  setResponseHeader,
+} from "@tanstack/react-start/server"
 
 const GEOJS_URL = "https://ipv4.geojs.io/v1/ip/geo.json"
 const FREEIPAPI_URL = "https://free.freeipapi.com/api/json"
@@ -50,7 +53,11 @@ export interface NetworkIdentity {
 function countryNameFromCode(code: string): string {
   if (!code) return ""
   try {
-    return new Intl.DisplayNames(["en"], { type: "region" }).of(code.toUpperCase()) ?? ""
+    return (
+      new Intl.DisplayNames(["en"], { type: "region" }).of(
+        code.toUpperCase()
+      ) ?? ""
+    )
   } catch {
     return ""
   }
@@ -65,57 +72,60 @@ function countryNameFromCode(code: string): string {
  * This is the reliable path on Safari / iCloud Private Relay, where the
  * browser-side calls to geojs/freeipapi get blocked as cross-site trackers.
  */
-export const fetchEdgeNetworkIdentity = createServerFn({ method: "POST" }).handler(
-  (): NetworkIdentity | null => {
-    // POST is inherently uncacheable by CDNs, but set the header explicitly
-    // as a belt-and-braces measure against any edge-layer surprises.
-    setResponseHeader("Cache-Control", "private, no-store, no-cache, must-revalidate")
+export const fetchEdgeNetworkIdentity = createServerFn({
+  method: "POST",
+}).handler((): NetworkIdentity | null => {
+  // POST is inherently uncacheable by CDNs, but set the header explicitly
+  // as a belt-and-braces measure against any edge-layer surprises.
+  setResponseHeader(
+    "Cache-Control",
+    "private, no-store, no-cache, must-revalidate"
+  )
 
-    const get = (name: string): string | null => {
-      const v = getRequestHeader(name)
-      return typeof v === "string" && v.trim().length > 0 ? v.trim() : null
-    }
+  const get = (name: string): string | null => {
+    const v = getRequestHeader(name)
+    return typeof v === "string" && v.trim().length > 0 ? v.trim() : null
+  }
 
-    // Vercel sets x-vercel-forwarded-for / x-forwarded-for to the client IP
-    // (the Private Relay egress IP when that's on). Take the first hop.
-    const ipRaw =
-      get("x-vercel-forwarded-for") ?? get("x-forwarded-for") ?? get("x-real-ip")
-    const ip = ipRaw ? ipRaw.split(",")[0].trim() : null
+  // Vercel sets x-vercel-forwarded-for / x-forwarded-for to the client IP
+  // (the Private Relay egress IP when that's on). Take the first hop.
+  const ipRaw =
+    get("x-vercel-forwarded-for") ?? get("x-forwarded-for") ?? get("x-real-ip")
+  const ip = ipRaw ? ipRaw.split(",")[0].trim() : null
 
-    // No usable public IP (local dev, loopback) — let the client fall back.
-    if (!ip || ip === "::1" || ip.startsWith("127.") || ip.startsWith("10.")) {
-      return null
-    }
+  // No usable public IP (local dev, loopback) — let the client fall back.
+  if (!ip || ip === "::1" || ip.startsWith("127.") || ip.startsWith("10.")) {
+    return null
+  }
 
-    const countryCode = (get("x-vercel-ip-country") ?? "").toUpperCase()
-    // Vercel URL-encodes the city/region (e.g. "New%20York").
-    const decode = (v: string | null): string => {
-      if (!v) return ""
-      try {
-        return decodeURIComponent(v)
-      } catch {
-        return v
-      }
-    }
-
-    return {
-      ip,
-      isp: null,
-      city: decode(get("x-vercel-ip-city")),
-      region: decode(get("x-vercel-ip-country-region")),
-      countryName: countryNameFromCode(countryCode),
-      countryCode,
-      latitude: get("x-vercel-ip-latitude")
-        ? Number(get("x-vercel-ip-latitude"))
-        : null,
-      longitude: get("x-vercel-ip-longitude")
-        ? Number(get("x-vercel-ip-longitude"))
-        : null,
-      timezone: get("x-vercel-ip-timezone"),
-      provider: "edge",
+  const countryCode = (get("x-vercel-ip-country") ?? "").toUpperCase()
+  // Vercel URL-encodes the city/region (e.g. "New%20York").
+  const decode = (v: string | null): string => {
+    if (!v) return ""
+    try {
+      return decodeURIComponent(v)
+    } catch {
+      return v
     }
   }
-)
+
+  return {
+    ip,
+    isp: null,
+    city: decode(get("x-vercel-ip-city")),
+    region: decode(get("x-vercel-ip-country-region")),
+    countryName: countryNameFromCode(countryCode),
+    countryCode,
+    latitude: get("x-vercel-ip-latitude")
+      ? Number(get("x-vercel-ip-latitude"))
+      : null,
+    longitude: get("x-vercel-ip-longitude")
+      ? Number(get("x-vercel-ip-longitude"))
+      : null,
+    timezone: get("x-vercel-ip-timezone"),
+    provider: "edge",
+  }
+})
 
 interface GeojsResponse {
   ip?: unknown

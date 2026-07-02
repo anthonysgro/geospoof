@@ -41,7 +41,9 @@ const GEO_TZ_BASE = `https://cdn.geospoof.com/geo-tz/${GEO_TZ_DATA_VERSION}`
 const GEO_TZ_DATA_URL = `${GEO_TZ_BASE}/timezones.geojson.geo.dat`
 const GEO_TZ_INDEX_URL = `${GEO_TZ_BASE}/timezones.geojson.index.json`
 
-type GeoTzFinder = { find: (lat: number, lon: number) => Promise<Array<string>> }
+type GeoTzFinder = {
+  find: (lat: number, lon: number) => Promise<Array<string>>
+}
 
 let finderPromise: Promise<GeoTzFinder> | null = null
 

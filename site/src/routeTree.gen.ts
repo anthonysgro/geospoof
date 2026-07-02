@@ -9,32 +9,28 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as VpnRouteImport } from './routes/vpn'
-import { Route as VerifyRouteImport } from './routes/verify'
+import { Route as Char123LocaleChar125RouteImport } from './routes/{-$locale}'
 import { Route as TestRouteImport } from './routes/test'
-import { Route as TermsRouteImport } from './routes/terms'
-import { Route as SupportRouteImport } from './routes/support'
-import { Route as SpoofTimezoneRouteImport } from './routes/spoof-timezone'
-import { Route as PrivacyRouteImport } from './routes/privacy'
-import { Route as EngineLevelSpoofingRouteImport } from './routes/engine-level-spoofing'
-import { Route as AboutRouteImport } from './routes/about'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as SpoofLocationIndexRouteImport } from './routes/spoof-location.index'
-import { Route as BlogIndexRouteImport } from './routes/blog.index'
-import { Route as SpoofLocationSafariRouteImport } from './routes/spoof-location.safari'
-import { Route as SpoofLocationFirefoxRouteImport } from './routes/spoof-location.firefox'
-import { Route as SpoofLocationEdgeRouteImport } from './routes/spoof-location.edge'
-import { Route as SpoofLocationChromeRouteImport } from './routes/spoof-location.chrome'
-import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
+import { Route as Char123LocaleChar125IndexRouteImport } from './routes/{-$locale}.index'
+import { Route as Char123LocaleChar125VpnRouteImport } from './routes/{-$locale}.vpn'
+import { Route as Char123LocaleChar125VerifyRouteImport } from './routes/{-$locale}.verify'
+import { Route as Char123LocaleChar125TermsRouteImport } from './routes/{-$locale}.terms'
+import { Route as Char123LocaleChar125SupportRouteImport } from './routes/{-$locale}.support'
+import { Route as Char123LocaleChar125SpoofTimezoneRouteImport } from './routes/{-$locale}.spoof-timezone'
+import { Route as Char123LocaleChar125PrivacyRouteImport } from './routes/{-$locale}.privacy'
+import { Route as Char123LocaleChar125EngineLevelSpoofingRouteImport } from './routes/{-$locale}.engine-level-spoofing'
+import { Route as Char123LocaleChar125AboutRouteImport } from './routes/{-$locale}.about'
+import { Route as Char123LocaleChar125SpoofLocationIndexRouteImport } from './routes/{-$locale}.spoof-location.index'
+import { Route as Char123LocaleChar125BlogIndexRouteImport } from './routes/{-$locale}.blog.index'
+import { Route as Char123LocaleChar125SpoofLocationSafariRouteImport } from './routes/{-$locale}.spoof-location.safari'
+import { Route as Char123LocaleChar125SpoofLocationFirefoxRouteImport } from './routes/{-$locale}.spoof-location.firefox'
+import { Route as Char123LocaleChar125SpoofLocationEdgeRouteImport } from './routes/{-$locale}.spoof-location.edge'
+import { Route as Char123LocaleChar125SpoofLocationChromeRouteImport } from './routes/{-$locale}.spoof-location.chrome'
+import { Route as Char123LocaleChar125BlogSlugRouteImport } from './routes/{-$locale}.blog.$slug'
 
-const VpnRoute = VpnRouteImport.update({
-  id: '/vpn',
-  path: '/vpn',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const VerifyRoute = VerifyRouteImport.update({
-  id: '/verify',
-  path: '/verify',
+const Char123LocaleChar125Route = Char123LocaleChar125RouteImport.update({
+  id: '/{-$locale}',
+  path: '/{-$locale}',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TestRoute = TestRouteImport.update({
@@ -42,229 +38,236 @@ const TestRoute = TestRouteImport.update({
   path: '/test',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TermsRoute = TermsRouteImport.update({
-  id: '/terms',
-  path: '/terms',
-  getParentRoute: () => rootRouteImport,
+const Char123LocaleChar125IndexRoute =
+  Char123LocaleChar125IndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => Char123LocaleChar125Route,
+  } as any)
+const Char123LocaleChar125VpnRoute = Char123LocaleChar125VpnRouteImport.update({
+  id: '/vpn',
+  path: '/vpn',
+  getParentRoute: () => Char123LocaleChar125Route,
 } as any)
-const SupportRoute = SupportRouteImport.update({
-  id: '/support',
-  path: '/support',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SpoofTimezoneRoute = SpoofTimezoneRouteImport.update({
-  id: '/spoof-timezone',
-  path: '/spoof-timezone',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PrivacyRoute = PrivacyRouteImport.update({
-  id: '/privacy',
-  path: '/privacy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EngineLevelSpoofingRoute = EngineLevelSpoofingRouteImport.update({
-  id: '/engine-level-spoofing',
-  path: '/engine-level-spoofing',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AboutRoute = AboutRouteImport.update({
-  id: '/about',
-  path: '/about',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SpoofLocationIndexRoute = SpoofLocationIndexRouteImport.update({
-  id: '/spoof-location/',
-  path: '/spoof-location/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BlogIndexRoute = BlogIndexRouteImport.update({
-  id: '/blog/',
-  path: '/blog/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SpoofLocationSafariRoute = SpoofLocationSafariRouteImport.update({
-  id: '/spoof-location/safari',
-  path: '/spoof-location/safari',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SpoofLocationFirefoxRoute = SpoofLocationFirefoxRouteImport.update({
-  id: '/spoof-location/firefox',
-  path: '/spoof-location/firefox',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SpoofLocationEdgeRoute = SpoofLocationEdgeRouteImport.update({
-  id: '/spoof-location/edge',
-  path: '/spoof-location/edge',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SpoofLocationChromeRoute = SpoofLocationChromeRouteImport.update({
-  id: '/spoof-location/chrome',
-  path: '/spoof-location/chrome',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BlogSlugRoute = BlogSlugRouteImport.update({
-  id: '/blog/$slug',
-  path: '/blog/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
+const Char123LocaleChar125VerifyRoute =
+  Char123LocaleChar125VerifyRouteImport.update({
+    id: '/verify',
+    path: '/verify',
+    getParentRoute: () => Char123LocaleChar125Route,
+  } as any)
+const Char123LocaleChar125TermsRoute =
+  Char123LocaleChar125TermsRouteImport.update({
+    id: '/terms',
+    path: '/terms',
+    getParentRoute: () => Char123LocaleChar125Route,
+  } as any)
+const Char123LocaleChar125SupportRoute =
+  Char123LocaleChar125SupportRouteImport.update({
+    id: '/support',
+    path: '/support',
+    getParentRoute: () => Char123LocaleChar125Route,
+  } as any)
+const Char123LocaleChar125SpoofTimezoneRoute =
+  Char123LocaleChar125SpoofTimezoneRouteImport.update({
+    id: '/spoof-timezone',
+    path: '/spoof-timezone',
+    getParentRoute: () => Char123LocaleChar125Route,
+  } as any)
+const Char123LocaleChar125PrivacyRoute =
+  Char123LocaleChar125PrivacyRouteImport.update({
+    id: '/privacy',
+    path: '/privacy',
+    getParentRoute: () => Char123LocaleChar125Route,
+  } as any)
+const Char123LocaleChar125EngineLevelSpoofingRoute =
+  Char123LocaleChar125EngineLevelSpoofingRouteImport.update({
+    id: '/engine-level-spoofing',
+    path: '/engine-level-spoofing',
+    getParentRoute: () => Char123LocaleChar125Route,
+  } as any)
+const Char123LocaleChar125AboutRoute =
+  Char123LocaleChar125AboutRouteImport.update({
+    id: '/about',
+    path: '/about',
+    getParentRoute: () => Char123LocaleChar125Route,
+  } as any)
+const Char123LocaleChar125SpoofLocationIndexRoute =
+  Char123LocaleChar125SpoofLocationIndexRouteImport.update({
+    id: '/spoof-location/',
+    path: '/spoof-location/',
+    getParentRoute: () => Char123LocaleChar125Route,
+  } as any)
+const Char123LocaleChar125BlogIndexRoute =
+  Char123LocaleChar125BlogIndexRouteImport.update({
+    id: '/blog/',
+    path: '/blog/',
+    getParentRoute: () => Char123LocaleChar125Route,
+  } as any)
+const Char123LocaleChar125SpoofLocationSafariRoute =
+  Char123LocaleChar125SpoofLocationSafariRouteImport.update({
+    id: '/spoof-location/safari',
+    path: '/spoof-location/safari',
+    getParentRoute: () => Char123LocaleChar125Route,
+  } as any)
+const Char123LocaleChar125SpoofLocationFirefoxRoute =
+  Char123LocaleChar125SpoofLocationFirefoxRouteImport.update({
+    id: '/spoof-location/firefox',
+    path: '/spoof-location/firefox',
+    getParentRoute: () => Char123LocaleChar125Route,
+  } as any)
+const Char123LocaleChar125SpoofLocationEdgeRoute =
+  Char123LocaleChar125SpoofLocationEdgeRouteImport.update({
+    id: '/spoof-location/edge',
+    path: '/spoof-location/edge',
+    getParentRoute: () => Char123LocaleChar125Route,
+  } as any)
+const Char123LocaleChar125SpoofLocationChromeRoute =
+  Char123LocaleChar125SpoofLocationChromeRouteImport.update({
+    id: '/spoof-location/chrome',
+    path: '/spoof-location/chrome',
+    getParentRoute: () => Char123LocaleChar125Route,
+  } as any)
+const Char123LocaleChar125BlogSlugRoute =
+  Char123LocaleChar125BlogSlugRouteImport.update({
+    id: '/blog/$slug',
+    path: '/blog/$slug',
+    getParentRoute: () => Char123LocaleChar125Route,
+  } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/about': typeof AboutRoute
-  '/engine-level-spoofing': typeof EngineLevelSpoofingRoute
-  '/privacy': typeof PrivacyRoute
-  '/spoof-timezone': typeof SpoofTimezoneRoute
-  '/support': typeof SupportRoute
-  '/terms': typeof TermsRoute
   '/test': typeof TestRoute
-  '/verify': typeof VerifyRoute
-  '/vpn': typeof VpnRoute
-  '/blog/$slug': typeof BlogSlugRoute
-  '/spoof-location/chrome': typeof SpoofLocationChromeRoute
-  '/spoof-location/edge': typeof SpoofLocationEdgeRoute
-  '/spoof-location/firefox': typeof SpoofLocationFirefoxRoute
-  '/spoof-location/safari': typeof SpoofLocationSafariRoute
-  '/blog/': typeof BlogIndexRoute
-  '/spoof-location/': typeof SpoofLocationIndexRoute
+  '/{-$locale}': typeof Char123LocaleChar125RouteWithChildren
+  '/{-$locale}/about': typeof Char123LocaleChar125AboutRoute
+  '/{-$locale}/engine-level-spoofing': typeof Char123LocaleChar125EngineLevelSpoofingRoute
+  '/{-$locale}/privacy': typeof Char123LocaleChar125PrivacyRoute
+  '/{-$locale}/spoof-timezone': typeof Char123LocaleChar125SpoofTimezoneRoute
+  '/{-$locale}/support': typeof Char123LocaleChar125SupportRoute
+  '/{-$locale}/terms': typeof Char123LocaleChar125TermsRoute
+  '/{-$locale}/verify': typeof Char123LocaleChar125VerifyRoute
+  '/{-$locale}/vpn': typeof Char123LocaleChar125VpnRoute
+  '/{-$locale}/': typeof Char123LocaleChar125IndexRoute
+  '/{-$locale}/blog/$slug': typeof Char123LocaleChar125BlogSlugRoute
+  '/{-$locale}/spoof-location/chrome': typeof Char123LocaleChar125SpoofLocationChromeRoute
+  '/{-$locale}/spoof-location/edge': typeof Char123LocaleChar125SpoofLocationEdgeRoute
+  '/{-$locale}/spoof-location/firefox': typeof Char123LocaleChar125SpoofLocationFirefoxRoute
+  '/{-$locale}/spoof-location/safari': typeof Char123LocaleChar125SpoofLocationSafariRoute
+  '/{-$locale}/blog/': typeof Char123LocaleChar125BlogIndexRoute
+  '/{-$locale}/spoof-location/': typeof Char123LocaleChar125SpoofLocationIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/about': typeof AboutRoute
-  '/engine-level-spoofing': typeof EngineLevelSpoofingRoute
-  '/privacy': typeof PrivacyRoute
-  '/spoof-timezone': typeof SpoofTimezoneRoute
-  '/support': typeof SupportRoute
-  '/terms': typeof TermsRoute
   '/test': typeof TestRoute
-  '/verify': typeof VerifyRoute
-  '/vpn': typeof VpnRoute
-  '/blog/$slug': typeof BlogSlugRoute
-  '/spoof-location/chrome': typeof SpoofLocationChromeRoute
-  '/spoof-location/edge': typeof SpoofLocationEdgeRoute
-  '/spoof-location/firefox': typeof SpoofLocationFirefoxRoute
-  '/spoof-location/safari': typeof SpoofLocationSafariRoute
-  '/blog': typeof BlogIndexRoute
-  '/spoof-location': typeof SpoofLocationIndexRoute
+  '/{-$locale}/about': typeof Char123LocaleChar125AboutRoute
+  '/{-$locale}/engine-level-spoofing': typeof Char123LocaleChar125EngineLevelSpoofingRoute
+  '/{-$locale}/privacy': typeof Char123LocaleChar125PrivacyRoute
+  '/{-$locale}/spoof-timezone': typeof Char123LocaleChar125SpoofTimezoneRoute
+  '/{-$locale}/support': typeof Char123LocaleChar125SupportRoute
+  '/{-$locale}/terms': typeof Char123LocaleChar125TermsRoute
+  '/{-$locale}/verify': typeof Char123LocaleChar125VerifyRoute
+  '/{-$locale}/vpn': typeof Char123LocaleChar125VpnRoute
+  '/{-$locale}': typeof Char123LocaleChar125IndexRoute
+  '/{-$locale}/blog/$slug': typeof Char123LocaleChar125BlogSlugRoute
+  '/{-$locale}/spoof-location/chrome': typeof Char123LocaleChar125SpoofLocationChromeRoute
+  '/{-$locale}/spoof-location/edge': typeof Char123LocaleChar125SpoofLocationEdgeRoute
+  '/{-$locale}/spoof-location/firefox': typeof Char123LocaleChar125SpoofLocationFirefoxRoute
+  '/{-$locale}/spoof-location/safari': typeof Char123LocaleChar125SpoofLocationSafariRoute
+  '/{-$locale}/blog': typeof Char123LocaleChar125BlogIndexRoute
+  '/{-$locale}/spoof-location': typeof Char123LocaleChar125SpoofLocationIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/about': typeof AboutRoute
-  '/engine-level-spoofing': typeof EngineLevelSpoofingRoute
-  '/privacy': typeof PrivacyRoute
-  '/spoof-timezone': typeof SpoofTimezoneRoute
-  '/support': typeof SupportRoute
-  '/terms': typeof TermsRoute
   '/test': typeof TestRoute
-  '/verify': typeof VerifyRoute
-  '/vpn': typeof VpnRoute
-  '/blog/$slug': typeof BlogSlugRoute
-  '/spoof-location/chrome': typeof SpoofLocationChromeRoute
-  '/spoof-location/edge': typeof SpoofLocationEdgeRoute
-  '/spoof-location/firefox': typeof SpoofLocationFirefoxRoute
-  '/spoof-location/safari': typeof SpoofLocationSafariRoute
-  '/blog/': typeof BlogIndexRoute
-  '/spoof-location/': typeof SpoofLocationIndexRoute
+  '/{-$locale}': typeof Char123LocaleChar125RouteWithChildren
+  '/{-$locale}/about': typeof Char123LocaleChar125AboutRoute
+  '/{-$locale}/engine-level-spoofing': typeof Char123LocaleChar125EngineLevelSpoofingRoute
+  '/{-$locale}/privacy': typeof Char123LocaleChar125PrivacyRoute
+  '/{-$locale}/spoof-timezone': typeof Char123LocaleChar125SpoofTimezoneRoute
+  '/{-$locale}/support': typeof Char123LocaleChar125SupportRoute
+  '/{-$locale}/terms': typeof Char123LocaleChar125TermsRoute
+  '/{-$locale}/verify': typeof Char123LocaleChar125VerifyRoute
+  '/{-$locale}/vpn': typeof Char123LocaleChar125VpnRoute
+  '/{-$locale}/': typeof Char123LocaleChar125IndexRoute
+  '/{-$locale}/blog/$slug': typeof Char123LocaleChar125BlogSlugRoute
+  '/{-$locale}/spoof-location/chrome': typeof Char123LocaleChar125SpoofLocationChromeRoute
+  '/{-$locale}/spoof-location/edge': typeof Char123LocaleChar125SpoofLocationEdgeRoute
+  '/{-$locale}/spoof-location/firefox': typeof Char123LocaleChar125SpoofLocationFirefoxRoute
+  '/{-$locale}/spoof-location/safari': typeof Char123LocaleChar125SpoofLocationSafariRoute
+  '/{-$locale}/blog/': typeof Char123LocaleChar125BlogIndexRoute
+  '/{-$locale}/spoof-location/': typeof Char123LocaleChar125SpoofLocationIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
-    | '/about'
-    | '/engine-level-spoofing'
-    | '/privacy'
-    | '/spoof-timezone'
-    | '/support'
-    | '/terms'
     | '/test'
-    | '/verify'
-    | '/vpn'
-    | '/blog/$slug'
-    | '/spoof-location/chrome'
-    | '/spoof-location/edge'
-    | '/spoof-location/firefox'
-    | '/spoof-location/safari'
-    | '/blog/'
-    | '/spoof-location/'
+    | '/{-$locale}'
+    | '/{-$locale}/about'
+    | '/{-$locale}/engine-level-spoofing'
+    | '/{-$locale}/privacy'
+    | '/{-$locale}/spoof-timezone'
+    | '/{-$locale}/support'
+    | '/{-$locale}/terms'
+    | '/{-$locale}/verify'
+    | '/{-$locale}/vpn'
+    | '/{-$locale}/'
+    | '/{-$locale}/blog/$slug'
+    | '/{-$locale}/spoof-location/chrome'
+    | '/{-$locale}/spoof-location/edge'
+    | '/{-$locale}/spoof-location/firefox'
+    | '/{-$locale}/spoof-location/safari'
+    | '/{-$locale}/blog/'
+    | '/{-$locale}/spoof-location/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
-    | '/about'
-    | '/engine-level-spoofing'
-    | '/privacy'
-    | '/spoof-timezone'
-    | '/support'
-    | '/terms'
     | '/test'
-    | '/verify'
-    | '/vpn'
-    | '/blog/$slug'
-    | '/spoof-location/chrome'
-    | '/spoof-location/edge'
-    | '/spoof-location/firefox'
-    | '/spoof-location/safari'
-    | '/blog'
-    | '/spoof-location'
+    | '/{-$locale}/about'
+    | '/{-$locale}/engine-level-spoofing'
+    | '/{-$locale}/privacy'
+    | '/{-$locale}/spoof-timezone'
+    | '/{-$locale}/support'
+    | '/{-$locale}/terms'
+    | '/{-$locale}/verify'
+    | '/{-$locale}/vpn'
+    | '/{-$locale}'
+    | '/{-$locale}/blog/$slug'
+    | '/{-$locale}/spoof-location/chrome'
+    | '/{-$locale}/spoof-location/edge'
+    | '/{-$locale}/spoof-location/firefox'
+    | '/{-$locale}/spoof-location/safari'
+    | '/{-$locale}/blog'
+    | '/{-$locale}/spoof-location'
   id:
     | '__root__'
-    | '/'
-    | '/about'
-    | '/engine-level-spoofing'
-    | '/privacy'
-    | '/spoof-timezone'
-    | '/support'
-    | '/terms'
     | '/test'
-    | '/verify'
-    | '/vpn'
-    | '/blog/$slug'
-    | '/spoof-location/chrome'
-    | '/spoof-location/edge'
-    | '/spoof-location/firefox'
-    | '/spoof-location/safari'
-    | '/blog/'
-    | '/spoof-location/'
+    | '/{-$locale}'
+    | '/{-$locale}/about'
+    | '/{-$locale}/engine-level-spoofing'
+    | '/{-$locale}/privacy'
+    | '/{-$locale}/spoof-timezone'
+    | '/{-$locale}/support'
+    | '/{-$locale}/terms'
+    | '/{-$locale}/verify'
+    | '/{-$locale}/vpn'
+    | '/{-$locale}/'
+    | '/{-$locale}/blog/$slug'
+    | '/{-$locale}/spoof-location/chrome'
+    | '/{-$locale}/spoof-location/edge'
+    | '/{-$locale}/spoof-location/firefox'
+    | '/{-$locale}/spoof-location/safari'
+    | '/{-$locale}/blog/'
+    | '/{-$locale}/spoof-location/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  AboutRoute: typeof AboutRoute
-  EngineLevelSpoofingRoute: typeof EngineLevelSpoofingRoute
-  PrivacyRoute: typeof PrivacyRoute
-  SpoofTimezoneRoute: typeof SpoofTimezoneRoute
-  SupportRoute: typeof SupportRoute
-  TermsRoute: typeof TermsRoute
   TestRoute: typeof TestRoute
-  VerifyRoute: typeof VerifyRoute
-  VpnRoute: typeof VpnRoute
-  BlogSlugRoute: typeof BlogSlugRoute
-  SpoofLocationChromeRoute: typeof SpoofLocationChromeRoute
-  SpoofLocationEdgeRoute: typeof SpoofLocationEdgeRoute
-  SpoofLocationFirefoxRoute: typeof SpoofLocationFirefoxRoute
-  SpoofLocationSafariRoute: typeof SpoofLocationSafariRoute
-  BlogIndexRoute: typeof BlogIndexRoute
-  SpoofLocationIndexRoute: typeof SpoofLocationIndexRoute
+  Char123LocaleChar125Route: typeof Char123LocaleChar125RouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/vpn': {
-      id: '/vpn'
-      path: '/vpn'
-      fullPath: '/vpn'
-      preLoaderRoute: typeof VpnRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/verify': {
-      id: '/verify'
-      path: '/verify'
-      fullPath: '/verify'
-      preLoaderRoute: typeof VerifyRouteImport
+    '/{-$locale}': {
+      id: '/{-$locale}'
+      path: '/{-$locale}'
+      fullPath: '/{-$locale}'
+      preLoaderRoute: typeof Char123LocaleChar125RouteImport
       parentRoute: typeof rootRouteImport
     }
     '/test': {
@@ -274,125 +277,172 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TestRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/terms': {
-      id: '/terms'
-      path: '/terms'
-      fullPath: '/terms'
-      preLoaderRoute: typeof TermsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/support': {
-      id: '/support'
-      path: '/support'
-      fullPath: '/support'
-      preLoaderRoute: typeof SupportRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/spoof-timezone': {
-      id: '/spoof-timezone'
-      path: '/spoof-timezone'
-      fullPath: '/spoof-timezone'
-      preLoaderRoute: typeof SpoofTimezoneRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/privacy': {
-      id: '/privacy'
-      path: '/privacy'
-      fullPath: '/privacy'
-      preLoaderRoute: typeof PrivacyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/engine-level-spoofing': {
-      id: '/engine-level-spoofing'
-      path: '/engine-level-spoofing'
-      fullPath: '/engine-level-spoofing'
-      preLoaderRoute: typeof EngineLevelSpoofingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/about': {
-      id: '/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof AboutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/': {
-      id: '/'
+    '/{-$locale}/': {
+      id: '/{-$locale}/'
       path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      fullPath: '/{-$locale}/'
+      preLoaderRoute: typeof Char123LocaleChar125IndexRouteImport
+      parentRoute: typeof Char123LocaleChar125Route
     }
-    '/spoof-location/': {
-      id: '/spoof-location/'
+    '/{-$locale}/vpn': {
+      id: '/{-$locale}/vpn'
+      path: '/vpn'
+      fullPath: '/{-$locale}/vpn'
+      preLoaderRoute: typeof Char123LocaleChar125VpnRouteImport
+      parentRoute: typeof Char123LocaleChar125Route
+    }
+    '/{-$locale}/verify': {
+      id: '/{-$locale}/verify'
+      path: '/verify'
+      fullPath: '/{-$locale}/verify'
+      preLoaderRoute: typeof Char123LocaleChar125VerifyRouteImport
+      parentRoute: typeof Char123LocaleChar125Route
+    }
+    '/{-$locale}/terms': {
+      id: '/{-$locale}/terms'
+      path: '/terms'
+      fullPath: '/{-$locale}/terms'
+      preLoaderRoute: typeof Char123LocaleChar125TermsRouteImport
+      parentRoute: typeof Char123LocaleChar125Route
+    }
+    '/{-$locale}/support': {
+      id: '/{-$locale}/support'
+      path: '/support'
+      fullPath: '/{-$locale}/support'
+      preLoaderRoute: typeof Char123LocaleChar125SupportRouteImport
+      parentRoute: typeof Char123LocaleChar125Route
+    }
+    '/{-$locale}/spoof-timezone': {
+      id: '/{-$locale}/spoof-timezone'
+      path: '/spoof-timezone'
+      fullPath: '/{-$locale}/spoof-timezone'
+      preLoaderRoute: typeof Char123LocaleChar125SpoofTimezoneRouteImport
+      parentRoute: typeof Char123LocaleChar125Route
+    }
+    '/{-$locale}/privacy': {
+      id: '/{-$locale}/privacy'
+      path: '/privacy'
+      fullPath: '/{-$locale}/privacy'
+      preLoaderRoute: typeof Char123LocaleChar125PrivacyRouteImport
+      parentRoute: typeof Char123LocaleChar125Route
+    }
+    '/{-$locale}/engine-level-spoofing': {
+      id: '/{-$locale}/engine-level-spoofing'
+      path: '/engine-level-spoofing'
+      fullPath: '/{-$locale}/engine-level-spoofing'
+      preLoaderRoute: typeof Char123LocaleChar125EngineLevelSpoofingRouteImport
+      parentRoute: typeof Char123LocaleChar125Route
+    }
+    '/{-$locale}/about': {
+      id: '/{-$locale}/about'
+      path: '/about'
+      fullPath: '/{-$locale}/about'
+      preLoaderRoute: typeof Char123LocaleChar125AboutRouteImport
+      parentRoute: typeof Char123LocaleChar125Route
+    }
+    '/{-$locale}/spoof-location/': {
+      id: '/{-$locale}/spoof-location/'
       path: '/spoof-location'
-      fullPath: '/spoof-location/'
-      preLoaderRoute: typeof SpoofLocationIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      fullPath: '/{-$locale}/spoof-location/'
+      preLoaderRoute: typeof Char123LocaleChar125SpoofLocationIndexRouteImport
+      parentRoute: typeof Char123LocaleChar125Route
     }
-    '/blog/': {
-      id: '/blog/'
+    '/{-$locale}/blog/': {
+      id: '/{-$locale}/blog/'
       path: '/blog'
-      fullPath: '/blog/'
-      preLoaderRoute: typeof BlogIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      fullPath: '/{-$locale}/blog/'
+      preLoaderRoute: typeof Char123LocaleChar125BlogIndexRouteImport
+      parentRoute: typeof Char123LocaleChar125Route
     }
-    '/spoof-location/safari': {
-      id: '/spoof-location/safari'
+    '/{-$locale}/spoof-location/safari': {
+      id: '/{-$locale}/spoof-location/safari'
       path: '/spoof-location/safari'
-      fullPath: '/spoof-location/safari'
-      preLoaderRoute: typeof SpoofLocationSafariRouteImport
-      parentRoute: typeof rootRouteImport
+      fullPath: '/{-$locale}/spoof-location/safari'
+      preLoaderRoute: typeof Char123LocaleChar125SpoofLocationSafariRouteImport
+      parentRoute: typeof Char123LocaleChar125Route
     }
-    '/spoof-location/firefox': {
-      id: '/spoof-location/firefox'
+    '/{-$locale}/spoof-location/firefox': {
+      id: '/{-$locale}/spoof-location/firefox'
       path: '/spoof-location/firefox'
-      fullPath: '/spoof-location/firefox'
-      preLoaderRoute: typeof SpoofLocationFirefoxRouteImport
-      parentRoute: typeof rootRouteImport
+      fullPath: '/{-$locale}/spoof-location/firefox'
+      preLoaderRoute: typeof Char123LocaleChar125SpoofLocationFirefoxRouteImport
+      parentRoute: typeof Char123LocaleChar125Route
     }
-    '/spoof-location/edge': {
-      id: '/spoof-location/edge'
+    '/{-$locale}/spoof-location/edge': {
+      id: '/{-$locale}/spoof-location/edge'
       path: '/spoof-location/edge'
-      fullPath: '/spoof-location/edge'
-      preLoaderRoute: typeof SpoofLocationEdgeRouteImport
-      parentRoute: typeof rootRouteImport
+      fullPath: '/{-$locale}/spoof-location/edge'
+      preLoaderRoute: typeof Char123LocaleChar125SpoofLocationEdgeRouteImport
+      parentRoute: typeof Char123LocaleChar125Route
     }
-    '/spoof-location/chrome': {
-      id: '/spoof-location/chrome'
+    '/{-$locale}/spoof-location/chrome': {
+      id: '/{-$locale}/spoof-location/chrome'
       path: '/spoof-location/chrome'
-      fullPath: '/spoof-location/chrome'
-      preLoaderRoute: typeof SpoofLocationChromeRouteImport
-      parentRoute: typeof rootRouteImport
+      fullPath: '/{-$locale}/spoof-location/chrome'
+      preLoaderRoute: typeof Char123LocaleChar125SpoofLocationChromeRouteImport
+      parentRoute: typeof Char123LocaleChar125Route
     }
-    '/blog/$slug': {
-      id: '/blog/$slug'
+    '/{-$locale}/blog/$slug': {
+      id: '/{-$locale}/blog/$slug'
       path: '/blog/$slug'
-      fullPath: '/blog/$slug'
-      preLoaderRoute: typeof BlogSlugRouteImport
-      parentRoute: typeof rootRouteImport
+      fullPath: '/{-$locale}/blog/$slug'
+      preLoaderRoute: typeof Char123LocaleChar125BlogSlugRouteImport
+      parentRoute: typeof Char123LocaleChar125Route
     }
   }
 }
 
+interface Char123LocaleChar125RouteChildren {
+  Char123LocaleChar125AboutRoute: typeof Char123LocaleChar125AboutRoute
+  Char123LocaleChar125EngineLevelSpoofingRoute: typeof Char123LocaleChar125EngineLevelSpoofingRoute
+  Char123LocaleChar125PrivacyRoute: typeof Char123LocaleChar125PrivacyRoute
+  Char123LocaleChar125SpoofTimezoneRoute: typeof Char123LocaleChar125SpoofTimezoneRoute
+  Char123LocaleChar125SupportRoute: typeof Char123LocaleChar125SupportRoute
+  Char123LocaleChar125TermsRoute: typeof Char123LocaleChar125TermsRoute
+  Char123LocaleChar125VerifyRoute: typeof Char123LocaleChar125VerifyRoute
+  Char123LocaleChar125VpnRoute: typeof Char123LocaleChar125VpnRoute
+  Char123LocaleChar125IndexRoute: typeof Char123LocaleChar125IndexRoute
+  Char123LocaleChar125BlogSlugRoute: typeof Char123LocaleChar125BlogSlugRoute
+  Char123LocaleChar125SpoofLocationChromeRoute: typeof Char123LocaleChar125SpoofLocationChromeRoute
+  Char123LocaleChar125SpoofLocationEdgeRoute: typeof Char123LocaleChar125SpoofLocationEdgeRoute
+  Char123LocaleChar125SpoofLocationFirefoxRoute: typeof Char123LocaleChar125SpoofLocationFirefoxRoute
+  Char123LocaleChar125SpoofLocationSafariRoute: typeof Char123LocaleChar125SpoofLocationSafariRoute
+  Char123LocaleChar125BlogIndexRoute: typeof Char123LocaleChar125BlogIndexRoute
+  Char123LocaleChar125SpoofLocationIndexRoute: typeof Char123LocaleChar125SpoofLocationIndexRoute
+}
+
+const Char123LocaleChar125RouteChildren: Char123LocaleChar125RouteChildren = {
+  Char123LocaleChar125AboutRoute: Char123LocaleChar125AboutRoute,
+  Char123LocaleChar125EngineLevelSpoofingRoute:
+    Char123LocaleChar125EngineLevelSpoofingRoute,
+  Char123LocaleChar125PrivacyRoute: Char123LocaleChar125PrivacyRoute,
+  Char123LocaleChar125SpoofTimezoneRoute:
+    Char123LocaleChar125SpoofTimezoneRoute,
+  Char123LocaleChar125SupportRoute: Char123LocaleChar125SupportRoute,
+  Char123LocaleChar125TermsRoute: Char123LocaleChar125TermsRoute,
+  Char123LocaleChar125VerifyRoute: Char123LocaleChar125VerifyRoute,
+  Char123LocaleChar125VpnRoute: Char123LocaleChar125VpnRoute,
+  Char123LocaleChar125IndexRoute: Char123LocaleChar125IndexRoute,
+  Char123LocaleChar125BlogSlugRoute: Char123LocaleChar125BlogSlugRoute,
+  Char123LocaleChar125SpoofLocationChromeRoute:
+    Char123LocaleChar125SpoofLocationChromeRoute,
+  Char123LocaleChar125SpoofLocationEdgeRoute:
+    Char123LocaleChar125SpoofLocationEdgeRoute,
+  Char123LocaleChar125SpoofLocationFirefoxRoute:
+    Char123LocaleChar125SpoofLocationFirefoxRoute,
+  Char123LocaleChar125SpoofLocationSafariRoute:
+    Char123LocaleChar125SpoofLocationSafariRoute,
+  Char123LocaleChar125BlogIndexRoute: Char123LocaleChar125BlogIndexRoute,
+  Char123LocaleChar125SpoofLocationIndexRoute:
+    Char123LocaleChar125SpoofLocationIndexRoute,
+}
+
+const Char123LocaleChar125RouteWithChildren =
+  Char123LocaleChar125Route._addFileChildren(Char123LocaleChar125RouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  AboutRoute: AboutRoute,
-  EngineLevelSpoofingRoute: EngineLevelSpoofingRoute,
-  PrivacyRoute: PrivacyRoute,
-  SpoofTimezoneRoute: SpoofTimezoneRoute,
-  SupportRoute: SupportRoute,
-  TermsRoute: TermsRoute,
   TestRoute: TestRoute,
-  VerifyRoute: VerifyRoute,
-  VpnRoute: VpnRoute,
-  BlogSlugRoute: BlogSlugRoute,
-  SpoofLocationChromeRoute: SpoofLocationChromeRoute,
-  SpoofLocationEdgeRoute: SpoofLocationEdgeRoute,
-  SpoofLocationFirefoxRoute: SpoofLocationFirefoxRoute,
-  SpoofLocationSafariRoute: SpoofLocationSafariRoute,
-  BlogIndexRoute: BlogIndexRoute,
-  SpoofLocationIndexRoute: SpoofLocationIndexRoute,
+  Char123LocaleChar125Route: Char123LocaleChar125RouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

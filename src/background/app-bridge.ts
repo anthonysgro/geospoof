@@ -18,6 +18,7 @@ import {
   handleSetLocation,
   handleSetProtectionStatus,
   handleSetWebRTCProtection,
+  handleSetPreserveGeoPrompt,
 } from "./messages";
 import { syncVpnLocation, clearIpGeoCache } from "./vpn-sync";
 import { broadcastSettingsToTabs } from "./tabs";
@@ -29,6 +30,13 @@ interface PendingSettings {
   updatedAt: number; // Unix seconds (Swift timeIntervalSince1970)
   enabled?: boolean;
   webrtc?: boolean;
+  /**
+   * App→extension "preserve location prompts" preference. A plain bool bridged
+   * like `webrtc`. Adopted into settings.preserveGeolocationPrompt. Pro-gated on
+   * iOS, but the background tab-payload gate independently forces the free
+   * behavior for non-Pro users, so adopting the raw preference here is safe.
+   */
+  preservePrompt?: boolean;
   vpnSync?: boolean;
   cleared?: boolean;
   resync?: boolean;
@@ -110,6 +118,16 @@ export async function adoptPendingSettingsFromApp(): Promise<void> {
     // 1. WebRTC protection — apply only when it actually differs.
     if (typeof pending.webrtc === "boolean" && pending.webrtc !== settings.webrtcProtection) {
       await handleSetWebRTCProtection({ enabled: pending.webrtc });
+    }
+
+    // 1a. "Preserve location prompts" — plain bool, adopt only when it differs.
+    // handleSetPreserveGeoPrompt persists + re-broadcasts (the broadcast's
+    // Pro-gate forces the free behavior for a non-Pro user regardless).
+    if (
+      typeof pending.preservePrompt === "boolean" &&
+      pending.preservePrompt !== settings.preserveGeolocationPrompt
+    ) {
+      await handleSetPreserveGeoPrompt({ enabled: pending.preservePrompt });
     }
 
     // 1b. Automatic-background-sync gate. The app is the authority on iOS Pro

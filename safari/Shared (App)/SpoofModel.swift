@@ -49,6 +49,7 @@ enum AppGroup {
     static let regionLongitude   = "region_longitude"
     static let regionUpdatedAt   = "region_updatedAt"
     static let regionWebrtc      = "region_webrtc"
+    static let regionPreservePrompt = "region_preservePrompt"
     static let regionVpnSync     = "region_vpnSync"
     static let regionIp          = "region_ip"
     static let regionTzId        = "region_tzId"
@@ -71,6 +72,7 @@ enum AppGroup {
     static let pendingLongitude   = "pending_longitude"
     static let pendingUpdatedAt   = "pending_updatedAt"
     static let pendingWebrtc      = "pending_webrtc"
+    static let pendingPreservePrompt = "pending_preservePrompt"
     static let pendingVpnSync     = "pending_vpnSync"
     static let pendingCleared     = "pending_cleared"
     static let pendingResync      = "pending_resync"
@@ -591,6 +593,12 @@ final class SpoofController: ObservableObject {
     @Published var locationName: SpoofLocationName?
     @Published var timezone: SpoofTimezone?
     @Published var webrtcProtection = false
+    /// "Preserve location prompts" — when on, spoofed sites show the browser's
+    /// native geolocation permission prompt (and real permission state) instead
+    /// of silently auto-granting spoofed coords. A plain bool bridged like
+    /// `webrtcProtection`. Pro-gated on the Apple apps (see the UI setter);
+    /// adoption in refreshFromExtension / restoreLocalPending sets it directly.
+    @Published var preserveGeolocationPrompt = false
     @Published var vpnSyncEnabled = false
     /// Site-scoping state. Mutated via the explicit setters below (which write
     /// the pending bridge record) and by adoption in refreshFromExtension /
@@ -1058,6 +1066,17 @@ final class SpoofController: ObservableObject {
         writePending()
     }
 
+    /// Toggle "preserve location prompts". Mirrors `setWebRTCProtection`: writes
+    /// the pending bridge record so the extension adopts it last-writer-wins.
+    /// The Pro gate lives in the UI (the toggle bounces non-Pro users to the
+    /// paywall); the extension independently forces the free behavior for a
+    /// non-Pro user, so this setter itself stays entitlement-agnostic.
+    func setPreserveGeolocationPrompt(_ value: Bool) {
+        Log.location.info("Preserve location prompts \(value ? "enabled" : "disabled")")
+        preserveGeolocationPrompt = value
+        writePending()
+    }
+
     // MARK: Site-scoping
 
     /// Switch the scope mode. The allow/deny lists are kept independently, so
@@ -1393,6 +1412,7 @@ final class SpoofController: ObservableObject {
 
         dict[AppGroup.pendingEnabled] = enabled
         dict[AppGroup.pendingWebrtc] = webrtcProtection
+        dict[AppGroup.pendingPreservePrompt] = preserveGeolocationPrompt
         dict[AppGroup.pendingVpnSync] = vpnSyncEnabled
         dict[AppGroup.pendingResync] = resync
         dict[AppGroup.pendingAutoSyncBlocked] = autoSyncBlocked
@@ -1502,6 +1522,7 @@ final class SpoofController: ObservableObject {
 
         enabled = (dict[AppGroup.pendingEnabled] as? Bool) ?? enabled
         webrtcProtection = (dict[AppGroup.pendingWebrtc] as? Bool) ?? webrtcProtection
+        preserveGeolocationPrompt = (dict[AppGroup.pendingPreservePrompt] as? Bool) ?? preserveGeolocationPrompt
         vpnSyncEnabled = (dict[AppGroup.pendingVpnSync] as? Bool) ?? vpnSyncEnabled
 
         if let raw = dict[AppGroup.pendingScopeMode] as? String, let mode = ScopeMode(rawValue: raw) {
@@ -1570,6 +1591,7 @@ final class SpoofController: ObservableObject {
 
         enabled = (dict[AppGroup.regionEnabled] as? Bool) ?? enabled
         webrtcProtection = (dict[AppGroup.regionWebrtc] as? Bool) ?? webrtcProtection
+        preserveGeolocationPrompt = (dict[AppGroup.regionPreservePrompt] as? Bool) ?? preserveGeolocationPrompt
         vpnSyncEnabled = (dict[AppGroup.regionVpnSync] as? Bool) ?? vpnSyncEnabled
 
         if let lat = dict[AppGroup.regionLatitude] as? Double,

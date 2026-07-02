@@ -209,9 +209,7 @@ async function resolvePublicIpLocation(): Promise<IpCountryResult> {
   try {
     return await resolveViaGeojs()
   } catch (err) {
-    errors.push(
-      `geojs: ${err instanceof Error ? err.message : String(err)}`
-    )
+    errors.push(`geojs: ${err instanceof Error ? err.message : String(err)}`)
   }
   try {
     return await resolveViaFreeipapi()

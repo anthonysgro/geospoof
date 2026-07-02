@@ -11,6 +11,10 @@
 import { readFileSync, readdirSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
+import {
+  nonDefaultLocaleCodes,
+  localizedBasePaths,
+} from "../src/lib/i18n/locale-data.mjs"
 
 const SITE_URL = "https://geospoof.com"
 
@@ -41,6 +45,20 @@ const staticRoutes = [
   "/terms",
   "/support",
 ]
+
+/**
+ * Non-default locales served under a URL prefix, derived from the shared locale
+ * config so it can't drift: e.g. `["fr"]` -> `{ fr: "/fr" }`. English is the
+ * default and lives at the bare path.
+ */
+const LOCALE_PREFIXES = Object.fromEntries(
+  nonDefaultLocaleCodes.map((code) => [code, `/${code}`])
+)
+
+// `localizedBasePaths` (the unprefixed paths with a translated variant for
+// every locale) is imported from the shared locale config above. Each gets one
+// `<url>` per locale, all cross-linked with `hreflang` alternates (plus
+// `x-default` -> the English bare path) so Google clusters them.
 
 /**
  * One-line descriptions for the key static routes, surfaced in llms.txt so AI
@@ -142,20 +160,71 @@ function readPosts() {
   return posts
 }
 
-function urlEntry(loc, lastmod) {
+/** The locale-prefixed location for a base path, e.g. ("/", "/fr") -> "/fr". */
+function prefixedLoc(basePath, prefix) {
+  return basePath === "/" ? prefix : `${prefix}${basePath}`
+}
+
+/**
+ * Build the hreflang alternate set for a localized base path: English (bare
+ * path) + every prefixed locale + an x-default pointing at the English path.
+ */
+function alternatesFor(basePath) {
+  const alts = [{ hreflang: "en", loc: basePath }]
+  for (const [locale, prefix] of Object.entries(LOCALE_PREFIXES)) {
+    alts.push({ hreflang: locale, loc: prefixedLoc(basePath, prefix) })
+  }
+  alts.push({ hreflang: "x-default", loc: basePath })
+  return alts
+}
+
+function alternateLinks(alts) {
+  return alts
+    .map(
+      (a) =>
+        `\n    <xhtml:link rel="alternate" hreflang="${a.hreflang}" href="${SITE_URL}${a.loc}"/>`
+    )
+    .join("")
+}
+
+function urlEntry(loc, lastmod, alts) {
   const lastmodTag = lastmod ? `\n    <lastmod>${lastmod}</lastmod>` : ""
-  return `  <url>\n    <loc>${SITE_URL}${loc}</loc>${lastmodTag}\n  </url>`
+  const altTags = alts ? alternateLinks(alts) : ""
+  return `  <url>\n    <loc>${SITE_URL}${loc}</loc>${lastmodTag}${altTags}\n  </url>`
 }
 
 function buildSitemap() {
   const posts = readPosts()
+
+  // Localized pages: one <url> per locale variant, each carrying the full
+  // hreflang cluster. These base paths are handled here, so we drop them from
+  // the plain static list below to avoid duplicate <loc> entries.
+  const localizedEntries = []
+  for (const basePath of localizedBasePaths) {
+    const alts = alternatesFor(basePath)
+    const variants = [
+      basePath,
+      ...Object.values(LOCALE_PREFIXES).map((prefix) =>
+        prefixedLoc(basePath, prefix)
+      ),
+    ]
+    for (const loc of variants) {
+      localizedEntries.push(urlEntry(loc, undefined, alts))
+    }
+  }
+
+  const plainStaticEntries = staticRoutes
+    .filter((route) => !localizedBasePaths.includes(route))
+    .map((route) => urlEntry(route))
+
   const entries = [
-    ...staticRoutes.map((route) => urlEntry(route)),
+    ...localizedEntries,
+    ...plainStaticEntries,
     ...posts.map((post) => urlEntry(`/blog/${post.slug}`, post.lastmod)),
   ]
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
 ${entries.join("\n")}
 </urlset>
 `
@@ -193,7 +262,9 @@ function buildLlmsTxt(posts) {
   lines.push("", "## Blog", "")
   for (const post of posts) {
     const desc = post.description ? `: ${post.description}` : ""
-    lines.push(`- [${post.title ?? post.slug}](${SITE_URL}/blog/${post.slug})${desc}`)
+    lines.push(
+      `- [${post.title ?? post.slug}](${SITE_URL}/blog/${post.slug})${desc}`
+    )
   }
 
   return lines.join("\n") + "\n"

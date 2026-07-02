@@ -1,5 +1,6 @@
-import { Link } from "@tanstack/react-router"
 import { ChevronDown, Globe, ShieldAlert, ShieldCheck } from "lucide-react"
+import type { Locale } from "@/lib/i18n"
+import type { Platform } from "@/hooks/use-platform"
 import { Navigation } from "@/components/landing/Navigation"
 import { Footer } from "@/components/landing/Footer"
 import { SkipLink } from "@/components/landing/SkipLink"
@@ -15,135 +16,132 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { cn } from "@/lib/utils"
-import { usePlatform, type Platform } from "@/hooks/use-platform"
+import { usePlatform } from "@/hooks/use-platform"
 import { getStoreLink } from "@/lib/store-links"
 import { SITE_URL } from "@/lib/blog"
+import { useTranslations } from "@/hooks/use-i18n"
+import { LocaleLink } from "@/components/LocaleLink"
+import {
+  buildAlternateLinks,
+  buildOgLocaleMeta,
+  format,
+  getDictionary,
+  localizedPath,
+} from "@/lib/i18n"
 
 export type BrowserSlug = "chrome" | "edge" | "firefox" | "safari"
 
-interface BrowserInfo {
-  /** Display name, e.g. "Chrome". */
+/**
+ * Non-translatable browser metadata. The display name is a proper noun and the
+ * operating-system list reads the same in every locale, so these stay here;
+ * all prose (intro, steps, FAQ, store name with article) lives in the
+ * dictionary under `spoofLocation.browsers[slug]` / `spoofLocation.page`.
+ */
+interface BrowserMeta {
   name: string
-  /** Store this browser installs from (drives the smart CTA). */
   storePlatform: Exclude<Platform, "unknown">
-  /** Human label for the store, used in copy and steps. */
-  storeName: string
-  /** Operating systems this browser/extension runs on (for schema + copy). */
   operatingSystem: string
   /** Whether GeoSpoof's WebRTC protection is available on this browser. */
   webrtc: boolean
-  /** One-paragraph, browser-specific intro under the H1. */
-  intro: string
-  /** Browser-specific "enable the extension" step. */
-  enableStep: string
-  /** Browser-specific FAQ entry appended to the shared questions. */
-  extraFaq: { q: string; a: string }
 }
 
-export const BROWSERS: Record<BrowserSlug, BrowserInfo> = {
+const BROWSER_META: Record<BrowserSlug, BrowserMeta> = {
   chrome: {
     name: "Chrome",
     storePlatform: "chromium",
-    storeName: "the Chrome Web Store",
     operatingSystem: "Windows, macOS, Linux",
     webrtc: true,
-    intro:
-      "Chrome reports your whereabouts to websites through the Geolocation API and your timezone through Intl and Date — and a VPN changes none of that. GeoSpoof overrides those signals inside Chrome so sites see the location you pick. The same build also runs in Brave, Opera, and other Chromium browsers.",
-    enableStep:
-      "Pin GeoSpoof from the puzzle-piece (Extensions) icon in Chrome's toolbar so it's one click away.",
-    extraFaq: {
-      q: "Does GeoSpoof work in Brave and other Chromium browsers?",
-      a: "Yes. GeoSpoof installs from the Chrome Web Store, which serves Chrome, Brave, Opera, and other Chromium-based browsers. The location and timezone spoofing works identically across all of them.",
-    },
   },
   edge: {
     name: "Edge",
     storePlatform: "chromium",
-    storeName: "the Chrome Web Store",
     operatingSystem: "Windows, macOS",
     webrtc: true,
-    intro:
-      "Microsoft Edge is built on Chromium, so it exposes your location the same way Chrome does — the Geolocation API plus your system timezone. GeoSpoof installs from the Chrome Web Store, runs in Edge, and overrides those APIs to report the location you choose. It works for spoofing your location in Edge on both Windows and macOS.",
-    enableStep:
-      "Allow the extension from the Chrome Web Store when Edge prompts you, then pin GeoSpoof from the Extensions (puzzle-piece) icon.",
-    extraFaq: {
-      q: "Can I spoof my location in Edge on Windows?",
-      a: "Yes. GeoSpoof runs in Edge on Windows and macOS. It overrides the location and timezone your browser reports to websites; it does not change Windows' own system location settings, so your OS stays untouched.",
-    },
   },
   firefox: {
     name: "Firefox",
     storePlatform: "firefox",
-    storeName: "Firefox Add-ons",
     operatingSystem: "Windows, macOS, Linux, Android",
     webrtc: true,
-    intro:
-      "Firefox hands websites your location through the Geolocation API and your region through the timezone APIs, regardless of any VPN. GeoSpoof installs from Firefox Add-ons and overrides those signals. It's the one build that also runs on Firefox for Android, so you can spoof your location on mobile too.",
-    enableStep:
-      "After adding GeoSpoof from Firefox Add-ons, pin it to the toolbar from the extensions menu for quick access.",
-    extraFaq: {
-      q: "Can I spoof my location in Firefox on Android?",
-      a: "Yes. Firefox 140+ on Android supports GeoSpoof, so you can spoof geolocation and timezone on your phone — something Chrome on mobile can't do, since it doesn't support extensions.",
-    },
   },
   safari: {
     name: "Safari",
     storePlatform: "apple",
-    storeName: "the App Store",
     operatingSystem: "iOS, iPadOS, macOS",
     webrtc: false,
-    intro:
-      "Safari on iOS, iPadOS, and macOS reports your location and timezone to websites just like any browser. GeoSpoof installs from the App Store and runs as a Safari extension, overriding those APIs so sites see the location you choose. Geolocation and timezone spoofing are fully supported; WebRTC protection isn't available on Safari.",
-    enableStep:
-      "After installing from the App Store, enable GeoSpoof from Safari's extensions menu (the puzzle-piece in the address bar on iOS, or Safari → Settings → Extensions on macOS).",
-    extraFaq: {
-      q: "Does location spoofing work in Safari on iPhone?",
-      a: "Yes. GeoSpoof is a Safari extension available through the App Store for iOS, iPadOS, and macOS. Once enabled for a site, it overrides the geolocation and timezone Safari reports. WebRTC protection is the one feature not available on Safari.",
-    },
   },
 }
 
-const SHARED_FAQ = (name: string): Array<{ q: string; a: string }> => [
-  {
-    q: `How do I spoof my location in ${name}?`,
-    a: `Install the free GeoSpoof extension, set a location (search a city, enter coordinates, or sync to your VPN), and GeoSpoof overrides the Geolocation and timezone APIs in ${name} so websites see your chosen location instead of your real one.`,
-  },
-  {
-    q: `Does a VPN change my location in ${name}?`,
-    a: `No. A VPN only changes your IP address. ${name} still reports its own browser geolocation and system timezone, so those can still reveal your real region. GeoSpoof spoofs the browser signals; use it alongside a VPN for a consistent location.`,
-  },
-  {
-    q: `Is GeoSpoof free for ${name}?`,
-    a: `Yes. GeoSpoof is free and open source. There's no account, no login, and no tracking — every setting stays on your device.`,
-  },
-]
+/** Browser cards on the hub, in display order. */
+const HUB_ORDER: Array<BrowserSlug> = ["chrome", "edge", "firefox", "safari"]
 
-function steps(info: BrowserInfo) {
-  return [
-    {
-      name: `Install GeoSpoof for ${info.name}`,
-      text: `Add the free GeoSpoof extension from ${info.storeName}.`,
-    },
-    { name: `Enable it in ${info.name}`, text: info.enableStep },
-    {
-      name: "Set your location",
-      text: "Search for a city, enter coordinates, or use VPN Sync to match your VPN's exit region.",
-    },
-    {
-      name: `${info.name} reports your chosen location`,
-      text: `GeoSpoof overrides the Geolocation API and timezone (Date, Intl, Temporal) so every site sees the location you picked${
-        info.webrtc ? ", and WebRTC protection blocks your real IP from leaking" : ""
-      }.`,
-    },
-  ]
+/**
+ * Build the `head` payload for any page in the spoof-location cluster, in the
+ * given locale: localized title/description/OG + self-canonical + hreflang
+ * cluster (en / fr / x-default -> English bare path). `head()` can't use hooks,
+ * so the route passes its locale explicitly.
+ */
+export function buildSpoofLocationHead(
+  target: BrowserSlug | "hub",
+  locale: Locale
+) {
+  const d = getDictionary(locale).spoofLocation
+  const basePath =
+    target === "hub" ? "/spoof-location" : `/spoof-location/${target}`
+  const meta = target === "hub" ? d.hub : d.browsers[target]
+  const canonical = `${SITE_URL}${localizedPath(basePath, locale)}`
+
+  return {
+    meta: [
+      { title: meta.metaTitle },
+      { name: "description", content: meta.metaDescription },
+      { property: "og:type", content: "website" },
+      ...buildOgLocaleMeta(locale),
+      { property: "og:url", content: canonical },
+      { property: "og:title", content: meta.ogTitle },
+      { property: "og:description", content: meta.metaDescription },
+      { name: "twitter:url", content: canonical },
+      { name: "twitter:title", content: meta.ogTitle },
+      { name: "twitter:description", content: meta.metaDescription },
+    ],
+    links: [
+      { rel: "canonical", href: canonical },
+      ...buildAlternateLinks(basePath, SITE_URL),
+    ],
+  }
 }
 
 export function BrowserSpoofPage({ slug }: { slug: BrowserSlug }) {
-  const info = BROWSERS[slug]
+  const info = BROWSER_META[slug]
+  const { locale, t } = useTranslations()
+  const p = t.spoofLocation.page
+  const b = t.spoofLocation.browsers[slug]
+  const name = info.name
+
   const platform = usePlatform()
   const store = getStoreLink(platform, `spoof-location-${slug}`)
-  const howToSteps = steps(info)
-  const faqs = [...SHARED_FAQ(info.name), info.extraFaq]
+
+  const howToSteps = [
+    {
+      name: format(p.stepInstallName, { name }),
+      text: format(p.stepInstallText, { store: b.storeName }),
+    },
+    { name: format(p.stepEnableName, { name }), text: b.enableStep },
+    { name: p.stepSetName, text: p.stepSetText },
+    {
+      name: format(p.stepReportsName, { name }),
+      text: `${p.stepReportsText}${info.webrtc ? p.stepReportsWebrtcSuffix : ""}.`,
+    },
+  ]
+
+  const faqs = [
+    { q: format(p.faqHowQ, { name }), a: format(p.faqHowA, { name }) },
+    { q: format(p.faqVpnQ, { name }), a: format(p.faqVpnA, { name }) },
+    { q: format(p.faqFreeQ, { name }), a: format(p.faqFreeA, { name }) },
+    { q: b.extraFaqQ, a: b.extraFaqA },
+  ]
+
+  const pageUrl = `${SITE_URL}${localizedPath(`/spoof-location/${slug}`, locale)}`
 
   return (
     <div className="min-h-screen bg-(--color-canvas)">
@@ -156,18 +154,20 @@ export function BrowserSpoofPage({ slug }: { slug: BrowserSlug }) {
             <BreadcrumbList>
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
-                  <Link to="/">Home</Link>
+                  <LocaleLink to="/">{p.breadcrumbHome}</LocaleLink>
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
-                  <Link to={"/spoof-location" as "/"}>Spoof Location</Link>
+                  <LocaleLink to="/spoof-location">
+                    {p.breadcrumbHub}
+                  </LocaleLink>
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
-                <BreadcrumbPage>{info.name}</BreadcrumbPage>
+                <BreadcrumbPage>{name}</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
@@ -176,19 +176,30 @@ export function BrowserSpoofPage({ slug }: { slug: BrowserSlug }) {
               variant="outline"
               className="mb-4 border-brand/30 bg-brand/10 tracking-wide text-(--color-brand) uppercase"
             >
-              {info.name} Extension
+              {format(p.browserBadge, { name })}
             </Badge>
             <h1 className="mb-5 text-4xl leading-tight font-bold text-(--color-canvas-foreground) md:text-5xl">
-              Spoof your location in{" "}
-              <span className="text-(--color-brand)">{info.name}</span>
+              {/* Interpolate the (highlighted) browser name wherever the
+                  locale places it — end for EN/FR/RU ("…in Chrome"), middle
+                  for ZH ("在 Chrome 中…"). */}
+              {p.headingPre.split("{name}").map((part, i) => (
+                <span key={i}>
+                  {i > 0 && (
+                    <span className="text-(--color-brand)">{name}</span>
+                  )}
+                  {part}
+                </span>
+              ))}
             </h1>
             <p className="mx-auto mb-8 max-w-2xl text-base text-(--color-canvas-muted) md:text-lg">
-              {info.intro}
+              {b.intro}
             </p>
             <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
               <a
                 href={store ? store.href : "#download"}
-                {...(store ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                {...(store
+                  ? { target: "_blank", rel: "noopener noreferrer" }
+                  : {})}
                 className={cn(
                   "inline-flex min-h-12 w-full items-center justify-center sm:min-h-14 sm:w-auto",
                   "rounded-brand bg-(--color-brand) px-8 text-base font-semibold text-white sm:text-lg",
@@ -196,9 +207,11 @@ export function BrowserSpoofPage({ slug }: { slug: BrowserSlug }) {
                   "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
                 )}
               >
-                {store ? store.cta : `Get GeoSpoof for ${info.name}`}
+                {store
+                  ? t.storeCta[store.key]
+                  : format(p.ctaFallback, { name })}
               </a>
-              <Link
+              <LocaleLink
                 to="/verify"
                 className={cn(
                   "inline-flex min-h-12 w-full items-center justify-center gap-2 sm:min-h-14 sm:w-auto",
@@ -207,8 +220,8 @@ export function BrowserSpoofPage({ slug }: { slug: BrowserSlug }) {
                   "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
                 )}
               >
-                Test your location
-              </Link>
+                {p.testLocation}
+              </LocaleLink>
             </div>
           </div>
         </Section>
@@ -216,7 +229,7 @@ export function BrowserSpoofPage({ slug }: { slug: BrowserSlug }) {
         {/* How to */}
         <Section narrow className="py-12! md:py-16!">
           <h2 className="mb-8 text-2xl font-bold text-(--color-canvas-foreground) md:text-3xl">
-            How to spoof your location in {info.name}
+            {format(p.howToHeading, { name })}
           </h2>
           <ol className="space-y-5">
             {howToSteps.map((step, i) => (
@@ -259,19 +272,16 @@ export function BrowserSpoofPage({ slug }: { slug: BrowserSlug }) {
               {info.webrtc ? (
                 <>
                   <span className="font-semibold text-(--color-canvas-foreground)">
-                    WebRTC protection is available in {info.name}.
+                    {format(p.webrtcAvailableTitle, { name })}
                   </span>{" "}
-                  GeoSpoof also blocks your real IP from leaking through WebRTC,
-                  which can otherwise bypass a VPN entirely.
+                  {p.webrtcAvailableBody}
                 </>
               ) : (
                 <>
                   <span className="font-semibold text-(--color-canvas-foreground)">
-                    Note: WebRTC protection isn't available in {info.name}.
+                    {format(p.webrtcUnavailableTitle, { name })}
                   </span>{" "}
-                  Geolocation and timezone spoofing are fully supported; the
-                  WebRTC privacy API GeoSpoof relies on isn't exposed on this
-                  browser.
+                  {p.webrtcUnavailableBody}
                 </>
               )}
             </p>
@@ -279,12 +289,16 @@ export function BrowserSpoofPage({ slug }: { slug: BrowserSlug }) {
         </Section>
 
         {/* FAQ */}
-        <Section narrow className="py-12! md:py-16!" aria-labelledby="faq-heading">
+        <Section
+          narrow
+          className="py-12! md:py-16!"
+          aria-labelledby="faq-heading"
+        >
           <h2
             id="faq-heading"
             className="mb-6 text-2xl font-bold text-(--color-canvas-foreground) md:text-3xl"
           >
-            Frequently asked questions
+            {p.faqHeading}
           </h2>
           <div className="overflow-hidden rounded-2xl border border-(--color-canvas-border)">
             {faqs.map((faq, i) => (
@@ -292,7 +306,8 @@ export function BrowserSpoofPage({ slug }: { slug: BrowserSlug }) {
                 key={faq.q}
                 className={cn(
                   "group bg-(--color-canvas) px-5 py-4",
-                  i < faqs.length - 1 && "border-b border-(--color-canvas-border)"
+                  i < faqs.length - 1 &&
+                    "border-b border-(--color-canvas-border)"
                 )}
               >
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-medium text-(--color-canvas-foreground)">
@@ -309,13 +324,13 @@ export function BrowserSpoofPage({ slug }: { slug: BrowserSlug }) {
           {/* Cross-link to siblings + hub */}
           <p className="mt-6 text-sm text-(--color-canvas-muted)">
             <Globe className="mr-1.5 inline size-4 align-text-bottom" />
-            Using a different browser? See{" "}
-            <Link
-              to={"/spoof-location" as "/"}
+            {p.crossLinkLead}
+            <LocaleLink
+              to="/spoof-location"
               className="font-medium text-(--color-brand) hover:underline"
             >
-              spoof your location in any browser
-            </Link>
+              {p.crossLinkText}
+            </LocaleLink>
             .
           </p>
         </Section>
@@ -336,12 +351,12 @@ export function BrowserSpoofPage({ slug }: { slug: BrowserSlug }) {
               "@context": "https://schema.org",
               "@type": "SoftwareApplication",
               name: "GeoSpoof",
-              description: `Spoof your geolocation and timezone in ${info.name} with a free, open-source extension.`,
-              url: `${SITE_URL}/spoof-location/${slug}`,
+              description: format(p.schemaSoftwareDesc, { name }),
+              url: pageUrl,
               image: `${SITE_URL}/icon.png`,
               applicationCategory: "BrowserApplication",
               operatingSystem: info.operatingSystem,
-              browserRequirements: `Requires ${info.name}`,
+              browserRequirements: `Requires ${name}`,
               isAccessibleForFree: true,
               offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
               author: { "@type": "Person", name: "Anthony Sgro" },
@@ -349,7 +364,7 @@ export function BrowserSpoofPage({ slug }: { slug: BrowserSlug }) {
             {
               "@context": "https://schema.org",
               "@type": "HowTo",
-              name: `How to spoof your location in ${info.name}`,
+              name: format(p.howToHeading, { name }),
               step: howToSteps.map((s) => ({
                 "@type": "HowToStep",
                 name: s.name,
@@ -369,24 +384,99 @@ export function BrowserSpoofPage({ slug }: { slug: BrowserSlug }) {
               "@context": "https://schema.org",
               "@type": "BreadcrumbList",
               itemListElement: [
-                { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+                {
+                  "@type": "ListItem",
+                  position: 1,
+                  name: p.breadcrumbHome,
+                  item: `${SITE_URL}${localizedPath("/", locale)}`,
+                },
                 {
                   "@type": "ListItem",
                   position: 2,
-                  name: "Spoof Location",
-                  item: `${SITE_URL}/spoof-location`,
+                  name: p.breadcrumbHub,
+                  item: `${SITE_URL}${localizedPath("/spoof-location", locale)}`,
                 },
                 {
                   "@type": "ListItem",
                   position: 3,
-                  name: info.name,
-                  item: `${SITE_URL}/spoof-location/${slug}`,
+                  name,
+                  item: pageUrl,
                 },
               ],
             },
           ]),
         }}
       />
+    </div>
+  )
+}
+
+/**
+ * Hub page (`/spoof-location`) listing the per-browser guides. Locale-aware via
+ * `useTranslations`; shared by the English and French routes.
+ */
+export function SpoofLocationHub() {
+  const { t } = useTranslations()
+  const h = t.spoofLocation.hub
+
+  return (
+    <div className="min-h-screen bg-(--color-canvas)">
+      <SkipLink />
+      <Navigation />
+      <main id="main-content">
+        <Section className="pt-12! pb-8! md:pt-20! md:pb-12!">
+          <div className="mx-auto max-w-3xl text-center">
+            <Badge
+              variant="outline"
+              className="mb-4 border-brand/30 bg-brand/10 tracking-wide text-(--color-brand) uppercase"
+            >
+              {h.badge}
+            </Badge>
+            <h1 className="mb-5 text-4xl leading-tight font-bold text-(--color-canvas-foreground) md:text-5xl">
+              {h.headingPre}
+              <span className="text-(--color-brand)">{h.headingEmphasis}</span>
+            </h1>
+            <p className="mx-auto mb-8 max-w-2xl text-base text-(--color-canvas-muted) md:text-lg">
+              {h.intro}
+            </p>
+          </div>
+
+          {/* Browser cards */}
+          <div className="mx-auto grid max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2">
+            {HUB_ORDER.map((slug) => {
+              const info = BROWSER_META[slug]
+              const b = t.spoofLocation.browsers[slug]
+              return (
+                <LocaleLink
+                  key={slug}
+                  to={`/spoof-location/${slug}`}
+                  className={cn(
+                    "flex flex-col gap-1 rounded-2xl border border-(--color-canvas-border) p-6",
+                    "transition-all hover:border-(--color-brand) hover:shadow-lg",
+                    "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+                  )}
+                >
+                  <span className="text-lg font-bold text-(--color-canvas-foreground)">
+                    {format(h.cardTitle, { name: info.name })}
+                  </span>
+                  <span className="text-sm text-(--color-canvas-muted)">
+                    {b.storeShort} · {info.operatingSystem}
+                  </span>
+                  <span className="mt-2 text-sm font-semibold text-(--color-brand)">
+                    {h.openGuide} →
+                  </span>
+                </LocaleLink>
+              )
+            })}
+          </div>
+        </Section>
+
+        <DownloadSection
+          campaign="spoof-location"
+          className="border-t border-(--color-canvas-border)"
+        />
+      </main>
+      <Footer />
     </div>
   )
 }

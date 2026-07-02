@@ -6,7 +6,9 @@ try {
   self.__helperResult = {
     timeZone: new Intl.DateTimeFormat().resolvedOptions().timeZone,
     offsetMinutes: new Date().getTimezoneOffset(),
-  };
+  }
 } catch (err) {
-  self.__helperResult = { error: err && err.message ? err.message : String(err) };
+  self.__helperResult = {
+    error: err && err.message ? err.message : String(err),
+  }
 }

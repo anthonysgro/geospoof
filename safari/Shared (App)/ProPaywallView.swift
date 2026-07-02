@@ -271,7 +271,7 @@ struct ProPaywallView: View {
                         isSelected: selectedProductID == monthly.id,
                         periodText: periodText(monthly),
                         priceCaption: "per \(periodText(monthly))",
-                        trialText: nil,
+                        trialText: trialText(monthly),
                         badgeText: nil,
                         subPriceText: nil
                     ) { selectedProductID = monthly.id }

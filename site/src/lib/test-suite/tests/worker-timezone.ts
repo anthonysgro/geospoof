@@ -108,7 +108,11 @@ async function runBlobWorker(source: string): Promise<WorkerResult> {
   if (typeof Worker === "undefined") {
     throw new SkipTestError("Worker API not available in this browser")
   }
-  if (typeof Blob === "undefined" || typeof URL === "undefined" || !URL.createObjectURL) {
+  if (
+    typeof Blob === "undefined" ||
+    typeof URL === "undefined" ||
+    !URL.createObjectURL
+  ) {
     throw new SkipTestError("Blob URL API not available")
   }
 
@@ -119,8 +123,16 @@ async function runBlobWorker(source: string): Promise<WorkerResult> {
   try {
     return await waitForWorkerResult(worker)
   } finally {
-    try { worker.terminate() } catch { /* cleanup */ }
-    try { URL.revokeObjectURL(url) } catch { /* cleanup */ }
+    try {
+      worker.terminate()
+    } catch {
+      /* cleanup */
+    }
+    try {
+      URL.revokeObjectURL(url)
+    } catch {
+      /* cleanup */
+    }
   }
 }
 
@@ -138,13 +150,19 @@ async function runUrlWorker(scriptUrl: string): Promise<WorkerResult> {
     worker = new Worker(scriptUrl)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    throw new SkipTestError(`Could not construct Worker from URL "${scriptUrl}": ${msg}`)
+    throw new SkipTestError(
+      `Could not construct Worker from URL "${scriptUrl}": ${msg}`
+    )
   }
 
   try {
     return await waitForWorkerResult(worker)
   } finally {
-    try { worker.terminate() } catch { /* cleanup */ }
+    try {
+      worker.terminate()
+    } catch {
+      /* cleanup */
+    }
   }
 }
 
@@ -162,13 +180,19 @@ async function runModuleWorker(scriptUrl: string): Promise<WorkerResult> {
     worker = new Worker(scriptUrl, { type: "module" })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    throw new SkipTestError(`Could not construct module Worker from URL "${scriptUrl}": ${msg}`)
+    throw new SkipTestError(
+      `Could not construct module Worker from URL "${scriptUrl}": ${msg}`
+    )
   }
 
   try {
     return await waitForWorkerResult(worker)
   } finally {
-    try { worker.terminate() } catch { /* cleanup */ }
+    try {
+      worker.terminate()
+    } catch {
+      /* cleanup */
+    }
   }
 }
 
@@ -186,7 +210,9 @@ async function runSharedWorker(scriptUrl: string): Promise<WorkerResult> {
     shared = new SharedWorker(scriptUrl)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    throw new SkipTestError(`Could not construct SharedWorker from URL "${scriptUrl}": ${msg}`)
+    throw new SkipTestError(
+      `Could not construct SharedWorker from URL "${scriptUrl}": ${msg}`
+    )
   }
 
   const port = shared.port
@@ -194,7 +220,9 @@ async function runSharedWorker(scriptUrl: string): Promise<WorkerResult> {
 
   return new Promise<WorkerResult>((resolve, reject) => {
     const timer = setTimeout(() => {
-      reject(new Error(`SharedWorker did not respond within ${WORKER_TIMEOUT_MS}ms`))
+      reject(
+        new Error(`SharedWorker did not respond within ${WORKER_TIMEOUT_MS}ms`)
+      )
     }, WORKER_TIMEOUT_MS)
 
     port.onmessage = (event: MessageEvent<unknown>) => {
@@ -204,7 +232,10 @@ async function runSharedWorker(scriptUrl: string): Promise<WorkerResult> {
         | { ok: false; error: string }
       if (data && typeof data === "object" && "ok" in data) {
         if (data.ok) {
-          resolve({ timeZone: data.timeZone, offsetMinutes: data.offsetMinutes })
+          resolve({
+            timeZone: data.timeZone,
+            offsetMinutes: data.offsetMinutes,
+          })
         } else {
           reject(new Error(`SharedWorker reported error: ${data.error}`))
         }
@@ -215,9 +246,10 @@ async function runSharedWorker(scriptUrl: string): Promise<WorkerResult> {
 
     shared.onerror = (event) => {
       clearTimeout(timer)
-      const message = typeof event === "object" && event && "message" in event
-        ? String((event as ErrorEvent).message)
-        : "SharedWorker error"
+      const message =
+        typeof event === "object" && event && "message" in event
+          ? String((event as ErrorEvent).message)
+          : "SharedWorker error"
       reject(new Error(message))
     }
 
@@ -241,7 +273,10 @@ function waitForWorkerResult(worker: Worker): Promise<WorkerResult> {
         | { ok: false; error: string }
       if (data && typeof data === "object" && "ok" in data) {
         if (data.ok) {
-          resolve({ timeZone: data.timeZone, offsetMinutes: data.offsetMinutes })
+          resolve({
+            timeZone: data.timeZone,
+            offsetMinutes: data.offsetMinutes,
+          })
         } else {
           reject(new Error(`Worker reported error: ${data.error}`))
         }
@@ -252,9 +287,10 @@ function waitForWorkerResult(worker: Worker): Promise<WorkerResult> {
 
     worker.onerror = (event) => {
       clearTimeout(timer)
-      const message = typeof event === "object" && event && "message" in event
-        ? String((event as ErrorEvent).message)
-        : "Worker error"
+      const message =
+        typeof event === "object" && event && "message" in event
+          ? String((event as ErrorEvent).message)
+          : "Worker error"
       reject(new Error(message))
     }
 
@@ -391,7 +427,9 @@ worker.postMessage({ start: true })
     return { value: tz, describe: `"${tz}"` }
   },
   observe: async () => {
-    const result = await runImportScriptsWorker("/workers/importscripts-probe.js")
+    const result = await runImportScriptsWorker(
+      "/workers/importscripts-probe.js"
+    )
     return {
       value: result.timeZone,
       describe: `"${result.timeZone}" (from importScripts-loaded code)`,
@@ -403,7 +441,9 @@ worker.postMessage({ start: true })
  * Special helper for the importScripts test — the response shape
  * includes both direct and imported results.
  */
-async function runImportScriptsWorker(scriptUrl: string): Promise<WorkerResult> {
+async function runImportScriptsWorker(
+  scriptUrl: string
+): Promise<WorkerResult> {
   if (typeof Worker === "undefined") {
     throw new SkipTestError("Worker API not available in this browser")
   }
@@ -413,13 +453,17 @@ async function runImportScriptsWorker(scriptUrl: string): Promise<WorkerResult> 
     worker = new Worker(scriptUrl)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    throw new SkipTestError(`Could not construct Worker from URL "${scriptUrl}": ${msg}`)
+    throw new SkipTestError(
+      `Could not construct Worker from URL "${scriptUrl}": ${msg}`
+    )
   }
 
   try {
     return await new Promise<WorkerResult>((resolve, reject) => {
       const timer = setTimeout(() => {
-        reject(new Error(`Worker did not respond within ${WORKER_TIMEOUT_MS}ms`))
+        reject(
+          new Error(`Worker did not respond within ${WORKER_TIMEOUT_MS}ms`)
+        )
       }, WORKER_TIMEOUT_MS)
 
       worker.onmessage = (event: MessageEvent<unknown>) => {
@@ -444,16 +488,21 @@ async function runImportScriptsWorker(scriptUrl: string): Promise<WorkerResult> 
 
       worker.onerror = (event) => {
         clearTimeout(timer)
-        const message = typeof event === "object" && event && "message" in event
-          ? String((event as ErrorEvent).message)
-          : "Worker error"
+        const message =
+          typeof event === "object" && event && "message" in event
+            ? String((event as ErrorEvent).message)
+            : "Worker error"
         reject(new Error(message))
       }
 
       worker.postMessage({ start: true })
     })
   } finally {
-    try { worker.terminate() } catch { /* cleanup */ }
+    try {
+      worker.terminate()
+    } catch {
+      /* cleanup */
+    }
   }
 }
 
@@ -557,7 +606,9 @@ worker.postMessage(null)
       worker = new Worker(dataUrl)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
-      throw new SkipTestError(`Could not construct Worker from data: URL: ${msg}`)
+      throw new SkipTestError(
+        `Could not construct Worker from data: URL: ${msg}`
+      )
     }
 
     try {
@@ -567,7 +618,11 @@ worker.postMessage(null)
         describe: `"${result.timeZone}" (from data-URL Worker)`,
       }
     } finally {
-      try { worker.terminate() } catch { /* cleanup */ }
+      try {
+        worker.terminate()
+      } catch {
+        /* cleanup */
+      }
     }
   },
 })
@@ -629,7 +684,9 @@ reg.active.postMessage({ channel: "geospoof-service-probe" })`,
       return { skipReason: "ServiceWorker API not available in this browser" }
     }
     if (typeof BroadcastChannel === "undefined") {
-      return { skipReason: "BroadcastChannel API not available in this browser" }
+      return {
+        skipReason: "BroadcastChannel API not available in this browser",
+      }
     }
     const tz = getMainThreadTimezone()
     if (!tz) return { skipReason: "Intl did not resolve a timezone identifier" }
@@ -655,7 +712,9 @@ async function runServiceWorker(scriptUrl: string): Promise<WorkerResult> {
     throw new SkipTestError("ServiceWorker API not available in this browser")
   }
   if (typeof BroadcastChannel === "undefined") {
-    throw new SkipTestError("BroadcastChannel API not available in this browser")
+    throw new SkipTestError(
+      "BroadcastChannel API not available in this browser"
+    )
   }
 
   const channelName = `geospoof-service-probe-${Date.now()}`
@@ -680,7 +739,9 @@ async function runServiceWorker(scriptUrl: string): Promise<WorkerResult> {
     // sent before activation will never be delivered.
     const activeWorker = await waitForActiveWorker(registration)
     if (!activeWorker) {
-      throw new SkipTestError("ServiceWorker did not reach active state in time")
+      throw new SkipTestError(
+        "ServiceWorker did not reach active state in time"
+      )
     }
 
     return await new Promise<WorkerResult>((resolve, reject) => {
@@ -702,12 +763,17 @@ async function runServiceWorker(scriptUrl: string): Promise<WorkerResult> {
           | { ok: false; error: string }
         if (data && typeof data === "object" && "ok" in data) {
           if (data.ok) {
-            resolve({ timeZone: data.timeZone, offsetMinutes: data.offsetMinutes })
+            resolve({
+              timeZone: data.timeZone,
+              offsetMinutes: data.offsetMinutes,
+            })
           } else {
             reject(new Error(`ServiceWorker reported error: ${data.error}`))
           }
         } else {
-          reject(new Error("ServiceWorker returned an unexpected message shape"))
+          reject(
+            new Error("ServiceWorker returned an unexpected message shape")
+          )
         }
       }
 

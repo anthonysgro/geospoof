@@ -1,7 +1,8 @@
 import { CheckIcon, MinusIcon } from "lucide-react"
-import { Link } from "@tanstack/react-router"
 import { Section } from "./Section"
 import { cn } from "@/lib/utils"
+import { useTranslations } from "@/hooks/use-i18n"
+import { LocaleLink } from "@/components/LocaleLink"
 import {
   Table,
   TableBody,
@@ -25,11 +26,12 @@ const platforms: Array<{
 ]
 
 function SupportBadge({ status }: { status: "full" | "none" | "na" }) {
+  const { t } = useTranslations()
   if (status === "full")
     return (
       <span
         className="inline-flex size-6 items-center justify-center rounded-full bg-brand/12 text-(--color-brand)"
-        aria-label="Supported"
+        aria-label={t.compatibility.supportedAria}
       >
         <CheckIcon className="size-3.5" strokeWidth={3} aria-hidden="true" />
       </span>
@@ -38,7 +40,7 @@ function SupportBadge({ status }: { status: "full" | "none" | "na" }) {
     return (
       <span
         className="text-xs text-(--color-canvas-muted) opacity-40"
-        aria-label="Not applicable"
+        aria-label={t.compatibility.naAria}
       >
         N/A
       </span>
@@ -46,24 +48,24 @@ function SupportBadge({ status }: { status: "full" | "none" | "na" }) {
   return (
     <MinusIcon
       className="mx-auto size-4 text-(--color-canvas-muted) opacity-50"
-      aria-label="Not supported"
+      aria-label={t.compatibility.notSupportedAria}
     />
   )
 }
 
 export function CompatibilitySection({ className }: { className?: string }) {
+  const { t } = useTranslations()
   return (
     <Section id="compatibility" className={cn("py-16! md:py-24!", className)}>
       <div className="mb-12 text-center">
         <p className="mb-3 text-sm font-semibold tracking-widest text-(--color-brand) uppercase">
-          Compatibility
+          {t.compatibility.eyebrow}
         </p>
         <h2 className="mb-4 text-3xl font-bold text-(--color-canvas-foreground) md:text-4xl">
-          Works across all your devices
+          {t.compatibility.heading}
         </h2>
         <p className="mx-auto max-w-xl text-(--color-canvas-muted)">
-          GeoSpoof runs on every major browser and platform. One extension,
-          consistent protection everywhere.
+          {t.compatibility.subhead}
         </p>
       </div>
 
@@ -73,7 +75,7 @@ export function CompatibilitySection({ className }: { className?: string }) {
             <TableHeader>
               <TableRow className="border-b border-(--color-canvas-border) hover:bg-transparent">
                 <TableHead className="w-32 pl-6 font-semibold text-(--color-canvas-muted)">
-                  Platform
+                  {t.compatibility.platformHeader}
                 </TableHead>
                 {browsers.map((b) => (
                   <TableHead
@@ -116,59 +118,58 @@ export function CompatibilitySection({ className }: { className?: string }) {
               strokeWidth={3}
               aria-hidden="true"
             />{" "}
-            Supported
+            {t.compatibility.legend.supported}
           </span>
           <span className="flex items-center gap-2 text-xs text-(--color-canvas-muted)">
-            <MinusIcon className="size-3.5 opacity-50" aria-hidden="true" /> Not
-            supported
+            <MinusIcon className="size-3.5 opacity-50" aria-hidden="true" />{" "}
+            {t.compatibility.legend.notSupported}
           </span>
           <span className="flex items-center gap-2 text-xs text-(--color-canvas-muted) opacity-60">
-            N/A — Not applicable
+            {t.compatibility.legend.na}
           </span>
         </div>
       </div>
 
       <p className="mt-4 text-center text-xs text-(--color-canvas-muted)">
-        Firefox for Android requires Firefox 140+. Safari requires iOS 16+ or
-        macOS 13+.
+        {t.compatibility.footnote}
       </p>
 
       <p className="mx-auto mt-6 max-w-2xl text-center text-sm text-(--color-canvas-muted)">
-        Browser-specific setup guides: spoof your location in{" "}
-        <Link
-          to={"/spoof-location/chrome" as "/"}
+        {t.compatibility.setupLead}
+        <LocaleLink
+          to={"/spoof-location/chrome"}
           className="font-medium text-(--color-brand) hover:underline"
         >
           Chrome
-        </Link>
-        ,{" "}
-        <Link
-          to={"/spoof-location/edge" as "/"}
+        </LocaleLink>
+        {", "}
+        <LocaleLink
+          to={"/spoof-location/edge"}
           className="font-medium text-(--color-brand) hover:underline"
         >
           Edge
-        </Link>
-        ,{" "}
-        <Link
-          to={"/spoof-location/firefox" as "/"}
+        </LocaleLink>
+        {", "}
+        <LocaleLink
+          to={"/spoof-location/firefox"}
           className="font-medium text-(--color-brand) hover:underline"
         >
           Firefox
-        </Link>
-        , or{" "}
-        <Link
-          to={"/spoof-location/safari" as "/"}
+        </LocaleLink>
+        {t.compatibility.or}
+        <LocaleLink
+          to={"/spoof-location/safari"}
           className="font-medium text-(--color-brand) hover:underline"
         >
           Safari
-        </Link>
-        . You can also{" "}
-        <Link
-          to={"/spoof-timezone" as "/"}
+        </LocaleLink>
+        {t.compatibility.alsoLead}
+        <LocaleLink
+          to={"/spoof-timezone"}
           className="font-medium text-(--color-brand) hover:underline"
         >
-          spoof your browser timezone
-        </Link>
+          {t.compatibility.timezoneLink}
+        </LocaleLink>
         .
       </p>
     </Section>

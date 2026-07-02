@@ -12,29 +12,39 @@
 
 self.addEventListener("install", (event) => {
   // Skip waiting so the worker activates immediately on first install
-  event.waitUntil(self.skipWaiting());
-});
+  event.waitUntil(self.skipWaiting())
+})
 
 self.addEventListener("activate", (event) => {
   // Claim any open clients so we can message them right away
-  event.waitUntil(self.clients.claim());
-});
+  event.waitUntil(self.clients.claim())
+})
 
 self.addEventListener("message", function (event) {
   try {
-    var timeZone = new Intl.DateTimeFormat().resolvedOptions().timeZone;
-    var offsetMinutes = new Date().getTimezoneOffset();
-    var channelName = (event.data && event.data.channel) || "geospoof-service-probe";
-    var bc = new BroadcastChannel(channelName);
-    bc.postMessage({ ok: true, timeZone: timeZone, offsetMinutes: offsetMinutes });
-    bc.close();
+    var timeZone = new Intl.DateTimeFormat().resolvedOptions().timeZone
+    var offsetMinutes = new Date().getTimezoneOffset()
+    var channelName =
+      (event.data && event.data.channel) || "geospoof-service-probe"
+    var bc = new BroadcastChannel(channelName)
+    bc.postMessage({
+      ok: true,
+      timeZone: timeZone,
+      offsetMinutes: offsetMinutes,
+    })
+    bc.close()
   } catch (err) {
     try {
-      var bc2 = new BroadcastChannel((event.data && event.data.channel) || "geospoof-service-probe");
-      bc2.postMessage({ ok: false, error: err && err.message ? err.message : String(err) });
-      bc2.close();
+      var bc2 = new BroadcastChannel(
+        (event.data && event.data.channel) || "geospoof-service-probe"
+      )
+      bc2.postMessage({
+        ok: false,
+        error: err && err.message ? err.message : String(err),
+      })
+      bc2.close()
     } catch (_) {
       // Nothing more we can do
     }
   }
-});
+})

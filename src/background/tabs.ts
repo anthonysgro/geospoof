@@ -6,7 +6,7 @@
 import type { Settings } from "@/shared/types/settings";
 import type { UpdateSettingsPayload, InjectionStatus } from "@/shared/types/messages";
 import { createLogger } from "@/shared/utils/debug-logger";
-import { computeEffectiveEnabled } from "@/shared/utils/scope";
+import { computeEffectiveEnabled, computeEffectivePreserveGeoPrompt } from "@/shared/utils/scope";
 import { computeEffectiveAccuracySetting } from "@/shared/accuracy/resolver";
 import { updateWorkerFilterSettings } from "./worker-request-filter";
 
@@ -79,7 +79,10 @@ export async function broadcastSettingsToTabs(settings: Settings): Promise<void>
       debugLogging,
       verbosityLevel,
       webrtcProtection,
-      preserveGeolocationPrompt,
+      preserveGeolocationPrompt: computeEffectivePreserveGeoPrompt(
+        preserveGeolocationPrompt,
+        settings.proFeaturesBlocked
+      ),
       // Custom accuracy is Pro-gated on iOS Safari: force Realistic ("auto")
       // for a free user so the page can't receive a pinned accuracy. Fail-open
       // + Safari-only (no effect on macOS / Chrome / Firefox).

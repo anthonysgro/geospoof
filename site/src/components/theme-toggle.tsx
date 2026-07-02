@@ -3,19 +3,25 @@ import { Moon, Sun } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useTheme } from "@/hooks/use-theme"
 import { useReducedMotion } from "@/hooks/use-reduced-motion"
+import { useTranslations } from "@/hooks/use-i18n"
 
 export function ThemeToggle({ className }: { className?: string }) {
   const { resolvedTheme, setTheme } = useTheme()
   const prefersReducedMotion = useReducedMotion()
+  const { t } = useTranslations()
   const [announcement, setAnnouncement] = React.useState("")
   const isDark = resolvedTheme === "dark"
 
   const handleToggle = React.useCallback(() => {
     const newTheme = isDark ? "light" : "dark"
     setTheme(newTheme)
-    setAnnouncement(`Theme changed to ${newTheme} mode`)
+    setAnnouncement(
+      newTheme === "dark"
+        ? t.themeToggle.changedToDark
+        : t.themeToggle.changedToLight
+    )
     setTimeout(() => setAnnouncement(""), 1000)
-  }, [isDark, setTheme])
+  }, [isDark, setTheme, t])
 
   return (
     <>
@@ -33,7 +39,9 @@ export function ThemeToggle({ className }: { className?: string }) {
           "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)",
           className
         )}
-        aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+        aria-label={
+          isDark ? t.themeToggle.switchToLight : t.themeToggle.switchToDark
+        }
       >
         {isDark ? (
           <Sun className="h-5 w-5" aria-hidden="true" />

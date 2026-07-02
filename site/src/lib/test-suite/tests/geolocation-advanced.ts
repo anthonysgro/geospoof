@@ -512,10 +512,7 @@ for (let i = 0; i < 8; i++) samples.push(await measureLatency())
           await withTimeout(measureLatency(), LATENCY_SAMPLE_BUDGET_MS)
         )
       } catch (err) {
-        if (
-          err instanceof Error &&
-          err.message === CACHE_PROBE_TIMEOUT_TOKEN
-        ) {
+        if (err instanceof Error && err.message === CACHE_PROBE_TIMEOUT_TOKEN) {
           throw new SkipTestError(
             `Browser did not resolve getCurrentPosition within ${LATENCY_SAMPLE_BUDGET_MS}ms on sample ${i + 1}. This engine doesn't expose the cached-read path this probe relies on (typical of Safari) — nothing measurable either way.`
           )
@@ -572,12 +569,12 @@ cached < 5  // sub-5ms means cached path hit`,
     try {
       cached = await withTimeout(
         measureLatency({ maximumAge: 60_000 }),
-        CACHE_PROBE_BUDGET_MS,
+        CACHE_PROBE_BUDGET_MS
       )
     } catch (err) {
       if (err instanceof Error && err.message === CACHE_PROBE_TIMEOUT_TOKEN) {
         throw new SkipTestError(
-          `Browser did not service a maximumAge: 60000 call within ${CACHE_PROBE_BUDGET_MS}ms. This engine's geolocation cache doesn't expose a sub-5ms read path we can time against — typical of Safari, which is native behaviour rather than a GeoSpoof signal. Nothing to measure either way.`,
+          `Browser did not service a maximumAge: 60000 call within ${CACHE_PROBE_BUDGET_MS}ms. This engine's geolocation cache doesn't expose a sub-5ms read path we can time against — typical of Safari, which is native behaviour rather than a GeoSpoof signal. Nothing to measure either way.`
         )
       }
       throw err
@@ -594,7 +591,7 @@ cached < 5  // sub-5ms means cached path hit`,
     // path as the genuine measurement.
     if (cached > 100) {
       throw new SkipTestError(
-        `Cached call took ${cached.toFixed(1)}ms. This engine's geolocation cache doesn't expose a sub-5ms read path we can time against — typical of Safari, which is native behaviour rather than a GeoSpoof signal. Nothing to measure either way.`,
+        `Cached call took ${cached.toFixed(1)}ms. This engine's geolocation cache doesn't expose a sub-5ms read path we can time against — typical of Safari, which is native behaviour rather than a GeoSpoof signal. Nothing to measure either way.`
       )
     }
     return {

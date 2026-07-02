@@ -10,6 +10,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
+import { useTranslations } from "@/hooks/use-i18n"
 
 export interface NavItem {
   label: string
@@ -18,11 +19,18 @@ export interface NavItem {
 
 interface MobileNavProps {
   items: Array<NavItem>
+  /** Current locale's home path (e.g. "/" or "/fr"). */
+  homePath?: string
   className?: string
 }
 
-export function MobileNav({ items, className }: MobileNavProps) {
+export function MobileNav({
+  items,
+  homePath = "/",
+  className,
+}: MobileNavProps) {
   const [open, setOpen] = React.useState(false)
+  const { t } = useTranslations()
 
   const handleLinkClick = (
     e: React.MouseEvent<HTMLAnchorElement>,
@@ -32,15 +40,16 @@ export function MobileNav({ items, className }: MobileNavProps) {
     if (!href.startsWith("#")) return
     e.preventDefault()
     if (href === "#") {
-      if (window.location.pathname !== "/") {
-        window.location.href = "/"
+      if (window.location.pathname !== homePath) {
+        window.location.href = homePath
       } else {
         window.scrollTo({ top: 0, behavior: "smooth" })
       }
       return
     }
-    if (window.location.pathname !== "/") {
-      window.location.href = "/" + href
+    if (window.location.pathname !== homePath) {
+      window.location.href =
+        homePath === "/" ? "/" + href : homePath + "/" + href
       return
     }
     const el = document.getElementById(href.slice(1))
@@ -54,7 +63,7 @@ export function MobileNav({ items, className }: MobileNavProps) {
           variant="ghost"
           size="icon"
           className={cn("min-h-12 min-w-12", className)}
-          aria-label="Open navigation menu"
+          aria-label={t.nav.openMenu}
         >
           <MenuIcon className="size-6" />
         </Button>
@@ -74,7 +83,7 @@ export function MobileNav({ items, className }: MobileNavProps) {
         </SheetHeader>
         <nav
           className="flex flex-1 flex-col gap-2 py-6"
-          aria-label="Mobile navigation"
+          aria-label={t.nav.mainNavAria}
         >
           {items.map((item) => (
             <SheetClose asChild key={item.href}>
@@ -96,34 +105,53 @@ export function MobileNav({ items, className }: MobileNavProps) {
           ))}
         </nav>
 
-        {/* Footer links */}
-        <div className="flex items-center gap-2 border-t border-(--color-canvas-border) px-4 py-4">
-          <a
-            href="https://buymeacoffee.com/sgro"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              "flex items-center gap-2 rounded-lg px-3 py-2",
-              "text-sm text-(--color-canvas-muted) hover:text-(--color-canvas-foreground)",
-              "transition-colors duration-200"
-            )}
-          >
-            <CoffeeIcon className="h-4 w-4" />
-            Buy me a coffee
-          </a>
-          <a
-            href="https://github.com/anthonysgro/geospoof"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              "flex items-center gap-2 rounded-lg px-3 py-2",
-              "text-sm text-(--color-canvas-muted) hover:text-(--color-canvas-foreground)",
-              "transition-colors duration-200"
-            )}
-          >
-            <GithubIcon className="h-4 w-4" />
-            GitHub
-          </a>
+        {/* Bottom group: primary CTA + secondary links, one padded section */}
+        <div className="mt-auto flex flex-col gap-3 border-t border-(--color-canvas-border) px-4 py-4">
+          <SheetClose asChild>
+            <a
+              href="#download"
+              onClick={(e) => handleLinkClick(e, "#download")}
+              className={cn(
+                "flex min-h-12 items-center justify-center px-6 py-2.5",
+                "bg-(--color-brand) text-white",
+                "rounded-(--radius-brand)",
+                "text-base font-semibold shadow-md",
+                "transition-all duration-200 hover:bg-(--color-brand-dark) hover:shadow-lg",
+                "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+              )}
+            >
+              {t.nav.download}
+            </a>
+          </SheetClose>
+
+          <div className="flex items-center gap-2">
+            <a
+              href="https://buymeacoffee.com/sgro"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                "flex items-center gap-2 rounded-lg px-3 py-2",
+                "text-sm text-(--color-canvas-muted) hover:text-(--color-canvas-foreground)",
+                "transition-colors duration-200"
+              )}
+            >
+              <CoffeeIcon className="h-4 w-4" />
+              {t.nav.buyMeACoffee}
+            </a>
+            <a
+              href="https://github.com/anthonysgro/geospoof"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                "flex items-center gap-2 rounded-lg px-3 py-2",
+                "text-sm text-(--color-canvas-muted) hover:text-(--color-canvas-foreground)",
+                "transition-colors duration-200"
+              )}
+            >
+              <GithubIcon className="h-4 w-4" />
+              GitHub
+            </a>
+          </div>
         </div>
       </SheetContent>
     </Sheet>

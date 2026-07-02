@@ -61,7 +61,7 @@ const GEOLOCATION_CALL_TIMEOUT_MS = 15_000
 function deriveLongTimezoneName(
   identifier: string,
   when: Date,
-  locale: string | undefined = undefined,
+  locale: string | undefined = undefined
 ): string {
   if (!identifier) return ""
   try {
@@ -308,9 +308,9 @@ const dateGetTimezoneOffsetTest = buildBehavioralTest<number>({
   group: "timezone-correctness",
   name: "Date.prototype.getTimezoneOffset agrees with Intl shortOffset",
   description:
-    "`new Date().getTimezoneOffset()` should equal the negated minute offset derived from `Intl.DateTimeFormat(..., { timeZoneName: \"shortOffset\" })` at the same instant. Both APIs describe the same runtime zone, so they must agree. A mismatch means one surface is spoofed and the other isn't.",
+    '`new Date().getTimezoneOffset()` should equal the negated minute offset derived from `Intl.DateTimeFormat(..., { timeZoneName: "shortOffset" })` at the same instant. Both APIs describe the same runtime zone, so they must agree. A mismatch means one surface is spoofed and the other isn\'t.',
   technique:
-    "Derive the east-of-UTC offset from Intl.DateTimeFormat with timeZoneName: \"shortOffset\" at the current instant, negate it, and compare to new Date().getTimezoneOffset().",
+    'Derive the east-of-UTC offset from Intl.DateTimeFormat with timeZoneName: "shortOffset" at the current instant, negate it, and compare to new Date().getTimezoneOffset().',
   codeSnippet: `const tz = new Intl.DateTimeFormat().resolvedOptions().timeZone
 const parts = new Intl.DateTimeFormat(undefined, {
   timeZone: tz,
@@ -412,7 +412,7 @@ const dateToLocaleStringTimezoneTest = buildBehavioralTest<string>({
   group: "timezone-correctness",
   name: "Date.prototype.toLocaleString honors the resolved timezone",
   description:
-    "`new Date().toLocaleString(undefined, { timeZoneName: \"long\" })` should contain the long timezone name derived from the current Intl resolved zone. A mismatch means toLocaleString and Intl disagree on the current timezone.",
+    '`new Date().toLocaleString(undefined, { timeZoneName: "long" })` should contain the long timezone name derived from the current Intl resolved zone. A mismatch means toLocaleString and Intl disagree on the current timezone.',
   technique:
     'Derive the long timezone name from Intl.DateTimeFormat at the current resolved zone, then call new Date().toLocaleString(undefined, { timeZoneName: "long" }) and assert the expected long name is a substring of the result.',
   codeSnippet: `const expected = /* long name derived from current Intl zone */
@@ -1081,7 +1081,9 @@ const geolocationOptionalFieldsNullTest = buildBehavioralTest<string>({
       return v === null || (typeof v === "number" && Number.isFinite(v))
     })
     return {
-      value: allPresentAndNative ? "all four present and native" : parts.join("; "),
+      value: allPresentAndNative
+        ? "all four present and native"
+        : parts.join("; "),
       describe: parts.join("; "),
     }
   },
@@ -1123,8 +1125,8 @@ Math.min(unixDelta, cfDelta) < 10_000`,
         settled = true
         reject(
           new Error(
-            `getCurrentPosition did not resolve within ${GEOLOCATION_CALL_TIMEOUT_MS}ms`,
-          ),
+            `getCurrentPosition did not resolve within ${GEOLOCATION_CALL_TIMEOUT_MS}ms`
+          )
         )
       }, GEOLOCATION_CALL_TIMEOUT_MS)
       try {
@@ -1149,7 +1151,7 @@ Math.min(unixDelta, cfDelta) < 10_000`,
             enableHighAccuracy: true,
             maximumAge: 0,
             timeout: GEOLOCATION_CALL_TIMEOUT_MS,
-          },
+          }
         )
       } catch (err) {
         clearTimeout(timer)

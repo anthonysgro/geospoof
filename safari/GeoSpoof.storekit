@@ -48,7 +48,7 @@
       "type" : "Consumable"
     },
     {
-      "displayPrice" : "49.99",
+      "displayPrice" : "24.99",
       "familyShareable" : false,
       "internalID" : "1000000004",
       "localizations" : [
@@ -74,11 +74,15 @@
         {
           "adHocOffers" : [],
           "codeOffers" : [],
-          "displayPrice" : "2.99",
+          "displayPrice" : "1.99",
           "familyShareable" : false,
           "groupNumber" : 1,
           "internalID" : "2000000001",
-          "introductoryOffer" : null,
+          "introductoryOffer" : {
+            "internalID" : "2000000011",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P3D"
+          },
           "localizations" : [
             {
               "description" : "Unlock all GeoSpoof Pro features.",
@@ -96,7 +100,7 @@
         {
           "adHocOffers" : [],
           "codeOffers" : [],
-          "displayPrice" : "19.99",
+          "displayPrice" : "9.99",
           "familyShareable" : false,
           "groupNumber" : 1,
           "internalID" : "2000000002",

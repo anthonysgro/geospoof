@@ -31,7 +31,11 @@ import type { LocationName } from "@/shared/types/settings";
 import { resolveAccuracy, computeEffectiveAccuracySetting } from "@/shared/accuracy/resolver";
 import { detectDeviceClass } from "@/shared/accuracy/device-class";
 import { setDebugEnabled, setVerbosityLevel, createLogger } from "@/shared/utils/debug-logger";
-import { computeEffectiveEnabled, normalizeDomain } from "@/shared/utils/scope";
+import {
+  computeEffectiveEnabled,
+  computeEffectivePreserveGeoPrompt,
+  normalizeDomain,
+} from "@/shared/utils/scope";
 import { loadSettings, updateSettings, validateAccuracySetting } from "./settings";
 
 const logger = createLogger("BG");
@@ -148,7 +152,10 @@ export async function handleMessage(
           debugLogging: settings.debugLogging,
           verbosityLevel: settings.verbosityLevel,
           webrtcProtection: settings.webrtcProtection,
-          preserveGeolocationPrompt: settings.preserveGeolocationPrompt,
+          preserveGeolocationPrompt: computeEffectivePreserveGeoPrompt(
+            settings.preserveGeolocationPrompt,
+            settings.proFeaturesBlocked
+          ),
           // Pro-gate custom accuracy on iOS Safari (force Realistic for a free
           // user); fail-open + Safari-only, like the scope gate above.
           accuracySetting: computeEffectiveAccuracySetting(

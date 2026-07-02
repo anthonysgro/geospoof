@@ -1,6 +1,9 @@
 import * as React from "react"
-import { Link } from "@tanstack/react-router"
+import type { Dictionary } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
+import { useTranslations } from "@/hooks/use-i18n"
+import { format } from "@/lib/i18n"
+import { LocaleLink } from "@/components/LocaleLink"
 
 interface FooterLink {
   label: string
@@ -19,42 +22,47 @@ interface FooterGroup {
 // (reachable mainly via the sitemap), which is a top reason crawlers leave
 // templated pages unindexed; linking them from every page is a real discovery
 // signal.
-const footerGroups: Array<FooterGroup> = [
-  {
-    title: "Guides",
-    links: [
-      { label: "Spoof location: all browsers", href: "/spoof-location" },
-      { label: "Spoof location in Chrome", href: "/spoof-location/chrome" },
-      { label: "Spoof location in Firefox", href: "/spoof-location/firefox" },
-      { label: "Spoof location in Edge", href: "/spoof-location/edge" },
-      { label: "Spoof location in Safari", href: "/spoof-location/safari" },
-      { label: "Spoof timezone", href: "/spoof-timezone" },
-    ],
-  },
-  {
-    title: "Learn",
-    links: [
-      { label: "Do you need a VPN?", href: "/vpn" },
-      { label: "Test your protection", href: "/verify" },
-      { label: "Engine-level Spoofing (Chrome)", href: "/engine-level-spoofing" },
-      { label: "Blog", href: "/blog" },
-      { label: "Support", href: "/support" },
-    ],
-  },
-  {
-    title: "Company",
-    links: [
-      { label: "About", href: "/about" },
-      { label: "Privacy Policy", href: "/privacy" },
-      { label: "Terms of Service", href: "/terms" },
-      {
-        label: "GitHub",
-        href: "https://github.com/anthonysgro/geospoof",
-        external: true,
-      },
-    ],
-  },
-]
+//
+// Labels come from the active dictionary; hrefs stay on the (English) canonical
+// pages until those routes are localized too.
+function getFooterGroups(t: Dictionary): Array<FooterGroup> {
+  return [
+    {
+      title: t.footer.groups.guides,
+      links: [
+        { label: t.footer.links.spoofAllBrowsers, href: "/spoof-location" },
+        { label: t.footer.links.spoofChrome, href: "/spoof-location/chrome" },
+        { label: t.footer.links.spoofFirefox, href: "/spoof-location/firefox" },
+        { label: t.footer.links.spoofEdge, href: "/spoof-location/edge" },
+        { label: t.footer.links.spoofSafari, href: "/spoof-location/safari" },
+        { label: t.footer.links.spoofTimezone, href: "/spoof-timezone" },
+      ],
+    },
+    {
+      title: t.footer.groups.learn,
+      links: [
+        { label: t.footer.links.needVpn, href: "/vpn" },
+        { label: t.footer.links.testProtection, href: "/verify" },
+        { label: t.footer.links.engineLevel, href: "/engine-level-spoofing" },
+        { label: t.footer.links.blog, href: "/blog" },
+        { label: t.footer.links.support, href: "/support" },
+      ],
+    },
+    {
+      title: t.footer.groups.company,
+      links: [
+        { label: t.footer.links.about, href: "/about" },
+        { label: t.footer.links.privacy, href: "/privacy" },
+        { label: t.footer.links.terms, href: "/terms" },
+        {
+          label: t.footer.links.github,
+          href: "https://github.com/anthonysgro/geospoof",
+          external: true,
+        },
+      ],
+    },
+  ]
+}
 
 const linkClass = cn(
   "text-body-base text-(--color-canvas-muted)",
@@ -69,7 +77,9 @@ interface FooterProps extends React.ComponentProps<"footer"> {
 }
 
 export function Footer({ className, ...props }: FooterProps) {
+  const { t } = useTranslations()
   const currentYear = new Date().getFullYear()
+  const footerGroups = getFooterGroups(t)
 
   return (
     <footer
@@ -82,14 +92,14 @@ export function Footer({ className, ...props }: FooterProps) {
       )}
       {...props}
     >
-      <div className="mx-auto max-w-[1200px]">
+      <div className="mx-auto max-w-300">
         <nav
-          aria-label="Footer navigation"
+          aria-label={t.footer.footerNavAria}
           className="grid grid-cols-2 gap-8 md:grid-cols-3"
         >
           {footerGroups.map((group) => (
             <div key={group.title}>
-              <h2 className="mb-3 text-small font-semibold tracking-wide text-(--color-canvas-foreground) uppercase">
+              <h2 className="text-small mb-3 font-semibold tracking-wide text-(--color-canvas-foreground) uppercase">
                 {group.title}
               </h2>
               <ul className="flex flex-col gap-1">
@@ -105,9 +115,9 @@ export function Footer({ className, ...props }: FooterProps) {
                         {link.label}
                       </a>
                     ) : (
-                      <Link to={link.href as "/"} className={linkClass}>
+                      <LocaleLink to={link.href as "/"} className={linkClass}>
                         {link.label}
-                      </Link>
+                      </LocaleLink>
                     )}
                   </li>
                 ))}
@@ -117,8 +127,8 @@ export function Footer({ className, ...props }: FooterProps) {
         </nav>
 
         {/* Copyright */}
-        <p className="mt-10 border-t border-(--color-canvas-border) pt-6 text-small text-(--color-canvas-muted)">
-          © {currentYear} GeoSpoof. All rights reserved.
+        <p className="text-small mt-10 border-t border-(--color-canvas-border) pt-6 text-(--color-canvas-muted)">
+          {format(t.footer.copyright, { year: currentYear })}
         </p>
       </div>
     </footer>

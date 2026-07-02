@@ -4,10 +4,13 @@
  */
 self.onmessage = function () {
   try {
-    const timeZone = new Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const offsetMinutes = new Date().getTimezoneOffset();
-    self.postMessage({ ok: true, timeZone, offsetMinutes });
+    const timeZone = new Intl.DateTimeFormat().resolvedOptions().timeZone
+    const offsetMinutes = new Date().getTimezoneOffset()
+    self.postMessage({ ok: true, timeZone, offsetMinutes })
   } catch (err) {
-    self.postMessage({ ok: false, error: err && err.message ? err.message : String(err) });
+    self.postMessage({
+      ok: false,
+      error: err && err.message ? err.message : String(err),
+    })
   }
-};
+}

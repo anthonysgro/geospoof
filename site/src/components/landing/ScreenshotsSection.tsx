@@ -1,14 +1,16 @@
 import { motion } from "motion/react"
+import { PhoneCarouselSection } from "./PhoneCarouselSection"
 import { useReducedMotion } from "@/hooks/use-reduced-motion"
 import { useTheme } from "@/hooks/use-theme"
 import { cn } from "@/lib/utils"
-import { PhoneCarouselSection } from "./PhoneCarouselSection"
+import { useTranslations } from "@/hooks/use-i18n"
 
 export function ScreenshotsSection({ className }: { className?: string }) {
   const prefersReducedMotion = useReducedMotion()
   const MotionDiv = prefersReducedMotion ? "div" : motion.div
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === "dark"
+  const { t } = useTranslations()
 
   // Responsive srcset — serve the smallest variant that covers the
   // displayed width at 1× DPR. The image is constrained to 1600px by
@@ -23,18 +25,18 @@ export function ScreenshotsSection({ className }: { className?: string }) {
   return (
     <section className={cn("w-full py-16 md:py-24", className)}>
       {/* Heading — constrained width */}
-      <div className="mx-auto mb-10 max-w-[1200px] px-6 text-center md:px-12 lg:px-16">
+      <div className="mx-auto mb-10 max-w-300 px-6 text-center md:px-12 lg:px-16">
         <p className="mb-3 text-sm font-semibold tracking-widest text-(--color-brand) uppercase">
-          See it in action
+          {t.screenshots.eyebrow}
         </p>
         <h2 className="text-3xl font-bold text-(--color-canvas-foreground) md:text-4xl">
-          Works everywhere you browse
+          {t.screenshots.heading}
         </h2>
       </div>
 
       {/* Full-bleed image with subtle frame */}
       <MotionDiv
-        className="mx-auto w-full max-w-[1600px] px-4 md:px-6"
+        className="mx-auto w-full max-w-400 px-4 md:px-6"
         {...(!prefersReducedMotion && {
           initial: { opacity: 0, y: 32 },
           whileInView: { opacity: 1, y: 0 },
@@ -51,7 +53,7 @@ export function ScreenshotsSection({ className }: { className?: string }) {
             />
             <img
               src={desktopPng}
-              alt="GeoSpoof browser extension running on desktop — showing location spoofing in action"
+              alt={t.screenshots.desktopAlt}
               width={3058}
               height={1906}
               loading="lazy"

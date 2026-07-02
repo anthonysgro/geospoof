@@ -54,8 +54,7 @@ export function FailedTestsPreview({
             of {totalCount}
           </p>
           <p className="mt-0.5 text-xs text-(--color-canvas-muted)">
-            Filter the Detectable Issues section below to see only the
-            failures.
+            Filter the Detectable Issues section below to see only the failures.
           </p>
         </div>
       </div>

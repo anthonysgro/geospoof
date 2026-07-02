@@ -2,7 +2,7 @@
  * Classic Worker that uses importScripts to load a secondary script.
  * Tests whether importScripts-loaded code also sees the spoofed timezone.
  */
-importScripts("./importscripts-helper.js");
+importScripts("./importscripts-helper.js")
 
 self.onmessage = function () {
   // __helperResult is set by the imported script
@@ -10,13 +10,16 @@ self.onmessage = function () {
     var direct = {
       timeZone: new Intl.DateTimeFormat().resolvedOptions().timeZone,
       offsetMinutes: new Date().getTimezoneOffset(),
-    };
+    }
     self.postMessage({
       ok: true,
       direct: direct,
       imported: self.__helperResult || null,
-    });
+    })
   } catch (err) {
-    self.postMessage({ ok: false, error: err && err.message ? err.message : String(err) });
+    self.postMessage({
+      ok: false,
+      error: err && err.message ? err.message : String(err),
+    })
   }
-};
+}

@@ -1,70 +1,65 @@
 import { Section } from "./Section"
+import type { Platform } from "@/hooks/use-platform"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
-import { usePlatform, type Platform } from "@/hooks/use-platform"
+import { BrowserLogo } from "@/components/BrowserLogo"
+import type { BrowserLogoName } from "@/components/BrowserLogo"
+import { usePlatform } from "@/hooks/use-platform"
+import { useTranslations } from "@/hooks/use-i18n"
 
 interface DownloadOption {
+  id: "firefox" | "chromium" | "apple"
   /** Which detected platform this store serves (undefined = no auto-match). */
   platform?: Exclude<Platform, "unknown">
+  /** Store brand name — a proper noun, kept as-is across locales. */
   name: string
-  description: string
-  /** Square brand logo shown on the card. */
-  icon: string
-  /** Verb used in the smart primary button, e.g. "Add to Firefox". */
-  cta: string
+  /** Inlined browser logo shown on the card. */
+  logo: BrowserLogoName
   href: (campaign: string) => string
   primary?: boolean
   badge?: string
 }
 
+// Static store metadata. Display copy (description, CTA verb) is pulled from
+// the active dictionary at render time via `t.download.stores[id]`.
 const downloads: Array<DownloadOption> = [
   {
+    id: "firefox",
     platform: "firefox",
     name: "Firefox Add-ons",
-    description: "Firefox 140+ on desktop and Android",
-    icon: "/images/stores/firefox-store-icon.png",
-    cta: "Add to Firefox",
+    logo: "firefox",
     href: (campaign) =>
       `https://addons.mozilla.org/firefox/addon/geo-spoof/?utm_source=geospoof.com&utm_medium=website&utm_campaign=${campaign === "homepage" ? "download" : campaign}`,
     primary: true,
   },
   {
+    id: "chromium",
     platform: "chromium",
     name: "Chrome Web Store",
-    description: "Chrome, Brave, and Edge",
-    icon: "/images/stores/chrome-store-icon.png",
-    cta: "Add to Chrome",
+    logo: "chrome",
     href: (campaign) =>
       `https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje?utm_source=geospoof.com&utm_medium=website&utm_campaign=${campaign === "homepage" ? "download" : campaign}`,
     primary: true,
   },
   {
+    id: "apple",
     platform: "apple",
     name: "App Store",
-    description: "Safari on iOS and macOS",
-    icon: "/images/stores/safari-icon.png",
-    cta: "Get on the App Store",
+    logo: "safari",
     href: (campaign) =>
       `https://apps.apple.com/app/apple-store/id6765719745?pt=128299974&ct=${campaign === "homepage" ? "dotcom" : campaign}&mt=8`,
     primary: true,
   },
 ]
 
-const selfHosted: Array<DownloadOption & { icon: string }> = [
+const selfHosted: Array<{
+  id: "xpi"
+  logo: BrowserLogoName
+  href: () => string
+}> = [
   {
-    name: "Direct download (macOS)",
-    description:
-      "Notarized DMG for Safari on macOS. No Apple ID required. Manual updates — re-download to upgrade.",
-    icon: "/images/stores/dmg-install-icon.png",
-    cta: "GitHub Releases",
-    href: () => "https://github.com/anthonysgro/geospoof/releases/latest",
-  },
-  {
-    name: "Self-hosted XPI (Firefox)",
-    description:
-      "Signed XPI for Firefox forks or manual installs. Auto-updates via our update manifest.",
-    icon: "/images/stores/github-store-icon.svg",
-    cta: "GitHub Releases",
+    id: "xpi",
+    logo: "github",
     href: () => "https://github.com/anthonysgro/geospoof/releases/latest",
   },
 ]
@@ -77,6 +72,7 @@ export function DownloadSection({
   campaign?: string
 }) {
   const platform = usePlatform()
+  const { t } = useTranslations()
   const recommended = downloads.find((d) => d.platform === platform)
 
   // Show the matched store first; the rest keep their original order. On the
@@ -90,14 +86,13 @@ export function DownloadSection({
     <Section id="download" className={cn("py-16! md:py-24!", className)}>
       <div className="mb-12 text-center">
         <p className="mb-3 text-sm font-semibold tracking-widest text-(--color-brand) uppercase">
-          Download
+          {t.download.eyebrow}
         </p>
         <h2 className="mb-4 text-3xl font-bold text-(--color-canvas-foreground) md:text-4xl">
-          Get GeoSpoof free
+          {t.download.heading}
         </h2>
         <p className="mx-auto max-w-xl text-(--color-canvas-muted)">
-          Available on all major browsers. No account required, no telemetry, no
-          tracking.
+          {t.download.subhead}
         </p>
       </div>
 
@@ -118,28 +113,21 @@ export function DownloadSection({
                 "cursor-pointer hover:border-(--color-brand) hover:shadow-lg",
                 "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)",
                 isRecommended
-                  ? "border-(--color-brand) ring-1 ring-(--color-brand)/40 shadow-md"
+                  ? "border-(--color-brand) shadow-md ring-1 ring-brand/40"
                   : "border-(--color-canvas-border)"
               )}
             >
               {isRecommended ? (
                 <Badge className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-(--color-brand) text-white">
-                  Recommended for you
+                  {t.download.recommendedBadge}
                 </Badge>
               ) : null}
-              <img
-                src={d.icon}
-                alt=""
-                aria-hidden="true"
-                className="h-12 w-12 object-contain"
-                width={48}
-                height={48}
-              />
+              <BrowserLogo name={d.logo} className="size-12" />
               <span className="text-lg font-bold text-(--color-canvas-foreground)">
                 {d.name}
               </span>
               <span className="text-sm text-(--color-canvas-muted)">
-                {d.description}
+                {t.download.stores[d.id].description}
               </span>
               {d.badge ? (
                 <Badge variant="secondary" className="mt-auto">
@@ -147,7 +135,7 @@ export function DownloadSection({
                 </Badge>
               ) : (
                 <span className="mt-auto inline-block rounded-full bg-(--color-brand)/10 px-3 py-1 text-xs font-semibold text-(--color-brand)">
-                  Install free →
+                  {t.download.installFree} →
                 </span>
               )}
             </a>
@@ -158,45 +146,41 @@ export function DownloadSection({
       {/* Self-hosted options */}
       <div className="mx-auto max-w-3xl">
         <h3 className="mb-4 text-center text-sm font-semibold tracking-widest text-(--color-canvas-muted) uppercase">
-          Other ways to download
+          {t.download.otherWays}
         </h3>
         <div className="space-y-3">
-        {selfHosted.map((option) => (
-          <div
-            key={option.name}
-            className="flex flex-col gap-3 rounded-xl border border-(--color-canvas-border) px-6 py-4 md:flex-row md:items-center"
-          >
-            <img
-              src={option.icon}
-              alt=""
-              aria-hidden="true"
-              className="hidden h-8 w-8 object-contain md:block"
-              width={32}
-              height={32}
-            />
-            <div className="flex-1">
-              <span className="text-sm font-semibold text-(--color-canvas-foreground)">
-                {option.name}
-              </span>
-              <p className="mt-0.5 text-xs text-(--color-canvas-muted)">
-                {option.description}
-              </p>
-            </div>
-            <a
-              href={option.href(campaign)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={cn(
-                "shrink-0 rounded-lg border border-(--color-canvas-border) px-4 py-2",
-                "text-sm font-medium text-(--color-canvas-foreground)",
-                "transition-colors hover:border-(--color-brand) hover:text-(--color-brand)",
-                "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
-              )}
+          {selfHosted.map((option) => (
+            <div
+              key={option.id}
+              className="flex flex-col gap-3 rounded-xl border border-(--color-canvas-border) px-6 py-4 md:flex-row md:items-center"
             >
-              {option.cta} →
-            </a>
-          </div>
-        ))}
+              <BrowserLogo
+                name={option.logo}
+                className="hidden size-8 text-(--color-canvas-foreground) md:block"
+              />
+              <div className="flex-1">
+                <span className="text-sm font-semibold text-(--color-canvas-foreground)">
+                  {t.download.selfHosted[option.id].name}
+                </span>
+                <p className="mt-0.5 text-xs text-(--color-canvas-muted)">
+                  {t.download.selfHosted[option.id].description}
+                </p>
+              </div>
+              <a
+                href={option.href()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                  "shrink-0 rounded-lg border border-(--color-canvas-border) px-4 py-2",
+                  "text-sm font-medium text-(--color-canvas-foreground)",
+                  "transition-colors hover:border-(--color-brand) hover:text-(--color-brand)",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+                )}
+              >
+                {t.download.selfHosted.cta} →
+              </a>
+            </div>
+          ))}
         </div>
       </div>
     </Section>

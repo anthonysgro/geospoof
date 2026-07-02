@@ -2,6 +2,8 @@ import * as React from "react"
 import type { Platform } from "@/hooks/use-platform"
 import { cn } from "@/lib/utils"
 import { usePlatform } from "@/hooks/use-platform"
+import { BrowserLogo } from "@/components/BrowserLogo"
+import type { BrowserLogoName } from "@/components/BrowserLogo"
 
 /** Recursively extract the plain-text content of a React node, for slug ids. */
 function nodeText(node: React.ReactNode): string {
@@ -80,8 +82,20 @@ export function ThemeImage({
   return (
     <span className={cn("my-6 block", wrapperClassName)}>
       <span className="block overflow-hidden rounded-md-brand border border-(--color-canvas-border) bg-card p-2 shadow-md ring-1 ring-black/5 sm:p-3 dark:ring-white/10">
-        <img src={light} alt={alt} loading="lazy" decoding="async" className={cn(imgClass, "dark:hidden")} />
-        <img src={dark} alt={alt} loading="lazy" decoding="async" className={cn(imgClass, "hidden dark:block")} />
+        <img
+          src={light}
+          alt={alt}
+          loading="lazy"
+          decoding="async"
+          className={cn(imgClass, "dark:hidden")}
+        />
+        <img
+          src={dark}
+          alt={alt}
+          loading="lazy"
+          decoding="async"
+          className={cn(imgClass, "hidden dark:block")}
+        />
       </span>
       {caption && (
         <span className="text-small mt-2 block text-center text-(--color-canvas-muted)">
@@ -127,7 +141,12 @@ export function Compare({
       <span className="text-small mb-2 block text-center font-semibold text-(--color-canvas-foreground)">
         {label}
       </span>
-      <ThemeImage light={light} dark={dark} alt={`${label}: ${alt}`} wrapperClassName="my-0" />
+      <ThemeImage
+        light={light}
+        dark={dark}
+        alt={`${label}: ${alt}`}
+        wrapperClassName="my-0"
+      />
     </span>
   )
   return (
@@ -137,7 +156,7 @@ export function Compare({
     // `ml-[50%]` + `-translate-x-1/2` — up to the same 1200px the wide page
     // sections use. Gated at `lg` because narrower viewports have no room to
     // gain (and the panes stack on mobile anyway).
-    <span className="my-6 block lg:ml-[50%] lg:w-[min(1200px,92vw)] lg:-translate-x-1/2">
+    <span className="my-6 block lg:ml-[50%] lg:w-[min(75rem,92vw)] lg:-translate-x-1/2">
       <span className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {figure(leftLabel, leftLight, leftDark)}
         {figure(rightLabel, rightLight, rightDark)}
@@ -190,13 +209,13 @@ export function ImagePair({
           alt={`${label}: ${alt}`}
           loading="lazy"
           decoding="async"
-          className="mx-auto block h-auto w-full max-w-[260px] rounded-sm-brand"
+          className="mx-auto block h-auto w-full max-w-65 rounded-sm-brand"
         />
       </span>
     </span>
   )
   return (
-    <span className="mx-auto my-6 block max-w-[640px]">
+    <span className="mx-auto my-6 block max-w-160">
       <span className="grid grid-cols-2 gap-4">
         {figure(leftLabel, leftSrc)}
         {figure(rightLabel, rightSrc)}
@@ -224,12 +243,9 @@ export function ImagePair({
  * branding stays compliant with Apple's marketing guidelines. The `campaign`
  * prop feeds App Store Connect's `ct` attribution token.
  */
-export function AppStoreBadges({
-  campaign = "blog",
-}: {
-  campaign?: string
-}) {
-  const base = "https://apps.apple.com/app/apple-store/id6765719745?pt=128299974"
+export function AppStoreBadges({ campaign = "blog" }: { campaign?: string }) {
+  const base =
+    "https://apps.apple.com/app/apple-store/id6765719745?pt=128299974"
   const linkClass =
     "transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) focus-visible:ring-offset-2 rounded-md-brand"
   return (
@@ -283,7 +299,7 @@ function DownloadCTA({ campaign = "blog" }: { campaign?: string }) {
     platform: Exclude<Platform, "unknown">
     name: string
     detail: string
-    icon: string
+    logo: BrowserLogoName
     cta: string
     href: string
   }> = [
@@ -291,7 +307,7 @@ function DownloadCTA({ campaign = "blog" }: { campaign?: string }) {
       platform: "firefox",
       name: "Firefox",
       detail: "Desktop & Android",
-      icon: "/images/stores/firefox-store-icon.png",
+      logo: "firefox",
       cta: "Add to Firefox",
       href: `https://addons.mozilla.org/firefox/addon/geo-spoof/?utm_source=geospoof.com&utm_medium=blog&utm_campaign=${campaign}`,
     },
@@ -299,7 +315,7 @@ function DownloadCTA({ campaign = "blog" }: { campaign?: string }) {
       platform: "chromium",
       name: "Chrome",
       detail: "Chrome, Brave & Edge",
-      icon: "/images/stores/chrome-store-icon.png",
+      logo: "chrome",
       cta: "Add to Chrome",
       href: `https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje?utm_source=geospoof.com&utm_medium=blog&utm_campaign=${campaign}`,
     },
@@ -307,7 +323,7 @@ function DownloadCTA({ campaign = "blog" }: { campaign?: string }) {
       platform: "apple",
       name: "iPhone, iPad & Mac",
       detail: "Safari via the App Store",
-      icon: "/images/stores/safari-icon.png",
+      logo: "safari",
       cta: "Get on the App Store",
       href: `https://apps.apple.com/app/apple-store/id6765719745?pt=128299974&ct=${campaign}&mt=8`,
     },
@@ -344,18 +360,13 @@ function DownloadCTA({ campaign = "blog" }: { campaign?: string }) {
                 Your browser
               </span>
             )}
-            <img
-              src={s.icon}
-              alt=""
-              aria-hidden="true"
-              width={40}
-              height={40}
-              className="h-10 w-10 object-contain"
-            />
+            <BrowserLogo name={s.logo} className="size-10" />
             <span className="text-sm font-bold text-(--color-canvas-foreground)">
               {s.name}
             </span>
-            <span className="text-xs text-(--color-canvas-muted)">{s.detail}</span>
+            <span className="text-xs text-(--color-canvas-muted)">
+              {s.detail}
+            </span>
             <span className="mt-1 inline-block text-xs font-semibold text-(--color-brand)">
               {s.cta} →
             </span>

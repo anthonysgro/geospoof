@@ -29,7 +29,13 @@
 //   turns "someone bumped geo-tz and forgot to version the path" from a silent,
 //   user-facing data-corruption bug into a loud, local build failure.
 
-import { copyFileSync, mkdirSync, existsSync, statSync, readFileSync } from "node:fs"
+import {
+  copyFileSync,
+  mkdirSync,
+  existsSync,
+  statSync,
+  readFileSync,
+} from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -49,7 +55,10 @@ function fail(msg) {
 
 // 1. The version actually installed in node_modules (what we're about to copy).
 const installedVersion = JSON.parse(
-  readFileSync(path.join(siteRoot, "node_modules", "geo-tz", "package.json"), "utf-8")
+  readFileSync(
+    path.join(siteRoot, "node_modules", "geo-tz", "package.json"),
+    "utf-8"
+  )
 ).version
 
 // 2. The literal the SITE's verify page builds its URL from.
@@ -64,7 +73,12 @@ const siteVersion = siteMatch ? siteMatch[1] : null
 //    the extension source ABOVE the site dir, so it's only present when the full
 //    repo is checked out (local dev, full-repo CI) — NOT in Vercel's site-rooted
 //    build context. Check it opportunistically; never require it.
-const extensionDataPath = path.join(repoRoot, "src", "shared", "geo-tz-data.json")
+const extensionDataPath = path.join(
+  repoRoot,
+  "src",
+  "shared",
+  "geo-tz-data.json"
+)
 const canonicalVersion = existsSync(extensionDataPath)
   ? JSON.parse(readFileSync(extensionDataPath, "utf-8")).version
   : null
@@ -126,7 +140,9 @@ for (const file of FILES) {
     const dest = path.join(outDir, file)
     copyFileSync(src, dest)
     const mb = (statSync(dest).size / 1024 / 1024).toFixed(1)
-    console.log(`[geo-tz] copied ${file} (${mb} MB) → ${path.relative(siteRoot, dest)}`)
+    console.log(
+      `[geo-tz] copied ${file} (${mb} MB) → ${path.relative(siteRoot, dest)}`
+    )
   }
 }
 

@@ -92,6 +92,19 @@ export async function loadSettings(): Promise<void> {
 
     renderScope(settings, proLocked);
 
+    // Preserve-location-prompts is Pro-gated on iOS Safari (parity with custom
+    // accuracy / per-site filtering). For a non-Pro user the background already
+    // forces the free behavior (auto-grant, no prompt); this disables the toggle
+    // and shows the Pro note so the popup explains why it can't be turned on.
+    if (preserveGeoPromptToggle) {
+      preserveGeoPromptToggle.disabled = proLocked;
+      if (proLocked) preserveGeoPromptToggle.checked = false;
+    }
+    const preserveGeoPromptProNote = document.getElementById("preserveGeoPromptProNote");
+    if (preserveGeoPromptProNote) {
+      preserveGeoPromptProNote.style.display = proLocked ? "block" : "none";
+    }
+
     updateDetailsView(settings);
 
     // Restore debug logging toggle state

@@ -204,6 +204,7 @@ struct SettingsView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
+                    PreservePromptRows(controller: controller)
                 } header: {
                     Text("Advanced")
                 }

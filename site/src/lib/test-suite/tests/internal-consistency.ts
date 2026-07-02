@@ -841,8 +841,8 @@ d.getMonth() === 5`,
   },
 })
 
-const setFullYearRoundTripsThroughGetFullYearTest =
-  buildBehavioralTest<number>({
+const setFullYearRoundTripsThroughGetFullYearTest = buildBehavioralTest<number>(
+  {
     id: "consistency.timezone.setfullyear-roundtrips-through-getfullyear",
     group: "internal-consistency",
     name: "setFullYear followed by getFullYear returns the value set",
@@ -865,10 +865,11 @@ d.getFullYear() === 2030`,
       const value = d.getFullYear()
       return { value, describe: `getFullYear() returned ${value}` }
     },
-  })
+  }
+)
 
-const epochOneSevenNineteenSeventyIsMidnightTest =
-  buildBehavioralTest<boolean>({
+const epochOneSevenNineteenSeventyIsMidnightTest = buildBehavioralTest<boolean>(
+  {
     id: "consistency.timezone.epoch-1970-07-01-is-midnight-in-spoofed-zone",
     group: "internal-consistency",
     name: "new Date('07/01/1970') lands on midnight local (spoofed) time",
@@ -899,7 +900,8 @@ d.getMilliseconds() === 0`,
         describe: `h=${h}, m=${m}, s=${s}, ms=${ms}`,
       }
     },
-  })
+  }
+)
 
 const newDateEqualsDateCallTest = buildBehavioralTest<string>({
   id: "consistency.timezone.new-date-equals-date-function-call",
@@ -918,7 +920,10 @@ a.slice(a.indexOf("GMT")) === b.slice(b.indexOf("GMT"))`,
     const a = new Date().toString()
     const idx = a.indexOf("GMT")
     const tail = idx === -1 ? "" : a.slice(idx)
-    return { value: tail, describe: `new Date().toString() zone tail: "${tail}"` }
+    return {
+      value: tail,
+      describe: `new Date().toString() zone tail: "${tail}"`,
+    }
   },
   observe: async () => {
     // Date() (no new) returns a string of the current time.
@@ -935,7 +940,7 @@ const dateEpochSurfacesAgreeTest = buildBehavioralTest<boolean>({
   group: "internal-consistency",
   name: "Date.now, +new Date, valueOf, and getTime return the same epoch",
   description:
-    'CreepJS\'s valid.nowTime check samples four ways to read the current epoch — Date.now(), +new Date(), new Date().getTime(), new Date().valueOf() — and asserts they all agree (within the millisecond those four calls take to execute). A spoofer that adjusts the epoch on one surface but not another diverges here. We tolerate a 10ms drift between the first and last sample to absorb slow machines; any gap larger than that is a genuine inconsistency.',
+    "CreepJS's valid.nowTime check samples four ways to read the current epoch — Date.now(), +new Date(), new Date().getTime(), new Date().valueOf() — and asserts they all agree (within the millisecond those four calls take to execute). A spoofer that adjusts the epoch on one surface but not another diverges here. We tolerate a 10ms drift between the first and last sample to absorb slow machines; any gap larger than that is a genuine inconsistency.",
   technique:
     "Sample the four surfaces back-to-back and assert all four values fall within a 10ms window. This is the wall-clock equivalent of dateNowMonotonic but spans four independent entry points to the same underlying epoch.",
   codeSnippet: `const a = Date.now()
@@ -968,7 +973,7 @@ const utcSurfacesAgreeTest = buildBehavioralTest<string>({
   group: "internal-consistency",
   name: "toISOString, toJSON, and JSON.stringify agree on UTC representation",
   description:
-    'CreepJS\'s valid.utcTime check compares three UTC surfaces — new Date().toISOString(), new Date().toJSON(), and JSON.stringify(new Date()).slice(1, -1) — and asserts they all match. These surfaces are intentionally NOT overridden (they expose UTC, not local time), so they should all agree by default. A spoofer that accidentally hooks one of them will regress here.',
+    "CreepJS's valid.utcTime check compares three UTC surfaces — new Date().toISOString(), new Date().toJSON(), and JSON.stringify(new Date()).slice(1, -1) — and asserts they all match. These surfaces are intentionally NOT overridden (they expose UTC, not local time), so they should all agree by default. A spoofer that accidentally hooks one of them will regress here.",
   technique:
     "Anchor on ctx.getIdentity().startedAt for a single Date, produce the three UTC surfaces, and assert they're pairwise equal. Using a fixed instant avoids millisecond-boundary flake that sampling `new Date()` three times would introduce.",
   codeSnippet: `const d = new Date(identity.startedAt)
@@ -987,7 +992,9 @@ a === b && a === c`,
     const json = instant.toJSON()
     const stringified = JSON.stringify(instant).slice(1, -1)
     const allAgree = iso === json && iso === stringified
-    const value = allAgree ? iso : `DIVERGED: iso=${iso}, toJSON=${json}, stringify=${stringified}`
+    const value = allAgree
+      ? iso
+      : `DIVERGED: iso=${iso}, toJSON=${json}, stringify=${stringified}`
     return {
       value,
       describe: allAgree

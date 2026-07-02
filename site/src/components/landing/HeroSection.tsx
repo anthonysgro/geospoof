@@ -1,13 +1,14 @@
 import { motion } from "motion/react"
-import type { MouseEvent } from "react"
-import { Link } from "@tanstack/react-router"
 import { Section } from "./Section"
+import type { MouseEvent } from "react"
 import { cn } from "@/lib/utils"
 import { useReducedMotion } from "@/hooks/use-reduced-motion"
 import { useTheme } from "@/hooks/use-theme"
 import { usePlatform } from "@/hooks/use-platform"
 import { getStoreLink } from "@/lib/store-links"
 import { Badge } from "@/components/ui/badge"
+import { useTranslations } from "@/hooks/use-i18n"
+import { LocaleLink } from "@/components/LocaleLink"
 
 const heroTextVariants = {
   hidden: { opacity: 0, y: 24 },
@@ -36,6 +37,7 @@ export function HeroSection({ className }: { className?: string }) {
   const MotionDiv = prefersReducedMotion ? "div" : motion.div
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === "dark"
+  const { t } = useTranslations()
 
   const platform = usePlatform()
   const store = getStoreLink(platform)
@@ -95,7 +97,7 @@ export function HeroSection({ className }: { className?: string }) {
               />
               <img
                 src={ios2Png}
-                alt="GeoSpoof app — secondary view"
+                alt={t.hero.secondaryPhoneAlt}
                 width={1070}
                 height={2185}
                 className="w-full"
@@ -110,7 +112,7 @@ export function HeroSection({ className }: { className?: string }) {
               />
               <img
                 src={ios1Png}
-                alt="GeoSpoof app — main view"
+                alt={t.hero.mainPhoneAlt}
                 width={1070}
                 height={2185}
                 className="w-full"
@@ -133,21 +135,19 @@ export function HeroSection({ className }: { className?: string }) {
             variant="outline"
             className="mb-4 border-brand/30 bg-brand/10 tracking-wide text-(--color-brand) uppercase"
           >
-            VPN Companion · Extension
+            {t.hero.badge}
           </Badge>
 
           <h1 className="mb-4 text-4xl leading-tight font-bold text-(--color-canvas-foreground) sm:mb-6 md:text-5xl xl:text-[4.5rem]">
-            Finish what{" "}
+            {t.hero.headlinePre}
             <span className="whitespace-nowrap text-(--color-brand)">
-              your VPN
-            </span>{" "}
-            started
+              {t.hero.headlineEmphasis}
+            </span>
+            {t.hero.headlinePost}
           </h1>
 
           <p className="mb-6 max-w-xl text-base text-(--color-canvas-muted) sm:mb-8 md:text-lg xl:text-xl">
-            A VPN changes your IP, but your browser still leaks your real
-            location. GeoSpoof matches it to your VPN automatically — and keeps
-            it matched as you switch servers.
+            {t.hero.subhead}
           </p>
 
           <div className="flex w-full flex-col items-center gap-3 xl:w-auto xl:items-start">
@@ -166,7 +166,7 @@ export function HeroSection({ className }: { className?: string }) {
                     "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
                   )}
                 >
-                  {store.cta}
+                  {t.storeCta[store.key]}
                 </a>
               ) : (
                 <a
@@ -181,10 +181,10 @@ export function HeroSection({ className }: { className?: string }) {
                     "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
                   )}
                 >
-                  Download Free
+                  {t.hero.downloadFree}
                 </a>
               )}
-              <Link
+              <LocaleLink
                 to="/verify"
                 className={cn(
                   "group inline-flex items-center justify-center gap-2.5",
@@ -199,8 +199,8 @@ export function HeroSection({ className }: { className?: string }) {
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75" />
                   <span className="relative inline-flex size-2.5 rounded-full bg-green-500" />
                 </span>
-                See what sites detect
-              </Link>
+                {t.hero.seeWhatSitesDetect}
+              </LocaleLink>
             </div>
             {/* When we've matched a store, still let people reach the others. */}
             {store ? (
@@ -209,7 +209,7 @@ export function HeroSection({ className }: { className?: string }) {
                 onClick={scrollToDownload}
                 className="text-sm text-(--color-canvas-muted) underline-offset-4 transition-colors hover:text-(--color-canvas-foreground) hover:underline"
               >
-                All platforms &amp; browsers
+                {t.hero.allPlatforms}
               </a>
             ) : null}
           </div>
@@ -220,7 +220,7 @@ export function HeroSection({ className }: { className?: string }) {
               <span className="font-semibold text-(--color-canvas-foreground)">
                 5,000+
               </span>{" "}
-              users
+              {t.hero.usersSuffix}
             </span>
             <span
               className="hidden h-3.5 w-px bg-(--color-canvas-border) sm:block"
@@ -234,7 +234,7 @@ export function HeroSection({ className }: { className?: string }) {
                 <span className="font-semibold text-(--color-canvas-foreground)">
                   5.0
                 </span>{" "}
-                Firefox
+                {t.hero.firefoxRating}
               </span>
             </span>
           </div>

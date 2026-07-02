@@ -313,7 +313,7 @@ const iframeDateToStringTest = buildBehavioralTest<string>({
   group: "timezone-stealth",
   name: "iframe.contentWindow.Date.prototype.toString carries the spoofed zone name",
   description:
-    'The GMT-offset-and-zone-name tail of `new iframe.contentWindow.Date().toString()` must match the tail from `new Date().toString()`. Both are formatted through the spoofed Date.prototype.toString override, which the iframe patcher installs on the iframe realm. A mismatch means the iframe-realm toString override didn\'t install and the iframe-realm Date formats in the real system zone while the top-level formats in the spoofed zone.',
+    "The GMT-offset-and-zone-name tail of `new iframe.contentWindow.Date().toString()` must match the tail from `new Date().toString()`. Both are formatted through the spoofed Date.prototype.toString override, which the iframe patcher installs on the iframe realm. A mismatch means the iframe-realm toString override didn't install and the iframe-realm Date formats in the real system zone while the top-level formats in the spoofed zone.",
   technique:
     'Mount an about:blank iframe, anchor both Date instances on the same fixed epoch (ctx.getIdentity().startedAt) to eliminate inter-call jitter, then capture and compare the "GMT±HHMM (Zone Name)" substring of both toString outputs.',
   codeSnippet: `const e = identity.startedAt

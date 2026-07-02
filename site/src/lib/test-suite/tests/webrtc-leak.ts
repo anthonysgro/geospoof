@@ -84,7 +84,7 @@ function debugEnabled(): boolean {
 }
 function log(...args: Array<unknown>): void {
   if (!debugEnabled()) return
-   
+
   console.log("[webrtc-leak]", ...args)
 }
 
@@ -236,14 +236,14 @@ function parseCandidateLine(line: string): {
  */
 async function gatherCandidates(
   pc: RTCPeerConnection,
-  opts: { collectStats?: boolean } = {},
+  opts: { collectStats?: boolean } = {}
 ): Promise<GatherResult> {
   const collected: Array<GatheredCandidate> = []
   const seenLines = new Set<string>()
 
   const ingestLine = (
     line: string,
-    source: "event" | "sdp",
+    source: "event" | "sdp"
   ): GatheredCandidate | null => {
     if (seenLines.has(line)) return null
     seenLines.add(line)
@@ -274,7 +274,7 @@ async function gatherCandidates(
       lines.length,
       "lines,",
       candidateLines.length,
-      "candidate line(s)",
+      "candidate line(s)"
     )
     let sawPublic = false
     for (const rawLine of lines) {
@@ -306,7 +306,7 @@ async function gatherCandidates(
   } catch (err) {
     log("createDataChannel threw:", err)
     throw new SkipTestError(
-      "RTCPeerConnection.createDataChannel is unavailable in this context — cannot drive ICE gathering.",
+      "RTCPeerConnection.createDataChannel is unavailable in this context — cannot drive ICE gathering."
     )
   }
 
@@ -318,7 +318,6 @@ async function gatherCandidates(
     const offer = await pc.createOffer({
       offerToReceiveAudio: true,
       offerToReceiveVideo: true,
-       
     } as any)
     await pc.setLocalDescription(offer)
   } catch (err) {
@@ -328,7 +327,7 @@ async function gatherCandidates(
       await pc.setLocalDescription(offer)
     } catch (err2) {
       throw new SkipTestError(
-        `createOffer / setLocalDescription failed: ${err2 instanceof Error ? err2.message : String(err2)}`,
+        `createOffer / setLocalDescription failed: ${err2 instanceof Error ? err2.message : String(err2)}`
       )
     }
   }
@@ -338,7 +337,14 @@ async function gatherCandidates(
     const finish = async (reason: string): Promise<void> => {
       if (done) return
       done = true
-      log("finish() reason:", reason, "gathering:", pc.iceGatheringState, "connection:", pc.iceConnectionState)
+      log(
+        "finish() reason:",
+        reason,
+        "gathering:",
+        pc.iceGatheringState,
+        "connection:",
+        pc.iceConnectionState
+      )
       // Final SDP drain — essential on Firefox, which populates the
       // SDP only when gathering completes.
       pollSdp("final-drain")
@@ -377,7 +383,7 @@ async function gatherCandidates(
 
     const deadlineTimer = setTimeout(
       () => void finish("budget-exhausted"),
-      GATHERING_BUDGET_MS,
+      GATHERING_BUDGET_MS
     )
   })
 }
@@ -405,7 +411,7 @@ async function runTopLevelGather(opts: {
     pc = new RTCPeerConnection({ iceServers: [{ urls: STUN_URL }] })
   } catch (err) {
     throw new SkipTestError(
-      `RTCPeerConnection constructor threw (${err instanceof Error ? err.message : String(err)}) — browser policy likely blocks WebRTC entirely, nothing to measure.`,
+      `RTCPeerConnection constructor threw (${err instanceof Error ? err.message : String(err)}) — browser policy likely blocks WebRTC entirely, nothing to measure.`
     )
   }
   try {
@@ -452,9 +458,7 @@ function mountBlankIframe(): Promise<HTMLIFrameElement> {
         // already detached
       }
       reject(
-        new Error(
-          `iframe did not load within ${IFRAME_LOAD_TIMEOUT_MS}ms`,
-        ),
+        new Error(`iframe did not load within ${IFRAME_LOAD_TIMEOUT_MS}ms`)
       )
     }, IFRAME_LOAD_TIMEOUT_MS)
     const done = (): void => {
@@ -499,7 +503,7 @@ function mountBlankIframe(): Promise<HTMLIFrameElement> {
  * unreachable."
  */
 function verdictForZeroCandidates(
-  result: GatherResult,
+  result: GatherResult
 ): { kind: "pass"; describe: string } | { kind: "skip"; reason: string } {
   // Firefox-protection signature.
   if (
@@ -555,7 +559,9 @@ await pc.setLocalDescription(
 // fail if any extracted IP is public.`,
   expected: async () => {
     if (typeof RTCPeerConnection === "undefined") {
-      return { skipReason: "RTCPeerConnection is not available in this runtime" }
+      return {
+        skipReason: "RTCPeerConnection is not available in this runtime",
+      }
     }
     return { value: true, describe: "no public IPs in ICE candidates" }
   },
@@ -571,7 +577,7 @@ await pc.setLocalDescription(
     const leaks = result.candidates.filter((c) => isPublicAddress(c.address))
     if (leaks.length === 0) {
       const typesSeen = Array.from(
-        new Set(result.candidates.map((c) => c.type ?? "?")),
+        new Set(result.candidates.map((c) => c.type ?? "?"))
       ).sort()
       return {
         value: true,
@@ -582,7 +588,7 @@ await pc.setLocalDescription(
     // Dedupe by address — Firefox emits one srflx per m= section
     // (audio/video/data), so the same IP can appear 3x.
     const uniqueLeaks = Array.from(
-      new Map(leaks.map((c) => [c.address, c])).values(),
+      new Map(leaks.map((c) => [c.address, c])).values()
     )
     const sample = uniqueLeaks
       .slice(0, 2)
@@ -617,7 +623,9 @@ for (const c of hostCandidates) {
 }`,
   expected: async () => {
     if (typeof RTCPeerConnection === "undefined") {
-      return { skipReason: "RTCPeerConnection is not available in this runtime" }
+      return {
+        skipReason: "RTCPeerConnection is not available in this runtime",
+      }
     }
     return {
       value: true,
@@ -642,7 +650,7 @@ for (const c of hostCandidates) {
     const hostCandidates = result.candidates.filter((c) => c.type === "host")
     if (hostCandidates.length === 0) {
       throw new SkipTestError(
-        `${result.candidates.length} candidate(s) gathered but none of type "host" — can't assess mDNS obfuscation.`,
+        `${result.candidates.length} candidate(s) gathered but none of type "host" — can't assess mDNS obfuscation.`
       )
     }
 
@@ -655,7 +663,7 @@ for (const c of hostCandidates) {
     }
 
     const unique = Array.from(
-      new Map(rawLanLeaks.map((c) => [c.address, c])).values(),
+      new Map(rawLanLeaks.map((c) => [c.address, c])).values()
     )
     const sample = unique
       .slice(0, 2)
@@ -689,22 +697,28 @@ const pc = new Ctor({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] })
 // ... same gather + classify pattern as the top-level test`,
   expected: async () => {
     if (typeof RTCPeerConnection === "undefined") {
-      return { skipReason: "RTCPeerConnection is not available in this runtime" }
+      return {
+        skipReason: "RTCPeerConnection is not available in this runtime",
+      }
     }
-    return { value: true, describe: "no public IPs in ICE candidates (iframe realm)" }
+    return {
+      value: true,
+      describe: "no public IPs in ICE candidates (iframe realm)",
+    }
   },
   observe: async () => {
     const iframe = await mountBlankIframe()
     try {
       const win = iframe.contentWindow
-      if (!win) throw new SkipTestError("iframe has no contentWindow after load")
-       
+      if (!win)
+        throw new SkipTestError("iframe has no contentWindow after load")
+
       const IframeRTC = (win as any).RTCPeerConnection as
         | (new (config?: RTCConfiguration) => RTCPeerConnection)
         | undefined
       if (typeof IframeRTC !== "function") {
         throw new SkipTestError(
-          "iframe.contentWindow.RTCPeerConnection is not a constructor — likely a cross-origin or sandboxed context",
+          "iframe.contentWindow.RTCPeerConnection is not a constructor — likely a cross-origin or sandboxed context"
         )
       }
 
@@ -713,7 +727,7 @@ const pc = new Ctor({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] })
         pc = new IframeRTC({ iceServers: [{ urls: STUN_URL }] })
       } catch (err) {
         throw new SkipTestError(
-          `iframe-realm RTCPeerConnection constructor threw (${err instanceof Error ? err.message : String(err)}) — browser policy blocks WebRTC in this iframe, nothing to measure.`,
+          `iframe-realm RTCPeerConnection constructor threw (${err instanceof Error ? err.message : String(err)}) — browser policy blocks WebRTC in this iframe, nothing to measure.`
         )
       }
 
@@ -734,12 +748,10 @@ const pc = new Ctor({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] })
         throw new SkipTestError(v.reason)
       }
 
-      const leaks = result.candidates.filter((c) =>
-        isPublicAddress(c.address),
-      )
+      const leaks = result.candidates.filter((c) => isPublicAddress(c.address))
       if (leaks.length === 0) {
         const typesSeen = Array.from(
-          new Set(result.candidates.map((c) => c.type ?? "?")),
+          new Set(result.candidates.map((c) => c.type ?? "?"))
         ).sort()
         return {
           value: true,
@@ -748,7 +760,7 @@ const pc = new Ctor({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] })
       }
 
       const unique = Array.from(
-        new Map(leaks.map((c) => [c.address, c])).values(),
+        new Map(leaks.map((c) => [c.address, c])).values()
       )
       const sample = unique
         .slice(0, 2)
@@ -789,7 +801,6 @@ function collectAddressesFromStats(stats: RTCStatsReport | null): Array<{
     // Local-candidate reports carry address/ip. Newer spec uses
     // "address"; older Chromium and Firefox use "ip".
     if (report.type === "local-candidate") {
-       
       const r = report as any
       const addr: unknown = r.address ?? r.ip
       if (typeof addr === "string" && addr.length > 0) {
@@ -826,7 +837,9 @@ stats.forEach((r) => {
 })`,
   expected: async () => {
     if (typeof RTCPeerConnection === "undefined") {
-      return { skipReason: "RTCPeerConnection is not available in this runtime" }
+      return {
+        skipReason: "RTCPeerConnection is not available in this runtime",
+      }
     }
     return { value: true, describe: "no public IPs in getStats() reports" }
   },
@@ -837,7 +850,7 @@ stats.forEach((r) => {
 
     if (!result.stats) {
       throw new SkipTestError(
-        "RTCPeerConnection.getStats() returned no stats report (or threw). Can't inspect the stats-API surface on this engine.",
+        "RTCPeerConnection.getStats() returned no stats report (or threw). Can't inspect the stats-API surface on this engine."
       )
     }
 
@@ -853,7 +866,7 @@ stats.forEach((r) => {
         throw new SkipTestError(v.reason)
       }
       throw new SkipTestError(
-        "getStats() returned reports but none of type 'local-candidate' — engine doesn't expose this surface, nothing to measure.",
+        "getStats() returned reports but none of type 'local-candidate' — engine doesn't expose this surface, nothing to measure."
       )
     }
 
@@ -866,13 +879,12 @@ stats.forEach((r) => {
     }
 
     const unique = Array.from(
-      new Map(leaks.map((a) => [a.address, a])).values(),
+      new Map(leaks.map((a) => [a.address, a])).values()
     )
     const sample = unique
       .slice(0, 2)
       .map(
-        (a) =>
-          `${a.address}${a.candidateType ? ` (${a.candidateType})` : ""}`,
+        (a) => `${a.address}${a.candidateType ? ` (${a.candidateType})` : ""}`
       )
       .join(", ")
     const suffix = unique.length > 2 ? `, +${unique.length - 2} more` : ""

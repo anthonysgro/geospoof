@@ -443,6 +443,7 @@ struct MacSettingsView: View {
 
                 Section {
                     AccuracySettingsRows(controller: controller)
+                    PreservePromptRows(controller: controller)
                 } header: {
                     Text("Advanced")
                 }

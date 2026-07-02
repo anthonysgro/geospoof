@@ -32,12 +32,12 @@ interface CountryFeature {
   geometry: unknown
 }
 
-const GREEN  = "#4caf50"   // brand green — browser location + atmosphere
-const AMBER  = "#fb923c"   // IP location
-const DOT    = "rgba(74,222,128,0.55)"   // brighter green land dots
-const ATMOS  = "#4caf50"   // brand green atmosphere glow — not indigo!
+const GREEN = "#4caf50" // brand green — browser location + atmosphere
+const AMBER = "#fb923c" // IP location
+const DOT = "rgba(74,222,128,0.55)" // brighter green land dots
+const ATMOS = "#4caf50" // brand green atmosphere glow — not indigo!
 const ARC_START = "#4caf50"
-const ARC_END   = "#fb923c"
+const ARC_END = "#fb923c"
 
 const COUNTRIES_URL =
   "https://raw.githubusercontent.com/vasturiano/react-globe.gl/master/example/datasets/ne_110m_admin_0_countries.geojson"
@@ -49,13 +49,20 @@ function gcMidpoint(
   a: { lat: number; lon: number },
   b: { lat: number; lon: number }
 ): { lat: number; lng: number } {
-  const r = Math.PI / 180, d = 180 / Math.PI
-  const lat1 = a.lat * r, lon1 = a.lon * r
-  const lat2 = b.lat * r, lon2 = b.lon * r
+  const r = Math.PI / 180,
+    d = 180 / Math.PI
+  const lat1 = a.lat * r,
+    lon1 = a.lon * r
+  const lat2 = b.lat * r,
+    lon2 = b.lon * r
   const Bx = Math.cos(lat2) * Math.cos(lon2 - lon1)
   const By = Math.cos(lat2) * Math.sin(lon2 - lon1)
   return {
-    lat: Math.atan2(Math.sin(lat1) + Math.sin(lat2), Math.sqrt((Math.cos(lat1) + Bx) ** 2 + By ** 2)) * d,
+    lat:
+      Math.atan2(
+        Math.sin(lat1) + Math.sin(lat2),
+        Math.sqrt((Math.cos(lat1) + Bx) ** 2 + By ** 2)
+      ) * d,
     lng: (lon1 + Math.atan2(By, Math.cos(lat1) + Bx)) * d,
   }
 }
@@ -63,20 +70,30 @@ function gcMidpoint(
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
-export function GlobeView({ primary, secondary, browserTimezone, ipTimezone, className }: GlobeViewProps) {
+export function GlobeView({
+  primary,
+  secondary,
+  browserTimezone,
+  ipTimezone,
+  className,
+}: GlobeViewProps) {
   const mountRef = React.useRef<HTMLDivElement>(null)
   const [Globe, setGlobe] = React.useState<React.ElementType | null>(null)
   const [dims, setDims] = React.useState({ width: 0, height: 0 })
   const [countries, setCountries] = React.useState<Array<CountryFeature>>([])
 
   React.useEffect(() => {
-    import("react-globe.gl").then((m) => setGlobe(() => m.default as React.ElementType))
+    import("react-globe.gl").then((m) =>
+      setGlobe(() => m.default as React.ElementType)
+    )
   }, [])
 
   React.useEffect(() => {
     const el = mountRef.current
     if (!el) return
-    const ro = new ResizeObserver(() => setDims({ width: el.clientWidth, height: el.clientHeight }))
+    const ro = new ResizeObserver(() =>
+      setDims({ width: el.clientWidth, height: el.clientHeight })
+    )
     ro.observe(el)
     setDims({ width: el.clientWidth, height: el.clientHeight })
     return () => ro.disconnect()
@@ -85,7 +102,9 @@ export function GlobeView({ primary, secondary, browserTimezone, ipTimezone, cla
   React.useEffect(() => {
     fetch(COUNTRIES_URL)
       .then((r) => r.json())
-      .then((d: { features: Array<CountryFeature> }) => setCountries(d.features))
+      .then((d: { features: Array<CountryFeature> }) =>
+        setCountries(d.features)
+      )
       .catch(() => {})
   }, [])
 
@@ -93,27 +112,54 @@ export function GlobeView({ primary, secondary, browserTimezone, ipTimezone, cla
   // Derived data
   // ---------------------------------------------------------------------------
   const points = [
-    primary   && { lat: primary.lat,   lng: primary.lon,   label: primary.label,   color: GREEN, radius: 0.5 },
-    secondary && { lat: secondary.lat, lng: secondary.lon, label: secondary.label, color: AMBER, radius: 0.45 },
+    primary && {
+      lat: primary.lat,
+      lng: primary.lon,
+      label: primary.label,
+      color: GREEN,
+      radius: 0.5,
+    },
+    secondary && {
+      lat: secondary.lat,
+      lng: secondary.lon,
+      label: secondary.label,
+      color: AMBER,
+      radius: 0.45,
+    },
   ].filter(Boolean)
 
-  const arcs = primary && secondary ? [{
-    startLat: primary.lat, startLng: primary.lon,
-    endLat: secondary.lat, endLng: secondary.lon,
-  }] : []
+  const arcs =
+    primary && secondary
+      ? [
+          {
+            startLat: primary.lat,
+            startLng: primary.lon,
+            endLat: secondary.lat,
+            endLng: secondary.lon,
+          },
+        ]
+      : []
 
   // Sonar rings: green at browser location, amber at IP location
   const rings = [
-    (primary  && browserTimezone) && {
-      lat: primary.lat,   lng: primary.lon,
-      color: (t: number) => `rgba(74,222,128,${Math.max(0, 0.8 - t)})`,
-      maxR: 5, propagationSpeed: 2, repeatPeriod: 1000,
-    },
-    (secondary && ipTimezone) && {
-      lat: secondary.lat, lng: secondary.lon,
-      color: (t: number) => `rgba(251,146,60,${Math.max(0, 0.8 - t)})`,
-      maxR: 5, propagationSpeed: 2, repeatPeriod: 1200,
-    },
+    primary &&
+      browserTimezone && {
+        lat: primary.lat,
+        lng: primary.lon,
+        color: (t: number) => `rgba(74,222,128,${Math.max(0, 0.8 - t)})`,
+        maxR: 5,
+        propagationSpeed: 2,
+        repeatPeriod: 1000,
+      },
+    secondary &&
+      ipTimezone && {
+        lat: secondary.lat,
+        lng: secondary.lon,
+        color: (t: number) => `rgba(251,146,60,${Math.max(0, 0.8 - t)})`,
+        maxR: 5,
+        propagationSpeed: 2,
+        repeatPeriod: 1200,
+      },
   ].filter(Boolean)
 
   // Camera — center between the two points, pull back enough to see both
@@ -191,9 +237,13 @@ export function GlobeView({ primary, secondary, browserTimezone, ipTimezone, cla
           // Camera
           pointOfView={pov}
           enablePointerInteraction={true}
-          onGlobeReady={function (
-            this: { controls: () => { autoRotate: boolean; autoRotateSpeed: number; enableZoom: boolean } }
-          ) {
+          onGlobeReady={function (this: {
+            controls: () => {
+              autoRotate: boolean
+              autoRotateSpeed: number
+              enableZoom: boolean
+            }
+          }) {
             const c = this.controls()
             c.autoRotate = true
             c.autoRotateSpeed = 0.6
