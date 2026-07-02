@@ -722,14 +722,17 @@ function VerifyInner() {
             <LocaleLink
               to="/vpn"
               className={cn(
-                "inline-flex w-full items-center justify-center gap-1.5 text-center",
+                "group inline-flex w-full items-center justify-center gap-1.5 text-center",
                 "rounded-brand bg-(--color-brand) px-5 py-2.5 text-sm font-semibold text-white",
                 "shadow-sm transition-all hover:bg-(--color-brand-dark) hover:shadow-md",
                 "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) focus-visible:ring-offset-2"
               )}
             >
               {d.vpnCard.cta}
-              <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
+              <ArrowRight
+                className="size-4 shrink-0 transition-transform group-hover:translate-x-0.5"
+                aria-hidden="true"
+              />
             </LocaleLink>
             <span className="pointer-events-none absolute -top-2.5 -right-2.5 z-10 inline-flex items-center gap-0.5 rounded-full bg-amber-400 px-2 py-0.5 text-xs font-bold text-amber-950 shadow-md ring-2 ring-(--color-canvas)">
               <Star className="size-3 fill-current" aria-hidden="true" />
