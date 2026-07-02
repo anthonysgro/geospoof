@@ -11,6 +11,7 @@ import {
   RefreshCw,
   ShieldAlert,
   ShieldCheck,
+  Star,
   Wifi,
   X,
 } from "lucide-react"
@@ -688,32 +689,61 @@ function VerifyInner() {
           honest spot to point at the VPN layer — the user is literally looking
           at their exposed IP. Links to the /vpn hub (disclosure, "why Proton",
           and alternatives) rather than straight to the affiliate URL. */}
-      <div className="mt-4 flex flex-col gap-4 rounded-2xl border border-brand/30 bg-brand/5 p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between md:p-6">
-        <div className="flex items-start gap-3">
+      <div className="mt-4 flex flex-col gap-4 rounded-2xl border border-brand/40 bg-brand/5 p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between md:p-6">
+        <div className="flex min-w-0 items-start gap-3">
           <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-brand/15 text-(--color-brand)">
             <Wifi className="size-5" aria-hidden="true" />
           </span>
-          <div>
-            <p className="text-xs leading-relaxed text-(--color-canvas-foreground) sm:text-sm">
+          <div className="min-w-0">
+            <p className="text-sm leading-relaxed font-medium text-(--color-canvas-foreground)">
               {d.vpnCard.line1}
             </p>
-            <p className="mt-0.5 text-xs text-(--color-canvas-muted)">
-              {format(d.vpnCard.line2, { discount: PROTON_DISCOUNT })}
-            </p>
+            <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+              {[
+                t.vpn.whyProton.reason1Title,
+                t.vpn.whyProton.reason2Title,
+              ].map((feature) => (
+                <li
+                  key={feature}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-(--color-canvas-foreground)"
+                >
+                  <Check
+                    className="size-3.5 shrink-0 text-(--color-brand)"
+                    aria-hidden="true"
+                  />
+                  {feature}
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
-        <LocaleLink
-          to="/vpn"
-          className={cn(
-            "inline-flex shrink-0 items-center justify-center gap-1.5 self-start whitespace-nowrap sm:self-auto",
-            "rounded-brand bg-(--color-brand) px-5 py-2.5 text-sm font-semibold text-white",
-            "shadow-sm transition-all hover:bg-(--color-brand-dark) hover:shadow-md",
-            "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) focus-visible:ring-offset-2"
-          )}
-        >
-          {d.vpnCard.cta}
-          <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
-        </LocaleLink>
+        <div className="flex min-w-0 flex-col gap-2 self-stretch sm:max-w-xs sm:self-center">
+          <span className="relative inline-flex">
+            <LocaleLink
+              to="/vpn"
+              className={cn(
+                "inline-flex w-full items-center justify-center gap-1.5 text-center",
+                "rounded-brand bg-(--color-brand) px-5 py-2.5 text-sm font-semibold text-white",
+                "shadow-sm transition-all hover:bg-(--color-brand-dark) hover:shadow-md",
+                "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) focus-visible:ring-offset-2"
+              )}
+            >
+              {d.vpnCard.cta}
+              <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
+            </LocaleLink>
+            <span className="pointer-events-none absolute -top-2.5 -right-2.5 z-10 inline-flex items-center gap-0.5 rounded-full bg-amber-400 px-2 py-0.5 text-xs font-bold text-amber-950 shadow-md ring-2 ring-(--color-canvas)">
+              <Star className="size-3 fill-current" aria-hidden="true" />
+              {format(t.vpn.hero.discountSticker, { discount: PROTON_DISCOUNT })}
+            </span>
+          </span>
+          <span className="inline-flex items-center justify-center gap-1.5 text-xs text-(--color-canvas-muted)">
+            <ShieldCheck
+              className="size-3.5 shrink-0 text-(--color-brand)"
+              aria-hidden="true"
+            />
+            {t.vpn.hero.moneyBack}
+          </span>
+        </div>
       </div>
 
       {/* API values — wider on desktop */}
