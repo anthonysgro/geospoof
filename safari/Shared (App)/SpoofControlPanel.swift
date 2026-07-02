@@ -2059,6 +2059,56 @@ struct AccuracySettingsRows: View {
     }
 }
 
+// MARK: - Preserve location prompts (Pro-gated, Safari bridge)
+
+/// Row(s) for the "Preserve Location Prompts" setting, embeddable in a Form
+/// Section (placed under Advanced, beneath Location Accuracy). When on, spoofed
+/// sites show the browser's native geolocation permission prompt instead of
+/// GeoSpoof silently auto-granting the spoofed location. Pro-gated on the Apple
+/// apps (parity with custom accuracy / per-site filters); the extension also
+/// forces the free behavior for non-Pro users, so this is the UI half of the
+/// same gate. A free user sees a locked PRO row that opens the paywall.
+struct PreservePromptRows: View {
+    @ObservedObject var controller: SpoofController
+    @ObservedObject private var pro = ProStore.shared
+    @State private var showPaywall = false
+
+    private var locked: Bool { !pro.isPro }
+
+    var body: some View {
+        if locked {
+            Button {
+                showPaywall = true
+            } label: {
+                HStack(spacing: 12) {
+                    Label("Preserve Location Prompts", systemImage: "hand.raised.circle")
+                    Spacer(minLength: 8)
+                    Text("PRO")
+                        .font(.caption2.bold())
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color.brand.opacity(0.18), in: Capsule())
+                        .foregroundStyle(Color.brand)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .sheet(isPresented: $showPaywall) { ProPaywallView() }
+
+            Text("Preserving a site's native location prompt is a GeoSpoof Pro feature. Free spoofing answers permission prompts automatically with your spoofed location.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        } else {
+            Toggle(isOn: Binding(
+                get: { controller.preserveGeolocationPrompt },
+                set: { controller.setPreserveGeolocationPrompt($0) }
+            )) {
+                Label("Preserve Location Prompts", systemImage: "hand.raised.circle")
+            }
+        }
+    }
+}
+
 // MARK: - Accuracy picker (iOS pushed detail screen)
 
 /// Short label for the currently selected accuracy, e.g. "Realistic" or

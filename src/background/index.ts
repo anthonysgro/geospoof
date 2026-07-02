@@ -15,7 +15,7 @@ import { now } from "@/shared/utils/safe-time";
 import { setWebRTCProtection } from "./webrtc";
 import { updateBadge, setBadgeForTab, badgeStateFor } from "./badge";
 import { broadcastSettingsToTabs, isRestrictedUrl, checkTabInjection } from "./tabs";
-import { computeEffectiveEnabled } from "@/shared/utils/scope";
+import { computeEffectiveEnabled, computeEffectivePreserveGeoPrompt } from "@/shared/utils/scope";
 import { computeEffectiveAccuracySetting } from "@/shared/accuracy/resolver";
 import { handleMessage, handleSetLocation } from "./messages";
 import { syncVpnLocation } from "./vpn-sync";
@@ -424,7 +424,10 @@ async function onAlarm(alarm: Alarms.Alarm): Promise<void> {
         debugLogging,
         verbosityLevel,
         webrtcProtection,
-        preserveGeolocationPrompt,
+        preserveGeolocationPrompt: computeEffectivePreserveGeoPrompt(
+          preserveGeolocationPrompt,
+          settings.proFeaturesBlocked
+        ),
         // Pro-gate custom accuracy on iOS Safari (force Realistic for a free
         // user); fail-open + Safari-only, mirroring the scope gate above.
         accuracySetting: computeEffectiveAccuracySetting(
@@ -587,7 +590,10 @@ if (browser.tabs && browser.tabs.onCreated) {
         debugLogging,
         verbosityLevel,
         webrtcProtection,
-        preserveGeolocationPrompt,
+        preserveGeolocationPrompt: computeEffectivePreserveGeoPrompt(
+          preserveGeolocationPrompt,
+          settings.proFeaturesBlocked
+        ),
         // Pro-gate custom accuracy on iOS Safari (force Realistic for a free
         // user); fail-open + Safari-only, mirroring the scope gate above.
         accuracySetting: computeEffectiveAccuracySetting(

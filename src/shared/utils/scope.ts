@@ -109,6 +109,32 @@ export function matchesDomainList(hostname: string, list: string[]): boolean {
 }
 
 /**
+ * Preserve-geolocation-prompt Pro gate. "Preserve location prompts" is a
+ * Pro-only config feature on iOS Safari (parity with per-site filtering and
+ * custom accuracy). When the iOS app signals `proFeaturesBlocked` (non-Pro),
+ * force the flag off so a free user always gets the prompt-free, auto-granted
+ * spoofed location — the free behavior — regardless of how it was set (app,
+ * popup, or a stale value after a lapsed subscription). Optional + fail-open:
+ * undefined/false passes the value through, and the `__SAFARI__` guard compiles
+ * out on other engines, so macOS Safari / Chrome / Firefox are unaffected.
+ *
+ * Applied in the background at every point that builds a tab-bound payload, so
+ * the value the content script receives is always the safe default for a free
+ * user. Mirrors `computeEffectiveEnabled`'s scope gate and
+ * `computeEffectiveAccuracySetting` so all three Pro-only config features share
+ * one flag and the same enforcement shape.
+ */
+export function computeEffectivePreserveGeoPrompt(
+  preserveGeolocationPrompt: boolean,
+  proFeaturesBlocked?: boolean
+): boolean {
+  if (__SAFARI__ && proFeaturesBlocked === true) {
+    return false;
+  }
+  return preserveGeolocationPrompt;
+}
+
+/**
  * Effective_Enabled resolver (Req 6, design §2). The single source of truth for
  * the per-tab spoofing decision. Pure: it derives the hostname from the tab's
  * top-level URL and combines the master switch, scope mode, and lists into one

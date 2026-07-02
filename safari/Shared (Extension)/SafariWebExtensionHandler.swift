@@ -36,6 +36,8 @@ enum RegionKey {
     static let longitude   = "region_longitude"
     static let updatedAt   = "region_updatedAt"
     static let webrtc      = "region_webrtc"
+    // "Preserve location prompts" (Extension -> App), a plain bool like webrtc.
+    static let preservePrompt = "region_preservePrompt"
     static let vpnSync     = "region_vpnSync"
     static let ip          = "region_ip"
     static let tzId        = "region_tzId"
@@ -59,6 +61,8 @@ enum RegionKey {
     static let pLongitude   = "pending_longitude"
     static let pUpdatedAt   = "pending_updatedAt"
     static let pWebrtc      = "pending_webrtc"
+    // "Preserve location prompts" (App -> Extension), a plain bool like pWebrtc.
+    static let pPreservePrompt = "pending_preservePrompt"
     static let pVpnSync     = "pending_vpnSync"
     static let pCleared     = "pending_cleared"
     static let pResync      = "pending_resync"
@@ -178,6 +182,7 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             }
 
             dict[RegionKey.webrtc] = input["webrtcProtection"] as? Bool ?? false
+            dict[RegionKey.preservePrompt] = input["preserveGeolocationPrompt"] as? Bool ?? false
             dict[RegionKey.vpnSync] = input["vpnSyncEnabled"] as? Bool ?? false
 
             if let ip = input["ip"] as? String, !ip.isEmpty {
@@ -246,6 +251,7 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             "updatedAt": (dict[RegionKey.pUpdatedAt] as? Double) ?? 0,
             "enabled": (dict[RegionKey.pEnabled] as? Bool) ?? false,
             "webrtc": (dict[RegionKey.pWebrtc] as? Bool) ?? false,
+            "preservePrompt": (dict[RegionKey.pPreservePrompt] as? Bool) ?? false,
             "vpnSync": (dict[RegionKey.pVpnSync] as? Bool) ?? false,
             "cleared": (dict[RegionKey.pCleared] as? Bool) ?? false,
             "resync": (dict[RegionKey.pResync] as? Bool) ?? false,

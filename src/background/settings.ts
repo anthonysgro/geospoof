@@ -396,6 +396,11 @@ async function pushRegionToNativeHost(settings: Settings): Promise<void> {
       location: settings.location ?? null,
       timezone: settings.timezone ?? null,
       webrtcProtection: settings.webrtcProtection,
+      // "Preserve location prompts" — a plain bool like webrtcProtection. The
+      // app decodes + adopts it; it's Pro-gated on iOS, but the raw preference
+      // is bridged (the app is the Pro authority and the tab-payload gate in
+      // the background still forces the free behavior for non-Pro users).
+      preserveGeolocationPrompt: settings.preserveGeolocationPrompt,
       vpnSyncEnabled: settings.vpnSyncEnabled,
       ip,
       // Favorites are synced through the bridge as a JSON string so the native
