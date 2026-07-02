@@ -18,6 +18,10 @@ dist
 web-ext-artifacts
 .test-profile/
 
+# Generated at release time by scripts/generate-update-manifest.sh and
+# published to the gh-pages branch — not source, never read from the repo.
+update.json
+
 # Packaged extension
 *.zip
 

@@ -103,14 +103,35 @@ jobs:
           files: release-assets/*
           generate_release_notes: true
 
-      - name: Deploy site and update manifest to GitHub Pages
+      # gh-pages only needs to serve the Firefox self-hosted update manifest
+      # (update.json, referenced by the extension's update_url at
+      # anthonysgro.github.io/geospoof/update.json) plus the Jekyll-bypass
+      # marker. Stage exactly those into a clean directory so the published
+      # branch never carries repo source.
+      #
+      # No CNAME here on purpose: a CNAME=geospoof.com made GitHub Pages
+      # 301-redirect the github.io update URL to geospoof.com (served by Vercel,
+      # which has no /update.json), 404ing the manifest and breaking Firefox
+      # self-hosted auto-updates. geospoof.com belongs to Vercel; Pages serves
+      # only at the plain github.io path.
+      - name: Stage GitHub Pages content
+        run: |
+          mkdir -p pages-dist
+          cp update.json pages-dist/update.json
+          touch pages-dist/.nojekyll
+
+      - name: Deploy update manifest to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .
+          publish_dir: ./pages-dist
           publish_branch: gh-pages
-          keep_files: true
-          include_files: update.json
+          # Publish ONLY the staged artifacts. The previous `publish_dir: .` +
+          # `keep_files: true` mirrored the entire repo onto gh-pages and never
+          # removed deleted files, leaving a stale, internally-inconsistent
+          # source tree that broke branch builds (e.g. Vercel previews). A clean
+          # minimal publish keeps gh-pages to just what GitHub Pages serves.
+          keep_files: false
 
   release-macos:
     needs: release
