@@ -54,6 +54,7 @@ import {
   useIdentity,
 } from "@/lib/verification/identity-context"
 import {
+  fetchEdgeNetworkIdentity,
   haversineKm,
   resolveNetworkIdentity,
 } from "@/lib/verification/network-identity"
@@ -104,6 +105,23 @@ export function buildVerifyHead(locale: Locale) {
 
 export const Route = createFileRoute("/{-$locale}/verify")({
   component: VerifyPage,
+  // Read the visitor's network identity from Vercel's request headers during
+  // SSR so the IP/location panel renders with the page — no extra client-side
+  // `/__server` round-trip on fresh/server-rendered loads (F5, URL bar,
+  // bookmarks, the extension link, the Refresh button).
+  //
+  // Guarded to the server: on a client-side navigation there are no request
+  // headers to read, so we skip the call and return null, and the client-side
+  // effect resolves the identity exactly as before (also covers local dev and
+  // the geojs/freeipapi fallback when no usable IP header is present).
+  loader: async (): Promise<NetworkIdentity | null> => {
+    if (typeof window !== "undefined") return null
+    try {
+      return await fetchEdgeNetworkIdentity()
+    } catch {
+      return null
+    }
+  },
   head: ({ params }) => buildVerifyHead(toLocale(params.locale)),
 })
 
@@ -273,9 +291,17 @@ function VerifyInner() {
   const { t } = useTranslations()
   const d = t.verify
   const { snapshot } = useIdentity()
-  const [network, setNetwork] = React.useState<NetworkState>({
-    status: "pending",
-  })
+  // Network identity read from Vercel's edge headers during SSR (see the route
+  // loader). Present on fresh/server-rendered loads → the IP panel renders
+  // immediately with the page and we skip the client `/__server` round-trip.
+  // Null on client-side navigations and local dev, where the effect below
+  // resolves it client-side (edge fn → geojs → freeipapi).
+  const initialNetwork = Route.useLoaderData()
+  const [network, setNetwork] = React.useState<NetworkState>(
+    initialNetwork
+      ? { status: "ready", value: initialNetwork }
+      : { status: "pending" }
+  )
   const [webrtc, setWebrtc] = React.useState<WebrtcState>({ status: "pending" })
   const [workers, setWorkers] = React.useState<WorkerState>({
     status: "pending",
@@ -303,15 +329,21 @@ function VerifyInner() {
     void prefetchLeaflet()
 
     let cancelled = false
-    resolveNetworkIdentity().then(
-      (value) => !cancelled && setNetwork({ status: "ready", value }),
-      (err: unknown) =>
-        !cancelled &&
-        setNetwork({
-          status: "error",
-          error: err instanceof Error ? err.message : String(err),
-        })
-    )
+    // Only resolve the network identity on the client when SSR didn't already
+    // supply it from the edge headers (see the route loader). This preserves
+    // the edge → geojs → freeipapi fallback for client-side navigations and
+    // local dev, while fresh server-rendered loads skip the round-trip.
+    if (!initialNetwork) {
+      resolveNetworkIdentity().then(
+        (value) => !cancelled && setNetwork({ status: "ready", value }),
+        (err: unknown) =>
+          !cancelled &&
+          setNetwork({
+            status: "error",
+            error: err instanceof Error ? err.message : String(err),
+          })
+      )
+    }
     void probeWebrtc().then((value) => {
       if (!cancelled) setWebrtc({ status: "ready", value })
     })
@@ -321,7 +353,7 @@ function VerifyInner() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [initialNetwork])
 
   const net = network.status === "ready" ? network.value : null
   const loc = snapshot.location
