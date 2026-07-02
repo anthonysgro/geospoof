@@ -451,7 +451,7 @@ export const en = {
       headingPost: "?",
       answer:
         "GeoSpoof hides your browser's location. A VPN hides your IP. For full privacy, you want both.",
-      disclosureLabel: "Privacy Disclosure:",
+      disclosureLabel: "Affiliate disclosure:",
       disclosureBody:
         "We partner with Proton VPN. If you subscribe through our link, we earn a commission at no extra cost to you.",
       ctaPlans: "See Proton VPN plans",

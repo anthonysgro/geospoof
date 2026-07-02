@@ -453,7 +453,7 @@ export const fr: Dictionary = {
       headingPost: " ?",
       answer:
         "GeoSpoof masque la position de votre navigateur. Un VPN masque votre IP. Pour une confidentialité complète, il vous faut les deux.",
-      disclosureLabel: "Divulgation de confidentialité :",
+      disclosureLabel: "Divulgation d’affiliation :",
       disclosureBody:
         "Nous sommes partenaires de Proton VPN. Si vous vous abonnez via notre lien, nous percevons une commission sans coût supplémentaire pour vous.",
       ctaPlans: "Voir les offres Proton VPN",

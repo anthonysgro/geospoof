@@ -450,7 +450,7 @@ export const id: Dictionary = {
       headingPost: "?",
       answer:
         "GeoSpoof menyembunyikan lokasi browser Anda. VPN menyembunyikan IP Anda. Untuk privasi penuh, Anda ingin keduanya.",
-      disclosureLabel: "Pengungkapan Privasi:",
+      disclosureLabel: "Pengungkapan afiliasi:",
       disclosureBody:
         "Kami bermitra dengan Proton VPN. Jika Anda berlangganan melalui tautan kami, kami mendapat komisi tanpa biaya tambahan bagi Anda.",
       ctaPlans: "Lihat paket Proton VPN",

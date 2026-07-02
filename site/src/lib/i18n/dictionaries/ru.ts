@@ -460,7 +460,7 @@ export const ru: Dictionary = {
       headingPost: "?",
       answer:
         "GeoSpoof скрывает местоположение вашего браузера. VPN скрывает ваш IP. Для полной приватности нужны оба.",
-      disclosureLabel: "Раскрытие о приватности:",
+      disclosureLabel: "Партнёрское раскрытие:",
       disclosureBody:
         "Мы сотрудничаем с Proton VPN. Если вы оформите подписку по нашей ссылке, мы получим комиссию без дополнительных затрат для вас.",
       ctaPlans: "Посмотреть тарифы Proton VPN",

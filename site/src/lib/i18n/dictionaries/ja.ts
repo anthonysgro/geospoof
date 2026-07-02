@@ -450,7 +450,7 @@ export const ja: Dictionary = {
       headingPost: " に VPN は必要？",
       answer:
         "GeoSpoof はブラウザの位置情報を隠します。VPN は IP を隠します。完全なプライバシーには、両方が必要です。",
-      disclosureLabel: "プライバシーに関する開示：",
+      disclosureLabel: "アフィリエイトに関する開示：",
       disclosureBody:
         "私たちは Proton VPN と提携しています。当社のリンク経由でご契約いただくと、追加費用なしで私たちに手数料が入ります。",
       ctaPlans: "Proton VPN のプランを見る",

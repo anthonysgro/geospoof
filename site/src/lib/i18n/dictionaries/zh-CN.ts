@@ -446,7 +446,7 @@ export const zhCN: Dictionary = {
       headingPost: " 还需要 VPN 吗？",
       answer:
         "GeoSpoof 隐藏你浏览器的位置。VPN 隐藏你的 IP。要获得完整隐私，两者都需要。",
-      disclosureLabel: "隐私披露：",
+      disclosureLabel: "联盟披露：",
       disclosureBody:
         "我们与 Proton VPN 合作。如果你通过我们的链接订阅，我们会获得一笔佣金，而你无需支付任何额外费用。",
       ctaPlans: "查看 Proton VPN 套餐",

@@ -452,7 +452,7 @@ export const ptBR: Dictionary = {
       headingPost: "?",
       answer:
         "O GeoSpoof oculta a localização do seu navegador. Um VPN oculta o seu IP. Para privacidade completa, você quer os dois.",
-      disclosureLabel: "Aviso de privacidade:",
+      disclosureLabel: "Aviso de afiliação:",
       disclosureBody:
         "Somos parceiros do Proton VPN. Se você assinar pelo nosso link, ganhamos uma comissão sem custo adicional para você.",
       ctaPlans: "Ver os planos do Proton VPN",
