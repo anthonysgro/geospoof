@@ -2,6 +2,8 @@ import { Section } from "./Section"
 import type { Platform } from "@/hooks/use-platform"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
+import { BrowserLogo } from "@/components/BrowserLogo"
+import type { BrowserLogoName } from "@/components/BrowserLogo"
 import { usePlatform } from "@/hooks/use-platform"
 import { useTranslations } from "@/hooks/use-i18n"
 
@@ -11,8 +13,8 @@ interface DownloadOption {
   platform?: Exclude<Platform, "unknown">
   /** Store brand name — a proper noun, kept as-is across locales. */
   name: string
-  /** Square brand logo shown on the card. */
-  icon: string
+  /** Inlined browser logo shown on the card. */
+  logo: BrowserLogoName
   href: (campaign: string) => string
   primary?: boolean
   badge?: string
@@ -25,7 +27,7 @@ const downloads: Array<DownloadOption> = [
     id: "firefox",
     platform: "firefox",
     name: "Firefox Add-ons",
-    icon: "/images/stores/firefox-store-icon.png",
+    logo: "firefox",
     href: (campaign) =>
       `https://addons.mozilla.org/firefox/addon/geo-spoof/?utm_source=geospoof.com&utm_medium=website&utm_campaign=${campaign === "homepage" ? "download" : campaign}`,
     primary: true,
@@ -34,7 +36,7 @@ const downloads: Array<DownloadOption> = [
     id: "chromium",
     platform: "chromium",
     name: "Chrome Web Store",
-    icon: "/images/stores/chrome-store-icon.png",
+    logo: "chrome",
     href: (campaign) =>
       `https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje?utm_source=geospoof.com&utm_medium=website&utm_campaign=${campaign === "homepage" ? "download" : campaign}`,
     primary: true,
@@ -43,7 +45,7 @@ const downloads: Array<DownloadOption> = [
     id: "apple",
     platform: "apple",
     name: "App Store",
-    icon: "/images/stores/safari-icon.png",
+    logo: "safari",
     href: (campaign) =>
       `https://apps.apple.com/app/apple-store/id6765719745?pt=128299974&ct=${campaign === "homepage" ? "dotcom" : campaign}&mt=8`,
     primary: true,
@@ -51,18 +53,13 @@ const downloads: Array<DownloadOption> = [
 ]
 
 const selfHosted: Array<{
-  id: "dmg" | "xpi"
-  icon: string
+  id: "xpi"
+  logo: BrowserLogoName
   href: () => string
 }> = [
   {
-    id: "dmg",
-    icon: "/images/stores/dmg-install-icon.png",
-    href: () => "https://github.com/anthonysgro/geospoof/releases/latest",
-  },
-  {
     id: "xpi",
-    icon: "/images/stores/github-store-icon.svg",
+    logo: "github",
     href: () => "https://github.com/anthonysgro/geospoof/releases/latest",
   },
 ]
@@ -125,14 +122,7 @@ export function DownloadSection({
                   {t.download.recommendedBadge}
                 </Badge>
               ) : null}
-              <img
-                src={d.icon}
-                alt=""
-                aria-hidden="true"
-                className="h-12 w-12 object-contain"
-                width={48}
-                height={48}
-              />
+              <BrowserLogo name={d.logo} className="size-12" />
               <span className="text-lg font-bold text-(--color-canvas-foreground)">
                 {d.name}
               </span>
@@ -164,13 +154,9 @@ export function DownloadSection({
               key={option.id}
               className="flex flex-col gap-3 rounded-xl border border-(--color-canvas-border) px-6 py-4 md:flex-row md:items-center"
             >
-              <img
-                src={option.icon}
-                alt=""
-                aria-hidden="true"
-                className="hidden h-8 w-8 object-contain md:block"
-                width={32}
-                height={32}
+              <BrowserLogo
+                name={option.logo}
+                className="hidden size-8 text-(--color-canvas-foreground) md:block"
               />
               <div className="flex-1">
                 <span className="text-sm font-semibold text-(--color-canvas-foreground)">

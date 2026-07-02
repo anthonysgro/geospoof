@@ -2,6 +2,8 @@ import * as React from "react"
 import type { Platform } from "@/hooks/use-platform"
 import { cn } from "@/lib/utils"
 import { usePlatform } from "@/hooks/use-platform"
+import { BrowserLogo } from "@/components/BrowserLogo"
+import type { BrowserLogoName } from "@/components/BrowserLogo"
 
 /** Recursively extract the plain-text content of a React node, for slug ids. */
 function nodeText(node: React.ReactNode): string {
@@ -297,7 +299,7 @@ function DownloadCTA({ campaign = "blog" }: { campaign?: string }) {
     platform: Exclude<Platform, "unknown">
     name: string
     detail: string
-    icon: string
+    logo: BrowserLogoName
     cta: string
     href: string
   }> = [
@@ -305,7 +307,7 @@ function DownloadCTA({ campaign = "blog" }: { campaign?: string }) {
       platform: "firefox",
       name: "Firefox",
       detail: "Desktop & Android",
-      icon: "/images/stores/firefox-store-icon.png",
+      logo: "firefox",
       cta: "Add to Firefox",
       href: `https://addons.mozilla.org/firefox/addon/geo-spoof/?utm_source=geospoof.com&utm_medium=blog&utm_campaign=${campaign}`,
     },
@@ -313,7 +315,7 @@ function DownloadCTA({ campaign = "blog" }: { campaign?: string }) {
       platform: "chromium",
       name: "Chrome",
       detail: "Chrome, Brave & Edge",
-      icon: "/images/stores/chrome-store-icon.png",
+      logo: "chrome",
       cta: "Add to Chrome",
       href: `https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje?utm_source=geospoof.com&utm_medium=blog&utm_campaign=${campaign}`,
     },
@@ -321,7 +323,7 @@ function DownloadCTA({ campaign = "blog" }: { campaign?: string }) {
       platform: "apple",
       name: "iPhone, iPad & Mac",
       detail: "Safari via the App Store",
-      icon: "/images/stores/safari-icon.png",
+      logo: "safari",
       cta: "Get on the App Store",
       href: `https://apps.apple.com/app/apple-store/id6765719745?pt=128299974&ct=${campaign}&mt=8`,
     },
@@ -358,14 +360,7 @@ function DownloadCTA({ campaign = "blog" }: { campaign?: string }) {
                 Your browser
               </span>
             )}
-            <img
-              src={s.icon}
-              alt=""
-              aria-hidden="true"
-              width={40}
-              height={40}
-              className="h-10 w-10 object-contain"
-            />
+            <BrowserLogo name={s.logo} className="size-10" />
             <span className="text-sm font-bold text-(--color-canvas-foreground)">
               {s.name}
             </span>
