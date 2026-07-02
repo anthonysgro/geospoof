@@ -92,9 +92,15 @@ export function buildVerifyHead(locale: Locale) {
     links: [
       { rel: "canonical", href: canonical },
       ...buildAlternateLinks("/verify", SITE_URL),
-      // Warm up connections to the map tile CDNs before the map mounts.
-      { rel: "preconnect", href: "https://server.arcgisonline.com" },
-      { rel: "dns-prefetch", href: "https://server.arcgisonline.com" },
+      // Warm up connections to the CARTO map tile CDN before the map mounts.
+      // `preconnect` opens the socket *and* completes the TLS handshake (the
+      // expensive part) up front; `dns-prefetch` is the fallback for browsers
+      // that ignore preconnect. The tiles are plain (non-CORS) images, so no
+      // `crossOrigin` here — that would open a separate, unused connection.
+      { rel: "preconnect", href: "https://a.basemaps.cartocdn.com" },
+      { rel: "preconnect", href: "https://b.basemaps.cartocdn.com" },
+      { rel: "preconnect", href: "https://c.basemaps.cartocdn.com" },
+      { rel: "preconnect", href: "https://d.basemaps.cartocdn.com" },
       { rel: "dns-prefetch", href: "https://a.basemaps.cartocdn.com" },
       { rel: "dns-prefetch", href: "https://b.basemaps.cartocdn.com" },
       { rel: "dns-prefetch", href: "https://c.basemaps.cartocdn.com" },
