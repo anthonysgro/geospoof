@@ -130,6 +130,28 @@ export function PrivacyPage() {
               </ul>
             </PolicySection>
 
+            <PolicySection title="Website Analytics">
+              <p>
+                The GeoSpoof browser extension and companion apps collect no
+                analytics or telemetry, as stated above. The GeoSpoof website (
+                <strong>geospoof.com</strong>) — the marketing and documentation
+                site you are reading now — uses{" "}
+                <a
+                  href="https://vercel.com/docs/analytics/privacy-and-compliance"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Vercel Web Analytics
+                </a>
+                , a privacy-friendly, cookieless service that measures aggregate
+                page views and traffic trends. It sets no cookies, does not
+                track you across other websites, and does not build an
+                advertising profile; the data is aggregated and is not used to
+                identify individual visitors. This applies to the website only —
+                never to the extension or apps, which remain analytics-free.
+              </p>
+            </PolicySection>
+
             <PolicySection title="Local Data Storage">
               <p>
                 All extension settings are stored locally on your device using
@@ -386,6 +408,38 @@ export function PrivacyPage() {
               </p>
             </PolicySection>
 
+            <PolicySection title="Affiliate Links">
+              <p>
+                GeoSpoof includes an affiliate link recommending{" "}
+                <strong>Proton VPN</strong>, which helps fund the project.
+                Following that link opens Proton's website through a redirect on
+                our own domain (
+                <code className="rounded bg-(--color-canvas-border) px-1 text-sm">
+                  geospoof.com/go/proton/…
+                </code>
+                ).{" "}
+                <strong>We collect no personal data when you click it</strong> —
+                the redirect performs no tracking and sets no cookies of its
+                own.
+              </p>
+              <p>
+                Once you arrive on Proton's site, Proton and its affiliate
+                network may process your data and set their own cookies under{" "}
+                <a
+                  href="https://proton.me/legal/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Proton's privacy policy
+                </a>
+                . If you subscribe through the link, we may earn a commission at
+                no extra cost to you. We maintain no user accounts and receive
+                no personal information about you from Proton. GeoSpoof is an
+                independent project and is not affiliated with or endorsed by
+                Proton.
+              </p>
+            </PolicySection>
+
             <PolicySection title="Data Security">
               <ul>
                 <li>
@@ -405,8 +459,9 @@ export function PrivacyPage() {
                 <li>All third-party API calls use HTTPS encryption</li>
                 <li>
                   The developer maintains no user accounts and runs no backend
-                  application or database; geospoof.com and its cdn.geospoof.com
-                  subdomain serve only static files
+                  application or database; cdn.geospoof.com serves only static
+                  files, and the website (geospoof.com) uses only cookieless,
+                  privacy-friendly analytics (see "Website Analytics")
                 </li>
               </ul>
             </PolicySection>

@@ -81,14 +81,14 @@ export const ptBR: Dictionary = {
       metaDescription:
         "Política de Privacidade do GeoSpoof — saiba como protegemos os seus dados e respeitamos a sua privacidade.",
       heading: "Política de Privacidade",
-      lastUpdated: "Última atualização: 22 de junho de 2026",
+      lastUpdated: "Última atualização: 3 de julho de 2026",
     },
     terms: {
       metaTitle: "Termos de Serviço | GeoSpoof",
       metaDescription:
         "Termos de Serviço do GeoSpoof — entenda os termos que regem o uso da extensão.",
       heading: "Termos de Serviço",
-      lastUpdated: "Última atualização: 20 de junho de 2026",
+      lastUpdated: "Última atualização: 3 de julho de 2026",
     },
   },
   testimonials: {
@@ -168,8 +168,7 @@ export const ptBR: Dictionary = {
     noAria: "Não",
     features: {
       coordinates: "Falsificar a geolocalização por coordenadas",
-      oneIdentity:
-        "Uma identidade consistente em dezenas de APIs do navegador",
+      oneIdentity: "Uma identidade consistente em dezenas de APIs do navegador",
       citySearch: "Definir a sua localização por busca de cidade",
       webrtc: "Proteção contra vazamento de IP por WebRTC",
       everyBrowser:
@@ -379,7 +378,8 @@ export const ptBR: Dictionary = {
           "O Chrome informa aos sites onde você está pela API de geolocalização e o seu fuso horário pelo Intl e pelo Date — e um VPN não muda nada disso. O GeoSpoof substitui esses sinais dentro do Chrome para que os sites vejam a localização que você escolher. A mesma versão também roda no Brave, Opera e outros navegadores Chromium.",
         enableStep:
           "Fixe o GeoSpoof pelo ícone de peça de quebra-cabeça (Extensões) na barra de ferramentas do Chrome para tê-lo a um clique de distância.",
-        extraFaqQ: "O GeoSpoof funciona no Brave e em outros navegadores Chromium?",
+        extraFaqQ:
+          "O GeoSpoof funciona no Brave e em outros navegadores Chromium?",
         extraFaqA:
           "Sim. O GeoSpoof é instalado pela Chrome Web Store, que atende Chrome, Brave, Opera e outros navegadores baseados em Chromium. A falsificação de localização e de fuso horário funciona de forma idêntica em todos eles.",
         metaTitle:
@@ -411,7 +411,8 @@ export const ptBR: Dictionary = {
           "O Firefox entrega aos sites a sua localização pela API de geolocalização e a sua região pelas APIs de fuso horário, independentemente de qualquer VPN. O GeoSpoof é instalado pelo Firefox Add-ons e substitui esses sinais. É a única versão que também roda no Firefox para Android, então você pode falsificar a sua localização no celular também.",
         enableStep:
           "Depois de adicionar o GeoSpoof pelo Firefox Add-ons, fixe-o na barra de ferramentas pelo menu de extensões para acesso rápido.",
-        extraFaqQ: "Posso falsificar a minha localização no Firefox no Android?",
+        extraFaqQ:
+          "Posso falsificar a minha localização no Firefox no Android?",
         extraFaqA:
           "Sim. O Firefox 140+ no Android suporta o GeoSpoof, então você pode falsificar a geolocalização e o fuso horário no seu celular — algo que o Chrome no celular não consegue fazer, já que não suporta extensões.",
         metaTitle:
@@ -427,7 +428,8 @@ export const ptBR: Dictionary = {
           "O Safari no iOS, iPadOS e macOS informa a sua localização e o seu fuso horário aos sites como qualquer navegador. O GeoSpoof é instalado pela App Store e roda como uma extensão do Safari, substituindo essas APIs para que os sites vejam a localização que você escolher. A falsificação de localização e de fuso horário é totalmente suportada; a proteção WebRTC não está disponível no Safari.",
         enableStep:
           "Depois de instalar pela App Store, ative o GeoSpoof pelo menu de extensões do Safari (a peça de quebra-cabeça na barra de endereços no iOS, ou Safari → Configurações → Extensões no macOS).",
-        extraFaqQ: "A falsificação de localização funciona no Safari no iPhone?",
+        extraFaqQ:
+          "A falsificação de localização funciona no Safari no iPhone?",
         extraFaqA:
           "Sim. O GeoSpoof é uma extensão do Safari disponível pela App Store para iOS, iPadOS e macOS. Uma vez ativada para um site, ela substitui a geolocalização e o fuso horário que o Safari informa. A proteção WebRTC é o único recurso indisponível no Safari.",
         metaTitle:
@@ -581,8 +583,7 @@ export const ptBR: Dictionary = {
     copied: "✓ Copiado",
     copyAria: "Copiar o endereço de e-mail",
     stillNeedHelp: "Ainda precisa de ajuda?",
-    contactBody:
-      "Envie um e-mail e retornaremos em um ou dois dias.",
+    contactBody: "Envie um e-mail e retornaremos em um ou dois dias.",
     reportBugsLead: "Você também pode relatar bugs no ",
   },
   about: {
@@ -713,7 +714,8 @@ export const ptBR: Dictionary = {
     refresh: "Atualizar",
     refreshAria:
       "Atualizar — recarregue a página para ver os seus valores mais recentes",
-    introMobile: "Valores ao vivo que os sites podem ler sobre você agora mesmo.",
+    introMobile:
+      "Valores ao vivo que os sites podem ler sobre você agora mesmo.",
     introDesktop:
       "Valores ao vivo do seu navegador agora mesmo — a localização, o fuso horário e o IP que os sites podem ler. Com o GeoSpoof ativo, eles refletem a sua localização falsificada em vez da real.",
     vpnSyncNote:
@@ -755,8 +757,7 @@ export const ptBR: Dictionary = {
       problemWebrtc: "WebRTC vazando o seu IP real",
       problemGeo: "A localização não combina com o IP",
       problemTz: "O fuso horário não combina com o IP",
-      crossRef:
-        "Um site que cruzar esses sinais pode sinalizar você.",
+      crossRef: "Um site que cruzar esses sinais pode sinalizar você.",
       installFree: "Instalar o GeoSpoof grátis",
       alreadyHave: "Já tem o GeoSpoof?",
     },
@@ -772,7 +773,8 @@ export const ptBR: Dictionary = {
       autoSyncBody:
         "Dê a ela até ~10 segundos depois de atualizar para se ajustar, então verifique de novo — a sincronização automática não é instantânea como a manual.",
       updateBold: "Atualize para a versão mais recente.",
-      updateBody: "Novos truques de fingerprinting são corrigidos continuamente. ",
+      updateBody:
+        "Novos truques de fingerprinting são corrigidos continuamente. ",
       downloadOptions: "Ver opções de download",
       checkSiteBold: "Verifique se está ativo para este site.",
       checkSiteBody:

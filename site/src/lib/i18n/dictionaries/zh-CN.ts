@@ -93,13 +93,13 @@ export const zhCN: Dictionary = {
       metaDescription:
         "GeoSpoof 隐私政策——了解我们如何保护你的数据并尊重你的隐私。",
       heading: "隐私政策",
-      lastUpdated: "最后更新：2026 年 6 月 22 日",
+      lastUpdated: "最后更新：2026 年 7 月 3 日",
     },
     terms: {
       metaTitle: "服务条款 | GeoSpoof",
       metaDescription: "GeoSpoof 服务条款——了解规范你使用本扩展的相关条款。",
       heading: "服务条款",
-      lastUpdated: "最后更新：2026 年 6 月 20 日",
+      lastUpdated: "最后更新：2026 年 7 月 3 日",
     },
   },
   testimonials: {

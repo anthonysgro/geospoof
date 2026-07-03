@@ -346,7 +346,30 @@ export function TermsPage() {
               </p>
             </TermsSection>
 
-            <TermsSection title="13. Changes to Terms">
+            <TermsSection title="13. Affiliate Links and Recommendations">
+              <p>
+                GeoSpoof is free and open source. To help fund its development,
+                the Extension, the companion apps, and the website may include
+                affiliate links to third-party products we recommend — at
+                present, only <strong>Proton VPN</strong>. If you purchase or
+                subscribe to a recommended product through one of these links,
+                we may earn a commission,{" "}
+                <strong>at no extra cost to you</strong>.
+              </p>
+              <p>
+                We recommend products only on their own merits, and earning a
+                commission does not change which product we recommend or the
+                price you pay. GeoSpoof is an independent project and is{" "}
+                <strong>
+                  not affiliated with, sponsored by, or endorsed by Proton
+                </strong>
+                . Any third-party website you reach through an affiliate link is
+                governed by that site's own terms and privacy policy, as noted
+                in Section 4 and our <a href="/privacy">Privacy Policy</a>.
+              </p>
+            </TermsSection>
+
+            <TermsSection title="14. Changes to Terms">
               <p>
                 We reserve the right to modify these Terms at any time. Changes
                 will be posted on this page with an updated date, and material
@@ -356,7 +379,7 @@ export function TermsPage() {
               </p>
             </TermsSection>
 
-            <TermsSection title="14. Contact and Notices">
+            <TermsSection title="15. Contact and Notices">
               <p>
                 For questions about these Terms, or to send legal notices,
                 contact us at{" "}

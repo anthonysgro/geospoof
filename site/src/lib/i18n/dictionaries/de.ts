@@ -81,14 +81,14 @@ export const de: Dictionary = {
       metaDescription:
         "Datenschutzerklärung von GeoSpoof — erfahre, wie wir deine Daten schützen und deine Privatsphäre respektieren.",
       heading: "Datenschutzerklärung",
-      lastUpdated: "Zuletzt aktualisiert: 22. Juni 2026",
+      lastUpdated: "Zuletzt aktualisiert: 3. Juli 2026",
     },
     terms: {
       metaTitle: "Nutzungsbedingungen | GeoSpoof",
       metaDescription:
         "Nutzungsbedingungen von GeoSpoof — verstehe die Bedingungen für die Nutzung der Erweiterung.",
       heading: "Nutzungsbedingungen",
-      lastUpdated: "Zuletzt aktualisiert: 20. Juni 2026",
+      lastUpdated: "Zuletzt aktualisiert: 3. Juli 2026",
     },
   },
   testimonials: {
@@ -412,7 +412,8 @@ export const de: Dictionary = {
           "Firefox übergibt Websites deinen Standort über die Geolocation-API und deine Region über die Zeitzonen-APIs, unabhängig von jedem VPN. GeoSpoof wird über Firefox Add-ons installiert und überschreibt diese Signale. Es ist die einzige Version, die auch auf Firefox für Android läuft, sodass du deinen Standort auch mobil fälschen kannst.",
         enableStep:
           "Nachdem du GeoSpoof über Firefox Add-ons hinzugefügt hast, hefte es für schnellen Zugriff über das Erweiterungsmenü an die Symbolleiste.",
-        extraFaqQ: "Kann ich meinen Standort in Firefox unter Android fälschen?",
+        extraFaqQ:
+          "Kann ich meinen Standort in Firefox unter Android fälschen?",
         extraFaqA:
           "Ja. Firefox 140+ unter Android unterstützt GeoSpoof, sodass du Geolocation und Zeitzone auf deinem Handy fälschen kannst — etwas, das Chrome auf dem Handy nicht kann, da es keine Erweiterungen unterstützt.",
         metaTitle:
@@ -428,7 +429,8 @@ export const de: Dictionary = {
           "Safari unter iOS, iPadOS und macOS meldet deinen Standort und deine Zeitzone genau wie jeder Browser an Websites. GeoSpoof wird aus dem App Store installiert und läuft als Safari-Erweiterung, die diese APIs überschreibt, damit Websites den Standort sehen, den du wählst. Standort- und Zeitzonenfälschung werden vollständig unterstützt; der WebRTC-Schutz ist in Safari nicht verfügbar.",
         enableStep:
           "Aktiviere GeoSpoof nach der Installation aus dem App Store über das Erweiterungsmenü von Safari (das Puzzleteil in der Adressleiste unter iOS oder Safari → Einstellungen → Erweiterungen unter macOS).",
-        extraFaqQ: "Funktioniert die Standortfälschung in Safari auf dem iPhone?",
+        extraFaqQ:
+          "Funktioniert die Standortfälschung in Safari auf dem iPhone?",
         extraFaqA:
           "Ja. GeoSpoof ist eine Safari-Erweiterung, die über den App Store für iOS, iPadOS und macOS verfügbar ist. Sobald sie für eine Website aktiviert ist, überschreibt sie die von Safari gemeldete Geolocation und Zeitzone. Der WebRTC-Schutz ist die einzige Funktion, die in Safari nicht verfügbar ist.",
         metaTitle:
@@ -763,8 +765,7 @@ export const de: Dictionary = {
     },
     dialog: {
       title: "Läuft GeoSpoof bereits?",
-      description:
-        "Eine kurze Checkliste klärt fast jedes markierte Signal.",
+      description: "Eine kurze Checkliste klärt fast jedes markierte Signal.",
       ipMismatchLocation: "IP passt nicht zu deinem Standort?",
       ipMismatchTimezone: "IP passt nicht zu deiner Zeitzone?",
       ipMismatchBody:

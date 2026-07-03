@@ -81,14 +81,14 @@ export const es: Dictionary = {
       metaDescription:
         "Política de privacidad de GeoSpoof — descubre cómo protegemos tus datos y respetamos tu privacidad.",
       heading: "Política de privacidad",
-      lastUpdated: "Última actualización: 22 de junio de 2026",
+      lastUpdated: "Última actualización: 3 de julio de 2026",
     },
     terms: {
       metaTitle: "Términos del servicio | GeoSpoof",
       metaDescription:
         "Términos del servicio de GeoSpoof — conoce las condiciones que rigen el uso de la extensión.",
       heading: "Términos del servicio",
-      lastUpdated: "Última actualización: 20 de junio de 2026",
+      lastUpdated: "Última actualización: 3 de julio de 2026",
     },
   },
   testimonials: {
@@ -168,8 +168,7 @@ export const es: Dictionary = {
     noAria: "No",
     features: {
       coordinates: "Falsear la geolocalización por coordenadas",
-      oneIdentity:
-        "Una identidad coherente en decenas de API del navegador",
+      oneIdentity: "Una identidad coherente en decenas de API del navegador",
       citySearch: "Definir tu ubicación buscando una ciudad",
       webrtc: "Protección contra fugas de IP por WebRTC",
       everyBrowser:
@@ -206,8 +205,7 @@ export const es: Dictionary = {
     },
     footnote:
       "Firefox para Android requiere Firefox 140+. Safari requiere iOS 16+ o macOS 13+.",
-    setupLead:
-      "Guías de configuración por navegador: falsea tu ubicación en ",
+    setupLead: "Guías de configuración por navegador: falsea tu ubicación en ",
     or: " o ",
     alsoLead: ". También puedes ",
     timezoneLink: "falsear la zona horaria de tu navegador",
@@ -538,7 +536,8 @@ export const es: Dictionary = {
   },
   support: {
     meta: {
-      title: "Soporte de GeoSpoof — arregla el falseo, la Sincro VPN y la configuración",
+      title:
+        "Soporte de GeoSpoof — arregla el falseo, la Sincro VPN y la configuración",
       description:
         "Obtén ayuda con GeoSpoof: arregla el falseo de ubicación que no funciona, resuelve tiempos de espera de la Sincronización con VPN, problemas de WebRTC y la configuración en navegador o móvil — o contacta con nuestro equipo.",
     },
@@ -580,8 +579,7 @@ export const es: Dictionary = {
     copied: "✓ Copiado",
     copyAria: "Copiar la dirección de correo",
     stillNeedHelp: "¿Aún necesitas ayuda?",
-    contactBody:
-      "Envíanos un correo y te responderemos en uno o dos días.",
+    contactBody: "Envíanos un correo y te responderemos en uno o dos días.",
     reportBugsLead: "También puedes reportar errores en ",
   },
   about: {
@@ -711,7 +709,8 @@ export const es: Dictionary = {
     heading: "Lo que los sitios web pueden ver de ti",
     refresh: "Actualizar",
     refreshAria: "Actualizar — recarga la página para ver tus últimos valores",
-    introMobile: "Valores en vivo que los sitios web pueden leer de ti ahora mismo.",
+    introMobile:
+      "Valores en vivo que los sitios web pueden leer de ti ahora mismo.",
     introDesktop:
       "Valores en vivo de tu navegador ahora mismo — la ubicación, la zona horaria y la IP que los sitios web pueden leer. Con GeoSpoof activo, reflejan tu ubicación falseada en lugar de la real.",
     vpnSyncNote:
@@ -770,13 +769,15 @@ export const es: Dictionary = {
       autoSyncBody:
         "Dale hasta ~10 segundos después de actualizar para ponerse al día, luego vuelve a comprobar — la sincronización automática no es instantánea como la manual.",
       updateBold: "Actualiza a la última versión.",
-      updateBody: "Los nuevos trucos de huella digital se parchean continuamente. ",
+      updateBody:
+        "Los nuevos trucos de huella digital se parchean continuamente. ",
       downloadOptions: "Ver opciones de descarga",
       checkSiteBold: "Comprueba que está activo para este sitio.",
       checkSiteBody:
         "Mira el icono de la barra de herramientas; si limitas por lista de permitidos o de bloqueados, incluye este sitio.",
       reloadBold: "Recarga tras activar o actualizar.",
-      reloadBody: "Algunas superficies solo se aplican al cargar la página de nuevo.",
+      reloadBody:
+        "Algunas superficies solo se aplican al cargar la página de nuevo.",
       stillStuck: "¿Sigues atascado? Contacta con soporte",
       gotIt: "Entendido",
     },
@@ -861,7 +862,8 @@ export const es: Dictionary = {
         step3code: "chrome.exe",
         step3end:
           " y añade el parámetro después de la comilla de cierre (ten en cuenta el espacio inicial).",
-        step4: "Haz clic en Aceptar, luego abre Chrome desde ese acceso directo.",
+        step4:
+          "Haz clic en Aceptar, luego abre Chrome desde ese acceso directo.",
         note: "Repite esto para cada acceso directo desde el que inicies Chrome (la barra de tareas y el menú Inicio son accesos directos distintos).",
       },
       mac: {

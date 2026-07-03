@@ -74,21 +74,20 @@ export const ja: Dictionary = {
     apple: "App Store で入手",
   },
   legal: {
-    englishNote:
-      "以下の法的文書は英語のみで提供されます。英語版が正文です。",
+    englishNote: "以下の法的文書は英語のみで提供されます。英語版が正文です。",
     privacy: {
       metaTitle: "プライバシーポリシー | GeoSpoof",
       metaDescription:
         "GeoSpoof のプライバシーポリシー — 私たちがどのようにあなたのデータを保護し、プライバシーを尊重するかをご確認ください。",
       heading: "プライバシーポリシー",
-      lastUpdated: "最終更新日：2026年6月22日",
+      lastUpdated: "最終更新日：2026年7月3日",
     },
     terms: {
       metaTitle: "利用規約 | GeoSpoof",
       metaDescription:
         "GeoSpoof の利用規約 — 拡張機能の利用を規定する条件をご確認ください。",
       heading: "利用規約",
-      lastUpdated: "最終更新日：2026年6月20日",
+      lastUpdated: "最終更新日：2026年7月3日",
     },
   },
   testimonials: {
@@ -204,8 +203,7 @@ export const ja: Dictionary = {
     },
     footnote:
       "Firefox for Android には Firefox 140 以降が必要です。Safari には iOS 16 以降または macOS 13 以降が必要です。",
-    setupLead:
-      "ブラウザ別の設定ガイド：位置情報を偽装するには ",
+    setupLead: "ブラウザ別の設定ガイド：位置情報を偽装するには ",
     or: " または ",
     alsoLead: "。さらに、",
     timezoneLink: "ブラウザのタイムゾーンを偽装",
@@ -315,8 +313,7 @@ export const ja: Dictionary = {
   },
   spoofLocation: {
     hub: {
-      metaTitle:
-        "ブラウザの位置情報を偽装 — 無料拡張機能 | GeoSpoof",
+      metaTitle: "ブラウザの位置情報を偽装 — 無料拡張機能 | GeoSpoof",
       metaDescription:
         "Chrome、Edge、Firefox、Safari でブラウザの位置情報を偽装。GeoSpoof は Geolocation API とタイムゾーンを上書きし、あなたが選んだ位置をサイトに見せます。",
       ogTitle: "ブラウザの位置情報を偽装",
@@ -350,8 +347,7 @@ export const ja: Dictionary = {
       webrtcAvailableTitle: "{name} では WebRTC 保護が利用できます。",
       webrtcAvailableBody:
         "GeoSpoof は、VPN を完全にすり抜けかねない WebRTC 経由の本当の IP の漏れも防ぎます。",
-      webrtcUnavailableTitle:
-        "注意：{name} では WebRTC 保護は利用できません。",
+      webrtcUnavailableTitle: "注意：{name} では WebRTC 保護は利用できません。",
       webrtcUnavailableBody:
         "位置情報とタイムゾーンの偽装は完全に対応していますが、GeoSpoof が利用する WebRTC のプライバシー API はこのブラウザでは公開されていません。",
       faqHeading: "よくある質問",
@@ -377,11 +373,11 @@ export const ja: Dictionary = {
           "Chrome は Geolocation API であなたの居場所を、Intl と Date でタイムゾーンをサイトに伝えます — そして VPN はそれを何も変えません。GeoSpoof は Chrome の内部でこれらのシグナルを上書きし、あなたが選んだ位置をサイトに見せます。同じビルドは Brave、Opera、その他の Chromium ブラウザでも動作します。",
         enableStep:
           "Chrome ツールバーのパズルピース（拡張機能）アイコンから GeoSpoof をピン留めし、ワンクリックで使えるようにします。",
-        extraFaqQ: "GeoSpoof は Brave やその他の Chromium ブラウザで動作しますか？",
+        extraFaqQ:
+          "GeoSpoof は Brave やその他の Chromium ブラウザで動作しますか？",
         extraFaqA:
           "はい。GeoSpoof は Chrome、Brave、Opera など Chromium ベースのブラウザに対応する Chrome ウェブストアからインストールします。位置情報とタイムゾーンの偽装は、すべてで同じように機能します。",
-        metaTitle:
-          "Chrome で位置情報を偽装 — 無料拡張機能 | GeoSpoof",
+        metaTitle: "Chrome で位置情報を偽装 — 無料拡張機能 | GeoSpoof",
         metaDescription:
           "無料拡張機能で Chrome の位置情報を偽装。GeoSpoof は Geolocation API とタイムゾーンを上書きし、あなたが選んだ位置をサイトに見せます。Brave にも対応。",
         ogTitle: "Chrome で位置情報を偽装",
@@ -396,8 +392,7 @@ export const ja: Dictionary = {
         extraFaqQ: "Windows の Edge で位置情報を偽装できますか？",
         extraFaqA:
           "はい。GeoSpoof は Windows と macOS の Edge で動作します。ブラウザがサイトに報告する位置情報とタイムゾーンを上書きしますが、Windows 自体の位置情報設定は変更しないため、OS はそのままです。",
-        metaTitle:
-          "Edge で位置情報を偽装 — 無料拡張機能 | GeoSpoof",
+        metaTitle: "Edge で位置情報を偽装 — 無料拡張機能 | GeoSpoof",
         metaDescription:
           "無料拡張機能で Microsoft Edge の位置情報を偽装。GeoSpoof は Geolocation API とタイムゾーンを上書きし、あなたが選んだ位置をサイトに見せます。",
         ogTitle: "Edge で位置情報を偽装",
@@ -412,8 +407,7 @@ export const ja: Dictionary = {
         extraFaqQ: "Android の Firefox で位置情報を偽装できますか？",
         extraFaqA:
           "はい。Android の Firefox 140+ は GeoSpoof に対応しているので、スマートフォンで位置情報とタイムゾーンを偽装できます — モバイルの Chrome は拡張機能に対応していないため、これはできません。",
-        metaTitle:
-          "Firefox で位置情報を偽装 — 無料アドオン | GeoSpoof",
+        metaTitle: "Firefox で位置情報を偽装 — 無料アドオン | GeoSpoof",
         metaDescription:
           "無料でオープンソースのアドオンで Firefox の位置情報を偽装。GeoSpoof は Geolocation API とタイムゾーンを上書きし、あなたが選んだ位置をサイトに見せます。",
         ogTitle: "Firefox で位置情報を偽装",
@@ -428,8 +422,7 @@ export const ja: Dictionary = {
         extraFaqQ: "iPhone の Safari で位置情報の偽装は機能しますか？",
         extraFaqA:
           "はい。GeoSpoof は iOS、iPadOS、macOS 向けに App Store で提供される Safari 拡張機能です。あるサイトで有効にすると、Safari が報告する位置情報とタイムゾーンを上書きします。WebRTC 保護は Safari で利用できない唯一の機能です。",
-        metaTitle:
-          "Safari で位置情報を偽装 — 無料拡張機能 | GeoSpoof",
+        metaTitle: "Safari で位置情報を偽装 — 無料拡張機能 | GeoSpoof",
         metaDescription:
           "App Store の無料拡張機能で Safari の位置情報を偽装。GeoSpoof は iOS、iPadOS、macOS で Geolocation API とタイムゾーンを上書きします。",
         ogTitle: "Safari で位置情報を偽装",
@@ -438,8 +431,7 @@ export const ja: Dictionary = {
   },
   vpn: {
     meta: {
-      title:
-        "GeoSpoof に VPN は必要？ プライバシーの2つの層 | GeoSpoof",
+      title: "GeoSpoof に VPN は必要？ プライバシーの2つの層 | GeoSpoof",
       description:
         "GeoSpoof はブラウザが報告する位置情報・タイムゾーン・WebRTC を隠します。ノーログの VPN は IP を隠します — 拡張機能では変えられない唯一のシグナルです。",
       ogTitle: "GeoSpoof に VPN は必要？",
@@ -541,8 +533,7 @@ export const ja: Dictionary = {
         "GeoSpoof のヘルプ：機能しない位置情報の偽装、VPN 同期のタイムアウト、WebRTC の問題、ブラウザやモバイルの設定の解決 — またはチームへのお問い合わせ。",
     },
     heading: "どのようにお手伝いできますか？",
-    subhead:
-      "以下でよくある問題の答えを見つけるか、直接お問い合わせください。",
+    subhead: "以下でよくある問題の答えを見つけるか、直接お問い合わせください。",
     commonIssues: "よくある問題",
     faqs: [
       {
@@ -578,8 +569,7 @@ export const ja: Dictionary = {
     copied: "✓ コピーしました",
     copyAria: "メールアドレスをコピー",
     stillNeedHelp: "まだお困りですか？",
-    contactBody:
-      "メールをお送りいただければ、1〜2日以内に返信いたします。",
+    contactBody: "メールをお送りいただければ、1〜2日以内に返信いたします。",
     reportBugsLead: "バグの報告もこちらから：",
   },
   about: {
@@ -612,8 +602,7 @@ export const ja: Dictionary = {
   },
   spoofTimezone: {
     meta: {
-      title:
-        "ブラウザのタイムゾーンを偽装 — 無料拡張機能 | GeoSpoof",
+      title: "ブラウザのタイムゾーンを偽装 — 無料拡張機能 | GeoSpoof",
       description:
         "ブラウザのタイムゾーンを任意の位置に合わせて変更・偽装。GeoSpoof は Date、Intl、Temporal を上書きし、時計があなたの本当の地域を明かさないようにします。",
       ogTitle: "ブラウザのタイムゾーンを偽装",
@@ -757,7 +746,8 @@ export const ja: Dictionary = {
     },
     dialog: {
       title: "すでに GeoSpoof を実行中ですか？",
-      description: "簡単なチェックリストで、検出されたほぼすべてのシグナルが解消します。",
+      description:
+        "簡単なチェックリストで、検出されたほぼすべてのシグナルが解消します。",
       ipMismatchLocation: "IP が位置と一致しませんか？",
       ipMismatchTimezone: "IP がタイムゾーンと一致しませんか？",
       ipMismatchBody:
@@ -766,13 +756,15 @@ export const ja: Dictionary = {
       autoSyncBody:
         "更新後、追いつくまで最大10秒ほど待ってから再確認してください — 自動同期は手動同期のように即時ではありません。",
       updateBold: "最新バージョンに更新してください。",
-      updateBody: "新しいフィンガープリンティングの手口は継続的に修正されています。 ",
+      updateBody:
+        "新しいフィンガープリンティングの手口は継続的に修正されています。 ",
       downloadOptions: "ダウンロードオプションを見る",
       checkSiteBold: "このサイトで有効になっているか確認してください。",
       checkSiteBody:
         "ツールバーのアイコンを確認してください。許可リストや拒否リストで範囲を限定している場合は、このサイトを含めてください。",
       reloadBold: "有効化または更新の後に再読み込みしてください。",
-      reloadBody: "一部のサーフェスは、ページを新しく読み込んだときにのみ適用されます。",
+      reloadBody:
+        "一部のサーフェスは、ページを新しく読み込んだときにのみ適用されます。",
       stillStuck: "まだ解決しませんか？ サポートにお問い合わせください",
       gotIt: "了解",
     },
@@ -808,7 +800,8 @@ export const ja: Dictionary = {
         "Chrome の「このブラウザをデバッグしています」バーを非表示にする | GeoSpoof",
       description:
         "GeoSpoof のエンジンレベルの偽装は Chrome のデバッガー API を使うため、Chrome はデバッグバーを表示します。その意味、安全な理由、非表示にする方法を解説します。",
-      ogTitle: "Chrome の「このブラウザをデバッグしています」バーを非表示にする",
+      ogTitle:
+        "Chrome の「このブラウザをデバッグしています」バーを非表示にする",
     },
     hero: {
       breadcrumbHome: "ホーム",

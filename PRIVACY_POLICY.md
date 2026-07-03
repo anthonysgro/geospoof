@@ -1,6 +1,6 @@
 # Privacy Policy for GeoSpoof
 
-**Last Updated:** June 21, 2026
+**Last Updated:** July 3, 2026
 
 ## Overview
 
@@ -16,6 +16,16 @@ GeoSpoof is committed to protecting your privacy. This extension is designed to 
 - Does NOT collect analytics or telemetry
 - Does NOT store data on external servers
 - Does NOT share data with third parties for advertising or marketing
+
+## Website Analytics
+
+The GeoSpoof browser extension and companion apps collect no analytics or telemetry, as described above. The GeoSpoof **website** (`geospoof.com`) — the marketing and documentation site — uses [Vercel Web Analytics](https://vercel.com/docs/analytics/privacy-and-compliance), a privacy-friendly, cookieless service that measures aggregate page views and traffic trends. It sets no cookies, does not track you across other websites, and does not build an advertising profile; the data is aggregated and is not used to identify individual visitors. This applies to the website only — never to the extension or apps, which remain analytics-free.
+
+## Affiliate Links
+
+GeoSpoof includes an affiliate link recommending **Proton VPN**, which helps fund the project. Following that link opens Proton's website through a redirect on the developer's own domain (`geospoof.com/go/proton/…`). **No personal data is collected when you click it** — the redirect performs no tracking and sets no cookies of its own.
+
+Once you arrive on Proton's site, Proton and its affiliate network may process your data and set their own cookies under [Proton's privacy policy](https://proton.me/legal/privacy). If you subscribe through the link, the developer may earn a commission at no extra cost to you. The developer maintains no user accounts and receives no personal information about you from Proton. GeoSpoof is an independent project and is not affiliated with or endorsed by Proton.
 
 ## Local Data Storage
 
@@ -200,7 +210,7 @@ You can change or revoke any of these at any time in **Safari → Settings → E
 - No data is transmitted to the developer for collection, analytics, or profiling
 - The one request that reaches developer-controlled infrastructure — fetching timezone boundary data from `cdn.geospoof.com` — is a static-file download that is not used to track or identify you (see "Third-Party API Usage")
 - All third-party API calls use HTTPS encryption
-- The developer maintains no user accounts and runs no backend application or database; `geospoof.com` (the website) and `cdn.geospoof.com` (the timezone boundary data) serve only static files
+- The developer maintains no user accounts and runs no backend application or database; `cdn.geospoof.com` (the timezone boundary data) serves only static files, and the website (`geospoof.com`) uses only cookieless, privacy-friendly analytics (see "Website Analytics")
 
 ## Your Rights
 

@@ -81,14 +81,14 @@ export const fr: Dictionary = {
       metaDescription:
         "Politique de confidentialité de GeoSpoof — découvrez comment nous protégeons vos données et respectons votre vie privée.",
       heading: "Politique de confidentialité",
-      lastUpdated: "Dernière mise à jour : 22 juin 2026",
+      lastUpdated: "Dernière mise à jour : 3 juillet 2026",
     },
     terms: {
       metaTitle: "Conditions d’utilisation | GeoSpoof",
       metaDescription:
         "Conditions d’utilisation de GeoSpoof — comprenez les conditions régissant votre utilisation de l’extension.",
       heading: "Conditions d’utilisation",
-      lastUpdated: "Dernière mise à jour : 20 juin 2026",
+      lastUpdated: "Dernière mise à jour : 3 juillet 2026",
     },
   },
   testimonials: {

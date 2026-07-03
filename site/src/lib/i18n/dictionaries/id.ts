@@ -81,14 +81,14 @@ export const id: Dictionary = {
       metaDescription:
         "Kebijakan Privasi GeoSpoof — pelajari cara kami melindungi data Anda dan menghormati privasi Anda.",
       heading: "Kebijakan Privasi",
-      lastUpdated: "Terakhir Diperbarui: 22 Juni 2026",
+      lastUpdated: "Terakhir Diperbarui: 3 Juli 2026",
     },
     terms: {
       metaTitle: "Ketentuan Layanan | GeoSpoof",
       metaDescription:
         "Ketentuan Layanan GeoSpoof — pahami ketentuan yang mengatur penggunaan ekstensi.",
       heading: "Ketentuan Layanan",
-      lastUpdated: "Terakhir Diperbarui: 20 Juni 2026",
+      lastUpdated: "Terakhir Diperbarui: 3 Juli 2026",
     },
   },
   testimonials: {
@@ -182,8 +182,7 @@ export const id: Dictionary = {
       notSupported: "Tidak didukung",
     },
     proAria: "Pro di iPhone dan iPad",
-    proNote:
-      "Pro di iPhone & iPad. Gratis di browser desktop dan Safari.",
+    proNote: "Pro di iPhone & iPad. Gratis di browser desktop dan Safari.",
     ctaLead: "Jangan hanya percaya kata kami: ",
     ctaLink: "uji perlindungan Anda",
     ctaTail: " dan lihat sendiri setiap sinyalnya.",
@@ -204,8 +203,7 @@ export const id: Dictionary = {
     },
     footnote:
       "Firefox untuk Android memerlukan Firefox 140+. Safari memerlukan iOS 16+ atau macOS 13+.",
-    setupLead:
-      "Panduan penyiapan khusus browser: palsukan lokasi Anda di ",
+    setupLead: "Panduan penyiapan khusus browser: palsukan lokasi Anda di ",
     or: ", atau ",
     alsoLead: ". Anda juga dapat ",
     timezoneLink: "memalsukan zona waktu browser Anda",
@@ -315,8 +313,7 @@ export const id: Dictionary = {
   },
   spoofLocation: {
     hub: {
-      metaTitle:
-        "Palsukan Lokasi Browser Anda — Ekstensi Gratis | GeoSpoof",
+      metaTitle: "Palsukan Lokasi Browser Anda — Ekstensi Gratis | GeoSpoof",
       metaDescription:
         "Palsukan lokasi browser Anda di Chrome, Edge, Firefox, atau Safari. GeoSpoof menimpa Geolocation API dan zona waktu agar situs melihat lokasi yang Anda pilih.",
       ogTitle: "Palsukan lokasi browser Anda",
@@ -377,7 +374,8 @@ export const id: Dictionary = {
           "Chrome melaporkan keberadaan Anda ke situs web melalui Geolocation API dan zona waktu Anda melalui Intl dan Date — dan VPN tidak mengubah semua itu. GeoSpoof menimpa sinyal tersebut di dalam Chrome agar situs melihat lokasi yang Anda pilih. Build yang sama juga berjalan di Brave, Opera, dan browser Chromium lainnya.",
         enableStep:
           "Sematkan GeoSpoof dari ikon potongan puzzle (Ekstensi) di bilah alat Chrome agar hanya satu klik saja.",
-        extraFaqQ: "Apakah GeoSpoof berfungsi di Brave dan browser Chromium lainnya?",
+        extraFaqQ:
+          "Apakah GeoSpoof berfungsi di Brave dan browser Chromium lainnya?",
         extraFaqA:
           "Ya. GeoSpoof diinstal dari Chrome Web Store, yang melayani Chrome, Brave, Opera, dan browser berbasis Chromium lainnya. Pemalsuan lokasi dan zona waktu berfungsi identik di semuanya.",
         metaTitle:
@@ -396,8 +394,7 @@ export const id: Dictionary = {
         extraFaqQ: "Bisakah saya memalsukan lokasi saya di Edge pada Windows?",
         extraFaqA:
           "Ya. GeoSpoof berjalan di Edge pada Windows dan macOS. Ia menimpa lokasi dan zona waktu yang dilaporkan browser Anda ke situs; ia tidak mengubah pengaturan lokasi sistem Windows itu sendiri, jadi OS Anda tetap utuh.",
-        metaTitle:
-          "Palsukan Lokasi Anda di Edge — Ekstensi Gratis | GeoSpoof",
+        metaTitle: "Palsukan Lokasi Anda di Edge — Ekstensi Gratis | GeoSpoof",
         metaDescription:
           "Palsukan lokasi Anda di Microsoft Edge dengan ekstensi gratis. GeoSpoof menimpa Geolocation API dan zona waktu agar situs melihat lokasi yang Anda pilih.",
         ogTitle: "Palsukan lokasi Anda di Edge",
@@ -409,11 +406,11 @@ export const id: Dictionary = {
           "Firefox menyerahkan lokasi Anda ke situs web melalui Geolocation API dan wilayah Anda melalui API zona waktu, terlepas dari VPN apa pun. GeoSpoof diinstal dari Firefox Add-ons dan menimpa sinyal tersebut. Ini adalah satu-satunya build yang juga berjalan di Firefox untuk Android, jadi Anda dapat memalsukan lokasi Anda di ponsel juga.",
         enableStep:
           "Setelah menambahkan GeoSpoof dari Firefox Add-ons, sematkan ke bilah alat dari menu ekstensi untuk akses cepat.",
-        extraFaqQ: "Bisakah saya memalsukan lokasi saya di Firefox pada Android?",
+        extraFaqQ:
+          "Bisakah saya memalsukan lokasi saya di Firefox pada Android?",
         extraFaqA:
           "Ya. Firefox 140+ di Android mendukung GeoSpoof, jadi Anda dapat memalsukan geolokasi dan zona waktu di ponsel Anda — sesuatu yang tidak bisa dilakukan Chrome di ponsel, karena tidak mendukung ekstensi.",
-        metaTitle:
-          "Palsukan Lokasi Anda di Firefox — Add-on Gratis | GeoSpoof",
+        metaTitle: "Palsukan Lokasi Anda di Firefox — Add-on Gratis | GeoSpoof",
         metaDescription:
           "Palsukan lokasi Anda di Firefox dengan add-on gratis dan open source. GeoSpoof menimpa Geolocation API dan zona waktu agar situs melihat lokasi yang Anda pilih.",
         ogTitle: "Palsukan lokasi Anda di Firefox",
@@ -491,7 +488,8 @@ export const id: Dictionary = {
       reason3Body:
         "Sinkronisasi VPN GeoSpoof menjaga lokasi palsu Anda tetap cocok dengan wilayah keluar VPN Anda secara otomatis — dengan Proton, atau VPN lain apa pun yang Anda pilih.",
       calloutLead: "Jangan hanya percaya kata kami.",
-      calloutBodyPre: " Proton adalah salah satu dari sedikit VPN yang direkomendasikan oleh ",
+      calloutBodyPre:
+        " Proton adalah salah satu dari sedikit VPN yang direkomendasikan oleh ",
       calloutLink: "Privacy Guides",
       calloutBodyPost:
         ", sumber daya privasi independen yang dikelola komunitas. GeoSpoof berfungsi dengan VPN apa pun, jadi Anda tidak pernah terkunci; kami merekomendasikan Proton karena alasan open source dan audit di atas, tetapi pilihan yang tepat adalah yang Anda percayai.",
@@ -536,7 +534,8 @@ export const id: Dictionary = {
   },
   support: {
     meta: {
-      title: "Dukungan GeoSpoof — Perbaiki Pemalsuan, Sinkronisasi VPN & Penyiapan",
+      title:
+        "Dukungan GeoSpoof — Perbaiki Pemalsuan, Sinkronisasi VPN & Penyiapan",
       description:
         "Dapatkan bantuan dengan GeoSpoof: perbaiki pemalsuan lokasi yang tidak berfungsi, atasi waktu habis Sinkronisasi VPN, masalah WebRTC, dan penyiapan browser atau ponsel — atau hubungi tim kami.",
     },
@@ -612,8 +611,7 @@ export const id: Dictionary = {
   },
   spoofTimezone: {
     meta: {
-      title:
-        "Palsukan Zona Waktu Browser Anda — Ekstensi Gratis | GeoSpoof",
+      title: "Palsukan Zona Waktu Browser Anda — Ekstensi Gratis | GeoSpoof",
       description:
         "Ubah atau palsukan zona waktu browser Anda agar cocok dengan lokasi mana pun. GeoSpoof menimpa Date, Intl, dan Temporal agar jam Anda tidak bisa mengungkap wilayah asli Anda.",
       ogTitle: "Palsukan zona waktu browser Anda",
@@ -708,8 +706,10 @@ export const id: Dictionary = {
     eyebrow: "Verifikasi",
     heading: "Apa yang bisa dilihat situs web tentang Anda",
     refresh: "Muat ulang",
-    refreshAria: "Muat ulang — muat ulang halaman untuk melihat nilai terbaru Anda",
-    introMobile: "Nilai langsung yang bisa dibaca situs web tentang Anda sekarang.",
+    refreshAria:
+      "Muat ulang — muat ulang halaman untuk melihat nilai terbaru Anda",
+    introMobile:
+      "Nilai langsung yang bisa dibaca situs web tentang Anda sekarang.",
     introDesktop:
       "Nilai langsung dari browser Anda sekarang — lokasi, zona waktu, dan IP yang bisa dibaca situs web. Dengan GeoSpoof aktif, mereka mencerminkan lokasi palsu Anda alih-alih yang asli.",
     vpnSyncNote:
@@ -740,7 +740,8 @@ export const id: Dictionary = {
       description:
         "Permukaan fingerprinting utama yang diperiksa penyerang. Perluas grup mana pun untuk melihat nilai yang mereka dapatkan — semuanya harus menceritakan hal yang sama.",
     },
-    supportLead: "Melihat sesuatu yang salah, atau hasil yang tidak Anda duga? ",
+    supportLead:
+      "Melihat sesuatu yang salah, atau hasil yang tidak Anda duga? ",
     supportLink: "Dapatkan dukungan",
     verdict: {
       running: "Menjalankan pemeriksaan…",
@@ -757,7 +758,8 @@ export const id: Dictionary = {
     },
     dialog: {
       title: "Sudah menjalankan GeoSpoof?",
-      description: "Daftar periksa singkat mengatasi hampir setiap sinyal yang ditandai.",
+      description:
+        "Daftar periksa singkat mengatasi hampir setiap sinyal yang ditandai.",
       ipMismatchLocation: "IP tidak cocok dengan lokasi Anda?",
       ipMismatchTimezone: "IP tidak cocok dengan zona waktu Anda?",
       ipMismatchBody:
@@ -932,7 +934,8 @@ export const id: Dictionary = {
       howToStep4Name: "Buka kembali GeoSpoof",
       howToStep4Text:
         "Pemalsuan Tingkat Mesin tetap berfungsi persis seperti sebelumnya — hanya bilah notifikasi yang hilang.",
-      howToName: "Cara menyembunyikan bilah “mulai men-debug browser ini” Chrome",
+      howToName:
+        "Cara menyembunyikan bilah “mulai men-debug browser ini” Chrome",
       howToDesc:
         "Sembunyikan bilah notifikasi yang ditampilkan Chrome saat Pemalsuan Tingkat Mesin GeoSpoof aktif, dengan menjalankan Chrome menggunakan flag {flag}.",
     },
