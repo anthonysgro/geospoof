@@ -43,6 +43,7 @@ export const ru: Dictionary = {
     seeWhatSitesDetect: "Посмотреть, что видят сайты",
     allPlatforms: "Все браузеры и платформы",
     usersTrust: "Нам доверяют {count} пользователей",
+    usersShort: "{count} пользователей",
     firefoxRating: "Firefox",
     mainPhoneAlt: "Приложение GeoSpoof — главный экран",
     secondaryPhoneAlt: "Приложение GeoSpoof — второй экран",

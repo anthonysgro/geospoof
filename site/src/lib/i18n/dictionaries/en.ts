@@ -31,6 +31,7 @@ export const en = {
     seeWhatSitesDetect: "See what sites detect",
     allPlatforms: "All platforms & browsers",
     usersTrust: "Trusted by {count} users",
+    usersShort: "{count} users",
     firefoxRating: "Firefox",
     mainPhoneAlt: "GeoSpoof app — main view",
     secondaryPhoneAlt: "GeoSpoof app — secondary view",

@@ -31,6 +31,7 @@ export const es: Dictionary = {
     seeWhatSitesDetect: "Ve lo que detectan los sitios",
     allPlatforms: "Todas las plataformas y navegadores",
     usersTrust: "Con la confianza de {count} usuarios",
+    usersShort: "{count} usuarios",
     firefoxRating: "Firefox",
     mainPhoneAlt: "Aplicación GeoSpoof — vista principal",
     secondaryPhoneAlt: "Aplicación GeoSpoof — vista secundaria",

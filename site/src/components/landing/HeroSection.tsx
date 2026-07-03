@@ -49,6 +49,22 @@ export function HeroSection({ className }: { className?: string }) {
       ?.scrollIntoView({ behavior: "smooth", block: "start" })
   }
 
+  // Render a localized users phrase (a "{count}" template) with the count
+  // emphasized. Used for both the short and "trusted by" variants; the count
+  // isn't always in the middle (e.g. JA/RU), so we split on the placeholder.
+  const renderUsers = (template: string) => {
+    const [before, after] = template.split("{count}")
+    return (
+      <>
+        {before}
+        <span className="font-semibold text-(--color-canvas-foreground)">
+          7,000+
+        </span>
+        {after}
+      </>
+    )
+  }
+
   const ios1Webp = isDark
     ? "/images/hero/ios-1-dark.webp"
     : "/images/hero/ios-1.webp"
@@ -217,24 +233,13 @@ export function HeroSection({ className }: { className?: string }) {
           {/* Social proof */}
           <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 xl:justify-start">
             <span className="text-sm text-(--color-canvas-muted)">
-              {/*
-                usersTrust is a localized template with a {count} placeholder
-                (e.g. "Trusted by {count} users"). Split on it so the count
-                stays bold while word order around it follows each language —
-                the number isn't always in the middle (e.g. JA/RU).
-              */}
-              {(() => {
-                const [before, after] = t.hero.usersTrust.split("{count}")
-                return (
-                  <>
-                    {before}
-                    <span className="font-semibold text-(--color-canvas-foreground)">
-                      7,000+
-                    </span>
-                    {after}
-                  </>
-                )
-              })()}
+              {/* xs: bare count ("7,000+ users"). sm+: full "trusted by" line. */}
+              <span className="sm:hidden">
+                {renderUsers(t.hero.usersShort)}
+              </span>
+              <span className="hidden sm:inline">
+                {renderUsers(t.hero.usersTrust)}
+              </span>
             </span>
             <span
               className="hidden h-3.5 w-px bg-(--color-canvas-border) sm:block"

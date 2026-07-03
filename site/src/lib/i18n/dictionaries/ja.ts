@@ -31,6 +31,7 @@ export const ja: Dictionary = {
     seeWhatSitesDetect: "サイトが検出する内容を見る",
     allPlatforms: "すべてのプラットフォームとブラウザ",
     usersTrust: "{count}のユーザーに信頼されています",
+    usersShort: "{count}のユーザー",
     firefoxRating: "Firefox",
     mainPhoneAlt: "GeoSpoof アプリ — メイン画面",
     secondaryPhoneAlt: "GeoSpoof アプリ — サブ画面",

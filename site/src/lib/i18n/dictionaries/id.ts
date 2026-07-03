@@ -31,6 +31,7 @@ export const id: Dictionary = {
     seeWhatSitesDetect: "Lihat apa yang dideteksi situs",
     allPlatforms: "Semua platform & browser",
     usersTrust: "Dipercaya oleh {count} pengguna",
+    usersShort: "{count} pengguna",
     firefoxRating: "Firefox",
     mainPhoneAlt: "Aplikasi GeoSpoof — tampilan utama",
     secondaryPhoneAlt: "Aplikasi GeoSpoof — tampilan kedua",
