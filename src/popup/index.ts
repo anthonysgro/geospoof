@@ -626,11 +626,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // and never surface an external affiliate link (App Store guidelines).
   if (!__SAFARI__) {
     const vpnPromo = document.getElementById("vpnPromoLink") as HTMLAnchorElement | null;
-    // The HTML ships the Chromium redirect; point Firefox builds at their
-    // own source tag so affiliate reporting stays split by browser.
-    if (__FIREFOX__ && vpnPromo) {
-      vpnPromo.href = "https://www.geospoof.com/go/proton/firefox/popup-footer";
-    }
     void browser.runtime
       .getPlatformInfo()
       .then(({ os }) => {

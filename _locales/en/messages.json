@@ -306,11 +306,11 @@
     "description": "Accessible label for the footer cross-link to the GeoSpoof Apple app (the visible text sits next to an Apple logo glyph)."
   },
   "vpnPromo_text": {
-    "message": "Save up to 70% on Proton VPN",
-    "description": "Footer cross-link label offering a Proton VPN affiliate discount; shown to users on non-Apple operating systems (Windows/Linux/Android/ChromeOS) in place of the Apple App Store link."
+    "message": "Pair with Proton VPN",
+    "description": "Footer cross-link inviting the user to pair GeoSpoof with Proton VPN (a disclosed affiliate recommendation); shown on non-Apple operating systems (Windows/Linux/Android/ChromeOS) in place of the Apple App Store link. Points at the on-site /vpn recommendation page."
   },
   "vpnPromo_ariaLabel": {
-    "message": "Save up to 70% on Proton VPN (affiliate link)",
+    "message": "Pair with Proton VPN (affiliate link)",
     "description": "Accessible label for the footer Proton VPN affiliate cross-link (the visible text sits next to a shield glyph)."
   },
   "vpnPromo_tag": {

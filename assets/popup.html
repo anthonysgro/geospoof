@@ -377,20 +377,21 @@
             </svg>
             <span data-i18n="iosPromo_text">Now on iPhone, iPad &amp; Mac</span>
           </a>
-          <!-- Proton VPN affiliate cross-link. Hidden by default; revealed at
-               runtime only for non-Apple OSes (see popup/index.ts). The href
-               points at the same-origin /go/proton redirect so the outbound
-               affiliate URL can change server-side (see site/vercel.json). The
-               HTML ships the Chromium redirect as the default; index.ts swaps
-               it to the Firefox source on Firefox builds. -->
+          <!-- Proton VPN cross-link. Hidden by default; revealed at runtime
+               only for non-Apple OSes (see popup/index.ts). Points at our own
+               /vpn recommendation page (which carries the affiliate disclosure
+               and the outbound Proton link) rather than straight at the
+               affiliate redirect — a softer sell for a privacy audience, and
+               a real page so the visit is measurable. UTM-tagged so the click
+               attributes to the popup footer. -->
           <a
             id="vpnPromoLink"
-            href="https://www.geospoof.com/go/proton/chrome/popup-footer"
+            href="https://www.geospoof.com/vpn?utm_source=extension&amp;utm_medium=popup&amp;utm_campaign=popup-footer"
             target="_blank"
-            rel="noopener sponsored"
+            rel="noopener"
             class="help-link"
             style="display: none"
-            aria-label="Save up to 70% on Proton VPN (affiliate link)"
+            aria-label="Pair with Proton VPN (affiliate link)"
             data-i18n-aria-label="vpnPromo_ariaLabel"
           >
             <svg
@@ -405,7 +406,7 @@
                 d="M256 0c4.6 0 9.2 1 13.4 2.9L457.7 82.8c22 9.3 38.4 31 38.3 57.2-.5 99.2-41.3 280.7-213.6 363.2-16.7 8-36.1 8-52.8 0C57.3 420.7 16.5 239.2 16 140c-.1-26.2 16.3-47.9 38.3-57.2L242.7 2.9C246.8 1 251.4 0 256 0z"
               />
             </svg>
-            <span data-i18n="vpnPromo_text">Save up to 70% on Proton VPN</span>
+            <span data-i18n="vpnPromo_text">Pair with Proton VPN</span>
             <span class="ecosystem-link-tag" data-i18n="vpnPromo_tag">Affiliate</span>
           </a>
         </div>

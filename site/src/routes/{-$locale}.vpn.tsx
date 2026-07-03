@@ -300,26 +300,36 @@ function HeroSection() {
             />
             {d.moneyBack}
           </span>
+          {/* Split into two nowrap groups (3 + 2) so the row wraps in a
+              balanced way instead of peeling off one item at a time — Android
+              never ends up alone on its own line. On a single line the groups
+              sit flush and read as one continuous, pipe-separated row. */}
           <ul
-            className="flex flex-wrap items-center justify-center text-xs text-(--color-canvas-muted)"
+            className="flex flex-wrap items-center justify-center gap-y-1.5 text-xs text-(--color-canvas-muted)"
             aria-label={d.platformsAria}
           >
-            {PROTON_PLATFORMS.map(({ label, icon: Icon }, i) => (
-              <li key={label} className="inline-flex items-center">
-                {i > 0 && (
-                  <span className="px-3 opacity-40" aria-hidden="true">
-                    |
-                  </span>
-                )}
-                <span className="inline-flex items-center gap-1.5">
-                  <Icon
-                    className="size-3.5 shrink-0 opacity-70"
-                    aria-hidden="true"
-                  />
-                  {label}
-                </span>
-              </li>
-            ))}
+            {[PROTON_PLATFORMS.slice(0, 3), PROTON_PLATFORMS.slice(3)].map(
+              (group, gi) => (
+                <li key={gi} className="inline-flex items-center">
+                  {group.map(({ label, icon: Icon }, ii) => (
+                    <React.Fragment key={label}>
+                      {!(gi === 0 && ii === 0) && (
+                        <span className="px-3 opacity-40" aria-hidden="true">
+                          |
+                        </span>
+                      )}
+                      <span className="inline-flex items-center gap-1.5">
+                        <Icon
+                          className="size-3.5 shrink-0 opacity-70"
+                          aria-hidden="true"
+                        />
+                        {label}
+                      </span>
+                    </React.Fragment>
+                  ))}
+                </li>
+              )
+            )}
           </ul>
         </div>
       </div>
