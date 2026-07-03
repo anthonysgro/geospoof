@@ -310,11 +310,11 @@
     "description": "Footer cross-link inviting the user to pair GeoSpoof with Proton VPN (a disclosed affiliate recommendation); shown on non-Apple operating systems (Windows/Linux/Android/ChromeOS) in place of the Apple App Store link. Points at the on-site /vpn recommendation page."
   },
   "vpnPromo_ariaLabel": {
-    "message": "Komplettera med Proton VPN (affiliatelänk)",
+    "message": "Komplettera med Proton VPN (annons)",
     "description": "Accessible label for the footer Proton VPN affiliate cross-link (the visible text sits next to a shield glyph)."
   },
   "vpnPromo_tag": {
-    "message": "Affiliate",
+    "message": "Annons",
     "description": "Small inline marker disclosing that the adjacent Proton VPN link is an affiliate link."
   },
   "review_modal_title": {

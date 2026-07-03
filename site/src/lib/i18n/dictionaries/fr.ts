@@ -454,11 +454,10 @@ export const fr: Dictionary = {
       headingPost: " ?",
       answer:
         "GeoSpoof masque la position de votre navigateur. Un VPN masque votre IP. Pour une confidentialité complète, il vous faut les deux.",
-      disclosureLabel: "Divulgation d’affiliation :",
       disclosureBody:
         "Nous sommes partenaires de Proton VPN. Si vous vous abonnez via notre lien, nous percevons une commission sans coût supplémentaire pour vous.",
       ctaPlans: "Voir les offres Proton VPN",
-      discountSticker: "Jusqu’à {discount} de réduction",
+      partnerPricing: "Jusqu’à {discount} de remise partenaire",
       learnMore: "En savoir plus",
       moneyBack: "Garantie de remboursement de 30 jours",
       platformsAria:
@@ -505,7 +504,6 @@ export const fr: Dictionary = {
       heading: "Choisissez l’offre qui vous convient",
       body: "GeoSpoof est open source. Pour la couche IP, nous vous orienterions vers Proton VPN Plus. L’offre 2 ans est à {discount} de réduction par rapport au tarif standard de Proton — le prix mensuel le plus bas et le meilleur rapport qualité-prix. Vous préférez l’essayer d’abord ? L’offre mensuelle fonctionne aussi.",
       cta: "Voir les offres Proton VPN",
-      discountLine: "{discount} de réduction sur l’offre 2 ans",
     },
     inlineDisclosure:
       "À noter — ceci est un lien affilié. Abonnez-vous via ce lien et Proton nous reverse une petite part, sans coût supplémentaire pour vous. C’est ainsi que nous aidons à garder GeoSpoof open source et indépendant.",
@@ -740,7 +738,9 @@ export const fr: Dictionary = {
         "Votre adresse IP est le seul signal que GeoSpoof ne peut pas changer. Seul un VPN le peut.",
       line2:
         "Celui que nous recommandons est à jusqu’à {discount} de réduction.",
-      cta: "Voir le VPN sans journaux que nous recommandons",
+      cta: "Sécurisez votre IP avec Proton VPN",
+      priceNote: "Jusqu’à {discount} de remise",
+      guaranteeNote: "Garantie 30 jours",
     },
     apiSection: {
       eyebrow: "Surface des API du navigateur",

@@ -11,7 +11,6 @@ import {
   ServerCog,
   ShieldCheck,
   Smartphone,
-  Star,
   TabletSmartphone,
   Terminal,
 } from "lucide-react"
@@ -234,48 +233,28 @@ function HeroSection() {
         <p className="mx-auto mb-7 max-w-2xl text-lg font-semibold text-(--color-canvas-foreground) md:text-xl">
           {d.answer}
         </p>
-        {/* Affiliate disclosure card, placed ABOVE the CTA so it is seen before
-            the click (FTC "clear and conspicuous"). */}
-        <div className="mx-auto mb-6 flex max-w-xl items-start gap-2.5 rounded-xl border border-(--color-canvas-border) bg-(--color-canvas) px-4 py-3 text-left">
-          <Info
-            className="mt-0.5 size-4 shrink-0 text-(--color-canvas-muted)"
-            aria-hidden="true"
-          />
-          <p className="text-xs leading-relaxed text-(--color-canvas-muted)">
-            <span className="font-semibold text-(--color-canvas-foreground)">
-              {d.disclosureLabel}
-            </span>{" "}
-            {d.disclosureBody}
-          </p>
-        </div>
         <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
-          <span className="relative inline-flex w-full sm:w-auto">
-            <a
-              {...CTA_LINK_PROPS}
-              className={cn(
-                "inline-flex min-h-12 w-full items-center justify-center gap-2.5 sm:min-h-14 sm:w-auto",
-                "rounded-brand bg-(--color-brand) px-8 text-base font-semibold text-white sm:text-lg",
-                "shadow-md transition-all hover:bg-(--color-brand-dark) hover:shadow-lg",
-                "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
-              )}
-            >
-              <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-md bg-white">
-                <img
-                  src="/proton/proton-vpn-logomark.svg"
-                  alt=""
-                  aria-hidden="true"
-                  width={918}
-                  height={833}
-                  className="size-4 w-auto"
-                />
-              </span>
-              {d.ctaPlans}
-            </a>
-            <span className="pointer-events-none absolute -top-3 -right-3 z-10 inline-flex items-center gap-0.5 rounded-full bg-amber-400 px-2 py-0.5 text-xs font-bold text-amber-950 shadow-md ring-2 ring-(--color-canvas)">
-              <Star className="size-3 fill-current" aria-hidden="true" />
-              {format(d.discountSticker, { discount: PROTON_DISCOUNT })}
+          <a
+            {...CTA_LINK_PROPS}
+            className={cn(
+              "inline-flex min-h-12 w-full items-center justify-center gap-2.5 sm:min-h-14 sm:w-auto",
+              "rounded-brand bg-(--color-brand) px-8 text-base font-semibold text-white sm:text-lg",
+              "shadow-md transition-all hover:bg-(--color-brand-dark) hover:shadow-lg",
+              "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+            )}
+          >
+            <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-md bg-white">
+              <img
+                src="/proton/proton-vpn-logomark.svg"
+                alt=""
+                aria-hidden="true"
+                width={918}
+                height={833}
+                className="size-4 w-auto"
+              />
             </span>
-          </span>
+            {d.ctaPlans}
+          </a>
           {/* Secondary CTA — stays on-page, smooth-scrolls to the "Why Proton"
               explainer for people who want the reasoning before clicking out. */}
           <a
@@ -293,12 +272,30 @@ function HeroSection() {
           </a>
         </div>
         <div className="mt-6 flex flex-col items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 text-sm text-(--color-canvas-muted)">
-            <ShieldCheck
-              className="size-4 shrink-0 text-(--color-brand)"
-              aria-hidden="true"
-            />
-            {d.moneyBack}
+          {/* Discount shown as a calm benefit under the CTA rather than a
+              floating sticker — reads as partner pricing, not an ad, which
+              lands better with a privacy-minded audience. */}
+          {/* Benefit line mirroring the plan section below: a shield on each
+              half — the partner discount and the money-back guarantee — split
+              by a quiet middot. */}
+          <span className="inline-flex flex-wrap items-center justify-center gap-x-1.5 text-center text-sm text-(--color-canvas-muted)">
+            <span className="inline-flex items-center gap-1.5">
+              <ShieldCheck
+                className="size-4 shrink-0 text-(--color-brand)"
+                aria-hidden="true"
+              />
+              {format(d.partnerPricing, { discount: PROTON_DISCOUNT })}
+            </span>
+            <span className="opacity-40" aria-hidden="true">
+              ·
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <ShieldCheck
+                className="size-4 shrink-0 text-(--color-brand)"
+                aria-hidden="true"
+              />
+              {d.moneyBack}
+            </span>
           </span>
           {/* Split into two nowrap groups (3 + 2) so the row wraps in a
               balanced way instead of peeling off one item at a time — Android
@@ -331,6 +328,19 @@ function HeroSection() {
               )
             )}
           </ul>
+        </div>
+        {/* Affiliate disclosure — placed below the CTA and micro-benefits per
+            the revised hierarchy. Un-boxed and quiet (no card), fronted by a
+            small info glyph, but still directly under the outbound CTA and
+            fully legible, so it stays clear and conspicuous. */}
+        <div className="mx-auto mt-6 flex w-fit max-w-2xl items-start gap-1.5 text-left">
+          <Info
+            className="mt-0.5 size-3.5 shrink-0 text-(--color-canvas-muted)"
+            aria-hidden="true"
+          />
+          <p className="text-xs leading-relaxed text-(--color-canvas-muted)">
+            {d.disclosureBody}
+          </p>
         </div>
       </div>
     </Section>
@@ -490,7 +500,13 @@ function PlanGuidanceSection() {
         <div className="mt-4 flex flex-col items-center gap-3">
           <CtaButton>{d.cta}</CtaButton>
           <span className="inline-flex flex-wrap items-center justify-center gap-x-1.5 text-center text-sm text-(--color-canvas-muted)">
-            {format(d.discountLine, { discount: PROTON_DISCOUNT })}
+            <span className="inline-flex items-center gap-1.5">
+              <ShieldCheck
+                className="size-4 shrink-0 text-(--color-brand)"
+                aria-hidden="true"
+              />
+              {format(t.vpn.hero.partnerPricing, { discount: PROTON_DISCOUNT })}
+            </span>
             <span className="opacity-40" aria-hidden="true">
               ·
             </span>

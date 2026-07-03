@@ -452,11 +452,10 @@ export const en = {
       headingPost: "?",
       answer:
         "GeoSpoof hides your browser's location. A VPN hides your IP. For full privacy, you want both.",
-      disclosureLabel: "Affiliate disclosure:",
       disclosureBody:
         "We partner with Proton VPN. If you subscribe through our link, we earn a commission at no extra cost to you.",
       ctaPlans: "See Proton VPN plans",
-      discountSticker: "Up to {discount} off",
+      partnerPricing: "Up to {discount} partner discount",
       learnMore: "Learn more",
       moneyBack: "30-day money-back guarantee",
       platformsAria:
@@ -503,7 +502,6 @@ export const en = {
       heading: "Pick the plan that fits",
       body: "GeoSpoof is open-source. For the IP layer, we'd point you to Proton's VPN Plus. The 2-year plan is {discount} off Proton's standard rate — the lowest price per month and the best overall value. Prefer to try it first? The monthly plan works too.",
       cta: "See Proton VPN plans",
-      discountLine: "{discount} off the 2-year plan",
     },
     inlineDisclosure:
       "Heads up — this is an affiliate link. Subscribe through it and Proton shares a small cut with us, at no extra cost to you. It's how we help keep GeoSpoof open-source and independent.",
@@ -731,7 +729,9 @@ export const en = {
       line1:
         "Your IP address is the one signal GeoSpoof can't change. Only a VPN can.",
       line2: "The one we recommend is up to {discount} off.",
-      cta: "See the no-log VPN we recommend",
+      cta: "Secure your IP with Proton VPN",
+      priceNote: "Up to {discount} off",
+      guaranteeNote: "30-day guarantee",
     },
     apiSection: {
       eyebrow: "Browser API surface",

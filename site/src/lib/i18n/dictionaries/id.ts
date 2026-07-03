@@ -451,11 +451,10 @@ export const id: Dictionary = {
       headingPost: "?",
       answer:
         "GeoSpoof menyembunyikan lokasi browser Anda. VPN menyembunyikan IP Anda. Untuk privasi penuh, Anda ingin keduanya.",
-      disclosureLabel: "Pengungkapan afiliasi:",
       disclosureBody:
         "Kami bermitra dengan Proton VPN. Jika Anda berlangganan melalui tautan kami, kami mendapat komisi tanpa biaya tambahan bagi Anda.",
       ctaPlans: "Lihat paket Proton VPN",
-      discountSticker: "Diskon hingga {discount}",
+      partnerPricing: "Diskon mitra hingga {discount}",
       learnMore: "Pelajari lebih lanjut",
       moneyBack: "Garansi uang kembali 30 hari",
       platformsAria:
@@ -502,7 +501,6 @@ export const id: Dictionary = {
       heading: "Pilih paket yang cocok",
       body: "GeoSpoof bersifat open source. Untuk lapis IP, kami akan mengarahkan Anda ke Proton VPN Plus. Paket 2 tahun berdiskon {discount} dari tarif standar Proton — harga per bulan terendah dan nilai keseluruhan terbaik. Ingin mencobanya dulu? Paket bulanan juga tersedia.",
       cta: "Lihat paket Proton VPN",
-      discountLine: "Diskon {discount} untuk paket 2 tahun",
     },
     inlineDisclosure:
       "Perhatian — ini adalah tautan afiliasi. Berlanggananlah melaluinya dan Proton membagi sedikit bagian kepada kami, tanpa biaya tambahan bagi Anda. Begitulah cara kami membantu menjaga GeoSpoof tetap open source dan independen.",
@@ -733,7 +731,9 @@ export const id: Dictionary = {
       line1:
         "Alamat IP Anda adalah satu-satunya sinyal yang tidak bisa diubah GeoSpoof. Hanya VPN yang bisa.",
       line2: "Yang kami rekomendasikan berdiskon hingga {discount}.",
-      cta: "Lihat VPN tanpa log yang kami rekomendasikan",
+      cta: "Amankan IP Anda dengan Proton VPN",
+      priceNote: "Diskon hingga {discount}",
+      guaranteeNote: "Garansi 30 hari",
     },
     apiSection: {
       eyebrow: "Permukaan API browser",

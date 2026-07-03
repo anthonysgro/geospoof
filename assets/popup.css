@@ -852,18 +852,26 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   margin-top: -1px;
 }
 
-/* Small muted "Affiliate" marker next to the Proton VPN cross-link, so the
-   monetized nature of the link is disclosed inline rather than hidden. */
+/* "Ad" disclosure appended to the Proton VPN cross-link: a small info glyph
+   plus a micro-caps label. "Ad" (localized) is the FTC's preferred plain-
+   English term — clearer to the average consumer than "affiliate". Muted so it
+   reads as an honest marker, not a loud promotional badge. */
 .ecosystem-link-tag {
   flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   font-size: 9px;
-  line-height: 1;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 2px 4px;
-  border-radius: 3px;
+  letter-spacing: 0.06em;
   color: var(--text-subtle);
-  background: var(--border-subtle);
+}
+
+.ecosystem-link-tag-icon {
+  flex: none;
+  width: 10px;
+  height: 10px;
 }
 
 /* Meta footer: "☕ Buy me a coffee · v1.21.7" as small subtext, centered, with

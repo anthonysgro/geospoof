@@ -447,11 +447,10 @@ export const zhCN: Dictionary = {
       headingPost: " 还需要 VPN 吗？",
       answer:
         "GeoSpoof 隐藏你浏览器的位置。VPN 隐藏你的 IP。要获得完整隐私，两者都需要。",
-      disclosureLabel: "联盟披露：",
       disclosureBody:
         "我们与 Proton VPN 合作。如果你通过我们的链接订阅，我们会获得一笔佣金，而你无需支付任何额外费用。",
       ctaPlans: "查看 Proton VPN 套餐",
-      discountSticker: "最高立减 {discount}",
+      partnerPricing: "合作伙伴折扣最高 {discount}",
       learnMore: "了解更多",
       moneyBack: "30 天退款保证",
       platformsAria: "Proton VPN 支持 Windows、macOS、Linux、iOS 和 Android",
@@ -497,7 +496,6 @@ export const zhCN: Dictionary = {
       heading: "选择适合你的套餐",
       body: "GeoSpoof 是开源的。至于 IP 层面，我们会向你推荐 Proton 的 VPN Plus。两年套餐比 Proton 的标准价低 {discount}——每月单价最低，整体性价比最高。想先试试？月付套餐同样可以。",
       cta: "查看 Proton VPN 套餐",
-      discountLine: "两年套餐立减 {discount}",
     },
     inlineDisclosure:
       "友情提示——这是一个联盟链接。通过它订阅，Proton 会与我们分成一小部分，而你无需支付任何额外费用。这有助于我们让 GeoSpoof 保持开源和独立。",
@@ -721,7 +719,9 @@ export const zhCN: Dictionary = {
     vpnCard: {
       line1: "IP 地址是 GeoSpoof 唯一无法改变的信号。只有 VPN 才能改变它。",
       line2: "我们推荐的那一款最高立减 {discount}。",
-      cta: "查看我们推荐的无日志 VPN",
+      cta: "使用 Proton VPN 保护你的 IP",
+      priceNote: "最高立减 {discount}",
+      guaranteeNote: "30 天保证",
     },
     apiSection: {
       eyebrow: "浏览器 API 面",

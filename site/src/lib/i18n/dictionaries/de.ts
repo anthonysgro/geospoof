@@ -454,11 +454,10 @@ export const de: Dictionary = {
       headingPost: "?",
       answer:
         "GeoSpoof verbirgt den Standort deines Browsers. Ein VPN verbirgt deine IP. Für vollständigen Datenschutz willst du beides.",
-      disclosureLabel: "Affiliate-Hinweis:",
       disclosureBody:
         "Wir kooperieren mit Proton VPN. Wenn du über unseren Link abonnierst, erhalten wir eine Provision, ohne dass dir zusätzliche Kosten entstehen.",
       ctaPlans: "Proton-VPN-Tarife ansehen",
-      discountSticker: "Bis zu {discount} Rabatt",
+      partnerPricing: "Bis zu {discount} Partnerrabatt",
       learnMore: "Mehr erfahren",
       moneyBack: "30-Tage-Geld-zurück-Garantie",
       platformsAria:
@@ -505,7 +504,6 @@ export const de: Dictionary = {
       heading: "Wähle den passenden Tarif",
       body: "GeoSpoof ist quelloffen. Für die IP-Ebene würden wir dich zu Protons VPN Plus lotsen. Der 2-Jahres-Tarif ist {discount} günstiger als Protons Standardpreis — der niedrigste Preis pro Monat und das beste Gesamtpreis-Leistungs-Verhältnis. Willst du es lieber erst ausprobieren? Der Monatstarif funktioniert auch.",
       cta: "Proton-VPN-Tarife ansehen",
-      discountLine: "{discount} Rabatt auf den 2-Jahres-Tarif",
     },
     inlineDisclosure:
       "Hinweis — das ist ein Affiliate-Link. Abonniere darüber und Proton gibt uns einen kleinen Anteil ab, ohne dass dir zusätzliche Kosten entstehen. So helfen wir mit, GeoSpoof quelloffen und unabhängig zu halten.",
@@ -738,7 +736,9 @@ export const de: Dictionary = {
       line1:
         "Deine IP-Adresse ist das eine Signal, das GeoSpoof nicht ändern kann. Nur ein VPN kann das.",
       line2: "Das von uns empfohlene gibt es mit bis zu {discount} Rabatt.",
-      cta: "Sieh dir das empfohlene VPN ohne Protokolle an",
+      cta: "Sichere deine IP mit Proton VPN",
+      priceNote: "Bis zu {discount} Rabatt",
+      guaranteeNote: "30 Tage Garantie",
     },
     apiSection: {
       eyebrow: "Browser-API-Oberfläche",

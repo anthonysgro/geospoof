@@ -11,7 +11,6 @@ import {
   RefreshCw,
   ShieldAlert,
   ShieldCheck,
-  Star,
   Wifi,
   X,
 } from "lucide-react"
@@ -718,34 +717,34 @@ function VerifyInner() {
           </div>
         </div>
         <div className="flex min-w-0 flex-col gap-2 self-stretch sm:max-w-xs sm:self-center">
-          <span className="relative inline-flex">
-            <LocaleLink
-              to="/vpn"
-              className={cn(
-                "group inline-flex w-full items-center justify-center gap-1.5 text-center",
-                "rounded-brand bg-(--color-brand) px-5 py-2.5 text-sm font-semibold text-white",
-                "shadow-sm transition-all hover:bg-(--color-brand-dark) hover:shadow-md",
-                "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) focus-visible:ring-offset-2"
-              )}
-            >
-              {d.vpnCard.cta}
-              <ArrowRight
-                className="size-4 shrink-0 transition-transform group-hover:translate-x-0.5"
-                aria-hidden="true"
-              />
-            </LocaleLink>
-            <span className="pointer-events-none absolute -top-2.5 -right-2.5 z-10 inline-flex items-center gap-0.5 rounded-full bg-amber-400 px-2 py-0.5 text-xs font-bold text-amber-950 shadow-md ring-2 ring-(--color-canvas)">
-              <Star className="size-3 fill-current" aria-hidden="true" />
-              {format(t.vpn.hero.discountSticker, { discount: PROTON_DISCOUNT })}
-            </span>
-          </span>
-          <span className="inline-flex items-center justify-center gap-1.5 text-xs text-(--color-canvas-muted)">
-            <ShieldCheck
-              className="size-3.5 shrink-0 text-(--color-brand)"
+          <LocaleLink
+            to="/vpn"
+            className={cn(
+              "group inline-flex w-full items-center justify-center gap-1.5 text-center",
+              "rounded-brand bg-(--color-brand) px-5 py-2.5 text-sm font-semibold text-white",
+              "shadow-sm transition-all hover:bg-(--color-brand-dark) hover:shadow-md",
+              "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) focus-visible:ring-offset-2"
+            )}
+          >
+            {d.vpnCard.cta}
+            <ArrowRight
+              className="size-4 shrink-0 transition-transform group-hover:translate-x-0.5"
               aria-hidden="true"
             />
-            {t.vpn.hero.moneyBack}
-          </span>
+          </LocaleLink>
+          {/* Discount presented as a native diagnostic recommendation, not a
+              floating sticker — flat styling that matches the test-result rows
+              above so the offer reads as part of the audit rather than an ad. */}
+          {/* Single compact line so it never wraps in the narrow card column.
+              No icon here — the card already has a checkmark list on the left,
+              so this stays a quiet diagnostic note under the button. */}
+          <p className="text-center text-xs text-(--color-canvas-muted)">
+            {format(d.vpnCard.priceNote, { discount: PROTON_DISCOUNT })}
+            <span className="mx-2 opacity-40" aria-hidden="true">
+              •
+            </span>
+            {d.vpnCard.guaranteeNote}
+          </p>
         </div>
       </div>
 

@@ -451,11 +451,10 @@ export const ja: Dictionary = {
       headingPost: " に VPN は必要？",
       answer:
         "GeoSpoof はブラウザの位置情報を隠します。VPN は IP を隠します。完全なプライバシーには、両方が必要です。",
-      disclosureLabel: "アフィリエイトに関する開示：",
       disclosureBody:
         "私たちは Proton VPN と提携しています。当社のリンク経由でご契約いただくと、追加費用なしで私たちに手数料が入ります。",
       ctaPlans: "Proton VPN のプランを見る",
-      discountSticker: "最大 {discount} オフ",
+      partnerPricing: "パートナー割引 最大 {discount}",
       learnMore: "詳しく見る",
       moneyBack: "30日間の返金保証",
       platformsAria:
@@ -502,7 +501,6 @@ export const ja: Dictionary = {
       heading: "自分に合うプランを選ぶ",
       body: "GeoSpoof はオープンソースです。IP の層については、Proton の VPN Plus をおすすめします。2年プランは Proton の標準料金より {discount} オフで、月あたりの料金が最も安く、総合的に最もお得です。まず試してみたいですか？ 月額プランもあります。",
       cta: "Proton VPN のプランを見る",
-      discountLine: "2年プランが {discount} オフ",
     },
     inlineDisclosure:
       "ご注意 — これはアフィリエイトリンクです。これを経由してご契約いただくと、追加費用なしで Proton が私たちに少額を分配します。これにより GeoSpoof をオープンソースかつ独立に保つ助けになっています。",
@@ -733,7 +731,9 @@ export const ja: Dictionary = {
       line1:
         "IP アドレスは、GeoSpoof が変えられない唯一のシグナルです。変えられるのは VPN だけです。",
       line2: "私たちのおすすめは最大 {discount} オフです。",
-      cta: "おすすめのノーログ VPN を見る",
+      cta: "Proton VPN で IP を保護",
+      priceNote: "最大 {discount} オフ",
+      guaranteeNote: "30日間保証",
     },
     apiSection: {
       eyebrow: "ブラウザ API のサーフェス",

@@ -453,11 +453,10 @@ export const es: Dictionary = {
       headingPost: "?",
       answer:
         "GeoSpoof oculta la ubicación de tu navegador. Una VPN oculta tu IP. Para una privacidad completa, quieres las dos.",
-      disclosureLabel: "Aviso de afiliación:",
       disclosureBody:
         "Colaboramos con Proton VPN. Si te suscribes a través de nuestro enlace, ganamos una comisión sin coste adicional para ti.",
       ctaPlans: "Ver los planes de Proton VPN",
-      discountSticker: "Hasta un {discount} de descuento",
+      partnerPricing: "Hasta {discount} de descuento para socios",
       learnMore: "Saber más",
       moneyBack: "Garantía de devolución de 30 días",
       platformsAria:
@@ -504,7 +503,6 @@ export const es: Dictionary = {
       heading: "Elige el plan que mejor te venga",
       body: "GeoSpoof es de código abierto. Para la capa de IP, te orientaríamos hacia Proton VPN Plus. El plan de 2 años tiene un {discount} de descuento sobre la tarifa estándar de Proton — el precio mensual más bajo y la mejor relación calidad-precio en general. ¿Prefieres probarlo antes? El plan mensual también funciona.",
       cta: "Ver los planes de Proton VPN",
-      discountLine: "{discount} de descuento en el plan de 2 años",
     },
     inlineDisclosure:
       "Aviso — este es un enlace de afiliado. Suscríbete a través de él y Proton nos comparte una pequeña parte, sin coste adicional para ti. Así es como ayudamos a mantener GeoSpoof de código abierto e independiente.",
@@ -735,7 +733,9 @@ export const es: Dictionary = {
       line1:
         "Tu dirección IP es la única señal que GeoSpoof no puede cambiar. Solo una VPN puede.",
       line2: "La que recomendamos tiene hasta un {discount} de descuento.",
-      cta: "Ver la VPN sin registros que recomendamos",
+      cta: "Protege tu IP con Proton VPN",
+      priceNote: "Hasta {discount} de descuento",
+      guaranteeNote: "Garantía de 30 días",
     },
     apiSection: {
       eyebrow: "Superficie de las API del navegador",
