@@ -1,8 +1,0 @@
-node_modules
-dist
-cdk.out
-.cdk.staging
-.kiro
-.git
-coverage
-package-lock.json
