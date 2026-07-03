@@ -30,7 +30,7 @@ export const ptBR: Dictionary = {
     downloadFree: "Baixar grátis",
     seeWhatSitesDetect: "Veja o que os sites detectam",
     allPlatforms: "Todas as plataformas e navegadores",
-    usersSuffix: "usuários",
+    usersTrust: "Com a confiança de {count} usuários",
     firefoxRating: "Firefox",
     mainPhoneAlt: "Aplicativo GeoSpoof — tela principal",
     secondaryPhoneAlt: "Aplicativo GeoSpoof — tela secundária",

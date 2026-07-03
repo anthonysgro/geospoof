@@ -30,7 +30,7 @@ export const ja: Dictionary = {
     downloadFree: "無料でダウンロード",
     seeWhatSitesDetect: "サイトが検出する内容を見る",
     allPlatforms: "すべてのプラットフォームとブラウザ",
-    usersSuffix: "ユーザー",
+    usersTrust: "{count}のユーザーに信頼されています",
     firefoxRating: "Firefox",
     mainPhoneAlt: "GeoSpoof アプリ — メイン画面",
     secondaryPhoneAlt: "GeoSpoof アプリ — サブ画面",

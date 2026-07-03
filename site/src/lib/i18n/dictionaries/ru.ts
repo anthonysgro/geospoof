@@ -42,7 +42,7 @@ export const ru: Dictionary = {
     downloadFree: "Установить бесплатно",
     seeWhatSitesDetect: "Посмотреть, что видят сайты",
     allPlatforms: "Все браузеры и платформы",
-    usersSuffix: "пользователей",
+    usersTrust: "Нам доверяют {count} пользователей",
     firefoxRating: "Firefox",
     mainPhoneAlt: "Приложение GeoSpoof — главный экран",
     secondaryPhoneAlt: "Приложение GeoSpoof — второй экран",

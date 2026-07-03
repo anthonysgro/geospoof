@@ -30,7 +30,7 @@ export const en = {
     downloadFree: "Download Free",
     seeWhatSitesDetect: "See what sites detect",
     allPlatforms: "All platforms & browsers",
-    usersSuffix: "users",
+    usersTrust: "Trusted by {count} users",
     firefoxRating: "Firefox",
     mainPhoneAlt: "GeoSpoof app — main view",
     secondaryPhoneAlt: "GeoSpoof app — secondary view",

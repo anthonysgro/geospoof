@@ -217,10 +217,24 @@ export function HeroSection({ className }: { className?: string }) {
           {/* Social proof */}
           <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 xl:justify-start">
             <span className="text-sm text-(--color-canvas-muted)">
-              <span className="font-semibold text-(--color-canvas-foreground)">
-                7,000+
-              </span>{" "}
-              {t.hero.usersSuffix}
+              {/*
+                usersTrust is a localized template with a {count} placeholder
+                (e.g. "Trusted by {count} users"). Split on it so the count
+                stays bold while word order around it follows each language —
+                the number isn't always in the middle (e.g. JA/RU).
+              */}
+              {(() => {
+                const [before, after] = t.hero.usersTrust.split("{count}")
+                return (
+                  <>
+                    {before}
+                    <span className="font-semibold text-(--color-canvas-foreground)">
+                      7,000+
+                    </span>
+                    {after}
+                  </>
+                )
+              })()}
             </span>
             <span
               className="hidden h-3.5 w-px bg-(--color-canvas-border) sm:block"

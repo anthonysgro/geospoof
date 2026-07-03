@@ -30,7 +30,7 @@ export const id: Dictionary = {
     downloadFree: "Unduh Gratis",
     seeWhatSitesDetect: "Lihat apa yang dideteksi situs",
     allPlatforms: "Semua platform & browser",
-    usersSuffix: "pengguna",
+    usersTrust: "Dipercaya oleh {count} pengguna",
     firefoxRating: "Firefox",
     mainPhoneAlt: "Aplikasi GeoSpoof — tampilan utama",
     secondaryPhoneAlt: "Aplikasi GeoSpoof — tampilan kedua",

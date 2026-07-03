@@ -43,7 +43,7 @@ export const zhCN: Dictionary = {
     downloadFree: "免费安装",
     seeWhatSitesDetect: "查看网站能检测到什么",
     allPlatforms: "所有浏览器和平台",
-    usersSuffix: "位用户",
+    usersTrust: "深受 {count} 位用户信赖",
     firefoxRating: "Firefox",
     mainPhoneAlt: "GeoSpoof 应用——主界面",
     secondaryPhoneAlt: "GeoSpoof 应用——次要界面",
