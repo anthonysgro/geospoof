@@ -32,13 +32,22 @@ import { ProtonLogo } from "@/components/ProtonLogo"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { SITE_URL } from "@/lib/blog"
-import { PROTON_DISCOUNT, protonVpnLink } from "@/lib/affiliate"
+import {
+  PROTON_DISCOUNT,
+  protonUnlimitedLink,
+  protonVpnLink,
+} from "@/lib/affiliate"
 import { useTranslations } from "@/hooks/use-i18n"
 
 // Single CTA destination for this page. Defined once; the actual outbound URL
 // lives behind the /go/proton redirect (see vercel.json), built via
 // @/lib/affiliate so it can change server-side without touching this component.
 const PROTON_LINK = protonVpnLink("vpn-page")
+
+// Secondary CTA for the plan section: the Proton Unlimited bundle, for visitors
+// who already have a VPN. Same offer as the primary link (offer_id 26) on its
+// bundle landing page — see @/lib/affiliate and the /go/proton redirect.
+const PROTON_UNLIMITED_LINK = protonUnlimitedLink("vpn-unlimited")
 
 /**
  * Build the `head` payload for the VPN page in a given locale: localized
@@ -519,6 +528,22 @@ function PlanGuidanceSection() {
             </span>
           </span>
         </div>
+        {/* Quiet, contextual upsell for visitors who already run a VPN. Sits
+            below the primary VPN CTA (never above it) and links to the Proton
+            Unlimited bundle landing. Marked sponsored/nofollow like every other
+            outbound affiliate link on the page. */}
+        <p className="mt-6 border-t border-(--color-canvas-border) pt-5 text-center text-sm text-(--color-canvas-muted)">
+          {d.unlimitedPre}
+          <a
+            href={PROTON_UNLIMITED_LINK}
+            target="_blank"
+            rel="sponsored nofollow noopener noreferrer"
+            className="font-medium text-(--color-brand) hover:underline"
+          >
+            {d.unlimitedLink}
+          </a>
+          {d.unlimitedPost}
+        </p>
       </div>
     </Section>
   )

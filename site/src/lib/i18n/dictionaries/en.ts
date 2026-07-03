@@ -502,6 +502,13 @@ export const en = {
       heading: "Pick the plan that fits",
       body: "GeoSpoof is open-source. For the IP layer, we'd point you to Proton's VPN Plus. The 2-year plan is {discount} off Proton's standard rate — the lowest price per month and the best overall value. Prefer to try it first? The monthly plan works too.",
       cta: "See Proton VPN plans",
+      // Secondary, contextual upsell for visitors who already run a VPN. Rendered
+      // as pre + link + post fragments (same pattern as the primer/callout
+      // links elsewhere on the page). Unlimited bundles the VPN with the rest of
+      // Proton's suite, so it's the one cross-sell that fits a VPN-intent page.
+      unlimitedPre: "Already have a VPN, or want more than one tool? Proton's ",
+      unlimitedLink: "Unlimited plan",
+      unlimitedPost: " bundles VPN with Mail, Pass, Drive, and Calendar.",
     },
     inlineDisclosure:
       "Heads up — this is an affiliate link. Subscribe through it and Proton shares a small cut with us, at no extra cost to you. It's how we help keep GeoSpoof open-source and independent.",

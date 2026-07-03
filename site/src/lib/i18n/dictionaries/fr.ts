@@ -504,6 +504,10 @@ export const fr: Dictionary = {
       heading: "Choisissez l’offre qui vous convient",
       body: "GeoSpoof est open source. Pour la couche IP, nous vous orienterions vers Proton VPN Plus. L’offre 2 ans est à {discount} de réduction par rapport au tarif standard de Proton — le prix mensuel le plus bas et le meilleur rapport qualité-prix. Vous préférez l’essayer d’abord ? L’offre mensuelle fonctionne aussi.",
       cta: "Voir les offres Proton VPN",
+      unlimitedPre:
+        "Vous avez déjà un VPN ou vous voulez plus qu’un outil ? L’offre ",
+      unlimitedLink: "Unlimited de Proton",
+      unlimitedPost: " regroupe le VPN avec Mail, Pass, Drive et Calendar.",
     },
     inlineDisclosure:
       "À noter — ceci est un lien affilié. Abonnez-vous via ce lien et Proton nous reverse une petite part, sans coût supplémentaire pour vous. C’est ainsi que nous aidons à garder GeoSpoof open source et indépendant.",

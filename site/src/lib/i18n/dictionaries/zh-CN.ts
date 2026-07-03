@@ -496,6 +496,9 @@ export const zhCN: Dictionary = {
       heading: "选择适合你的套餐",
       body: "GeoSpoof 是开源的。至于 IP 层面，我们会向你推荐 Proton 的 VPN Plus。两年套餐比 Proton 的标准价低 {discount}——每月单价最低，整体性价比最高。想先试试？月付套餐同样可以。",
       cta: "查看 Proton VPN 套餐",
+      unlimitedPre: "已经有 VPN，或者想要不止一个工具？Proton 的 ",
+      unlimitedLink: "Unlimited 套餐",
+      unlimitedPost: " 将 VPN 与 Mail、Pass、Drive 和 Calendar 打包在一起。",
     },
     inlineDisclosure:
       "友情提示——这是一个联盟链接。通过它订阅，Proton 会与我们分成一小部分，而你无需支付任何额外费用。这有助于我们让 GeoSpoof 保持开源和独立。",

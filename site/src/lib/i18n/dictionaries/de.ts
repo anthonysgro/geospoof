@@ -506,6 +506,10 @@ export const de: Dictionary = {
       heading: "Wähle den passenden Tarif",
       body: "GeoSpoof ist quelloffen. Für die IP-Ebene würden wir dich zu Protons VPN Plus lotsen. Der 2-Jahres-Tarif ist {discount} günstiger als Protons Standardpreis — der niedrigste Preis pro Monat und das beste Gesamtpreis-Leistungs-Verhältnis. Willst du es lieber erst ausprobieren? Der Monatstarif funktioniert auch.",
       cta: "Proton-VPN-Tarife ansehen",
+      unlimitedPre:
+        "Schon ein VPN, oder möchtest du mehr als ein Tool? Protons ",
+      unlimitedLink: "Unlimited-Tarif",
+      unlimitedPost: " bündelt VPN mit Mail, Pass, Drive und Calendar.",
     },
     inlineDisclosure:
       "Hinweis — das ist ein Affiliate-Link. Abonniere darüber und Proton gibt uns einen kleinen Anteil ab, ohne dass dir zusätzliche Kosten entstehen. So helfen wir mit, GeoSpoof quelloffen und unabhängig zu halten.",

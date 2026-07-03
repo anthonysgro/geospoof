@@ -499,6 +499,10 @@ export const id: Dictionary = {
       heading: "Pilih paket yang cocok",
       body: "GeoSpoof bersifat open source. Untuk lapis IP, kami akan mengarahkan Anda ke Proton VPN Plus. Paket 2 tahun berdiskon {discount} dari tarif standar Proton — harga per bulan terendah dan nilai keseluruhan terbaik. Ingin mencobanya dulu? Paket bulanan juga tersedia.",
       cta: "Lihat paket Proton VPN",
+      unlimitedPre: "Sudah punya VPN, atau ingin lebih dari satu alat? Paket ",
+      unlimitedLink: "Unlimited dari Proton",
+      unlimitedPost:
+        " menggabungkan VPN dengan Mail, Pass, Drive, dan Calendar.",
     },
     inlineDisclosure:
       "Perhatian — ini adalah tautan afiliasi. Berlanggananlah melaluinya dan Proton membagi sedikit bagian kepada kami, tanpa biaya tambahan bagi Anda. Begitulah cara kami membantu menjaga GeoSpoof tetap open source dan independen.",

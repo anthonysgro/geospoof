@@ -505,6 +505,9 @@ export const ptBR: Dictionary = {
       heading: "Escolha o plano que combina com você",
       body: "O GeoSpoof é de código aberto. Para a camada de IP, indicaríamos o Proton VPN Plus. O plano de 2 anos tem {discount} de desconto sobre a tarifa padrão da Proton — o menor preço por mês e o melhor custo-benefício geral. Prefere experimentar antes? O plano mensal também funciona.",
       cta: "Ver os planos do Proton VPN",
+      unlimitedPre: "Já tem uma VPN ou quer mais de uma ferramenta? O plano ",
+      unlimitedLink: "Unlimited da Proton",
+      unlimitedPost: " reúne VPN com Mail, Pass, Drive e Calendar.",
     },
     inlineDisclosure:
       "Atenção — este é um link de afiliado. Assine por ele e a Proton nos repassa uma pequena parte, sem custo adicional para você. É assim que ajudamos a manter o GeoSpoof de código aberto e independente.",

@@ -30,6 +30,24 @@ export function protonVpnLink(placement: VpnPlacement): string {
   return `/go/proton/web/${placement}`
 }
 
+/** On-site (web) placements that link to the Proton Unlimited offer. */
+export type UnlimitedPlacement = "vpn-unlimited" // the /vpn page "already have a VPN?" bundle upsell
+
+/**
+ * Same-origin path that 307-redirects to the Proton Unlimited landing for a
+ * given on-site placement. The redirect target is defined in `vercel.json`.
+ *
+ * Note: Unlimited is sold under the SAME Proton offer as VPN (offer_id 26,
+ * "Proton VPN RevShare") — Unlimited includes the VPN — so the only difference
+ * from `protonVpnLink` is the landing page (`url_id`), which lives in the
+ * redirect. Attribution and commission treatment match the VPN links.
+ *
+ * @param placement on-site spot the click originates from (aff_sub)
+ */
+export function protonUnlimitedLink(placement: UnlimitedPlacement): string {
+  return `/go/proton/web/${placement}`
+}
+
 /**
  * Plain, NON-affiliate Proton VPN URL — no offer_id, no aff_id, no tracking.
  *

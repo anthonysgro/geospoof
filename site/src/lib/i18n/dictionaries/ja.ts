@@ -493,6 +493,10 @@ export const ja: Dictionary = {
       heading: "自分に合うプランを選ぶ",
       body: "GeoSpoof はオープンソースです。IP の層については、Proton の VPN Plus をおすすめします。2年プランは Proton の標準料金より {discount} オフで、月あたりの料金が最も安く、総合的に最もお得です。まず試してみたいですか？ 月額プランもあります。",
       cta: "Proton VPN のプランを見る",
+      unlimitedPre:
+        "すでに VPN をお持ちですか？もっと多くの機能が必要ですか？Proton の",
+      unlimitedLink: "Unlimited プラン",
+      unlimitedPost: "なら、VPN に Mail・Pass・Drive・Calendar が含まれます。",
     },
     inlineDisclosure:
       "ご注意 — これはアフィリエイトリンクです。これを経由してご契約いただくと、追加費用なしで Proton が私たちに少額を分配します。これにより GeoSpoof をオープンソースかつ独立に保つ助けになっています。",
