@@ -52,6 +52,16 @@
       "source": "/go/proton/firefox/options",
       "destination": "https://go.getproton.me/aff_c?offer_id=26&aff_id=18662&source=firefox&aff_sub=options&aff_sub2=v1",
       "permanent": false
+    },
+    {
+      "source": "/go/proton/chrome/popup-footer",
+      "destination": "https://go.getproton.me/aff_c?offer_id=26&aff_id=18662&source=chrome&aff_sub=popup-footer&aff_sub2=v1",
+      "permanent": false
+    },
+    {
+      "source": "/go/proton/firefox/popup-footer",
+      "destination": "https://go.getproton.me/aff_c?offer_id=26&aff_id=18662&source=firefox&aff_sub=popup-footer&aff_sub2=v1",
+      "permanent": false
     }
   ],
   "headers": [

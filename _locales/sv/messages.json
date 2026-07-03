@@ -305,6 +305,18 @@
     "message": "GeoSpoof är nu tillgänglig på iPhone, iPad och Mac",
     "description": "Accessible label for the footer cross-link to the GeoSpoof Apple app (the visible text sits next to an Apple logo glyph)."
   },
+  "vpnPromo_text": {
+    "message": "Spara upp till 70 % på Proton VPN",
+    "description": "Footer cross-link label offering a Proton VPN affiliate discount; shown to users on non-Apple operating systems (Windows/Linux/Android/ChromeOS) in place of the Apple App Store link."
+  },
+  "vpnPromo_ariaLabel": {
+    "message": "Spara upp till 70 % på Proton VPN (affiliatelänk)",
+    "description": "Accessible label for the footer Proton VPN affiliate cross-link (the visible text sits next to a shield glyph)."
+  },
+  "vpnPromo_tag": {
+    "message": "Affiliate",
+    "description": "Small inline marker disclosing that the adjacent Proton VPN link is an affiliate link."
+  },
   "review_modal_title": {
     "message": "Gillar du GeoSpoof? ❤️",
     "description": "Heading of the modal that asks the user to leave a review."

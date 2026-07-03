@@ -562,5 +562,17 @@
   "iosPromo_ariaLabel": {
     "message": "GeoSpoof 现已支持 iPhone、iPad 和 Mac",
     "description": "Accessible label for the footer cross-link to the GeoSpoof Apple app (the visible text sits next to an Apple logo glyph)."
+  },
+  "vpnPromo_text": {
+    "message": "Proton VPN 最高可省 70%",
+    "description": "Footer cross-link label offering a Proton VPN affiliate discount; shown to users on non-Apple operating systems (Windows/Linux/Android/ChromeOS) in place of the Apple App Store link."
+  },
+  "vpnPromo_ariaLabel": {
+    "message": "Proton VPN 最高可省 70%（联盟推广链接）",
+    "description": "Accessible label for the footer Proton VPN affiliate cross-link (the visible text sits next to a shield glyph)."
+  },
+  "vpnPromo_tag": {
+    "message": "推广",
+    "description": "Small inline marker disclosing that the adjacent Proton VPN link is an affiliate link."
   }
 }

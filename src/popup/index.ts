@@ -616,5 +616,35 @@ document.addEventListener("DOMContentLoaded", () => {
     if (body1 && iosCopy) body1.textContent = iosCopy;
   }
 
+  // Footer ecosystem cross-link. Apple-OS users (macOS/iOS/iPadOS) keep the
+  // App Store cross-link — they likely own other Apple devices, so the app is
+  // relevant to them. Everyone else (Windows/Linux/Android/ChromeOS) gets a
+  // Proton VPN affiliate offer instead, which is useful to them and monetizes
+  // an otherwise-dead slot. Detection keys on the OS (not the browser build):
+  // someone running Chrome *on a Mac* is still an Apple user. Safari builds
+  // only ever run on Apple platforms, so they always keep the App Store link
+  // and never surface an external affiliate link (App Store guidelines).
+  if (!__SAFARI__) {
+    const vpnPromo = document.getElementById("vpnPromoLink") as HTMLAnchorElement | null;
+    // The HTML ships the Chromium redirect; point Firefox builds at their
+    // own source tag so affiliate reporting stays split by browser.
+    if (__FIREFOX__ && vpnPromo) {
+      vpnPromo.href = "https://www.geospoof.com/go/proton/firefox/popup-footer";
+    }
+    void browser.runtime
+      .getPlatformInfo()
+      .then(({ os }) => {
+        // "mac" → Apple user; keep the static App Store default.
+        if (os === "mac") return;
+        const iosPromo = document.getElementById("iosPromoLink");
+        if (iosPromo) iosPromo.style.display = "none";
+        if (vpnPromo) vpnPromo.style.display = "inline-flex";
+      })
+      .catch(() => {
+        // getPlatformInfo shouldn't reject in practice; if it does, keep the
+        // static default (App Store link) rather than guessing the platform.
+      });
+  }
+
   void loadSettings();
 });

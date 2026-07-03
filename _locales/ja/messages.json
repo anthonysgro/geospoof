@@ -562,5 +562,17 @@
   "iosPromo_ariaLabel": {
     "message": "GeoSpoof が iPhone、iPad、Mac で利用可能になりました",
     "description": "Accessible label for the footer cross-link to the GeoSpoof Apple app (the visible text sits next to an Apple logo glyph)."
+  },
+  "vpnPromo_text": {
+    "message": "Proton VPN が最大 70% 割引",
+    "description": "Footer cross-link label offering a Proton VPN affiliate discount; shown to users on non-Apple operating systems (Windows/Linux/Android/ChromeOS) in place of the Apple App Store link."
+  },
+  "vpnPromo_ariaLabel": {
+    "message": "Proton VPN が最大 70% 割引（アフィリエイトリンク）",
+    "description": "Accessible label for the footer Proton VPN affiliate cross-link (the visible text sits next to a shield glyph)."
+  },
+  "vpnPromo_tag": {
+    "message": "アフィリエイト",
+    "description": "Small inline marker disclosing that the adjacent Proton VPN link is an affiliate link."
   }
 }

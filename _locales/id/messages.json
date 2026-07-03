@@ -305,6 +305,18 @@
     "message": "GeoSpoof kini tersedia di iPhone, iPad, dan Mac",
     "description": "Accessible label for the footer cross-link to the GeoSpoof Apple app (the visible text sits next to an Apple logo glyph)."
   },
+  "vpnPromo_text": {
+    "message": "Hemat hingga 70% untuk Proton VPN",
+    "description": "Footer cross-link label offering a Proton VPN affiliate discount; shown to users on non-Apple operating systems (Windows/Linux/Android/ChromeOS) in place of the Apple App Store link."
+  },
+  "vpnPromo_ariaLabel": {
+    "message": "Hemat hingga 70% untuk Proton VPN (tautan afiliasi)",
+    "description": "Accessible label for the footer Proton VPN affiliate cross-link (the visible text sits next to a shield glyph)."
+  },
+  "vpnPromo_tag": {
+    "message": "Afiliasi",
+    "description": "Small inline marker disclosing that the adjacent Proton VPN link is an affiliate link."
+  },
   "review_modal_title": {
     "message": "Suka GeoSpoof? ❤️",
     "description": "Heading of the modal that asks the user to leave a review."
