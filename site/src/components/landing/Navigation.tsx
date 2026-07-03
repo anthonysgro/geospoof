@@ -158,7 +158,22 @@ function RightActions({
     <>
       <LanguageSwitcher />
 
-      <ThemeToggle />
+      {/*
+        In the lg range only: there's no GitHub icon between the toggle and the
+        CTA, and the language switcher shows its "EN" label, so the toggle
+        floats with more apparent space on its language side than its CTA side
+        (the filled CTA absorbs its own padding). Pull it ~10px toward the
+        language switcher to even the two gaps. Below lg the "EN" label is
+        hidden (globe only), so no pull — it'd be too tight. At xl the GitHub
+        icon restores the rhythm.
+
+        The margin lives on this wrapper, not on ThemeToggle itself: the button
+        has `transition-all`, which would otherwise animate the margin and make
+        it visibly slide when crossing the breakpoint.
+      */}
+      <span className="inline-flex lg:-ml-2.5 xl:ml-0">
+        <ThemeToggle />
+      </span>
 
       {/* GitHub — desktop only */}
       <a

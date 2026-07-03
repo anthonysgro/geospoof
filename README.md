@@ -10,6 +10,7 @@
 [![Version](https://img.shields.io/github/package-json/v/anthonysgro/geospoof?color=green)](https://github.com/anthonysgro/geospoof/releases)
 [![Firefox users](https://img.shields.io/amo/users/geo-spoof?logo=firefox-browser&label=Firefox%20users)](https://addons.mozilla.org/firefox/addon/geo-spoof/?utm_source=github&utm_medium=readme&utm_campaign=readme)
 [![Chrome users](https://img.shields.io/chrome-web-store/users/dgdbdodafgaeifgajaajohkjjgobcgje?logo=googlechrome&label=Chrome%20users)](https://chromewebstore.google.com/detail/geospoof/dgdbdodafgaeifgajaajohkjjgobcgje?utm_source=github&utm_medium=readme&utm_campaign=readme)
+[![Safari users](https://img.shields.io/badge/Safari%20users-1%2C300-0071E3?logo=apple&logoColor=white)](https://apps.apple.com/app/apple-store/id6765719745?pt=128299974&ct=github&mt=8)
 [![Reddit](https://img.shields.io/badge/Reddit-r%2FGeoSpoof-FF4500.svg?logo=reddit&logoColor=white)](https://www.reddit.com/r/geospoof)
 
   <p>
