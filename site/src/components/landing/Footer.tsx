@@ -59,6 +59,11 @@ function getFooterGroups(t: Dictionary): Array<FooterGroup> {
           href: "https://github.com/anthonysgro/geospoof",
           external: true,
         },
+        {
+          label: t.nav.buyMeACoffee,
+          href: "https://buymeacoffee.com/sgro",
+          external: true,
+        },
       ],
     },
   ]

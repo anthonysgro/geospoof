@@ -1,4 +1,4 @@
-import { CoffeeIcon, GithubIcon } from "lucide-react"
+import { GithubIcon } from "lucide-react"
 import navLogo from "@/assets/nav-logo.webp"
 import { NavLink } from "./NavLink"
 import { MobileNav } from "./MobileNav"
@@ -134,17 +134,6 @@ function RightActions({
       <LanguageSwitcher />
 
       <ThemeToggle />
-
-      {/* Buy me a coffee — desktop only */}
-      <a
-        href="https://buymeacoffee.com/sgro"
-        target="_blank"
-        rel="noopener noreferrer"
-        className={iconBtnClass}
-        aria-label={t.nav.buyMeACoffee}
-      >
-        <CoffeeIcon className="h-5 w-5" />
-      </a>
 
       {/* GitHub — desktop only */}
       <a

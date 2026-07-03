@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
+import { CoffeeIcon } from "lucide-react"
 import * as React from "react"
 import type { Locale } from "@/lib/i18n"
 import {
@@ -19,6 +20,7 @@ import { useTranslations } from "@/hooks/use-i18n"
 
 const GITHUB_PROFILE = "https://github.com/anthonysgro"
 const LINKEDIN_URL = "https://www.linkedin.com/in/sgro"
+const BUY_ME_A_COFFEE = "https://buymeacoffee.com/sgro"
 
 /**
  * Build the `head` payload for the About page in a given locale: localized
@@ -139,6 +141,16 @@ export function AboutPage() {
                 >
                   <LinkedInIcon className="size-4" />
                   LinkedIn
+                </a>
+                <a
+                  href={BUY_ME_A_COFFEE}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={socialLinkClass}
+                  aria-label={t.nav.buyMeACoffee}
+                >
+                  <CoffeeIcon className="size-4" />
+                  {t.nav.buyMeACoffee}
                 </a>
               </div>
             </div>
