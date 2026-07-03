@@ -1,10 +1,10 @@
 import { GithubIcon } from "lucide-react"
-import navLogo from "@/assets/nav-logo.webp"
 import { NavLink } from "./NavLink"
 import { MobileNav } from "./MobileNav"
 import { LanguageSwitcher } from "./LanguageSwitcher"
 import type { NavItem } from "./MobileNav"
 import type { Dictionary, Locale } from "@/lib/i18n"
+import navLogo from "@/assets/nav-logo.webp"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { cn } from "@/lib/utils"
 import { useTranslations } from "@/hooks/use-i18n"
@@ -17,6 +17,29 @@ function getNavItems(t: Dictionary, locale: Locale): Array<NavItem> {
     { label: t.nav.features, href: "#features" },
     { label: t.nav.blog, href: localizedHref("/blog", locale) },
     { label: t.nav.support, href: localizedHref("/support", locale) },
+  ]
+}
+
+/**
+ * Primary nav items for the mobile menu: the shared items plus About. About
+ * sits at the same hierarchy as Home/Features/Blog/Support here, but stays out
+ * of the desktop header (which we keep lean).
+ */
+function getMobileNavItems(t: Dictionary, locale: Locale): Array<NavItem> {
+  return [
+    ...getNavItems(t, locale),
+    { label: t.footer.links.about, href: localizedHref("/about", locale) },
+  ]
+}
+
+/**
+ * Legal links (Privacy, Terms) shown as small, anchored text at the bottom of
+ * the mobile menu — present but visually de-emphasized below the CTA.
+ */
+function getLegalNavItems(t: Dictionary, locale: Locale): Array<NavItem> {
+  return [
+    { label: t.footer.links.privacy, href: localizedHref("/privacy", locale) },
+    { label: t.footer.links.terms, href: localizedHref("/terms", locale) },
   ]
 }
 
@@ -122,11 +145,13 @@ const iconBtnClass = cn(
 
 function RightActions({
   t,
-  items,
+  mobileItems,
+  legalItems,
   homePath,
 }: {
   t: Dictionary
-  items: Array<NavItem>
+  mobileItems: Array<NavItem>
+  legalItems: Array<NavItem>
   homePath: string
 }) {
   return (
@@ -163,7 +188,12 @@ function RightActions({
       </a>
 
       {/* Mobile hamburger */}
-      <MobileNav items={items} homePath={homePath} className="lg:hidden" />
+      <MobileNav
+        items={mobileItems}
+        legalItems={legalItems}
+        homePath={homePath}
+        className="lg:hidden"
+      />
     </>
   )
 }
@@ -172,6 +202,8 @@ export function Navigation({ className }: { className?: string }) {
   const { locale, t } = useTranslations()
   const homePath = localizedPath("/", locale)
   const items = getNavItems(t, locale)
+  const mobileItems = getMobileNavItems(t, locale)
+  const legalItems = getLegalNavItems(t, locale)
 
   return (
     <header
@@ -198,7 +230,12 @@ export function Navigation({ className }: { className?: string }) {
           ariaLabel={t.nav.mainNavAria}
         />
         <div className="flex items-center gap-3 justify-self-end lg:gap-3">
-          <RightActions t={t} items={items} homePath={homePath} />
+          <RightActions
+            t={t}
+            mobileItems={mobileItems}
+            legalItems={legalItems}
+            homePath={homePath}
+          />
         </div>
       </nav>
     </header>

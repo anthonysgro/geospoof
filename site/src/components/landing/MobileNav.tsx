@@ -19,6 +19,11 @@ export interface NavItem {
 
 interface MobileNavProps {
   items: Array<NavItem>
+  /**
+   * Legal links (Privacy, Terms) rendered as small, de-emphasized text pinned
+   * to the bottom of the menu. Mobile-only.
+   */
+  legalItems?: Array<NavItem>
   /** Current locale's home path (e.g. "/" or "/fr"). */
   homePath?: string
   className?: string
@@ -26,6 +31,7 @@ interface MobileNavProps {
 
 export function MobileNav({
   items,
+  legalItems = [],
   homePath = "/",
   className,
 }: MobileNavProps) {
@@ -82,7 +88,7 @@ export function MobileNav({
           </SheetTitle>
         </SheetHeader>
         <nav
-          className="flex flex-1 flex-col gap-2 py-6"
+          className="flex flex-1 flex-col gap-2 overflow-y-auto py-6"
           aria-label={t.nav.mainNavAria}
         >
           {items.map((item) => (
@@ -152,6 +158,36 @@ export function MobileNav({
               GitHub
             </a>
           </div>
+
+          {legalItems.length > 0 && (
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-3">
+              {legalItems.map((item, i) => (
+                <React.Fragment key={item.href}>
+                  {i > 0 && (
+                    <span
+                      aria-hidden="true"
+                      className="text-xs text-(--color-canvas-muted)/60"
+                    >
+                      &middot;
+                    </span>
+                  )}
+                  <SheetClose asChild>
+                    <a
+                      href={item.href}
+                      onClick={(e) => handleLinkClick(e, item.href)}
+                      className={cn(
+                        "text-xs text-(--color-canvas-muted) hover:text-(--color-canvas-foreground)",
+                        "transition-colors duration-200",
+                        "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+                      )}
+                    >
+                      {item.label}
+                    </a>
+                  </SheetClose>
+                </React.Fragment>
+              ))}
+            </div>
+          )}
         </div>
       </SheetContent>
     </Sheet>
