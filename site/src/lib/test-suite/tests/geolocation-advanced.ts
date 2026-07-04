@@ -1006,6 +1006,48 @@ const overridesDoNotLeakExtensionInStackTest = buildBehavioralTest<boolean>({
   equals: (expected, observed) => expected === observed,
 })
 
+const constructorsDoNotLeakExtensionInStackTest = buildBehavioralTest<boolean>({
+  id: "tampering.constructors.error-stack-hides-extension-origin",
+  group: "geolocation-stealth",
+  name: "Overridden constructors do not leak an extension origin on invalid input",
+  description:
+    "The Date and Intl.DateTimeFormat constructors are replaced by the extension. Constructors have no `this` brand check, but on invalid input the native constructor throws (e.g. RangeError for an invalid `timeZone`). If the override rethrows that error from its own injected frame, the stack carries a chrome-extension:// URL — exposing the extension id. This calls the constructors with inputs that make native throw and asserts no thrown stack contains an extension origin. (Native `Date` does not throw on junk — it returns an Invalid Date — so it can't leak here; it's probed for completeness.)",
+  technique:
+    "Call `new Intl.DateTimeFormat('en', { timeZone: 'Not/AZone' })` (native throws RangeError) and `new Date('nonsense')`; scan any thrown stack for an extension-scheme URL.",
+  codeSnippet: `try { new Intl.DateTimeFormat("en", { timeZone: "Not/AZone" }) }
+catch (e) { /(chrome|moz|safari-web)-extension:\\/\\//.test(e.stack) }`,
+  expected: async () => ({
+    value: false,
+    describe: "no constructor leaks an extension origin",
+  }),
+  observe: async () => {
+    const probes: Array<[string, () => unknown]> = [
+      [
+        "new Intl.DateTimeFormat('en',{timeZone:'Not/AZone'})",
+        () => new Intl.DateTimeFormat("en", { timeZone: "Not/AZone" }),
+      ],
+      ["new Date('nonsense')", () => new Date("nonsense")],
+    ]
+    const leaks: Array<string> = []
+    for (const [label, run] of probes) {
+      try {
+        run()
+      } catch (err) {
+        const leak = extensionLeakInStack(err)
+        if (leak) leaks.push(`${label} → ${leak}`)
+      }
+    }
+    return {
+      value: leaks.length > 0,
+      describe: leaks.length
+        ? `leaks (${leaks.length}): ${leaks.join("; ")}`
+        : "no extension origin in any constructor stack",
+    }
+  },
+  // Pass when the observed "leaked" flag equals the expected `false`.
+  equals: (expected, observed) => expected === observed,
+})
+
 /** The seven GeolocationCoordinates attribute names (any engine order). */
 const COORD_ATTRS: ReadonlyArray<string> = [
   "accuracy",
@@ -1184,6 +1226,7 @@ export const geolocationAdvancedTests: ReadonlyArray<TestDefinition> = [
   errorStackHidesExtensionTest,
   permissionsQueryRejectsForeignThisTest,
   overridesDoNotLeakExtensionInStackTest,
+  constructorsDoNotLeakExtensionInStackTest,
   coordsToJsonOrderTest,
   positionToJsonOrderTest,
 ]

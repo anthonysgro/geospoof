@@ -26,7 +26,12 @@ import {
   originalResolvedOptions,
   engineTruncatesOffset,
 } from "./state";
-import { registerOverride, disguiseAsNative, installOverride } from "./function-masking";
+import {
+  registerOverride,
+  disguiseAsNative,
+  installOverride,
+  stripExtensionFramesFromStack,
+} from "./function-masking";
 import { deriveOffsetFromParts, getIntlBasedOffset } from "./timezone-helpers";
 import { seedFromBootstrap } from "./bootstrap";
 import { createLogger } from "@/shared/utils/debug-logger";
@@ -164,7 +169,17 @@ export function installTimezoneOverrides(): void {
         return instance;
       } catch (error) {
         logger.error("Error in DateTimeFormat constructor override:", error);
-        return new OriginalDateTimeFormat(locales, options);
+        // Fall back to the caller's original options. If those are themselves
+        // invalid (e.g. a bad `timeZone`/locale from the page), the native
+        // constructor throws a RangeError — correct behaviour, but the error's
+        // stack would carry our injected frame. Scrub it so the genuine native
+        // error can't be used to read the extension id, then rethrow.
+        try {
+          return new OriginalDateTimeFormat(locales, options);
+        } catch (err) {
+          stripExtensionFramesFromStack(err);
+          throw err;
+        }
       }
     } as unknown as typeof Intl.DateTimeFormat;
 
