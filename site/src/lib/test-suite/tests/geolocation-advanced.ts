@@ -650,6 +650,306 @@ function withTimeout<T>(inner: Promise<T>, ms: number): Promise<T> {
 // test was dropped rather than encoded as a Firefox-only assertion.
 
 // ===========================================================================
+// GROUP 3 — ARGUMENT & ERROR SEMANTICS
+// ===========================================================================
+//
+// These three vectors come from a July-2026 bug report against the
+// extension. They are self-verifying: each derives its "native" oracle
+// from the running browser itself (a thrown error's type/stack, or the
+// untouched prototype's attribute order), so the cards read `pass` on a
+// clean browser regardless of engine and only flip to `fail` when an
+// override diverges from native behaviour.
+
+/** Matches an extension-scheme URL anywhere in an error's stack trace. */
+const EXTENSION_URL_RE = /(?:chrome|moz|safari-web)-extension:\/\/[^\s):]+/i
+
+/** A geolocation instance cast to accept deliberately-wrong arguments. */
+interface LooseGeolocation {
+  getCurrentPosition: (...args: Array<unknown>) => unknown
+  watchPosition: (...args: Array<unknown>) => unknown
+  clearWatch: (watchId: number) => void
+}
+
+interface InvalidCallOutcome {
+  label: string
+  threwTypeError: boolean
+  detail: string
+}
+
+/**
+ * Invoke a geolocation call that native throws on, and report whether it
+ * threw a TypeError. If a buggy override returns a watch id instead of
+ * throwing, clear it so the probe doesn't leave a live watch running.
+ */
+function runInvalidGeoCall(
+  label: string,
+  call: () => unknown
+): InvalidCallOutcome {
+  try {
+    const ret = call()
+    if (typeof ret === "number") {
+      try {
+        navigator.geolocation.clearWatch(ret)
+      } catch {
+        /* nothing to clean up */
+      }
+    }
+    return { label, threwTypeError: false, detail: "did not throw" }
+  } catch (err) {
+    const isTypeError = err instanceof TypeError
+    const message = err instanceof Error ? err.message : String(err)
+    return {
+      label,
+      threwTypeError: isTypeError,
+      detail: isTypeError ? "TypeError" : `non-TypeError (${message})`,
+    }
+  }
+}
+
+const invalidArgumentsThrowTest = buildBehavioralTest<boolean>({
+  id: "tampering.geolocation.invalid-arguments-throw-typeerror",
+  group: "geolocation-stealth",
+  name: "getCurrentPosition / watchPosition throw TypeError on invalid arguments",
+  description:
+    "Per Web IDL, getCurrentPosition and watchPosition take a required PositionCallback and an optional PositionOptions dictionary. Calling them with no arguments, a non-callable first argument, or a primitive options value throws a TypeError synchronously on native. An override that skips this validation silently accepts the bad call — a one-line detection that no real browser exhibits.",
+  technique:
+    "Invoke both methods with (), ({}), and (noop, noop, 'b') and assert every call throws a TypeError.",
+  codeSnippet: `navigator.geolocation.getCurrentPosition()                    // TypeError
+navigator.geolocation.getCurrentPosition({})                  // TypeError
+navigator.geolocation.getCurrentPosition(()=>{}, ()=>{}, 'b') // TypeError
+// same three for watchPosition`,
+  expected: async () => ({
+    value: true,
+    describe: "every invalid call throws TypeError",
+  }),
+  observe: async () => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      throw new SkipTestError("navigator.geolocation is not available")
+    }
+    const geo = navigator.geolocation as unknown as LooseGeolocation
+    const noop = (): void => {}
+    const outcomes: Array<InvalidCallOutcome> = [
+      runInvalidGeoCall("getCurrentPosition()", () => geo.getCurrentPosition()),
+      runInvalidGeoCall("getCurrentPosition({})", () =>
+        geo.getCurrentPosition({})
+      ),
+      runInvalidGeoCall("getCurrentPosition(noop,noop,'b')", () =>
+        geo.getCurrentPosition(noop, noop, "b")
+      ),
+      runInvalidGeoCall("watchPosition()", () => geo.watchPosition()),
+      runInvalidGeoCall("watchPosition({})", () => geo.watchPosition({})),
+      runInvalidGeoCall("watchPosition(noop,noop,'b')", () =>
+        geo.watchPosition(noop, noop, "b")
+      ),
+    ]
+    return {
+      value: outcomes.every((o) => o.threwTypeError),
+      describe: outcomes.map((o) => `${o.label} → ${o.detail}`).join("; "),
+    }
+  },
+})
+
+const errorStackHidesExtensionTest = buildBehavioralTest<boolean>({
+  id: "tampering.geolocation.error-stack-hides-extension-origin",
+  group: "geolocation-stealth",
+  name: "Foreign-this geolocation error does not leak an extension origin",
+  description:
+    "Calling a detached Geolocation method (the function pulled off navigator.geolocation and invoked with the wrong `this`) throws a TypeError natively. When a content-script override throws that error from its own injected script, the error's stack trace contains a chrome-extension:// / moz-extension:// URL — exposing the extension id and confirming its presence. A native browser's stack has no such frame.",
+  technique:
+    "Detach getCurrentPosition, call it so the brand check fails, and scan the thrown error's stack for an extension-scheme URL.",
+  codeSnippet: `const f = navigator.geolocation.getCurrentPosition
+try { f(() => {}) } catch (e) {
+  /(chrome|moz|safari-web)-extension:\\/\\//.test(e.stack) // native: false
+}`,
+  expected: async () => ({
+    value: false,
+    describe: "no extension-scheme URL in the error stack",
+  }),
+  observe: async () => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      throw new SkipTestError("navigator.geolocation is not available")
+    }
+    const detached = navigator.geolocation.getCurrentPosition as (
+      cb: PositionCallback
+    ) => void
+    let caught: unknown
+    try {
+      detached(() => {})
+      return {
+        value: false,
+        describe:
+          "call did not throw (override ignored `this`) — no stack to leak",
+      }
+    } catch (err) {
+      caught = err
+    }
+    const isTypeError = caught instanceof TypeError
+    const stack =
+      caught instanceof Error && typeof caught.stack === "string"
+        ? caught.stack
+        : ""
+    const match = stack.match(EXTENSION_URL_RE)
+    const leaked = match !== null
+    return {
+      value: leaked,
+      describe: leaked
+        ? `stack leaks extension origin: ${match?.[0] ?? ""}`
+        : `threw ${isTypeError ? "TypeError" : "error"} with no extension origin in stack`,
+    }
+  },
+  // Pass when the observed "leaked" flag equals the expected `false`.
+  equals: (expected, observed) => expected === observed,
+})
+
+/** The seven GeolocationCoordinates attribute names (any engine order). */
+const COORD_ATTRS: ReadonlyArray<string> = [
+  "accuracy",
+  "altitude",
+  "altitudeAccuracy",
+  "heading",
+  "latitude",
+  "longitude",
+  "speed",
+]
+/** The two GeolocationPosition attribute names. */
+const POSITION_ATTRS: ReadonlyArray<string> = ["coords", "timestamp"]
+
+/**
+ * The true native `[Default] toJSON()` key order — which is engine-specific and
+ * is NOT the same as the prototype's own-property order (Blink installs the
+ * attribute getters in one order but serializes them in another, and the order
+ * can't be sampled from a spoofed instance because native `toJSON` brand-checks
+ * and throws). We therefore encode the two known native orders, verified
+ * against the engines' own IDL sources, and pick by engine family:
+ *
+ *   - Blink (Chromium): accuracy leads coords, timestamp leads position.
+ *     (Confirmed empirically on Chrome 149; matches MDN's example output.)
+ *   - Gecko / WebKit: latitude leads coords (altitude before accuracy), coords
+ *     leads position. (Verified against the Gecko and WebKit IDL sources, which
+ *     are byte-identical in attribute order.)
+ *
+ * On a clean browser the observed native `toJSON()` order must equal the entry
+ * for its engine — so these cards double as a self-check: if an engine ever
+ * changes its serialization order, the card fails on a clean browser and tells
+ * us to update the table.
+ *
+ * Sources:
+ *   - https://developer.mozilla.org/en-US/docs/Web/API/GeolocationCoordinates/toJSON
+ *   - https://developer.mozilla.org/en-US/docs/Web/API/GeolocationPosition/toJSON
+ *   - Gecko:  https://github.com/mozilla/gecko-dev/blob/master/dom/webidl/GeolocationCoordinates.webidl
+ *   - WebKit: https://github.com/WebKit/WebKit/blob/main/Source/WebCore/Modules/geolocation/GeolocationCoordinates.idl
+ *   - Spec:   https://www.w3.org/TR/geolocation/  (the `[Default] object toJSON()` serializer)
+ */
+type EngineFamily = "blink" | "gecko-webkit"
+
+function detectEngineFamily(): EngineFamily {
+  // Only Blink needs singling out — Gecko and WebKit share the same native
+  // order. `navigator.userAgentData` is Chromium-only (Firefox and Safari have
+  // both stated they won't ship User-Agent Client Hints), so its presence is a
+  // clean, non-deprecated positive signal for Blink. iOS "Chrome" (CriOS) is
+  // really WebKit and does not expose it, so it correctly reads as non-Blink.
+  // UA-string sniffing remains only as a last-resort fallback for old Chromium
+  // that predates userAgentData.
+  if (typeof navigator === "undefined") return "gecko-webkit"
+  const uaData = (navigator as Navigator & { userAgentData?: unknown })
+    .userAgentData
+  if (uaData) return "blink"
+  return /\bChrome\//.test(navigator.userAgent || "") ? "blink" : "gecko-webkit"
+}
+
+const NATIVE_COORDS_ORDER: Record<EngineFamily, ReadonlyArray<string>> = {
+  blink: [
+    "accuracy",
+    "latitude",
+    "longitude",
+    "altitude",
+    "altitudeAccuracy",
+    "heading",
+    "speed",
+  ],
+  "gecko-webkit": [
+    "latitude",
+    "longitude",
+    "altitude",
+    "accuracy",
+    "altitudeAccuracy",
+    "heading",
+    "speed",
+  ],
+}
+
+const NATIVE_POSITION_ORDER: Record<EngineFamily, ReadonlyArray<string>> = {
+  blink: ["timestamp", "coords"],
+  "gecko-webkit": ["coords", "timestamp"],
+}
+
+/** Read the ordered keys of an object's `toJSON()` output (attrs only). */
+function toJsonKeyOrder(
+  obj: object,
+  attrs: ReadonlyArray<string>
+): Array<string> {
+  const withToJson = obj as { toJSON?: () => unknown }
+  const json =
+    typeof withToJson.toJSON === "function"
+      ? withToJson.toJSON()
+      : (JSON.parse(JSON.stringify(obj)) as unknown)
+  if (json === null || typeof json !== "object") return []
+  const known = new Set(attrs)
+  return Object.keys(json as Record<string, unknown>).filter((k) =>
+    known.has(k)
+  )
+}
+
+const coordsToJsonOrderTest = buildBehavioralTest<string>({
+  id: "tampering.geolocation.coords-tojson-key-order",
+  group: "geolocation-stealth",
+  name: "GeolocationCoordinates toJSON key order matches native",
+  description:
+    "JSON.stringify(position.coords) must emit keys in the running engine's native [Default] toJSON() order. That order is engine-specific — Blink (Chromium) leads with accuracy; Gecko/WebKit lead with latitude — and it is NOT the prototype's property order, so an override that guesses or reuses the prototype order mismatches native. The expected order comes from the per-engine native serialization order (verified against each engine's IDL), so on a clean browser the observed native output equals it.",
+  technique:
+    "Compare the key order of position.coords.toJSON() against the running engine's known native serialization order.",
+  codeSnippet: `Object.keys((await getPosition()).coords.toJSON())
+// Blink: [accuracy, latitude, longitude, altitude, ...]
+// Gecko/WebKit: [latitude, longitude, altitude, accuracy, ...]`,
+  expected: async () => {
+    if (typeof GeolocationCoordinates === "undefined") {
+      return { skipReason: "GeolocationCoordinates interface not exposed" }
+    }
+    const order = NATIVE_COORDS_ORDER[detectEngineFamily()]
+    return { value: order.join(","), describe: `[${order.join(", ")}]` }
+  },
+  observe: async (ctx) => {
+    const pos = await getFullPosition(ctx)
+    const keys = toJsonKeyOrder(pos.coords, COORD_ATTRS)
+    return { value: keys.join(","), describe: `[${keys.join(", ")}]` }
+  },
+})
+
+const positionToJsonOrderTest = buildBehavioralTest<string>({
+  id: "tampering.geolocation.position-tojson-key-order",
+  group: "geolocation-stealth",
+  name: "GeolocationPosition toJSON key order matches native",
+  description:
+    "Same as the coords key-order check, but for the outer GeolocationPosition (coords vs timestamp). The native serializer order is engine-specific — Blink emits timestamp before coords; Gecko/WebKit emit coords before timestamp — and is not the prototype order. Expected comes from the per-engine native order, so a clean browser passes and only an override emitting the wrong order fails.",
+  technique:
+    "Compare the key order of position.toJSON() against the running engine's known native serialization order.",
+  codeSnippet: `Object.keys((await getPosition()).toJSON())
+// Blink: [timestamp, coords]   Gecko/WebKit: [coords, timestamp]`,
+  expected: async () => {
+    if (typeof GeolocationPosition === "undefined") {
+      return { skipReason: "GeolocationPosition interface not exposed" }
+    }
+    const order = NATIVE_POSITION_ORDER[detectEngineFamily()]
+    return { value: order.join(","), describe: `[${order.join(", ")}]` }
+  },
+  observe: async (ctx) => {
+    const pos = await getFullPosition(ctx)
+    const keys = toJsonKeyOrder(pos, POSITION_ATTRS)
+    return { value: keys.join(","), describe: `[${keys.join(", ")}]` }
+  },
+})
+
+// ===========================================================================
 // Manifest
 // ===========================================================================
 
@@ -674,6 +974,11 @@ export const geolocationAdvancedTests: ReadonlyArray<TestDefinition> = [
   // Group 2 — timing channels
   latencyDistributionTest,
   maximumAgeCachingTest,
+  // Group 3 — argument & error semantics (July-2026 bug report)
+  invalidArgumentsThrowTest,
+  errorStackHidesExtensionTest,
+  coordsToJsonOrderTest,
+  positionToJsonOrderTest,
 ]
 
 // It helps the noop callback pass the method-binding test's lint.

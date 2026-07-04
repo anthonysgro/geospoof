@@ -98,6 +98,20 @@ export const originalWatchPosition = navigator.geolocation.watchPosition.bind(
 );
 export const originalClearWatch = navigator.geolocation.clearWatch.bind(navigator.geolocation);
 
+// Unbound native geolocation methods, captured before overrides are applied.
+// Unlike the bound `original*` refs above, these are invoked via
+// `Reflect.apply(fn, self, args)` so the browser performs its own WebIDL
+// brand check and argument coercion against an arbitrary `this` — reproducing
+// the exact native TypeError (correct type, per-engine message, native stack)
+// when the override is called with a foreign `this` or invalid arguments.
+// See `reproduceNativeGeoError` in geolocation.ts. Reading the property off the
+// instance yields the same function object as `Geolocation.prototype.<method>`.
+/* eslint-disable @typescript-eslint/unbound-method */
+export const nativeGetCurrentPosition = navigator.geolocation.getCurrentPosition;
+export const nativeWatchPosition = navigator.geolocation.watchPosition;
+export const nativeClearWatch = navigator.geolocation.clearWatch;
+/* eslint-enable @typescript-eslint/unbound-method */
+
 // Date prototype originals
 // These are intentionally detached and always re-bound at call sites via `.call(this)`.
 /* eslint-disable @typescript-eslint/unbound-method */

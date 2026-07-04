@@ -14,6 +14,9 @@ import {
   originalGetCurrentPosition,
   originalWatchPosition,
   originalClearWatch,
+  nativeGetCurrentPosition,
+  nativeWatchPosition,
+  nativeClearWatch,
 } from "./state";
 import { installOverride, registerOverride, disguiseAsNative } from "./function-masking";
 import { waitForSettings } from "./settings-listener";
@@ -289,22 +292,113 @@ function createGeolocationPosition(location: SpoofedLocation): SpoofedGeolocatio
   return { coords: coordsFields as unknown as SpoofedGeolocationPosition["coords"], timestamp };
 }
 
+/** A native geolocation method invoked with loose args during delegation. */
+type NativeGeoMethod = (...args: Array<unknown>) => unknown;
+
 /**
- * Enforce the WebIDL brand check that native methods perform. Native
- * `Geolocation.prototype.getCurrentPosition.call({}, ...)` throws
- * `TypeError` because `{}` doesn't implement the Geolocation interface.
- * Without this guard, a fingerprinter can run exactly that call, see it
- * succeed, and detect that the method has been overridden.
- *
- * We check `this instanceof Geolocation` (matching the prototype chain
- * we install the override on). The thrown message mirrors Firefox's
- * native text so the error is indistinguishable under casual inspection.
+ * This injected script's own URL, captured at module-load time from a
+ * throwaway stack. In a `world: "MAIN"` content script this is the
+ * `chrome-extension://<id>/…` (or `moz-extension://…`) resource URL. We use it
+ * to strip our own frames out of thrown-error stacks (see
+ * `stripExtensionFramesFromStack`) so a page can't read the extension id off an
+ * error a fingerprinter deliberately provokes. `null` when it can't be
+ * determined (then scrubbing is a no-op and we simply don't make things worse).
  */
-function assertGeolocationBrand(self: unknown, method: string): void {
-  if (!(self instanceof Geolocation)) {
-    throw new TypeError(
-      `'${method}' called on an object that does not implement interface Geolocation.`
+const SELF_SCRIPT_URL: string | null = (() => {
+  try {
+    const stack = new Error().stack;
+    if (typeof stack !== "string") return null;
+    // Frames look like "  at fn (chrome-extension://id/injected.js:1:2)" or
+    // "  at chrome-extension://id/injected.js:1:2". Match ONLY extension-scheme
+    // URLs (a world:MAIN content script is always served from one) and trim the
+    // trailing :line:col so it matches every frame from this file. Restricting
+    // to extension schemes means we can never accidentally scrub a page's own
+    // https frames — if no extension frame is found we return null and the
+    // scrubber no-ops rather than risk over-trimming a real stack.
+    const match = stack.match(
+      /((?:chrome-extension|moz-extension|safari-web-extension):\/\/[^\s):]+)/
     );
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+})();
+
+/**
+ * Remove any stack frames that reference this injected script from a thrown
+ * error, in place. After scrubbing, an error the browser threw from inside one
+ * of our overrides looks like the native throw a page would see with no
+ * extension present: the native (URL-less) frame plus the page's own frames.
+ * No-op when the self URL is unknown or the stack isn't a writable string.
+ */
+function stripExtensionFramesFromStack(err: unknown): void {
+  if (!SELF_SCRIPT_URL || !(err instanceof Error) || typeof err.stack !== "string") return;
+  const cleaned = err.stack
+    .split("\n")
+    .filter((line) => !line.includes(SELF_SCRIPT_URL))
+    .join("\n");
+  try {
+    err.stack = cleaned;
+  } catch {
+    // `stack` is non-configurable on some engines — leave it as-is.
+  }
+}
+
+/** No-op used when substituting a *valid* callback during native delegation. */
+const GEO_NOOP = (): void => {};
+
+/**
+ * Whether a geolocation call's `this` and arguments are valid per WebIDL, so
+ * the override can proceed. Mirrors the checks the native methods perform:
+ *   - `this` must implement the Geolocation interface,
+ *   - `successCallback` (arg 0) must be callable,
+ *   - `errorCallback` (arg 1), when present, must be callable,
+ *   - `options` (arg 2), when present, must be an object (dictionaries reject
+ *     non-null primitives; functions are objects and are accepted).
+ */
+function geoArgsValid(
+  self: unknown,
+  successCallback: unknown,
+  errorCallback: unknown,
+  options: unknown
+): boolean {
+  if (!(self instanceof Geolocation)) return false;
+  if (typeof successCallback !== "function") return false;
+  if (errorCallback != null && typeof errorCallback !== "function") return false;
+  if (options != null && Object(options) !== options) return false;
+  return true;
+}
+
+/**
+ * Reproduce the browser's own error for an invalid geolocation call.
+ *
+ * Called only once `geoArgsValid` has determined the call is invalid. Invoking
+ * the unbound native method with the same receiver and arguments makes the
+ * browser throw its genuine `TypeError` — correct type, exact per-engine
+ * message, and a native stack — instead of a hand-rolled error whose message
+ * and stack (bearing the extension's own URL) betray the override. We then
+ * strip our injected-script frames from that stack so the extension id can't be
+ * read off it.
+ *
+ * Defense in depth: any *valid* success/error callback is swapped for a no-op
+ * before delegating, so in the (spec-impossible) event the native call fails to
+ * throw, the page's real callbacks never receive a real position. The original
+ * argument count is preserved so the native error message (which distinguishes
+ * "1 argument required, but only 0 present" from a type error) matches exactly.
+ */
+function reproduceNativeGeoError(
+  self: unknown,
+  nativeMethod: (...args: Array<unknown>) => unknown,
+  args: IArguments
+): void {
+  const argv = Array.prototype.slice.call(args) as Array<unknown>;
+  if (typeof argv[0] === "function") argv[0] = GEO_NOOP;
+  if (typeof argv[1] === "function") argv[1] = GEO_NOOP;
+  try {
+    Reflect.apply(nativeMethod, self, argv);
+  } catch (err) {
+    stripExtensionFramesFromStack(err);
+    throw err;
   }
 }
 
@@ -345,7 +439,10 @@ function respondViaNativePrompt(
 ): void {
   logger.debug("getCurrentPosition: preserve-prompt mode, calling real API for native prompt");
   originalGetCurrentPosition(
-    () => {
+    (realPosition) => {
+      // We momentarily hold a genuine native position — learn the engine's true
+      // toJSON key order from it before discarding, then hand back spoofed coords.
+      sampleNativeToJsonOrder(realPosition);
       const position = createGeolocationPosition(spoofedLocation!);
       rememberPosition(position);
       logger.debug("getCurrentPosition: prompt granted, substituting spoofed coords");
@@ -365,7 +462,11 @@ function getCurrentPositionOverride(
   errorCallback?: PositionErrorCallback | null,
   options?: PositionOptions
 ): void {
-  assertGeolocationBrand(this, "getCurrentPosition");
+  if (!geoArgsValid(this, successCallback, errorCallback, options)) {
+    // eslint-disable-next-line prefer-rest-params
+    reproduceNativeGeoError(this, nativeGetCurrentPosition as NativeGeoMethod, arguments);
+    return;
+  }
   logger.debug(
     "getCurrentPosition called — settingsReceived:",
     settingsReceived,
@@ -460,7 +561,13 @@ function watchPositionOverride(
   errorCallback?: PositionErrorCallback | null,
   options?: PositionOptions
 ): number {
-  assertGeolocationBrand(this, "watchPosition");
+  if (!geoArgsValid(this, successCallback, errorCallback, options)) {
+    // eslint-disable-next-line prefer-rest-params
+    reproduceNativeGeoError(this, nativeWatchPosition as NativeGeoMethod, arguments);
+    // `reproduceNativeGeoError` always throws (the native call rejects the
+    // invalid input); this return only satisfies the number return type.
+    return 0;
+  }
   if (spoofingEnabled && spoofedLocation) {
     if (preserveGeolocationPrompt) {
       // Preserve-prompt mode: let the real API drive both the native permission
@@ -470,8 +577,9 @@ function watchPositionOverride(
       // clearWatch routes it back to the native clearWatch (see below).
       logger.debug("watchPosition: preserve-prompt mode, delegating to real API");
       return originalWatchPosition(
-        () => {
+        (realPosition) => {
           if (!spoofingEnabled || !spoofedLocation) return;
+          sampleNativeToJsonOrder(realPosition);
           const position = createGeolocationPosition(spoofedLocation);
           successCallback(position as GeolocationPosition);
         },
@@ -526,7 +634,14 @@ function watchPositionOverride(
 
 /** Override for `navigator.geolocation.clearWatch`. */
 function clearWatchOverride(this: unknown, watchId: number): void {
-  assertGeolocationBrand(this, "clearWatch");
+  // clearWatch takes only a `this` brand check natively (the numeric watchId
+  // coerces without throwing), so validate the receiver and delegate a foreign
+  // `this` to the native method for a faithful, non-leaking TypeError.
+  if (!(this instanceof Geolocation)) {
+    // eslint-disable-next-line prefer-rest-params
+    reproduceNativeGeoError(this, nativeClearWatch as NativeGeoMethod, arguments);
+    return;
+  }
   // A synthetic (spoofed) watch lives in `watchCallbacks`; clear it locally.
   // Anything else is a real native watch — either spoofing is off, or we're in
   // preserve-prompt mode where watchPosition delegates to the real API — so
@@ -650,6 +765,124 @@ function installPositionAccessors(): void {
 }
 
 /**
+ * The native key order that the `[Default] toJSON()` serializer emits, per
+ * engine. The serializer walks the interface's Web IDL attribute-declaration
+ * order — which is NOT the prototype's own-property order (Blink installs the
+ * getters in one order but serializes in another) and CANNOT be sampled from a
+ * spoofed instance (native `toJSON` brand-checks and throws on our
+ * `Object.create`-d objects). So we encode the two known native orders and
+ * select by build target:
+ *
+ *   - Blink / Chromium: `accuracy` leads coords, `timestamp` leads position
+ *     (confirmed empirically on Chrome 149 and documented on MDN).
+ *   - Gecko (Firefox) and WebKit (Safari): the W3C-origin IDL order — coords
+ *     lead with `latitude` (with `altitude` before `accuracy`), position leads
+ *     with `coords` (verified against the Gecko and WebKit IDL sources, which
+ *     are byte-identical in attribute order).
+ *
+ * Each build ships to exactly one engine family, so a compile-time constant is
+ * correct and has zero runtime cost or detection surface. It is also the
+ * fallback for the runtime-sampled order (see `sampleNativeToJsonOrder`).
+ *
+ * Sources (the `[Default] object toJSON()` serializer walks IDL attribute
+ * order):
+ *   - Spec + serializer definition: https://www.w3.org/TR/geolocation/#coordinates_interface
+ *     and the commit that added it: https://github.com/w3c/geolocation/commit/09b48e6
+ *   - MDN (documents the observed Blink output order):
+ *     https://developer.mozilla.org/en-US/docs/Web/API/GeolocationCoordinates/toJSON
+ *     https://developer.mozilla.org/en-US/docs/Web/API/GeolocationPosition/toJSON
+ *   - Gecko IDL: https://github.com/mozilla/gecko-dev/blob/master/dom/webidl/GeolocationCoordinates.webidl
+ *     https://github.com/mozilla/gecko-dev/blob/master/dom/webidl/GeolocationPosition.webidl
+ *   - WebKit IDL: https://github.com/WebKit/WebKit/blob/main/Source/WebCore/Modules/geolocation/GeolocationCoordinates.idl
+ *     https://github.com/WebKit/WebKit/blob/main/Source/WebCore/Modules/geolocation/GeolocationPosition.idl
+ *   - Blink intent-to-ship discussion: https://groups.google.com/a/chromium.org/g/blink-dev/c/JQkvFd0oXUI
+ */
+const COORDS_JSON_ORDER: ReadonlyArray<keyof CoordsSlots> = __CHROMIUM__
+  ? ["accuracy", "latitude", "longitude", "altitude", "altitudeAccuracy", "heading", "speed"]
+  : ["latitude", "longitude", "altitude", "accuracy", "altitudeAccuracy", "heading", "speed"];
+
+const POSITION_JSON_ORDER: ReadonlyArray<keyof PositionSlots> = __CHROMIUM__
+  ? ["timestamp", "coords"]
+  : ["coords", "timestamp"];
+
+/**
+ * Runtime-learned native key orders. Populated by `sampleNativeToJsonOrder`
+ * the first time we hold a genuine browser-allocated position (preserve-prompt
+ * mode calls the real API). When set, they take precedence over the hardcoded
+ * build-flag defaults — so if an engine ever changes its serializer order, a
+ * preserve-prompt user's spoofed output tracks it automatically. `null` until
+ * sampled, which is the common case (default prompt-free mode never sees a real
+ * position), and then the verified defaults apply.
+ */
+let sampledCoordsOrder: ReadonlyArray<keyof CoordsSlots> | null = null;
+let sampledPositionOrder: ReadonlyArray<keyof PositionSlots> | null = null;
+
+/** The coords key order to emit: runtime-sampled if known, else the default. */
+function effectiveCoordsOrder(): ReadonlyArray<keyof CoordsSlots> {
+  return sampledCoordsOrder ?? COORDS_JSON_ORDER;
+}
+
+/** The position key order to emit: runtime-sampled if known, else the default. */
+function effectivePositionOrder(): ReadonlyArray<keyof PositionSlots> {
+  return sampledPositionOrder ?? POSITION_JSON_ORDER;
+}
+
+/**
+ * Learn the engine's true `toJSON()` key order from a genuine, browser-
+ * allocated `GeolocationPosition` (available only in preserve-prompt mode,
+ * where we call the real geolocation API). Calling `.toJSON()` on a real
+ * instance routes through our prototype override, which delegates non-spoofed
+ * instances to the native serializer — so the returned key order is the true
+ * native order for this exact engine build. We cache it once; failures are
+ * swallowed and simply leave the verified hardcoded defaults in place.
+ */
+function sampleNativeToJsonOrder(realPosition: GeolocationPosition): void {
+  try {
+    const coordKeys = new Set<string>([
+      "accuracy",
+      "altitude",
+      "altitudeAccuracy",
+      "heading",
+      "latitude",
+      "longitude",
+      "speed",
+    ]);
+    const withToJson = realPosition as unknown as { toJSON?: () => unknown };
+    if (sampledPositionOrder === null && typeof withToJson.toJSON === "function") {
+      const posJson = withToJson.toJSON();
+      if (posJson && typeof posJson === "object") {
+        const keys = Object.keys(posJson as Record<string, unknown>).filter(
+          (k) => k === "coords" || k === "timestamp"
+        );
+        if (keys.length === 2) sampledPositionOrder = keys;
+      }
+    }
+    const coords = realPosition.coords as unknown as { toJSON?: () => unknown };
+    if (sampledCoordsOrder === null && coords && typeof coords.toJSON === "function") {
+      const cJson = coords.toJSON();
+      if (cJson && typeof cJson === "object") {
+        const keys = Object.keys(cJson as Record<string, unknown>).filter((k) => coordKeys.has(k));
+        if (keys.length === coordKeys.size) sampledCoordsOrder = keys as Array<keyof CoordsSlots>;
+      }
+    }
+  } catch {
+    // Sampling is best-effort; the hardcoded defaults remain in effect.
+  }
+}
+
+/** Build the coords JSON object with keys inserted in native order. */
+function buildCoordsJSON(
+  cSlots: CoordsSlots,
+  order: ReadonlyArray<keyof CoordsSlots>
+): Record<string, number | null> {
+  const out: Record<string, number | null> = {};
+  for (const key of order) {
+    out[key] = cSlots[key];
+  }
+  return out;
+}
+
+/**
  * Install a `toJSON` override on `GeolocationPosition.prototype`.
  *
  * Native `GeolocationPosition.prototype.toJSON` is a brand-checked
@@ -678,21 +911,16 @@ function installPositionToJSON(): void {
     const slots = positionSlots.get(this);
     if (slots) {
       const cSlots = coordsSlots.get(slots.coords);
-      const coordsJSON = cSlots
-        ? {
-            latitude: cSlots.latitude,
-            longitude: cSlots.longitude,
-            accuracy: cSlots.accuracy,
-            altitude: cSlots.altitude,
-            altitudeAccuracy: cSlots.altitudeAccuracy,
-            heading: cSlots.heading,
-            speed: cSlots.speed,
-          }
+      const coordsJSON: unknown = cSlots
+        ? buildCoordsJSON(cSlots, effectiveCoordsOrder())
         : slots.coords;
-      return {
-        coords: coordsJSON,
-        timestamp: slots.timestamp,
-      };
+      // Assemble the position object with keys in native order (engine-specific
+      // — Blink emits `timestamp` before `coords`; Gecko/WebKit the reverse).
+      const out: Record<string, unknown> = {};
+      for (const key of effectivePositionOrder()) {
+        out[key] = key === "coords" ? coordsJSON : slots.timestamp;
+      }
+      return out;
     }
     // Pristine browser-allocated instance — fall through to native.
     if (typeof originalToJSON === "function") {
@@ -725,15 +953,7 @@ function installCoordsToJSON(): void {
   function spoofedToJSON(this: object): unknown {
     const slots = coordsSlots.get(this);
     if (slots) {
-      return {
-        latitude: slots.latitude,
-        longitude: slots.longitude,
-        accuracy: slots.accuracy,
-        altitude: slots.altitude,
-        altitudeAccuracy: slots.altitudeAccuracy,
-        heading: slots.heading,
-        speed: slots.speed,
-      };
+      return buildCoordsJSON(slots, effectiveCoordsOrder());
     }
     if (typeof originalToJSON === "function") {
       return originalToJSON.call(this);
