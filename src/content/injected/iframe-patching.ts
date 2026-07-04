@@ -39,7 +39,7 @@
  */
 
 import type { AnyFunction } from "./types";
-import { overrideRegistry, spoofingEnabled, spoofedLocation, settingsReceived } from "./state";
+import { overrideRegistry, spoofedLocation } from "./state";
 import {
   installOverride,
   stripConstruct,
@@ -49,10 +49,9 @@ import {
 } from "./function-masking";
 import { buildPermissionsQueryOverride } from "./permissions";
 import {
-  geoArgsValid,
-  reproduceNativeGeoError,
   createGeolocationPosition,
   installGeolocationObjectModel,
+  buildGeolocationOverrides,
   type NativeGeoMethod,
   type GeolocationRealm,
 } from "./geolocation";
@@ -60,7 +59,6 @@ import { installLastModifiedOverride } from "./document-overrides";
 import { installXsltOverridesOn } from "./xslt-overrides";
 import { seedFromBootstrap } from "./bootstrap";
 import { buildRTCPeerConnectionWrapper, installRTCGetStatsOverride } from "./webrtc";
-import { waitForSettings } from "./settings-listener";
 import { installDateGetterOverridesOn, type DateGetterOriginals } from "./date-getters";
 import { installDateSetterOverridesOn, type DateSetterOriginals } from "./date-setters";
 import { installDateFormattingOverridesOn, type DateFormattingOriginals } from "./date-formatting";
@@ -228,89 +226,37 @@ export function patchIframeWindow(iframeWindow: Window): void {
     };
     installGeolocationObjectModel(iframeGeoRealm);
 
-    // Shared watch-id tracking for this iframe instance
-    const iframeWatchCallbacks = new Map<number, PositionCallback>();
-    let iframeWatchIdCounter = 1;
-
-    const iframeGetCurrentPosition = function (
-      this: unknown,
-      successCallback: PositionCallback,
-      errorCallback?: PositionErrorCallback | null,
-      options?: PositionOptions
-    ): void {
-      if (!geoArgsValid(IframeGeolocation, this, successCallback, errorCallback, options)) {
-        // eslint-disable-next-line prefer-rest-params
-        reproduceNativeGeoError(this, iframeNativeGetCurrentPosition, arguments);
-        return;
-      }
-      const respond = ({ timedOut }: { timedOut: boolean }): void => {
-        if (timedOut) {
-          logger.warn("iframe getCurrentPosition: settings timed out, returning TIMEOUT error");
-          if (errorCallback) {
-            errorCallback({
-              code: GeolocationPositionError.TIMEOUT,
-              message: "Settings not received in time",
-              PERMISSION_DENIED: GeolocationPositionError.PERMISSION_DENIED,
-              POSITION_UNAVAILABLE: GeolocationPositionError.POSITION_UNAVAILABLE,
-              TIMEOUT: GeolocationPositionError.TIMEOUT,
-            });
-          }
-          return;
-        }
-        if (spoofingEnabled && spoofedLocation) {
-          const pos = createGeolocationPosition(spoofedLocation, iframeGeoRealm);
-          const delay = 10 + Math.random() * 40;
-          logger.debug("iframe getCurrentPosition: returning spoofed coords", {
-            lat: pos.coords.latitude,
-            lon: pos.coords.longitude,
-          });
-          setTimeout(() => successCallback(pos as GeolocationPosition), delay);
-        } else {
-          iframeOrigGetCurrentPosition(successCallback, errorCallback, options);
-        }
-      };
-
-      if (settingsReceived) {
-        respond({ timedOut: false });
-      } else {
-        void waitForSettings().then(respond);
+    // Liveness check for the shared watch cadence: our re-fire timers run in
+    // the parent context, but the success callback belongs to THIS iframe's
+    // realm. Once the iframe is removed from the DOM, keep firing would leak
+    // timers and throw on a dead realm — so the cadence stops when the frame
+    // is no longer connected. (The top-level realm passes `() => true`.)
+    const iframeIsAlive = (): boolean => {
+      try {
+        const el = iframeWindow.frameElement;
+        return el ? el.isConnected : false;
+      } catch {
+        // Cross-realm access can throw once the browsing context is torn down.
+        return false;
       }
     };
 
-    const iframeWatchPosition = function (
-      this: unknown,
-      successCallback: PositionCallback,
-      errorCallback?: PositionErrorCallback | null,
-      options?: PositionOptions
-    ): number {
-      if (!geoArgsValid(IframeGeolocation, this, successCallback, errorCallback, options)) {
-        // eslint-disable-next-line prefer-rest-params
-        reproduceNativeGeoError(this, iframeNativeWatchPosition, arguments);
-        return 0; // unreachable: reproduceNativeGeoError throws
-      }
-      if (spoofingEnabled && spoofedLocation) {
-        const watchId = iframeWatchIdCounter++;
-        iframeWatchCallbacks.set(watchId, successCallback);
-        const pos = createGeolocationPosition(spoofedLocation, iframeGeoRealm);
-        const delay = 10 + Math.random() * 40;
-        setTimeout(() => successCallback(pos as GeolocationPosition), delay);
-        return watchId;
-      }
-      return iframeOrigWatchPosition(successCallback, errorCallback, options);
-    };
-
-    const iframeClearWatch = function (this: unknown, watchId: number): void {
-      if (!(this instanceof IframeGeolocation)) {
-        // eslint-disable-next-line prefer-rest-params
-        reproduceNativeGeoError(this, iframeNativeClearWatch, arguments);
-        return;
-      }
-      if (spoofingEnabled) {
-        iframeWatchCallbacks.delete(watchId);
-      } else {
-        iframeOrigClearWatch(watchId);
-      }
-    };
+    // Build the geolocation overrides with the SAME shared factory the
+    // top-level realm uses (see buildGeolocationOverrides in geolocation.ts).
+    // The maximumAge cache, preserve-prompt native prompt, defer-until-settings,
+    // and watchPosition re-fire cadence now live in one place — the iframe no
+    // longer carries a fires-once, cacheless copy that drifts.
+    const iframeOverrides = buildGeolocationOverrides({
+      Geolocation: IframeGeolocation,
+      origGetCurrentPosition: iframeOrigGetCurrentPosition,
+      origWatchPosition: iframeOrigWatchPosition,
+      origClearWatch: iframeOrigClearWatch,
+      nativeGetCurrentPosition: iframeNativeGetCurrentPosition,
+      nativeWatchPosition: iframeNativeWatchPosition,
+      nativeClearWatch: iframeNativeClearWatch,
+      buildPosition: () => createGeolocationPosition(spoofedLocation!, iframeGeoRealm),
+      isAlive: iframeIsAlive,
+    });
 
     // Install on the iframe's own `Geolocation.prototype`. `installOverride`
     // reads the target's descriptor and preserves its flags, so the
@@ -319,11 +265,16 @@ export function patchIframeWindow(iframeWindow: Window): void {
     installOverride(
       iframeGeolocationCtor.prototype,
       "getCurrentPosition",
-      iframeGetCurrentPosition,
+      iframeOverrides.getCurrentPosition,
       1
     );
-    installOverride(iframeGeolocationCtor.prototype, "watchPosition", iframeWatchPosition, 1);
-    installOverride(iframeGeolocationCtor.prototype, "clearWatch", iframeClearWatch, 1);
+    installOverride(
+      iframeGeolocationCtor.prototype,
+      "watchPosition",
+      iframeOverrides.watchPosition,
+      1
+    );
+    installOverride(iframeGeolocationCtor.prototype, "clearWatch", iframeOverrides.clearWatch, 1);
 
     logger.debug("[patchIframeWindow] section 2 (geolocation) complete");
   } catch (err) {

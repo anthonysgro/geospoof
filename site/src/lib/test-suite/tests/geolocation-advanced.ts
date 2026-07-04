@@ -634,7 +634,7 @@ function withTimeout<T>(inner: Promise<T>, ms: number): Promise<T> {
   })
 }
 
-// Note: there is intentionally no `watchposition-fires-multiple-times`
+// Note: there is intentionally no ABSOLUTE `watchposition-fires-multiple-times`
 // test here. Engines disagree on the cadence:
 //   - Firefox re-fires watchPosition's callback every 2s even for a
 //     stationary device.
@@ -646,8 +646,16 @@ function withTimeout<T>(inner: Promise<T>, ms: number): Promise<T> {
 // like Firefox actually stands out against Safari. The only reliable
 // signal a fingerprinter would use here is a `position.coords`
 // cross-check (already covered by the watchPosition-matches-
-// getCurrentPosition test in values-correctness), so this cadence
-// test was dropped rather than encoded as a Firefox-only assertion.
+// getCurrentPosition test in values-correctness), so an absolute
+// cadence assertion was dropped rather than encoded as a Firefox-only
+// assertion.
+//
+// What we DO assert (see iframeWatchCadenceParityTest below) is realm
+// PARITY: the iframe realm's cadence must match the top frame's in the
+// same run. That's engine-agnostic — on any clean browser native-top and
+// native-iframe behave identically, so it passes regardless of whether
+// this engine re-fires — and it catches the specific drift where the
+// iframe carried a fires-once copy while the top frame re-fired.
 
 // ===========================================================================
 // GROUP 3 — ARGUMENT & ERROR SEMANTICS
@@ -1528,6 +1536,101 @@ Object.keys(p.coords.toJSON())  // native engine order, must not throw`,
   },
 })
 
+/**
+ * Count how many times a `watchPosition` callback fires on the given
+ * Geolocation over `observeMs`, then clear the watch. Error callbacks
+ * (denied / timeout) are ignored — the count simply stays low, which the
+ * parity comparison handles symmetrically for both realms. Rejects only if
+ * `watchPosition` itself throws synchronously (so the caller can skip).
+ */
+function countWatchCallbacks(
+  geo: Geolocation,
+  observeMs: number
+): Promise<number> {
+  return new Promise((resolve, reject) => {
+    let n = 0
+    let id: number
+    try {
+      id = geo.watchPosition(
+        () => {
+          n++
+        },
+        () => {},
+        { maximumAge: 0 }
+      )
+    } catch (err) {
+      reject(err instanceof Error ? err : new Error(String(err)))
+      return
+    }
+    setTimeout(() => {
+      try {
+        geo.clearWatch(id)
+      } catch {
+        /* nothing to clean up */
+      }
+      resolve(n)
+    }, observeMs)
+  })
+}
+
+const iframeWatchCadenceParityTest = buildBehavioralTest<boolean>({
+  id: "tampering.iframe-realm.watchposition-cadence-matches-top-frame",
+  group: "geolocation-stealth",
+  name: "Iframe-realm watchPosition cadence matches the top frame",
+  description:
+    "watchPosition cadence is engine-specific (Firefox re-fires a stationary watch every ~2s; Safari fires once), so an absolute callback count isn't a fair native oracle. But the top frame and a same-origin iframe must behave IDENTICALLY — a fingerprinter can run a watch in each and compare. An earlier iframe override fired once and fell silent while the top frame re-fired, a trivial tell. This runs a watch in each realm for the same window and asserts they land in the same bucket (both re-fire, or both fire once). On a clean browser both realms are native and match; only a realm-specific drift fails it.",
+  technique:
+    "Run watchPosition in the top frame and in a same-origin iframe for the same duration; bucket each callback count as re-fires (>=2) or fires-once (<=1) and assert the buckets match.",
+  codeSnippet: `const top = await countWatch(navigator.geolocation)
+const ifr = await countWatch(iframe.contentWindow.navigator.geolocation)
+bucket(top) === bucket(ifr)   // realms must agree`,
+  expected: async () => ({
+    value: true,
+    describe: "iframe cadence bucket matches top frame",
+  }),
+  observe: async () => {
+    if (typeof document === "undefined" || !document.body) {
+      throw new SkipTestError("no document.body to attach an iframe to")
+    }
+    const OBS = 3_000
+    let topCount: number
+    try {
+      topCount = await countWatchCallbacks(navigator.geolocation, OBS)
+    } catch (err) {
+      throw new SkipTestError(
+        `top-level watchPosition unavailable: ${err instanceof Error ? err.message : String(err)}`
+      )
+    }
+    const frame = document.createElement("iframe")
+    frame.setAttribute("allow", "geolocation")
+    frame.style.display = "none"
+    document.body.appendChild(frame)
+    try {
+      const win = frame.contentWindow as (Window & typeof globalThis) | null
+      if (!win)
+        return { value: false, describe: "iframe exposed no contentWindow" }
+      let iframeCount: number
+      try {
+        iframeCount = await countWatchCallbacks(win.navigator.geolocation, OBS)
+      } catch (err) {
+        throw new SkipTestError(
+          `iframe watchPosition unavailable: ${err instanceof Error ? err.message : String(err)}`
+        )
+      }
+      const bucket = (n: number): "re-fires" | "fires-once" =>
+        n >= 2 ? "re-fires" : "fires-once"
+      const topBucket = bucket(topCount)
+      const iframeBucket = bucket(iframeCount)
+      return {
+        value: topBucket === iframeBucket,
+        describe: `top=${topCount} (${topBucket}), iframe=${iframeCount} (${iframeBucket})`,
+      }
+    } finally {
+      frame.remove()
+    }
+  },
+})
+
 // ===========================================================================
 // Manifest
 // ===========================================================================
@@ -1562,6 +1665,7 @@ export const geolocationAdvancedTests: ReadonlyArray<TestDefinition> = [
   iframeRealmDoesNotLeakExtensionInStackTest,
   iframeGeolocationBrandCheckTest,
   iframeGeolocationObjectShapeTest,
+  iframeWatchCadenceParityTest,
   coordsToJsonOrderTest,
   positionToJsonOrderTest,
 ]

@@ -32,9 +32,6 @@ import { DEFAULT_ACCURACY_SETTING } from "@/shared/types/settings";
 
 const logger = createLogger("INJ");
 
-const watchCallbacks = new Map<number, PositionCallback>();
-let watchIdCounter = 1;
-
 /**
  * Per-spoofed-instance state for GeolocationCoordinates.
  *
@@ -193,25 +190,6 @@ export function getPaddedCoords(location: SpoofedLocation): {
 interface PositionCacheEntry {
   position: SpoofedGeolocationPosition;
   capturedAt: number;
-}
-let cachedPosition: PositionCacheEntry | null = null;
-
-/**
- * Check whether the cached position can satisfy the caller's
- * `maximumAge` request. Returns the cached position or `null`.
- */
-function consumeCachedPosition(options?: PositionOptions): SpoofedGeolocationPosition | null {
-  if (!cachedPosition) return null;
-  const maxAge = options?.maximumAge ?? 0;
-  if (maxAge <= 0) return null;
-  const age = Date.now() - cachedPosition.capturedAt;
-  if (age > maxAge) return null;
-  return cachedPosition.position;
-}
-
-/** Record a newly-emitted position so subsequent `maximumAge` reads can hit it. */
-function rememberPosition(position: SpoofedGeolocationPosition): void {
-  cachedPosition = { position, capturedAt: Date.now() };
 }
 
 /**
@@ -385,133 +363,186 @@ export function reproduceNativeGeoError(
 }
 
 /**
- * Emit a freshly-built spoofed position to the success callback with a
- * realistic 10-50ms delay (mirrors a native fresh-fix latency). This is the
- * seamless, prompt-free path used when "preserve permission prompts" is off.
+ * The realm-specific dependencies a set of geolocation overrides needs. The
+ * top-level realm and each same-origin iframe realm supply their own, so the
+ * full behavior — brand check, `maximumAge` cache, preserve-prompt native
+ * prompt, defer-until-settings, and `watchPosition` re-fire cadence — is
+ * defined once and shared, instead of the iframe carrying a simplified copy
+ * that drifts (previously: no cache, no prompt, fires-once).
+ *
+ * Per-realm (not shared): the `Geolocation` constructor (brand check), the
+ * realm's bound native methods (pass-through / preserve-prompt) and unbound
+ * natives (faithful `reproduceNativeGeoError` throw), a `buildPosition` closure
+ * that mints a spoofed position in the correct realm, and `isAlive` — a
+ * liveness check the watch cadence consults before each re-fire so a removed
+ * iframe's timers stop (the top-level realm passes `() => true`).
+ *
+ * Shared via module state (same for every realm): `spoofingEnabled`,
+ * `spoofedLocation`, `settingsReceived`, `preserveGeolocationPrompt`,
+ * `waitForSettings`, and `sampleNativeToJsonOrder`. The `maximumAge` cache and
+ * watch bookkeeping are per-override-set (closed over below) — native-correct,
+ * since the top frame and an iframe are separate browsing contexts with
+ * independent caches.
  */
-function emitSpoofedPosition(successCallback: PositionCallback): void {
-  const position = createGeolocationPosition(spoofedLocation!);
-  rememberPosition(position);
-  const delay = 10 + Math.random() * 40;
-  logger.debug("getCurrentPosition: returning spoofed coords", {
-    coords: { lat: position.coords.latitude, lon: position.coords.longitude },
-    delay: `${delay.toFixed(1)}ms`,
-  });
-  setTimeout(() => {
-    if (successCallback) {
-      successCallback(position as GeolocationPosition);
-    }
-  }, delay);
+export interface GeolocationOverrideRealm {
+  Geolocation: new () => object;
+  origGetCurrentPosition: (
+    success: PositionCallback,
+    error?: PositionErrorCallback | null,
+    options?: PositionOptions
+  ) => void;
+  origWatchPosition: (
+    success: PositionCallback,
+    error?: PositionErrorCallback | null,
+    options?: PositionOptions
+  ) => number;
+  origClearWatch: (watchId: number) => void;
+  nativeGetCurrentPosition: NativeGeoMethod;
+  nativeWatchPosition: NativeGeoMethod;
+  nativeClearWatch: NativeGeoMethod;
+  buildPosition: () => SpoofedGeolocationPosition;
+  isAlive: () => boolean;
+}
+
+/** The three geolocation method overrides produced for a realm. */
+export interface GeolocationOverrides {
+  getCurrentPosition: (
+    this: unknown,
+    successCallback: PositionCallback,
+    errorCallback?: PositionErrorCallback | null,
+    options?: PositionOptions
+  ) => void;
+  watchPosition: (
+    this: unknown,
+    successCallback: PositionCallback,
+    errorCallback?: PositionErrorCallback | null,
+    options?: PositionOptions
+  ) => number;
+  clearWatch: (this: unknown, watchId: number) => void;
 }
 
 /**
- * "Preserve permission prompts" path: invoke the real geolocation API so the
- * browser surfaces its native permission prompt. On grant, discard the real
- * coordinates and hand back spoofed ones (the page still never learns the real
- * location); on denial / unavailable / timeout, forward the native error
- * unchanged. The real position is requested only to drive the genuine
- * permission flow — the user keeps per-site control over which sites get any
- * location at all, and a denied site is indistinguishable from a normal
- * browser.
+ * Build the `getCurrentPosition` / `watchPosition` / `clearWatch` overrides for
+ * one realm. See {@link GeolocationOverrideRealm} for the split between
+ * per-realm dependencies and shared module state.
  */
-function respondViaNativePrompt(
-  successCallback: PositionCallback,
-  errorCallback: PositionErrorCallback | null | undefined,
-  options: PositionOptions | undefined
-): void {
-  logger.debug("getCurrentPosition: preserve-prompt mode, calling real API for native prompt");
-  originalGetCurrentPosition(
-    (realPosition) => {
-      // We momentarily hold a genuine native position — learn the engine's true
-      // toJSON key order from it before discarding, then hand back spoofed coords.
-      sampleNativeToJsonOrder(realPosition);
-      const position = createGeolocationPosition(spoofedLocation!);
-      rememberPosition(position);
-      logger.debug("getCurrentPosition: prompt granted, substituting spoofed coords");
+export function buildGeolocationOverrides(realm: GeolocationOverrideRealm): GeolocationOverrides {
+  // Per-realm watch bookkeeping and maximumAge cache slot.
+  const watchCallbacks = new Map<number, PositionCallback>();
+  let watchIdCounter = 1;
+  let cachedPosition: PositionCacheEntry | null = null;
+
+  /**
+   * Check whether the cached position can satisfy the caller's `maximumAge`
+   * request. Returns the cached position or `null`.
+   */
+  const consumeCachedPosition = (options?: PositionOptions): SpoofedGeolocationPosition | null => {
+    if (!cachedPosition) return null;
+    const maxAge = options?.maximumAge ?? 0;
+    if (maxAge <= 0) return null;
+    const age = Date.now() - cachedPosition.capturedAt;
+    if (age > maxAge) return null;
+    return cachedPosition.position;
+  };
+
+  /** Record a newly-emitted position so subsequent `maximumAge` reads can hit it. */
+  const rememberPosition = (position: SpoofedGeolocationPosition): void => {
+    cachedPosition = { position, capturedAt: Date.now() };
+  };
+
+  /**
+   * Emit a freshly-built spoofed position to the success callback with a
+   * realistic 10-50ms delay (mirrors a native fresh-fix latency). This is the
+   * seamless, prompt-free path used when "preserve permission prompts" is off.
+   */
+  const emitSpoofedPosition = (successCallback: PositionCallback): void => {
+    const position = realm.buildPosition();
+    rememberPosition(position);
+    const delay = 10 + Math.random() * 40;
+    logger.debug("getCurrentPosition: returning spoofed coords", {
+      coords: { lat: position.coords.latitude, lon: position.coords.longitude },
+      delay: `${delay.toFixed(1)}ms`,
+    });
+    setTimeout(() => {
       if (successCallback) {
         successCallback(position as GeolocationPosition);
       }
-    },
-    errorCallback,
-    options
-  );
-}
+    }, delay);
+  };
 
-/** Override for `navigator.geolocation.getCurrentPosition`. */
-function getCurrentPositionOverride(
-  this: unknown,
-  successCallback: PositionCallback,
-  errorCallback?: PositionErrorCallback | null,
-  options?: PositionOptions
-): void {
-  if (!geoArgsValid(Geolocation, this, successCallback, errorCallback, options)) {
-    // eslint-disable-next-line prefer-rest-params
-    reproduceNativeGeoError(this, nativeGetCurrentPosition as NativeGeoMethod, arguments);
-    return;
-  }
-  logger.debug(
-    "getCurrentPosition called — settingsReceived:",
-    settingsReceived,
-    "spoofingEnabled:",
-    spoofingEnabled,
-    "hasLocation:",
-    !!spoofedLocation
-  );
+  /**
+   * "Preserve permission prompts" path: invoke the real geolocation API so the
+   * browser surfaces its native permission prompt. On grant, discard the real
+   * coordinates and hand back spoofed ones (the page still never learns the
+   * real location); on denial / unavailable / timeout, forward the native error
+   * unchanged. The real position is requested only to drive the genuine
+   * permission flow — the user keeps per-site control over which sites get any
+   * location at all, and a denied site is indistinguishable from a normal
+   * browser.
+   */
+  const respondViaNativePrompt = (
+    successCallback: PositionCallback,
+    errorCallback: PositionErrorCallback | null | undefined,
+    options: PositionOptions | undefined
+  ): void => {
+    logger.debug("getCurrentPosition: preserve-prompt mode, calling real API for native prompt");
+    realm.origGetCurrentPosition(
+      (realPosition) => {
+        // We momentarily hold a genuine native position — learn the engine's
+        // true toJSON key order from it before discarding, then hand back
+        // spoofed coords.
+        sampleNativeToJsonOrder(realPosition);
+        const position = realm.buildPosition();
+        rememberPosition(position);
+        logger.debug("getCurrentPosition: prompt granted, substituting spoofed coords");
+        if (successCallback) {
+          successCallback(position as GeolocationPosition);
+        }
+      },
+      errorCallback,
+      options
+    );
+  };
 
-  // Satisfy `maximumAge`: if the caller accepts a cached position and
-  // one is still fresh, return it synchronously (via queueMicrotask so
-  // the callback still fires asynchronously, as native does). This
-  // mirrors the observable timing of a cache hit — sub-millisecond —
-  // which a real implementation produces but a naive spoof does not.
-  if (settingsReceived && spoofingEnabled && spoofedLocation) {
-    const cached = consumeCachedPosition(options);
-    if (cached) {
-      logger.debug("getCurrentPosition: cache hit, returning immediately");
-      queueMicrotask(() => {
-        successCallback(cached as GeolocationPosition);
-      });
+  /** Override for `navigator.geolocation.getCurrentPosition`. */
+  function getCurrentPosition(
+    this: unknown,
+    successCallback: PositionCallback,
+    errorCallback?: PositionErrorCallback | null,
+    options?: PositionOptions
+  ): void {
+    if (!geoArgsValid(realm.Geolocation, this, successCallback, errorCallback, options)) {
+      // eslint-disable-next-line prefer-rest-params
+      reproduceNativeGeoError(this, realm.nativeGetCurrentPosition, arguments);
       return;
     }
-  }
+    logger.debug(
+      "getCurrentPosition called — settingsReceived:",
+      settingsReceived,
+      "spoofingEnabled:",
+      spoofingEnabled,
+      "hasLocation:",
+      !!spoofedLocation
+    );
 
-  if (settingsReceived) {
-    // Settings already loaded — respond immediately
-    if (spoofingEnabled && spoofedLocation) {
-      if (preserveGeolocationPrompt) {
-        respondViaNativePrompt(successCallback, errorCallback, options);
-      } else {
-        emitSpoofedPosition(successCallback);
-      }
-    } else {
-      logger.debug("getCurrentPosition: spoofing disabled, using original");
-      originalGetCurrentPosition(successCallback, errorCallback, options);
-    }
-  } else {
-    // Settings not yet received — wait for them before responding
-    logger.debug("getCurrentPosition: deferring until settings arrive");
-    const deferStart = now();
-    void waitForSettings().then(({ timedOut }) => {
-      const waited = now() - deferStart;
-      if (timedOut) {
-        // Settings never arrived within the timeout window. We don't know
-        // whether spoofing should be on or off, so we cannot safely fall
-        // through to the real API (that would leak the user's real location
-        // if spoofing was meant to be active). Fire the error callback instead.
-        logger.warn(
-          `getCurrentPosition: settings timed out after ${waited.toFixed(1)}ms, returning TIMEOUT error`
-        );
-        if (errorCallback) {
-          errorCallback({
-            code: GeolocationPositionError.TIMEOUT,
-            message: "Settings not received in time",
-            PERMISSION_DENIED: GeolocationPositionError.PERMISSION_DENIED,
-            POSITION_UNAVAILABLE: GeolocationPositionError.POSITION_UNAVAILABLE,
-            TIMEOUT: GeolocationPositionError.TIMEOUT,
-          });
-        }
+    // Satisfy `maximumAge`: if the caller accepts a cached position and
+    // one is still fresh, return it synchronously (via queueMicrotask so
+    // the callback still fires asynchronously, as native does). This
+    // mirrors the observable timing of a cache hit — sub-millisecond —
+    // which a real implementation produces but a naive spoof does not.
+    if (settingsReceived && spoofingEnabled && spoofedLocation) {
+      const cached = consumeCachedPosition(options);
+      if (cached) {
+        logger.debug("getCurrentPosition: cache hit, returning immediately");
+        queueMicrotask(() => {
+          successCallback(cached as GeolocationPosition);
+        });
         return;
       }
-      logger.debug(`getCurrentPosition: waitForSettings resolved after ${waited.toFixed(1)}ms`);
+    }
+
+    if (settingsReceived) {
+      // Settings already loaded — respond immediately
       if (spoofingEnabled && spoofedLocation) {
         if (preserveGeolocationPrompt) {
           respondViaNativePrompt(successCallback, errorCallback, options);
@@ -519,120 +550,175 @@ function getCurrentPositionOverride(
           emitSpoofedPosition(successCallback);
         }
       } else {
-        logger.debug("getCurrentPosition (deferred): spoofing disabled, using original");
-        originalGetCurrentPosition(successCallback, errorCallback, options);
+        logger.debug("getCurrentPosition: spoofing disabled, using original");
+        realm.origGetCurrentPosition(successCallback, errorCallback, options);
       }
-    });
-  }
-}
-
-/**
- * Override for `navigator.geolocation.watchPosition`.
- *
- * Native watchPosition fires its callback repeatedly as the device
- * moves, and on a stationary device it still emits updates every few
- * seconds as GPS/Wi-Fi estimates refine. A spoofing implementation that
- * fires once and falls silent is trivially detectable — a fingerprinter
- * can count callbacks over a 5-second window. We emit an initial
- * callback then schedule periodic re-fires with the same spoofed
- * position until the caller clears the watch.
- */
-function watchPositionOverride(
-  this: unknown,
-  successCallback: PositionCallback,
-  errorCallback?: PositionErrorCallback | null,
-  options?: PositionOptions
-): number {
-  if (!geoArgsValid(Geolocation, this, successCallback, errorCallback, options)) {
-    // eslint-disable-next-line prefer-rest-params
-    reproduceNativeGeoError(this, nativeWatchPosition as NativeGeoMethod, arguments);
-    // `reproduceNativeGeoError` always throws (the native call rejects the
-    // invalid input); this return only satisfies the number return type.
-    return 0;
-  }
-  if (spoofingEnabled && spoofedLocation) {
-    if (preserveGeolocationPrompt) {
-      // Preserve-prompt mode: let the real API drive both the native permission
-      // prompt and the native re-fire cadence, but substitute spoofed coords on
-      // every update so the real location never reaches the page. Denials/errors
-      // flow through untouched. The returned id is the real watch id, so
-      // clearWatch routes it back to the native clearWatch (see below).
-      logger.debug("watchPosition: preserve-prompt mode, delegating to real API");
-      return originalWatchPosition(
-        (realPosition) => {
-          if (!spoofingEnabled || !spoofedLocation) return;
-          sampleNativeToJsonOrder(realPosition);
-          const position = createGeolocationPosition(spoofedLocation);
-          successCallback(position as GeolocationPosition);
-        },
-        errorCallback,
-        options
-      );
+    } else {
+      // Settings not yet received — wait for them before responding
+      logger.debug("getCurrentPosition: deferring until settings arrive");
+      const deferStart = now();
+      void waitForSettings().then(({ timedOut }) => {
+        const waited = now() - deferStart;
+        if (timedOut) {
+          // Settings never arrived within the timeout window. We don't know
+          // whether spoofing should be on or off, so we cannot safely fall
+          // through to the real API (that would leak the user's real location
+          // if spoofing was meant to be active). Fire the error callback instead.
+          logger.warn(
+            `getCurrentPosition: settings timed out after ${waited.toFixed(1)}ms, returning TIMEOUT error`
+          );
+          if (errorCallback) {
+            errorCallback({
+              code: GeolocationPositionError.TIMEOUT,
+              message: "Settings not received in time",
+              PERMISSION_DENIED: GeolocationPositionError.PERMISSION_DENIED,
+              POSITION_UNAVAILABLE: GeolocationPositionError.POSITION_UNAVAILABLE,
+              TIMEOUT: GeolocationPositionError.TIMEOUT,
+            });
+          }
+          return;
+        }
+        logger.debug(`getCurrentPosition: waitForSettings resolved after ${waited.toFixed(1)}ms`);
+        if (spoofingEnabled && spoofedLocation) {
+          if (preserveGeolocationPrompt) {
+            respondViaNativePrompt(successCallback, errorCallback, options);
+          } else {
+            emitSpoofedPosition(successCallback);
+          }
+        } else {
+          logger.debug("getCurrentPosition (deferred): spoofing disabled, using original");
+          realm.origGetCurrentPosition(successCallback, errorCallback, options);
+        }
+      });
     }
-
-    const watchId = watchIdCounter++;
-    watchCallbacks.set(watchId, successCallback);
-
-    const initialDelay = 10 + Math.random() * 40;
-    logger.debug("watchPosition: returning spoofed coords", {
-      watchId,
-      coords: {
-        lat: spoofedLocation.latitude,
-        lon: spoofedLocation.longitude,
-      },
-      delay: `${initialDelay.toFixed(1)}ms`,
-    });
-
-    const emit = (): void => {
-      if (!watchCallbacks.has(watchId)) return;
-      if (!spoofingEnabled || !spoofedLocation) return;
-      const position = createGeolocationPosition(spoofedLocation);
-      successCallback(position as GeolocationPosition);
-    };
-
-    // Initial callback — mirrors the timing of a first fresh fix.
-    setTimeout(emit, initialDelay);
-
-    // Periodic re-fires matching native behavior. We cap the interval
-    // at 2s so worst-case RNG still produces at least two callbacks
-    // inside a 3-second observation window (first callback up to 50ms
-    // + one re-fire at up to 2000ms = 2050ms, well under 3000ms). A
-    // wider upper bound made the cadence test flaky.
-    const schedule = (): void => {
-      if (!watchCallbacks.has(watchId)) return;
-      const interval = 1_000 + Math.random() * 1_000;
-      setTimeout(() => {
-        emit();
-        schedule();
-      }, interval);
-    };
-    schedule();
-
-    return watchId;
-  } else {
-    return originalWatchPosition(successCallback, errorCallback, options);
   }
-}
 
-/** Override for `navigator.geolocation.clearWatch`. */
-function clearWatchOverride(this: unknown, watchId: number): void {
-  // clearWatch takes only a `this` brand check natively (the numeric watchId
-  // coerces without throwing), so validate the receiver and delegate a foreign
-  // `this` to the native method for a faithful, non-leaking TypeError.
-  if (!(this instanceof Geolocation)) {
-    // eslint-disable-next-line prefer-rest-params
-    reproduceNativeGeoError(this, nativeClearWatch as NativeGeoMethod, arguments);
-    return;
+  /**
+   * Override for `navigator.geolocation.watchPosition`.
+   *
+   * Native watchPosition fires its callback repeatedly as the device
+   * moves, and on a stationary device it still emits updates every few
+   * seconds as GPS/Wi-Fi estimates refine. A spoofing implementation that
+   * fires once and falls silent is trivially detectable — a fingerprinter
+   * can count callbacks over a 5-second window. We emit an initial
+   * callback then schedule periodic re-fires with the same spoofed
+   * position until the caller clears the watch.
+   */
+  function watchPosition(
+    this: unknown,
+    successCallback: PositionCallback,
+    errorCallback?: PositionErrorCallback | null,
+    options?: PositionOptions
+  ): number {
+    if (!geoArgsValid(realm.Geolocation, this, successCallback, errorCallback, options)) {
+      // eslint-disable-next-line prefer-rest-params
+      reproduceNativeGeoError(this, realm.nativeWatchPosition, arguments);
+      // `reproduceNativeGeoError` always throws (the native call rejects the
+      // invalid input); this return only satisfies the number return type.
+      return 0;
+    }
+    if (spoofingEnabled && spoofedLocation) {
+      if (preserveGeolocationPrompt) {
+        // Preserve-prompt mode: let the real API drive both the native permission
+        // prompt and the native re-fire cadence, but substitute spoofed coords on
+        // every update so the real location never reaches the page. Denials/errors
+        // flow through untouched. The returned id is the real watch id, so
+        // clearWatch routes it back to the native clearWatch (see below).
+        logger.debug("watchPosition: preserve-prompt mode, delegating to real API");
+        return realm.origWatchPosition(
+          (realPosition) => {
+            if (!spoofingEnabled || !spoofedLocation) return;
+            sampleNativeToJsonOrder(realPosition);
+            successCallback(realm.buildPosition() as GeolocationPosition);
+          },
+          errorCallback,
+          options
+        );
+      }
+
+      const watchId = watchIdCounter++;
+      watchCallbacks.set(watchId, successCallback);
+
+      const initialDelay = 10 + Math.random() * 40;
+      logger.debug("watchPosition: returning spoofed coords", {
+        watchId,
+        delay: `${initialDelay.toFixed(1)}ms`,
+      });
+
+      const emit = (): void => {
+        if (!watchCallbacks.has(watchId)) return;
+        if (!spoofingEnabled || !spoofedLocation) return;
+        // Stop (and forget) the watch if the realm is gone — e.g. an iframe
+        // removed from the DOM. Our timers run in the parent context, but the
+        // callback belongs to the (now dead) iframe realm; re-firing would leak
+        // timers and throw every tick.
+        if (!realm.isAlive()) {
+          watchCallbacks.delete(watchId);
+          return;
+        }
+        try {
+          successCallback(realm.buildPosition() as GeolocationPosition);
+        } catch (err) {
+          // The callback's realm may have gone away between the liveness check
+          // and this call. Stop re-firing rather than throwing every tick.
+          logger.debug(
+            "watchPosition: emit failed, clearing watch",
+            err instanceof Error ? err.message : String(err)
+          );
+          watchCallbacks.delete(watchId);
+        }
+      };
+
+      // Initial callback — mirrors the timing of a first fresh fix.
+      setTimeout(emit, initialDelay);
+
+      // Periodic re-fires matching native behavior. We cap the interval
+      // at 2s so worst-case RNG still produces at least two callbacks
+      // inside a 3-second observation window (first callback up to 50ms
+      // + one re-fire at up to 2000ms = 2050ms, well under 3000ms). A
+      // wider upper bound made the cadence test flaky.
+      const schedule = (): void => {
+        if (!watchCallbacks.has(watchId)) return;
+        if (!realm.isAlive()) {
+          watchCallbacks.delete(watchId);
+          return;
+        }
+        const interval = 1_000 + Math.random() * 1_000;
+        setTimeout(() => {
+          emit();
+          schedule();
+        }, interval);
+      };
+      schedule();
+
+      return watchId;
+    } else {
+      return realm.origWatchPosition(successCallback, errorCallback, options);
+    }
   }
-  // A synthetic (spoofed) watch lives in `watchCallbacks`; clear it locally.
-  // Anything else is a real native watch — either spoofing is off, or we're in
-  // preserve-prompt mode where watchPosition delegates to the real API — so
-  // route it to the native clearWatch.
-  if (watchCallbacks.has(watchId)) {
-    watchCallbacks.delete(watchId);
-  } else {
-    originalClearWatch(watchId);
+
+  /** Override for `navigator.geolocation.clearWatch`. */
+  function clearWatch(this: unknown, watchId: number): void {
+    // clearWatch takes only a `this` brand check natively (the numeric watchId
+    // coerces without throwing), so validate the receiver and delegate a foreign
+    // `this` to the native method for a faithful, non-leaking TypeError.
+    if (!(this instanceof realm.Geolocation)) {
+      // eslint-disable-next-line prefer-rest-params
+      reproduceNativeGeoError(this, realm.nativeClearWatch, arguments);
+      return;
+    }
+    // A synthetic (spoofed) watch lives in `watchCallbacks`; clear it locally.
+    // Anything else is a real native watch — either spoofing is off, or we're in
+    // preserve-prompt mode where watchPosition delegates to the real API — so
+    // route it to the native clearWatch.
+    if (watchCallbacks.has(watchId)) {
+      watchCallbacks.delete(watchId);
+    } else {
+      realm.origClearWatch(watchId);
+    }
   }
+
+  return { getCurrentPosition, watchPosition, clearWatch };
 }
 
 /**
@@ -661,9 +747,21 @@ function clearWatchOverride(this: unknown, watchId: number): void {
  * hardcoding it here.
  */
 export function installGeolocationOverrides(): void {
-  installOverride(Geolocation.prototype, "getCurrentPosition", getCurrentPositionOverride, 1);
-  installOverride(Geolocation.prototype, "watchPosition", watchPositionOverride, 1);
-  installOverride(Geolocation.prototype, "clearWatch", clearWatchOverride, 1);
+  const overrides = buildGeolocationOverrides({
+    Geolocation,
+    origGetCurrentPosition: originalGetCurrentPosition,
+    origWatchPosition: originalWatchPosition,
+    origClearWatch: originalClearWatch,
+    nativeGetCurrentPosition: nativeGetCurrentPosition as NativeGeoMethod,
+    nativeWatchPosition: nativeWatchPosition as NativeGeoMethod,
+    nativeClearWatch: nativeClearWatch as NativeGeoMethod,
+    // Top-level realm: build in the default (top) realm; always alive.
+    buildPosition: () => createGeolocationPosition(spoofedLocation!),
+    isAlive: () => true,
+  });
+  installOverride(Geolocation.prototype, "getCurrentPosition", overrides.getCurrentPosition, 1);
+  installOverride(Geolocation.prototype, "watchPosition", overrides.watchPosition, 1);
+  installOverride(Geolocation.prototype, "clearWatch", overrides.clearWatch, 1);
   installGeolocationObjectModel(TOP_REALM);
 }
 
