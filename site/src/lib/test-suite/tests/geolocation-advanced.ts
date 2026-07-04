@@ -1404,6 +1404,130 @@ const positionToJsonOrderTest = buildBehavioralTest<string>({
   },
 })
 
+/**
+ * Resolve a spoofed position from a same-origin iframe realm, with a hard
+ * timeout so a clean browser that never grants geolocation (or Safari's
+ * serialized geolocation queue) makes the caller skip rather than hang the
+ * suite. While the extension is active this resolves immediately with spoofed
+ * coords regardless of permission state.
+ */
+function getIframePosition(
+  win: Window & typeof globalThis,
+  timeoutMs = GEO_CALL_TIMEOUT_MS
+): Promise<GeolocationPosition> {
+  return new Promise((resolve, reject) => {
+    let settled = false
+    const timer = setTimeout(() => {
+      if (settled) return
+      settled = true
+      reject(new Error("iframe getCurrentPosition timed out"))
+    }, timeoutMs)
+    const done = (fn: () => void): void => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      fn()
+    }
+    try {
+      win.navigator.geolocation.getCurrentPosition(
+        (p) => done(() => resolve(p)),
+        (e) =>
+          done(() =>
+            reject(new Error(`iframe getCurrentPosition error: ${e.message}`))
+          ),
+        { maximumAge: Number.POSITIVE_INFINITY }
+      )
+    } catch (err) {
+      clearTimeout(timer)
+      reject(err instanceof Error ? err : new Error(String(err)))
+    }
+  })
+}
+
+const iframeGeolocationObjectShapeTest = buildBehavioralTest<boolean>({
+  id: "tampering.iframe-realm.geolocation-object-shape-matches-native",
+  group: "geolocation-stealth",
+  name: "Iframe-realm spoofed position matches native object shape",
+  description:
+    "A spoofed GeolocationPosition read through a same-origin iframe must be byte-identical in shape to a native one: zero own properties (values are served by prototype accessors, so Object.keys(coords) and Object.keys(position) are []), and a working toJSON() that emits the engine's native key order. An earlier iframe builder installed own data properties and never installed the accessor/toJSON overrides on the iframe realm, so iframe coords had enumerable own keys and coords.toJSON() threw Illegal invocation — both trivially distinguishable from the top frame. This creates a same-origin iframe, reads a spoofed position from its realm, and asserts own-keys are empty and the toJSON order matches native.",
+  technique:
+    "Create a same-origin iframe, get a position from its navigator.geolocation, then assert Object.keys(coords)/Object.keys(position) are empty and coords/position toJSON() key order equals the running engine's native order.",
+  codeSnippet: `const w = iframe.contentWindow
+const p = await new Promise(r => w.navigator.geolocation.getCurrentPosition(r))
+Object.keys(p.coords)           // native: []
+Object.keys(p.coords.toJSON())  // native engine order, must not throw`,
+  expected: async () => ({
+    value: true,
+    describe: "empty own-keys; toJSON order matches native",
+  }),
+  observe: async () => {
+    if (typeof document === "undefined" || !document.body) {
+      throw new SkipTestError("no document.body to attach an iframe to")
+    }
+    const frame = document.createElement("iframe")
+    frame.setAttribute("allow", "geolocation")
+    frame.style.display = "none"
+    document.body.appendChild(frame)
+    try {
+      const win = frame.contentWindow as (Window & typeof globalThis) | null
+      if (!win)
+        return { value: false, describe: "iframe exposed no contentWindow" }
+      let ifPos: GeolocationPosition
+      try {
+        ifPos = await getIframePosition(win)
+      } catch (err) {
+        // No grantable position on a clean browser (or Safari's serialized
+        // queue) — skip rather than flake. The card is meaningful whenever a
+        // position is obtainable, which is always true while the extension is
+        // active (it returns spoofed coords synchronously).
+        throw new SkipTestError(
+          `no iframe position available: ${err instanceof Error ? err.message : String(err)}`
+        )
+      }
+      const fam = detectEngineFamily()
+      const problems: Array<string> = []
+
+      const coordsOwn = Object.keys(ifPos.coords)
+      if (coordsOwn.length)
+        problems.push(`coords own-keys [${coordsOwn.join(",")}]`)
+      const posOwn = Object.keys(ifPos)
+      if (posOwn.length)
+        problems.push(`position own-keys [${posOwn.join(",")}]`)
+
+      try {
+        const order = toJsonKeyOrder(ifPos.coords, COORD_ATTRS).join(",")
+        const want = NATIVE_COORDS_ORDER[fam].join(",")
+        if (order !== want)
+          problems.push(`coords.toJSON [${order}] != native [${want}]`)
+      } catch (err) {
+        problems.push(
+          `coords.toJSON threw ${err instanceof Error ? err.constructor.name : "?"}`
+        )
+      }
+
+      try {
+        const order = toJsonKeyOrder(ifPos, POSITION_ATTRS).join(",")
+        const want = NATIVE_POSITION_ORDER[fam].join(",")
+        if (order !== want)
+          problems.push(`position.toJSON [${order}] != native [${want}]`)
+      } catch (err) {
+        problems.push(
+          `position.toJSON threw ${err instanceof Error ? err.constructor.name : "?"}`
+        )
+      }
+
+      return {
+        value: problems.length === 0,
+        describe: problems.length
+          ? problems.join("; ")
+          : "empty own-keys; toJSON order matches native",
+      }
+    } finally {
+      frame.remove()
+    }
+  },
+})
+
 // ===========================================================================
 // Manifest
 // ===========================================================================
@@ -1437,6 +1561,7 @@ export const geolocationAdvancedTests: ReadonlyArray<TestDefinition> = [
   constructorsDoNotLeakExtensionInStackTest,
   iframeRealmDoesNotLeakExtensionInStackTest,
   iframeGeolocationBrandCheckTest,
+  iframeGeolocationObjectShapeTest,
   coordsToJsonOrderTest,
   positionToJsonOrderTest,
 ]

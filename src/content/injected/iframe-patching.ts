@@ -38,7 +38,7 @@
  * as a gap.
  */
 
-import type { AnyFunction, SpoofedLocation } from "./types";
+import type { AnyFunction } from "./types";
 import { overrideRegistry, spoofingEnabled, spoofedLocation, settingsReceived } from "./state";
 import {
   installOverride,
@@ -49,14 +49,13 @@ import {
 } from "./function-masking";
 import { buildPermissionsQueryOverride } from "./permissions";
 import {
-  getPaddedCoords,
   geoArgsValid,
   reproduceNativeGeoError,
+  createGeolocationPosition,
+  installGeolocationObjectModel,
   type NativeGeoMethod,
+  type GeolocationRealm,
 } from "./geolocation";
-import { resolveAccuracy } from "@/shared/accuracy/resolver";
-import { detectDeviceClass } from "@/shared/accuracy/device-class";
-import { DEFAULT_ACCURACY_SETTING } from "@/shared/types/settings";
 import { installLastModifiedOverride } from "./document-overrides";
 import { installXsltOverridesOn } from "./xslt-overrides";
 import { seedFromBootstrap } from "./bootstrap";
@@ -77,112 +76,6 @@ const logger = createLogger("INJ");
 
 // Track which iframe windows have already been patched to avoid re-patching
 const patchedIframeWindows = new WeakSet<Window>();
-
-/**
- * Build a spoofed GeolocationPosition from the current shared state.
- * Mirrors the logic in geolocation.ts but is inlined here to avoid a
- * circular import (geolocation.ts → state.ts ← iframe-patching.ts).
- *
- * The `targetWindow` parameter is the window whose `GeolocationPosition`
- * / `GeolocationCoordinates` prototypes we should use. For the iframe
- * patcher this is the iframe's own window, so that page-side checks
- * like `pos instanceof iframeWindow.GeolocationPosition` (or the
- * equivalent in-iframe code) pass. Falls back to a plain object literal
- * when the prototypes are unavailable.
- *
- * See geolocation.ts for the full explanation of why we use
- * `defineOwnFields` (own data properties) rather than `Object.assign`
- * (which would invoke the WebIDL brand-checked setters on the prototype
- * and throw).
- */
-function buildSpoofedPosition(
-  targetWindow: Window,
-  location: SpoofedLocation
-): GeolocationPosition {
-  // Share the top-level padding cache so a page reading through an
-  // iframe sees identical coords to a page reading through
-  // `navigator.geolocation` directly. See `getPaddedCoords` in
-  // geolocation.ts for the rationale.
-  const padded = getPaddedCoords(location);
-  const coordsFields = {
-    latitude: padded.latitude,
-    longitude: padded.longitude,
-    // Resolve the accuracy via the shared Resolver — identical inputs to the
-    // top-level frame (same setting, seed, device class, and raw coordinates)
-    // yield an identical value, so a page reading an iframe's geolocation sees
-    // the same accuracy as `navigator.geolocation` directly. See
-    // createGeolocationPosition in geolocation.ts for the rationale.
-    accuracy: resolveAccuracy({
-      setting: location.accuracySetting ?? DEFAULT_ACCURACY_SETTING,
-      deviceClass: detectDeviceClass(navigator),
-      seed: location.accuracySeed ?? 0,
-      latitude: location.latitude,
-      longitude: location.longitude,
-    }),
-    altitude: null,
-    altitudeAccuracy: null,
-    heading: null,
-    speed: null,
-  };
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-  const targetCoordsCtor = (targetWindow as any).GeolocationCoordinates as
-    | { prototype: object }
-    | undefined;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-  const targetPosCtor = (targetWindow as any).GeolocationPosition as
-    | { prototype: object }
-    | undefined;
-
-  let coords: GeolocationCoordinates;
-  try {
-    if (targetCoordsCtor?.prototype) {
-      coords = defineOwnFields(
-        Object.create(targetCoordsCtor.prototype) as object,
-        coordsFields
-      ) as unknown as GeolocationCoordinates;
-    } else {
-      coords = coordsFields as unknown as GeolocationCoordinates;
-    }
-  } catch {
-    coords = coordsFields as unknown as GeolocationCoordinates;
-  }
-
-  const positionFields = {
-    coords,
-    timestamp: Date.now(),
-  };
-
-  try {
-    if (targetPosCtor?.prototype) {
-      return defineOwnFields(
-        Object.create(targetPosCtor.prototype) as object,
-        positionFields
-      ) as unknown as GeolocationPosition;
-    }
-  } catch {
-    // fall through to plain object
-  }
-  return positionFields as unknown as GeolocationPosition;
-}
-
-/**
- * Install each key/value of `fields` as an own enumerable, non-writable,
- * non-configurable data property on `target`. Bypasses any inherited
- * accessor setters (e.g. WebIDL brand-checked setters on
- * GeolocationCoordinates.prototype).
- */
-function defineOwnFields<T extends Record<string, unknown>>(target: object, fields: T): object {
-  for (const key of Object.keys(fields)) {
-    Object.defineProperty(target, key, {
-      value: fields[key],
-      writable: false,
-      enumerable: true,
-      configurable: false,
-    });
-  }
-  return target;
-}
 
 /**
  * Patch an iframe window's geolocation API and Function.prototype.toString
@@ -316,6 +209,25 @@ export function patchIframeWindow(iframeWindow: Window): void {
 
     const IframeGeolocation = iframeGeolocationCtor as unknown as new () => object;
 
+    // Install the WeakMap-backed accessors + toJSON on THIS realm's
+    // GeolocationCoordinates / GeolocationPosition prototypes, then build
+    // spoofed positions with the shared builder. This makes iframe-realm
+    // spoofed objects byte-identical to top-level ones: zero own properties
+    // (`Object.keys(coords)` → []) and native per-engine `toJSON` key order —
+    // closing the detection vector where the old `defineOwnFields` approach
+    // left own data properties and a throwing native `toJSON`.
+    const iframeGeoRealm: GeolocationRealm = {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+      GeolocationCoordinates: (iframeWindow as any).GeolocationCoordinates as
+        | { prototype: object }
+        | undefined,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+      GeolocationPosition: (iframeWindow as any).GeolocationPosition as
+        | { prototype: object }
+        | undefined,
+    };
+    installGeolocationObjectModel(iframeGeoRealm);
+
     // Shared watch-id tracking for this iframe instance
     const iframeWatchCallbacks = new Map<number, PositionCallback>();
     let iframeWatchIdCounter = 1;
@@ -346,13 +258,13 @@ export function patchIframeWindow(iframeWindow: Window): void {
           return;
         }
         if (spoofingEnabled && spoofedLocation) {
-          const pos = buildSpoofedPosition(iframeWindow, spoofedLocation);
+          const pos = createGeolocationPosition(spoofedLocation, iframeGeoRealm);
           const delay = 10 + Math.random() * 40;
           logger.debug("iframe getCurrentPosition: returning spoofed coords", {
             lat: pos.coords.latitude,
             lon: pos.coords.longitude,
           });
-          setTimeout(() => successCallback(pos), delay);
+          setTimeout(() => successCallback(pos as GeolocationPosition), delay);
         } else {
           iframeOrigGetCurrentPosition(successCallback, errorCallback, options);
         }
@@ -379,9 +291,9 @@ export function patchIframeWindow(iframeWindow: Window): void {
       if (spoofingEnabled && spoofedLocation) {
         const watchId = iframeWatchIdCounter++;
         iframeWatchCallbacks.set(watchId, successCallback);
-        const pos = buildSpoofedPosition(iframeWindow, spoofedLocation);
+        const pos = createGeolocationPosition(spoofedLocation, iframeGeoRealm);
         const delay = 10 + Math.random() * 40;
-        setTimeout(() => successCallback(pos), delay);
+        setTimeout(() => successCallback(pos as GeolocationPosition), delay);
         return watchId;
       }
       return iframeOrigWatchPosition(successCallback, errorCallback, options);

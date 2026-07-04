@@ -215,6 +215,27 @@ function rememberPosition(position: SpoofedGeolocationPosition): void {
 }
 
 /**
+ * The realm-specific constructors used to build and brand spoofed position
+ * objects. The top-level realm uses its own `GeolocationCoordinates` /
+ * `GeolocationPosition` globals; the iframe patcher passes the iframe realm's
+ * constructors so `pos instanceof iframeWindow.GeolocationPosition` holds and
+ * the WeakMap-backed accessors/toJSON (installed on that realm's prototypes)
+ * resolve correctly. Either may be `undefined` on very old engines that don't
+ * expose these globals — the builder then falls back to a plain object.
+ */
+export interface GeolocationRealm {
+  GeolocationCoordinates?: { prototype: object };
+  GeolocationPosition?: { prototype: object };
+}
+
+/** The top-level realm's constructors, captured at module load. */
+const TOP_REALM: GeolocationRealm = {
+  GeolocationCoordinates:
+    typeof GeolocationCoordinates !== "undefined" ? GeolocationCoordinates : undefined,
+  GeolocationPosition: typeof GeolocationPosition !== "undefined" ? GeolocationPosition : undefined,
+};
+
+/**
  * Create a W3C-compliant GeolocationPosition from spoofed location.
  *
  * The object's `[[Prototype]]` chain points at `GeolocationPosition.
@@ -240,7 +261,10 @@ function rememberPosition(position: SpoofedGeolocationPosition): void {
  * aren't exposed (very old engines or unusual contexts) we fall back
  * to a plain object literal so the call path still succeeds.
  */
-function createGeolocationPosition(location: SpoofedLocation): SpoofedGeolocationPosition {
+export function createGeolocationPosition(
+  location: SpoofedLocation,
+  realm: GeolocationRealm = TOP_REALM
+): SpoofedGeolocationPosition {
   const padded = getPaddedCoords(location);
   const coordsFields: CoordsSlots = {
     latitude: padded.latitude,
@@ -265,10 +289,11 @@ function createGeolocationPosition(location: SpoofedLocation): SpoofedGeolocatio
   };
 
   // Build the coords instance — prototype-linked, WeakMap-backed, no own props.
+  const CoordsCtor = realm.GeolocationCoordinates;
   let coords: GeolocationCoordinates;
   try {
-    if (typeof GeolocationCoordinates !== "undefined" && GeolocationCoordinates.prototype) {
-      const coordsInstance = Object.create(GeolocationCoordinates.prototype) as object;
+    if (CoordsCtor?.prototype) {
+      const coordsInstance = Object.create(CoordsCtor.prototype) as object;
       coordsSlots.set(coordsInstance, coordsFields);
       coords = coordsInstance as unknown as GeolocationCoordinates;
     } else {
@@ -284,9 +309,10 @@ function createGeolocationPosition(location: SpoofedLocation): SpoofedGeolocatio
   // own properties. `toJSON` lives on the prototype (see
   // `installPositionToJSON`), matching native layout so
   // `Object.getOwnPropertyNames(pos)` returns [].
+  const PosCtor = realm.GeolocationPosition;
   try {
-    if (typeof GeolocationPosition !== "undefined" && GeolocationPosition.prototype) {
-      const positionInstance = Object.create(GeolocationPosition.prototype) as object;
+    if (PosCtor?.prototype) {
+      const positionInstance = Object.create(PosCtor.prototype) as object;
       positionSlots.set(positionInstance, { coords, timestamp });
       return positionInstance as unknown as SpoofedGeolocationPosition;
     }
@@ -638,10 +664,32 @@ export function installGeolocationOverrides(): void {
   installOverride(Geolocation.prototype, "getCurrentPosition", getCurrentPositionOverride, 1);
   installOverride(Geolocation.prototype, "watchPosition", watchPositionOverride, 1);
   installOverride(Geolocation.prototype, "clearWatch", clearWatchOverride, 1);
-  installCoordinateAccessors();
-  installPositionAccessors();
-  installPositionToJSON();
-  installCoordsToJSON();
+  installGeolocationObjectModel(TOP_REALM);
+}
+
+/**
+ * Install the WeakMap-backed attribute accessors + `toJSON` overrides on a
+ * realm's `GeolocationCoordinates.prototype` and `GeolocationPosition.prototype`.
+ *
+ * This is what makes spoofed position objects indistinguishable from native:
+ * values live in the shared `coordsSlots` / `positionSlots` WeakMaps (keyed by
+ * instance, so they work across realms) rather than as own data properties, so
+ * `Object.keys(coords)` returns `[]` and `coords.toJSON()` emits the native
+ * per-engine key order. Called once per realm — by `installGeolocationOverrides`
+ * for the top level and by the iframe patcher for each same-origin iframe realm,
+ * so both share one implementation and cannot drift.
+ */
+export function installGeolocationObjectModel(realm: GeolocationRealm): void {
+  const coordsProto = realm.GeolocationCoordinates?.prototype;
+  if (coordsProto) {
+    installCoordinateAccessors(coordsProto);
+    installCoordsToJSON(coordsProto);
+  }
+  const positionProto = realm.GeolocationPosition?.prototype;
+  if (positionProto) {
+    installPositionAccessors(positionProto);
+    installPositionToJSON(positionProto);
+  }
 }
 
 /**
@@ -651,9 +699,7 @@ export function installGeolocationOverrides(): void {
  * isn't one of ours, it falls through to the original native getter
  * so pristine browser-allocated coords keep working.
  */
-function installCoordinateAccessors(): void {
-  if (typeof GeolocationCoordinates === "undefined" || !GeolocationCoordinates.prototype) return;
-  const proto = GeolocationCoordinates.prototype;
+function installCoordinateAccessors(proto: object): void {
   const keys: ReadonlyArray<keyof CoordsSlots> = [
     "latitude",
     "longitude",
@@ -688,9 +734,7 @@ function installCoordinateAccessors(): void {
  * `GeolocationPosition.prototype`: `coords` and `timestamp`. Same
  * pattern as `installCoordinateAccessors`.
  */
-function installPositionAccessors(): void {
-  if (typeof GeolocationPosition === "undefined" || !GeolocationPosition.prototype) return;
-  const proto = GeolocationPosition.prototype;
+function installPositionAccessors(proto: object): void {
   const keys: ReadonlyArray<keyof PositionSlots> = ["coords", "timestamp"];
   for (const key of keys) {
     const originalDesc = Object.getOwnPropertyDescriptor(proto, key);
@@ -843,9 +887,8 @@ function buildCoordsJSON(
  * matching native layout and closing the detection vector where a
  * page can inspect non-enumerable own keys.
  */
-function installPositionToJSON(): void {
-  if (typeof GeolocationPosition === "undefined" || !GeolocationPosition.prototype) return;
-  const proto = GeolocationPosition.prototype as unknown as {
+function installPositionToJSON(protoObj: object): void {
+  const proto = protoObj as unknown as {
     toJSON?: () => unknown;
   };
 
@@ -886,9 +929,8 @@ function installPositionToJSON(): void {
  * sub-object. Spoofed instances return their stored fields; pristine
  * browser-allocated instances fall through to the native method.
  */
-function installCoordsToJSON(): void {
-  if (typeof GeolocationCoordinates === "undefined" || !GeolocationCoordinates.prototype) return;
-  const proto = GeolocationCoordinates.prototype as unknown as {
+function installCoordsToJSON(protoObj: object): void {
+  const proto = protoObj as unknown as {
     toJSON?: () => unknown;
   };
 
