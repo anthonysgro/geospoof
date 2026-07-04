@@ -50,13 +50,20 @@ const SELF_SCRIPT_URL: string | null = (() => {
  * Safari already anonymize content-script frames, but scrubbing is harmless there.
  */
 export function stripExtensionFramesFromStack(err: unknown): void {
-  if (!SELF_SCRIPT_URL || !(err instanceof Error) || typeof err.stack !== "string") return;
-  const cleaned = err.stack
+  // Duck-type instead of `instanceof Error`: an error thrown in an iframe realm
+  // is an instance of THAT realm's Error, so a top-realm `instanceof Error`
+  // check is false for it and would skip scrubbing — leaking the extension id
+  // through the iframe cascade. Any object with a writable string `stack`
+  // qualifies, which is exactly what we need cross-realm.
+  if (!SELF_SCRIPT_URL || err === null || typeof err !== "object") return;
+  const e = err as { stack?: unknown };
+  if (typeof e.stack !== "string") return;
+  const cleaned = e.stack
     .split("\n")
     .filter((line) => !line.includes(SELF_SCRIPT_URL))
     .join("\n");
   try {
-    err.stack = cleaned;
+    e.stack = cleaned;
   } catch {
     // `stack` is non-configurable on some engines — leave it as-is.
   }

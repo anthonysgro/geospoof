@@ -52,6 +52,7 @@ import {
   stripConstruct,
   registerOverride,
   disguiseAsNative,
+  stripExtensionFramesFromStack,
   nativeTypeErrorMessage,
 } from "./function-masking";
 import { isAmbiguousDateString, computeEpochAdjustment } from "./timezone-helpers";
@@ -403,14 +404,43 @@ export function patchIframeWindow(iframeWindow: Window): void {
 
     const iframeOrigQuery = iframePerms.query.bind(iframePerms);
 
+    // Unbound native `query`, captured BEFORE we override the prototype, so we
+    // can reproduce the browser's own brand-check rejection for a foreign `this`
+    // (mirrors the top-level permissions.ts override).
+
+    const iframeNativeQueryUnbound = (
+      iframePermsCtor.prototype as {
+        query?: (this: unknown, descriptor?: PermissionDescriptor) => Promise<PermissionStatus>;
+      }
+    ).query;
+    const IframePermissions = iframePermsCtor as unknown as new () => object;
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
     const iframePermissionStatusCtor = (iframeWindow as any).PermissionStatus as
       | { prototype: object }
       | undefined;
 
-    const iframePermissionsQuery = (
+    const iframePermissionsQuery = function (
+      this: unknown,
       descriptor: PermissionDescriptor
-    ): Promise<PermissionStatus> => {
+    ): Promise<PermissionStatus> {
+      // Brand check: `query` is a Promise-returning WebIDL op, so a foreign
+      // `this` REJECTS (not throws). Delegate to the iframe realm's unbound
+      // native query so the rejection is genuine, then scrub our injected frame
+      // from its stack (cross-realm: the rejection is an iframe-realm Error).
+      if (iframeNativeQueryUnbound && !(this instanceof IframePermissions)) {
+        let result: Promise<PermissionStatus>;
+        try {
+          result = iframeNativeQueryUnbound.call(this, descriptor);
+        } catch (err) {
+          stripExtensionFramesFromStack(err);
+          throw err;
+        }
+        return result.catch((err: unknown) => {
+          stripExtensionFramesFromStack(err);
+          throw err;
+        });
+      }
       if (descriptor?.name === "geolocation" && spoofingEnabled) {
         // Return a PermissionStatus whose prototype matches the iframe's
         // own `PermissionStatus.prototype`, so brand checks via

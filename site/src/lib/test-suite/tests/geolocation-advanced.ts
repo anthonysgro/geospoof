@@ -931,11 +931,33 @@ function foreignCallablesFor(
   return out
 }
 
-/** The first extension-scheme URL in an error's stack, or null. */
+/**
+ * The first extension-scheme URL in an error's stack, or null. Duck-typed
+ * rather than `instanceof Error` so it also handles errors thrown in an iframe
+ * realm (instances of that realm's Error, not this one's).
+ */
 function extensionLeakInStack(err: unknown): string | null {
   const stack =
-    err instanceof Error && typeof err.stack === "string" ? err.stack : ""
+    err !== null &&
+    typeof err === "object" &&
+    typeof (err as { stack?: unknown }).stack === "string"
+      ? (err as { stack: string }).stack
+      : ""
   return stack.match(EXTENSION_URL_RE)?.[0] ?? null
+}
+
+/** Safely walk a dotted path (e.g. ["Intl","DateTimeFormat","prototype"]) to a prototype object. */
+function nestedProto(
+  root: unknown,
+  path: ReadonlyArray<string>
+): object | null {
+  let cur: unknown = root
+  for (const key of path) {
+    if (cur === null || (typeof cur !== "object" && typeof cur !== "function"))
+      return null
+    cur = (cur as Record<string, unknown>)[key]
+  }
+  return cur !== null && typeof cur === "object" ? cur : null
 }
 
 const overridesDoNotLeakExtensionInStackTest = buildBehavioralTest<boolean>({
@@ -1047,6 +1069,104 @@ catch (e) { /(chrome|moz|safari-web)-extension:\\/\\//.test(e.stack) }`,
   // Pass when the observed "leaked" flag equals the expected `false`.
   equals: (expected, observed) => expected === observed,
 })
+
+const iframeRealmDoesNotLeakExtensionInStackTest = buildBehavioralTest<boolean>(
+  {
+    id: "tampering.iframe-realm.error-stack-hides-extension-origin",
+    group: "geolocation-stealth",
+    name: "Iframe-realm overrides do not leak an extension origin in error stacks",
+    description:
+      "The cross-realm counterpart to the override stack-leak walker. The extension patches same-origin iframes by reaching into their realm (patchIframeWindow), so a foreign-`this` brand-check throw inside the iframe can leak the extension id the same way — and, subtly, the scrub itself must be cross-realm-safe: an error thrown in the iframe realm is an instance of the iframe's Error, so an `instanceof Error` guard in the scrub would skip it. This creates a same-origin iframe, triggers patching via `contentWindow`, walks every own method/getter/setter on the iframe realm's patched prototypes with a foreign `this`, awaits rejections, and fails if any thrown/rejected stack carries an extension origin.",
+    technique:
+      "Create a same-origin iframe, read contentWindow to trigger patching, then walk the iframe realm's prototypes with a foreign `this` and scan (duck-typed, cross-realm) for an extension-scheme URL in thrown/rejected stacks.",
+    codeSnippet: `const f = document.createElement("iframe"); document.body.appendChild(f);
+const w = f.contentWindow; // triggers patchIframeWindow
+for (const fn of ownMembers(w.Date.prototype, w.Intl.DateTimeFormat.prototype, ...))
+  try { fn.call({}) } catch (e) { /(chrome|moz|safari-web)-extension:\\/\\//.test(e.stack) }`,
+    expected: async () => ({
+      value: false,
+      describe: "no iframe-realm override leaks an extension origin",
+    }),
+    observe: async () => {
+      if (typeof document === "undefined" || !document.body) {
+        throw new SkipTestError("no document.body to attach an iframe to")
+      }
+      const frame = document.createElement("iframe")
+      frame.style.display = "none"
+      document.body.appendChild(frame)
+      try {
+        const win = frame.contentWindow
+        if (!win)
+          return { value: false, describe: "iframe exposed no contentWindow" }
+
+        const targets: Array<[string, object]> = []
+        const add = (name: string, path: ReadonlyArray<string>): void => {
+          const proto = nestedProto(win, path)
+          if (proto) targets.push([name, proto])
+        }
+        add("Date.prototype", ["Date", "prototype"])
+        add("Intl.DateTimeFormat.prototype", [
+          "Intl",
+          "DateTimeFormat",
+          "prototype",
+        ])
+        add("Geolocation.prototype", ["Geolocation", "prototype"])
+        add("Permissions.prototype", ["Permissions", "prototype"])
+        add("Document.prototype", ["Document", "prototype"])
+        add("Element.prototype", ["Element", "prototype"])
+        add("HTMLIFrameElement.prototype", ["HTMLIFrameElement", "prototype"])
+        add("Node.prototype", ["Node", "prototype"])
+
+        const leaks: Array<string> = []
+        const pending: Array<Promise<void>> = []
+        const withCap = <T>(p: Promise<T>): Promise<T | undefined> =>
+          Promise.race([
+            p,
+            new Promise<undefined>((resolve) =>
+              setTimeout(() => resolve(undefined), 1500)
+            ),
+          ])
+
+        for (const [protoName, proto] of targets) {
+          for (const [label, fn] of foreignCallablesFor(protoName, proto)) {
+            try {
+              const result = fn.call({})
+              if (
+                result &&
+                typeof (result as PromiseLike<unknown>).then === "function"
+              ) {
+                pending.push(
+                  withCap(Promise.resolve(result)).then(
+                    () => undefined,
+                    (err: unknown) => {
+                      const leak = extensionLeakInStack(err)
+                      if (leak) leaks.push(`${label} → ${leak}`)
+                    }
+                  )
+                )
+              }
+            } catch (err) {
+              const leak = extensionLeakInStack(err)
+              if (leak) leaks.push(`${label} → ${leak}`)
+            }
+          }
+        }
+        await Promise.all(pending)
+
+        return {
+          value: leaks.length > 0,
+          describe: leaks.length
+            ? `leaks (${leaks.length}): ${leaks.slice(0, 6).join("; ")}${leaks.length > 6 ? " …" : ""}`
+            : "no extension origin across any iframe-realm member",
+        }
+      } finally {
+        frame.remove()
+      }
+    },
+    // Pass when the observed "leaked" flag equals the expected `false`.
+    equals: (expected, observed) => expected === observed,
+  }
+)
 
 /** The seven GeolocationCoordinates attribute names (any engine order). */
 const COORD_ATTRS: ReadonlyArray<string> = [
@@ -1227,6 +1347,7 @@ export const geolocationAdvancedTests: ReadonlyArray<TestDefinition> = [
   permissionsQueryRejectsForeignThisTest,
   overridesDoNotLeakExtensionInStackTest,
   constructorsDoNotLeakExtensionInStackTest,
+  iframeRealmDoesNotLeakExtensionInStackTest,
   coordsToJsonOrderTest,
   positionToJsonOrderTest,
 ]
