@@ -537,34 +537,161 @@ export const ja: Dictionary = {
         "GeoSpoof のヘルプ：機能しない位置情報の偽装、VPN 同期のタイムアウト、WebRTC の問題、ブラウザやモバイルの設定の解決 — またはチームへのお問い合わせ。",
     },
     heading: "どのようにお手伝いできますか？",
-    subhead: "以下でよくある問題の答えを見つけるか、直接お問い合わせください。",
-    commonIssues: "よくある問題",
-    faqs: [
+    subhead:
+      "ほとんどのご報告は、以下のいずれかの原因にたどり着きます。上から順に試し、偽装が機能したら止めてください。",
+    symptomsLead: "どのような状況ですか？",
+    symptoms: [
+      { label: "位置情報の偽装が機能しない", target: "troubleshooting" },
       {
-        q: "拡張機能をインストールした後、偽装が機能しない",
-        a: "拡張機能は読み込み時にページへ注入されるため、インストールまたは有効化した時点で既に開いていたタブはまだ保護されません。位置情報保護を有効にした後、保護したいタブをすべて再読み込みしてください。それでも機能しない場合は、拡張機能を無効にしてから再度有効にし、もう一度再読み込みしてみてください。",
+        label: "VPN 同期が失敗する、またはタイムアウトする",
+        target: "faq-vpn-sync",
       },
       {
+        label: "デスクトップでは動くのにスマートフォンで動かない",
+        target: "faq-mobile",
+      },
+      { label: "その他", target: "questions" },
+    ],
+    lastUpdatedLabel: "最終更新",
+    troubleshooting: {
+      title: "サイトで偽装が機能しない",
+      intro:
+        "以下は、よくある順に並べています。最後まで進む必要はおそらくありません。",
+      browserNote:
+        "GeoSpoof は Chrome、Edge、Brave、Safari でも動作します。以下の手順は、こうした競合が最も多い Firefox 向けに書かれています — 他のブラウザでは、同等の設定を適用してください。",
+      latestReleaseLabel: "最新リリース",
+      latestReleaseCta: "GitHub で最新リリースを見る",
+      badgeActiveLabel: "このタブで有効",
+      badgeActiveAlt:
+        "現在のタブで有効であることを示すバッジ付きの GeoSpoof ツールバーアイコン",
+      badgeDisabledLabel: "このタブでは動作していません",
+      badgeDisabledAlt:
+        "現在のタブで動作していないことを示すバッジ付きの GeoSpoof ツールバーアイコン",
+      geolocationDeniedAlt:
+        "Firefox が位置情報リクエストをブロックしたため「Geolocation: Denied」と報告するフィンガープリントテストの結果",
+      geolocationDeniedCaption:
+        "フィンガープリントテストで、ブロックされた位置情報リクエストがどう見えるか。",
+      preserveOffAlt:
+        "「位置情報の確認を保持」トグルをオフにした GeoSpoof のポップアップ",
+      preserveOffCaption:
+        "「位置情報の確認を保持」をオフにした GeoSpoof のポップアップ。",
+      tzpCta: "TZP テストを開く",
+      featuredLabel: "最良の診断",
+      steps: [
+        {
+          title: "タブを再読み込みするか、開き直す",
+          featured: false,
+          body: "GeoSpoof は、有効化した後に読み込まれたページにのみ適用されます。GeoSpoof をインストール・更新・再有効化した時点で既に開いていたタブは、再読み込みするまで偽装されません。テスト中のタブを再読み込みしてください — それでも解決しない場合は、閉じてから開き直してください。",
+          details: [],
+          note: "",
+          action: "",
+        },
+        {
+          title: "最新バージョンに更新する",
+          featured: false,
+          body: "多くの問題は、より新しいリリースで既に修正されています。ポップアップで「詳細」→「高度な設定」を開いてバージョンを確認し、下の最新リリースと比較して、遅れている場合はブラウザの拡張機能マネージャーから更新してください。",
+          details: [],
+          note: "",
+          action: "latestRelease",
+        },
+        {
+          title: "サイトで GeoSpoof が動作していることを確認する",
+          featured: false,
+          body: "GeoSpoof のツールバーアイコンは、現在のタブで有効かどうかを示します。有効になっていなければ何も偽装されません — 多くの場合、「フィルター」タブで設定したサイトの範囲が原因です。",
+          details: [
+            "許可リストモード：リストにあるサイトだけが偽装されます — テスト中のサイトを追加してください。",
+            "拒否リストモード：そのサイトがリストにないことを確認してください。",
+            "または「すべて」に切り替えて、どこでも偽装してください。",
+          ],
+          note: "",
+          action: "badgeCheck",
+        },
+        {
+          title: "サイトの位置情報の許可をリセットする",
+          featured: false,
+          body: "テストが「Geolocation: Denied」と報告する場合、Firefox がリクエストをブロックしています — 多くは、確認ダイアログで「この決定を記憶する」にチェックを入れて一度拒否したためです。",
+          details: [
+            "アドレスバーの鍵アイコンをクリックします。",
+            "位置情報について記憶された「ブロック」を解除し、ページを再読み込みします。",
+            "Firefox の設定で「位置情報へのアクセスを求める新しいリクエストをブロックする」がオフになっていることを確認します。",
+            "GeoSpoof の「位置情報の確認を保持」トグルがオンの状態で確認を拒否した場合は、許可するか、トグルをオフにして GeoSpoof が直接応答するようにしてください。",
+          ],
+          note: "",
+          action: "geolocationDenied",
+        },
+        {
+          title: "ブラウザを再起動する",
+          featured: false,
+          body: "一部のブラウザ API は起動時に設定されるため、最近のインストール・更新・設定変更は、ブラウザを完全に閉じて開き直すまで反映されないことがあります。",
+          details: [],
+          note: "",
+          action: "",
+        },
+        {
+          title: "新しい Firefox プロファイルでテストする",
+          featured: true,
+          body: "クリーンなプロファイルは、既存の設定から GeoSpoof を切り離します。",
+          details: [
+            "about:profiles を開き、新しいプロファイルを作成します。",
+            "それを起動し、GeoSpoof をインストールして、同じサイトをもう一度テストします。",
+          ],
+          note: "クリーンなプロファイルで偽装が機能するなら、GeoSpoof 自体は問題ありません — 通常のプロファイル内の何か、ほぼ必ずプライバシーツールか about:config の変更が干渉しています。次の2つのステップでそれらを扱います。",
+          action: "",
+        },
+        {
+          title: "競合するプライバシーツールを無効にする",
+          featured: false,
+          body: "堅牢化ツールは、GeoSpoof と同じブラウザ API の多くを変更し、それを上書きすることがあります。使用しているものを一時的に無効にしてから再試行してください：Arkenfox、Betterfox、LibreWolf、CanvasBlocker、JShelter、Chameleon、Trace、その他のフィンガープリントランダマイザー。",
+          details: [],
+          note: "",
+          action: "",
+        },
+        {
+          title: "about:config を確認する（上級者向け）",
+          featured: false,
+          body: "Firefox を堅牢化している場合は、これらの設定が無効になっていることを確認し、再起動して再試行してください。「厳格」な強化型トラッキング防止は通常問題なく、変更は不要です。",
+          details: [
+            "privacy.resistFingerprinting",
+            "privacy.fingerprintingProtection",
+            "privacy.fingerprintingProtection.pbmode",
+          ],
+          note: "",
+          action: "",
+        },
+        {
+          title: "2つ目のフィンガープリントテストで確認する",
+          featured: false,
+          body: "テストは異なる API を測定し、中には単にバグのあるものもあります。GeoSpoof のせいだと判断する前に、別の信頼できるテストで結果を確認してください — arkenfox の TZP の Region セクションをおすすめします。",
+          details: [],
+          note: "",
+          action: "tzpTest",
+        },
+      ],
+    },
+    commonIssues: "その他のよくある質問",
+    faqs: [
+      {
+        id: "vpn-sync",
         q: "VPN 同期でタイムアウトまたはネットワークエラーが表示される",
         a: "VPN 同期は、VPN の出口リージョンを検出するためにいくつかのパブリック IP ジオロケーションサービスを呼び出します。一部の VPN やファイアウォールは、これらのサービスへの送信リクエストをブロックします。VPN のファイアウォールやキルスイッチを一時的に無効にしてみてください。問題が続く場合は、代わりに「都市を検索」または「座標を入力」タブで位置を手動設定してください。",
       },
       {
-        q: "ブラウザの更新後に偽装が機能しなくなった",
-        a: "ブラウザの更新により、拡張機能とページ API のやり取りが変わることが時々あります。GeoSpoof が最新バージョンであることを確認してください。ポップアップの「詳細」タブでバージョンを確認し、GitHub の最新リリースと比較してください。遅れている場合は、ブラウザの拡張機能マネージャーから更新してください。",
-      },
-      {
+        id: "specific-site",
         q: "特定のウェブサイトが偽装されない",
         a: "一部のサイトは、ブラウザの Geolocation API ではなく IP アドレスに基づくサーバー側の位置検出を使います。GeoSpoof はブラウザ API のみを上書きし、IP アドレスは変えません。位置の完全な一貫性のためには、同じ地域を指す VPN と GeoSpoof を併用してください。",
       },
       {
+        id: "mobile",
         q: "デスクトップでは動くのにスマートフォンで動かない",
         a: "Firefox for Android では、Firefox 140 以降で拡張機能が完全に対応しています。iOS と macOS の Safari では、拡張機能は App Store で提供されます — アドレスバーのパズルピースアイコンをタップし、保護したいサイトで GeoSpoof を有効にしてください。iOS と Android の Chrome は拡張機能に対応していません。",
       },
       {
+        id: "webrtc",
         q: "WebRTC 保護が利用できない / グレーアウトしている",
         a: "WebRTC 保護は、すべてのプラットフォームで利用できるわけではないブラウザのプライバシー API を使います。デスクトップの Firefox と Chromium ベースのブラウザで対応しています。Safari と Firefox for Android では利用できません。",
       },
       {
+        id: "extensions-page",
         q: "「拡張機能はこのページでは実行できません」と表示される",
         a: "ブラウザは、about:blank、chrome://、about:newtab、拡張機能ストアのページなどの組み込みページで拡張機能が実行されるのを制限します。これは回避できないブラウザのセキュリティ境界です。GeoSpoof はすべての通常のウェブサイトで機能します。",
       },
@@ -574,6 +701,16 @@ export const ja: Dictionary = {
     copyAria: "メールアドレスをコピー",
     stillNeedHelp: "まだお困りですか？",
     contactBody: "メールをお送りいただければ、1〜2日以内に返信いたします。",
+    contactChecklistLead: "より早く対応できるよう、以下を添えてください：",
+    contactChecklist: [
+      "Firefox のバージョン",
+      "オペレーティングシステム",
+      "GeoSpoof のバージョン",
+      "VPN プロバイダー（該当する場合）",
+      "使用しているフィンガープリントテストのサイト",
+      "結果のスクリーンショット",
+      "新しい Firefox プロファイルで偽装が機能するかどうか",
+    ],
     reportBugsLead: "バグの報告もこちらから：",
   },
   about: {

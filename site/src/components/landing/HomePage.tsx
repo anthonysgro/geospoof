@@ -68,8 +68,7 @@ const localeMeta: Record<Locale, { title: string; description: string }> = {
       "Spoof your browser's geolocation, timezone, and WebRTC in one free extension. No account required. Works on Chrome, Firefox, Edge, Brave, and Safari.",
   },
   de: {
-    title:
-      "GeoSpoof — Standort und Zeitzone fälschen (kostenlose Erweiterung)",
+    title: "GeoSpoof — Standort und Zeitzone fälschen (kostenlose Erweiterung)",
     description:
       "Fälsche Geolocation, Zeitzone und WebRTC deines Browsers mit einer einzigen kostenlosen Erweiterung. Kein Konto nötig. Funktioniert in Chrome, Firefox, Edge, Brave und Safari.",
   },
@@ -80,14 +79,12 @@ const localeMeta: Record<Locale, { title: string; description: string }> = {
       "Simulez la géolocalisation, le fuseau horaire et le WebRTC de votre navigateur avec une seule extension gratuite. Sans compte. Compatible Chrome, Firefox, Edge, Brave et Safari.",
   },
   id: {
-    title:
-      "GeoSpoof — Palsukan Geolokasi & Zona Waktu (Ekstensi Gratis)",
+    title: "GeoSpoof — Palsukan Geolokasi & Zona Waktu (Ekstensi Gratis)",
     description:
       "Palsukan geolokasi, zona waktu, dan WebRTC browser Anda dalam satu ekstensi gratis. Tanpa akun. Berfungsi di Chrome, Firefox, Edge, Brave, dan Safari.",
   },
   ja: {
-    title:
-      "GeoSpoof — 位置情報とタイムゾーンを偽装（無料拡張機能）",
+    title: "GeoSpoof — 位置情報とタイムゾーンを偽装（無料拡張機能）",
     description:
       "ブラウザの位置情報・タイムゾーン・WebRTC を1つの無料拡張機能で偽装。アカウント不要。Chrome、Firefox、Edge、Brave、Safari に対応。",
   },

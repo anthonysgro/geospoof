@@ -547,34 +547,163 @@ export const es: Dictionary = {
     },
     heading: "¿Cómo podemos ayudarte?",
     subhead:
-      "Encuentra respuestas a los problemas comunes más abajo, o contáctanos directamente.",
-    commonIssues: "Problemas comunes",
-    faqs: [
+      "La mayoría de los reportes se deben a una de las causas de abajo. Recorre la lista y detente cuando el falseo funcione.",
+    symptomsLead: "¿Qué está pasando?",
+    symptoms: [
       {
-        q: "El falseo no funciona después de instalar la extensión",
-        a: "La extensión se inyecta en las páginas al cargarlas, así que las pestañas que ya estaban abiertas cuando la instalaste o la activaste aún no estarán protegidas. Recarga cada pestaña que quieras proteger tras activar la Protección de ubicación. Si sigue sin funcionar, prueba a desactivar y reactivar la extensión, y luego recarga de nuevo.",
+        label: "El falseo de ubicación no funciona",
+        target: "troubleshooting",
       },
       {
+        label: "La Sincronización con VPN falla o expira",
+        target: "faq-vpn-sync",
+      },
+      {
+        label: "Funciona en el escritorio pero no en mi teléfono",
+        target: "faq-mobile",
+      },
+      { label: "Otra cosa", target: "questions" },
+    ],
+    lastUpdatedLabel: "Última actualización",
+    troubleshooting: {
+      title: "El falseo no funciona en un sitio",
+      intro:
+        "Están ordenados de más a menos común. Probablemente no necesites llegar al final.",
+      browserNote:
+        "GeoSpoof también funciona en Chrome, Edge, Brave y Safari. Los pasos de abajo están escritos para Firefox, donde estos conflictos son más comunes — en otros navegadores, aplica los ajustes equivalentes.",
+      latestReleaseLabel: "Última versión",
+      latestReleaseCta: "Ver la última versión en GitHub",
+      badgeActiveLabel: "Activo en esta pestaña",
+      badgeActiveAlt:
+        "Icono de GeoSpoof en la barra de herramientas con una insignia que indica que está activo en la pestaña actual",
+      badgeDisabledLabel: "No se está ejecutando en esta pestaña",
+      badgeDisabledAlt:
+        "Icono de GeoSpoof en la barra de herramientas con una insignia que indica que no se está ejecutando en la pestaña actual",
+      geolocationDeniedAlt:
+        'El resultado de una prueba de huella digital que informa "Geolocation: Denied" porque Firefox bloqueó la solicitud de ubicación',
+      geolocationDeniedCaption:
+        "Así se ve una solicitud de ubicación bloqueada en una prueba de huella digital.",
+      preserveOffAlt:
+        'El popup de GeoSpoof con el interruptor "Conservar avisos de ubicación" desactivado',
+      preserveOffCaption:
+        'Popup de GeoSpoof con "Conservar avisos de ubicación" desactivado.',
+      tzpCta: "Abrir la prueba TZP",
+      featuredLabel: "Mejor diagnóstico",
+      steps: [
+        {
+          title: "Actualiza la pestaña, o vuelve a abrirla",
+          featured: false,
+          body: "GeoSpoof solo surte efecto en las páginas cargadas después de activarlo. Cualquier pestaña que ya estuviera abierta cuando instalaste, actualizaste o reactivaste GeoSpoof no se falseará hasta que se recargue. Actualiza la pestaña que estás probando — si eso no ayuda, ciérrala y vuelve a abrirla.",
+          details: [],
+          note: "",
+          action: "",
+        },
+        {
+          title: "Actualiza a la última versión",
+          featured: false,
+          body: "Muchos problemas ya están resueltos en una versión más reciente. En el popup, abre Detalles → Avanzado para ver tu versión, luego compárala con la última versión de abajo y actualiza a través del gestor de extensiones de tu navegador si vas por detrás.",
+          details: [],
+          note: "",
+          action: "latestRelease",
+        },
+        {
+          title: "Confirma que GeoSpoof se está ejecutando en el sitio",
+          featured: false,
+          body: "El icono de GeoSpoof en la barra de herramientas indica si está activo en la pestaña actual. Si no está activo, no se falsea nada — casi siempre por el alcance de sitios definido en la pestaña Filtros.",
+          details: [
+            "Modo Lista de permitidos: solo se falsean los sitios de la lista — añade el sitio que estás probando.",
+            "Modo Lista de bloqueados: asegúrate de que el sitio no esté en la lista.",
+            'O cambia a "Todos" para falsear en todas partes.',
+          ],
+          note: "",
+          action: "badgeCheck",
+        },
+        {
+          title: "Restablece el permiso de ubicación del sitio",
+          featured: false,
+          body: 'Si una prueba informa "Geolocation: Denied", Firefox está bloqueando la solicitud — normalmente porque el aviso se rechazó una vez con "Recordar esta decisión" marcado.',
+          details: [
+            "Haz clic en el icono del candado en la barra de direcciones.",
+            "Borra cualquier Bloqueo recordado para la ubicación, luego recarga la página.",
+            'En los ajustes de Firefox, confirma que "Bloquear las nuevas solicitudes de acceso a tu ubicación" está desactivado.',
+            'Si el interruptor "Conservar avisos de ubicación" de GeoSpoof está activado y rechazaste el aviso, permítelo o desactiva el interruptor para que GeoSpoof responda directamente.',
+          ],
+          note: "",
+          action: "geolocationDenied",
+        },
+        {
+          title: "Reinicia el navegador",
+          featured: false,
+          body: "Algunas API del navegador se configuran al arrancar, así que una instalación, actualización o cambio de ajustes reciente puede no surtir efecto hasta que cierres y vuelvas a abrir el navegador por completo.",
+          details: [],
+          note: "",
+          action: "",
+        },
+        {
+          title: "Prueba en un perfil nuevo de Firefox",
+          featured: true,
+          body: "Un perfil limpio aísla GeoSpoof de tu configuración actual.",
+          details: [
+            "Abre about:profiles y crea un perfil nuevo.",
+            "Inícialo, instala GeoSpoof y prueba el mismo sitio de nuevo.",
+          ],
+          note: "Si el falseo funciona en el perfil limpio, GeoSpoof en sí está bien — algo en tu perfil normal está interfiriendo, casi siempre una herramienta de privacidad o un cambio en about:config. Los dos pasos siguientes cubren esos casos.",
+          action: "",
+        },
+        {
+          title: "Desactiva las herramientas de privacidad en conflicto",
+          featured: false,
+          body: "Las herramientas de endurecimiento cambian muchas de las mismas API del navegador que GeoSpoof y pueden anularlo. Desactiva temporalmente las que uses y vuelve a intentarlo: Arkenfox, Betterfox, LibreWolf, CanvasBlocker, JShelter, Chameleon, Trace o cualquier aleatorizador de huella digital.",
+          details: [],
+          note: "",
+          action: "",
+        },
+        {
+          title: "Revisa about:config (avanzado)",
+          featured: false,
+          body: "Si has endurecido Firefox, confirma que estas preferencias están desactivadas, luego reinicia y vuelve a intentarlo. La Protección contra el rastreo mejorada en modo estricto suele estar bien y no necesita cambios.",
+          details: [
+            "privacy.resistFingerprinting",
+            "privacy.fingerprintingProtection",
+            "privacy.fingerprintingProtection.pbmode",
+          ],
+          note: "",
+          action: "",
+        },
+        {
+          title: "Confirma en una segunda prueba de huella digital",
+          featured: false,
+          body: "Las pruebas miden distintas API y algunas simplemente tienen fallos. Antes de asumir que GeoSpoof es el culpable, verifica el resultado en otra prueba reputada — recomendamos la sección Region del TZP de arkenfox.",
+          details: [],
+          note: "",
+          action: "tzpTest",
+        },
+      ],
+    },
+    commonIssues: "Otras preguntas frecuentes",
+    faqs: [
+      {
+        id: "vpn-sync",
         q: "La Sincronización con VPN muestra un tiempo de espera o un error de red",
         a: "La Sincronización con VPN consulta algunos servicios públicos de geolocalización por IP para detectar la región de salida de tu VPN. Algunas VPN o cortafuegos bloquean las solicitudes salientes a estos servicios. Prueba a desactivar temporalmente el cortafuegos o el kill switch de tu VPN. Si el problema persiste, usa las pestañas Buscar ciudad o Introducir coordenadas para definir tu ubicación manualmente.",
       },
       {
-        q: "El falseo dejó de funcionar tras una actualización del navegador",
-        a: "Las actualizaciones del navegador cambian a veces cómo interactúan las extensiones con las API de las páginas. Asegúrate de tener la última versión de GeoSpoof. Comprueba la versión en la pestaña Detalles del popup y compárala con la última versión en GitHub. Si vas por detrás, actualiza a través del gestor de extensiones de tu navegador.",
-      },
-      {
+        id: "specific-site",
         q: "Un sitio web concreto no se está falseando",
         a: "Algunos sitios usan detección de ubicación en el servidor basada en tu dirección IP en lugar de la API de geolocalización del navegador. GeoSpoof solo reemplaza las API del navegador — no cambia tu dirección IP. Para una coherencia de ubicación total, usa GeoSpoof junto con una VPN apuntada a la misma región.",
       },
       {
+        id: "mobile",
         q: "La extensión funciona en el escritorio pero no en mi teléfono",
         a: "En Firefox para Android, la extensión es totalmente compatible con Firefox 140 y posteriores. En Safari de iOS y macOS, la extensión está disponible en el App Store — toca el icono de la pieza de puzle en la barra de direcciones y activa GeoSpoof para el sitio que quieras proteger. Chrome para iOS y Android no admite extensiones.",
       },
       {
+        id: "webrtc",
         q: "La Protección WebRTC no está disponible / aparece atenuada",
         a: "La Protección WebRTC usa una API de privacidad del navegador que no está disponible en todas las plataformas. Es compatible con Firefox y los navegadores basados en Chromium en el escritorio. No está disponible en Safari ni en Firefox para Android.",
       },
       {
+        id: "extensions-page",
         q: 'Veo "Las extensiones no pueden ejecutarse en esta página"',
         a: "Los navegadores impiden que las extensiones se ejecuten en páginas internas como about:blank, chrome://, about:newtab y las páginas de las tiendas de extensiones. Es un límite de seguridad del navegador que no se puede eludir. GeoSpoof funciona en todos los sitios web normales.",
       },
@@ -584,6 +713,16 @@ export const es: Dictionary = {
     copyAria: "Copiar la dirección de correo",
     stillNeedHelp: "¿Aún necesitas ayuda?",
     contactBody: "Envíanos un correo y te responderemos en uno o dos días.",
+    contactChecklistLead: "Incluye esto para que podamos ayudarte más rápido:",
+    contactChecklist: [
+      "Versión de Firefox",
+      "Sistema operativo",
+      "Versión de GeoSpoof",
+      "Proveedor de VPN (si aplica)",
+      "El sitio de prueba de huella digital que usas",
+      "Una captura de pantalla del resultado",
+      "Si el falseo funciona en un perfil nuevo de Firefox",
+    ],
     reportBugsLead: "También puedes reportar errores en ",
   },
   about: {

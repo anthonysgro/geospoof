@@ -545,34 +545,160 @@ export const id: Dictionary = {
     },
     heading: "Bagaimana kami bisa membantu?",
     subhead:
-      "Temukan jawaban untuk masalah umum di bawah, atau hubungi kami langsung.",
-    commonIssues: "Masalah Umum",
-    faqs: [
+      "Sebagian besar laporan berujung pada salah satu penyebab di bawah ini. Telusuri daftar dari atas dan berhenti saat pemalsuan berfungsi.",
+    symptomsLead: "Apa yang terjadi?",
+    symptoms: [
+      { label: "Pemalsuan lokasi tidak berfungsi", target: "troubleshooting" },
       {
-        q: "Pemalsuan tidak berfungsi setelah saya menginstal ekstensi",
-        a: "Ekstensi disuntikkan ke halaman saat pemuatan, jadi tab mana pun yang sudah terbuka saat Anda menginstal atau mengaktifkannya belum terlindungi. Muat ulang setiap tab yang ingin Anda lindungi setelah mengaktifkan Perlindungan Lokasi. Jika masih tidak berfungsi, coba nonaktifkan dan aktifkan kembali ekstensi, lalu muat ulang lagi.",
+        label: "Sinkronisasi VPN gagal atau kehabisan waktu",
+        target: "faq-vpn-sync",
       },
       {
+        label: "Berfungsi di desktop tetapi tidak di ponsel saya",
+        target: "faq-mobile",
+      },
+      { label: "Sesuatu yang lain", target: "questions" },
+    ],
+    lastUpdatedLabel: "Terakhir diperbarui",
+    troubleshooting: {
+      title: "Pemalsuan tidak berfungsi di sebuah situs",
+      intro:
+        "Ini diurutkan dari yang paling umum ke yang paling jarang. Anda kemungkinan tidak perlu sampai ke akhir.",
+      browserNote:
+        "GeoSpoof juga berjalan di Chrome, Edge, Brave, dan Safari. Langkah-langkah di bawah ditulis untuk Firefox, tempat konflik ini paling umum — di browser lain, terapkan pengaturan yang setara.",
+      latestReleaseLabel: "Rilis terbaru",
+      latestReleaseCta: "Lihat rilis terbaru di GitHub",
+      badgeActiveLabel: "Aktif di tab ini",
+      badgeActiveAlt:
+        "Ikon bilah alat GeoSpoof dengan lencana yang menunjukkan bahwa ia aktif di tab saat ini",
+      badgeDisabledLabel: "Tidak berjalan di tab ini",
+      badgeDisabledAlt:
+        "Ikon bilah alat GeoSpoof dengan lencana yang menunjukkan bahwa ia tidak berjalan di tab saat ini",
+      geolocationDeniedAlt:
+        'Hasil uji fingerprint yang melaporkan "Geolocation: Denied" karena Firefox memblokir permintaan lokasi',
+      geolocationDeniedCaption:
+        "Seperti inilah tampilan permintaan lokasi yang diblokir pada uji fingerprint.",
+      preserveOffAlt:
+        'Popup GeoSpoof dengan tombol "Pertahankan permintaan izin lokasi" dinonaktifkan',
+      preserveOffCaption:
+        'Popup GeoSpoof dengan "Pertahankan permintaan izin lokasi" dinonaktifkan.',
+      tzpCta: "Buka uji TZP",
+      featuredLabel: "Diagnostik terbaik",
+      steps: [
+        {
+          title: "Muat ulang tab, atau buka kembali",
+          featured: false,
+          body: "GeoSpoof hanya berlaku pada halaman yang dimuat setelah ia diaktifkan. Tab mana pun yang sudah terbuka saat Anda menginstal, memperbarui, atau mengaktifkan kembali GeoSpoof tidak akan dipalsukan sampai dimuat ulang. Muat ulang tab yang Anda uji — jika itu tidak membantu, tutup dan buka lagi.",
+          details: [],
+          note: "",
+          action: "",
+        },
+        {
+          title: "Perbarui ke versi terbaru",
+          featured: false,
+          body: "Banyak masalah sudah diperbaiki di rilis yang lebih baru. Di popup, buka Detail → Lanjutan untuk melihat versi Anda, lalu bandingkan dengan rilis terbaru di bawah dan perbarui melalui pengelola ekstensi browser Anda jika Anda tertinggal.",
+          details: [],
+          note: "",
+          action: "latestRelease",
+        },
+        {
+          title: "Pastikan GeoSpoof berjalan di situs tersebut",
+          featured: false,
+          body: "Ikon bilah alat GeoSpoof menunjukkan apakah ia aktif di tab saat ini. Jika tidak aktif, tidak ada yang dipalsukan — paling sering karena cakupan situs yang diatur di tab Filter.",
+          details: [
+            "Mode daftar izin: hanya situs yang terdaftar yang dipalsukan — tambahkan situs yang Anda uji.",
+            "Mode daftar blokir: pastikan situs tidak ada dalam daftar.",
+            'Atau beralih ke "Semua" untuk memalsukan di mana saja.',
+          ],
+          note: "",
+          action: "badgeCheck",
+        },
+        {
+          title: "Atur ulang izin lokasi situs",
+          featured: false,
+          body: 'Jika sebuah uji melaporkan "Geolocation: Denied", Firefox memblokir permintaan — biasanya karena permintaan izin pernah ditolak dengan "Remember this decision" dicentang.',
+          details: [
+            "Klik ikon gembok di bilah alamat.",
+            "Hapus setiap Block lokasi yang diingat, lalu muat ulang halaman.",
+            'Di pengaturan Firefox, pastikan "Block new requests asking to access your location" dinonaktifkan.',
+            'Jika tombol "Pertahankan permintaan izin lokasi" GeoSpoof aktif dan Anda menolak permintaan itu, izinkan atau nonaktifkan tombol tersebut agar GeoSpoof menjawab langsung.',
+          ],
+          note: "",
+          action: "geolocationDenied",
+        },
+        {
+          title: "Mulai ulang browser Anda",
+          featured: false,
+          body: "Beberapa API browser diatur saat startup, jadi pemasangan, pembaruan, atau perubahan pengaturan yang baru dilakukan mungkin tidak berlaku sampai Anda menutup dan membuka kembali browser sepenuhnya.",
+          details: [],
+          note: "",
+          action: "",
+        },
+        {
+          title: "Uji di profil Firefox yang baru",
+          featured: true,
+          body: "Profil bersih mengisolasi GeoSpoof dari penyiapan Anda yang ada.",
+          details: [
+            "Buka about:profiles dan buat profil baru.",
+            "Jalankan, instal GeoSpoof, dan uji situs yang sama lagi.",
+          ],
+          note: "Jika pemalsuan berfungsi di profil bersih, GeoSpoof sendiri baik-baik saja — ada sesuatu di profil normal Anda yang mengganggu, hampir selalu berupa alat privasi atau perubahan about:config. Dua langkah berikutnya membahas hal itu.",
+          action: "",
+        },
+        {
+          title: "Nonaktifkan alat privasi yang berkonflik",
+          featured: false,
+          body: "Alat penguatan mengubah banyak API browser yang sama dengan GeoSpoof dan bisa menimpanya. Nonaktifkan sementara yang Anda gunakan, lalu coba lagi: Arkenfox, Betterfox, LibreWolf, CanvasBlocker, JShelter, Chameleon, Trace, atau perandom fingerprint apa pun.",
+          details: [],
+          note: "",
+          action: "",
+        },
+        {
+          title: "Periksa about:config (lanjutan)",
+          featured: false,
+          body: "Jika Anda telah memperkuat Firefox, pastikan preferensi ini dinonaktifkan, lalu mulai ulang dan coba lagi. Enhanced Tracking Protection mode Strict biasanya baik-baik saja dan tidak perlu diubah.",
+          details: [
+            "privacy.resistFingerprinting",
+            "privacy.fingerprintingProtection",
+            "privacy.fingerprintingProtection.pbmode",
+          ],
+          note: "",
+          action: "",
+        },
+        {
+          title: "Konfirmasi pada uji fingerprint kedua",
+          featured: false,
+          body: "Uji mengukur API yang berbeda dan sebagian memang bermasalah. Sebelum menganggap GeoSpoof yang salah, verifikasi hasilnya pada uji tepercaya lain — kami merekomendasikan bagian Region dari TZP milik arkenfox.",
+          details: [],
+          note: "",
+          action: "tzpTest",
+        },
+      ],
+    },
+    commonIssues: "Pertanyaan umum lainnya",
+    faqs: [
+      {
+        id: "vpn-sync",
         q: "Sinkronisasi VPN menampilkan waktu habis atau kesalahan jaringan",
         a: "Sinkronisasi VPN memanggil beberapa layanan geolokasi IP publik untuk mendeteksi wilayah keluar VPN Anda. Beberapa VPN atau firewall memblokir permintaan keluar ke layanan ini. Coba nonaktifkan sementara firewall atau kill switch VPN Anda. Jika masalah berlanjut, gunakan tab Cari Kota atau Masukkan Koordinat untuk menetapkan lokasi Anda secara manual.",
       },
       {
-        q: "Pemalsuan berhenti berfungsi setelah pembaruan browser",
-        a: "Pembaruan browser terkadang mengubah cara ekstensi berinteraksi dengan API halaman. Pastikan Anda menggunakan versi GeoSpoof terbaru. Periksa versinya di tab Detail pada popup dan bandingkan dengan rilis terbaru di GitHub. Jika Anda tertinggal, perbarui melalui pengelola ekstensi browser Anda.",
-      },
-      {
+        id: "specific-site",
         q: "Situs web tertentu tidak dipalsukan",
         a: "Beberapa situs menggunakan deteksi lokasi sisi server berdasarkan alamat IP Anda alih-alih Geolocation API browser. GeoSpoof hanya menimpa API browser — ia tidak mengubah alamat IP Anda. Untuk konsistensi lokasi penuh, gunakan GeoSpoof bersama VPN yang mengarah ke wilayah yang sama.",
       },
       {
+        id: "mobile",
         q: "Ekstensi berfungsi di desktop tetapi tidak di ponsel saya",
         a: "Di Firefox untuk Android, ekstensi sepenuhnya didukung pada Firefox 140 dan yang lebih baru. Di Safari iOS dan macOS, ekstensi tersedia melalui App Store — ketuk ikon potongan puzzle di bilah alamat dan aktifkan GeoSpoof untuk situs yang ingin Anda lindungi. Chrome untuk iOS dan Android tidak mendukung ekstensi.",
       },
       {
+        id: "webrtc",
         q: "Perlindungan WebRTC tidak tersedia / berwarna abu-abu",
         a: "Perlindungan WebRTC menggunakan API privasi browser yang tidak tersedia di semua platform. Ia didukung di Firefox dan browser berbasis Chromium di desktop. Ia tidak tersedia di Safari atau Firefox untuk Android.",
       },
       {
+        id: "extensions-page",
         q: 'Saya melihat "Ekstensi tidak dapat berjalan di halaman ini"',
         a: "Browser membatasi ekstensi agar tidak berjalan di halaman bawaan seperti about:blank, chrome://, about:newtab, dan halaman toko ekstensi. Ini adalah batas keamanan browser yang tidak dapat dilewati. GeoSpoof berfungsi di semua situs web normal.",
       },
@@ -583,6 +709,16 @@ export const id: Dictionary = {
     stillNeedHelp: "Masih perlu bantuan?",
     contactBody:
       "Kirimi kami email dan kami akan membalas dalam satu atau dua hari.",
+    contactChecklistLead: "Sertakan ini agar kami bisa membantu lebih cepat:",
+    contactChecklist: [
+      "Versi Firefox",
+      "Sistem operasi",
+      "Versi GeoSpoof",
+      "Penyedia VPN (jika ada)",
+      "Situs uji fingerprint yang Anda gunakan",
+      "Tangkapan layar hasilnya",
+      "Apakah pemalsuan berfungsi di profil Firefox yang baru",
+    ],
     reportBugsLead: "Anda juga dapat melaporkan bug di ",
   },
   about: {

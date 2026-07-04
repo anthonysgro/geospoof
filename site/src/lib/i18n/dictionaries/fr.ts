@@ -549,35 +549,164 @@ export const fr: Dictionary = {
     },
     heading: "Comment pouvons-nous vous aider ?",
     subhead:
-      "Trouvez des réponses aux problèmes courants ci-dessous, ou contactez-nous directement.",
-    commonIssues: "Problèmes courants",
+      "La plupart des signalements se ramènent à l’une des causes ci-dessous. Parcourez la liste et arrêtez-vous dès que la simulation fonctionne.",
+    symptomsLead: "Que se passe-t-il ?",
+    symptoms: [
+      {
+        label: "La simulation de position ne fonctionne pas",
+        target: "troubleshooting",
+      },
+      {
+        label: "La Synchronisation VPN échoue ou expire",
+        target: "faq-vpn-sync",
+      },
+      {
+        label: "Ça marche sur ordinateur mais pas sur mon téléphone",
+        target: "faq-mobile",
+      },
+      { label: "Autre chose", target: "questions" },
+    ],
+    lastUpdatedLabel: "Dernière mise à jour",
+    troubleshooting: {
+      title: "La simulation ne fonctionne pas sur un site",
+      intro:
+        "Elles sont classées de la plus fréquente à la moins fréquente. Vous n’aurez sans doute pas besoin d’aller jusqu’au bout.",
+      browserNote:
+        "GeoSpoof fonctionne aussi sur Chrome, Edge, Brave et Safari. Les étapes ci-dessous sont rédigées pour Firefox, où ces conflits sont les plus fréquents — sur les autres navigateurs, appliquez les réglages équivalents.",
+      latestReleaseLabel: "Dernière version",
+      latestReleaseCta: "Voir la dernière version sur GitHub",
+      badgeActiveLabel: "Active sur cet onglet",
+      badgeActiveAlt:
+        "Icône GeoSpoof dans la barre d’outils, avec un badge indiquant qu’elle est active sur l’onglet actuel",
+      badgeDisabledLabel: "Inactive sur cet onglet",
+      badgeDisabledAlt:
+        "Icône GeoSpoof dans la barre d’outils, avec un badge indiquant qu’elle ne s’exécute pas sur l’onglet actuel",
+      geolocationDeniedAlt:
+        "Résultat d’un test d’empreinte affichant « Geolocation: Denied » parce que Firefox a bloqué la demande de position",
+      geolocationDeniedCaption:
+        "À quoi ressemble une demande de position bloquée sur un test d’empreinte.",
+      preserveOffAlt:
+        "La fenêtre GeoSpoof avec l’option « Conserver les invites de localisation » désactivée",
+      preserveOffCaption:
+        "Fenêtre GeoSpoof avec « Conserver les invites de localisation » désactivée.",
+      tzpCta: "Ouvrir le test TZP",
+      featuredLabel: "Meilleur diagnostic",
+      steps: [
+        {
+          title: "Actualisez l’onglet, ou rouvrez-le",
+          featured: false,
+          body: "GeoSpoof ne prend effet que sur les pages chargées après son activation. Tout onglet déjà ouvert lorsque vous avez installé, mis à jour ou réactivé GeoSpoof ne sera pas simulé tant qu’il n’est pas rechargé. Actualisez l’onglet que vous testez — si cela ne suffit pas, fermez-le puis rouvrez-le.",
+          details: [],
+          note: "",
+          action: "",
+        },
+        {
+          title: "Mettez à jour vers la dernière version",
+          featured: false,
+          body: "De nombreux problèmes sont déjà corrigés dans une version plus récente. Dans la fenêtre, ouvrez Détails → Avancé pour voir votre version, puis comparez-la à la dernière version ci-dessous et mettez à jour via le gestionnaire d’extensions de votre navigateur si vous êtes en retard.",
+          details: [],
+          note: "",
+          action: "latestRelease",
+        },
+        {
+          title: "Vérifiez que GeoSpoof s’exécute sur le site",
+          featured: false,
+          body: "L’icône de GeoSpoof dans la barre d’outils indique si l’extension est active sur l’onglet actuel. Si elle ne l’est pas, rien n’est simulé — le plus souvent à cause de la portée des sites définie dans l’onglet Filtres.",
+          details: [
+            "Mode Liste d’autorisation : seuls les sites listés sont simulés — ajoutez le site que vous testez.",
+            "Mode Liste de blocage : assurez-vous que le site n’est pas dans la liste.",
+            "Ou passez sur « Tous » pour simuler partout.",
+          ],
+          note: "",
+          action: "badgeCheck",
+        },
+        {
+          title: "Réinitialisez l’autorisation de position du site",
+          featured: false,
+          body: "Si un test affiche « Geolocation: Denied », Firefox bloque la demande — généralement parce que l’invite a été refusée une fois avec « Se souvenir de cette décision » cochée.",
+          details: [
+            "Cliquez sur l’icône de cadenas dans la barre d’adresse.",
+            "Effacez tout blocage mémorisé pour la position, puis rechargez la page.",
+            "Dans les paramètres de Firefox, vérifiez que « Bloquer les nouvelles demandes d’accès à votre position » est désactivé.",
+            "Si l’option « Conserver les invites de localisation » de GeoSpoof est activée et que vous avez refusé l’invite, autorisez-la ou désactivez l’option pour que GeoSpoof réponde directement.",
+          ],
+          note: "",
+          action: "geolocationDenied",
+        },
+        {
+          title: "Redémarrez votre navigateur",
+          featured: false,
+          body: "Certaines API du navigateur sont mises en place au démarrage ; une installation, une mise à jour ou un changement de réglage récent peut donc ne prendre effet qu’après avoir entièrement fermé puis rouvert votre navigateur.",
+          details: [],
+          note: "",
+          action: "",
+        },
+        {
+          title: "Testez dans un profil Firefox tout neuf",
+          featured: true,
+          body: "Un profil vierge isole GeoSpoof de votre configuration existante.",
+          details: [
+            "Ouvrez about:profiles et créez un nouveau profil.",
+            "Lancez-le, installez GeoSpoof et testez à nouveau le même site.",
+          ],
+          note: "Si la simulation fonctionne dans le profil vierge, GeoSpoof lui-même n’est pas en cause — quelque chose dans votre profil habituel interfère, presque toujours un outil de confidentialité ou une modification dans about:config. Les deux étapes suivantes traitent ces cas.",
+          action: "",
+        },
+        {
+          title: "Désactivez les outils de confidentialité en conflit",
+          featured: false,
+          body: "Les outils de durcissement modifient bon nombre des mêmes API du navigateur que GeoSpoof et peuvent le supplanter. Désactivez temporairement ceux que vous utilisez, puis réessayez : Arkenfox, Betterfox, LibreWolf, CanvasBlocker, JShelter, Chameleon, Trace, ou tout outil de randomisation d’empreinte.",
+          details: [],
+          note: "",
+          action: "",
+        },
+        {
+          title: "Vérifiez about:config (avancé)",
+          featured: false,
+          body: "Si vous avez durci Firefox, vérifiez que ces préférences sont désactivées, puis redémarrez et réessayez. La protection renforcée contre le pistage en mode Strict ne pose généralement pas de problème et n’a pas besoin d’être modifiée.",
+          details: [
+            "privacy.resistFingerprinting",
+            "privacy.fingerprintingProtection",
+            "privacy.fingerprintingProtection.pbmode",
+          ],
+          note: "",
+          action: "",
+        },
+        {
+          title: "Confirmez avec un second test d’empreinte",
+          featured: false,
+          body: "Les tests mesurent des API différentes et certains sont tout simplement bogués. Avant de conclure que GeoSpoof est en cause, vérifiez le résultat sur un autre test réputé — nous recommandons la section Region du TZP d’arkenfox.",
+          details: [],
+          note: "",
+          action: "tzpTest",
+        },
+      ],
+    },
+    commonIssues: "Autres questions fréquentes",
     faqs: [
       {
-        q: "La simulation ne fonctionne pas après l’installation de l’extension",
-        a: "L’extension s’injecte dans les pages au moment de leur chargement ; les onglets déjà ouverts lorsque vous l’avez installée ou activée ne sont donc pas encore protégés. Actualisez chaque onglet que vous souhaitez protéger après avoir activé la Protection de position. Si cela ne fonctionne toujours pas, désactivez puis réactivez l’extension, puis actualisez à nouveau.",
-      },
-      {
+        id: "vpn-sync",
         q: "La Synchronisation VPN affiche un délai d’attente ou une erreur réseau",
-        a: "La Synchronisation VPN interroge quelques services publics de géolocalisation d’IP pour détecter la région de sortie de votre VPN. Certains VPN ou pare-feux bloquent les requêtes sortantes vers ces services. Essayez de désactiver temporairement le pare-feu ou le kill switch de votre VPN. Si le problème persiste, utilisez les onglets Rechercher une ville ou Saisir des coordonnées pour définir votre position manuellement.",
+        a: "La Synchronisation VPN interroge quelques services publics de géolocalisation d’IP pour détecter la région de sortie de votre VPN. Certains VPN ou pare-feux bloquent les requêtes sortantes vers ces services. Essayez de désactiver temporairement le pare-feu ou le kill switch de votre VPN. Si le problème persiste, utilisez plutôt les onglets Rechercher une ville ou Saisir des coordonnées pour définir votre position manuellement.",
       },
       {
-        q: "La simulation a cessé de fonctionner après une mise à jour du navigateur",
-        a: "Les mises à jour de navigateur modifient parfois la façon dont les extensions interagissent avec les API de page. Assurez-vous d’utiliser la dernière version de GeoSpoof. Vérifiez la version dans l’onglet Détails de la fenêtre et comparez-la à la dernière version publiée sur GitHub. Si vous êtes en retard, mettez à jour via le gestionnaire d’extensions de votre navigateur.",
-      },
-      {
+        id: "specific-site",
         q: "Un site web précis n’est pas simulé",
         a: "Certains sites détectent la position côté serveur d’après votre adresse IP plutôt que via l’API de géolocalisation du navigateur. GeoSpoof ne remplace que les API du navigateur — il ne change pas votre adresse IP. Pour une cohérence de position complète, utilisez GeoSpoof avec un VPN pointant vers la même région.",
       },
       {
+        id: "mobile",
         q: "L’extension fonctionne sur ordinateur mais pas sur mon téléphone",
         a: "Sur Firefox pour Android, l’extension est entièrement prise en charge à partir de Firefox 140. Sur Safari iOS et macOS, l’extension est disponible sur l’App Store — appuyez sur l’icône en forme de pièce de puzzle dans la barre d’adresse et activez GeoSpoof pour le site à protéger. Chrome sur iOS et Android ne prend pas en charge les extensions.",
       },
       {
+        id: "webrtc",
         q: "La Protection WebRTC n’est pas disponible / grisée",
         a: "La Protection WebRTC utilise une API de confidentialité du navigateur qui n’est pas disponible sur toutes les plateformes. Elle est prise en charge sur Firefox et les navigateurs basés sur Chromium sur ordinateur. Elle n’est pas disponible sur Safari ni sur Firefox pour Android.",
       },
       {
-        q: "Le message « Les extensions ne peuvent pas s’exécuter sur cette page » s’affiche",
+        id: "extensions-page",
+        q: "Le message « Les extensions ne peuvent pas s’exécuter sur cette page » s’affiche",
         a: "Les navigateurs empêchent les extensions de s’exécuter sur les pages intégrées comme about:blank, chrome://, about:newtab et les pages des boutiques d’extensions. Il s’agit d’une limite de sécurité du navigateur qui ne peut pas être contournée. GeoSpoof fonctionne sur tous les sites web normaux.",
       },
     ],
@@ -587,6 +716,17 @@ export const fr: Dictionary = {
     stillNeedHelp: "Besoin d’aide supplémentaire ?",
     contactBody:
       "Envoyez-nous un e-mail et nous vous répondrons d’ici un jour ou deux.",
+    contactChecklistLead:
+      "Joignez ces informations pour que nous puissions vous aider plus vite :",
+    contactChecklist: [
+      "Version de Firefox",
+      "Système d’exploitation",
+      "Version de GeoSpoof",
+      "Fournisseur VPN (le cas échéant)",
+      "Le site de test d’empreinte que vous utilisez",
+      "Une capture d’écran du résultat",
+      "Si la simulation fonctionne dans un profil Firefox tout neuf",
+    ],
     reportBugsLead: "Vous pouvez aussi signaler des bugs sur ",
   },
   about: {

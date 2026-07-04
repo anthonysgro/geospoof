@@ -16,12 +16,7 @@ export function Section({
       className={cn("py-24", "px-6 md:px-12 lg:px-16", className)}
       {...props}
     >
-      <div
-        className={cn(
-          "mx-auto w-full",
-          narrow ? "max-w-180" : "max-w-300"
-        )}
-      >
+      <div className={cn("mx-auto w-full", narrow ? "max-w-180" : "max-w-300")}>
         {children}
       </div>
     </section>

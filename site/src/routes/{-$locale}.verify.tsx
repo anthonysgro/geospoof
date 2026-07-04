@@ -698,21 +698,20 @@ function VerifyInner() {
               {d.vpnCard.line1}
             </p>
             <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-              {[
-                t.vpn.whyProton.reason1Title,
-                t.vpn.whyProton.reason2Title,
-              ].map((feature) => (
-                <li
-                  key={feature}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-(--color-canvas-foreground)"
-                >
-                  <Check
-                    className="size-3.5 shrink-0 text-(--color-brand)"
-                    aria-hidden="true"
-                  />
-                  {feature}
-                </li>
-              ))}
+              {[t.vpn.whyProton.reason1Title, t.vpn.whyProton.reason2Title].map(
+                (feature) => (
+                  <li
+                    key={feature}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-(--color-canvas-foreground)"
+                  >
+                    <Check
+                      className="size-3.5 shrink-0 text-(--color-brand)"
+                      aria-hidden="true"
+                    />
+                    {feature}
+                  </li>
+                )
+              )}
             </ul>
           </div>
         </div>

@@ -549,34 +549,158 @@ export const en = {
         "Get help with GeoSpoof: fix location spoofing that isn't working, resolve VPN Sync timeouts, WebRTC issues, and browser or mobile setup — or contact our team.",
     },
     heading: "How can we help?",
-    subhead: "Find answers to common issues below, or reach out directly.",
-    commonIssues: "Common Issues",
+    subhead:
+      "Most reports trace back to one of the causes below. Work down the list and stop when spoofing works.",
+    symptomsLead: "What's happening?",
+    symptoms: [
+      {
+        label: "Location spoofing isn't working",
+        target: "troubleshooting",
+      },
+      { label: "VPN Sync fails or times out", target: "faq-vpn-sync" },
+      { label: "It works on desktop but not my phone", target: "faq-mobile" },
+      { label: "Something else", target: "questions" },
+    ],
+    lastUpdatedLabel: "Last updated",
+    troubleshooting: {
+      title: "Spoofing isn't working on a site",
+      intro:
+        "These are ordered from most to least common. You likely won't need to reach the end.",
+      browserNote:
+        "GeoSpoof also runs on Chrome, Edge, Brave, and Safari. The steps below are written for Firefox, where these conflicts are most common — on other browsers, apply the equivalent settings.",
+      latestReleaseLabel: "Latest release",
+      latestReleaseCta: "View the latest release on GitHub",
+      badgeActiveLabel: "Active on this tab",
+      badgeActiveAlt:
+        "GeoSpoof toolbar icon with a badge showing it is active on the current tab",
+      badgeDisabledLabel: "Not running on this tab",
+      badgeDisabledAlt:
+        "GeoSpoof toolbar icon with a badge showing it is not running on the current tab",
+      geolocationDeniedAlt:
+        'A fingerprint test result reporting "Geolocation: Denied" because Firefox blocked the location request',
+      geolocationDeniedCaption:
+        "What a blocked location request looks like on a fingerprint test.",
+      preserveOffAlt:
+        'The GeoSpoof popup with the "Preserve location prompts" toggle turned off',
+      preserveOffCaption:
+        'GeoSpoof popup with "Preserve location prompts" turned off.',
+      tzpCta: "Open the TZP test",
+      featuredLabel: "Best diagnostic",
+      steps: [
+        {
+          title: "Refresh the tab, or reopen it",
+          featured: false,
+          body: "GeoSpoof only takes effect on pages loaded after it's enabled. Any tab that was already open when you installed, updated, or re-enabled GeoSpoof won't be spoofed until it reloads. Refresh the tab you're testing — if that doesn't help, close it and open it again.",
+          details: [],
+          note: "",
+          action: "",
+        },
+        {
+          title: "Update to the latest version",
+          featured: false,
+          body: "Many issues are already fixed in a newer release. In the popup, open Details → Advanced to see your version, then compare it to the latest release below and update through your browser's extension manager if you're behind.",
+          details: [],
+          note: "",
+          action: "latestRelease",
+        },
+        {
+          title: "Confirm GeoSpoof is running on the site",
+          featured: false,
+          body: "GeoSpoof's toolbar icon shows whether it's active on the current tab. If it isn't active, nothing gets spoofed — most often because of the site scope set in the Filters tab.",
+          details: [
+            "Allowlist mode: only listed sites are spoofed — add the site you're testing.",
+            "Denylist mode: make sure the site isn't on the list.",
+            'Or switch to "All" to spoof everywhere.',
+          ],
+          note: "",
+          action: "badgeCheck",
+        },
+        {
+          title: "Reset the site's location permission",
+          featured: false,
+          body: 'If a test reports "Geolocation: Denied", Firefox is blocking the request — usually because the prompt was once denied with "Remember this decision" checked.',
+          details: [
+            "Click the lock icon in the address bar.",
+            "Clear any remembered Block for location, then reload the page.",
+            'In Firefox settings, confirm "Block new requests asking to access your location" is off.',
+            'If GeoSpoof\'s "Preserve location prompts" toggle is on and you denied the prompt, either allow it or turn the toggle off so GeoSpoof answers directly.',
+          ],
+          note: "",
+          action: "geolocationDenied",
+        },
+        {
+          title: "Restart your browser",
+          featured: false,
+          body: "Some browser APIs are set up at startup, so a recent install, update, or settings change may not take effect until you fully close and reopen your browser.",
+          details: [],
+          note: "",
+          action: "",
+        },
+        {
+          title: "Test in a fresh Firefox profile",
+          featured: true,
+          body: "A clean profile isolates GeoSpoof from your existing setup.",
+          details: [
+            "Open about:profiles and create a new profile.",
+            "Launch it, install GeoSpoof, and test the same site again.",
+          ],
+          note: "If spoofing works in the clean profile, GeoSpoof itself is fine — something in your normal profile is interfering, almost always a privacy tool or an about:config change. The next two steps cover those.",
+          action: "",
+        },
+        {
+          title: "Disable conflicting privacy tools",
+          featured: false,
+          body: "Hardening tools change many of the same browser APIs as GeoSpoof and can override it. Temporarily disable any you use, then retry: Arkenfox, Betterfox, LibreWolf, CanvasBlocker, JShelter, Chameleon, Trace, or any fingerprint randomizer.",
+          details: [],
+          note: "",
+          action: "",
+        },
+        {
+          title: "Check about:config (advanced)",
+          featured: false,
+          body: "If you've hardened Firefox, confirm these preferences are disabled, then restart and retry. Strict Enhanced Tracking Protection is usually fine and doesn't need changing.",
+          details: [
+            "privacy.resistFingerprinting",
+            "privacy.fingerprintingProtection",
+            "privacy.fingerprintingProtection.pbmode",
+          ],
+          note: "",
+          action: "",
+        },
+        {
+          title: "Confirm on a second fingerprint test",
+          featured: false,
+          body: "Tests measure different APIs and some are simply buggy. Before assuming GeoSpoof is at fault, verify the result on another reputable test — we recommend the Region section of arkenfox's TZP.",
+          details: [],
+          note: "",
+          action: "tzpTest",
+        },
+      ],
+    },
+    commonIssues: "Other common questions",
     faqs: [
       {
-        q: "Spoofing isn't working after I installed the extension",
-        a: "The extension injects into pages at load time, so any tabs that were already open when you installed or enabled it won't be protected yet. Refresh every tab you want to protect after enabling Location Protection. If it still doesn't work, try disabling and re-enabling the extension, then refresh again.",
-      },
-      {
+        id: "vpn-sync",
         q: "VPN Sync shows a timeout or network error",
         a: "VPN Sync calls a few public IP geolocation services to detect your VPN exit region. Some VPNs or firewalls block outbound requests to these services. Try temporarily disabling your VPN's firewall or kill switch. If the issue persists, use the Search City or Enter Coordinates tabs to set your location manually instead.",
       },
       {
-        q: "Spoofing stopped working after a browser update",
-        a: "Browser updates occasionally change how extensions interact with page APIs. Make sure you're on the latest version of GeoSpoof. Check the version in the Details tab of the popup and compare it to the latest release on GitHub. If you're behind, update through your browser's extension manager.",
-      },
-      {
+        id: "specific-site",
         q: "A specific website isn't being spoofed",
         a: "Some sites use server-side location detection based on your IP address rather than the browser Geolocation API. GeoSpoof overrides browser APIs only — it does not change your IP address. For full location consistency, use GeoSpoof alongside a VPN pointed at the same region.",
       },
       {
+        id: "mobile",
         q: "The extension works on desktop but not on my phone",
         a: "On Firefox for Android, the extension is fully supported on Firefox 140 and later. On iOS and macOS Safari, the extension is available through the App Store — tap the puzzle piece icon in the address bar and enable GeoSpoof for the site you want to protect. Chrome for iOS and Android does not support extensions.",
       },
       {
+        id: "webrtc",
         q: "WebRTC Protection isn't available / greyed out",
         a: "WebRTC Protection uses a browser privacy API that is not available on all platforms. It is supported on Firefox and Chromium-based browsers on desktop. It is not available on Safari or Firefox for Android.",
       },
       {
+        id: "extensions-page",
         q: 'I see "Extensions cannot run on this page"',
         a: "Browsers restrict extensions from running on built-in pages such as about:blank, chrome://, about:newtab, and extension store pages. This is a browser security boundary that cannot be bypassed. GeoSpoof works on all normal websites.",
       },
@@ -587,6 +711,16 @@ export const en = {
     stillNeedHelp: "Still need help?",
     contactBody:
       "Send us an email and we'll get back to you within a day or two.",
+    contactChecklistLead: "Include these so we can help faster:",
+    contactChecklist: [
+      "Firefox version",
+      "Operating system",
+      "GeoSpoof version",
+      "VPN provider (if applicable)",
+      "The fingerprint test site you're using",
+      "A screenshot of the result",
+      "Whether spoofing works in a fresh Firefox profile",
+    ],
     reportBugsLead: "You can also report bugs on ",
   },
   about: {

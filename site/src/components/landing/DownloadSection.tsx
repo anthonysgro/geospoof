@@ -1,9 +1,9 @@
 import { Section } from "./Section"
 import type { Platform } from "@/hooks/use-platform"
+import type { BrowserLogoName } from "@/components/BrowserLogo"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { BrowserLogo } from "@/components/BrowserLogo"
-import type { BrowserLogoName } from "@/components/BrowserLogo"
 import { usePlatform } from "@/hooks/use-platform"
 import { useTranslations } from "@/hooks/use-i18n"
 

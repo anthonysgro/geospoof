@@ -550,34 +550,163 @@ export const ptBR: Dictionary = {
     },
     heading: "Como podemos ajudar?",
     subhead:
-      "Encontre respostas para os problemas comuns abaixo, ou fale diretamente conosco.",
-    commonIssues: "Problemas comuns",
-    faqs: [
+      "A maioria dos relatos se resume a uma das causas abaixo. Percorra a lista e pare quando a falsificação funcionar.",
+    symptomsLead: "O que está acontecendo?",
+    symptoms: [
       {
-        q: "A falsificação não funciona depois que instalei a extensão",
-        a: "A extensão é injetada nas páginas no momento em que carregam, então qualquer aba que já estava aberta quando você instalou ou ativou ainda não estará protegida. Recarregue cada aba que você quer proteger depois de ativar a Proteção de Localização. Se ainda não funcionar, tente desativar e reativar a extensão, e recarregue de novo.",
+        label: "A falsificação de localização não está funcionando",
+        target: "troubleshooting",
       },
       {
+        label: "A Sincronização com VPN falha ou expira",
+        target: "faq-vpn-sync",
+      },
+      {
+        label: "Funciona no desktop mas não no meu celular",
+        target: "faq-mobile",
+      },
+      { label: "Outra coisa", target: "questions" },
+    ],
+    lastUpdatedLabel: "Última atualização",
+    troubleshooting: {
+      title: "A falsificação não está funcionando em um site",
+      intro:
+        "Estão ordenados do mais comum ao menos comum. Provavelmente você não precisará chegar ao fim.",
+      browserNote:
+        "O GeoSpoof também funciona no Chrome, Edge, Brave e Safari. Os passos abaixo foram escritos para o Firefox, onde esses conflitos são mais comuns — em outros navegadores, aplique as configurações equivalentes.",
+      latestReleaseLabel: "Versão mais recente",
+      latestReleaseCta: "Ver a versão mais recente no GitHub",
+      badgeActiveLabel: "Ativo nesta aba",
+      badgeActiveAlt:
+        "Ícone do GeoSpoof na barra de ferramentas com um selo mostrando que está ativo na aba atual",
+      badgeDisabledLabel: "Não está em execução nesta aba",
+      badgeDisabledAlt:
+        "Ícone do GeoSpoof na barra de ferramentas com um selo mostrando que não está em execução na aba atual",
+      geolocationDeniedAlt:
+        'Um resultado de teste de fingerprint informando "Geolocation: Denied" porque o Firefox bloqueou a solicitação de localização',
+      geolocationDeniedCaption:
+        "Como uma solicitação de localização bloqueada aparece em um teste de fingerprint.",
+      preserveOffAlt:
+        'O popup do GeoSpoof com a opção "Preservar solicitações de localização" desativada',
+      preserveOffCaption:
+        'Popup do GeoSpoof com "Preservar solicitações de localização" desativado.',
+      tzpCta: "Abrir o teste TZP",
+      featuredLabel: "Melhor diagnóstico",
+      steps: [
+        {
+          title: "Atualize a aba, ou reabra-a",
+          featured: false,
+          body: "O GeoSpoof só passa a valer em páginas carregadas depois de ele ser ativado. Qualquer aba que já estava aberta quando você instalou, atualizou ou reativou o GeoSpoof não será falsificada até recarregar. Atualize a aba que você está testando — se isso não ajudar, feche-a e abra de novo.",
+          details: [],
+          note: "",
+          action: "",
+        },
+        {
+          title: "Atualize para a versão mais recente",
+          featured: false,
+          body: "Muitos problemas já estão corrigidos em uma versão mais nova. No popup, abra Detalhes → Avançado para ver a sua versão, depois compare com a versão mais recente abaixo e atualize pelo gerenciador de extensões do seu navegador se estiver atrasado.",
+          details: [],
+          note: "",
+          action: "latestRelease",
+        },
+        {
+          title: "Confirme que o GeoSpoof está em execução no site",
+          featured: false,
+          body: "O ícone do GeoSpoof na barra de ferramentas mostra se ele está ativo na aba atual. Se não estiver ativo, nada é falsificado — na maioria das vezes por causa do escopo de sites definido na aba Filtros.",
+          details: [
+            "Modo de lista de permitidos: apenas os sites listados são falsificados — adicione o site que você está testando.",
+            "Modo de lista de bloqueados: certifique-se de que o site não esteja na lista.",
+            'Ou mude para "Tudo" para falsificar em todo lugar.',
+          ],
+          note: "",
+          action: "badgeCheck",
+        },
+        {
+          title: "Redefina a permissão de localização do site",
+          featured: false,
+          body: 'Se um teste informar "Geolocation: Denied", o Firefox está bloqueando a solicitação — geralmente porque o aviso já foi negado uma vez com "Lembrar desta decisão" marcado.',
+          details: [
+            "Clique no ícone de cadeado na barra de endereços.",
+            "Limpe qualquer Bloquear lembrado para localização, depois recarregue a página.",
+            'Nas configurações do Firefox, confirme que "Bloquear novas solicitações que pedem acesso à sua localização" está desativado.',
+            'Se a opção "Preservar solicitações de localização" do GeoSpoof estiver ativada e você negou o aviso, permita-o ou desative a opção para que o GeoSpoof responda diretamente.',
+          ],
+          note: "",
+          action: "geolocationDenied",
+        },
+        {
+          title: "Reinicie o navegador",
+          featured: false,
+          body: "Algumas APIs do navegador são configuradas na inicialização, então uma instalação, atualização ou mudança de configuração recente pode não valer até você fechar e reabrir o navegador por completo.",
+          details: [],
+          note: "",
+          action: "",
+        },
+        {
+          title: "Teste em um perfil novo do Firefox",
+          featured: true,
+          body: "Um perfil limpo isola o GeoSpoof da sua configuração atual.",
+          details: [
+            "Abra about:profiles e crie um novo perfil.",
+            "Inicie-o, instale o GeoSpoof e teste o mesmo site de novo.",
+          ],
+          note: "Se a falsificação funcionar no perfil limpo, o GeoSpoof em si está bem — algo no seu perfil normal está interferindo, quase sempre uma ferramenta de privacidade ou uma mudança no about:config. Os próximos dois passos cobrem isso.",
+          action: "",
+        },
+        {
+          title: "Desative ferramentas de privacidade em conflito",
+          featured: false,
+          body: "Ferramentas de reforço mudam muitas das mesmas APIs do navegador que o GeoSpoof e podem sobrepô-lo. Desative temporariamente as que você usa, depois tente de novo: Arkenfox, Betterfox, LibreWolf, CanvasBlocker, JShelter, Chameleon, Trace ou qualquer randomizador de fingerprint.",
+          details: [],
+          note: "",
+          action: "",
+        },
+        {
+          title: "Verifique o about:config (avançado)",
+          featured: false,
+          body: "Se você reforçou o Firefox, confirme que estas preferências estão desativadas, depois reinicie e tente de novo. A Proteção Aprimorada contra Rastreamento no modo Estrito geralmente está bem e não precisa ser alterada.",
+          details: [
+            "privacy.resistFingerprinting",
+            "privacy.fingerprintingProtection",
+            "privacy.fingerprintingProtection.pbmode",
+          ],
+          note: "",
+          action: "",
+        },
+        {
+          title: "Confirme em um segundo teste de fingerprint",
+          featured: false,
+          body: "Os testes medem APIs diferentes e alguns simplesmente têm bugs. Antes de presumir que o GeoSpoof é o culpado, verifique o resultado em outro teste confiável — recomendamos a seção Region do TZP do arkenfox.",
+          details: [],
+          note: "",
+          action: "tzpTest",
+        },
+      ],
+    },
+    commonIssues: "Outras perguntas comuns",
+    faqs: [
+      {
+        id: "vpn-sync",
         q: "A Sincronização com VPN mostra um tempo limite ou erro de rede",
         a: "A Sincronização com VPN consulta alguns serviços públicos de geolocalização por IP para detectar a região de saída do seu VPN. Alguns VPNs ou firewalls bloqueiam solicitações de saída para esses serviços. Tente desativar temporariamente o firewall ou o kill switch do seu VPN. Se o problema continuar, use as abas Buscar Cidade ou Inserir Coordenadas para definir a sua localização manualmente.",
       },
       {
-        q: "A falsificação parou de funcionar depois de uma atualização do navegador",
-        a: "As atualizações do navegador ocasionalmente mudam como as extensões interagem com as APIs das páginas. Certifique-se de estar na versão mais recente do GeoSpoof. Verifique a versão na aba Detalhes do popup e compare com a versão mais recente no GitHub. Se estiver atrasado, atualize pelo gerenciador de extensões do seu navegador.",
-      },
-      {
+        id: "specific-site",
         q: "Um site específico não está sendo falsificado",
         a: "Alguns sites usam detecção de localização no servidor com base no seu endereço IP, e não na API de geolocalização do navegador. O GeoSpoof substitui apenas APIs do navegador — não muda o seu endereço IP. Para consistência total de localização, use o GeoSpoof junto com um VPN apontado para a mesma região.",
       },
       {
+        id: "mobile",
         q: "A extensão funciona no desktop mas não no meu celular",
         a: "No Firefox para Android, a extensão é totalmente suportada no Firefox 140 e posteriores. No Safari do iOS e do macOS, a extensão está disponível pela App Store — toque no ícone de peça de quebra-cabeça na barra de endereços e ative o GeoSpoof para o site que você quer proteger. O Chrome para iOS e Android não suporta extensões.",
       },
       {
+        id: "webrtc",
         q: "A Proteção WebRTC não está disponível / está esmaecida",
         a: "A Proteção WebRTC usa uma API de privacidade do navegador que não está disponível em todas as plataformas. Ela é suportada no Firefox e em navegadores baseados em Chromium no desktop. Não está disponível no Safari nem no Firefox para Android.",
       },
       {
+        id: "extensions-page",
         q: 'Vejo "As extensões não podem ser executadas nesta página"',
         a: "Os navegadores impedem que as extensões sejam executadas em páginas internas como about:blank, chrome://, about:newtab e as páginas das lojas de extensões. Esse é um limite de segurança do navegador que não pode ser contornado. O GeoSpoof funciona em todos os sites normais.",
       },
@@ -587,6 +716,17 @@ export const ptBR: Dictionary = {
     copyAria: "Copiar o endereço de e-mail",
     stillNeedHelp: "Ainda precisa de ajuda?",
     contactBody: "Envie um e-mail e retornaremos em um ou dois dias.",
+    contactChecklistLead:
+      "Inclua estes itens para podermos ajudar mais rápido:",
+    contactChecklist: [
+      "Versão do Firefox",
+      "Sistema operacional",
+      "Versão do GeoSpoof",
+      "Provedor de VPN (se aplicável)",
+      "O site de teste de fingerprint que você está usando",
+      "Uma captura de tela do resultado",
+      "Se a falsificação funciona em um perfil novo do Firefox",
+    ],
     reportBugsLead: "Você também pode relatar bugs no ",
   },
   about: {

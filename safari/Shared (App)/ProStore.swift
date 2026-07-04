@@ -491,6 +491,37 @@ final class ProStore: ObservableObject {
     // MARK: Purchase / restore
 
     /// Returns true if the purchase completed and unlocked Pro.
+    /// Extract the transaction we're willing to act on from a StoreKit
+    /// `VerificationResult`.
+    ///
+    /// - **Release builds:** verified only. An `.unverified` result returns nil
+    ///   and is refused — we must NEVER trust an unsigned/tampered transaction
+    ///   in production. This preserves the original `guard case .verified`
+    ///   behavior exactly.
+    /// - **DEBUG builds only:** also accept `.unverified`, logging loudly. In
+    ///   local StoreKit testing the signer's certificate can fail JWS
+    ///   verification (notably once the wall-clock passes an older Xcode test
+    ///   certificate's validity window, or on clock skew), stranding otherwise-
+    ///   successful purchases as `.unverified` and making the paywall/unlock
+    ///   flow impossible to test. This escape hatch is compiled out of release
+    ///   entirely, so it can never weaken a shipping build.
+    private func acceptableTransaction(
+        _ result: VerificationResult<StoreKit.Transaction>
+    ) -> StoreKit.Transaction? {
+        switch result {
+        case .verified(let transaction):
+            return transaction
+        case .unverified(let transaction, let error):
+            #if DEBUG
+            Log.pro.warn("⚠️ DEBUG: accepting UNVERIFIED \(transaction.productID) — local StoreKit test cert failed verification (\(error.localizedDescription)). This path does NOT exist in release builds.")
+            return transaction
+            #else
+            _ = (transaction, error)
+            return nil
+            #endif
+        }
+    }
+
     @discardableResult
     func purchase(_ product: Product) async -> Bool {
         guard !purchaseInFlight else { return false }
@@ -501,17 +532,37 @@ final class ProStore: ObservableObject {
             let result = try await product.purchase()
             switch result {
             case .success(let verification):
-                guard case .verified(let transaction) = verification else {
+                guard let transaction = acceptableTransaction(verification) else {
+                    // Release builds land here on unverified: purchase succeeded
+                    // at Apple's layer but the signed payload failed local
+                    // verification, so we never unlock — yet Apple considers the
+                    // product owned, which is why a retry says "already
+                    // subscribed". (DEBUG builds accept it via acceptableTransaction.)
+                    if case .unverified(_, let error) = verification {
+                        Log.pro.error("Purchase UNVERIFIED for \(product.id): \(error.localizedDescription)")
+                    }
                     lastError = "Purchase could not be verified."
                     return false
                 }
+                #if DEBUG
+                Log.pro.info("Purchase verified: \(transaction.productID) txn=\(transaction.id) type=\(String(describing: transaction.productType))")
+                #endif
                 await transaction.finish()
                 await refreshEntitlements()
+                #if DEBUG
+                Log.pro.info("Post-purchase state: isPro=\(self.isPro) active=\(self.activeProductIDs) lifetime=\(self.ownsLifetime)")
+                #endif
                 return isPro
             case .userCancelled:
+                #if DEBUG
+                Log.pro.info("Purchase userCancelled for \(product.id)")
+                #endif
                 return false
             case .pending:
                 // Ask-to-buy / SCA — entitlement arrives later via Transaction.updates.
+                #if DEBUG
+                Log.pro.info("Purchase pending for \(product.id)")
+                #endif
                 return false
             @unknown default:
                 return false
@@ -568,9 +619,26 @@ final class ProStore: ObservableObject {
         var activeTransaction: StoreKit.Transaction?
         var lifetimeOwned = false
         var lifetimeTxnID: UInt64?
+        #if DEBUG
+        // DIAGNOSTIC counters (DEBUG only): distinguish "StoreKit yielded
+        // nothing" (env / simulator state) from "yielded something we filtered
+        // out" (code).
+        var seen = 0
+        var unverifiedSeen = 0
+        #endif
         for await result in Transaction.currentEntitlements {
-            guard case .verified(let transaction) = result else { continue }
+            #if DEBUG
+            seen += 1
+            // Release: verified only. DEBUG: also accepts unverified (see
+            // acceptableTransaction) so a failing local test cert doesn't
+            // silently drop the just-purchased entitlement on every refresh.
+            if case .unverified = result { unverifiedSeen += 1 }
+            #endif
+            guard let transaction = acceptableTransaction(result) else { continue }
             guard transaction.revocationDate == nil else { continue }
+            #if DEBUG
+            Log.pro.info("currentEntitlements entry: \(transaction.productID) type=\(String(describing: transaction.productType)) expiry=\(String(describing: transaction.expirationDate))")
+            #endif
 
             // The one-time lifetime unlock: a non-consumable, so it has no
             // expiry and isn't part of the subscription set.
@@ -592,6 +660,9 @@ final class ProStore: ObservableObject {
         activeProductIDs = active
         ownsLifetime = lifetimeOwned
         lifetimeTransactionID = lifetimeTxnID
+        #if DEBUG
+        Log.pro.info("refreshEntitlements: seen=\(seen) unverified=\(unverifiedSeen) active=\(active) lifetime=\(lifetimeOwned) isFounder=\(self.isFounder) isPro=\(self.isPro)")
+        #endif
         await updateSubscriptionDetails(from: activeTransaction)
         persistIsPro()
     }
@@ -638,9 +709,13 @@ final class ProStore: ObservableObject {
     private func listenForTransactions() -> Task<Void, Never> {
         Task.detached { [weak self] in
             for await result in Transaction.updates {
-                guard case .verified(let transaction) = result else { continue }
+                // Release: verified only. DEBUG: acceptableTransaction also lets
+                // unverified local-test transactions through so out-of-band
+                // updates still finish + refresh while testing.
+                guard let self else { continue }
+                guard let transaction = await self.acceptableTransaction(result) else { continue }
                 await transaction.finish()
-                await self?.refreshEntitlements()
+                await self.refreshEntitlements()
             }
         }
     }

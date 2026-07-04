@@ -1,9 +1,9 @@
 import * as React from "react"
 import type { Platform } from "@/hooks/use-platform"
+import type { BrowserLogoName } from "@/components/BrowserLogo"
 import { cn } from "@/lib/utils"
 import { usePlatform } from "@/hooks/use-platform"
 import { BrowserLogo } from "@/components/BrowserLogo"
-import type { BrowserLogoName } from "@/components/BrowserLogo"
 
 /** Recursively extract the plain-text content of a React node, for slug ids. */
 function nodeText(node: React.ReactNode): string {
