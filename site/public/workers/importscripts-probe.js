@@ -10,6 +10,12 @@ self.onmessage = function () {
     var direct = {
       timeZone: new Intl.DateTimeFormat().resolvedOptions().timeZone,
       offsetMinutes: new Date().getTimezoneOffset(),
+      temporalTimeZone:
+        typeof Temporal !== "undefined" &&
+        Temporal.Now &&
+        Temporal.Now.timeZoneId
+          ? Temporal.Now.timeZoneId()
+          : null,
     }
     self.postMessage({
       ok: true,

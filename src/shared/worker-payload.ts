@@ -294,6 +294,57 @@ Date.prototype.toDateString = function toDateString() {
   return get("weekday") + " " + get("month") + " " + get("day") + " " + get("year");
 };
 __register(Date.prototype.toDateString, "toDateString");
+
+// --- Temporal.Now override ---
+// Temporal.Now.timeZoneId() returns the system zone, and the plain*ISO /
+// zonedDateTimeISO methods read the system zone when called with no explicit
+// timezone argument — both leak the real timezone inside a worker even when
+// Date/Intl are spoofed. Mirror the main-realm temporal.ts overrides: return
+// the spoofed identifier for timeZoneId, and substitute it whenever the caller
+// passed no explicit zone. The ZonedDateTime offset getters are intentionally
+// left untouched — once the zone is spoofed they already derive the correct
+// (spoofed) offset. Feature-detected: a no-op on engines without Temporal.
+if (typeof Temporal !== "undefined" && Temporal && Temporal.Now) {
+  try {
+    var __TNow = Temporal.Now;
+    var __origTZId = __TNow.timeZoneId.bind(__TNow);
+    var __origPDTISO = __TNow.plainDateTimeISO.bind(__TNow);
+    var __origPDISO = __TNow.plainDateISO.bind(__TNow);
+    var __origPTISO = __TNow.plainTimeISO.bind(__TNow);
+    var __origZDTISO = __TNow.zonedDateTimeISO.bind(__TNow);
+
+    var __installNow = function(name, fn) {
+      __register(fn, name);
+      var d = Object.getOwnPropertyDescriptor(__TNow, name);
+      Object.defineProperty(__TNow, name, {
+        value: fn,
+        writable: d ? d.writable : true,
+        configurable: d ? d.configurable : true,
+        enumerable: d ? d.enumerable : false
+      });
+    };
+
+    // Keep __origTZId referenced so a future change can delegate to it; the
+    // spoofed timeZoneId returns the baked identifier directly.
+    void __origTZId;
+
+    __installNow("timeZoneId", function timeZoneId() { return __tz_id; });
+    __installNow("plainDateTimeISO", function plainDateTimeISO(tz) {
+      return __origPDTISO(tz === undefined ? __tz_id : tz);
+    });
+    __installNow("plainDateISO", function plainDateISO(tz) {
+      return __origPDISO(tz === undefined ? __tz_id : tz);
+    });
+    __installNow("plainTimeISO", function plainTimeISO(tz) {
+      return __origPTISO(tz === undefined ? __tz_id : tz);
+    });
+    __installNow("zonedDateTimeISO", function zonedDateTimeISO(tz) {
+      return __origZDTISO(tz === undefined ? __tz_id : tz);
+    });
+  } catch(e) {
+    // Temporal override failed — leave originals in place.
+  }
+}
 `;
 
 /**

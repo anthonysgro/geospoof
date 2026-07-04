@@ -6,6 +6,10 @@ try {
   self.__helperResult = {
     timeZone: new Intl.DateTimeFormat().resolvedOptions().timeZone,
     offsetMinutes: new Date().getTimezoneOffset(),
+    temporalTimeZone:
+      typeof Temporal !== "undefined" && Temporal.Now && Temporal.Now.timeZoneId
+        ? Temporal.Now.timeZoneId()
+        : null,
   }
 } catch (err) {
   self.__helperResult = {

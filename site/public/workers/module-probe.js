@@ -6,7 +6,11 @@ self.onmessage = function () {
   try {
     const timeZone = new Intl.DateTimeFormat().resolvedOptions().timeZone
     const offsetMinutes = new Date().getTimezoneOffset()
-    self.postMessage({ ok: true, timeZone, offsetMinutes })
+    const temporalTimeZone =
+      typeof Temporal !== "undefined" && Temporal.Now && Temporal.Now.timeZoneId
+        ? Temporal.Now.timeZoneId()
+        : null
+    self.postMessage({ ok: true, timeZone, offsetMinutes, temporalTimeZone })
   } catch (err) {
     self.postMessage({
       ok: false,

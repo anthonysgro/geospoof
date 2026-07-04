@@ -24,6 +24,10 @@ self.addEventListener("message", function (event) {
   try {
     var timeZone = new Intl.DateTimeFormat().resolvedOptions().timeZone
     var offsetMinutes = new Date().getTimezoneOffset()
+    var temporalTimeZone =
+      typeof Temporal !== "undefined" && Temporal.Now && Temporal.Now.timeZoneId
+        ? Temporal.Now.timeZoneId()
+        : null
     var channelName =
       (event.data && event.data.channel) || "geospoof-service-probe"
     var bc = new BroadcastChannel(channelName)
@@ -31,6 +35,7 @@ self.addEventListener("message", function (event) {
       ok: true,
       timeZone: timeZone,
       offsetMinutes: offsetMinutes,
+      temporalTimeZone: temporalTimeZone,
     })
     bc.close()
   } catch (err) {

@@ -82,6 +82,12 @@ const WORKER_TIMEOUT_MS = 5_000
 interface WorkerResult {
   timeZone: string
   offsetMinutes: number
+  /**
+   * `Temporal.Now.timeZoneId()` as seen inside the worker, or null when the
+   * engine doesn't ship Temporal. Collected by every probe so the Temporal
+   * card set can assert it per surface, exactly like the Intl `timeZone`.
+   */
+  temporalTimeZone?: string | null
 }
 
 // ---------------------------------------------------------------------------
@@ -95,6 +101,27 @@ interface WorkerResult {
 function getMainThreadTimezone(): string {
   try {
     return new Intl.DateTimeFormat().resolvedOptions().timeZone ?? ""
+  } catch {
+    return ""
+  }
+}
+
+/**
+ * Read the main thread's current `Temporal.Now.timeZoneId()` (post-
+ * settlement), or "" when Temporal is unavailable or throws. Used as the
+ * "expected" value for the Temporal Worker test — on a spoofed page this
+ * equals the Intl timezone, on a clean browser it's the real zone (and the
+ * Worker reports the same real zone, so the test still passes).
+ */
+function getMainThreadTemporalTimezone(): string {
+  try {
+    const T = (
+      globalThis as {
+        Temporal?: { Now?: { timeZoneId?: () => string } }
+      }
+    ).Temporal
+    if (!T?.Now?.timeZoneId) return ""
+    return T.Now.timeZoneId() ?? ""
   } catch {
     return ""
   }
@@ -130,6 +157,35 @@ async function runBlobWorker(source: string): Promise<WorkerResult> {
     }
     try {
       URL.revokeObjectURL(url)
+    } catch {
+      /* cleanup */
+    }
+  }
+}
+
+/**
+ * Spin up a `data:` URL classic Worker with the given source, send it a
+ * start message, and resolve with the timezone data it reports back.
+ */
+async function runDataUrlWorker(source: string): Promise<WorkerResult> {
+  if (typeof Worker === "undefined") {
+    throw new SkipTestError("Worker API not available in this browser")
+  }
+  const dataUrl = `data:application/javascript,${encodeURIComponent(source)}`
+
+  let worker: Worker
+  try {
+    worker = new Worker(dataUrl)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    throw new SkipTestError(`Could not construct Worker from data: URL: ${msg}`)
+  }
+
+  try {
+    return await waitForWorkerResult(worker)
+  } finally {
+    try {
+      worker.terminate()
     } catch {
       /* cleanup */
     }
@@ -228,13 +284,19 @@ async function runSharedWorker(scriptUrl: string): Promise<WorkerResult> {
     port.onmessage = (event: MessageEvent<unknown>) => {
       clearTimeout(timer)
       const data = event.data as
-        | { ok: true; timeZone: string; offsetMinutes: number }
+        | {
+            ok: true
+            timeZone: string
+            offsetMinutes: number
+            temporalTimeZone?: string | null
+          }
         | { ok: false; error: string }
       if (data && typeof data === "object" && "ok" in data) {
         if (data.ok) {
           resolve({
             timeZone: data.timeZone,
             offsetMinutes: data.offsetMinutes,
+            temporalTimeZone: data.temporalTimeZone ?? null,
           })
         } else {
           reject(new Error(`SharedWorker reported error: ${data.error}`))
@@ -269,13 +331,19 @@ function waitForWorkerResult(worker: Worker): Promise<WorkerResult> {
     worker.onmessage = (event: MessageEvent<unknown>) => {
       clearTimeout(timer)
       const data = event.data as
-        | { ok: true; timeZone: string; offsetMinutes: number }
+        | {
+            ok: true
+            timeZone: string
+            offsetMinutes: number
+            temporalTimeZone?: string | null
+          }
         | { ok: false; error: string }
       if (data && typeof data === "object" && "ok" in data) {
         if (data.ok) {
           resolve({
             timeZone: data.timeZone,
             offsetMinutes: data.offsetMinutes,
+            temporalTimeZone: data.temporalTimeZone ?? null,
           })
         } else {
           reject(new Error(`Worker reported error: ${data.error}`))
@@ -307,7 +375,8 @@ const BLOB_WORKER_SOURCE = `
     try {
       const timeZone = new Intl.DateTimeFormat().resolvedOptions().timeZone;
       const offsetMinutes = new Date().getTimezoneOffset();
-      self.postMessage({ ok: true, timeZone, offsetMinutes });
+      const temporalTimeZone = (typeof Temporal !== "undefined" && Temporal.Now && Temporal.Now.timeZoneId) ? Temporal.Now.timeZoneId() : null;
+      self.postMessage({ ok: true, timeZone, offsetMinutes, temporalTimeZone });
     } catch (err) {
       self.postMessage({ ok: false, error: err && err.message ? err.message : String(err) });
     }
@@ -513,7 +582,8 @@ const NESTED_WORKER_SOURCE = `
         try {
           const timeZone = new Intl.DateTimeFormat().resolvedOptions().timeZone;
           const offsetMinutes = new Date().getTimezoneOffset();
-          self.postMessage({ ok: true, timeZone, offsetMinutes });
+          const temporalTimeZone = (typeof Temporal !== "undefined" && Temporal.Now && Temporal.Now.timeZoneId) ? Temporal.Now.timeZoneId() : null;
+          self.postMessage({ ok: true, timeZone, offsetMinutes, temporalTimeZone });
         } catch (err) {
           self.postMessage({ ok: false, error: err && err.message ? err.message : String(err) });
         }
@@ -590,39 +660,10 @@ worker.postMessage(null)
     return { value: tz, describe: `"${tz}"` }
   },
   observe: async () => {
-    const source = `self.onmessage = () => {
-      try {
-        const timeZone = new Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const offsetMinutes = new Date().getTimezoneOffset();
-        self.postMessage({ ok: true, timeZone, offsetMinutes });
-      } catch (err) {
-        self.postMessage({ ok: false, error: err && err.message ? err.message : String(err) });
-      }
-    };`
-    const dataUrl = `data:application/javascript,${encodeURIComponent(source)}`
-
-    let worker: Worker
-    try {
-      worker = new Worker(dataUrl)
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      throw new SkipTestError(
-        `Could not construct Worker from data: URL: ${msg}`
-      )
-    }
-
-    try {
-      const result = await waitForWorkerResult(worker)
-      return {
-        value: result.timeZone,
-        describe: `"${result.timeZone}" (from data-URL Worker)`,
-      }
-    } finally {
-      try {
-        worker.terminate()
-      } catch {
-        /* cleanup */
-      }
+    const result = await runDataUrlWorker(BLOB_WORKER_SOURCE)
+    return {
+      value: result.timeZone,
+      describe: `"${result.timeZone}" (from data-URL Worker)`,
     }
   },
 })
@@ -833,16 +874,227 @@ function waitForActiveWorker(
 }
 
 // ---------------------------------------------------------------------------
+// Temporal card set — one per surface, mirroring the Intl cards above.
+//
+// `Temporal.Now.timeZoneId()` is a zone surface distinct from Intl and
+// getTimezoneOffset. Because every worker injection path shares one payload
+// (SPOOF_CORE), Temporal coverage mirrors Intl coverage surface-for-surface:
+// closed on all engines for blob / data / nested, closed on Firefox
+// (filterResponseData) for URL / shared / importScripts / module, and a known
+// limitation for service workers. Each card reuses the same runner and the
+// same engine-split group as its Intl twin, reading `temporalTimeZone` off the
+// shared WorkerResult. Skips cleanly on engines without Temporal.
+// ---------------------------------------------------------------------------
+
+const workerApiAvailable = (): string | null =>
+  typeof Worker === "undefined"
+    ? "Worker API not available in this browser"
+    : null
+
+const sharedWorkerApiAvailable = (): string | null =>
+  typeof SharedWorker === "undefined"
+    ? "SharedWorker API not available in this browser"
+    : null
+
+const serviceWorkerApiAvailable = (): string | null => {
+  if (typeof navigator === "undefined" || !navigator.serviceWorker) {
+    return "ServiceWorker API not available in this browser"
+  }
+  if (typeof BroadcastChannel === "undefined") {
+    return "BroadcastChannel API not available in this browser"
+  }
+  return null
+}
+
+/**
+ * Build a per-surface Temporal Worker card. Reuses the surface's existing
+ * runner (`run`) — which now also collects `temporalTimeZone` — and compares
+ * it to the main thread's `Temporal.Now.timeZoneId()`. Skips when Temporal is
+ * unavailable on the main thread (`expected`) or inside the worker (`observe`),
+ * so a clean browser or a non-Temporal engine never flakes red.
+ */
+function buildWorkerTemporalTest(config: {
+  id: string
+  name: string
+  group: TestGroupId
+  surfaceLabel: string
+  description: string
+  technique: string
+  codeSnippet: string
+  available: () => string | null
+  run: () => Promise<WorkerResult>
+}): TestDefinition {
+  return buildBehavioralTest<string>({
+    id: config.id,
+    group: config.group,
+    name: config.name,
+    description: config.description,
+    technique: config.technique,
+    codeSnippet: config.codeSnippet,
+    expected: async () => {
+      const unavailable = config.available()
+      if (unavailable) return { skipReason: unavailable }
+      const tz = getMainThreadTemporalTimezone()
+      if (!tz) {
+        return { skipReason: "Temporal API not available in this browser" }
+      }
+      return { value: tz, describe: `"${tz}"` }
+    },
+    observe: async () => {
+      const result = await config.run()
+      const tz = result.temporalTimeZone
+      if (tz == null) {
+        throw new SkipTestError("Temporal API not available in this worker")
+      }
+      return {
+        value: tz,
+        describe: `"${tz}" (from ${config.surfaceLabel}, Temporal.Now.timeZoneId())`,
+      }
+    },
+  })
+}
+
+const blobWorkerTemporalTest = buildWorkerTemporalTest({
+  id: "tampering.worker.blob-url-temporal",
+  name: "Blob-URL Worker honors the spoofed Temporal timezone",
+  group: "timezone-stealth",
+  surfaceLabel: "blob-URL Worker",
+  description:
+    "The Temporal API exposes the current zone directly via Temporal.Now.timeZoneId(), a surface separate from Intl.DateTimeFormat and Date.prototype.getTimezoneOffset. A blob-URL Worker reading it must report the same zone as the main thread. The worker payload historically spoofed only Date/Intl, so this leaked the real zone even while Intl was spoofed; the payload now installs Temporal.Now overrides too.",
+  technique:
+    "Construct a blob-URL Worker that reads Temporal.Now.timeZoneId() and compare it to the main thread's Temporal.Now.timeZoneId().",
+  codeSnippet: `const blob = new Blob(["self.onmessage=()=>self.postMessage(Temporal.Now.timeZoneId())"], { type: "application/javascript" })
+new Worker(URL.createObjectURL(blob)) // reported id should equal main thread`,
+  available: workerApiAvailable,
+  run: () => runBlobWorker(BLOB_WORKER_SOURCE),
+})
+
+const urlWorkerTemporalTest = buildWorkerTemporalTest({
+  id: "tampering.worker.url-classic-temporal",
+  name: "URL-based classic Worker honors the spoofed Temporal timezone",
+  group: urlWorkerGroup,
+  surfaceLabel: "URL-based classic Worker",
+  description:
+    "A classic Worker served from a script URL must report the same Temporal.Now.timeZoneId() as the main thread. Covered on Firefox by the background webRequest.filterResponseData listener (which shares the same payload as the blob path); a documented known limitation on Chromium/Safari where that API is unavailable.",
+  technique:
+    "Construct a Worker from /workers/classic-probe.js and compare its Temporal.Now.timeZoneId() to the main thread's.",
+  codeSnippet: `const worker = new Worker("/workers/classic-probe.js")
+// reported Temporal.Now.timeZoneId() should equal main thread`,
+  available: workerApiAvailable,
+  run: () => runUrlWorker("/workers/classic-probe.js"),
+})
+
+const sharedWorkerTemporalTest = buildWorkerTemporalTest({
+  id: "tampering.worker.shared-worker-temporal",
+  name: "SharedWorker honors the spoofed Temporal timezone",
+  group: urlWorkerGroup,
+  surfaceLabel: "SharedWorker",
+  description:
+    "A SharedWorker must report the same Temporal.Now.timeZoneId() as the main thread. Same engine split as the other URL-based worker surfaces: closed on Firefox via filterResponseData, a known limitation on Chromium/Safari.",
+  technique:
+    "Connect to /workers/shared-probe.js over its port and compare its Temporal.Now.timeZoneId() to the main thread's.",
+  codeSnippet: `const s = new SharedWorker("/workers/shared-probe.js")
+s.port.start() // reported Temporal.Now.timeZoneId() should equal main thread`,
+  available: sharedWorkerApiAvailable,
+  run: () => runSharedWorker("/workers/shared-probe.js"),
+})
+
+const importScriptsTemporalTest = buildWorkerTemporalTest({
+  id: "tampering.worker.importscripts-temporal",
+  name: "importScripts-loaded code honors the spoofed Temporal timezone",
+  group: urlWorkerGroup,
+  surfaceLabel: "importScripts-loaded code",
+  description:
+    "Code pulled into a Worker via importScripts() runs in the worker scope and must see the spoofed Temporal.Now.timeZoneId(). Covered on Firefox via filterResponseData; a known limitation on Chromium/Safari.",
+  technique:
+    "Load /workers/importscripts-probe.js (which importScripts a helper) and compare the helper's Temporal.Now.timeZoneId() to the main thread's.",
+  codeSnippet: `// probe.js: importScripts("./importscripts-helper.js")
+const worker = new Worker("/workers/importscripts-probe.js")
+// imported code's Temporal.Now.timeZoneId() should equal main thread`,
+  available: workerApiAvailable,
+  run: () => runImportScriptsWorker("/workers/importscripts-probe.js"),
+})
+
+const nestedWorkerTemporalTest = buildWorkerTemporalTest({
+  id: "tampering.worker.nested-worker-temporal",
+  name: "Nested Worker (Worker-in-Worker) honors the spoofed Temporal timezone",
+  group: "timezone-stealth",
+  surfaceLabel: "nested Worker-in-Worker",
+  description:
+    "A Worker spawned from inside another Worker must also report the spoofed Temporal.Now.timeZoneId(). The payload recursively wraps self.Worker, so the child inherits the Temporal overrides on every engine.",
+  technique:
+    "Construct a blob-URL Worker that spawns a child blob-URL Worker; the child reports its Temporal.Now.timeZoneId() up to the main thread for comparison.",
+  codeSnippet: `// outer worker: const child = new Worker(URL.createObjectURL(new Blob([...])))
+// child reports Temporal.Now.timeZoneId(); should equal main thread`,
+  available: workerApiAvailable,
+  run: () => runBlobWorker(NESTED_WORKER_SOURCE),
+})
+
+const dataUrlWorkerTemporalTest = buildWorkerTemporalTest({
+  id: "tampering.worker.data-url-temporal",
+  name: "Data-URL Worker honors the spoofed Temporal timezone",
+  group: "timezone-stealth",
+  surfaceLabel: "data-URL Worker",
+  description:
+    "A Worker constructed from a data: URL is an inline construction pattern the payload covers on every engine by decoding, prepending the payload, and reconstructing. Its Temporal.Now.timeZoneId() must match the main thread.",
+  technique:
+    "Construct a Worker from a data: URL that reads Temporal.Now.timeZoneId() and compare it to the main thread's.",
+  codeSnippet: `new Worker("data:application/javascript," + encodeURIComponent(
+  "self.onmessage=()=>self.postMessage(Temporal.Now.timeZoneId())"
+)) // reported id should equal main thread`,
+  available: workerApiAvailable,
+  run: () => runDataUrlWorker(BLOB_WORKER_SOURCE),
+})
+
+const moduleWorkerTemporalTest = buildWorkerTemporalTest({
+  id: "tampering.worker.module-temporal",
+  name: "Module Worker honors the spoofed Temporal timezone",
+  group: urlWorkerGroup,
+  surfaceLabel: "module Worker",
+  description:
+    "A module Worker (type: 'module') must report the same Temporal.Now.timeZoneId() as the main thread. Blob-wrapping breaks module imports, so on Firefox this is closed at the network layer via filterResponseData; a documented known limitation on Chromium/Safari.",
+  technique:
+    "Construct a module Worker from /workers/module-probe.js and compare its Temporal.Now.timeZoneId() to the main thread's.",
+  codeSnippet: `const worker = new Worker("/workers/module-probe.js", { type: "module" })
+// reported Temporal.Now.timeZoneId() should equal main thread`,
+  available: workerApiAvailable,
+  run: () => runModuleWorker("/workers/module-probe.js"),
+})
+
+const serviceWorkerTemporalTest = buildWorkerTemporalTest({
+  id: "known-limitation.worker.service-worker-temporal",
+  name: "ServiceWorker reports the spoofed Temporal timezone",
+  group: "known-limitations",
+  surfaceLabel: "ServiceWorker",
+  description:
+    "A ServiceWorker must report the same Temporal.Now.timeZoneId() as the main thread. Like its Intl counterpart this is a known limitation: service workers require a stable browser-managed URL that rules out constructor interception, and only Firefox's network-layer filter can reach them. Documented pending a future architectural approach.",
+  technique:
+    "Register /workers/service-probe.js, message it over BroadcastChannel, and compare its Temporal.Now.timeZoneId() to the main thread's. Unregisters afterward.",
+  codeSnippet: `await navigator.serviceWorker.register("/workers/service-probe.js")
+// worker reports Temporal.Now.timeZoneId() via BroadcastChannel`,
+  available: serviceWorkerApiAvailable,
+  run: () => runServiceWorker("/workers/service-probe.js"),
+})
+
+// ---------------------------------------------------------------------------
 // Manifest
 // ---------------------------------------------------------------------------
 
 export const workerTimezoneTests: ReadonlyArray<TestDefinition> = [
   blobWorkerTimezoneTest,
+  blobWorkerTemporalTest,
   urlWorkerTimezoneTest,
+  urlWorkerTemporalTest,
   sharedWorkerTimezoneTest,
+  sharedWorkerTemporalTest,
   importScriptsTimezoneTest,
+  importScriptsTemporalTest,
   nestedWorkerTimezoneTest,
+  nestedWorkerTemporalTest,
   dataUrlWorkerTimezoneTest,
+  dataUrlWorkerTemporalTest,
   moduleWorkerTimezoneTest,
+  moduleWorkerTemporalTest,
   serviceWorkerTimezoneTest,
+  serviceWorkerTemporalTest,
 ]
