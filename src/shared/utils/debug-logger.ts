@@ -1,7 +1,20 @@
 /**
  * Shared debug logging utility for all extension contexts.
  * Five severity levels with numeric comparison gating.
- * ERROR and WARN always emit. INFO/DEBUG/TRACE respect verbose mode + verbosity threshold.
+ *
+ * INFO/DEBUG/TRACE always respect the debug toggle (`_enabled`) + verbosity
+ * threshold (`_level`) in every context.
+ *
+ * ERROR/WARN behavior depends on context:
+ *   - `BG` (background), `POPUP`, and `CS` (content script, isolated world) are
+ *     NOT observable by page JavaScript, so error/warn always emit there —
+ *     useful for diagnosing production issues at no privacy cost.
+ *   - `INJ` (injected) runs in the page's MAIN world, where `console.*` is the
+ *     page's own console object (observable and hookable by the page). A
+ *     branded `[GeoSpoof …]` line there is a fingerprinting/detection vector, so
+ *     `INJ` gates ALL five levels — including error/warn — behind the same
+ *     `_enabled` + `_level` check as the others. A normal user (debug off)
+ *     emits nothing to the page console; bug reporters flip on debug logging.
  */
 
 import { now } from "./safe-time";
@@ -81,10 +94,15 @@ function timestamp(): string {
 export function createLogger(component: ComponentTag) {
   return {
     error(...args: unknown[]): void {
+      // INJ shares the page's realm — gate it behind the toggle + level like
+      // every other INJ level so no branded output reaches the page console.
+      // Other contexts aren't page-observable, so error always emits there.
+      if (component === "INJ" && (!_enabled || LogLevel.ERROR > _level)) return;
       console.error(`[GeoSpoof ${component}] [ERROR] ${timestamp()} —`, ...args);
       emitToSink(component, "ERROR", args);
     },
     warn(...args: unknown[]): void {
+      if (component === "INJ" && (!_enabled || LogLevel.WARN > _level)) return;
       console.warn(`[GeoSpoof ${component}] [WARN] ${timestamp()} —`, ...args);
       emitToSink(component, "WARN", args);
     },

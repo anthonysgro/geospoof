@@ -515,6 +515,14 @@
     "message": "Verbosity Level",
     "description": "Label for the log-verbosity selector."
   },
+  "advanced_verbosity_error": {
+    "message": "Error",
+    "description": "Verbosity level: only error-level logs."
+  },
+  "advanced_verbosity_warn": {
+    "message": "Warn",
+    "description": "Verbosity level: error and warning logs."
+  },
   "advanced_verbosity_info": {
     "message": "Info",
     "description": "Verbosity level: only info-level logs."
