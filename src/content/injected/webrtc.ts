@@ -68,7 +68,11 @@
  */
 
 import { OriginalRTCPeerConnection, webrtcProtectionEnabled, overrideRegistry } from "./state";
-import { registerOverride, disguiseAsNative } from "./function-masking";
+import {
+  registerOverride,
+  disguiseAsNative,
+  stripExtensionFramesFromStack,
+} from "./function-masking";
 import { createLogger } from "@/shared/utils/debug-logger";
 
 const logger = createLogger("INJ");
@@ -224,9 +228,18 @@ export function installRTCGetStatsOverride(proto: RTCPeerConnection): void {
     this: RTCPeerConnection,
     selector?: MediaStreamTrack | null
   ): Promise<RTCStatsReport> {
-    const report = await originalGetStats.call(this, selector);
-    if (!webrtcProtectionEnabled) return report;
-    return scrubLocalCandidateAddresses(report);
+    try {
+      const report = await originalGetStats.call(this, selector);
+      if (!webrtcProtectionEnabled) return report;
+      return scrubLocalCandidateAddresses(report);
+    } catch (err) {
+      // `getStats` is a Promise-returning WebIDL op: a foreign `this` rejects
+      // (rather than throwing synchronously), and the rejection's Error carries
+      // our injected frame. Scrub it so the extension id can't be read off the
+      // rejection stack, then re-reject with the genuine native error.
+      stripExtensionFramesFromStack(err);
+      throw err;
+    }
   }
 
   registerOverride(wrappedGetStats, "getStats");

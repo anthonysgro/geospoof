@@ -201,6 +201,52 @@ export function installOverride(
 }
 
 /**
+ * Install an accessor (getter and/or setter) override — the accessor twin of
+ * {@link installOverride}.
+ *
+ * Both the getter and setter are wrapped with {@link stripConstruct}, exactly
+ * like method overrides, so:
+ *  - they share the one wrapper implementation (no second copy of the
+ *    `Reflect.apply` + stack-scrub logic to keep in sync), and
+ *  - a foreign-`this` call that makes the native fallback throw has our
+ *    injected-script frames stripped from the error — closing the extension-id
+ *    stack leak for accessors the same way it's closed for methods.
+ *
+ * The wrapper is method-shorthand, so the installed accessor has no `prototype`
+ * and no `[[Construct]]` — matching a native accessor's shape (an improvement
+ * over a bare function-expression getter, which carries a `prototype`).
+ *
+ * Descriptor flags are copied from the target's existing descriptor so the
+ * result matches the native WebIDL shape without hardcoding it. Every override
+ * installed through this path is scrubbed by construction — there is no list to
+ * keep up to date.
+ */
+export function installScrubbedAccessor(
+  target: object,
+  prop: string,
+  accessors: { get?: AnyFunction; set?: AnyFunction }
+): void {
+  const originalDescriptor = Object.getOwnPropertyDescriptor(target, prop);
+  const descriptor: PropertyDescriptor = {
+    configurable: originalDescriptor?.configurable ?? true,
+    enumerable: originalDescriptor?.enumerable ?? true,
+  };
+  if (accessors.get) {
+    const wrappedGet = stripConstruct(accessors.get);
+    registerOverride(wrappedGet, `get ${prop}`);
+    disguiseAsNative(wrappedGet, `get ${prop}`, 0);
+    descriptor.get = wrappedGet as () => unknown;
+  }
+  if (accessors.set) {
+    const wrappedSet = stripConstruct(accessors.set);
+    registerOverride(wrappedSet, `set ${prop}`);
+    disguiseAsNative(wrappedSet, `set ${prop}`, 1);
+    descriptor.set = wrappedSet as (value: unknown) => void;
+  }
+  Object.defineProperty(target, prop, descriptor);
+}
+
+/**
  * Install the `Function.prototype.toString` override.
  *
  * Must be called before any other module registers overrides, so that

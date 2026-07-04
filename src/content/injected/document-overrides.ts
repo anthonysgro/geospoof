@@ -28,11 +28,7 @@
  */
 
 import { OriginalDate, OriginalDateTimeFormat, spoofingEnabled, timezoneData } from "./state";
-import {
-  registerOverride,
-  disguiseAsNative,
-  stripExtensionFramesFromStack,
-} from "./function-masking";
+import { installScrubbedAccessor } from "./function-masking";
 import { seedFromBootstrap } from "./bootstrap";
 import { createLogger } from "@/shared/utils/debug-logger";
 
@@ -130,67 +126,44 @@ export function installLastModifiedOverride(documentProto: object): void {
   // eslint-disable-next-line @typescript-eslint/unbound-method -- intentional: re-bound via .call(this) inside the wrapper
   const originalGet = desc.get;
 
-  // Method-shorthand form so the override has no `prototype` /
-  // [[Construct]] — matches native accessor shape.
-  // eslint-disable-next-line @typescript-eslint/unbound-method -- intentional: method shorthand destructuring for anti-fingerprint (no prototype/[[Construct]])
-  const spoofedGet = {
-    lastModified(this: Document): string {
-      // Close the document_start race for `document.lastModified` (and the
-      // DOMParser / parseHTMLUnsafe / iframe variants that share this getter):
-      // seed from the early bootstrap global if it hasn't been consumed yet.
-      seedFromBootstrap();
-      let native: string;
-      try {
-        native = originalGet.call(this) as string;
-      } catch (err) {
-        // Foreign `this`: the native getter throws a brand-check TypeError.
-        // Scrub our injected-script frames so the extension id can't be read
-        // off the stack, then rethrow the genuine native error.
-        stripExtensionFramesFromStack(err);
-        throw err;
-      }
-      if (!spoofingEnabled || !timezoneData) {
-        logger.debug("[lastModified-get] spoofing disabled, returning native", {
-          native,
-          spoofingEnabled,
-          hasTimezoneData: timezoneData !== null,
-        });
+  // The getter body. A foreign `this` makes `originalGet.call(this)` throw a
+  // native brand-check TypeError; `installScrubbedAccessor` wraps this (no
+  // prototype / [[Construct]], and strips our injected frames from any thrown
+  // error), so we don't repeat that plumbing here.
+  function spoofedLastModified(this: Document): string {
+    // Close the document_start race for `document.lastModified` (and the
+    // DOMParser / parseHTMLUnsafe / iframe variants that share this getter):
+    // seed from the early bootstrap global if it hasn't been consumed yet.
+    seedFromBootstrap();
+    const native = originalGet.call(this) as string;
+    if (!spoofingEnabled || !timezoneData) {
+      logger.debug("[lastModified-get] spoofing disabled, returning native", {
+        native,
+        spoofingEnabled,
+        hasTimezoneData: timezoneData !== null,
+      });
+      return native;
+    }
+    try {
+      const epoch = parseNativeLastModified(native);
+      if (epoch === null) {
+        logger.debug("[lastModified-get] parse failed, returning native", { native });
         return native;
       }
-      try {
-        const epoch = parseNativeLastModified(native);
-        if (epoch === null) {
-          logger.debug("[lastModified-get] parse failed, returning native", {
-            native,
-          });
-          return native;
-        }
-        const spoofed = formatInSpoofedZone(epoch, timezoneData.identifier);
-        logger.debug("[lastModified-get] spoofed", {
-          native,
-          spoofed,
-          zone: timezoneData.identifier,
-        });
-        return spoofed;
-      } catch (err) {
-        logger.warn("[lastModified-get] override failed, returning native value:", err);
-        return native;
-      }
-    },
-  }.lastModified;
+      const spoofed = formatInSpoofedZone(epoch, timezoneData.identifier);
+      logger.debug("[lastModified-get] spoofed", {
+        native,
+        spoofed,
+        zone: timezoneData.identifier,
+      });
+      return spoofed;
+    } catch (err) {
+      logger.warn("[lastModified-get] override failed, returning native value:", err);
+      return native;
+    }
+  }
 
-  // Register + disguise the override, then install as an accessor. We
-  // drop the "install via installOverride" path because installOverride
-  // expects a value descriptor; Document.prototype.lastModified is an
-  // accessor and must be defined with `get: ...` to match native shape.
-  registerOverride(spoofedGet, "lastModified");
-  disguiseAsNative(spoofedGet, "lastModified", 0);
-
-  Object.defineProperty(documentProto, "lastModified", {
-    get: spoofedGet,
-    configurable: desc.configurable,
-    enumerable: desc.enumerable,
-  });
+  installScrubbedAccessor(documentProto, "lastModified", { get: spoofedLastModified });
 
   logger.debug("[lastModified-install] override installed on Document.prototype", {
     isTopLevel: documentProto === (typeof Document !== "undefined" ? Document.prototype : null),

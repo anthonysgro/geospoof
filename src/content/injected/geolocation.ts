@@ -20,8 +20,7 @@ import {
 } from "./state";
 import {
   installOverride,
-  registerOverride,
-  disguiseAsNative,
+  installScrubbedAccessor,
   stripExtensionFramesFromStack,
 } from "./function-masking";
 import { waitForSettings } from "./settings-listener";
@@ -668,24 +667,18 @@ function installCoordinateAccessors(): void {
     if (!originalDesc?.get) continue;
     // eslint-disable-next-line @typescript-eslint/unbound-method -- intentional: re-bound via .call(this) inside the spoofed getter
     const originalGet = originalDesc.get;
-    // Use an explicit `this`-typed function so TS knows the getter
-    // accesses `this`. The getter is installed on the prototype via
-    // Object.defineProperty and invoked with the calling instance as
-    // `this`, so this usage is intentional and correct.
 
+    // Spoofed instances read from the WeakMap slot; any other receiver (e.g. a
+    // page's `GeolocationCoordinates.prototype.latitude.call({})` brand-probe)
+    // falls through to the native getter, which throws. `installScrubbedAccessor`
+    // wraps this so that thrown error's stack has no extension frames.
     function spoofedGet(this: object): unknown {
       const slots = coordsSlots.get(this);
       if (slots) return slots[key];
       return originalGet.call(this);
     }
 
-    registerOverride(spoofedGet, `get ${key}`);
-    disguiseAsNative(spoofedGet, `get ${key}`, 0);
-    Object.defineProperty(proto, key, {
-      get: spoofedGet,
-      configurable: originalDesc.configurable,
-      enumerable: originalDesc.enumerable,
-    });
+    installScrubbedAccessor(proto, key, { get: spoofedGet });
   }
 }
 
@@ -710,13 +703,7 @@ function installPositionAccessors(): void {
       return originalGet.call(this);
     }
 
-    registerOverride(spoofedGet, `get ${key}`);
-    disguiseAsNative(spoofedGet, `get ${key}`, 0);
-    Object.defineProperty(proto, key, {
-      get: spoofedGet,
-      configurable: originalDesc.configurable,
-      enumerable: originalDesc.enumerable,
-    });
+    installScrubbedAccessor(proto, key, { get: spoofedGet });
   }
 }
 

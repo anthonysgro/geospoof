@@ -7,12 +7,7 @@
  */
 
 import { spoofingEnabled, timezoneData } from "./state";
-import {
-  installOverride,
-  registerOverride,
-  disguiseAsNative,
-  stripExtensionFramesFromStack,
-} from "./function-masking";
+import { installOverride, installScrubbedAccessor } from "./function-masking";
 import { seedFromBootstrap } from "./bootstrap";
 import { createLogger } from "@/shared/utils/debug-logger";
 
@@ -106,53 +101,28 @@ export function installTemporalOverrides(): void {
     const origOffsetNsDesc = Object.getOwnPropertyDescriptor(ZDTProto, "offsetNanoseconds");
     const origOffsetDesc = Object.getOwnPropertyDescriptor(ZDTProto, "offset");
 
+    // These getters are passthroughs kept only for function masking (offset
+    // values are already native-correct). `installScrubbedAccessor` wraps them
+    // so a foreign-`this` brand-check throw has our injected frames scrubbed.
     if (origOffsetNsDesc?.get) {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       const origOffsetNsGetter = origOffsetNsDesc.get;
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const offsetNanosecondsGetter = function (this: any): number {
-        try {
+      installScrubbedAccessor(ZDTProto, "offsetNanoseconds", {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        get: function (this: any): number {
           return origOffsetNsGetter.call(this) as number;
-        } catch (err) {
-          // Foreign `this`: native throws a brand-check TypeError. Scrub our
-          // injected-script frames from the stack, then rethrow the native error.
-          stripExtensionFramesFromStack(err);
-          throw err;
-        }
-      };
-
-      registerOverride(offsetNanosecondsGetter, "get offsetNanoseconds");
-      disguiseAsNative(offsetNanosecondsGetter, "get offsetNanoseconds", 0);
-
-      Object.defineProperty(ZDTProto, "offsetNanoseconds", {
-        get: offsetNanosecondsGetter,
-        configurable: origOffsetNsDesc.configurable,
-        enumerable: origOffsetNsDesc.enumerable,
+        },
       });
     }
 
     if (origOffsetDesc?.get) {
       // eslint-disable-next-line @typescript-eslint/unbound-method
       const origOffsetGetter = origOffsetDesc.get;
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const offsetGetter = function (this: any): string {
-        try {
+      installScrubbedAccessor(ZDTProto, "offset", {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        get: function (this: any): string {
           return origOffsetGetter.call(this) as string;
-        } catch (err) {
-          stripExtensionFramesFromStack(err);
-          throw err;
-        }
-      };
-
-      registerOverride(offsetGetter, "get offset");
-      disguiseAsNative(offsetGetter, "get offset", 0);
-
-      Object.defineProperty(ZDTProto, "offset", {
-        get: offsetGetter,
-        configurable: origOffsetDesc.configurable,
-        enumerable: origOffsetDesc.enumerable,
+        },
       });
     }
   } catch {

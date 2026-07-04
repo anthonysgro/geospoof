@@ -876,21 +876,66 @@ try { f(() => {}) } catch (e) {
 /** A function invoked with a deliberately-foreign `this` to trip its brand check. */
 type ForeignCallable = (this: unknown, ...args: Array<unknown>) => unknown
 
-/** Build a thunk that calls `proto[key]` (a method) with a foreign `this`. */
-function foreignMethodCall(proto: object, key: string): () => void {
-  const bag = proto as unknown as Record<string, ForeignCallable | undefined>
-  return () => {
-    const fn = bag[key]
-    if (typeof fn === "function") fn.call({})
+/**
+ * The top-level interface prototypes GeoSpoof patches (methods and/or
+ * accessors). Kept explicit rather than derived from the extension's internal
+ * registry, which the page can't see. `Function.prototype` is deliberately
+ * absent — its `toString` stack is arkenfox-tuned and handled separately.
+ */
+function patchedPrototypes(): Array<[string, object]> {
+  const out: Array<[string, object]> = []
+  const add = (name: string, proto: unknown): void => {
+    if (proto !== null && typeof proto === "object") out.push([name, proto])
   }
+  add("Date.prototype", Date.prototype)
+  if (typeof Intl !== "undefined")
+    add("Intl.DateTimeFormat.prototype", Intl.DateTimeFormat?.prototype)
+  if (typeof GeolocationCoordinates !== "undefined")
+    add("GeolocationCoordinates.prototype", GeolocationCoordinates.prototype)
+  if (typeof GeolocationPosition !== "undefined")
+    add("GeolocationPosition.prototype", GeolocationPosition.prototype)
+  if (typeof Geolocation !== "undefined")
+    add("Geolocation.prototype", Geolocation.prototype)
+  if (typeof Permissions !== "undefined")
+    add("Permissions.prototype", Permissions.prototype)
+  if (typeof Document !== "undefined")
+    add("Document.prototype", Document.prototype)
+  const temporal = (
+    globalThis as { Temporal?: { ZonedDateTime?: { prototype: object } } }
+  ).Temporal
+  if (temporal?.ZonedDateTime?.prototype)
+    add("Temporal.ZonedDateTime.prototype", temporal.ZonedDateTime.prototype)
+  if (typeof RTCPeerConnection !== "undefined")
+    add("RTCPeerConnection.prototype", RTCPeerConnection.prototype)
+  add("Node.prototype", Node.prototype)
+  return out
 }
 
-/** Build a thunk that calls `proto[key]`'s accessor getter with a foreign `this`. */
-function foreignGetterCall(proto: object, key: string): () => void {
-  const get = Object.getOwnPropertyDescriptor(proto, key)?.get
-  return () => {
-    if (typeof get === "function") (get as ForeignCallable).call({})
+/** Collect every own method/getter/setter on a prototype as foreign-this thunks. */
+function foreignCallablesFor(
+  protoName: string,
+  proto: object
+): Array<[string, ForeignCallable]> {
+  const out: Array<[string, ForeignCallable]> = []
+  for (const key of Object.getOwnPropertyNames(proto)) {
+    if (key === "constructor") continue
+    const desc = Object.getOwnPropertyDescriptor(proto, key)
+    if (!desc) continue
+    if (typeof desc.value === "function")
+      out.push([`${protoName}.${key}()`, desc.value as ForeignCallable])
+    if (typeof desc.get === "function")
+      out.push([`get ${protoName}.${key}`, desc.get as ForeignCallable])
+    if (typeof desc.set === "function")
+      out.push([`set ${protoName}.${key}`, desc.set as ForeignCallable])
   }
+  return out
+}
+
+/** The first extension-scheme URL in an error's stack, or null. */
+function extensionLeakInStack(err: unknown): string | null {
+  const stack =
+    err instanceof Error && typeof err.stack === "string" ? err.stack : ""
+  return stack.match(EXTENSION_URL_RE)?.[0] ?? null
 }
 
 const overridesDoNotLeakExtensionInStackTest = buildBehavioralTest<boolean>({
@@ -898,71 +943,63 @@ const overridesDoNotLeakExtensionInStackTest = buildBehavioralTest<boolean>({
   group: "geolocation-stealth",
   name: "Overridden APIs do not leak an extension origin in error stacks",
   description:
-    "Generalization of the geolocation foreign-this check across every overridden surface. Web IDL methods/getters throw a TypeError when called with a wrong `this`. If a content-script override throws (or lets the native throw) from its own injected frame, the error's stack carries a chrome-extension:// / moz-extension:// URL — exposing the extension id. This probes several Date.prototype methods, Intl.DateTimeFormat.resolvedOptions, the Document.lastModified getter, and the Temporal offset getter, and fails if ANY thrown stack contains an extension origin. Native browsers (and engines that anonymize content-script frames, i.e. Firefox/Safari) have none. (Function.prototype.toString is covered separately — its stack is arkenfox-tuned.)",
+    "Generalization of the geolocation foreign-this check across EVERY patched surface, walked automatically. Web IDL methods/getters throw a TypeError (or, for promise-returning ops, reject) when called with a wrong `this`. If a content-script override throws/rejects from its own injected frame, the error's stack carries a chrome-extension:// / moz-extension:// URL — exposing the extension id. This enumerates every own method, getter, and setter on each patched prototype (Date, Intl.DateTimeFormat, GeolocationCoordinates/Position, Geolocation, Permissions, Document, Temporal.ZonedDateTime, RTCPeerConnection, Node), invokes each with a foreign `this`, awaits any rejections, and fails if ANY thrown/rejected stack contains an extension origin. Native browsers (and engines that anonymize content-script frames, i.e. Firefox/Safari) have none. (Function.prototype.toString is excluded — its stack is arkenfox-tuned and handled separately.)",
   technique:
-    "Invoke each overridden method/getter with a foreign `this` and scan every thrown stack for an extension-scheme URL.",
-  codeSnippet: `for (const call of [() => Date.prototype.getHours.call({}), /* …toString, resolvedOptions, lastModified… */]) {
-  try { call() } catch (e) { /(chrome|moz|safari-web)-extension:\\/\\//.test(e.stack) }
-}`,
+    "Walk every own method/getter/setter of each patched prototype, invoke with a foreign `this` (awaiting promise rejections), and scan every thrown/rejected stack for an extension-scheme URL.",
+  codeSnippet: `for (const proto of patchedPrototypes)
+  for (const fn of ownMethodsAndAccessors(proto))
+    try { await fn.call({}) } catch (e) { /(chrome|moz|safari-web)-extension:\\/\\//.test(e.stack) }`,
   expected: async () => ({
     value: false,
     describe: "no override leaks an extension origin",
   }),
   observe: async () => {
-    // NOTE: Function.prototype.toString is intentionally NOT probed here — its
-    // thrown-error stack shape is tuned to pass arkenfox's "o" check, so its
-    // scrub needs separate arkenfox verification and is tracked apart from this
-    // battery.
-    const probes: Array<[string, () => void]> = []
-    for (const m of [
-      "getHours",
-      "getTimezoneOffset",
-      "toString",
-      "toTimeString",
-      "toDateString",
-      "toLocaleString",
-      "getFullYear",
-    ]) {
-      probes.push([`Date.prototype.${m}`, foreignMethodCall(Date.prototype, m)])
-    }
-    if (typeof Intl !== "undefined" && Intl.DateTimeFormat?.prototype) {
-      probes.push([
-        "Intl.DateTimeFormat.prototype.resolvedOptions",
-        foreignMethodCall(Intl.DateTimeFormat.prototype, "resolvedOptions"),
-      ])
-    }
-    if (typeof Document !== "undefined" && Document.prototype) {
-      probes.push([
-        "Document.prototype.lastModified",
-        foreignGetterCall(Document.prototype, "lastModified"),
-      ])
-    }
-    const temporal = (
-      globalThis as { Temporal?: { ZonedDateTime?: { prototype: object } } }
-    ).Temporal
-    if (temporal?.ZonedDateTime?.prototype) {
-      probes.push([
-        "Temporal.ZonedDateTime.prototype.offset",
-        foreignGetterCall(temporal.ZonedDateTime.prototype, "offset"),
-      ])
-    }
-
     const leaks: Array<string> = []
-    for (const [name, run] of probes) {
-      try {
-        run()
-      } catch (err) {
-        const stack =
-          err instanceof Error && typeof err.stack === "string" ? err.stack : ""
-        const match = stack.match(EXTENSION_URL_RE)
-        if (match) leaks.push(`${name} → ${match[0]}`)
+    const pending: Array<Promise<void>> = []
+    // Cap async waits so a member that returns a slow/never-settling promise
+    // can't hang the suite; a timeout surfaces as "no leak" (its own error
+    // carries no extension origin), which is the safe default.
+    const withCap = <T>(p: Promise<T>): Promise<T | undefined> =>
+      Promise.race([
+        p,
+        new Promise<undefined>((resolve) =>
+          setTimeout(() => resolve(undefined), 1500)
+        ),
+      ])
+
+    for (const [protoName, proto] of patchedPrototypes()) {
+      for (const [label, fn] of foreignCallablesFor(protoName, proto)) {
+        try {
+          const result = fn.call({})
+          // Promise-returning ops (query, getStats, RTCPeerConnection.create*)
+          // reject rather than throw — capture their rejection stack too.
+          if (
+            result &&
+            typeof (result as PromiseLike<unknown>).then === "function"
+          ) {
+            pending.push(
+              withCap(Promise.resolve(result)).then(
+                () => undefined,
+                (err: unknown) => {
+                  const leak = extensionLeakInStack(err)
+                  if (leak) leaks.push(`${label} → ${leak}`)
+                }
+              )
+            )
+          }
+        } catch (err) {
+          const leak = extensionLeakInStack(err)
+          if (leak) leaks.push(`${label} → ${leak}`)
+        }
       }
     }
+    await Promise.all(pending)
+
     return {
       value: leaks.length > 0,
       describe: leaks.length
-        ? `leaks (${leaks.length}): ${leaks.join("; ")}`
-        : `no extension origin across ${probes.length} override stacks`,
+        ? `leaks (${leaks.length}): ${leaks.slice(0, 6).join("; ")}${leaks.length > 6 ? " …" : ""}`
+        : "no extension origin across any patched prototype member",
     }
   },
   // Pass when the observed "leaked" flag equals the expected `false`.
