@@ -4,6 +4,14 @@
  * Feature-detects the Temporal API and overrides `Temporal.Now` methods
  * to return the spoofed timezone when enabled. No-ops gracefully if
  * Temporal is unavailable.
+ *
+ * Exposes two entry points:
+ *   - `installTemporalOverrides()` — installs on the top-level realm,
+ *     closing the document_start race via the bootstrap seed hook.
+ *   - `installTemporalOverridesOn(temporalNs, opts)` — realm-parameterized
+ *     installer. The iframe patcher calls this against each same-origin
+ *     iframe realm, so the top-level and iframe realms share ONE
+ *     implementation and cannot drift apart.
  */
 
 import { spoofingEnabled, timezoneData } from "./state";
@@ -14,20 +22,33 @@ import { createLogger } from "@/shared/utils/debug-logger";
 const logger = createLogger("INJ");
 
 /**
- * Install Temporal.Now overrides if the Temporal API is available.
- * Called by index.ts during initialization.
+ * Install `Temporal.Now` + `Temporal.ZonedDateTime` overrides on the
+ * supplied Temporal namespace.
+ *
+ * `Now.timeZoneId()` returns the spoofed identifier; every
+ * `plain*ISO` / `zonedDateTimeISO` method substitutes the spoofed zone
+ * only when no explicit timezone argument was provided. The
+ * `ZonedDateTime.prototype` offset getters are passthroughs kept for
+ * function masking (toString returns `[native code]`) and wrapped so a
+ * foreign-`this` brand-check throw has our injected frames scrubbed.
+ *
+ * `opts.seed` is an optional per-call hook run at the top of each `Now`
+ * method — the top-level realm passes `seedFromBootstrap` to close the
+ * document_start race; iframe realms are patched after bootstrap so they
+ * omit it (behavior-preserving for that aspect).
  */
-export function installTemporalOverrides(): void {
-  if (typeof Temporal === "undefined") {
-    return;
-  }
+export function installTemporalOverridesOn(
+  temporalNs: NonNullable<typeof Temporal>,
+  opts?: { seed?: () => void }
+): void {
+  const seed = opts?.seed;
 
   try {
     // Temporal is feature-detected at runtime; cast through unknown to satisfy
     // strict type-checking since the eslint TS parser cannot resolve the ambient
     // Temporal declarations inside this IIFE.
 
-    const TemporalNow: TemporalNow = Temporal.Now;
+    const TemporalNow: TemporalNow = temporalNs.Now;
 
     const originalTimeZoneId = TemporalNow.timeZoneId.bind(TemporalNow);
     const originalPlainDateTimeISO = TemporalNow.plainDateTimeISO.bind(TemporalNow);
@@ -38,7 +59,7 @@ export function installTemporalOverrides(): void {
     const temporalNowObj = TemporalNow as unknown as object;
 
     installOverride(temporalNowObj, "timeZoneId", function (): string {
-      seedFromBootstrap();
+      seed?.();
       if (spoofingEnabled && timezoneData) {
         logger.debug("Temporal.Now.timeZoneId: returning spoofed", timezoneData.identifier);
         return timezoneData.identifier;
@@ -50,7 +71,7 @@ export function installTemporalOverrides(): void {
       temporalNowObj,
       "plainDateTimeISO",
       function (tzLike?: string): TemporalPlainDateTime {
-        seedFromBootstrap();
+        seed?.();
         if (spoofingEnabled && timezoneData && tzLike === undefined) {
           logger.debug("Temporal.Now.plainDateTimeISO: using spoofed tz", timezoneData.identifier);
           return originalPlainDateTimeISO(timezoneData.identifier);
@@ -60,7 +81,7 @@ export function installTemporalOverrides(): void {
     );
 
     installOverride(temporalNowObj, "plainDateISO", function (tzLike?: string): TemporalPlainDate {
-      seedFromBootstrap();
+      seed?.();
       if (spoofingEnabled && timezoneData && tzLike === undefined) {
         logger.debug("Temporal.Now.plainDateISO: using spoofed tz", timezoneData.identifier);
         return originalPlainDateISO(timezoneData.identifier);
@@ -69,7 +90,7 @@ export function installTemporalOverrides(): void {
     });
 
     installOverride(temporalNowObj, "plainTimeISO", function (tzLike?: string): TemporalPlainTime {
-      seedFromBootstrap();
+      seed?.();
       if (spoofingEnabled && timezoneData && tzLike === undefined) {
         logger.debug("Temporal.Now.plainTimeISO: using spoofed tz", timezoneData.identifier);
         return originalPlainTimeISO(timezoneData.identifier);
@@ -81,7 +102,7 @@ export function installTemporalOverrides(): void {
       temporalNowObj,
       "zonedDateTimeISO",
       function (tzLike?: string): TemporalZonedDateTime {
-        seedFromBootstrap();
+        seed?.();
         if (spoofingEnabled && timezoneData && tzLike === undefined) {
           logger.debug("Temporal.Now.zonedDateTimeISO: using spoofed tz", timezoneData.identifier);
           return originalZonedDateTimeISO(timezoneData.identifier);
@@ -96,7 +117,7 @@ export function installTemporalOverrides(): void {
     // we pass through the native nanosecond values untouched. The overrides
     // are kept only for function masking (toString returns [native code]).
 
-    const ZDTProto = Temporal.ZonedDateTime.prototype;
+    const ZDTProto = temporalNs.ZonedDateTime.prototype;
 
     const origOffsetNsDesc = Object.getOwnPropertyDescriptor(ZDTProto, "offsetNanoseconds");
     const origOffsetDesc = Object.getOwnPropertyDescriptor(ZDTProto, "offset");
@@ -128,4 +149,17 @@ export function installTemporalOverrides(): void {
   } catch {
     // Temporal API override failed — originals remain in place
   }
+}
+
+/**
+ * Install Temporal.Now overrides on the top-level realm if the Temporal
+ * API is available. Called by index.ts during initialization.
+ */
+export function installTemporalOverrides(): void {
+  if (typeof Temporal === "undefined") {
+    return;
+  }
+  installTemporalOverridesOn(Temporal, {
+    seed: seedFromBootstrap,
+  });
 }

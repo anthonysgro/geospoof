@@ -1,13 +1,22 @@
 /**
  * Date constructor and Date.parse overrides.
  *
- * Replaces `globalThis.Date` with a spoofing-aware constructor that adjusts
+ * Replaces a realm's `Date` with a spoofing-aware constructor that adjusts
  * epoch values for ambiguous date strings and multi-argument calls. Also
  * overrides `Date.parse` with the same adjustment logic.
+ *
+ * Exposes two entry points:
+ *   - `installDateConstructor()` — installs on the top-level realm
+ *     (`globalThis`), closing the document_start race via the bootstrap
+ *     seed hook.
+ *   - `installDateConstructorOn(realm)` — realm-parameterized installer.
+ *     The iframe patcher calls this against each same-origin iframe
+ *     realm, so the top-level and iframe realms share ONE implementation
+ *     and cannot drift apart.
  */
 
 import type { AnyFunction } from "./types";
-import { OriginalDate, OriginalDateParse, spoofingEnabled, timezoneData } from "./state";
+import { OriginalDate as CapturedOriginalDate, spoofingEnabled, timezoneData } from "./state";
 import { isAmbiguousDateString, computeEpochAdjustment } from "./timezone-helpers";
 import { registerOverride, disguiseAsNative } from "./function-masking";
 import { seedFromBootstrap } from "./bootstrap";
@@ -16,13 +25,38 @@ import { createLogger } from "@/shared/utils/debug-logger";
 const logger = createLogger("INJ");
 
 /**
- * Install the Date constructor override and Date.parse override.
- *
- * Replaces `globalThis.Date` with a spoofing-aware constructor, copies all
- * static methods, fixes prototype/constructor references, and registers
- * everything for toString masking.
+ * A realm's Date environment. `target` is the global object whose `Date`
+ * property gets replaced (`globalThis` for the top-level realm, the iframe
+ * window for iframe realms); `originalDate` is that realm's native `Date`
+ * constructor captured before the swap; `functionProto` is that realm's
+ * `Function.prototype` (so `Object.getPrototypeOf(Date)` matches native);
+ * `seed` is an optional per-call hook run at the top of the constructor —
+ * the top-level realm passes `seedFromBootstrap` to close the
+ * document_start race, iframe realms are patched after bootstrap so they
+ * omit it.
  */
-export function installDateConstructor(): void {
+export interface DateConstructorRealm {
+  target: object;
+  originalDate: DateConstructor;
+  functionProto: object;
+  seed?: () => void;
+}
+
+/**
+ * Install the Date constructor + Date.parse overrides on the supplied
+ * realm. Replaces `realm.target.Date` with a spoofing-aware constructor,
+ * copies all static methods, fixes prototype/constructor references, and
+ * registers everything for toString masking.
+ */
+export function installDateConstructorOn(realm: DateConstructorRealm): void {
+  const { target, functionProto } = realm;
+  const seed = realm.seed;
+  // The realm's native Date + Date.parse, captured before the swap. Named
+  // `OriginalDate` locally so the shared body below reads identically for
+  // every realm.
+  const OriginalDate = realm.originalDate;
+  const OriginalDateParse = OriginalDate.parse.bind(OriginalDate);
+
   // ── Date constructor override ────────────────────────────────────────
 
   /**
@@ -36,7 +70,8 @@ export function installDateConstructor(): void {
     // Close the document_start race for `new Date()` snapshots taken in the
     // page's first script — seed from the early bootstrap global if present
     // (Firefox). No-op once seeded or once the settings event has arrived.
-    seedFromBootstrap();
+    // Iframe realms pass no seed (patched after bootstrap).
+    seed?.();
     // Called as function (without new) — return current time string.
     //
     // Native `Date()` returns a string of the current time formatted
@@ -247,10 +282,10 @@ export function installDateConstructor(): void {
   });
 
   // Ensure prototype chain: Object.getPrototypeOf(Date) === Function.prototype
-  Object.setPrototypeOf(DateOverride, Function.prototype);
+  Object.setPrototypeOf(DateOverride, functionProto);
 
-  // Replace global Date constructor
-  (globalThis as unknown as Record<string, unknown>).Date = DateOverride as unknown;
+  // Replace the realm's Date constructor
+  (target as unknown as Record<string, unknown>).Date = DateOverride as unknown;
 
   // Fix constructor reference: Date.prototype.constructor === Date
   Object.defineProperty(OriginalDate.prototype, "constructor", {
@@ -265,4 +300,18 @@ export function installDateConstructor(): void {
   // Register static methods — fingerprinters check Date.now.toString() after the constructor swap
   registerOverride((DateOverride as unknown as DateConstructor).now, "now");
   registerOverride((DateOverride as unknown as DateConstructor).UTC, "UTC");
+}
+
+/**
+ * Install the Date constructor + Date.parse overrides on the top-level
+ * realm (`globalThis`), passing the bootstrap seed hook to close the
+ * document_start race.
+ */
+export function installDateConstructor(): void {
+  installDateConstructorOn({
+    target: globalThis,
+    originalDate: CapturedOriginalDate,
+    functionProto: Function.prototype,
+    seed: seedFromBootstrap,
+  });
 }

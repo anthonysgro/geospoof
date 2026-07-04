@@ -39,13 +39,7 @@
  */
 
 import type { AnyFunction, SpoofedLocation } from "./types";
-import {
-  overrideRegistry,
-  spoofingEnabled,
-  spoofedLocation,
-  settingsReceived,
-  timezoneData,
-} from "./state";
+import { overrideRegistry, spoofingEnabled, spoofedLocation, settingsReceived } from "./state";
 import {
   installOverride,
   stripConstruct,
@@ -54,7 +48,6 @@ import {
   nativeTypeErrorMessage,
 } from "./function-masking";
 import { buildPermissionsQueryOverride } from "./permissions";
-import { isAmbiguousDateString, computeEpochAdjustment } from "./timezone-helpers";
 import {
   getPaddedCoords,
   geoArgsValid,
@@ -76,6 +69,8 @@ import {
   installGetTimezoneOffsetOverrideOn,
   installDateTimeFormatOverridesOn,
 } from "./timezone-overrides";
+import { installDateConstructorOn } from "./date-constructor";
+import { installTemporalOverridesOn } from "./temporal";
 import { createLogger } from "@/shared/utils/debug-logger";
 
 const logger = createLogger("INJ");
@@ -527,171 +522,19 @@ export function patchIframeWindow(iframeWindow: Window): void {
     const IframeOriginalDate = (iframeWindow as any).Date as DateConstructor | undefined;
     if (!IframeOriginalDate) break dateSection;
 
-    const IframeOriginalDateParse = IframeOriginalDate.parse.bind(IframeOriginalDate);
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    function IframeDateOverride(this: any, ...args: any[]): any {
-      // Called as function (without new) — return current time string.
-      if (!new.target) {
-        return IframeOriginalDate!();
-      }
-
-      if (!spoofingEnabled || !timezoneData) {
-        if (args.length === 0) return new IframeOriginalDate!();
-        if (args.length === 1) return new IframeOriginalDate!(args[0] as number | string);
-        return new IframeOriginalDate!(
-          args[0] as number,
-          args[1] as number,
-          (args[2] ?? 1) as number,
-          (args[3] ?? 0) as number,
-          (args[4] ?? 0) as number,
-          (args[5] ?? 0) as number,
-          (args[6] ?? 0) as number
-        );
-      }
-
-      if (args.length === 0) {
-        return new IframeOriginalDate!();
-      }
-
-      if (args.length === 1) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        const arg = args[0];
-
-        if (typeof arg === "number") {
-          return new IframeOriginalDate!(arg);
-        }
-
-        if (typeof arg === "string") {
-          try {
-            const parsed = new IframeOriginalDate!(arg);
-            if (isNaN(parsed.getTime())) {
-              return parsed;
-            }
-            if (isAmbiguousDateString(arg)) {
-              const adjustment = computeEpochAdjustment(
-                parsed,
-                timezoneData.identifier,
-                timezoneData.offset
-              );
-              return new IframeOriginalDate!(parsed.getTime() + adjustment);
-            }
-            return parsed;
-          } catch {
-            return new IframeOriginalDate!(arg);
-          }
-        }
-
-        return new IframeOriginalDate!(arg as number | string);
-      }
-
-      // Multi-argument (year, month, ...): ambiguous local time, adjust.
-      try {
-        const parsed = new IframeOriginalDate!(
-          args[0] as number,
-          args[1] as number,
-          (args[2] ?? 1) as number,
-          (args[3] ?? 0) as number,
-          (args[4] ?? 0) as number,
-          (args[5] ?? 0) as number,
-          (args[6] ?? 0) as number
-        );
-        const adjustment = computeEpochAdjustment(
-          parsed,
-          timezoneData.identifier,
-          timezoneData.offset
-        );
-        return new IframeOriginalDate!(parsed.getTime() + adjustment);
-      } catch {
-        return new IframeOriginalDate!(
-          args[0] as number,
-          args[1] as number,
-          (args[2] ?? 1) as number,
-          (args[3] ?? 0) as number,
-          (args[4] ?? 0) as number,
-          (args[5] ?? 0) as number,
-          (args[6] ?? 0) as number
-        );
-      }
-    }
-
-    const iframeDateParseOverride = (str: string): number => {
-      if (!spoofingEnabled || !timezoneData) {
-        return IframeOriginalDateParse(str);
-      }
-      try {
-        const epoch = IframeOriginalDateParse(str);
-        if (isNaN(epoch)) return NaN;
-        if (isAmbiguousDateString(str)) {
-          const parsed = new IframeOriginalDate(epoch);
-          const adjustment = computeEpochAdjustment(
-            parsed,
-            timezoneData.identifier,
-            timezoneData.offset
-          );
-          return epoch + adjustment;
-        }
-        return epoch;
-      } catch {
-        return IframeOriginalDateParse(str);
-      }
-    };
-
-    // Wire up the replacement constructor: preserve prototype, copy
-    // statics, install Date.parse override, and swap into the iframe's
-    // globalThis. Mirrors the top-level installDateConstructor flow.
-    IframeDateOverride.prototype = IframeOriginalDate.prototype;
-
-    Object.defineProperty(IframeDateOverride, "name", {
-      value: "Date",
-      configurable: true,
-      enumerable: false,
-      writable: false,
-    });
-    Object.defineProperty(IframeDateOverride, "length", {
-      value: 7,
-      configurable: true,
-      enumerable: false,
-      writable: false,
-    });
-
-    const skipProps = new Set(["prototype", "name", "length", "parse"]);
-    for (const prop of Object.getOwnPropertyNames(IframeOriginalDate)) {
-      if (skipProps.has(prop)) continue;
-      const desc = Object.getOwnPropertyDescriptor(IframeOriginalDate, prop);
-      if (desc) {
-        Object.defineProperty(IframeDateOverride, prop, desc);
-      }
-    }
-
-    registerOverride(iframeDateParseOverride, "parse");
-    disguiseAsNative(iframeDateParseOverride, "parse", 1);
-    Object.defineProperty(IframeDateOverride, "parse", {
-      value: iframeDateParseOverride,
-      configurable: true,
-      enumerable: false,
-      writable: true,
-    });
-
-    // Match Function.prototype chain so `Object.getPrototypeOf(Date)`
-    // returns the iframe's Function.prototype (matching native).
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
     const iframeFunctionProto = (iframeWindow as any).Function.prototype as object;
-    Object.setPrototypeOf(IframeDateOverride, iframeFunctionProto);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-    (iframeWindow as any).Date = IframeDateOverride;
-
-    Object.defineProperty(IframeOriginalDate.prototype, "constructor", {
-      value: IframeDateOverride,
-      configurable: true,
-      enumerable: false,
-      writable: true,
+    // Same shared installer the top-level realm uses — the ambiguous-string
+    // epoch adjustment, the no-`new` `Date()` spoofed-zone consistency fix,
+    // static-method copying, and toString registration all live in one place
+    // and cannot drift between realms. No `seed` hook here: the iframe is
+    // patched after bootstrap has already run.
+    installDateConstructorOn({
+      target: iframeWindow,
+      originalDate: IframeOriginalDate,
+      functionProto: iframeFunctionProto,
     });
-
-    registerOverride(IframeDateOverride, "Date");
-    registerOverride((IframeDateOverride as unknown as DateConstructor).now, "now");
-    registerOverride((IframeDateOverride as unknown as DateConstructor).UTC, "UTC");
 
     logger.debug("[patchIframeWindow] section 5 (Date) complete");
   } catch (err) {
@@ -829,62 +672,14 @@ export function patchIframeWindow(iframeWindow: Window): void {
   // Document.prototype never got the spoofed getter.
   temporalSection: try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-    const iframeTemporal = (iframeWindow as any).Temporal as
-      | {
-          Now: {
-            timeZoneId: () => string;
-            plainDateTimeISO: (tz?: string) => unknown;
-            plainDateISO: (tz?: string) => unknown;
-            plainTimeISO: (tz?: string) => unknown;
-            zonedDateTimeISO: (tz?: string) => unknown;
-          };
-        }
-      | undefined;
+    const iframeTemporal = (iframeWindow as any).Temporal as typeof Temporal | undefined;
     if (!iframeTemporal?.Now) break temporalSection;
 
-    const iframeNow = iframeTemporal.Now;
-    const iframeOrigTimeZoneId = iframeNow.timeZoneId.bind(iframeNow);
-    const iframeOrigPlainDateTimeISO = iframeNow.plainDateTimeISO.bind(iframeNow);
-    const iframeOrigPlainDateISO = iframeNow.plainDateISO.bind(iframeNow);
-    const iframeOrigPlainTimeISO = iframeNow.plainTimeISO.bind(iframeNow);
-    const iframeOrigZonedDateTimeISO = iframeNow.zonedDateTimeISO.bind(iframeNow);
-
-    const iframeNowObj = iframeNow as unknown as object;
-
-    installOverride(iframeNowObj, "timeZoneId", function (): string {
-      if (spoofingEnabled && timezoneData) {
-        return timezoneData.identifier;
-      }
-      return iframeOrigTimeZoneId();
-    });
-
-    installOverride(iframeNowObj, "plainDateTimeISO", function (tzLike?: string): unknown {
-      if (spoofingEnabled && timezoneData && tzLike === undefined) {
-        return iframeOrigPlainDateTimeISO(timezoneData.identifier);
-      }
-      return iframeOrigPlainDateTimeISO(tzLike);
-    });
-
-    installOverride(iframeNowObj, "plainDateISO", function (tzLike?: string): unknown {
-      if (spoofingEnabled && timezoneData && tzLike === undefined) {
-        return iframeOrigPlainDateISO(timezoneData.identifier);
-      }
-      return iframeOrigPlainDateISO(tzLike);
-    });
-
-    installOverride(iframeNowObj, "plainTimeISO", function (tzLike?: string): unknown {
-      if (spoofingEnabled && timezoneData && tzLike === undefined) {
-        return iframeOrigPlainTimeISO(timezoneData.identifier);
-      }
-      return iframeOrigPlainTimeISO(tzLike);
-    });
-
-    installOverride(iframeNowObj, "zonedDateTimeISO", function (tzLike?: string): unknown {
-      if (spoofingEnabled && timezoneData && tzLike === undefined) {
-        return iframeOrigZonedDateTimeISO(timezoneData.identifier);
-      }
-      return iframeOrigZonedDateTimeISO(tzLike);
-    });
+    // Same shared installer the top-level realm uses — the Now spoofing
+    // logic and the ZonedDateTime offset accessor scrub live in one place
+    // and cannot drift between realms. No `seed` hook here: the iframe is
+    // patched after bootstrap has already run.
+    installTemporalOverridesOn(iframeTemporal);
 
     logger.debug("[patchIframeWindow] section 7 (Temporal) complete");
   } catch (err) {
