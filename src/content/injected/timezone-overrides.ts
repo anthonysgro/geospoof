@@ -10,11 +10,13 @@
  *     realm.
  *   - `installGetTimezoneOffsetOverrideOn(proto, original)` — installs
  *     just the getTimezoneOffset override on an arbitrary Date.prototype.
- *     The iframe patcher calls this against each same-origin iframe
- *     realm. The Intl.DateTimeFormat constructor swap is realm-specific
- *     enough (`Intl.DateTimeFormat = ...` on the iframe's `Intl`) that
- *     the iframe patcher installs it directly; only getTimezoneOffset
- *     needs the shared prototype-method pattern.
+ *   - `installDateTimeFormatOverridesOn(intl, opts)` — installs the
+ *     Intl.DateTimeFormat constructor + resolvedOptions overrides on an
+ *     arbitrary `Intl` object.
+ *
+ * The iframe patcher calls both realm-parameterized installers against
+ * each same-origin iframe realm, so the top-level and iframe realms
+ * share one implementation and cannot drift apart.
  */
 
 import {
@@ -22,8 +24,6 @@ import {
   timezoneData,
   explicitTimezoneInstances,
   originalGetTimezoneOffset,
-  OriginalDateTimeFormat,
-  originalResolvedOptions,
   engineTruncatesOffset,
 } from "./state";
 import {
@@ -119,8 +119,37 @@ export function installGetTimezoneOffsetOverrideOn(
  * - `Intl.DateTimeFormat` constructor
  * - `Intl.DateTimeFormat.prototype.resolvedOptions`
  */
-export function installTimezoneOverrides(): void {
-  installGetTimezoneOffsetOverrideOn(Date.prototype, originalGetTimezoneOffset);
+/**
+ * Install the `Intl.DateTimeFormat` constructor + `resolvedOptions`
+ * overrides on the supplied `Intl` object.
+ *
+ * Realm-parameterized so the top-level realm and every same-origin
+ * iframe realm share ONE implementation. The spoof logic, explicit-
+ * timezone tracking, and — critically — the error-path stack scrub can
+ * no longer drift between realms (which is exactly how the iframe realm
+ * previously leaked the extension id on invalid `timeZone`).
+ *
+ * The native constructor is read from `intl` at install time (before the
+ * swap), so each realm captures and falls back to its own native
+ * reference.
+ *
+ * `opts.seed` is an optional per-call hook run at the top of the
+ * constructor. The top-level realm passes `seedFromBootstrap` to close
+ * the document_start race for the first synchronous
+ * `Intl.DateTimeFormat().resolvedOptions().timeZone` read. Iframe realms
+ * are patched after bootstrap has already run, so they omit it — keeping
+ * this a behavior-preserving extraction of the existing per-realm code.
+ */
+export function installDateTimeFormatOverridesOn(
+  intl: typeof Intl,
+  opts?: { seed?: () => void }
+): void {
+  const seed = opts?.seed;
+  // Native constructor for this realm — still native at install time,
+  // since this function is what performs the swap.
+  const NativeDateTimeFormat = intl.DateTimeFormat;
+  // eslint-disable-next-line @typescript-eslint/unbound-method -- intentional: re-bound via .call(this) inside the resolvedOptions override
+  const nativeResolvedOptions = NativeDateTimeFormat.prototype.resolvedOptions;
 
   // Override Intl.DateTimeFormat constructor to inject timezone
   try {
@@ -132,7 +161,7 @@ export function installTimezoneOverrides(): void {
       // Close the document_start race for the most common aggressive probe:
       // `Intl.DateTimeFormat().resolvedOptions().timeZone` read in the page's
       // first script. Seed from the early bootstrap global if present.
-      seedFromBootstrap();
+      seed?.();
       try {
         const hasExplicitTimezone = options?.timeZone != null;
         // Treat explicit timezone matching the spoofed timezone as non-explicit
@@ -147,7 +176,7 @@ export function installTimezoneOverrides(): void {
         if (spoofingEnabled && timezoneData && (!hasExplicitTimezone || matchesSpoofedTz)) {
           // Inject spoofed timezone when caller did NOT provide an explicit one,
           // or when the explicit timezone matches the spoofed timezone
-          const opts: Intl.DateTimeFormatOptions = {
+          const opts2: Intl.DateTimeFormatOptions = {
             ...options,
             timeZone: timezoneData.identifier,
           };
@@ -157,12 +186,12 @@ export function installTimezoneOverrides(): void {
             "injected",
             timezoneData.identifier
           );
-          const instance = new OriginalDateTimeFormat(locales, opts);
+          const instance = new NativeDateTimeFormat(locales, opts2);
           // Do NOT add to explicitTimezoneInstances — treat as default-timezone instance
           return instance;
         }
 
-        const instance = new OriginalDateTimeFormat(locales, options);
+        const instance = new NativeDateTimeFormat(locales, options);
         if (hasExplicitTimezone) {
           explicitTimezoneInstances.add(instance);
         }
@@ -175,7 +204,7 @@ export function installTimezoneOverrides(): void {
         // stack would carry our injected frame. Scrub it so the genuine native
         // error can't be used to read the extension id, then rethrow.
         try {
-          return new OriginalDateTimeFormat(locales, options);
+          return new NativeDateTimeFormat(locales, options);
         } catch (err) {
           stripExtensionFramesFromStack(err);
           throw err;
@@ -185,16 +214,16 @@ export function installTimezoneOverrides(): void {
 
     registerOverride(DateTimeFormatOverride, "DateTimeFormat");
     disguiseAsNative(DateTimeFormatOverride, "DateTimeFormat", 0);
-    Intl.DateTimeFormat = DateTimeFormatOverride;
+    intl.DateTimeFormat = DateTimeFormatOverride;
 
     // Copy static properties
-    Object.defineProperty(Intl.DateTimeFormat, "prototype", {
-      value: OriginalDateTimeFormat.prototype,
+    Object.defineProperty(intl.DateTimeFormat, "prototype", {
+      value: NativeDateTimeFormat.prototype,
       writable: false,
       configurable: false,
     });
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    Intl.DateTimeFormat.supportedLocalesOf = OriginalDateTimeFormat.supportedLocalesOf;
+    intl.DateTimeFormat.supportedLocalesOf = NativeDateTimeFormat.supportedLocalesOf;
   } catch (error) {
     logger.error("Failed to override Intl.DateTimeFormat constructor:", error);
   }
@@ -202,15 +231,15 @@ export function installTimezoneOverrides(): void {
   // Override Intl.DateTimeFormat.prototype.resolvedOptions()
   // Scoped: only inject the spoofed timezone for instances that were NOT created
   // with an explicit timeZone option. This prevents self-interference where
-  // getIntlBasedOffset / getLongTimezoneName (which use OriginalDateTimeFormat
+  // getIntlBasedOffset / getLongTimezoneName (which use the native constructor
   // with explicit timeZone) would get corrupted by the spoofed timezone.
   try {
     installOverride(
-      Intl.DateTimeFormat.prototype,
+      intl.DateTimeFormat.prototype,
       "resolvedOptions",
       function (this: Intl.DateTimeFormat): Intl.ResolvedDateTimeFormatOptions {
         try {
-          const options = originalResolvedOptions.call(this);
+          const options = nativeResolvedOptions.call(this);
           // For non-explicit instances the constructor already injected the
           // spoofed timezone, so the native resolvedOptions already returns
           // the engine-normalized identifier (e.g. "Asia/Calcutta" for
@@ -218,11 +247,19 @@ export function installTimezoneOverrides(): void {
           return options;
         } catch (error) {
           logger.error("Error in resolvedOptions override:", error);
-          return originalResolvedOptions.call(this);
+          return nativeResolvedOptions.call(this);
         }
       }
     );
   } catch (error) {
     logger.error("Failed to override Intl.DateTimeFormat.resolvedOptions:", error);
   }
+}
+
+export function installTimezoneOverrides(): void {
+  installGetTimezoneOffsetOverrideOn(Date.prototype, originalGetTimezoneOffset);
+  // Top-level realm passes the bootstrap seed hook to close the
+  // document_start race; the iframe patcher calls the same installer
+  // without it.
+  installDateTimeFormatOverridesOn(Intl, { seed: seedFromBootstrap });
 }

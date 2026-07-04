@@ -45,7 +45,6 @@ import {
   spoofedLocation,
   settingsReceived,
   timezoneData,
-  explicitTimezoneInstances,
 } from "./state";
 import {
   installOverride,
@@ -73,7 +72,10 @@ import { waitForSettings } from "./settings-listener";
 import { installDateGetterOverridesOn, type DateGetterOriginals } from "./date-getters";
 import { installDateSetterOverridesOn, type DateSetterOriginals } from "./date-setters";
 import { installDateFormattingOverridesOn, type DateFormattingOriginals } from "./date-formatting";
-import { installGetTimezoneOffsetOverrideOn } from "./timezone-overrides";
+import {
+  installGetTimezoneOffsetOverrideOn,
+  installDateTimeFormatOverridesOn,
+} from "./timezone-overrides";
 import { createLogger } from "@/shared/utils/debug-logger";
 
 const logger = createLogger("INJ");
@@ -493,70 +495,11 @@ export function patchIframeWindow(iframeWindow: Window): void {
     const iframeIntl = (iframeWindow as any).Intl as typeof Intl | undefined;
     if (!iframeIntl?.DateTimeFormat) break intlSection;
 
-    const IframeOriginalDTF = iframeIntl.DateTimeFormat;
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- intentional: re-bound via .call(this) inside the resolvedOptions override
-    const iframeOrigResolvedOptions = IframeOriginalDTF.prototype.resolvedOptions;
-
-    const IframeDTFOverride = function (
-      this: Intl.DateTimeFormat | void,
-      locales?: string | string[],
-      options?: Intl.DateTimeFormatOptions
-    ): Intl.DateTimeFormat {
-      try {
-        const hasExplicitTimezone = options?.timeZone != null;
-        const matchesSpoofedTz =
-          hasExplicitTimezone &&
-          spoofingEnabled &&
-          timezoneData &&
-          options.timeZone!.toLowerCase() === timezoneData.identifier.toLowerCase();
-
-        if (spoofingEnabled && timezoneData && (!hasExplicitTimezone || matchesSpoofedTz)) {
-          const opts: Intl.DateTimeFormatOptions = {
-            ...options,
-            timeZone: timezoneData.identifier,
-          };
-          return new IframeOriginalDTF(locales, opts);
-        }
-
-        const instance = new IframeOriginalDTF(locales, options);
-        if (hasExplicitTimezone) {
-          // Track on the shared WeakSet so resolvedOptions treats it
-          // consistently with top-level instances.
-          explicitTimezoneInstances.add(instance);
-        }
-        return instance;
-      } catch {
-        return new IframeOriginalDTF(locales, options);
-      }
-    } as unknown as typeof Intl.DateTimeFormat;
-
-    registerOverride(IframeDTFOverride, "DateTimeFormat");
-    disguiseAsNative(IframeDTFOverride, "DateTimeFormat", 0);
-    iframeIntl.DateTimeFormat = IframeDTFOverride;
-
-    Object.defineProperty(iframeIntl.DateTimeFormat, "prototype", {
-      value: IframeOriginalDTF.prototype,
-      writable: false,
-      configurable: false,
-    });
-
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- intentional: reassigning the static method by reference matches the top-level override
-    iframeIntl.DateTimeFormat.supportedLocalesOf = IframeOriginalDTF.supportedLocalesOf;
-
-    // resolvedOptions pass-through — the constructor already injected
-    // the spoofed zone for non-explicit instances, so native resolved
-    // options returns the engine-normalized identifier.
-    installOverride(
-      iframeIntl.DateTimeFormat.prototype,
-      "resolvedOptions",
-      function (this: Intl.DateTimeFormat): Intl.ResolvedDateTimeFormatOptions {
-        try {
-          return iframeOrigResolvedOptions.call(this);
-        } catch {
-          return iframeOrigResolvedOptions.call(this);
-        }
-      }
-    );
+    // Same shared installer the top-level realm uses — the DTF spoof
+    // logic, explicit-timezone tracking, and error-path stack scrub live
+    // in one place and cannot drift between realms. No `seed` hook here:
+    // the iframe is patched after bootstrap has already run.
+    installDateTimeFormatOverridesOn(iframeIntl);
 
     logger.debug("[patchIframeWindow] section 4 (Intl) complete");
   } catch (err) {
