@@ -23,6 +23,7 @@
     "start:chromium": "web-ext run --source-dir dist --target=chromium --chromium-binary='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'",
     "start:chrome": "npm run build:chromium && web-ext run --source-dir dist --target=chromium --chromium-binary='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'",
     "start:brave": "npm run build:chromium && web-ext run --source-dir dist --target=chromium --chromium-binary='/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'",
+    "start:opera": "npm run build:chromium && web-ext run --source-dir dist --target=chromium --chromium-binary='/Applications/Opera.app/Contents/MacOS/Opera'",
     "start:waterfox": "npm run build:firefox && web-ext run --source-dir dist --firefox='/Applications/Waterfox.app/Contents/MacOS/waterfox'",
     "start:android": "web-ext run --source-dir dist --target=firefox-android --adb-remove-old-artifacts --android-device=$(adb devices | sed -n '2p' | awk '{print $1}')",
     "package": "npm run package:firefox",
