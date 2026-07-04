@@ -28,7 +28,11 @@
  */
 
 import { OriginalDate, OriginalDateTimeFormat, spoofingEnabled, timezoneData } from "./state";
-import { registerOverride, disguiseAsNative } from "./function-masking";
+import {
+  registerOverride,
+  disguiseAsNative,
+  stripExtensionFramesFromStack,
+} from "./function-masking";
 import { seedFromBootstrap } from "./bootstrap";
 import { createLogger } from "@/shared/utils/debug-logger";
 
@@ -135,7 +139,16 @@ export function installLastModifiedOverride(documentProto: object): void {
       // DOMParser / parseHTMLUnsafe / iframe variants that share this getter):
       // seed from the early bootstrap global if it hasn't been consumed yet.
       seedFromBootstrap();
-      const native = originalGet.call(this) as string;
+      let native: string;
+      try {
+        native = originalGet.call(this) as string;
+      } catch (err) {
+        // Foreign `this`: the native getter throws a brand-check TypeError.
+        // Scrub our injected-script frames so the extension id can't be read
+        // off the stack, then rethrow the genuine native error.
+        stripExtensionFramesFromStack(err);
+        throw err;
+      }
       if (!spoofingEnabled || !timezoneData) {
         logger.debug("[lastModified-get] spoofing disabled, returning native", {
           native,

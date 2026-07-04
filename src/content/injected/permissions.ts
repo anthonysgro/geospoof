@@ -10,8 +10,9 @@ import {
   settingsReceived,
   preserveGeolocationPrompt,
   originalPermissionsQuery,
+  nativePermissionsQuery,
 } from "./state";
-import { installOverride } from "./function-masking";
+import { installOverride, stripExtensionFramesFromStack } from "./function-masking";
 import { waitForSettings } from "./settings-listener";
 import { createLogger } from "@/shared/utils/debug-logger";
 
@@ -94,9 +95,33 @@ export function installPermissionsOverride(): void {
     return;
   }
 
-  const permissionsQueryOverride = (
+  const permissionsQueryOverride = function (
+    this: unknown,
     descriptor: PermissionDescriptor
-  ): Promise<PermissionStatus> => {
+  ): Promise<PermissionStatus> {
+    // WebIDL brand check: native `Permissions.prototype.query.call(notPermissions, …)`
+    // throws `TypeError` synchronously ("Illegal invocation" / "does not implement
+    // interface Permissions") before returning a promise. Our override must do the
+    // same, or a page can detect it with one line:
+    //   Permissions.prototype.query.call({}, { name: "geolocation" })
+    // We reproduce the genuine error by invoking the unbound native method with the
+    // foreign `this`, then strip our injected-script frames from the stack so the
+    // extension id can't be read off it (Blink shows a chrome-extension:// frame).
+    if (
+      nativePermissionsQuery &&
+      typeof Permissions !== "undefined" &&
+      !(this instanceof Permissions)
+    ) {
+      try {
+        // Cast the foreign `this` to Permissions deliberately — we WANT the
+        // native method to reject it. `.call` keeps this fully typed (returns
+        // Promise<PermissionStatus>), unlike Reflect.apply's `any`.
+        return nativePermissionsQuery.call(this, descriptor);
+      } catch (err) {
+        stripExtensionFramesFromStack(err);
+        throw err;
+      }
+    }
     try {
       if (descriptor?.name === "geolocation") {
         logger.debug("permissions.query: intercepted geolocation check", {

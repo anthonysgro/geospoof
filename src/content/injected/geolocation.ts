@@ -18,7 +18,12 @@ import {
   nativeWatchPosition,
   nativeClearWatch,
 } from "./state";
-import { installOverride, registerOverride, disguiseAsNative } from "./function-masking";
+import {
+  installOverride,
+  registerOverride,
+  disguiseAsNative,
+  stripExtensionFramesFromStack,
+} from "./function-masking";
 import { waitForSettings } from "./settings-listener";
 import { createLogger } from "@/shared/utils/debug-logger";
 import { now } from "@/shared/utils/safe-time";
@@ -294,55 +299,6 @@ function createGeolocationPosition(location: SpoofedLocation): SpoofedGeolocatio
 
 /** A native geolocation method invoked with loose args during delegation. */
 type NativeGeoMethod = (...args: Array<unknown>) => unknown;
-
-/**
- * This injected script's own URL, captured at module-load time from a
- * throwaway stack. In a `world: "MAIN"` content script this is the
- * `chrome-extension://<id>/…` (or `moz-extension://…`) resource URL. We use it
- * to strip our own frames out of thrown-error stacks (see
- * `stripExtensionFramesFromStack`) so a page can't read the extension id off an
- * error a fingerprinter deliberately provokes. `null` when it can't be
- * determined (then scrubbing is a no-op and we simply don't make things worse).
- */
-const SELF_SCRIPT_URL: string | null = (() => {
-  try {
-    const stack = new Error().stack;
-    if (typeof stack !== "string") return null;
-    // Frames look like "  at fn (chrome-extension://id/injected.js:1:2)" or
-    // "  at chrome-extension://id/injected.js:1:2". Match ONLY extension-scheme
-    // URLs (a world:MAIN content script is always served from one) and trim the
-    // trailing :line:col so it matches every frame from this file. Restricting
-    // to extension schemes means we can never accidentally scrub a page's own
-    // https frames — if no extension frame is found we return null and the
-    // scrubber no-ops rather than risk over-trimming a real stack.
-    const match = stack.match(
-      /((?:chrome-extension|moz-extension|safari-web-extension):\/\/[^\s):]+)/
-    );
-    return match ? match[1] : null;
-  } catch {
-    return null;
-  }
-})();
-
-/**
- * Remove any stack frames that reference this injected script from a thrown
- * error, in place. After scrubbing, an error the browser threw from inside one
- * of our overrides looks like the native throw a page would see with no
- * extension present: the native (URL-less) frame plus the page's own frames.
- * No-op when the self URL is unknown or the stack isn't a writable string.
- */
-function stripExtensionFramesFromStack(err: unknown): void {
-  if (!SELF_SCRIPT_URL || !(err instanceof Error) || typeof err.stack !== "string") return;
-  const cleaned = err.stack
-    .split("\n")
-    .filter((line) => !line.includes(SELF_SCRIPT_URL))
-    .join("\n");
-  try {
-    err.stack = cleaned;
-  } catch {
-    // `stack` is non-configurable on some engines — leave it as-is.
-  }
-}
 
 /** No-op used when substituting a *valid* callback during native delegation. */
 const GEO_NOOP = (): void => {};

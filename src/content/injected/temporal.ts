@@ -7,7 +7,12 @@
  */
 
 import { spoofingEnabled, timezoneData } from "./state";
-import { installOverride, registerOverride, disguiseAsNative } from "./function-masking";
+import {
+  installOverride,
+  registerOverride,
+  disguiseAsNative,
+  stripExtensionFramesFromStack,
+} from "./function-masking";
 import { seedFromBootstrap } from "./bootstrap";
 import { createLogger } from "@/shared/utils/debug-logger";
 
@@ -109,8 +114,11 @@ export function installTemporalOverrides(): void {
       const offsetNanosecondsGetter = function (this: any): number {
         try {
           return origOffsetNsGetter.call(this) as number;
-        } catch {
-          return origOffsetNsGetter.call(this) as number;
+        } catch (err) {
+          // Foreign `this`: native throws a brand-check TypeError. Scrub our
+          // injected-script frames from the stack, then rethrow the native error.
+          stripExtensionFramesFromStack(err);
+          throw err;
         }
       };
 
@@ -132,8 +140,9 @@ export function installTemporalOverrides(): void {
       const offsetGetter = function (this: any): string {
         try {
           return origOffsetGetter.call(this) as string;
-        } catch {
-          return origOffsetGetter.call(this) as string;
+        } catch (err) {
+          stripExtensionFramesFromStack(err);
+          throw err;
         }
       };
 

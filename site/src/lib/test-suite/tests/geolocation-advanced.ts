@@ -749,6 +749,53 @@ navigator.geolocation.getCurrentPosition(()=>{}, ()=>{}, 'b') // TypeError
   },
 })
 
+const permissionsQueryRejectsForeignThisTest = buildBehavioralTest<boolean>({
+  id: "tampering.permissions.query-rejects-foreign-this",
+  group: "geolocation-stealth",
+  name: "Permissions.prototype.query rejects foreign this",
+  description:
+    'Native Web IDL methods brand-check their receiver: `Permissions.prototype.query.call({}, { name: "geolocation" })` throws a TypeError synchronously ("Illegal invocation" / "does not implement interface Permissions") because `{}` is not a Permissions object. An override that ignores `this` returns a promise instead — a one-line detection that no real browser exhibits (and, if it also runs the spoof, hands back a fake "granted" through the bogus receiver).',
+  technique:
+    'Call `Permissions.prototype.query.call({}, { name: "geolocation" })` and assert it throws synchronously rather than returning a promise.',
+  codeSnippet: `try {
+  Permissions.prototype.query.call({}, { name: "geolocation" })
+  // fail — native throws
+} catch (e) {
+  // pass — TypeError as expected
+}`,
+  expected: async () => {
+    if (typeof Permissions === "undefined" || !navigator.permissions) {
+      return { skipReason: "Permissions API not available" }
+    }
+    return { value: true, describe: "throws TypeError synchronously" }
+  },
+  observe: async () => {
+    if (typeof Permissions === "undefined") {
+      throw new SkipTestError("Permissions interface not exposed")
+    }
+    try {
+      const r = Permissions.prototype.query.call({} as Permissions, {
+        name: "geolocation" as PermissionName,
+      })
+      // If it wrongly returned a promise, swallow any rejection so the probe
+      // doesn't trip an unhandled-rejection while we report the failure.
+      if (r && typeof (r as Promise<unknown>).catch === "function") {
+        void (r as Promise<unknown>).catch(() => {})
+      }
+      return { value: false, describe: "did not throw (returned a promise)" }
+    } catch (err) {
+      const isTypeError = err instanceof TypeError
+      const message = err instanceof Error ? err.message : String(err)
+      return {
+        value: isTypeError,
+        describe: isTypeError
+          ? `threw TypeError: "${message}"`
+          : `threw non-TypeError: ${message}`,
+      }
+    }
+  },
+})
+
 const errorStackHidesExtensionTest = buildBehavioralTest<boolean>({
   id: "tampering.geolocation.error-stack-hides-extension-origin",
   group: "geolocation-stealth",
@@ -795,6 +842,102 @@ try { f(() => {}) } catch (e) {
       describe: leaked
         ? `stack leaks extension origin: ${match?.[0] ?? ""}`
         : `threw ${isTypeError ? "TypeError" : "error"} with no extension origin in stack`,
+    }
+  },
+  // Pass when the observed "leaked" flag equals the expected `false`.
+  equals: (expected, observed) => expected === observed,
+})
+
+/** A function invoked with a deliberately-foreign `this` to trip its brand check. */
+type ForeignCallable = (this: unknown, ...args: Array<unknown>) => unknown
+
+/** Build a thunk that calls `proto[key]` (a method) with a foreign `this`. */
+function foreignMethodCall(proto: object, key: string): () => void {
+  const bag = proto as unknown as Record<string, ForeignCallable | undefined>
+  return () => {
+    const fn = bag[key]
+    if (typeof fn === "function") fn.call({})
+  }
+}
+
+/** Build a thunk that calls `proto[key]`'s accessor getter with a foreign `this`. */
+function foreignGetterCall(proto: object, key: string): () => void {
+  const get = Object.getOwnPropertyDescriptor(proto, key)?.get
+  return () => {
+    if (typeof get === "function") (get as ForeignCallable).call({})
+  }
+}
+
+const overridesDoNotLeakExtensionInStackTest = buildBehavioralTest<boolean>({
+  id: "tampering.overrides.error-stack-hides-extension-origin",
+  group: "geolocation-stealth",
+  name: "Overridden APIs do not leak an extension origin in error stacks",
+  description:
+    "Generalization of the geolocation foreign-this check across every overridden surface. Web IDL methods/getters throw a TypeError when called with a wrong `this`. If a content-script override throws (or lets the native throw) from its own injected frame, the error's stack carries a chrome-extension:// / moz-extension:// URL — exposing the extension id. This probes several Date.prototype methods, Intl.DateTimeFormat.resolvedOptions, the Document.lastModified getter, and the Temporal offset getter, and fails if ANY thrown stack contains an extension origin. Native browsers (and engines that anonymize content-script frames, i.e. Firefox/Safari) have none. (Function.prototype.toString is covered separately — its stack is arkenfox-tuned.)",
+  technique:
+    "Invoke each overridden method/getter with a foreign `this` and scan every thrown stack for an extension-scheme URL.",
+  codeSnippet: `for (const call of [() => Date.prototype.getHours.call({}), /* …toString, resolvedOptions, lastModified… */]) {
+  try { call() } catch (e) { /(chrome|moz|safari-web)-extension:\\/\\//.test(e.stack) }
+}`,
+  expected: async () => ({
+    value: false,
+    describe: "no override leaks an extension origin",
+  }),
+  observe: async () => {
+    // NOTE: Function.prototype.toString is intentionally NOT probed here — its
+    // thrown-error stack shape is tuned to pass arkenfox's "o" check, so its
+    // scrub needs separate arkenfox verification and is tracked apart from this
+    // battery.
+    const probes: Array<[string, () => void]> = []
+    for (const m of [
+      "getHours",
+      "getTimezoneOffset",
+      "toString",
+      "toTimeString",
+      "toDateString",
+      "toLocaleString",
+      "getFullYear",
+    ]) {
+      probes.push([`Date.prototype.${m}`, foreignMethodCall(Date.prototype, m)])
+    }
+    if (typeof Intl !== "undefined" && Intl.DateTimeFormat?.prototype) {
+      probes.push([
+        "Intl.DateTimeFormat.prototype.resolvedOptions",
+        foreignMethodCall(Intl.DateTimeFormat.prototype, "resolvedOptions"),
+      ])
+    }
+    if (typeof Document !== "undefined" && Document.prototype) {
+      probes.push([
+        "Document.prototype.lastModified",
+        foreignGetterCall(Document.prototype, "lastModified"),
+      ])
+    }
+    const temporal = (
+      globalThis as { Temporal?: { ZonedDateTime?: { prototype: object } } }
+    ).Temporal
+    if (temporal?.ZonedDateTime?.prototype) {
+      probes.push([
+        "Temporal.ZonedDateTime.prototype.offset",
+        foreignGetterCall(temporal.ZonedDateTime.prototype, "offset"),
+      ])
+    }
+
+    const leaks: Array<string> = []
+    for (const [name, run] of probes) {
+      try {
+        run()
+      } catch (err) {
+        const stack =
+          err instanceof Error && typeof err.stack === "string" ? err.stack : ""
+        const match = stack.match(EXTENSION_URL_RE)
+        if (match) leaks.push(`${name} → ${match[0]}`)
+      }
+    }
+    return {
+      value: leaks.length > 0,
+      describe: leaks.length
+        ? `leaks (${leaks.length}): ${leaks.join("; ")}`
+        : `no extension origin across ${probes.length} override stacks`,
     }
   },
   // Pass when the observed "leaked" flag equals the expected `false`.
@@ -977,6 +1120,8 @@ export const geolocationAdvancedTests: ReadonlyArray<TestDefinition> = [
   // Group 3 — argument & error semantics (July-2026 bug report)
   invalidArgumentsThrowTest,
   errorStackHidesExtensionTest,
+  permissionsQueryRejectsForeignThisTest,
+  overridesDoNotLeakExtensionInStackTest,
   coordsToJsonOrderTest,
   positionToJsonOrderTest,
 ]

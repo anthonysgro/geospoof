@@ -144,6 +144,18 @@ export const originalSetTime = Date.prototype.setTime;
 // Permissions original (may be undefined if API unavailable)
 export const originalPermissionsQuery = navigator.permissions?.query?.bind(navigator.permissions);
 
+// Unbound native `Permissions.prototype.query`, captured before the override.
+// Used to reproduce the browser's own brand-check error when `query` is called
+// with a `this` that isn't a real `Permissions` object (native throws
+// synchronously; our override must too). May be undefined if the Permissions
+// API isn't exposed. See `permissions.ts`.
+/* eslint-disable @typescript-eslint/unbound-method */
+export const nativePermissionsQuery =
+  typeof Permissions !== "undefined" && Permissions.prototype
+    ? Permissions.prototype.query
+    : undefined;
+/* eslint-enable @typescript-eslint/unbound-method */
+
 /**
  * Original WebRTC constructor reference, captured at module load
  * time before any overrides. May be `undefined` on engines that

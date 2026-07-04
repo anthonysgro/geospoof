@@ -19,6 +19,49 @@ import { overrideRegistry, originalFunctionToString, originalCall } from "./stat
 export let nativeTypeErrorMessage =
   "Function.prototype.toString requires that 'this' be a Function";
 
+/**
+ * This injected script's own URL, captured once at module load from a throwaway
+ * stack. In a `world: "MAIN"` content script this is the
+ * `chrome-extension://<id>/…` (or `moz-extension://…` / `safari-web-extension://…`)
+ * resource URL. Used by `stripExtensionFramesFromStack` to remove our own frames
+ * from thrown-error stacks so a page can't read the extension id off an error a
+ * fingerprinter provokes. `null` when it can't be determined (scrubbing then
+ * no-ops). Restricted to extension schemes so we never strip a page's own frames.
+ */
+const SELF_SCRIPT_URL: string | null = (() => {
+  try {
+    const stack = new Error().stack;
+    if (typeof stack !== "string") return null;
+    const match = stack.match(
+      /((?:chrome-extension|moz-extension|safari-web-extension):\/\/[^\s):]+)/
+    );
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+})();
+
+/**
+ * Remove any stack frames that reference this injected script from a thrown
+ * error, in place. After scrubbing, an error the browser threw from inside one
+ * of our overrides looks like the native throw a page would see with no
+ * extension present (message + the page's own frames). No-op when the self URL
+ * is unknown or the stack isn't a writable string. Blink-relevant: Firefox and
+ * Safari already anonymize content-script frames, but scrubbing is harmless there.
+ */
+export function stripExtensionFramesFromStack(err: unknown): void {
+  if (!SELF_SCRIPT_URL || !(err instanceof Error) || typeof err.stack !== "string") return;
+  const cleaned = err.stack
+    .split("\n")
+    .filter((line) => !line.includes(SELF_SCRIPT_URL))
+    .join("\n");
+  try {
+    err.stack = cleaned;
+  } catch {
+    // `stack` is non-configurable on some engines — leave it as-is.
+  }
+}
+
 /** Register a function in the override registry for toString masking. */
 export function registerOverride(fn: AnyFunction, nativeName: string): void {
   overrideRegistry.set(fn, nativeName);
@@ -78,8 +121,20 @@ export function stripConstruct(fn: AnyFunction): AnyFunction {
       // Use Reflect.apply instead of fn.apply — Chrome's stack trace
       // leaks "Object.apply" which fails the arkenfox validScope check.
       // Reflect.apply doesn't appear as "Object.apply" in the stack.
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return, prefer-rest-params
-      return Reflect.apply(fn, this, Array.prototype.slice.call(arguments) as unknown[]);
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, prefer-rest-params
+        return Reflect.apply(fn, this, Array.prototype.slice.call(arguments) as unknown[]);
+      } catch (err) {
+        // Single choke point for every installOverride-wrapped method: when the
+        // wrapped override throws (its own brand/arg error, or the native error
+        // it delegates to on a foreign `this`), strip our injected-script frames
+        // from the stack so a page can't read the extension id off it (Blink
+        // shows a chrome-extension:// frame; Firefox/Safari already anonymize).
+        // The scrub early-returns when there's no stack/URL, so the success path
+        // and non-leaking engines pay nothing.
+        stripExtensionFramesFromStack(err);
+        throw err;
+      }
     },
   }.method;
 }
