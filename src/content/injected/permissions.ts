@@ -112,15 +112,25 @@ export function installPermissionsOverride(): void {
       typeof Permissions !== "undefined" &&
       !(this instanceof Permissions)
     ) {
+      // `query` is a Promise-returning WebIDL operation: on a foreign `this` the
+      // browser REJECTS the returned promise (it does NOT throw synchronously).
+      // Cast the receiver to Permissions deliberately — we want native to reject
+      // it. `.call` keeps this fully typed (returns Promise<PermissionStatus>).
+      let result: Promise<PermissionStatus>;
       try {
-        // Cast the foreign `this` to Permissions deliberately — we WANT the
-        // native method to reject it. `.call` keeps this fully typed (returns
-        // Promise<PermissionStatus>), unlike Reflect.apply's `any`.
-        return nativePermissionsQuery.call(this, descriptor);
+        result = nativePermissionsQuery.call(this, descriptor);
       } catch (err) {
+        // Defensive: an engine that throws synchronously instead of rejecting.
         stripExtensionFramesFromStack(err);
         throw err;
       }
+      // The rejection reason's stack carries our injected frame (Blink shows a
+      // chrome-extension:// URL; Firefox/Safari anonymize), so scrub it before it
+      // reaches the page, then re-reject with the genuine native error.
+      return result.catch((err: unknown) => {
+        stripExtensionFramesFromStack(err);
+        throw err;
+      });
     }
     try {
       if (descriptor?.name === "geolocation") {

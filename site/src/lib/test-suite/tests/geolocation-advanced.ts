@@ -754,43 +754,68 @@ const permissionsQueryRejectsForeignThisTest = buildBehavioralTest<boolean>({
   group: "geolocation-stealth",
   name: "Permissions.prototype.query rejects foreign this",
   description:
-    'Native Web IDL methods brand-check their receiver: `Permissions.prototype.query.call({}, { name: "geolocation" })` throws a TypeError synchronously ("Illegal invocation" / "does not implement interface Permissions") because `{}` is not a Permissions object. An override that ignores `this` returns a promise instead — a one-line detection that no real browser exhibits (and, if it also runs the spoof, hands back a fake "granted" through the bogus receiver).',
+    'Native Web IDL brand-checks the receiver, but `query` is a Promise-returning operation, so a bad receiver yields a REJECTED promise (TypeError: "Illegal invocation" / "does not implement interface Permissions") rather than a synchronous throw. `Permissions.prototype.query.call({}, { name: "geolocation" })` must therefore return a promise that rejects with a TypeError whose stack carries no extension origin. An override that ignores `this` instead RESOLVES (handing back a fake "granted" through the bogus receiver), or leaks a chrome-extension:// frame in the rejection stack — both detectable.',
   technique:
-    'Call `Permissions.prototype.query.call({}, { name: "geolocation" })` and assert it throws synchronously rather than returning a promise.',
+    'Call `Permissions.prototype.query.call({}, { name: "geolocation" })`, await it, and assert it rejects with a TypeError whose stack contains no extension-scheme URL (rather than resolving).',
   codeSnippet: `try {
-  Permissions.prototype.query.call({}, { name: "geolocation" })
-  // fail — native throws
+  await Permissions.prototype.query.call({}, { name: "geolocation" })
+  // fail — native rejects a foreign this
 } catch (e) {
-  // pass — TypeError as expected
+  e instanceof TypeError &&
+    !/(chrome|moz|safari-web)-extension:\\/\\//.test(e.stack) // pass
 }`,
   expected: async () => {
     if (typeof Permissions === "undefined" || !navigator.permissions) {
       return { skipReason: "Permissions API not available" }
     }
-    return { value: true, describe: "throws TypeError synchronously" }
+    return {
+      value: true,
+      describe: "rejects with TypeError, no extension origin in stack",
+    }
   },
   observe: async () => {
     if (typeof Permissions === "undefined") {
       throw new SkipTestError("Permissions interface not exposed")
     }
+    let result: unknown
     try {
-      const r = Permissions.prototype.query.call({} as Permissions, {
+      result = Permissions.prototype.query.call({} as Permissions, {
         name: "geolocation" as PermissionName,
       })
-      // If it wrongly returned a promise, swallow any rejection so the probe
-      // doesn't trip an unhandled-rejection while we report the failure.
-      if (r && typeof (r as Promise<unknown>).catch === "function") {
-        void (r as Promise<unknown>).catch(() => {})
+    } catch (err) {
+      // Some engine threw synchronously instead of rejecting — accept it as long
+      // as it's a clean TypeError, but note the deviation from native.
+      const isTypeError = err instanceof TypeError
+      const stack =
+        err instanceof Error && typeof err.stack === "string" ? err.stack : ""
+      const leaked = EXTENSION_URL_RE.test(stack)
+      return {
+        value: isTypeError && !leaked,
+        describe: `threw synchronously (native rejects): ${isTypeError ? "TypeError" : "non-TypeError"}${leaked ? ", leaks extension origin" : ""}`,
       }
-      return { value: false, describe: "did not throw (returned a promise)" }
+    }
+    if (!result || typeof (result as Promise<unknown>).then !== "function") {
+      return { value: false, describe: "returned a non-promise value" }
+    }
+    try {
+      await (result as Promise<PermissionStatus>)
+      return {
+        value: false,
+        describe: "promise resolved (native rejects a foreign this)",
+      }
     } catch (err) {
       const isTypeError = err instanceof TypeError
       const message = err instanceof Error ? err.message : String(err)
+      const stack =
+        err instanceof Error && typeof err.stack === "string" ? err.stack : ""
+      const leak = stack.match(EXTENSION_URL_RE)
       return {
-        value: isTypeError,
-        describe: isTypeError
-          ? `threw TypeError: "${message}"`
-          : `threw non-TypeError: ${message}`,
+        value: isTypeError && leak === null,
+        describe: leak
+          ? `rejected but stack leaks extension origin: ${leak[0]}`
+          : isTypeError
+            ? `rejected with TypeError: "${message}"`
+            : `rejected with non-TypeError: ${message}`,
       }
     }
   },
