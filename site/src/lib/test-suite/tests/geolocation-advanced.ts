@@ -1028,6 +1028,94 @@ const overridesDoNotLeakExtensionInStackTest = buildBehavioralTest<boolean>({
   equals: (expected, observed) => expected === observed,
 })
 
+const iframeGeolocationBrandCheckTest = buildBehavioralTest<boolean>({
+  id: "tampering.iframe-realm.geolocation-rejects-foreign-this",
+  group: "geolocation-stealth",
+  name: "Iframe-realm Geolocation methods reject a foreign this",
+  description:
+    "Native Geolocation methods brand-check their receiver: `Geolocation.prototype.getCurrentPosition.call({}, noop)` throws TypeError synchronously. The top-level override enforces this, but the iframe cascade historically installed a simplified override that ignored `this` and ran anyway — detectable, and invisible to the stack-leak walker (it doesn't throw, so nothing lands in a catch). This creates a same-origin iframe, triggers patching, and asserts getCurrentPosition / watchPosition / clearWatch on the iframe's Geolocation.prototype all throw a TypeError for a foreign `this`.",
+  technique:
+    "Create a same-origin iframe, then call each Geolocation.prototype method with a foreign `this` and assert it throws synchronously.",
+  codeSnippet: `const w = iframe.contentWindow
+try { w.Geolocation.prototype.getCurrentPosition.call({}, () => {}) } // native: throws
+catch (e) { e instanceof w.TypeError /* pass */ }`,
+  expected: async () => ({
+    value: true,
+    describe: "all three methods throw for a foreign this",
+  }),
+  observe: async () => {
+    if (typeof document === "undefined" || !document.body) {
+      throw new SkipTestError("no document.body to attach an iframe to")
+    }
+    const frame = document.createElement("iframe")
+    frame.style.display = "none"
+    document.body.appendChild(frame)
+    try {
+      const win = frame.contentWindow as (Window & typeof globalThis) | null
+      const proto = nestedProto(win, ["Geolocation", "prototype"])
+      if (!win || !proto)
+        return {
+          value: false,
+          describe: "iframe exposed no Geolocation.prototype",
+        }
+      const noop = (): void => {}
+      const probes: Array<[string, () => void]> = [
+        [
+          "getCurrentPosition",
+          () =>
+            (
+              proto as unknown as Record<string, ForeignCallable>
+            ).getCurrentPosition.call({}, noop),
+        ],
+        [
+          "watchPosition",
+          () => {
+            const r = (
+              proto as unknown as Record<string, ForeignCallable>
+            ).watchPosition.call({}, noop)
+            // If a buggy override returned a watch id instead of throwing, clear it.
+            if (typeof r === "number") {
+              try {
+                ;(
+                  win.navigator.geolocation as unknown as {
+                    clearWatch: (id: number) => void
+                  }
+                ).clearWatch(r)
+              } catch {
+                /* ignore */
+              }
+            }
+          },
+        ],
+        [
+          "clearWatch",
+          () =>
+            (
+              proto as unknown as Record<string, ForeignCallable>
+            ).clearWatch.call({}, 1),
+        ],
+      ]
+      const results = probes.map(([name, run]) => {
+        try {
+          run()
+          return `${name}: did NOT throw`
+        } catch (err) {
+          const isTypeError =
+            err !== null &&
+            typeof err === "object" &&
+            (err as { constructor?: { name?: string } }).constructor?.name ===
+              "TypeError"
+          return `${name}: ${isTypeError ? "TypeError" : "threw non-TypeError"}`
+        }
+      })
+      const allThrew = results.every((r) => r.endsWith("TypeError"))
+      return { value: allThrew, describe: results.join("; ") }
+    } finally {
+      frame.remove()
+    }
+  },
+})
+
 const constructorsDoNotLeakExtensionInStackTest = buildBehavioralTest<boolean>({
   id: "tampering.constructors.error-stack-hides-extension-origin",
   group: "geolocation-stealth",
@@ -1348,6 +1436,7 @@ export const geolocationAdvancedTests: ReadonlyArray<TestDefinition> = [
   overridesDoNotLeakExtensionInStackTest,
   constructorsDoNotLeakExtensionInStackTest,
   iframeRealmDoesNotLeakExtensionInStackTest,
+  iframeGeolocationBrandCheckTest,
   coordsToJsonOrderTest,
   positionToJsonOrderTest,
 ]

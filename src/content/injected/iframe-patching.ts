@@ -52,11 +52,16 @@ import {
   stripConstruct,
   registerOverride,
   disguiseAsNative,
-  stripExtensionFramesFromStack,
   nativeTypeErrorMessage,
 } from "./function-masking";
+import { buildPermissionsQueryOverride } from "./permissions";
 import { isAmbiguousDateString, computeEpochAdjustment } from "./timezone-helpers";
-import { getPaddedCoords } from "./geolocation";
+import {
+  getPaddedCoords,
+  geoArgsValid,
+  reproduceNativeGeoError,
+  type NativeGeoMethod,
+} from "./geolocation";
 import { resolveAccuracy } from "@/shared/accuracy/resolver";
 import { detectDeviceClass } from "@/shared/accuracy/device-class";
 import { DEFAULT_ACCURACY_SETTING } from "@/shared/types/settings";
@@ -297,15 +302,38 @@ export function patchIframeWindow(iframeWindow: Window): void {
     const iframeOrigWatchPosition = iframeGeo.watchPosition.bind(iframeGeo);
     const iframeOrigClearWatch = iframeGeo.clearWatch.bind(iframeGeo);
 
+    // Unbound native methods (captured before override) + the realm's
+    // Geolocation constructor, so the shared guard (`geoArgsValid` +
+    // `reproduceNativeGeoError`) can reject a foreign `this` exactly like the
+    // top-level override — brand check + native-delegate + stack scrub — instead
+    // of the old iframe arrows that ignored `this`.
+    const iframeGeoProto = iframeGeolocationCtor.prototype as {
+      getCurrentPosition: NativeGeoMethod;
+      watchPosition: NativeGeoMethod;
+      clearWatch: NativeGeoMethod;
+    };
+
+    const iframeNativeGetCurrentPosition = iframeGeoProto.getCurrentPosition;
+    const iframeNativeWatchPosition = iframeGeoProto.watchPosition;
+    const iframeNativeClearWatch = iframeGeoProto.clearWatch;
+
+    const IframeGeolocation = iframeGeolocationCtor as unknown as new () => object;
+
     // Shared watch-id tracking for this iframe instance
     const iframeWatchCallbacks = new Map<number, PositionCallback>();
     let iframeWatchIdCounter = 1;
 
-    const iframeGetCurrentPosition = (
+    const iframeGetCurrentPosition = function (
+      this: unknown,
       successCallback: PositionCallback,
       errorCallback?: PositionErrorCallback | null,
       options?: PositionOptions
-    ): void => {
+    ): void {
+      if (!geoArgsValid(IframeGeolocation, this, successCallback, errorCallback, options)) {
+        // eslint-disable-next-line prefer-rest-params
+        reproduceNativeGeoError(this, iframeNativeGetCurrentPosition, arguments);
+        return;
+      }
       const respond = ({ timedOut }: { timedOut: boolean }): void => {
         if (timedOut) {
           logger.warn("iframe getCurrentPosition: settings timed out, returning TIMEOUT error");
@@ -340,11 +368,17 @@ export function patchIframeWindow(iframeWindow: Window): void {
       }
     };
 
-    const iframeWatchPosition = (
+    const iframeWatchPosition = function (
+      this: unknown,
       successCallback: PositionCallback,
       errorCallback?: PositionErrorCallback | null,
       options?: PositionOptions
-    ): number => {
+    ): number {
+      if (!geoArgsValid(IframeGeolocation, this, successCallback, errorCallback, options)) {
+        // eslint-disable-next-line prefer-rest-params
+        reproduceNativeGeoError(this, iframeNativeWatchPosition, arguments);
+        return 0; // unreachable: reproduceNativeGeoError throws
+      }
       if (spoofingEnabled && spoofedLocation) {
         const watchId = iframeWatchIdCounter++;
         iframeWatchCallbacks.set(watchId, successCallback);
@@ -356,7 +390,12 @@ export function patchIframeWindow(iframeWindow: Window): void {
       return iframeOrigWatchPosition(successCallback, errorCallback, options);
     };
 
-    const iframeClearWatch = (watchId: number): void => {
+    const iframeClearWatch = function (this: unknown, watchId: number): void {
+      if (!(this instanceof IframeGeolocation)) {
+        // eslint-disable-next-line prefer-rest-params
+        reproduceNativeGeoError(this, iframeNativeClearWatch, arguments);
+        return;
+      }
       if (spoofingEnabled) {
         iframeWatchCallbacks.delete(watchId);
       } else {
@@ -404,74 +443,28 @@ export function patchIframeWindow(iframeWindow: Window): void {
 
     const iframeOrigQuery = iframePerms.query.bind(iframePerms);
 
-    // Unbound native `query`, captured BEFORE we override the prototype, so we
-    // can reproduce the browser's own brand-check rejection for a foreign `this`
-    // (mirrors the top-level permissions.ts override).
+    // Unbound native `query`, captured BEFORE we override the prototype.
 
     const iframeNativeQueryUnbound = (
       iframePermsCtor.prototype as {
         query?: (this: unknown, descriptor?: PermissionDescriptor) => Promise<PermissionStatus>;
       }
     ).query;
-    const IframePermissions = iframePermsCtor as unknown as new () => object;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
     const iframePermissionStatusCtor = (iframeWindow as any).PermissionStatus as
       | { prototype: object }
       | undefined;
 
-    const iframePermissionsQuery = function (
-      this: unknown,
-      descriptor: PermissionDescriptor
-    ): Promise<PermissionStatus> {
-      // Brand check: `query` is a Promise-returning WebIDL op, so a foreign
-      // `this` REJECTS (not throws). Delegate to the iframe realm's unbound
-      // native query so the rejection is genuine, then scrub our injected frame
-      // from its stack (cross-realm: the rejection is an iframe-realm Error).
-      if (iframeNativeQueryUnbound && !(this instanceof IframePermissions)) {
-        let result: Promise<PermissionStatus>;
-        try {
-          result = iframeNativeQueryUnbound.call(this, descriptor);
-        } catch (err) {
-          stripExtensionFramesFromStack(err);
-          throw err;
-        }
-        return result.catch((err: unknown) => {
-          stripExtensionFramesFromStack(err);
-          throw err;
-        });
-      }
-      if (descriptor?.name === "geolocation" && spoofingEnabled) {
-        // Return a PermissionStatus whose prototype matches the iframe's
-        // own `PermissionStatus.prototype`, so brand checks via
-        // `Object.prototype.toString.call(status)` (yielding
-        // `"[object PermissionStatus]"`) and `status instanceof
-        // iframeWindow.PermissionStatus` both pass.
-        const target: PermissionStatus = iframePermissionStatusCtor?.prototype
-          ? (Object.create(iframePermissionStatusCtor.prototype) as PermissionStatus)
-          : (new EventTarget() as unknown as PermissionStatus);
-        Object.defineProperty(target, "state", {
-          value: "granted",
-          writable: false,
-          enumerable: true,
-          configurable: false,
-        });
-        Object.defineProperty(target, "name", {
-          value: "geolocation",
-          writable: false,
-          enumerable: true,
-          configurable: false,
-        });
-        Object.defineProperty(target, "onchange", {
-          value: null,
-          writable: true,
-          enumerable: true,
-          configurable: true,
-        });
-        return Promise.resolve(target);
-      }
-      return iframeOrigQuery(descriptor);
-    };
+    // Use the SAME builder as the top-level realm (see permissions.ts), so the
+    // brand check, native-delegation-with-scrub, preserve-prompt gating, and
+    // settings-wait behaviour can't drift between realms.
+    const iframePermissionsQuery = buildPermissionsQueryOverride({
+      Permissions: iframePermsCtor as unknown as new () => object,
+      nativeQueryUnbound: iframeNativeQueryUnbound,
+      boundQuery: iframeOrigQuery,
+      PermissionStatusCtor: iframePermissionStatusCtor,
+    });
 
     installOverride(iframePermsCtor.prototype, "query", iframePermissionsQuery, 1);
     logger.debug("[patchIframeWindow] section 3 (permissions) complete");

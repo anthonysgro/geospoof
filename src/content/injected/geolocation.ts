@@ -297,7 +297,7 @@ function createGeolocationPosition(location: SpoofedLocation): SpoofedGeolocatio
 }
 
 /** A native geolocation method invoked with loose args during delegation. */
-type NativeGeoMethod = (...args: Array<unknown>) => unknown;
+export type NativeGeoMethod = (...args: Array<unknown>) => unknown;
 
 /** No-op used when substituting a *valid* callback during native delegation. */
 const GEO_NOOP = (): void => {};
@@ -311,13 +311,14 @@ const GEO_NOOP = (): void => {};
  *   - `options` (arg 2), when present, must be an object (dictionaries reject
  *     non-null primitives; functions are objects and are accepted).
  */
-function geoArgsValid(
+export function geoArgsValid(
+  GeolocationCtor: new () => object,
   self: unknown,
   successCallback: unknown,
   errorCallback: unknown,
   options: unknown
 ): boolean {
-  if (!(self instanceof Geolocation)) return false;
+  if (!(self instanceof GeolocationCtor)) return false;
   if (typeof successCallback !== "function") return false;
   if (errorCallback != null && typeof errorCallback !== "function") return false;
   if (options != null && Object(options) !== options) return false;
@@ -341,7 +342,7 @@ function geoArgsValid(
  * argument count is preserved so the native error message (which distinguishes
  * "1 argument required, but only 0 present" from a type error) matches exactly.
  */
-function reproduceNativeGeoError(
+export function reproduceNativeGeoError(
   self: unknown,
   nativeMethod: (...args: Array<unknown>) => unknown,
   args: IArguments
@@ -417,7 +418,7 @@ function getCurrentPositionOverride(
   errorCallback?: PositionErrorCallback | null,
   options?: PositionOptions
 ): void {
-  if (!geoArgsValid(this, successCallback, errorCallback, options)) {
+  if (!geoArgsValid(Geolocation, this, successCallback, errorCallback, options)) {
     // eslint-disable-next-line prefer-rest-params
     reproduceNativeGeoError(this, nativeGetCurrentPosition as NativeGeoMethod, arguments);
     return;
@@ -516,7 +517,7 @@ function watchPositionOverride(
   errorCallback?: PositionErrorCallback | null,
   options?: PositionOptions
 ): number {
-  if (!geoArgsValid(this, successCallback, errorCallback, options)) {
+  if (!geoArgsValid(Geolocation, this, successCallback, errorCallback, options)) {
     // eslint-disable-next-line prefer-rest-params
     reproduceNativeGeoError(this, nativeWatchPosition as NativeGeoMethod, arguments);
     // `reproduceNativeGeoError` always throws (the native call rejects the

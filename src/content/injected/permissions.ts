@@ -33,11 +33,13 @@ const logger = createLogger("INJ");
  * so that the prototype's brand-checked accessors are bypassed (the
  * same trick we use for GeolocationCoordinates.latitude in geolocation.ts).
  */
-function createSpoofedPermissionStatus(name: PermissionName = "geolocation"): PermissionStatus {
-  const target =
-    typeof PermissionStatus !== "undefined" && PermissionStatus.prototype
-      ? (Object.create(PermissionStatus.prototype) as PermissionStatus)
-      : (new EventTarget() as unknown as PermissionStatus);
+function createSpoofedPermissionStatus(
+  PermissionStatusCtor: { prototype: object } | undefined,
+  name: PermissionName = "geolocation"
+): PermissionStatus {
+  const target = PermissionStatusCtor?.prototype
+    ? (Object.create(PermissionStatusCtor.prototype) as PermissionStatus)
+    : (new EventTarget() as unknown as PermissionStatus);
 
   let onchangeHandler: ((this: PermissionStatus, ev: Event) => unknown) | null = null;
 
@@ -68,6 +70,93 @@ function createSpoofedPermissionStatus(name: PermissionName = "geolocation"): Pe
 }
 
 /**
+ * Realm-specific bindings the `query` override needs. Passing these in lets the
+ * SAME builder serve the top-level realm and every iframe realm (see
+ * `iframe-patching.ts`), so the brand check, native-delegation-with-scrub,
+ * preserve-prompt gating, and settings-wait logic live in exactly ONE place —
+ * no more drift between the two implementations. Shared spoofing state
+ * (`spoofingEnabled` / `settingsReceived` / `preserveGeolocationPrompt`) comes
+ * from the single shared `state` module, so it's identical across realms.
+ */
+export interface PermissionsRealm {
+  /** The realm's `Permissions` constructor, for the WebIDL `this` brand check. */
+  Permissions: (new () => object) | undefined;
+  /** The realm's unbound native `query`, captured BEFORE the override is installed. */
+  nativeQueryUnbound:
+    | ((this: unknown, descriptor?: PermissionDescriptor) => Promise<PermissionStatus>)
+    | undefined;
+  /** The realm's original `query`, bound to its `navigator.permissions`. */
+  boundQuery: (descriptor: PermissionDescriptor) => Promise<PermissionStatus>;
+  /** The realm's `PermissionStatus` constructor, for a prototype-correct spoofed status. */
+  PermissionStatusCtor: { prototype: object } | undefined;
+}
+
+/**
+ * Build the `Permissions.prototype.query` override for a given realm — the
+ * single source of truth used by both the top-level installer and
+ * `patchIframeWindow`.
+ *
+ *  - WebIDL brand check: a foreign `this` is delegated to the realm's unbound
+ *    native `query` so it rejects genuinely, with our injected frames scrubbed
+ *    from the (possibly cross-realm) rejection stack.
+ *  - `geolocation` → spoofed "granted" when spoofing is on and preserve-prompt
+ *    is off; otherwise the genuine state (preserve-prompt) via the original.
+ *  - Defers until settings arrive; all other permissions pass through.
+ */
+export function buildPermissionsQueryOverride(
+  realm: PermissionsRealm
+): (this: unknown, descriptor: PermissionDescriptor) => Promise<PermissionStatus> {
+  const spoofedOrGenuine = (
+    descriptor: PermissionDescriptor
+  ): Promise<PermissionStatus> | PermissionStatus =>
+    spoofingEnabled && !preserveGeolocationPrompt
+      ? createSpoofedPermissionStatus(realm.PermissionStatusCtor)
+      : realm.boundQuery(descriptor);
+
+  return function permissionsQueryOverride(
+    this: unknown,
+    descriptor: PermissionDescriptor
+  ): Promise<PermissionStatus> {
+    // Brand check: `query` is a Promise-returning WebIDL op, so a foreign `this`
+    // REJECTS (not throws). Delegate to the realm's unbound native query for a
+    // genuine rejection, then scrub our injected frames from its stack (the
+    // rejection may be a cross-realm Error, so the scrub is duck-typed).
+    if (realm.nativeQueryUnbound && realm.Permissions && !(this instanceof realm.Permissions)) {
+      let result: Promise<PermissionStatus>;
+      try {
+        result = realm.nativeQueryUnbound.call(this, descriptor);
+      } catch (err) {
+        stripExtensionFramesFromStack(err);
+        throw err;
+      }
+      return result.catch((err: unknown) => {
+        stripExtensionFramesFromStack(err);
+        throw err;
+      });
+    }
+    try {
+      if (descriptor?.name === "geolocation") {
+        logger.debug("permissions.query: intercepted geolocation check", {
+          spoofingEnabled,
+          settingsReceived,
+          preserveGeolocationPrompt,
+        });
+        if (settingsReceived) {
+          return Promise.resolve(spoofedOrGenuine(descriptor));
+        }
+        // Settings not yet received — defer so we don't answer before we know
+        // whether spoofing (and preserve-prompt) is on.
+        return waitForSettings().then(() => spoofedOrGenuine(descriptor));
+      }
+      return realm.boundQuery(descriptor);
+    } catch (error) {
+      logger.error("Error in permissions.query override:", error);
+      return realm.boundQuery(descriptor);
+    }
+  };
+}
+
+/**
  * Install the `Permissions.prototype.query` override.
  *
  * When spoofing is enabled and the queried permission is "geolocation",
@@ -95,74 +184,12 @@ export function installPermissionsOverride(): void {
     return;
   }
 
-  const permissionsQueryOverride = function (
-    this: unknown,
-    descriptor: PermissionDescriptor
-  ): Promise<PermissionStatus> {
-    // WebIDL brand check: native `Permissions.prototype.query.call(notPermissions, …)`
-    // throws `TypeError` synchronously ("Illegal invocation" / "does not implement
-    // interface Permissions") before returning a promise. Our override must do the
-    // same, or a page can detect it with one line:
-    //   Permissions.prototype.query.call({}, { name: "geolocation" })
-    // We reproduce the genuine error by invoking the unbound native method with the
-    // foreign `this`, then strip our injected-script frames from the stack so the
-    // extension id can't be read off it (Blink shows a chrome-extension:// frame).
-    if (
-      nativePermissionsQuery &&
-      typeof Permissions !== "undefined" &&
-      !(this instanceof Permissions)
-    ) {
-      // `query` is a Promise-returning WebIDL operation: on a foreign `this` the
-      // browser REJECTS the returned promise (it does NOT throw synchronously).
-      // Cast the receiver to Permissions deliberately — we want native to reject
-      // it. `.call` keeps this fully typed (returns Promise<PermissionStatus>).
-      let result: Promise<PermissionStatus>;
-      try {
-        result = nativePermissionsQuery.call(this, descriptor);
-      } catch (err) {
-        // Defensive: an engine that throws synchronously instead of rejecting.
-        stripExtensionFramesFromStack(err);
-        throw err;
-      }
-      // The rejection reason's stack carries our injected frame (Blink shows a
-      // chrome-extension:// URL; Firefox/Safari anonymize), so scrub it before it
-      // reaches the page, then re-reject with the genuine native error.
-      return result.catch((err: unknown) => {
-        stripExtensionFramesFromStack(err);
-        throw err;
-      });
-    }
-    try {
-      if (descriptor?.name === "geolocation") {
-        logger.debug("permissions.query: intercepted geolocation check", {
-          spoofingEnabled,
-          settingsReceived,
-          preserveGeolocationPrompt,
-        });
-        if (settingsReceived) {
-          // In preserve-prompt mode we never fake "granted" — the page should
-          // see the genuine permission state so a yet-to-be-prompted site reads
-          // "prompt" (and a denied site "denied"), matching a normal browser and
-          // shedding the always-granted fingerprinting signal.
-          if (spoofingEnabled && !preserveGeolocationPrompt) {
-            return Promise.resolve(createSpoofedPermissionStatus());
-          }
-          return originalPermissionsQuery(descriptor);
-        }
-        // Defer until settings arrive
-        return waitForSettings().then(() => {
-          if (spoofingEnabled && !preserveGeolocationPrompt) {
-            return createSpoofedPermissionStatus();
-          }
-          return originalPermissionsQuery(descriptor);
-        });
-      }
-      return originalPermissionsQuery(descriptor);
-    } catch (error) {
-      logger.error("Error in permissions.query override:", error);
-      return originalPermissionsQuery(descriptor);
-    }
-  };
+  const override = buildPermissionsQueryOverride({
+    Permissions,
+    nativeQueryUnbound: nativePermissionsQuery as PermissionsRealm["nativeQueryUnbound"],
+    boundQuery: originalPermissionsQuery,
+    PermissionStatusCtor: typeof PermissionStatus !== "undefined" ? PermissionStatus : undefined,
+  });
 
-  installOverride(Permissions.prototype, "query", permissionsQueryOverride, 1);
+  installOverride(Permissions.prototype, "query", override, 1);
 }
