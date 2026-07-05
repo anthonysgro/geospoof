@@ -23,7 +23,7 @@ use idevice::dvt::remote_server::RemoteServerClient;
 use idevice::house_arrest::HouseArrestClient;
 use idevice::lockdown::LockdownClient;
 use idevice::mobile_image_mounter::ImageMounter;
-use idevice::provider::IdeviceProvider;
+use idevice::provider::{IdeviceProvider, TcpProvider};
 use idevice::rsd::RsdHandshake;
 use idevice::usbmuxd::{Connection, UsbmuxdAddr, UsbmuxdConnection};
 use idevice::{IdeviceService, RsdService};
@@ -180,6 +180,52 @@ impl IdeviceController {
         })
         .await
         .map_err(|e| DeviceError::Io(e.to_string()))?
+    }
+
+    /// NORTH-STAR EXPERIMENT (temporary): probe whether `lockdownd` answers over an
+    /// arbitrary IP (e.g. a Tailscale/overlay address) via `TcpProvider`, bypassing
+    /// usbmux entirely. Fetches the pairing record via usbmux (device must be reachable
+    /// now), then connects lockdown to `ip:62078` over TCP and reads ProductVersion.
+    /// Success ⇒ the remote/off-Wi-Fi control path is viable (design §10j).
+    pub async fn tcp_lockdown_probe(&self, ip: std::net::IpAddr) -> Result<String, DeviceError> {
+        let usb = self.provider().await?;
+        let pairing = usb
+            .get_pairing_file()
+            .await
+            .map_err(|e| DeviceError::Io(format!("get pairing file: {e}")))?;
+        let tcp = TcpProvider {
+            addr: ip,
+            scope_id: None,
+            pairing_file: pairing,
+            label: LABEL.to_string(),
+        };
+        let mut lockdown = LockdownClient::connect(&tcp)
+            .await
+            .map_err(|e| DeviceError::ServiceUnavailable(format!("lockdown connect: {e}")))?;
+        // Report whether the *authenticated session* works over TCP (developer services
+        // need it), not just the raw connect.
+        let session = match tcp.get_pairing_file().await {
+            Ok(pairing) => match lockdown.start_session(&pairing).await {
+                Ok(_) => "start_session=OK".to_string(),
+                Err(e) => format!("start_session=FAILED({e})"),
+            },
+            Err(e) => format!("pairing=FAILED({e})"),
+        };
+        let version = lockdown
+            .get_value(Some("ProductVersion"), None)
+            .await
+            .ok()
+            .and_then(|v| v.as_string().map(str::to_string))
+            .unwrap_or_default();
+        let name = lockdown
+            .get_value(Some("DeviceName"), None)
+            .await
+            .ok()
+            .and_then(|v| v.as_string().map(str::to_string))
+            .unwrap_or_default();
+        Ok(format!(
+            "{session}; ProductVersion={version:?}; DeviceName={name:?}"
+        ))
     }
 
     async fn ddi_mounted(&self) -> bool {

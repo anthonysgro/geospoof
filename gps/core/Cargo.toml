@@ -24,3 +24,6 @@ plist = "=1.10.0"
 [dev-dependencies]
 # test-util enables paused-time control for deterministic hold-loop tests.
 tokio = { version = "=1.52.3", features = ["rt", "time", "macros", "test-util"] }
+# Dev-only: surface idevice's internal `tracing` output in the verify_device spike
+# (RUST_LOG=idevice=trace) to debug the network remotepairing wire exchange.
+tracing-subscriber = { version = "=0.3.23", features = ["env-filter"] }

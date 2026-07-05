@@ -28,4 +28,7 @@ idevice = { version = "=0.1.64", features = [
     # same usbmux/Wi-Fi link (house_arrest vends the container; afc reads it). §10i.
     "afc",
     "house_arrest",
+    # North-star spike (§10j): RemoteXPC/RemotePairing TLS-PSK tunnel for off-usbmux /
+    # overlay control (the modern iOS 17+ wireless path). Pure-Rust crypto, no OpenSSL.
+    "remote_pairing",
 ] }
