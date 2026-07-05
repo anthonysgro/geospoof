@@ -600,6 +600,12 @@ final class SpoofController: ObservableObject {
     /// adoption in refreshFromExtension / restoreLocalPending sets it directly.
     @Published var preserveGeolocationPrompt = false
     @Published var vpnSyncEnabled = false
+    /// "Sync my iPhone's system GPS" — the Pro device-GPS layer (design §13).
+    /// Independent of the browser spoof: when on (and a location is chosen) the
+    /// GeoSpoof GPS desktop agent drives the iPhone's REAL system GPS to the same
+    /// location. Default off — moving the real device location is consequential
+    /// (Find My, every app), so it's an explicit opt-in, never automatic.
+    @Published var deviceGpsEnabled = false
     /// Site-scoping state. Mutated via the explicit setters below (which write
     /// the pending bridge record) and by adoption in refreshFromExtension /
     /// restoreLocalPending (which set them directly, no echo). No didSet, so
@@ -685,6 +691,8 @@ final class SpoofController: ObservableObject {
     init() {
         Log.app.info("SpoofController init")
         loadFavorites()
+        // Restore the device-GPS opt-in (§13) so the toggle survives relaunch.
+        deviceGpsEnabled = UserDefaults(suiteName: suite)?.bool(forKey: "gps_deviceEnabled") ?? false
         // Restore our own last-written desired state BEFORE reconciling with the
         // extension. The app keeps no other durable copy of its toggle/location
         // state, so on a cold launch (iOS terminating the backgrounded app, or
@@ -1063,6 +1071,16 @@ final class SpoofController: ObservableObject {
     func setWebRTCProtection(_ value: Bool) {
         Log.location.info("WebRTC protection \(value ? "enabled" : "disabled")")
         webrtcProtection = value
+        writePending()
+    }
+
+    /// Toggle the device-GPS sync layer (§13). Persists the opt-in (so it
+    /// survives relaunch) and rewrites `desired.json` so the desktop agent
+    /// picks up the change on its next tick.
+    func setDeviceGpsEnabled(_ value: Bool) {
+        Log.location.info("Device GPS sync \(value ? "enabled" : "disabled")")
+        deviceGpsEnabled = value
+        UserDefaults(suiteName: suite)?.set(value, forKey: "gps_deviceEnabled")
         writePending()
     }
 
@@ -1507,9 +1525,11 @@ final class SpoofController: ObservableObject {
         }
         let url = docs.appendingPathComponent("desired.json")
 
-        // Only "enabled" for GPS when there's an actual coordinate to apply
-        // (e.g. mid-VPN-sync with no location yet is not an instruction to spoof).
-        let active = enabled && location != nil
+        // Device GPS is its own opt-in (`deviceGpsEnabled`), decoupled from the
+        // browser spoof: it applies whenever the user enabled the GPS layer AND a
+        // location is chosen. Default off, so the real device location never moves
+        // without explicit consent (Find My, every app is affected).
+        let active = deviceGpsEnabled && location != nil
         let provenance = vpnSyncEnabled ? "vpn-sync" : "manual"
         var obj: [String: Any] = [
             "version": 1,

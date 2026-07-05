@@ -157,30 +157,290 @@ struct HomeView: View {
     }
 }
 
-// MARK: - GPS (placeholder — real device-GPS UI is the GeoSpoof GPS work)
+// MARK: - GPS (device / system GPS spoofing via the GeoSpoof GPS desktop agent)
 
-/// Center tab for device (system) GPS spoofing driven by the GeoSpoof GPS desktop agent.
-/// Placeholder for now; `controller` is retained so the real UI can read status / drive
-/// desired state without a signature change later.
+/// Redacted device summary from the agent's status report.
+struct GpsDeviceSummary: Codable, Equatable {
+    var name: String
+    var productType: String
+    var iosVersion: String
+    enum CodingKeys: String, CodingKey {
+        case name
+        case productType = "product_type"
+        case iosVersion = "ios_version"
+    }
+}
+
+/// The status the GeoSpoof GPS desktop agent writes back into this app's Documents
+/// as `status.json` over AFC (design §13e). Mirrors the agent's `StatusReport`.
+struct GpsStatus: Codable, Equatable {
+    var version: Int
+    var agentVersion: String
+    var connected: Bool
+    var device: GpsDeviceSummary?
+    var session: String     // "idle" | "spoofing" | "lost"
+    var provenance: String  // "vpn-sync" | "manual" | "from-app" | "unknown"
+    var remediation: String
+    var error: String?
+    var pro: Bool
+    enum CodingKeys: String, CodingKey {
+        case version
+        case agentVersion = "agent_version"
+        case connected, device, session, provenance, remediation, error, pro
+    }
+}
+
+/// Polls the agent's `status.json` from the app's Documents. The desktop agent
+/// rewrites it every few seconds over AFC; if it goes stale the Mac agent isn't
+/// running, so we treat the feature as "waiting for your Mac".
+@MainActor
+final class GpsStatusStore: ObservableObject {
+    @Published private(set) var status: GpsStatus?
+    /// True when there's no fresh status (agent not running / never set up).
+    @Published private(set) var isStale = true
+
+    /// The agent ticks ~every 5s; allow slack before calling it stale.
+    private static let freshWindow: TimeInterval = 20
+
+    func reload() {
+        guard let docs = FileManager.default
+            .urls(for: .documentDirectory, in: .userDomainMask).first else {
+            status = nil; isStale = true; return
+        }
+        let url = docs.appendingPathComponent("status.json")
+        guard let data = try? Data(contentsOf: url) else {
+            status = nil; isStale = true; return
+        }
+        status = try? JSONDecoder().decode(GpsStatus.self, from: data)
+        let mod = (try? FileManager.default
+            .attributesOfItem(atPath: url.path)[.modificationDate]) as? Date
+        if let mod {
+            isStale = Date().timeIntervalSince(mod) > Self.freshWindow
+        } else {
+            isStale = (status == nil)
+        }
+    }
+}
+
+/// Coarse UI phase derived from Pro state + the agent status.
+private enum GpsPhase: Equatable {
+    case notPro
+    case waitingForMac
+    case setupNeeded(String)
+    case ready
+    case spoofing
+    case lost
+}
+
+/// Center tab: device (system) GPS spoofing driven by the GeoSpoof GPS desktop
+/// agent. The iOS app is the sole controller — it writes the desired location
+/// (§13e) and reads the agent's status back. Location itself is chosen on Home;
+/// this tab opts the device-GPS layer in/out and shows connection/setup status.
 struct GpsView: View {
     @ObservedObject var controller: SpoofController
+    @ObservedObject private var pro = ProStore.shared
+    @ObservedObject private var router = AppRouter.shared
+    @StateObject private var statusStore = GpsStatusStore()
+
+    /// Where to send users to get the desktop app. TODO: confirm final URL.
+    private let downloadURL = URL(string: "https://www.geospoof.com/gps")!
+    private let refreshTimer = Timer.publish(every: 3, on: .main, in: .common).autoconnect()
 
     var body: some View {
         AdaptiveNavigationStack {
-            VStack(spacing: 12) {
-                Image(systemName: "location.circle")
-                    .font(.largeTitle)
-                    .foregroundColor(.secondary)
-                Text("Device GPS")
+            Form {
+                switch phase {
+                case .notPro:
+                    proPitchSection
+                case .waitingForMac:
+                    aboutSection
+                    waitingSection
+                case .setupNeeded(let message):
+                    setupNeededSection(message)
+                    syncToggleSection
+                case .ready:
+                    connectedSection(active: false)
+                    syncToggleSection
+                case .spoofing:
+                    connectedSection(active: true)
+                    syncToggleSection
+                case .lost:
+                    lostSection
+                    syncToggleSection
+                }
+            }
+            .groupedFormStyle()
+            .tint(.brand)
+            .navigationTitle("GPS")
+            .onAppear { statusStore.reload() }
+            .onReceive(refreshTimer) { _ in statusStore.reload() }
+        }
+    }
+
+    private var phase: GpsPhase {
+        if !pro.isPro { return .notPro }
+        guard let s = statusStore.status, !statusStore.isStale else { return .waitingForMac }
+        if s.session == "lost" { return .lost }
+        if !s.connected {
+            return .setupNeeded(s.remediation.isEmpty ? "Connecting to your iPhone…" : s.remediation)
+        }
+        if s.session == "spoofing" { return .spoofing }
+        if !s.remediation.isEmpty { return .setupNeeded(s.remediation) }
+        return .ready
+    }
+
+    // MARK: Sections
+
+    private var aboutSection: some View {
+        Section {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "location.circle.fill")
+                    .font(.title2)
+                    .foregroundColor(.brand)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Device GPS")
+                        .font(.headline)
+                    Text("Move your iPhone’s real system GPS to your spoof location, driven from the GeoSpoof GPS app on your Mac.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
+    private var proPitchSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 10) {
+                Label("Device GPS", systemImage: "location.circle.fill")
                     .font(.headline)
-                Text("Move your iPhone’s real GPS from your computer. Coming soon.")
+                Text("Spoof your iPhone’s real system GPS — not just the browser — to match your chosen location, controlled from your Mac. A GeoSpoof Pro feature.")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
+                Button {
+                    router.showPaywall = true
+                } label: {
+                    Text("Upgrade to Pro")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .padding(.top, 2)
             }
-            .padding(40)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .navigationTitle("GPS")
+            .padding(.vertical, 4)
+        }
+    }
+
+    private var waitingSection: some View {
+        Section {
+            HStack(spacing: 10) {
+                ProgressView()
+                Text("Waiting for your Mac…")
+                    .foregroundColor(.secondary)
+            }
+            Link(destination: downloadURL) {
+                Label("Get GeoSpoof GPS for Mac", systemImage: "arrow.down.circle")
+            }
+        } header: {
+            Text("Set up")
+        } footer: {
+            Text("1. Install GeoSpoof GPS on your Mac.\n2. Connect this iPhone with a cable and tap Trust.\n3. Follow the one-time setup in the Mac app.\nThen your chosen location will sync to your iPhone’s GPS.")
+        }
+    }
+
+    private func setupNeededSection(_ message: String) -> some View {
+        Section {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.orange)
+                Text(message)
+            }
+        } header: {
+            Text("Action needed")
+        } footer: {
+            Text("Complete this step on your iPhone or in the GeoSpoof GPS app on your Mac.")
+        }
+    }
+
+    @ViewBuilder
+    private func connectedSection(active: Bool) -> some View {
+        Section {
+            HStack {
+                Image(systemName: active ? "checkmark.circle.fill" : "checkmark.circle")
+                    .foregroundColor(active ? .green : .secondary)
+                Text(active ? "GPS spoofing active" : "Connected")
+                Spacer()
+            }
+            if let device = statusStore.status?.device {
+                infoRow("Device", device.name)
+            }
+            if active {
+                infoRow("Location", locationText)
+                if let prov = provenanceLabel(statusStore.status?.provenance ?? "") {
+                    infoRow("Source", prov)
+                }
+            }
+        } header: {
+            Text("Status")
+        }
+    }
+
+    private var syncToggleSection: some View {
+        Section {
+            Toggle(isOn: Binding(
+                get: { controller.deviceGpsEnabled },
+                set: { controller.setDeviceGpsEnabled($0) }
+            )) {
+                Label("Sync my iPhone’s GPS", systemImage: "location.fill.viewfinder")
+            }
+        } footer: {
+            if controller.deviceGpsEnabled && controller.location == nil {
+                Text("Choose a location on the Home tab to start syncing.")
+            } else {
+                Text("When on, your iPhone’s real system GPS is set to your chosen location. This affects all apps, including Find My.")
+            }
+        }
+    }
+
+    private var lostSection: some View {
+        Section {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "wifi.exclamationmark")
+                    .foregroundColor(.orange)
+                Text("Lost the connection to your Mac. Your real GPS may have returned.")
+            }
+        } header: {
+            Text("Status")
+        } footer: {
+            Text("Make sure the GeoSpoof GPS app is running and your Mac is awake and online.")
+        }
+    }
+
+    // MARK: Helpers
+
+    private func infoRow(_ label: String, _ value: String) -> some View {
+        HStack {
+            Text(label)
+            Spacer()
+            Text(value)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.trailing)
+        }
+    }
+
+    private var locationText: String {
+        if let name = controller.locationName?.displayName, !name.isEmpty { return name }
+        if let loc = controller.location {
+            return String(format: "%.4f, %.4f", loc.latitude, loc.longitude)
+        }
+        return "No location chosen"
+    }
+
+    private func provenanceLabel(_ provenance: String) -> String? {
+        switch provenance {
+        case "vpn-sync": return "Matched to your VPN"
+        case "manual": return "Manual"
+        case "from-app": return "GeoSpoof"
+        default: return nil
         }
     }
 }
