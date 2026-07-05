@@ -27,6 +27,10 @@ pub struct MockDeviceController {
     events: Mutex<VecDeque<DeviceEvent>>,
     /// Scripted result for `read_app_file` (the AFC desired-state source).
     app_file: Mutex<Option<Result<Vec<u8>, DeviceError>>>,
+    /// Files written via `write_app_file` (the status back-channel): (filename, bytes).
+    written_app_files: Mutex<Vec<(String, Vec<u8>)>>,
+    /// Optional forced error for `write_app_file`.
+    write_app_file_err: Option<DeviceError>,
     set_calls: AtomicUsize,
     clear_calls: AtomicUsize,
     mount_calls: AtomicUsize,
@@ -55,6 +59,8 @@ impl MockDeviceController {
             clear_default: Ok(()),
             events: Mutex::new(VecDeque::new()),
             app_file: Mutex::new(None),
+            written_app_files: Mutex::new(Vec::new()),
+            write_app_file_err: None,
             set_calls: AtomicUsize::new(0),
             clear_calls: AtomicUsize::new(0),
             mount_calls: AtomicUsize::new(0),
@@ -102,6 +108,17 @@ impl MockDeviceController {
     pub fn with_app_file(self, result: Result<Vec<u8>, DeviceError>) -> Self {
         *self.app_file.lock().expect("mock lock") = Some(result);
         self
+    }
+
+    /// Make `write_app_file` fail (status back-channel failure test).
+    pub fn with_write_app_file_err(mut self, err: DeviceError) -> Self {
+        self.write_app_file_err = Some(err);
+        self
+    }
+
+    /// Snapshot of files written via `write_app_file` — `(filename, bytes)` in call order.
+    pub fn written_app_files(&self) -> Vec<(String, Vec<u8>)> {
+        self.written_app_files.lock().expect("mock lock").clone()
     }
 
     /// Number of `set_location` calls observed.
@@ -166,5 +183,21 @@ impl DeviceController for MockDeviceController {
                 "no app file scripted".to_string(),
             )),
         }
+    }
+
+    async fn write_app_file(
+        &self,
+        _bundle_id: &str,
+        filename: &str,
+        bytes: &[u8],
+    ) -> Result<(), DeviceError> {
+        if let Some(err) = &self.write_app_file_err {
+            return Err(err.clone());
+        }
+        self.written_app_files
+            .lock()
+            .expect("mock lock")
+            .push((filename.to_string(), bytes.to_vec()));
+        Ok(())
     }
 }

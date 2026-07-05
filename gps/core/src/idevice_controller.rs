@@ -379,6 +379,33 @@ impl DeviceController for IdeviceController {
         };
         with_timeout(OP_TIMEOUT, op).await
     }
+
+    /// Write a file into an installed app's Documents over house_arrest + AFC — the
+    /// reverse of `read_app_file`, used to publish `status.json` back to the controlling
+    /// iOS app (design §13e). `!Send` session types → `spawn_blocking` + current-thread rt.
+    async fn write_app_file(
+        &self,
+        bundle_id: &str,
+        filename: &str,
+        bytes: &[u8],
+    ) -> Result<(), DeviceError> {
+        let udid = self.udid.clone();
+        let bundle_id = bundle_id.to_string();
+        let filename = filename.to_string();
+        let bytes = bytes.to_vec();
+        let op = async move {
+            tokio::task::spawn_blocking(move || {
+                let rt = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .map_err(|e| DeviceError::Io(e.to_string()))?;
+                rt.block_on(write_app_file_session(&udid, &bundle_id, &filename, &bytes))
+            })
+            .await
+            .map_err(|e| DeviceError::Io(e.to_string()))?
+        };
+        with_timeout(OP_TIMEOUT, op).await
+    }
 }
 
 /// Read `filename` from an app's Documents via house_arrest **VendDocuments** + AFC.
@@ -415,6 +442,36 @@ async fn read_app_file_session(
         .map_err(|e| DeviceError::Io(e.to_string()))?;
     let _ = fd.close().await;
     Ok(bytes)
+}
+
+/// Write `bytes` to `filename` in an app's Documents via house_arrest **VendDocuments** +
+/// AFC (the write counterpart of [`read_app_file_session`]). Opens `Documents/<filename>`
+/// `WrOnly` (O_WRONLY|O_CREAT|O_TRUNC) and writes the whole payload. Same VendDocuments path
+/// as reads (dev/prod parity; requires the app's `UIFileSharingEnabled`). `!Send`; runs
+/// inside `spawn_blocking`.
+async fn write_app_file_session(
+    udid: &str,
+    bundle_id: &str,
+    filename: &str,
+    bytes: &[u8],
+) -> Result<(), DeviceError> {
+    let provider = build_provider(udid).await?;
+    let house = HouseArrestClient::connect(&*provider)
+        .await
+        .map_err(|e| DeviceError::ServiceUnavailable(e.to_string()))?;
+    let mut afc = house
+        .vend_documents(bundle_id)
+        .await
+        .map_err(|e| DeviceError::ServiceUnavailable(e.to_string()))?;
+    let mut fd = afc
+        .open(format!("Documents/{filename}"), AfcFopenMode::WrOnly)
+        .await
+        .map_err(|e| DeviceError::Io(e.to_string()))?;
+    fd.write_entire(bytes)
+        .await
+        .map_err(|e| DeviceError::Io(e.to_string()))?;
+    let _ = fd.close().await;
+    Ok(())
 }
 
 /// Build a usbmux provider for a specific device UDID.

@@ -59,4 +59,19 @@ pub trait DeviceController: Send + Sync {
             "reading app files is not supported by this controller".to_string(),
         ))
     }
+
+    /// Write a file into an installed app's Documents over the device link (AFC write) —
+    /// the reverse of [`read_app_file`](Self::read_app_file). Used to publish the agent's
+    /// `status.json` back to the controlling iOS app so the phone can display connected/
+    /// spoofing state and remediation guidance (design §13e). Default: unsupported.
+    async fn write_app_file(
+        &self,
+        _bundle_id: &str,
+        _filename: &str,
+        _bytes: &[u8],
+    ) -> Result<(), DeviceError> {
+        Err(DeviceError::ServiceUnavailable(
+            "writing app files is not supported by this controller".to_string(),
+        ))
+    }
 }

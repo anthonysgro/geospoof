@@ -123,6 +123,26 @@ async fn main() {
             },
             None => eprintln!("usage: verify_device tcp-lockdown <ip>"),
         },
+        "write-app" => {
+            let bundle_id = args.get(2).map(String::as_str);
+            let filename = args.get(3).map(String::as_str);
+            let text = args.get(4).map(String::as_str).unwrap_or("hello from geospoof");
+            match (bundle_id, filename) {
+                (Some(bundle_id), Some(filename)) => {
+                    match controller
+                        .write_app_file(bundle_id, filename, text.as_bytes())
+                        .await
+                    {
+                        Ok(()) => println!(
+                            "write-app OK -> wrote {} bytes to {bundle_id} Documents/{filename}",
+                            text.len()
+                        ),
+                        Err(e) => eprintln!("write-app FAILED: {e}"),
+                    }
+                }
+                _ => eprintln!("usage: verify_device write-app <bundle-id> <filename> [text]"),
+            }
+        }
         "read-app" => {
             let bundle_id = args.get(2).map(String::as_str);
             let filename = args.get(3).map(String::as_str).unwrap_or("desired.json");

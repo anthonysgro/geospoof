@@ -225,6 +225,9 @@ async fn run(dir: &Path) {
                     let report = reconciler.reconcile(&desired).await;
                     tracing::info!(session = ?report.session, connected = report.connected, "reconciled");
                     write_status(dir, &report);
+                    // Publish status back to the controlling iOS app over the device link
+                    // so the phone can show state + remediation (design §13e).
+                    publish_status_to_app(&source, controller.as_ref(), &report).await;
                     keep_awake.set(should_keep_awake(report.session));
                 }
             }
@@ -238,6 +241,30 @@ async fn run(dir: &Path) {
             }
         }
         tokio::time::sleep(POLL_INTERVAL).await;
+    }
+}
+
+/// Publish the status report back to the controlling iOS app's Documents over the device
+/// link (§13e), so the phone can display connected/spoofing state + remediation. Only in
+/// `IosApp` mode; best-effort — a write failure (e.g. an AFC blip) is logged, never fatal.
+async fn publish_status_to_app(
+    source: &DesiredSource,
+    controller: &dyn DeviceController,
+    report: &StatusReport,
+) {
+    let DesiredSource::IosApp { bundle_id } = source else {
+        return;
+    };
+    match serde_json::to_vec_pretty(report) {
+        Ok(json) => {
+            if let Err(e) = controller
+                .write_app_file(bundle_id, "status.json", &json)
+                .await
+            {
+                tracing::debug!("status write-back to app failed: {e}");
+            }
+        }
+        Err(e) => tracing::warn!("cannot serialize status for app: {e}"),
     }
 }
 
@@ -362,5 +389,37 @@ mod tests {
         let last = DesiredState::manual(1.0, 2.0);
         let desired = resolve_desired(&ios_source(), &mock, Path::new("/tmp"), &last).await;
         assert_eq!(desired, last);
+    }
+
+    #[tokio::test]
+    async fn publishes_status_to_app_in_ios_mode() {
+        // In IosApp mode the agent writes status.json back to the phone (§13e).
+        let mock = MockDeviceController::ready();
+        let report = disconnected_report(true);
+        publish_status_to_app(&ios_source(), &mock, &report).await;
+
+        let written = mock.written_app_files();
+        assert_eq!(written.len(), 1);
+        assert_eq!(written[0].0, "status.json");
+        // Round-trips as a StatusReport the phone can parse.
+        let back: StatusReport = serde_json::from_slice(&written[0].1).unwrap();
+        assert!(back.pro);
+    }
+
+    #[tokio::test]
+    async fn local_file_mode_does_not_publish_to_app() {
+        // Local-file (CLI/testing) mode has no phone to publish to — must not write.
+        let mock = MockDeviceController::ready();
+        publish_status_to_app(&DesiredSource::LocalFile, &mock, &disconnected_report(true)).await;
+        assert!(mock.written_app_files().is_empty());
+    }
+
+    #[tokio::test]
+    async fn status_write_back_failure_is_non_fatal() {
+        // An AFC write blip must be swallowed (best-effort), never propagate/panic.
+        let mock =
+            MockDeviceController::ready().with_write_app_file_err(DeviceError::Io("blip".into()));
+        publish_status_to_app(&ios_source(), &mock, &disconnected_report(true)).await;
+        assert!(mock.written_app_files().is_empty());
     }
 }
