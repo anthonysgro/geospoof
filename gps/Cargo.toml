@@ -1,0 +1,24 @@
+[workspace]
+resolver = "2"
+members = ["core", "ffi"]
+
+[workspace.package]
+version = "0.0.1"
+edition = "2021"
+license = "MIT"
+authors = ["GeoSpoof"]
+repository = "https://github.com/anthonysgro/geospoof"
+
+[workspace.dependencies]
+# Pinned EXACT (design §10a.3: pin exacts, keep swappable). MIT.
+# Feature set targets what the core needs: usbmux (tcp), the CoreDeviceProxy userspace
+# tunnel, RSD, DVT location (set/clear), the legacy location fallback, and DDI mounting.
+idevice = { version = "=0.1.64", features = [
+    "tcp",
+    "core_device_proxy",
+    "rsd",
+    "dvt",
+    "location_simulation",
+    "tunnel_tcp_stack",
+    "mobile_image_mounter",
+] }

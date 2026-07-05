@@ -49,3 +49,10 @@ npm-debug.log*
 *.p8
 
 assets/Proton_Assets/*
+
+# GeoSpoof GPS (Rust/Swift desktop product under /gps)
+gps/target/
+gps/**/target/
+# iOS device-tooling working files (never source; created by go-ios/idevice in CWD)
+devimages/
+selfIdentity.plist

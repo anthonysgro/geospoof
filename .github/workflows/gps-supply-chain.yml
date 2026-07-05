@@ -1,0 +1,44 @@
+name: GPS Supply Chain
+
+# Supply-chain checks for the GeoSpoof GPS workspace (design §10a.3):
+# cargo-deny (advisories + license allow-list + bans + source trust) and cargo-audit
+# (RustSec vulnerabilities). Path-scoped to gps/, PLUS a weekly schedule so new
+# advisories against unchanged dependencies are still caught. Verified locally against
+# gps/Cargo.lock before landing (cargo-deny 0.19, cargo-audit 0.22).
+
+on:
+  push:
+    paths:
+      - "gps/**"
+      - ".github/workflows/gps-supply-chain.yml"
+  pull_request:
+    paths:
+      - "gps/**"
+      - ".github/workflows/gps-supply-chain.yml"
+  schedule:
+    - cron: "0 7 * * 1" # Mondays 07:00 UTC
+
+jobs:
+  cargo-deny:
+    name: cargo-deny
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          manifest-path: gps/Cargo.toml
+          command: check
+          arguments: --all-features
+
+  cargo-audit:
+    name: cargo-audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gps
+    steps:
+      - uses: actions/checkout@v5
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+      - run: cargo audit

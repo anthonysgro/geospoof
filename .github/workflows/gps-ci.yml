@@ -1,0 +1,64 @@
+name: GPS CI
+
+# Path-scoped CI for the GeoSpoof GPS product (Rust core + agent under /gps).
+# Runs ONLY when files under gps/ (or this workflow) change, so it never triggers on
+# extension/site/CDK-only changes. Until the Cargo workspace is scaffolded (task 2),
+# the cargo steps are skipped gracefully.
+
+on:
+  push:
+    paths:
+      - "gps/**"
+      - ".github/workflows/gps-ci.yml"
+  pull_request:
+    paths:
+      - "gps/**"
+      - ".github/workflows/gps-ci.yml"
+
+jobs:
+  rust:
+    name: rust checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gps
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check for Cargo workspace
+        id: check
+        run: |
+          if [ -f Cargo.toml ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "No gps/Cargo.toml yet — workspace not scaffolded (task 2). Skipping."
+          fi
+
+      - name: Install Rust toolchain
+        if: steps.check.outputs.exists == 'true'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        if: steps.check.outputs.exists == 'true'
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: gps
+
+      - name: Format
+        if: steps.check.outputs.exists == 'true'
+        run: cargo fmt --all --check
+
+      - name: Clippy
+        if: steps.check.outputs.exists == 'true'
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Build
+        if: steps.check.outputs.exists == 'true'
+        run: cargo build --all-targets --locked
+
+      - name: Test
+        if: steps.check.outputs.exists == 'true'
+        run: cargo test --locked

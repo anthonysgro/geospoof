@@ -1,0 +1,17 @@
+[package]
+name = "geospoof-gps-ffi"
+description = "C ABI over geospoof-gps-core for embedding in native hosts."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+# App-internal crate; never published to crates.io.
+publish = false
+
+[lib]
+# Static for native-app embedding; dynamic for flexibility. Full C ABI defined later
+# (design §10a.1).
+crate-type = ["staticlib", "cdylib"]
+
+[dependencies]
+geospoof-gps-core = { path = "../core" }
