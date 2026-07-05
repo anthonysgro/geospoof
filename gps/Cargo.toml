@@ -15,6 +15,7 @@ repository = "https://github.com/anthonysgro/geospoof"
 # tunnel, RSD, DVT location (set/clear), the legacy location fallback, and DDI mounting.
 idevice = { version = "=0.1.64", features = [
     "tcp",
+    "usbmuxd",
     "core_device_proxy",
     "rsd",
     "dvt",

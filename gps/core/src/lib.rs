@@ -9,13 +9,10 @@
 //! device [`state_machine`] (task 7), and the async [`hold`] loop (task 9). The real
 //! `IdeviceController` implementation lands in a later task (13).
 
-// Keep `idevice` linked until the real implementation (task 13) uses it, so the
-// dependency stays resolved/locked and the target feature set keeps compiling.
-use idevice as _;
-
 pub mod controller;
 pub mod error;
 pub mod hold;
+pub mod idevice_controller;
 pub mod state_machine;
 pub mod types;
 
@@ -25,6 +22,7 @@ pub mod mock;
 pub use controller::{DeviceController, DeviceEvent};
 pub use error::DeviceError;
 pub use hold::{hold_location, HoldConfig, HoldOutcome};
+pub use idevice_controller::IdeviceController;
 pub use state_machine::{remediation_for, transition, Event, Remediation};
 pub use types::{Coordinate, DeviceInfo, DeviceState, DeviceStatus, InvalidCoordinate};
 
