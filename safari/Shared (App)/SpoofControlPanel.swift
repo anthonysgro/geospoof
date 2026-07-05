@@ -1558,6 +1558,12 @@ private struct EnvironmentReviewModifier: ViewModifier {
 /// page-context convenience).
 struct SiteFiltersView: View {
     @ObservedObject var controller: SpoofController
+    /// Navigation title. iOS presents this as the "Browser" tab; macOS keeps "Filters".
+    var title: String = "Filters"
+    /// When true (the iOS Browser tab), append the browser-geolocation settings — Location
+    /// Accuracy + Preserve Location Prompts — below the site filters. macOS keeps those in
+    /// its own Settings › Advanced, so it leaves this off.
+    var showBrowserSettings: Bool = false
     @ObservedObject private var pro = ProStore.shared
     @State private var showingAdd = false
     @State private var showPaywall = false
@@ -1578,6 +1584,26 @@ struct SiteFiltersView: View {
     var body: some View {
         AdaptiveNavigationStack {
             Form {
+                // iOS "Browser" tab: browser-geolocation settings sit ABOVE the site filters
+                // (filters can grow long). Moved out of Settings › Advanced; macOS leaves off.
+                if showBrowserSettings {
+                    Section {
+                        NavigationLink {
+                            AccuracyPickerView(controller: controller)
+                        } label: {
+                            HStack {
+                                Label("Location Accuracy", systemImage: "scope")
+                                Spacer()
+                                Text(accuracyValueLabel(for: controller.accuracySetting))
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        PreservePromptRows(controller: controller)
+                    } header: {
+                        Text("Location")
+                    }
+                }
+
                 Section {
                     Picker("Mode", selection: $pickerMode) {
                         ForEach(ScopeMode.allCases) { mode in
@@ -1619,7 +1645,7 @@ struct SiteFiltersView: View {
             }
             .groupedFormStyle()
             .tint(.brand)
-            .navigationTitle("Filters")
+            .navigationTitle(title)
             .sheet(isPresented: $showingAdd) {
                 AddSiteSheet(
                     mode: controller.scopeMode,

@@ -57,12 +57,20 @@ struct RootView: View {
         TabView {
             HomeView(controller: controller)
                 .tabItem {
-                    Label("Home", systemImage: "location.circle")
+                    Label("Home", systemImage: "house")
                 }
 
-            SiteFiltersView(controller: controller)
+            SiteFiltersView(controller: controller, title: "Browser", showBrowserSettings: true)
                 .tabItem {
-                    Label("Filters", systemImage: "line.3.horizontal.decrease.circle")
+                    Label("Browser", systemImage: "globe")
+                }
+
+            // GPS sits in the center (5 tabs: Home · Browser · GPS · Details · Settings) and
+            // reuses Home's old location glyph. Placeholder for now — the real device-GPS UI
+            // is the GeoSpoof GPS work.
+            GpsView(controller: controller)
+                .tabItem {
+                    Label("GPS", systemImage: "location.circle")
                 }
 
             DetailsTab(controller: controller)
@@ -149,6 +157,34 @@ struct HomeView: View {
     }
 }
 
+// MARK: - GPS (placeholder — real device-GPS UI is the GeoSpoof GPS work)
+
+/// Center tab for device (system) GPS spoofing driven by the GeoSpoof GPS desktop agent.
+/// Placeholder for now; `controller` is retained so the real UI can read status / drive
+/// desired state without a signature change later.
+struct GpsView: View {
+    @ObservedObject var controller: SpoofController
+
+    var body: some View {
+        AdaptiveNavigationStack {
+            VStack(spacing: 12) {
+                Image(systemName: "location.circle")
+                    .font(.largeTitle)
+                    .foregroundColor(.secondary)
+                Text("Device GPS")
+                    .font(.headline)
+                Text("Move your iPhone’s real GPS from your computer. Coming soon.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(40)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .navigationTitle("GPS")
+        }
+    }
+}
+
 struct SettingsView: View {
     @ObservedObject var controller: SpoofController
     @StateObject private var iconModel = AppIconModel()
@@ -191,22 +227,6 @@ struct SettingsView: View {
                     }
                 } header: {
                     Text("Appearance")
-                }
-
-                Section {
-                    NavigationLink {
-                        AccuracyPickerView(controller: controller)
-                    } label: {
-                        HStack {
-                            Label("Location Accuracy", systemImage: "scope")
-                            Spacer()
-                            Text(accuracyValueLabel(for: controller.accuracySetting))
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    PreservePromptRows(controller: controller)
-                } header: {
-                    Text("Advanced")
                 }
 
                 // Tips remain available only to founding supporters — they got
