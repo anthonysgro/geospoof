@@ -167,6 +167,47 @@ function buildServiceWorkerRegisterTests(): ReadonlyArray<TestDefinition> {
 
   return [
     {
+      id: "extension-presence.sw-register.not-own-on-instance",
+      group: "extension-presence",
+      name: "navigator.serviceWorker.register: inherited, not own on instance",
+      description:
+        "Native `register` is a WebIDL operation on ServiceWorkerContainer.prototype; the container instance has no own `register`. An override installed on the instance is detectable via hasOwnProperty.",
+      technique:
+        "Check Object.prototype.hasOwnProperty.call(navigator.serviceWorker, 'register') is false and the prototype carries it instead.",
+      codeSnippet: `!Object.prototype.hasOwnProperty.call(navigator.serviceWorker, "register") &&
+Object.prototype.hasOwnProperty.call(
+  Object.getPrototypeOf(navigator.serviceWorker),
+  "register"
+)`,
+
+      run: async (): Promise<TestResult> => {
+        if (typeof navigator === "undefined" || !navigator.serviceWorker) {
+          return {
+            status: "skipped",
+            expected: "navigator.serviceWorker to be present",
+            actual: "navigator.serviceWorker unavailable",
+          }
+        }
+        const container = navigator.serviceWorker
+        const ownOnInstance = Object.prototype.hasOwnProperty.call(
+          container,
+          "register"
+        )
+        const proto = Object.getPrototypeOf(container) as object | null
+        const ownOnPrototype = proto
+          ? Object.prototype.hasOwnProperty.call(proto, "register")
+          : false
+        const passes = !ownOnInstance && ownOnPrototype
+        return {
+          status: passes ? "pass" : "fail",
+          expected:
+            "register inherited from prototype (no own property on instance)",
+          actual: `ownOnInstance=${String(ownOnInstance)}, ownOnPrototype=${String(ownOnPrototype)}`,
+          details: { ownOnInstance, ownOnPrototype },
+        }
+      },
+    },
+    {
       id: "extension-presence.sw-register.no-prototype",
       group: "extension-presence",
       name: "navigator.serviceWorker.register: no own prototype property",

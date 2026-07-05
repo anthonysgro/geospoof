@@ -64,7 +64,7 @@
  */
 
 import { timezoneData, spoofingEnabled, ANNOUNCE_EVENT_NAME } from "./state";
-import { registerOverride, disguiseAsNative } from "./function-masking";
+import { registerOverride, disguiseAsNative, stripConstruct } from "./function-masking";
 import { seedFromBootstrap } from "./bootstrap";
 import { SPOOF_CORE } from "@/shared/worker-payload";
 import { createLogger } from "@/shared/utils/debug-logger";
@@ -191,20 +191,29 @@ function installBlobUrlTracking(): void {
     return OriginalRevokeObjectURL(url);
   };
 
-  registerOverride(spoofedCreateObjectURL, "createObjectURL");
-  disguiseAsNative(spoofedCreateObjectURL, "createObjectURL", 1);
-  registerOverride(spoofedRevokeObjectURL, "revokeObjectURL");
-  disguiseAsNative(spoofedRevokeObjectURL, "revokeObjectURL", 1);
+  // Wrap in method-shorthand (via stripConstruct) before disguising so the
+  // installed functions have NO own `prototype` and NO `[[Construct]]` slot —
+  // matching native static methods. `disguiseAsNative` alone can't achieve this
+  // for a `function` expression, whose `prototype` is non-configurable and so
+  // survives the delete; a page reading `hasOwnProperty(URL.createObjectURL,
+  // "prototype")` would otherwise flag the override as non-native. This mirrors
+  // the treatment `installOverride` gives every method override.
+  const finalCreateObjectURL = stripConstruct(spoofedCreateObjectURL);
+  registerOverride(finalCreateObjectURL, "createObjectURL");
+  disguiseAsNative(finalCreateObjectURL, "createObjectURL", 1);
+  const finalRevokeObjectURL = stripConstruct(spoofedRevokeObjectURL);
+  registerOverride(finalRevokeObjectURL, "revokeObjectURL");
+  disguiseAsNative(finalRevokeObjectURL, "revokeObjectURL", 1);
 
   try {
     Object.defineProperty(URL, "createObjectURL", {
-      value: spoofedCreateObjectURL,
+      value: finalCreateObjectURL,
       writable: true,
       configurable: true,
       enumerable: true,
     });
     Object.defineProperty(URL, "revokeObjectURL", {
-      value: spoofedRevokeObjectURL,
+      value: finalRevokeObjectURL,
       writable: true,
       configurable: true,
       enumerable: true,
@@ -574,9 +583,21 @@ function installServiceWorkerAnnouncer(): void {
   try {
     if (typeof navigator === "undefined" || !navigator.serviceWorker) return;
     const container = navigator.serviceWorker;
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    const originalRegister = container.register;
-    if (typeof originalRegister !== "function") return;
+
+    // Native `register` is a WebIDL operation that lives on
+    // `ServiceWorkerContainer.prototype`, NOT as an own property of the
+    // container instance. Installing our override on the instance (as this used
+    // to) makes `Object.prototype.hasOwnProperty.call(navigator.serviceWorker,
+    // "register")` return `true`, where a clean browser returns `false` — a
+    // detectable tell on its own. Install on the prototype instead, mirroring
+    // how the geolocation methods are installed on `Geolocation.prototype`.
+    // Resolve the prototype via `getPrototypeOf` rather than the global
+    // `ServiceWorkerContainer` so we don't depend on that name being exposed.
+    const proto = Object.getPrototypeOf(container) as object | null;
+    if (!proto) return;
+    const originalDescriptor = Object.getOwnPropertyDescriptor(proto, "register");
+    if (!originalDescriptor || typeof originalDescriptor.value !== "function") return;
+    const originalRegister = originalDescriptor.value as ServiceWorkerContainer["register"];
 
     const wrappedRegister = function register(
       this: ServiceWorkerContainer,
@@ -589,17 +610,22 @@ function installServiceWorkerAnnouncer(): void {
       } catch (err) {
         logger.debug("[worker-patching] SW announce failed:", err);
       }
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+
       return originalRegister.call(this, scriptURL, options);
     };
 
-    registerOverride(wrappedRegister, "register");
-    disguiseAsNative(wrappedRegister, "register", 1);
-    Object.defineProperty(container, "register", {
-      value: wrappedRegister,
-      writable: true,
-      configurable: true,
-      enumerable: true,
+    // Method-shorthand wrap (see installBlobUrlTracking) so the installed
+    // `register` has no own `prototype` / `[[Construct]]`, matching the native
+    // WebIDL method shape. Descriptor flags are copied from the native
+    // descriptor so the property shape on the prototype is unchanged.
+    const finalRegister = stripConstruct(wrappedRegister);
+    registerOverride(finalRegister, "register");
+    disguiseAsNative(finalRegister, "register", 1);
+    Object.defineProperty(proto, "register", {
+      value: finalRegister,
+      writable: originalDescriptor.writable ?? true,
+      configurable: originalDescriptor.configurable ?? true,
+      enumerable: originalDescriptor.enumerable ?? true,
     });
   } catch (err) {
     logger.warn("[worker-patching] installServiceWorkerAnnouncer failed:", err);
