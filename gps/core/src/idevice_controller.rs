@@ -84,8 +84,9 @@ pub struct IdeviceController {
     /// Lazily-started persistent DVT location session. Held across set/clear so the
     /// tunnel + LocationSimulation stay alive between the hold-loop's re-applies — the
     /// simulated location never lapses into the real one (unlike a fresh tunnel per call).
-    /// Dropped on error (so the next attempt rebuilds) and after a clear (stop = release).
-    location_session: Mutex<Option<PersistentLocationSession>>,
+    /// Dropped on error so the next attempt rebuilds (self-heal). In overlay mode it also
+    /// carries desired/status file I/O (AFC) so the whole hold needs no usbmux (§16).
+    location_session: Mutex<Option<PersistentSession>>,
 }
 
 #[derive(Clone, Copy)]
@@ -253,7 +254,7 @@ impl IdeviceController {
                 // Nothing live to clear — the device is already on its real location.
                 return Ok(());
             }
-            *guard = Some(PersistentLocationSession::start(
+            *guard = Some(PersistentSession::start(
                 self.udid.clone(),
                 self.overlay.clone(),
             ));
@@ -263,8 +264,60 @@ impl IdeviceController {
             LocationOp::Set(lat, lon) => session.set(lat, lon).await,
             LocationOp::Clear => session.clear().await,
         };
-        if result.is_err() || matches!(op, LocationOp::Clear) {
-            // Drop on failure (rebuild next set) or after clearing (release the tunnel).
+        // Drop on failure so the next attempt rebuilds (self-heal). We keep the session on
+        // a successful clear — the tunnel stays open for desired/status I/O while idle.
+        if result.is_err() {
+            *guard = None;
+        }
+        result
+    }
+
+    /// Read a file from an app's Documents over the persistent session's tunnel (AFC over
+    /// RSD). Used only in overlay mode; drops the session on error so it rebuilds.
+    async fn session_read_file(
+        &self,
+        bundle_id: &str,
+        filename: &str,
+    ) -> Result<Vec<u8>, DeviceError> {
+        let mut guard = self.location_session.lock().await;
+        if guard.is_none() {
+            *guard = Some(PersistentSession::start(
+                self.udid.clone(),
+                self.overlay.clone(),
+            ));
+        }
+        let result = guard
+            .as_ref()
+            .expect("session present")
+            .read_file(bundle_id, filename)
+            .await;
+        if result.is_err() {
+            *guard = None;
+        }
+        result
+    }
+
+    /// Write a file to an app's Documents over the persistent session's tunnel (AFC over
+    /// RSD). Used only in overlay mode; drops the session on error so it rebuilds.
+    async fn session_write_file(
+        &self,
+        bundle_id: &str,
+        filename: &str,
+        bytes: Vec<u8>,
+    ) -> Result<(), DeviceError> {
+        let mut guard = self.location_session.lock().await;
+        if guard.is_none() {
+            *guard = Some(PersistentSession::start(
+                self.udid.clone(),
+                self.overlay.clone(),
+            ));
+        }
+        let result = guard
+            .as_ref()
+            .expect("session present")
+            .write_file(bundle_id, filename, bytes)
+            .await;
+        if result.is_err() {
             *guard = None;
         }
         result
@@ -386,6 +439,11 @@ impl DeviceController for IdeviceController {
     /// on a current-thread runtime inside `spawn_blocking` (the idevice session types are
     /// `!Send`; same pattern as the location/mount ops).
     async fn read_app_file(&self, bundle_id: &str, filename: &str) -> Result<Vec<u8>, DeviceError> {
+        // Overlay/tunnel mode: read over the persistent tunnel (AFC over RSD) — no usbmux,
+        // so it works after the phone rejoins Wi-Fi (§16).
+        if self.overlay.is_some() {
+            return with_timeout(OP_TIMEOUT, self.session_read_file(bundle_id, filename)).await;
+        }
         let udid = self.udid.clone();
         let bundle_id = bundle_id.to_string();
         let filename = filename.to_string();
@@ -412,6 +470,14 @@ impl DeviceController for IdeviceController {
         filename: &str,
         bytes: &[u8],
     ) -> Result<(), DeviceError> {
+        // Overlay/tunnel mode: write over the persistent tunnel (AFC over RSD) — no usbmux.
+        if self.overlay.is_some() {
+            return with_timeout(
+                OP_TIMEOUT,
+                self.session_write_file(bundle_id, filename, bytes.to_vec()),
+            )
+            .await;
+        }
         let udid = self.udid.clone();
         let bundle_id = bundle_id.to_string();
         let filename = filename.to_string();
@@ -567,8 +633,8 @@ async fn mount_ddi_session(udid: &str, ddi_dir: Option<&Path>) -> Result<(), Dev
     Ok(())
 }
 
-/// A command sent to the live location-session thread.
-enum LocationCmd {
+/// A command sent to the live device-session thread.
+enum SessionCmd {
     Set {
         lat: f64,
         lon: f64,
@@ -577,29 +643,47 @@ enum LocationCmd {
     Clear {
         reply: oneshot::Sender<Result<(), DeviceError>>,
     },
+    /// Read a file from an app's Documents over house_arrest+AFC on the tunnel's RSD.
+    ReadFile {
+        bundle_id: String,
+        filename: String,
+        reply: oneshot::Sender<Result<Vec<u8>, DeviceError>>,
+    },
+    /// Write a file to an app's Documents over house_arrest+AFC on the tunnel's RSD.
+    WriteFile {
+        bundle_id: String,
+        filename: String,
+        bytes: Vec<u8>,
+        reply: oneshot::Sender<Result<(), DeviceError>>,
+    },
 }
 
-/// A persistent DVT location-simulation session running on its own OS thread.
+/// A persistent device session running on its own OS thread.
 ///
 /// The idevice tunnel / RSD / DVT session types are `!Send` and borrow each other, so
-/// they can't be held directly in the async controller. Instead a dedicated thread runs a
-/// current-thread runtime that establishes the session ONCE (tunnel → RSD → RemoteServer →
-/// LocationSimulation) and then serves `Set`/`Clear` commands over a channel while keeping
-/// the tunnel open. Because the tunnel/session stays alive, the simulated location holds
-/// continuously — there is no revert window between the hold-loop's periodic re-applies
-/// (the fresh-tunnel-per-call design had a gap where the real location could resurface).
-struct PersistentLocationSession {
-    tx: mpsc::UnboundedSender<LocationCmd>,
+/// they can't be held directly in the async controller. A dedicated thread runs a
+/// current-thread runtime that establishes the RSD tunnel ONCE (tunnel → RSD →
+/// RemoteServer → LocationSimulation) and then serves commands over a channel while
+/// keeping the tunnel open:
+/// - **Set/Clear** drive the held `LocationSimulation`, so the location holds continuously
+///   with no revert window between re-applies (fresh-tunnel-per-call had that gap).
+/// - **ReadFile/WriteFile** run house_arrest+AFC over the SAME RSD tunnel (the DVT client
+///   owns its stream, so the adapter+handshake stay free for transient AFC connects). This
+///   lets the agent read `desired.json` / write `status.json` over the tunnel too — the
+///   whole hold works with NO usbmux, which is what survives the phone leaving and
+///   rejoining Wi-Fi (usbmux doesn't re-arm its Wi-Fi-sync device; design §16).
+struct PersistentSession {
+    tx: mpsc::UnboundedSender<SessionCmd>,
     /// Kept only so the thread is joined on drop; it exits when `tx` (the channel) drops.
     _thread: std::thread::JoinHandle<()>,
 }
 
-impl PersistentLocationSession {
+impl PersistentSession {
     /// Spawn the session thread. Returns immediately — establishment happens on the
-    /// thread. If it fails, the thread exits and the first `set`/`clear` reply errors
+    /// thread. If it fails, the thread exits and the first command's reply errors
     /// (channel closed), prompting the controller to drop and rebuild.
     fn start(udid: String, overlay: Option<OverlayTarget>) -> Self {
-        let (tx, rx) = mpsc::unbounded_channel::<LocationCmd>();
+        let (tx, rx) = mpsc::unbounded_channel::<SessionCmd>();
         let thread = std::thread::spawn(move || {
             let Ok(rt) = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
@@ -618,7 +702,7 @@ impl PersistentLocationSession {
     async fn set(&self, lat: f64, lon: f64) -> Result<(), DeviceError> {
         let (reply, rx) = oneshot::channel();
         self.tx
-            .send(LocationCmd::Set { lat, lon, reply })
+            .send(SessionCmd::Set { lat, lon, reply })
             .map_err(|_| DeviceError::NotConnected)?;
         rx.await.map_err(|_| DeviceError::NotConnected)?
     }
@@ -626,7 +710,37 @@ impl PersistentLocationSession {
     async fn clear(&self) -> Result<(), DeviceError> {
         let (reply, rx) = oneshot::channel();
         self.tx
-            .send(LocationCmd::Clear { reply })
+            .send(SessionCmd::Clear { reply })
+            .map_err(|_| DeviceError::NotConnected)?;
+        rx.await.map_err(|_| DeviceError::NotConnected)?
+    }
+
+    async fn read_file(&self, bundle_id: &str, filename: &str) -> Result<Vec<u8>, DeviceError> {
+        let (reply, rx) = oneshot::channel();
+        self.tx
+            .send(SessionCmd::ReadFile {
+                bundle_id: bundle_id.to_string(),
+                filename: filename.to_string(),
+                reply,
+            })
+            .map_err(|_| DeviceError::NotConnected)?;
+        rx.await.map_err(|_| DeviceError::NotConnected)?
+    }
+
+    async fn write_file(
+        &self,
+        bundle_id: &str,
+        filename: &str,
+        bytes: Vec<u8>,
+    ) -> Result<(), DeviceError> {
+        let (reply, rx) = oneshot::channel();
+        self.tx
+            .send(SessionCmd::WriteFile {
+                bundle_id: bundle_id.to_string(),
+                filename: filename.to_string(),
+                bytes,
+                reply,
+            })
             .map_err(|_| DeviceError::NotConnected)?;
         rx.await.map_err(|_| DeviceError::NotConnected)?
     }
@@ -641,7 +755,7 @@ impl PersistentLocationSession {
 async fn session_loop(
     udid: String,
     overlay: Option<OverlayTarget>,
-    mut rx: mpsc::UnboundedReceiver<LocationCmd>,
+    mut rx: mpsc::UnboundedReceiver<SessionCmd>,
 ) {
     // Establish once. On any failure, return — queued/next commands error via dropped
     // reply channels, and the controller rebuilds on the next attempt.
@@ -669,24 +783,99 @@ async fn session_loop(
     };
 
     // Serve commands over the live session until the controller drops us (channel close).
+    // `client` borrows `server` (which owns its stream), so `adapter`/`handshake` stay free
+    // for transient house_arrest+AFC connects on the same tunnel (ReadFile/WriteFile).
     while let Some(cmd) = rx.recv().await {
         match cmd {
-            LocationCmd::Set { lat, lon, reply } => {
+            SessionCmd::Set { lat, lon, reply } => {
                 let r = client
                     .set(lat, lon)
                     .await
                     .map_err(|e| DeviceError::ServiceUnavailable(e.to_string()));
                 let _ = reply.send(r);
             }
-            LocationCmd::Clear { reply } => {
+            SessionCmd::Clear { reply } => {
                 let r = client
                     .clear()
                     .await
                     .map_err(|e| DeviceError::ServiceUnavailable(e.to_string()));
                 let _ = reply.send(r);
             }
+            SessionCmd::ReadFile {
+                bundle_id,
+                filename,
+                reply,
+            } => {
+                let r = afc_read_rsd(&mut adapter, &mut handshake, &bundle_id, &filename).await;
+                let _ = reply.send(r);
+            }
+            SessionCmd::WriteFile {
+                bundle_id,
+                filename,
+                bytes,
+                reply,
+            } => {
+                let r = afc_write_rsd(&mut adapter, &mut handshake, &bundle_id, &filename, &bytes)
+                    .await;
+                let _ = reply.send(r);
+            }
         }
     }
+}
+
+/// Read `Documents/<filename>` from an app over house_arrest **VendDocuments** + AFC on the
+/// tunnel's RSD (design §16). Mirrors the usbmux `read_app_file_session`, but connects the
+/// service over the live tunnel adapter instead of a fresh usbmux link. `!Send`.
+async fn afc_read_rsd(
+    adapter: &mut AdapterHandle,
+    handshake: &mut RsdHandshake,
+    bundle_id: &str,
+    filename: &str,
+) -> Result<Vec<u8>, DeviceError> {
+    let house = HouseArrestClient::connect_rsd(adapter, handshake)
+        .await
+        .map_err(|e| DeviceError::ServiceUnavailable(e.to_string()))?;
+    let mut afc = house
+        .vend_documents(bundle_id)
+        .await
+        .map_err(|e| DeviceError::ServiceUnavailable(e.to_string()))?;
+    let mut fd = afc
+        .open(format!("Documents/{filename}"), AfcFopenMode::RdOnly)
+        .await
+        .map_err(|e| DeviceError::Io(e.to_string()))?;
+    let bytes = fd
+        .read_entire()
+        .await
+        .map_err(|e| DeviceError::Io(e.to_string()))?;
+    let _ = fd.close().await;
+    Ok(bytes)
+}
+
+/// Write `Documents/<filename>` to an app over house_arrest **VendDocuments** + AFC on the
+/// tunnel's RSD (design §16). Mirrors the usbmux `write_app_file_session`. `!Send`.
+async fn afc_write_rsd(
+    adapter: &mut AdapterHandle,
+    handshake: &mut RsdHandshake,
+    bundle_id: &str,
+    filename: &str,
+    bytes: &[u8],
+) -> Result<(), DeviceError> {
+    let house = HouseArrestClient::connect_rsd(adapter, handshake)
+        .await
+        .map_err(|e| DeviceError::ServiceUnavailable(e.to_string()))?;
+    let mut afc = house
+        .vend_documents(bundle_id)
+        .await
+        .map_err(|e| DeviceError::ServiceUnavailable(e.to_string()))?;
+    let mut fd = afc
+        .open(format!("Documents/{filename}"), AfcFopenMode::WrOnly)
+        .await
+        .map_err(|e| DeviceError::Io(e.to_string()))?;
+    fd.write_entire(bytes)
+        .await
+        .map_err(|e| DeviceError::Io(e.to_string()))?;
+    let _ = fd.close().await;
+    Ok(())
 }
 
 /// Build an RSD-capable jktcp adapter over usbmux via `CoreDeviceProxy`'s software tunnel.

@@ -16,9 +16,12 @@ geospoof-gps-core = { path = "../core" }
 # Exact pins (DEPENDENCY_POLICY.md).
 serde = { version = "=1.0.228", features = ["derive"] }
 serde_json = "=1.0.150"
-tokio = { version = "=1.52.3", features = ["rt-multi-thread", "macros", "time"] }
+tokio = { version = "=1.52.3", features = ["rt-multi-thread", "macros", "time", "signal"] }
 tracing = "=0.1.44"
 tracing-subscriber = { version = "=0.3.23", features = ["env-filter"] }
+# LAN discovery of the device's `_remotepairing._tcp` endpoint (idevice has no mDNS
+# browser). Used to find the phone's IP without depending on usbmuxd re-arming Wi-Fi sync.
+mdns-sd = "=0.20.1"
 
 [dev-dependencies]
 geospoof-gps-core = { path = "../core", features = ["mock"] }

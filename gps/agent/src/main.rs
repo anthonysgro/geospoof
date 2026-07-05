@@ -5,9 +5,11 @@
 //! (`run` / `set` / `clear` / `status`) drives it for dev/testing.
 
 mod contract;
+mod discovery;
 mod keepawake;
 mod reconcile;
 
+use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
@@ -67,6 +69,19 @@ async fn main() {
         "bootstrap" => {
             init_logging();
             bootstrap(&dir).await;
+        }
+        "discover" => {
+            init_logging();
+            let found = tokio::task::spawn_blocking(|| {
+                discovery::discover_remotepairing(Duration::from_secs(5))
+            })
+            .await
+            .ok()
+            .flatten();
+            match found {
+                Some((ip, port)) => println!("found device at {ip}:{port}"),
+                None => println!("no device found on the LAN (mDNS _remotepairing._tcp)"),
+            }
         }
         "clear" => write_desired(&dir, &DesiredState::disabled()),
         "status" => match read_status(&dir) {
@@ -191,57 +206,144 @@ async fn run(dir: &Path) {
     let pro = check_pro(dir);
     let config = HoldConfig::default();
     let source = DesiredSource::from_env();
-    let source_desc = source.describe();
-    tracing::info!(pro, source = %source_desc, "agent started");
+    let rp_path = rp_pairing_path(dir);
+
+    // Transport selection: an explicit overlay host (remote), or a bootstrapped
+    // RemotePairing record (LAN, discovered via mDNS), routes over the remote-pairing
+    // tunnel — usbmux-independent, so it survives the phone leaving and rejoining Wi-Fi
+    // (usbmux won't re-arm its Wi-Fi-sync device; design §16). Otherwise legacy usbmux.
+    let overlay_host: Option<IpAddr> = std::env::var("GEOSPOOF_OVERLAY_HOST")
+        .ok()
+        .and_then(|s| s.trim().parse().ok());
+    let tunnel = overlay_host.is_some() || rp_path.exists();
+    tracing::info!(
+        pro,
+        source = %source.describe(),
+        transport = if tunnel { "tunnel" } else { "usbmux" },
+        "agent started"
+    );
 
     // Last desired state we successfully resolved. Cached so a momentary source read
-    // failure doesn't drop the hold, and so a device that leaves and rejoins the
-    // network is driven back to the chosen location automatically (design §10i).
+    // failure doesn't drop the hold (design §10i).
     let mut last_desired = DesiredState::disabled();
-    let mut current: Option<(String, Arc<dyn DeviceController>, Reconciler)> = None;
+    let mut current: Option<(Arc<dyn DeviceController>, Reconciler)> = None;
     // Prevent idle sleep while actively spoofing so the Wi-Fi hold isn't dropped
     // (design §10h). Released automatically when idle/disconnected and on shutdown.
     let mut keep_awake = KeepAwake::new();
-    loop {
-        let udid = IdeviceController::list_udids()
-            .await
-            .ok()
-            .and_then(|mut v| v.drain(..).next());
+    // Resolves on SIGTERM/SIGINT so we can clear the spoof before exiting (see below).
+    let mut shutdown = std::pin::pin!(shutdown_signal());
 
-        match udid {
-            Some(udid) => {
-                let needs_new = !matches!(&current, Some((u, _, _)) if *u == udid);
-                if needs_new {
-                    tracing::info!("device connected");
-                    let controller: Arc<dyn DeviceController> =
-                        Arc::new(IdeviceController::new(udid.clone()));
-                    let reconciler = Reconciler::new(Arc::clone(&controller), config.clone(), pro);
-                    current = Some((udid, controller, reconciler));
-                }
-                if let Some((_, controller, reconciler)) = &current {
-                    let desired =
-                        resolve_desired(&source, controller.as_ref(), dir, &last_desired).await;
-                    last_desired = desired.clone();
-                    let report = reconciler.reconcile(&desired).await;
-                    tracing::info!(session = ?report.session, connected = report.connected, "reconciled");
-                    write_status(dir, &report);
-                    // Publish status back to the controlling iOS app over the device link
-                    // so the phone can show state + remediation (design §13e).
-                    publish_status_to_app(&source, controller.as_ref(), &report).await;
-                    keep_awake.set(should_keep_awake(report.session));
-                }
-            }
-            None => {
-                if current.is_some() {
-                    tracing::info!("device disconnected");
-                    current = None;
-                }
-                write_status(dir, &disconnected_report(pro));
-                keep_awake.set(false);
+    loop {
+        // (Re)connect whenever we have no live controller. In tunnel mode this
+        // rediscovers the device (possibly at a new IP) after a drop — the key to
+        // resuming when the phone rejoins Wi-Fi.
+        if current.is_none() {
+            let controller = connect_controller(overlay_host, tunnel, &rp_path).await;
+            if let Some(controller) = controller {
+                tracing::info!(
+                    transport = if tunnel { "tunnel" } else { "usbmux" },
+                    "device connected"
+                );
+                let reconciler = Reconciler::new(Arc::clone(&controller), config.clone(), pro)
+                    .tunnel_mode(tunnel);
+                current = Some((controller, reconciler));
             }
         }
-        tokio::time::sleep(POLL_INTERVAL).await;
+
+        if let Some((controller, reconciler)) = &current {
+            let desired = resolve_desired(&source, controller.as_ref(), dir, &last_desired).await;
+            last_desired = desired.clone();
+            let report = reconciler.reconcile(&desired).await;
+            tracing::info!(session = ?report.session, connected = report.connected, "reconciled");
+            write_status(dir, &report);
+            // Publish status back to the controlling iOS app (over the same transport) so
+            // the phone can show state + remediation (design §13e).
+            publish_status_to_app(&source, controller.as_ref(), &report).await;
+            keep_awake.set(should_keep_awake(report.session));
+            if !report.connected {
+                // Unreachable — drop so the next tick reconnects/rediscovers (§16).
+                tracing::info!("device unreachable; will reconnect");
+                current = None;
+                keep_awake.set(false);
+            }
+        } else {
+            write_status(dir, &disconnected_report(pro));
+            keep_awake.set(false);
+        }
+
+        tokio::select! {
+            _ = tokio::time::sleep(POLL_INTERVAL) => {}
+            _ = &mut shutdown => {
+                tracing::info!("shutdown signal — clearing location before exit");
+                break;
+            }
+        }
     }
+
+    // Graceful shutdown: clear the spoof over the live tunnel so the device reverts to its
+    // REAL location immediately. Without this, killing the agent leaves the persistent
+    // session dangling and the device keeps the spoof until its side times out the tunnel
+    // (a minute+). The in-app "stop" path already clears; this covers the app being quit
+    // (or the machine shutting down) while a spoof is active.
+    if let Some((controller, _)) = &current {
+        let _ = controller.clear_location().await;
+    }
+    keep_awake.set(false);
+}
+
+/// Resolve when the process is asked to stop (SIGTERM/SIGINT), so `run` can clear the spoof
+/// before exiting rather than leaving the device to time out a dangling tunnel session.
+async fn shutdown_signal() {
+    #[cfg(unix)]
+    {
+        use tokio::signal::unix::{SignalKind, signal};
+        if let (Ok(mut term), Ok(mut int)) = (
+            signal(SignalKind::terminate()),
+            signal(SignalKind::interrupt()),
+        ) {
+            tokio::select! {
+                _ = term.recv() => {}
+                _ = int.recv() => {}
+            }
+            return;
+        }
+    }
+    let _ = tokio::signal::ctrl_c().await;
+}
+
+/// Find and construct a controller for the current transport: an explicit overlay host, a
+/// mDNS-discovered LAN device over the remote-pairing tunnel, or (legacy) usbmux. Returns
+/// `None` when no device is reachable this tick.
+async fn connect_controller(
+    overlay_host: Option<IpAddr>,
+    tunnel: bool,
+    rp_path: &Path,
+) -> Option<Arc<dyn DeviceController>> {
+    if let Some(ip) = overlay_host {
+        return Some(Arc::new(
+            IdeviceController::new("overlay").with_overlay(ip, rp_path.to_path_buf()),
+        ));
+    }
+    if tunnel {
+        // Discover the phone's `_remotepairing._tcp` endpoint on the LAN (mDNS browse is
+        // blocking, so run it off the async runtime).
+        let found = tokio::task::spawn_blocking(|| {
+            discovery::discover_remotepairing(Duration::from_secs(3))
+        })
+        .await
+        .ok()
+        .flatten();
+        return found.map(|(ip, _port)| {
+            Arc::new(IdeviceController::new("overlay").with_overlay(ip, rp_path.to_path_buf()))
+                as Arc<dyn DeviceController>
+        });
+    }
+    // Legacy usbmux.
+    let udid = IdeviceController::list_udids()
+        .await
+        .ok()
+        .and_then(|mut v| v.drain(..).next());
+    udid.map(|u| Arc::new(IdeviceController::new(u)) as Arc<dyn DeviceController>)
 }
 
 /// Publish the status report back to the controlling iOS app's Documents over the device

@@ -24,6 +24,10 @@ pub struct Reconciler {
     session: SpoofSession,
     pro: bool,
     agent_version: &'static str,
+    /// When true, the controller reaches the device over the remote-pairing tunnel (not
+    /// usbmux), so we skip the usbmux `status()`/`device_info()` gate and just try — a
+    /// live tunnel IS the readiness proof (design §16 / CX try-first).
+    tunnel_mode: bool,
 }
 
 impl Reconciler {
@@ -35,7 +39,15 @@ impl Reconciler {
             session,
             pro,
             agent_version: env!("CARGO_PKG_VERSION"),
+            tunnel_mode: false,
         }
+    }
+
+    /// Mark this reconciler as driving the device over the remote-pairing tunnel (§16),
+    /// which skips the usbmux precondition probes.
+    pub fn tunnel_mode(mut self, on: bool) -> Self {
+        self.tunnel_mode = on;
+        self
     }
 
     /// Reconcile once against `desired`, returning the resulting status.
@@ -50,6 +62,11 @@ impl Reconciler {
                 "GeoSpoof Pro required".to_string(),
                 None,
             );
+        }
+
+        // Tunnel transport: no usbmux status/identity available — try directly (§16).
+        if self.tunnel_mode {
+            return self.reconcile_over_tunnel(desired).await;
         }
 
         let (status, status_error) = match self.controller.status().await {
@@ -106,6 +123,54 @@ impl Reconciler {
             Provenance::Unknown
         };
         self.report(status.is_some(), device, provenance, remediation, error)
+    }
+
+    /// Reconcile over the remote-pairing tunnel (§16): no usbmux, so we can't probe
+    /// trust/Developer Mode/identity — we just attempt (a live tunnel is the readiness
+    /// proof) and let a concrete failure surface the remediation. `connected` is derived
+    /// from the session/attempt rather than a usbmux status call.
+    async fn reconcile_over_tunnel(&self, desired: &DesiredState) -> StatusReport {
+        let mut attempt_error: Option<DeviceError> = None;
+
+        if desired.enabled {
+            if let Some((lat, lon)) = desired.coordinate()
+                && let Ok(coord) = Coordinate::new(lat, lon)
+            {
+                let already =
+                    matches!(self.session.state(), SessionState::Spoofing(c) if c == coord);
+                if !already {
+                    attempt_error = self.ensure_and_start(coord).await.err();
+                }
+            }
+        } else if !matches!(self.session.state(), SessionState::Idle) {
+            self.session.stop().await;
+        }
+
+        let spoofing = matches!(self.session.state(), SessionState::Spoofing(_));
+        // A live spoof, or a successful attempt this tick, proves we reached the device.
+        let connected = spoofing
+            || (desired.enabled && desired.coordinate().is_some() && attempt_error.is_none());
+        let remediation = match (&attempt_error, self.session.state()) {
+            (Some(e), _) => remediation_for_error(e),
+            (None, SessionState::Lost(_)) => {
+                "Couldn't hold the location — reconnecting when your device is reachable."
+                    .to_string()
+            }
+            _ => String::new(),
+        };
+        let provenance = if desired.enabled {
+            desired.provenance
+        } else {
+            Provenance::Unknown
+        };
+        // Device summary comes from usbmux identity we don't have over the tunnel; omit it.
+        self.report(
+            connected,
+            None,
+            provenance,
+            remediation,
+            attempt_error.map(|e| e.to_string()),
+        )
     }
 
     /// Bring the device to spoofing, mounting the Developer Disk Image on demand.
