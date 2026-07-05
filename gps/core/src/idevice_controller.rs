@@ -33,6 +33,7 @@ use idevice::tcp::adapter::Adapter;
 use idevice::tcp::handle::AdapterHandle;
 use idevice::usbmuxd::{Connection, UsbmuxdAddr, UsbmuxdConnection};
 use idevice::{IdeviceService, RsdService};
+use tokio::sync::{Mutex, mpsc, oneshot};
 
 use crate::controller::{DeviceController, DeviceEvent};
 use crate::error::DeviceError;
@@ -80,8 +81,14 @@ pub struct IdeviceController {
     /// When set, location set/clear run over the overlay (remote) transport rather than
     /// usbmux (§10j). Identity/status/mount/bootstrap remain usbmux (setup-time, USB).
     overlay: Option<OverlayTarget>,
+    /// Lazily-started persistent DVT location session. Held across set/clear so the
+    /// tunnel + LocationSimulation stay alive between the hold-loop's re-applies — the
+    /// simulated location never lapses into the real one (unlike a fresh tunnel per call).
+    /// Dropped on error (so the next attempt rebuilds) and after a clear (stop = release).
+    location_session: Mutex<Option<PersistentLocationSession>>,
 }
 
+#[derive(Clone, Copy)]
 enum LocationOp {
     Set(f64, f64),
     Clear,
@@ -94,6 +101,7 @@ impl IdeviceController {
             udid: udid.into(),
             ddi_dir: None,
             overlay: None,
+            location_session: Mutex::new(None),
         }
     }
 
@@ -233,18 +241,33 @@ impl IdeviceController {
     /// `set_location`). So we run the session on a dedicated current-thread runtime
     /// inside `spawn_blocking`: the non-Send types stay on that thread and only a
     /// `Send` `Result` crosses back out. (A persistent session is a perf follow-up.)
-    async fn run_location_op(&self, op: LocationOp) -> Result<(), DeviceError> {
-        let udid = self.udid.clone();
-        let overlay = self.overlay.clone();
-        tokio::task::spawn_blocking(move || {
-            let rt = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .map_err(|e| DeviceError::Io(e.to_string()))?;
-            rt.block_on(location_session(&udid, overlay.as_ref(), op))
-        })
-        .await
-        .map_err(|e| DeviceError::Io(e.to_string()))?
+    /// Apply a location op over the persistent DVT session, starting it lazily. The
+    /// session keeps the tunnel + LocationSimulation alive between calls, so the hold
+    /// loop's re-applies never leave a gap where the real location resurfaces. On any
+    /// error the session is dropped so the next attempt rebuilds it (self-healing after a
+    /// device disconnect); a successful clear also releases it (stop = back to real GPS).
+    async fn apply_location(&self, op: LocationOp) -> Result<(), DeviceError> {
+        let mut guard = self.location_session.lock().await;
+        if guard.is_none() {
+            if matches!(op, LocationOp::Clear) {
+                // Nothing live to clear — the device is already on its real location.
+                return Ok(());
+            }
+            *guard = Some(PersistentLocationSession::start(
+                self.udid.clone(),
+                self.overlay.clone(),
+            ));
+        }
+        let session = guard.as_ref().expect("session present");
+        let result = match op {
+            LocationOp::Set(lat, lon) => session.set(lat, lon).await,
+            LocationOp::Clear => session.clear().await,
+        };
+        if result.is_err() || matches!(op, LocationOp::Clear) {
+            // Drop on failure (rebuild next set) or after clearing (release the tunnel).
+            *guard = None;
+        }
+        result
     }
 
     /// NORTH-STAR EXPERIMENT (temporary): probe whether `lockdownd` answers over an
@@ -344,13 +367,13 @@ impl DeviceController for IdeviceController {
     async fn set_location(&self, coordinate: Coordinate) -> Result<(), DeviceError> {
         with_timeout(
             OP_TIMEOUT,
-            self.run_location_op(LocationOp::Set(coordinate.latitude, coordinate.longitude)),
+            self.apply_location(LocationOp::Set(coordinate.latitude, coordinate.longitude)),
         )
         .await
     }
 
     async fn clear_location(&self) -> Result<(), DeviceError> {
-        with_timeout(OP_TIMEOUT, self.run_location_op(LocationOp::Clear)).await
+        with_timeout(OP_TIMEOUT, self.apply_location(LocationOp::Clear)).await
     }
 
     async fn next_event(&self) -> Option<DeviceEvent> {
@@ -544,48 +567,126 @@ async fn mount_ddi_session(udid: &str, ddi_dir: Option<&Path>) -> Result<(), Dev
     Ok(())
 }
 
-/// Run one DVT location op. Builds the RSD tunnel via the selected transport — usbmux
-/// (`CoreDeviceProxy`) or overlay (`RemotePairing` → TLS-PSK `CdTunnel`, §10j) — then runs
-/// the identical RSD → DVT `LocationSimulation` half over the resulting jktcp adapter. The
-/// session types are `!Send`, so this runs on a current-thread runtime inside
-/// `spawn_blocking` (see caller).
-async fn location_session(
-    udid: &str,
-    overlay: Option<&OverlayTarget>,
-    op: LocationOp,
-) -> Result<(), DeviceError> {
-    let (mut adapter, rsd_port) = match overlay {
-        Some(target) => overlay_adapter(target).await?,
-        None => usbmux_adapter(udid).await?,
-    };
-    let stream = adapter
-        .connect(rsd_port)
-        .await
-        .map_err(|e| DeviceError::TunnelFailed(e.to_string()))?;
-    let mut handshake = RsdHandshake::new(stream)
-        .await
-        .map_err(|e| DeviceError::ServiceUnavailable(e.to_string()))?;
-    let mut server = RemoteServerClient::connect_rsd(&mut adapter, &mut handshake)
-        .await
-        .map_err(|e| DeviceError::ServiceUnavailable(e.to_string()))?;
-    server
-        .read_message(0)
-        .await
-        .map_err(|e| DeviceError::ServiceUnavailable(e.to_string()))?;
-    let mut client = LocationSimulationClient::new(&mut server)
-        .await
-        .map_err(|e| DeviceError::ServiceUnavailable(e.to_string()))?;
-    match op {
-        LocationOp::Set(lat, lon) => client
-            .set(lat, lon)
-            .await
-            .map_err(|e| DeviceError::ServiceUnavailable(e.to_string()))?,
-        LocationOp::Clear => client
-            .clear()
-            .await
-            .map_err(|e| DeviceError::ServiceUnavailable(e.to_string()))?,
+/// A command sent to the live location-session thread.
+enum LocationCmd {
+    Set {
+        lat: f64,
+        lon: f64,
+        reply: oneshot::Sender<Result<(), DeviceError>>,
+    },
+    Clear {
+        reply: oneshot::Sender<Result<(), DeviceError>>,
+    },
+}
+
+/// A persistent DVT location-simulation session running on its own OS thread.
+///
+/// The idevice tunnel / RSD / DVT session types are `!Send` and borrow each other, so
+/// they can't be held directly in the async controller. Instead a dedicated thread runs a
+/// current-thread runtime that establishes the session ONCE (tunnel → RSD → RemoteServer →
+/// LocationSimulation) and then serves `Set`/`Clear` commands over a channel while keeping
+/// the tunnel open. Because the tunnel/session stays alive, the simulated location holds
+/// continuously — there is no revert window between the hold-loop's periodic re-applies
+/// (the fresh-tunnel-per-call design had a gap where the real location could resurface).
+struct PersistentLocationSession {
+    tx: mpsc::UnboundedSender<LocationCmd>,
+    /// Kept only so the thread is joined on drop; it exits when `tx` (the channel) drops.
+    _thread: std::thread::JoinHandle<()>,
+}
+
+impl PersistentLocationSession {
+    /// Spawn the session thread. Returns immediately — establishment happens on the
+    /// thread. If it fails, the thread exits and the first `set`/`clear` reply errors
+    /// (channel closed), prompting the controller to drop and rebuild.
+    fn start(udid: String, overlay: Option<OverlayTarget>) -> Self {
+        let (tx, rx) = mpsc::unbounded_channel::<LocationCmd>();
+        let thread = std::thread::spawn(move || {
+            let Ok(rt) = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+            else {
+                return;
+            };
+            rt.block_on(session_loop(udid, overlay, rx));
+        });
+        Self {
+            tx,
+            _thread: thread,
+        }
     }
-    Ok(())
+
+    async fn set(&self, lat: f64, lon: f64) -> Result<(), DeviceError> {
+        let (reply, rx) = oneshot::channel();
+        self.tx
+            .send(LocationCmd::Set { lat, lon, reply })
+            .map_err(|_| DeviceError::NotConnected)?;
+        rx.await.map_err(|_| DeviceError::NotConnected)?
+    }
+
+    async fn clear(&self) -> Result<(), DeviceError> {
+        let (reply, rx) = oneshot::channel();
+        self.tx
+            .send(LocationCmd::Clear { reply })
+            .map_err(|_| DeviceError::NotConnected)?;
+        rx.await.map_err(|_| DeviceError::NotConnected)?
+    }
+}
+
+/// Session-thread body: establish the RSD tunnel + DVT `LocationSimulation` once via the
+/// selected transport — usbmux (`CoreDeviceProxy`) or overlay (`RemotePairing` → TLS-PSK
+/// `CdTunnel`, §10j) — then serve `Set`/`Clear` over `rx`, keeping the tunnel alive so the
+/// location holds. Exits (closing the tunnel) when establishment fails or the channel
+/// closes (the controller dropped the session). All types here are `!Send`; this runs on
+/// the session thread's own current-thread runtime.
+async fn session_loop(
+    udid: String,
+    overlay: Option<OverlayTarget>,
+    mut rx: mpsc::UnboundedReceiver<LocationCmd>,
+) {
+    // Establish once. On any failure, return — queued/next commands error via dropped
+    // reply channels, and the controller rebuilds on the next attempt.
+    let built = match &overlay {
+        Some(target) => overlay_adapter(target).await,
+        None => usbmux_adapter(&udid).await,
+    };
+    let Ok((mut adapter, rsd_port)) = built else {
+        return;
+    };
+    let Ok(stream) = adapter.connect(rsd_port).await else {
+        return;
+    };
+    let Ok(mut handshake) = RsdHandshake::new(stream).await else {
+        return;
+    };
+    let Ok(mut server) = RemoteServerClient::connect_rsd(&mut adapter, &mut handshake).await else {
+        return;
+    };
+    if server.read_message(0).await.is_err() {
+        return;
+    }
+    let Ok(mut client) = LocationSimulationClient::new(&mut server).await else {
+        return;
+    };
+
+    // Serve commands over the live session until the controller drops us (channel close).
+    while let Some(cmd) = rx.recv().await {
+        match cmd {
+            LocationCmd::Set { lat, lon, reply } => {
+                let r = client
+                    .set(lat, lon)
+                    .await
+                    .map_err(|e| DeviceError::ServiceUnavailable(e.to_string()));
+                let _ = reply.send(r);
+            }
+            LocationCmd::Clear { reply } => {
+                let r = client
+                    .clear()
+                    .await
+                    .map_err(|e| DeviceError::ServiceUnavailable(e.to_string()));
+                let _ = reply.send(r);
+            }
+        }
+    }
 }
 
 /// Build an RSD-capable jktcp adapter over usbmux via `CoreDeviceProxy`'s software tunnel.

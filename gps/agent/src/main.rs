@@ -347,6 +347,7 @@ fn disconnected_report(pro: bool) -> StatusReport {
         remediation: "Connect your iPhone".to_string(),
         error: None,
         pro,
+        updated_at: contract::now_epoch(),
     }
 }
 

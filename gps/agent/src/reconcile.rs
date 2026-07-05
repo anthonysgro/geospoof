@@ -151,6 +151,7 @@ impl Reconciler {
             remediation,
             error,
             pro: self.pro,
+            updated_at: crate::contract::now_epoch(),
         }
     }
 }

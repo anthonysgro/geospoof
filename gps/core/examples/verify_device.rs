@@ -126,7 +126,10 @@ async fn main() {
         "write-app" => {
             let bundle_id = args.get(2).map(String::as_str);
             let filename = args.get(3).map(String::as_str);
-            let text = args.get(4).map(String::as_str).unwrap_or("hello from geospoof");
+            let text = args
+                .get(4)
+                .map(String::as_str)
+                .unwrap_or("hello from geospoof");
             match (bundle_id, filename) {
                 (Some(bundle_id), Some(filename)) => {
                     match controller

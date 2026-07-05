@@ -183,10 +183,14 @@ struct GpsStatus: Codable, Equatable {
     var remediation: String
     var error: String?
     var pro: Bool
+    /// Unix seconds the agent produced this report. Used to detect a stale report (the
+    /// agent can't publish once it loses the device), so we never show a false "spoofing".
+    var updatedAt: Double?
     enum CodingKeys: String, CodingKey {
         case version
         case agentVersion = "agent_version"
         case connected, device, session, provenance, remediation, error, pro
+        case updatedAt = "updated_at"
     }
 }
 
@@ -211,13 +215,18 @@ final class GpsStatusStore: ObservableObject {
         guard let data = try? Data(contentsOf: url) else {
             status = nil; isStale = true; return
         }
-        status = try? JSONDecoder().decode(GpsStatus.self, from: data)
-        let mod = (try? FileManager.default
-            .attributesOfItem(atPath: url.path)[.modificationDate]) as? Date
-        if let mod {
-            isStale = Date().timeIntervalSince(mod) > Self.freshWindow
+        let decoded = try? JSONDecoder().decode(GpsStatus.self, from: data)
+        status = decoded
+        // Freshness comes from the report's own `updated_at` (agent clock), not the
+        // file's mtime — the agent can't rewrite the file once it loses the device, so
+        // a lingering file would otherwise look live. Comparing timestamps also survives
+        // AFC quirks. A report without a timestamp (older agent) is treated as stale.
+        // A small negative age (agent clock slightly ahead) still counts as fresh.
+        if let updatedAt = decoded?.updatedAt {
+            let age = Date().timeIntervalSince1970 - updatedAt
+            isStale = age > Self.freshWindow
         } else {
-            isStale = (status == nil)
+            isStale = true
         }
     }
 }

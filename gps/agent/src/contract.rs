@@ -124,6 +124,21 @@ pub struct StatusReport {
     pub remediation: String,
     pub error: Option<String>,
     pub pro: bool,
+    /// Unix time (seconds) this report was produced. The source app uses it to detect
+    /// a stale report: when the agent loses the device it can no longer publish, so the
+    /// last-written status lingers on the phone. Comparing `updated_at` to "now" lets the
+    /// app show "disconnected" instead of a false "spoofing" (design §13e / hold-loop).
+    #[serde(default)]
+    pub updated_at: u64,
+}
+
+/// Current Unix time in whole seconds (0 if the clock is before the epoch, which can't
+/// happen in practice). Used to stamp `StatusReport.updated_at`.
+pub fn now_epoch() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
 }
 
 #[cfg(test)]

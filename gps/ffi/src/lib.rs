@@ -12,6 +12,9 @@ use std::ffi::{CString, c_char};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::ptr;
 use std::sync::{Arc, Mutex};
+// Only used by the `mock`-gated `test_config`; gate the import to match so a plain
+// (no-feature) build stays warning-free.
+#[cfg(feature = "mock")]
 use std::time::Duration;
 
 use geospoof_gps_core::{Coordinate, DeviceController, HoldConfig, HoldOutcome, hold_location};
