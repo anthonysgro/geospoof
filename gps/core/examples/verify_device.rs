@@ -39,6 +39,18 @@ async fn main() {
         return;
     }
 
+    // Task 6 verification: exercise the PRODUCT code path (IdeviceController), not the
+    // standalone spike fns. `ctl-bootstrap` = controller's USB bootstrap; `ctl-hold` =
+    // a real SpoofSession hold loop over the overlay transport (re-applies on cadence).
+    if cmd == "ctl-bootstrap" {
+        ctl_bootstrap().await;
+        return;
+    }
+    if cmd == "ctl-hold" {
+        ctl_hold(&args).await;
+        return;
+    }
+
     // Bootstrap the RemotePairing record over the USB lockdown control service
     // `com.apple.dt.remotepairingdeviced.lockdown` (§10j Task 2). The NETWORK endpoint
     // reports `allowsPairSetup: false` (verified) — it only pair-VERIFIES — so pair-SETUP
@@ -210,6 +222,88 @@ async fn rp_pair(args: &[String]) {
         println!("RemoteXPC handshake OK (incl. device handshake)");
         drive_pair(RemotePairingClient::new(xpc, host), pairing_path, host).await;
     }
+}
+
+/// Task 6 verification: mint the RemotePairing record via the PRODUCT controller method
+/// (`IdeviceController::bootstrap_remote_pairing`) over USB. Writes the shared record path.
+async fn ctl_bootstrap() {
+    use geospoof_gps_core::IdeviceController;
+
+    let pairing_path = "/tmp/geospoof-rp-pairing.plist";
+    let udid = match IdeviceController::list_udids().await {
+        Ok(mut u) => match u.drain(..).next() {
+            Some(udid) => udid,
+            None => {
+                eprintln!("no device found (connect + trust over USB)");
+                return;
+            }
+        },
+        Err(e) => {
+            eprintln!("device discovery failed: {e}");
+            return;
+        }
+    };
+    match IdeviceController::new(udid)
+        .bootstrap_remote_pairing(pairing_path)
+        .await
+    {
+        Ok(()) => println!("ctl bootstrap OK -> {pairing_path}"),
+        Err(e) => eprintln!("ctl bootstrap FAILED: {e}"),
+    }
+}
+
+/// Task 6 verification: drive the real product hold loop (`SpoofSession`) over the OVERLAY
+/// transport (`IdeviceController::with_overlay`). Holds `hold_s` seconds — the loop
+/// re-applies on its cadence over the overlay — then stops (which clears). This exercises
+/// exactly what the agent will run. Requires `ctl-bootstrap`/`rp-bootstrap` first.
+async fn ctl_hold(args: &[String]) {
+    use std::net::IpAddr;
+    use std::sync::Arc;
+
+    use geospoof_gps_core::{
+        Coordinate, DeviceController, HoldConfig, IdeviceController, SpoofSession,
+    };
+
+    let pairing_path = "/tmp/geospoof-rp-pairing.plist";
+    let Some(ip) = args.get(2).and_then(|s| s.parse::<IpAddr>().ok()) else {
+        eprintln!("usage: ctl-hold <ip> <lat> <lon> [hold_s]");
+        return;
+    };
+    let (Some(lat), Some(lon)) = (
+        args.get(3).and_then(|s| s.parse::<f64>().ok()),
+        args.get(4).and_then(|s| s.parse::<f64>().ok()),
+    ) else {
+        eprintln!("usage: ctl-hold <ip> <lat> <lon> [hold_s]");
+        return;
+    };
+    let hold_s = args
+        .get(5)
+        .and_then(|s| s.parse::<u64>().ok())
+        .unwrap_or(60);
+    let coord = match Coordinate::new(lat, lon) {
+        Ok(c) => c,
+        Err(_) => {
+            eprintln!("invalid coordinate");
+            return;
+        }
+    };
+
+    // udid is only for the controller ctor; the overlay transport ignores it for location ops.
+    let udid = IdeviceController::list_udids()
+        .await
+        .ok()
+        .and_then(|mut u| u.drain(..).next())
+        .unwrap_or_else(|| "overlay".to_string());
+    let controller: Arc<dyn DeviceController> =
+        Arc::new(IdeviceController::new(udid).with_overlay(ip, pairing_path));
+    let session = SpoofSession::new(controller, HoldConfig::default());
+
+    println!("holding {lat}, {lon} over overlay {ip} for {hold_s}s (product hold loop) ...");
+    session.start(coord).await;
+    tokio::time::sleep(std::time::Duration::from_secs(hold_s)).await;
+    println!("session state: {:?}", session.state());
+    session.stop().await;
+    println!("stopped + cleared -> real GPS restored");
 }
 
 /// Full overlay chain (§10j Tasks 3-5), pure Rust/idevice, no usbmux, no sudo:

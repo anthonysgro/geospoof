@@ -64,6 +64,10 @@ async fn main() {
                 write_desired(&dir, &desired);
             }
         }
+        "bootstrap" => {
+            init_logging();
+            bootstrap(&dir).await;
+        }
         "clear" => write_desired(&dir, &DesiredState::disabled()),
         "status" => match read_status(&dir) {
             Some(report) => println!(
@@ -73,7 +77,44 @@ async fn main() {
             None => println!("no status yet (is the agent running?)"),
         },
         _ => {
-            eprintln!("geospoof-gps-agent <run|set LAT LON|clear|status>");
+            eprintln!("geospoof-gps-agent <run|bootstrap|set LAT LON|clear|status>");
+        }
+    }
+}
+
+/// One-time USB setup for the overlay (remote) transport (§10j): mint + persist the
+/// RemotePairing record so the agent can later drive the device over an overlay network
+/// while it's on any Wi-Fi. Promptless (the device is already USB-trusted). Run once with
+/// the iPhone connected via USB, unlocked, and trusted.
+async fn bootstrap(dir: &Path) {
+    let udid = match IdeviceController::list_udids().await {
+        Ok(mut v) => match v.drain(..).next() {
+            Some(u) => u,
+            None => {
+                eprintln!(
+                    "no iPhone found over USB — connect it, unlock, and tap Trust, then retry"
+                );
+                std::process::exit(1);
+            }
+        },
+        Err(e) => {
+            eprintln!("device discovery failed: {e}");
+            std::process::exit(1);
+        }
+    };
+    if let Err(e) = std::fs::create_dir_all(dir) {
+        eprintln!("cannot create data dir {}: {e}", dir.display());
+        std::process::exit(1);
+    }
+    let path = rp_pairing_path(dir);
+    match IdeviceController::new(udid)
+        .bootstrap_remote_pairing(&path)
+        .await
+    {
+        Ok(()) => println!("remote pairing ready -> {}", path.display()),
+        Err(e) => {
+            eprintln!("bootstrap failed: {e}");
+            std::process::exit(1);
         }
     }
 }
@@ -219,6 +260,11 @@ fn data_dir() -> PathBuf {
 
 fn desired_path(dir: &Path) -> PathBuf {
     dir.join("desired.json")
+}
+
+/// Path to the persisted RemotePairing record used by the overlay transport (§10j).
+fn rp_pairing_path(dir: &Path) -> PathBuf {
+    dir.join("rp-pairing.plist")
 }
 
 fn status_path(dir: &Path) -> PathBuf {

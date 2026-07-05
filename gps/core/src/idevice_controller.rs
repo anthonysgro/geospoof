@@ -11,6 +11,7 @@
 //! - `mount_ddi` cannot auto-source the personalized DDI yet (design §8 / task 16).
 //! - `next_event` (usbmux hotplug streaming) is not implemented yet.
 
+use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -24,7 +25,12 @@ use idevice::house_arrest::HouseArrestClient;
 use idevice::lockdown::LockdownClient;
 use idevice::mobile_image_mounter::ImageMounter;
 use idevice::provider::{IdeviceProvider, TcpProvider};
+use idevice::remote_pairing::{
+    RemotePairingClient, RpPairingFile, RpPairingSocket, connect_tls_psk_tunnel_native,
+};
 use idevice::rsd::RsdHandshake;
+use idevice::tcp::adapter::Adapter;
+use idevice::tcp::handle::AdapterHandle;
 use idevice::usbmuxd::{Connection, UsbmuxdAddr, UsbmuxdConnection};
 use idevice::{IdeviceService, RsdService};
 
@@ -40,6 +46,19 @@ const LABEL: &str = "geospoof-gps";
 const STATUS_TIMEOUT: Duration = Duration::from_secs(15);
 const OP_TIMEOUT: Duration = Duration::from_secs(30);
 const MOUNT_TIMEOUT: Duration = Duration::from_secs(180);
+
+/// The device's `_remotepairing._tcp` port (used for the overlay/remote transport, §10j).
+const REMOTEPAIRING_PORT: u16 = 49152;
+
+/// Overlay (off-usbmux) transport target for location ops: the device's IP on an overlay
+/// network (e.g. a mesh VPN) plus the path to the RemotePairing record minted over USB by
+/// [`IdeviceController::bootstrap_remote_pairing`] (§10j). When set, location set/clear
+/// run over the RemotePairing → TLS-PSK → RSD → DVT chain instead of usbmux/CoreDeviceProxy.
+#[derive(Clone)]
+struct OverlayTarget {
+    host: IpAddr,
+    pairing_path: PathBuf,
+}
 
 /// Run `fut` with a deadline, mapping expiry to [`DeviceError::Timeout`] so the caller
 /// always gets a definite outcome instead of blocking forever.
@@ -58,6 +77,9 @@ pub struct IdeviceController {
     udid: String,
     /// Optional folder holding a user-provided personalized DDI (clean 3-file layout).
     ddi_dir: Option<PathBuf>,
+    /// When set, location set/clear run over the overlay (remote) transport rather than
+    /// usbmux (§10j). Identity/status/mount/bootstrap remain usbmux (setup-time, USB).
+    overlay: Option<OverlayTarget>,
 }
 
 enum LocationOp {
@@ -71,6 +93,7 @@ impl IdeviceController {
         Self {
             udid: udid.into(),
             ddi_dir: None,
+            overlay: None,
         }
     }
 
@@ -79,6 +102,47 @@ impl IdeviceController {
     pub fn with_ddi_dir(mut self, dir: impl Into<PathBuf>) -> Self {
         self.ddi_dir = Some(dir.into());
         self
+    }
+
+    /// Route location set/clear over the overlay (remote) transport: the device at `host`
+    /// on an overlay network, authenticated with the RemotePairing record at `pairing_path`
+    /// (minted once over USB by [`Self::bootstrap_remote_pairing`]). This is the §10j
+    /// "spoof on the go" path — establish while the phone is reachable, then it rides
+    /// cellular roams for the life of the session. Identity/status/mount stay on usbmux.
+    pub fn with_overlay(mut self, host: IpAddr, pairing_path: impl Into<PathBuf>) -> Self {
+        self.overlay = Some(OverlayTarget {
+            host,
+            pairing_path: pairing_path.into(),
+        });
+        self
+    }
+
+    /// Mint and persist the RemotePairing record over the USB lockdown control service
+    /// `com.apple.dt.remotepairingdeviced.lockdown` (§10j). Promptless (the device is
+    /// already USB-trusted, and pairing is pinless). This is the one-time USB setup that
+    /// unlocks the overlay transport: the network `_remotepairing._tcp` endpoint only
+    /// pair-VERIFIES (`allowsPairSetup: false`), so the record MUST originate here.
+    /// `pairing_path` is where the record is written (reuse it in [`Self::with_overlay`]).
+    pub async fn bootstrap_remote_pairing(
+        &self,
+        pairing_path: impl AsRef<Path>,
+    ) -> Result<(), DeviceError> {
+        let udid = self.udid.clone();
+        let path = pairing_path.as_ref().to_path_buf();
+        // Non-Send session types → current-thread runtime inside spawn_blocking (same
+        // pattern as the location/mount ops).
+        let op = async move {
+            tokio::task::spawn_blocking(move || {
+                let rt = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .map_err(|e| DeviceError::Io(e.to_string()))?;
+                rt.block_on(bootstrap_remote_pairing_session(&udid, &path))
+            })
+            .await
+            .map_err(|e| DeviceError::Io(e.to_string()))?
+        };
+        with_timeout(OP_TIMEOUT, op).await
     }
 
     /// List the UDIDs of USB-connected devices (usbmux discovery).
@@ -171,12 +235,13 @@ impl IdeviceController {
     /// `Send` `Result` crosses back out. (A persistent session is a perf follow-up.)
     async fn run_location_op(&self, op: LocationOp) -> Result<(), DeviceError> {
         let udid = self.udid.clone();
+        let overlay = self.overlay.clone();
         tokio::task::spawn_blocking(move || {
             let rt = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
                 .build()
                 .map_err(|e| DeviceError::Io(e.to_string()))?;
-            rt.block_on(location_session(&udid, op))
+            rt.block_on(location_session(&udid, overlay.as_ref(), op))
         })
         .await
         .map_err(|e| DeviceError::Io(e.to_string()))?
@@ -422,18 +487,20 @@ async fn mount_ddi_session(udid: &str, ddi_dir: Option<&Path>) -> Result<(), Dev
     Ok(())
 }
 
-/// Run one DVT location op over a fresh software tunnel. The session types are `!Send`,
-/// so this runs on a current-thread runtime inside `spawn_blocking` (see caller).
-async fn location_session(udid: &str, op: LocationOp) -> Result<(), DeviceError> {
-    let provider = build_provider(udid).await?;
-    let proxy = CoreDeviceProxy::connect(&*provider)
-        .await
-        .map_err(|e| DeviceError::TunnelFailed(e.to_string()))?;
-    let rsd_port = proxy.tunnel_info().server_rsd_port;
-    let mut adapter = proxy
-        .create_software_tunnel()
-        .map_err(|e| DeviceError::TunnelFailed(e.to_string()))?
-        .to_async_handle();
+/// Run one DVT location op. Builds the RSD tunnel via the selected transport — usbmux
+/// (`CoreDeviceProxy`) or overlay (`RemotePairing` → TLS-PSK `CdTunnel`, §10j) — then runs
+/// the identical RSD → DVT `LocationSimulation` half over the resulting jktcp adapter. The
+/// session types are `!Send`, so this runs on a current-thread runtime inside
+/// `spawn_blocking` (see caller).
+async fn location_session(
+    udid: &str,
+    overlay: Option<&OverlayTarget>,
+    op: LocationOp,
+) -> Result<(), DeviceError> {
+    let (mut adapter, rsd_port) = match overlay {
+        Some(target) => overlay_adapter(target).await?,
+        None => usbmux_adapter(udid).await?,
+    };
     let stream = adapter
         .connect(rsd_port)
         .await
@@ -461,5 +528,132 @@ async fn location_session(udid: &str, op: LocationOp) -> Result<(), DeviceError>
             .await
             .map_err(|e| DeviceError::ServiceUnavailable(e.to_string()))?,
     }
+    Ok(())
+}
+
+/// Build an RSD-capable jktcp adapter over usbmux via `CoreDeviceProxy`'s software tunnel.
+/// Returns the adapter handle plus the device's RSD port.
+async fn usbmux_adapter(udid: &str) -> Result<(AdapterHandle, u16), DeviceError> {
+    let provider = build_provider(udid).await?;
+    let proxy = CoreDeviceProxy::connect(&*provider)
+        .await
+        .map_err(|e| DeviceError::TunnelFailed(e.to_string()))?;
+    let rsd_port = proxy.tunnel_info().server_rsd_port;
+    let adapter = proxy
+        .create_software_tunnel()
+        .map_err(|e| DeviceError::TunnelFailed(e.to_string()))?
+        .to_async_handle();
+    Ok((adapter, rsd_port))
+}
+
+/// Build an RSD-capable jktcp adapter over the overlay (§10j): network RemotePairing
+/// pair-verify (using the USB-bootstrapped record) → `create_tcp_listener` → TLS-PSK
+/// `CdTunnel` → jktcp adapter (same recipe as `CoreDeviceProxy::create_software_tunnel`,
+/// no root/utun). Returns the adapter handle plus the tunnel's RSD port.
+async fn overlay_adapter(target: &OverlayTarget) -> Result<(AdapterHandle, u16), DeviceError> {
+    let host = target.host;
+
+    // The network endpoint only pair-VERIFIES, so the record must already exist (bootstrap).
+    let mut pairing_file = RpPairingFile::read_from_file(&target.pairing_path)
+        .await
+        .map_err(|e| {
+            DeviceError::ServiceUnavailable(format!(
+                "no RemotePairing record at {} (run bootstrap_remote_pairing over USB first): {e}",
+                target.pairing_path.display()
+            ))
+        })?;
+
+    // 1. Pair-verify over RPPairing framing.
+    let control = tokio::net::TcpStream::connect((host, REMOTEPAIRING_PORT))
+        .await
+        .map_err(|e| DeviceError::Io(format!("connect {host}:{REMOTEPAIRING_PORT}: {e}")))?;
+    let mut client = RemotePairingClient::new(RpPairingSocket::new(control), LABEL);
+    client
+        .connect(&mut pairing_file, || async { "000000".to_string() })
+        .await
+        .map_err(|e| DeviceError::TunnelFailed(format!("remote pair-verify: {e}")))?;
+
+    // 2. Ask the device to open a tunnel listener, then TLS-PSK + CDTunnel to it.
+    let listener_port = client
+        .create_tcp_listener()
+        .await
+        .map_err(|e| DeviceError::TunnelFailed(format!("create_tcp_listener: {e}")))?;
+    let key = client.encryption_key().to_vec();
+    let tunnel = tokio::net::TcpStream::connect((host, listener_port))
+        .await
+        .map_err(|e| DeviceError::Io(format!("connect tunnel {host}:{listener_port}: {e}")))?;
+    let cdt = connect_tls_psk_tunnel_native(tunnel, &key)
+        .await
+        .map_err(|e| DeviceError::TunnelFailed(format!("TLS-PSK/CDTunnel: {e}")))?;
+
+    // 3. jktcp userspace adapter over the CDTunnel (mirrors create_software_tunnel).
+    let our_ip = cdt
+        .info
+        .client_address
+        .parse::<IpAddr>()
+        .map_err(|e| DeviceError::TunnelFailed(format!("bad client address: {e}")))?;
+    let their_ip = cdt
+        .info
+        .server_address
+        .parse::<IpAddr>()
+        .map_err(|e| DeviceError::TunnelFailed(format!("bad server address: {e}")))?;
+    let mtu = cdt.info.mtu as usize;
+    let rsd_port = cdt.info.server_rsd_port;
+    let mut adapter = Adapter::new(Box::new(cdt.into_inner()), our_ip, their_ip);
+    adapter.set_mss(mtu.saturating_sub(60));
+    Ok((adapter.to_async_handle(), rsd_port))
+}
+
+/// Mint + persist the RemotePairing record over the USB lockdown control service (§10j).
+/// `!Send`; runs inside `spawn_blocking` (see [`IdeviceController::bootstrap_remote_pairing`]).
+async fn bootstrap_remote_pairing_session(
+    udid: &str,
+    pairing_path: &Path,
+) -> Result<(), DeviceError> {
+    const RP_LOCKDOWN_SERVICE: &str = "com.apple.dt.remotepairingdeviced.lockdown";
+
+    let provider = build_provider(udid).await?;
+    let mut lockdown = LockdownClient::connect(&*provider)
+        .await
+        .map_err(|e| DeviceError::Io(e.to_string()))?;
+    let pairing = provider
+        .get_pairing_file()
+        .await
+        .map_err(|_| DeviceError::NotTrusted)?;
+    let legacy = lockdown
+        .start_session(&pairing)
+        .await
+        .map_err(|e| DeviceError::Io(e.to_string()))?;
+    let (port, ssl) = lockdown
+        .start_service(RP_LOCKDOWN_SERVICE)
+        .await
+        .map_err(|e| DeviceError::ServiceUnavailable(e.to_string()))?;
+    let mut idev = provider
+        .connect(port)
+        .await
+        .map_err(|e| DeviceError::Io(e.to_string()))?;
+    if ssl && let Err(e) = idev.start_session(&pairing, legacy).await {
+        return Err(DeviceError::Io(e.to_string()));
+    }
+    let sock = idev
+        .get_socket()
+        .ok_or_else(|| DeviceError::Io("remotepairing service had no socket".to_string()))?;
+
+    // Reuse an existing record's host identity if present, else mint a fresh one.
+    let mut pairing_file = match RpPairingFile::read_from_file(pairing_path).await {
+        Ok(p) => p,
+        Err(_) => RpPairingFile::generate(LABEL),
+    };
+    let mut client = RemotePairingClient::new(RpPairingSocket::new(sock), LABEL);
+    // Pinless pairing (allowsPinlessPairing) uses the fixed code "000000"; idevice only
+    // auto-fills it on the awaitingUserConsent branch, so supply it via the callback.
+    client
+        .connect(&mut pairing_file, || async { "000000".to_string() })
+        .await
+        .map_err(|e| DeviceError::ServiceUnavailable(format!("remote pairing setup: {e}")))?;
+    pairing_file
+        .write_to_file(pairing_path)
+        .await
+        .map_err(|e| DeviceError::Io(e.to_string()))?;
     Ok(())
 }
