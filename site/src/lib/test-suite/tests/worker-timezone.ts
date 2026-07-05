@@ -88,6 +88,13 @@ interface WorkerResult {
    * card set can assert it per surface, exactly like the Intl `timeZone`.
    */
   temporalTimeZone?: string | null
+  /**
+   * Full Date/Intl/Temporal parity signature, computed inside the worker via
+   * the shared `self.__tzSignature` helper when the runner posts a `sigBase`.
+   * Consumed by the per-surface full-parity cards. Null when the served probe
+   * didn't compute one (older/unpatched path).
+   */
+  sig?: TzSignature | null
 }
 
 // ---------------------------------------------------------------------------
@@ -289,6 +296,7 @@ async function runSharedWorker(scriptUrl: string): Promise<WorkerResult> {
             timeZone: string
             offsetMinutes: number
             temporalTimeZone?: string | null
+            sig?: TzSignature | null
           }
         | { ok: false; error: string }
       if (data && typeof data === "object" && "ok" in data) {
@@ -297,6 +305,7 @@ async function runSharedWorker(scriptUrl: string): Promise<WorkerResult> {
             timeZone: data.timeZone,
             offsetMinutes: data.offsetMinutes,
             temporalTimeZone: data.temporalTimeZone ?? null,
+            sig: data.sig ?? null,
           })
         } else {
           reject(new Error(`SharedWorker reported error: ${data.error}`))
@@ -315,7 +324,7 @@ async function runSharedWorker(scriptUrl: string): Promise<WorkerResult> {
       reject(new Error(message))
     }
 
-    port.postMessage({ start: true })
+    port.postMessage({ start: true, sigBase: PARITY_BASE })
   })
 }
 
@@ -336,6 +345,7 @@ function waitForWorkerResult(worker: Worker): Promise<WorkerResult> {
             timeZone: string
             offsetMinutes: number
             temporalTimeZone?: string | null
+            sig?: TzSignature | null
           }
         | { ok: false; error: string }
       if (data && typeof data === "object" && "ok" in data) {
@@ -344,6 +354,7 @@ function waitForWorkerResult(worker: Worker): Promise<WorkerResult> {
             timeZone: data.timeZone,
             offsetMinutes: data.offsetMinutes,
             temporalTimeZone: data.temporalTimeZone ?? null,
+            sig: data.sig ?? null,
           })
         } else {
           reject(new Error(`Worker reported error: ${data.error}`))
@@ -362,7 +373,7 @@ function waitForWorkerResult(worker: Worker): Promise<WorkerResult> {
       reject(new Error(message))
     }
 
-    worker.postMessage({ start: true })
+    worker.postMessage({ start: true, sigBase: PARITY_BASE })
   })
 }
 
@@ -564,7 +575,7 @@ async function runImportScriptsWorker(
         reject(new Error(message))
       }
 
-      worker.postMessage({ start: true })
+      worker.postMessage({ start: true, sigBase: PARITY_BASE })
     })
   } finally {
     try {
@@ -766,6 +777,25 @@ async function runServiceWorker(scriptUrl: string): Promise<WorkerResult> {
       // Scope to the workers directory so the registration doesn't
       // affect the rest of the site. The service-probe.js file lives
       // at /workers/service-probe.js so this scope matches.
+      // Clean slate: drop any prior registration for this scope before
+      // registering, so we always install the CURRENT probe script. Service
+      // workers persist across sessions and update only on a byte-diff, so a
+      // stale copy (e.g. from before the parity signature existed) can linger
+      // and report no `sig`. A fresh install after unregister re-fetches the
+      // script bypassing the HTTP cache (SW update semantics). This is more
+      // robust than a per-run cache-busting query, which spawns a new worker
+      // each run and races the previous one being torn down (message lands on
+      // a redundant worker → BroadcastChannel never replies → timeout).
+      try {
+        const existing = await navigator.serviceWorker.getRegistrations()
+        await Promise.all(
+          existing
+            .filter((r) => r.scope.endsWith("/workers/"))
+            .map((r) => r.unregister())
+        )
+      } catch {
+        /* best effort — proceed to register regardless */
+      }
       registration = await navigator.serviceWorker.register(scriptUrl, {
         scope: "/workers/",
       })
@@ -800,13 +830,21 @@ async function runServiceWorker(scriptUrl: string): Promise<WorkerResult> {
         clearTimeout(timer)
         channel.close()
         const data = event.data as
-          | { ok: true; timeZone: string; offsetMinutes: number }
+          | {
+              ok: true
+              timeZone: string
+              offsetMinutes: number
+              temporalTimeZone?: string | null
+              sig?: TzSignature | null
+            }
           | { ok: false; error: string }
         if (data && typeof data === "object" && "ok" in data) {
           if (data.ok) {
             resolve({
               timeZone: data.timeZone,
               offsetMinutes: data.offsetMinutes,
+              temporalTimeZone: data.temporalTimeZone ?? null,
+              sig: data.sig ?? null,
             })
           } else {
             reject(new Error(`ServiceWorker reported error: ${data.error}`))
@@ -818,7 +856,7 @@ async function runServiceWorker(scriptUrl: string): Promise<WorkerResult> {
         }
       }
 
-      activeWorker.postMessage({ channel: channelName })
+      activeWorker.postMessage({ channel: channelName, sigBase: PARITY_BASE })
     })
   } finally {
     // Always unregister so the worker doesn't persist across test runs.
@@ -845,31 +883,38 @@ function waitForActiveWorker(
   return new Promise((resolve) => {
     const timer = setTimeout(() => resolve(null), WORKER_TIMEOUT_MS)
 
-    if (registration.active) {
+    // Prefer the freshly installing/waiting worker over any active one. After a
+    // re-register the new script installs ALONGSIDE the old active worker; if we
+    // grabbed `registration.active` we'd message the stale worker (which would
+    // reply fast but without the current code — e.g. no parity `sig`). Only fall
+    // back to `active` when there's no incoming worker (bytes unchanged).
+    const incoming = registration.installing || registration.waiting
+
+    if (!incoming) {
       clearTimeout(timer)
-      resolve(registration.active)
+      resolve(registration.active ?? null)
       return
     }
 
-    const worker = registration.installing || registration.waiting
-    if (!worker) {
+    if (incoming.state === "activated") {
       clearTimeout(timer)
-      resolve(null)
+      resolve(incoming)
       return
     }
 
     const onStateChange = () => {
-      if (worker.state === "activated") {
-        worker.removeEventListener("statechange", onStateChange)
+      if (incoming.state === "activated") {
+        incoming.removeEventListener("statechange", onStateChange)
         clearTimeout(timer)
-        resolve(worker)
-      } else if (worker.state === "redundant") {
-        worker.removeEventListener("statechange", onStateChange)
+        resolve(incoming)
+      } else if (incoming.state === "redundant") {
+        incoming.removeEventListener("statechange", onStateChange)
         clearTimeout(timer)
-        resolve(null)
+        // Superseded by a newer install — use whatever is now active.
+        resolve(registration.active ?? null)
       }
     }
-    worker.addEventListener("statechange", onStateChange)
+    incoming.addEventListener("statechange", onStateChange)
   })
 }
 
@@ -1077,24 +1122,379 @@ const serviceWorkerTemporalTest = buildWorkerTemporalTest({
 })
 
 // ---------------------------------------------------------------------------
+// Full-surface parity (completeness proof)
+//
+// The per-surface Intl + Temporal cards above prove the payload REACHES each
+// worker construction pattern. This card proves the payload is COMPLETE: it
+// computes a signature spanning the entire spoofable Date/Intl/Temporal surface
+// (construction, parse, every local getter, a setter round-trip, getTimezoneOffset,
+// the formatter family, and Temporal.Now) in a blob Worker and asserts every
+// field equals the main thread's. Completeness is surface-independent — the
+// payload installs synchronously before worker code on every surface it reaches
+// — so proving it on the all-engine blob surface, combined with per-surface
+// reach cards, covers the matrix without duplicating a 40-line signature across
+// the served /workers/*.js probes.
+// ---------------------------------------------------------------------------
+
+/** A comprehensive timezone signature captured at a single fixed instant. */
+interface TzSignature {
+  intlTz: string
+  offset: number
+  ctorEpoch: number
+  parseEpoch: number
+  getters: ReadonlyArray<number>
+  setterEpoch: number
+  toStr: string
+  dateStr: string
+  timeStr: string
+  localeStr: string
+  temporal: string | null
+}
+
+/**
+ * Compute the timezone signature across the full Date / Intl / Temporal surface.
+ *
+ * MUST stay self-contained — globals only, no closures or imports — because it
+ * is serialized with `.toString()` and injected into a Worker so the worker and
+ * the main thread execute byte-identical logic. This is the single source of
+ * truth for the parity comparison; editing it updates both sides at once.
+ */
+function computeTzSignature(base: number): TzSignature {
+  const d = new Date(base)
+  const rt = new Date(base)
+  rt.setHours(9, 30, 15, 0)
+  const T = (
+    globalThis as { Temporal?: { Now?: { timeZoneId?: () => string } } }
+  ).Temporal
+  return {
+    intlTz: new Intl.DateTimeFormat().resolvedOptions().timeZone,
+    offset: d.getTimezoneOffset(),
+    ctorEpoch: new Date("2020-06-01T12:00:00").getTime(),
+    parseEpoch: Date.parse("2020-06-01T12:00:00"),
+    getters: [
+      d.getFullYear(),
+      d.getMonth(),
+      d.getDate(),
+      d.getDay(),
+      d.getHours(),
+      d.getMinutes(),
+      d.getSeconds(),
+      d.getMilliseconds(),
+    ],
+    setterEpoch: rt.getTime(),
+    toStr: d.toString(),
+    dateStr: d.toDateString(),
+    timeStr: d.toTimeString(),
+    localeStr: d.toLocaleString("en-US"),
+    temporal: T && T.Now && T.Now.timeZoneId ? T.Now.timeZoneId() : null,
+  }
+}
+
+/** A non-round instant that exercises every component (incl. ms). */
+const PARITY_BASE = Date.UTC(2021, 6, 15, 8, 5, 45, 678)
+
+/** Worker source that computes the signature and posts it back. */
+const SIG_WORKER_SOURCE = `self.onmessage = function (e) {
+  try {
+    var f = (${computeTzSignature.toString()});
+    self.postMessage({ ok: true, sig: f(e.data) });
+  } catch (err) {
+    self.postMessage({ ok: false, error: err && err.message ? err.message : String(err) });
+  }
+};`
+
+/**
+ * Outer-worker source that spawns a child blob Worker to compute the signature
+ * and relays it up — exercises the nested (Worker-in-Worker) path, where the
+ * payload must recursively wrap `self.Worker` inside the parent worker.
+ */
+const NESTED_SIG_WORKER_SOURCE = `self.onmessage = function (e) {
+  try {
+    var childSrc = ${JSON.stringify(SIG_WORKER_SOURCE)};
+    var url = URL.createObjectURL(new Blob([childSrc], { type: "application/javascript" }));
+    var child = new Worker(url);
+    child.onmessage = function (ev) {
+      try { child.terminate(); URL.revokeObjectURL(url); } catch (x) { /* cleanup */ }
+      self.postMessage(ev.data);
+    };
+    child.onerror = function () { self.postMessage({ ok: false, error: "nested child worker error" }); };
+    child.postMessage(e.data);
+  } catch (err) {
+    self.postMessage({ ok: false, error: err && err.message ? err.message : String(err) });
+  }
+};`
+
+/** Post BASE to a signature worker, resolve its reported signature, clean up. */
+function awaitWorkerSignature(
+  worker: Worker,
+  base: number,
+  cleanup: () => void
+): Promise<TzSignature> {
+  return new Promise<TzSignature>((resolve, reject) => {
+    const timer = setTimeout(
+      () =>
+        reject(
+          new Error(`Worker did not respond within ${WORKER_TIMEOUT_MS}ms`)
+        ),
+      WORKER_TIMEOUT_MS
+    )
+    worker.onmessage = (event: MessageEvent<unknown>) => {
+      clearTimeout(timer)
+      const data = event.data as
+        | { ok: true; sig: TzSignature }
+        | { ok: false; error: string }
+      if (data && typeof data === "object" && "ok" in data) {
+        if (data.ok) resolve(data.sig)
+        else reject(new Error(data.error))
+      } else {
+        reject(new Error("Worker returned an unexpected message shape"))
+      }
+    }
+    worker.onerror = () => {
+      clearTimeout(timer)
+      reject(new Error("Worker error"))
+    }
+    worker.postMessage(base)
+  }).finally(() => {
+    try {
+      worker.terminate()
+    } catch {
+      /* cleanup */
+    }
+    cleanup()
+  })
+}
+
+function assertBlobWorkerApis(): void {
+  if (
+    typeof Worker === "undefined" ||
+    typeof Blob === "undefined" ||
+    typeof URL === "undefined" ||
+    !URL.createObjectURL
+  ) {
+    throw new SkipTestError("Worker/Blob URL API not available")
+  }
+}
+
+function runSignatureViaBlob(base: number): Promise<TzSignature> {
+  assertBlobWorkerApis()
+  const url = URL.createObjectURL(
+    new Blob([SIG_WORKER_SOURCE], { type: "application/javascript" })
+  )
+  return awaitWorkerSignature(new Worker(url), base, () => {
+    try {
+      URL.revokeObjectURL(url)
+    } catch {
+      /* cleanup */
+    }
+  })
+}
+
+function runSignatureViaData(base: number): Promise<TzSignature> {
+  if (typeof Worker === "undefined") {
+    throw new SkipTestError("Worker API not available")
+  }
+  const dataUrl = `data:application/javascript,${encodeURIComponent(SIG_WORKER_SOURCE)}`
+  return awaitWorkerSignature(new Worker(dataUrl), base, () => {})
+}
+
+function runSignatureViaNested(base: number): Promise<TzSignature> {
+  assertBlobWorkerApis()
+  const url = URL.createObjectURL(
+    new Blob([NESTED_SIG_WORKER_SOURCE], { type: "application/javascript" })
+  )
+  return awaitWorkerSignature(new Worker(url), base, () => {
+    try {
+      URL.revokeObjectURL(url)
+    } catch {
+      /* cleanup */
+    }
+  })
+}
+
+/**
+ * Build a full-surface parity card for an all-engine worker construction path.
+ * Runs the shared signature function in the worker and deep-compares every
+ * field against the main thread.
+ */
+function buildWorkerFullParityTest(cfg: {
+  id: string
+  name: string
+  surfaceLabel: string
+  group?: TestGroupId
+  run: (base: number) => Promise<TzSignature>
+}): TestDefinition {
+  return buildBehavioralTest<boolean>({
+    id: cfg.id,
+    group: cfg.group ?? "timezone-stealth",
+    name: cfg.name,
+    description:
+      `Proves the worker spoofing payload is COMPLETE (not merely present) on the ${cfg.surfaceLabel} surface. ` +
+      "Computes a signature spanning every spoofable timezone surface — Intl.DateTimeFormat().resolvedOptions(), " +
+      "getTimezoneOffset, ambiguous-string and multi-argument construction, Date.parse, all local getters " +
+      "(getFullYear/Month/Date/Day/Hours/Minutes/Seconds/Milliseconds), a setHours round-trip epoch, the " +
+      "toString/toDateString/toTimeString/toLocaleString family, and Temporal.Now.timeZoneId — inside the worker " +
+      "and asserts each field equals the main thread's.",
+    technique: `Serialize one signature function via .toString(), run it in a ${cfg.surfaceLabel}, and deep-compare every field against the main thread. Clean browsers match (both native); a worker that diverges fails with the diverging field names.`,
+    codeSnippet: `const sig = (base) => ({ intlTz, offset, ctorEpoch, parseEpoch, getters, setterEpoch, toStr, dateStr, timeStr, localeStr, temporal })
+// worker sig must deep-equal sig(base) on the main thread`,
+    expected: async () => {
+      if (typeof Worker === "undefined") {
+        return { skipReason: "Worker API not available in this browser" }
+      }
+      return { value: true, describe: "worker signature matches main thread" }
+    },
+    observe: async () => {
+      const mainSig = computeTzSignature(PARITY_BASE)
+      let workerSig: TzSignature
+      try {
+        workerSig = await cfg.run(PARITY_BASE)
+      } catch (err) {
+        if (err instanceof SkipTestError) throw err
+        throw new SkipTestError(
+          `${cfg.surfaceLabel} signature unavailable: ${err instanceof Error ? err.message : String(err)}`
+        )
+      }
+      const diffs: Array<string> = []
+      const keys = Object.keys(mainSig) as Array<keyof TzSignature>
+      for (const k of keys) {
+        if (k === "temporal") {
+          // Only meaningful when both realms expose Temporal.
+          if (
+            mainSig.temporal &&
+            workerSig.temporal &&
+            mainSig.temporal !== workerSig.temporal
+          ) {
+            diffs.push("temporal")
+          }
+          continue
+        }
+        if (JSON.stringify(mainSig[k]) !== JSON.stringify(workerSig[k])) {
+          diffs.push(k)
+        }
+      }
+      return {
+        value: diffs.length === 0,
+        describe: diffs.length
+          ? `diverged from main thread: ${diffs.join(", ")}`
+          : "all Date/Intl/Temporal surfaces match the main thread",
+      }
+    },
+  })
+}
+
+const blobWorkerFullParityTest = buildWorkerFullParityTest({
+  id: "tampering.worker.blob-full-timezone-parity",
+  name: "Blob Worker matches the main thread across the full Date/Intl/Temporal surface",
+  surfaceLabel: "blob-URL Worker",
+  run: runSignatureViaBlob,
+})
+
+const dataUrlWorkerFullParityTest = buildWorkerFullParityTest({
+  id: "tampering.worker.data-full-timezone-parity",
+  name: "Data-URL Worker matches the main thread across the full Date/Intl/Temporal surface",
+  surfaceLabel: "data-URL Worker",
+  run: runSignatureViaData,
+})
+
+const nestedWorkerFullParityTest = buildWorkerFullParityTest({
+  id: "tampering.worker.nested-full-timezone-parity",
+  name: "Nested Worker matches the main thread across the full Date/Intl/Temporal surface",
+  surfaceLabel: "nested Worker-in-Worker",
+  run: runSignatureViaNested,
+})
+
+// ── Served-worker full parity ────────────────────────────────────────
+// The served probes compute the same signature (via the shared
+// self.__tzSignature helper) and return it on their normal result. These
+// cards reuse the existing per-surface runners and read `result.sig`. Same
+// engine split as the Intl/Temporal cards for these surfaces: closed on
+// Firefox via filterResponseData (which prepends the full payload), a known
+// limitation on Chromium/Safari, and always a known limitation for service
+// workers.
+
+/** Extract the parity signature a served probe reported, or skip. */
+function sigFromResult(result: WorkerResult): TzSignature {
+  if (!result.sig) {
+    throw new SkipTestError("worker did not report a parity signature")
+  }
+  return result.sig
+}
+
+const urlWorkerFullParityTest = buildWorkerFullParityTest({
+  id: "tampering.worker.url-classic-full-timezone-parity",
+  name: "URL-based classic Worker matches the main thread across the full Date/Intl/Temporal surface",
+  surfaceLabel: "URL-based classic Worker",
+  group: urlWorkerGroup,
+  run: async () =>
+    sigFromResult(await runUrlWorker("/workers/classic-probe.js")),
+})
+
+const sharedWorkerFullParityTest = buildWorkerFullParityTest({
+  id: "tampering.worker.shared-worker-full-timezone-parity",
+  name: "SharedWorker matches the main thread across the full Date/Intl/Temporal surface",
+  surfaceLabel: "SharedWorker",
+  group: urlWorkerGroup,
+  run: async () =>
+    sigFromResult(await runSharedWorker("/workers/shared-probe.js")),
+})
+
+const importScriptsFullParityTest = buildWorkerFullParityTest({
+  id: "tampering.worker.importscripts-full-timezone-parity",
+  name: "importScripts-loaded code matches the main thread across the full Date/Intl/Temporal surface",
+  surfaceLabel: "importScripts-loaded code",
+  group: urlWorkerGroup,
+  run: async () =>
+    sigFromResult(
+      await runImportScriptsWorker("/workers/importscripts-probe.js")
+    ),
+})
+
+const moduleWorkerFullParityTest = buildWorkerFullParityTest({
+  id: "tampering.worker.module-full-timezone-parity",
+  name: "Module Worker matches the main thread across the full Date/Intl/Temporal surface",
+  surfaceLabel: "module Worker",
+  group: urlWorkerGroup,
+  run: async () =>
+    sigFromResult(await runModuleWorker("/workers/module-probe.js")),
+})
+
+const serviceWorkerFullParityTest = buildWorkerFullParityTest({
+  id: "known-limitation.worker.service-worker-full-timezone-parity",
+  name: "ServiceWorker matches the main thread across the full Date/Intl/Temporal surface",
+  surfaceLabel: "ServiceWorker",
+  group: "known-limitations",
+  run: async () =>
+    sigFromResult(await runServiceWorker("/workers/service-probe.js")),
+})
+
+// ---------------------------------------------------------------------------
 // Manifest
 // ---------------------------------------------------------------------------
 
 export const workerTimezoneTests: ReadonlyArray<TestDefinition> = [
   blobWorkerTimezoneTest,
   blobWorkerTemporalTest,
+  blobWorkerFullParityTest,
   urlWorkerTimezoneTest,
   urlWorkerTemporalTest,
+  urlWorkerFullParityTest,
   sharedWorkerTimezoneTest,
   sharedWorkerTemporalTest,
+  sharedWorkerFullParityTest,
   importScriptsTimezoneTest,
   importScriptsTemporalTest,
+  importScriptsFullParityTest,
   nestedWorkerTimezoneTest,
   nestedWorkerTemporalTest,
+  nestedWorkerFullParityTest,
   dataUrlWorkerTimezoneTest,
   dataUrlWorkerTemporalTest,
+  dataUrlWorkerFullParityTest,
   moduleWorkerTimezoneTest,
   moduleWorkerTemporalTest,
+  moduleWorkerFullParityTest,
   serviceWorkerTimezoneTest,
   serviceWorkerTemporalTest,
+  serviceWorkerFullParityTest,
 ]

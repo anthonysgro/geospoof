@@ -2,9 +2,10 @@
  * Classic Worker that uses importScripts to load a secondary script.
  * Tests whether importScripts-loaded code also sees the spoofed timezone.
  */
+importScripts("./tz-signature.js")
 importScripts("./importscripts-helper.js")
 
-self.onmessage = function () {
+self.onmessage = function (e) {
   // __helperResult is set by the imported script
   try {
     var direct = {
@@ -17,10 +18,18 @@ self.onmessage = function () {
           ? Temporal.Now.timeZoneId()
           : null,
     }
+    // Compute the full signature via imported code (self.__tzSignature), and
+    // attach it to the imported result so the parity card reads it off the
+    // importScripts-loaded surface.
+    var imported = self.__helperResult || null
+    var sigBase = e && e.data && e.data.sigBase
+    if (imported && sigBase != null && self.__tzSignature) {
+      imported.sig = self.__tzSignature(sigBase)
+    }
     self.postMessage({
       ok: true,
       direct: direct,
-      imported: self.__helperResult || null,
+      imported: imported,
     })
   } catch (err) {
     self.postMessage({

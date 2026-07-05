@@ -2,7 +2,9 @@
  * Classic Worker probe script — served from a real URL.
  * Reports timezone data back to the parent via postMessage.
  */
-self.onmessage = function () {
+importScripts("./tz-signature.js")
+
+self.onmessage = function (e) {
   try {
     var timeZone = new Intl.DateTimeFormat().resolvedOptions().timeZone
     var offsetMinutes = new Date().getTimezoneOffset()
@@ -10,11 +12,15 @@ self.onmessage = function () {
       typeof Temporal !== "undefined" && Temporal.Now && Temporal.Now.timeZoneId
         ? Temporal.Now.timeZoneId()
         : null
+    var sigBase = e && e.data && e.data.sigBase
+    var sig =
+      sigBase != null && self.__tzSignature ? self.__tzSignature(sigBase) : null
     self.postMessage({
       ok: true,
       timeZone: timeZone,
       offsetMinutes: offsetMinutes,
       temporalTimeZone: temporalTimeZone,
+      sig: sig,
     })
   } catch (err) {
     self.postMessage({

@@ -10,6 +10,10 @@
  * test to successfully register it.
  */
 
+// Must run during initial evaluation — service workers forbid importScripts
+// inside event handlers. Defines self.__tzSignature for the parity card.
+importScripts("./tz-signature.js")
+
 self.addEventListener("install", (event) => {
   // Skip waiting so the worker activates immediately on first install
   event.waitUntil(self.skipWaiting())
@@ -28,6 +32,9 @@ self.addEventListener("message", function (event) {
       typeof Temporal !== "undefined" && Temporal.Now && Temporal.Now.timeZoneId
         ? Temporal.Now.timeZoneId()
         : null
+    var sigBase = event.data && event.data.sigBase
+    var sig =
+      sigBase != null && self.__tzSignature ? self.__tzSignature(sigBase) : null
     var channelName =
       (event.data && event.data.channel) || "geospoof-service-probe"
     var bc = new BroadcastChannel(channelName)
@@ -36,6 +43,7 @@ self.addEventListener("message", function (event) {
       timeZone: timeZone,
       offsetMinutes: offsetMinutes,
       temporalTimeZone: temporalTimeZone,
+      sig: sig,
     })
     bc.close()
   } catch (err) {

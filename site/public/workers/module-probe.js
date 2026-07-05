@@ -2,7 +2,11 @@
  * Module Worker probe script — served from a real URL with type: "module".
  * Reports timezone data back to the parent via postMessage.
  */
-self.onmessage = function () {
+// Side-effect import defines self.__tzSignature. A module worker can't use
+// importScripts, but it can import a plain (import/export-free) script.
+import "./tz-signature.js"
+
+self.onmessage = function (e) {
   try {
     const timeZone = new Intl.DateTimeFormat().resolvedOptions().timeZone
     const offsetMinutes = new Date().getTimezoneOffset()
@@ -10,7 +14,16 @@ self.onmessage = function () {
       typeof Temporal !== "undefined" && Temporal.Now && Temporal.Now.timeZoneId
         ? Temporal.Now.timeZoneId()
         : null
-    self.postMessage({ ok: true, timeZone, offsetMinutes, temporalTimeZone })
+    const sigBase = e && e.data && e.data.sigBase
+    const sig =
+      sigBase != null && self.__tzSignature ? self.__tzSignature(sigBase) : null
+    self.postMessage({
+      ok: true,
+      timeZone,
+      offsetMinutes,
+      temporalTimeZone,
+      sig,
+    })
   } catch (err) {
     self.postMessage({
       ok: false,

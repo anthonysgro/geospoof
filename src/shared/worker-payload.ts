@@ -230,6 +230,17 @@ for (var si = 0; si < getterNames.length; si++) {
   Date.prototype[gName] = gFn;
 }
 
+// getMilliseconds is timezone-independent (whole-minute offsets don't affect
+// the ms component), so this is a passthrough — installed only so its toString
+// is masked consistently with the other getters, matching the main realm which
+// also registers a passthrough here.
+var __origGetMs = Date.prototype.getMilliseconds;
+var __spoofedGetMs = function getMilliseconds() {
+  return __origGetMs.call(this);
+};
+__register(__spoofedGetMs, "getMilliseconds");
+Date.prototype.getMilliseconds = __spoofedGetMs;
+
 // --- Date.prototype.toString / toTimeString / toDateString ---
 function getLongTzName(d) {
   try {
@@ -294,6 +305,400 @@ Date.prototype.toDateString = function toDateString() {
   return get("weekday") + " " + get("month") + " " + get("day") + " " + get("year");
 };
 __register(Date.prototype.toDateString, "toDateString");
+
+// --- Date constructor + Date.parse override ---
+// The prototype overrides above spoof how an existing Date is READ. But
+// constructing a Date from an ambiguous local-time string ("2020-06-01T12:00:00")
+// or from multi-argument components interprets those in the worker's REAL system
+// zone, producing an epoch a page can diff against the main thread to recover the
+// real offset. Mirror the main-realm date-constructor.ts: detect ambiguous inputs
+// and shift the epoch by (realOffset - spoofedOffset) so construction behaves as
+// if the worker were in the spoofed zone. origGTZO (captured above) is the native
+// getTimezoneOffset — i.e. the REAL system offset — which is exactly what the
+// adjustment needs.
+var OrigDate = Date;
+var OrigDateParse = Date.parse;
+
+// Engine truncation of sub-minute historical offsets (Chrome/V8 truncates to
+// whole minutes when interpreting ambiguous strings; Firefox keeps fractional).
+// Detected the same way as state.ts so the adjustment matches the engine's own
+// parsing for pre-1900 LMT dates.
+var __engineTruncatesOffset = (function () {
+  try {
+    var probe = new OrigDate(OrigDate.UTC(1879, 0, 15, 13, 0, 0));
+    var f = new OrigDTF("en-US", {
+      timeZone: "Asia/Kolkata",
+      timeZoneName: "shortOffset",
+    });
+    var parts = f.formatToParts(probe);
+    var val = "GMT";
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i].type === "timeZoneName") { val = parts[i].value; break; }
+    }
+    return !/:(\\d{2})$/.test(val);
+  } catch (e) {
+    return true;
+  }
+})();
+
+// Parse "GMT±HH:MM" / "GMT±HHMM" / "GMT" into minutes east of UTC, or null.
+function __parseOffsetEast(tzPart) {
+  var m = /^GMT(?:([+-])(\\d{1,2})(?::?(\\d{2}))?)?$/.exec(tzPart);
+  if (!m) return null;
+  if (!m[1]) return 0;
+  var h = parseInt(m[2], 10);
+  var mn = m[3] ? parseInt(m[3], 10) : 0;
+  return (m[1] === "+" ? 1 : -1) * (h * 60 + mn);
+}
+
+// Spoofed-zone offset (minutes east of UTC) at a given instant.
+function __spoofedOffsetEast(date, fallback) {
+  try {
+    var f = new OrigDTF("en-US", {
+      timeZone: __tz_id,
+      timeZoneName: "shortOffset",
+    });
+    var parts = f.formatToParts(date);
+    var tzPart = "GMT";
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i].type === "timeZoneName") { tzPart = parts[i].value; break; }
+    }
+    var off = __parseOffsetEast(tzPart);
+    return off === null ? fallback : off;
+  } catch (e) {
+    return fallback;
+  }
+}
+
+// Ambiguous = no explicit tz designator (Z / UTC / GMT / ±HH[:MM]); an ISO
+// date-only string (YYYY-MM-DD) is explicit UTC per spec, so not ambiguous.
+function __isAmbiguousDateString(str) {
+  var t = str.trim();
+  if (/^\\d{4}-\\d{2}-\\d{2}$/.test(t)) return false;
+  var explicit =
+    /Z$/i.test(t) ||
+    /\\b(?:UTC|GMT)\\b/i.test(str) ||
+    /[+-]\\d{2}(?::?\\d{2})?$/.test(t);
+  return !explicit;
+}
+
+// ms to add to an epoch so a real-zone interpretation becomes a spoofed-zone
+// one. Mirrors computeEpochAdjustment: resolve the spoofed offset at the
+// wall-clock instant, refine once for DST boundaries, truncate on V8.
+function __computeEpochAdjustment(parsedDate) {
+  var realOffset = origGTZO.call(parsedDate); // minutes, positive = west
+  var utcEpoch = parsedDate.getTime() + realOffset * 60000;
+  try {
+    var est = __spoofedOffsetEast(new OrigDate(utcEpoch), 0);
+    var probe = new OrigDate(utcEpoch - est * 60000);
+    var spoofedOffset = __spoofedOffsetEast(probe, est);
+    if (spoofedOffset !== est) {
+      var refined = new OrigDate(utcEpoch - spoofedOffset * 60000);
+      spoofedOffset = __spoofedOffsetEast(refined, spoofedOffset);
+    }
+    var effective = __engineTruncatesOffset
+      ? Math.trunc(spoofedOffset)
+      : spoofedOffset;
+    return Math.round((-effective - realOffset) * 60000);
+  } catch (e) {
+    return 0;
+  }
+}
+
+function __spoofedDateParse(str) {
+  if (typeof str !== "string") return OrigDateParse(str);
+  var epoch = OrigDateParse(str);
+  if (isNaN(epoch)) return NaN;
+  if (__isAmbiguousDateString(str)) {
+    return epoch + __computeEpochAdjustment(new OrigDate(epoch));
+  }
+  return epoch;
+}
+
+function __multiArgDate(args) {
+  return new OrigDate(
+    args[0],
+    args[1],
+    args[2] != null ? args[2] : 1,
+    args[3] != null ? args[3] : 0,
+    args[4] != null ? args[4] : 0,
+    args[5] != null ? args[5] : 0,
+    args[6] != null ? args[6] : 0
+  );
+}
+
+function SpoofedDate() {
+  var args = Array.prototype.slice.call(arguments);
+  // Called without new → current time as a string. Native returns a
+  // system-zone string; route through the spoofed toString so it matches
+  // "new Date().toString()" (CreepJS valid.date consistency).
+  if (new.target === undefined) {
+    return new OrigDate().toString();
+  }
+  if (args.length === 0) return new OrigDate();
+  if (args.length === 1) {
+    var a = args[0];
+    if (typeof a === "number") return new OrigDate(a);
+    if (typeof a === "string") {
+      try {
+        var parsed = new OrigDate(a);
+        if (isNaN(parsed.getTime())) return parsed;
+        if (__isAmbiguousDateString(a)) {
+          return new OrigDate(parsed.getTime() + __computeEpochAdjustment(parsed));
+        }
+        return parsed;
+      } catch (e) {
+        return new OrigDate(a);
+      }
+    }
+    return new OrigDate(a);
+  }
+  try {
+    var p = __multiArgDate(args);
+    return new OrigDate(p.getTime() + __computeEpochAdjustment(p));
+  } catch (e) {
+    return __multiArgDate(args);
+  }
+}
+
+SpoofedDate.prototype = OrigDate.prototype;
+Object.defineProperty(SpoofedDate, "name", {
+  value: "Date",
+  configurable: true,
+  enumerable: false,
+  writable: false,
+});
+Object.defineProperty(SpoofedDate, "length", {
+  value: 7,
+  configurable: true,
+  enumerable: false,
+  writable: false,
+});
+var __dateSkip = { prototype: 1, name: 1, length: 1, parse: 1 };
+var __dateStatics = Object.getOwnPropertyNames(OrigDate);
+for (var __dsi = 0; __dsi < __dateStatics.length; __dsi++) {
+  var __sp = __dateStatics[__dsi];
+  if (__dateSkip[__sp]) continue;
+  var __spd = Object.getOwnPropertyDescriptor(OrigDate, __sp);
+  if (__spd) Object.defineProperty(SpoofedDate, __sp, __spd);
+}
+__register(__spoofedDateParse, "parse");
+Object.defineProperty(SpoofedDate, "parse", {
+  value: __spoofedDateParse,
+  configurable: true,
+  enumerable: false,
+  writable: true,
+});
+try {
+  Object.setPrototypeOf(SpoofedDate, Function.prototype);
+} catch (e) {
+  /* best effort */
+}
+__register(SpoofedDate, "Date");
+Object.defineProperty(OrigDate.prototype, "constructor", {
+  value: SpoofedDate,
+  configurable: true,
+  enumerable: false,
+  writable: true,
+});
+try {
+  Object.defineProperty(self, "Date", {
+    value: SpoofedDate,
+    writable: true,
+    configurable: true,
+    enumerable: false,
+  });
+} catch (e) {
+  self.Date = SpoofedDate;
+}
+
+// --- Date setter overrides (local wall-clock setters) ---
+// The getters above read in the spoofed zone; without matching setters,
+// "d.setHours(9); d.getHours()" doesn't round-trip (set writes in the real
+// zone, get reads in the spoofed zone) — a self-inconsistency detectable
+// inside the worker alone, and the resulting epoch differs from the main
+// thread. Mirror date-setters.ts: read the current spoofed wall-clock parts,
+// substitute the changed components, recompose the UTC epoch through the
+// spoofed offset (with one DST refinement), and commit via native setTime.
+// setMilliseconds / setTime / setUTC* are timezone-independent and left native.
+var __origSetHours = OrigDate.prototype.setHours;
+var __origSetMinutes = OrigDate.prototype.setMinutes;
+var __origSetSeconds = OrigDate.prototype.setSeconds;
+var __origSetDate = OrigDate.prototype.setDate;
+var __origSetMonth = OrigDate.prototype.setMonth;
+var __origSetFullYear = OrigDate.prototype.setFullYear;
+var __origSetTime = OrigDate.prototype.setTime;
+
+// Resolve a date's wall-clock components in the spoofed zone. month0 is
+// 0-indexed to match Date.UTC / the constructor. Milliseconds are read from
+// the native getter (timezone-independent for whole-minute offsets).
+function __spoofedParts(date) {
+  var f = new OrigDTF("en-US", {
+    timeZone: __tz_id,
+    hour12: false,
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  var parts = f.formatToParts(date);
+  var o = {};
+  for (var i = 0; i < parts.length; i++) {
+    o[parts[i].type] = parts[i].value;
+  }
+  var hour = parseInt(o.hour, 10);
+  if (hour === 24) hour = 0;
+  return {
+    year: parseInt(o.year, 10),
+    month0: parseInt(o.month, 10) - 1,
+    day: parseInt(o.day, 10),
+    hour: hour,
+    minute: parseInt(o.minute, 10),
+    second: parseInt(o.second, 10),
+  };
+}
+
+// UTC epoch that, read back in the spoofed zone, yields the given wall-clock
+// components. Refines the offset once against the final instant for DST.
+function __composeUtcFromSpoofedLocal(year, month0, day, hour, minute, second, ms) {
+  if (
+    !isFinite(year) || !isFinite(month0) || !isFinite(day) || !isFinite(hour) ||
+    !isFinite(minute) || !isFinite(second) || !isFinite(ms)
+  ) {
+    return NaN;
+  }
+  var rawUtc;
+  if (year >= 0 && year <= 99) {
+    // setFullYear-style small years are literal, not 1900+year like Date.UTC.
+    var tmp = new OrigDate(OrigDate.UTC(2000, month0, day, hour, minute, second, ms));
+    tmp.setUTCFullYear(Math.trunc(year));
+    rawUtc = tmp.getTime();
+  } else {
+    rawUtc = OrigDate.UTC(year, month0, day, hour, minute, second, ms);
+  }
+  if (!isFinite(rawUtc)) return NaN;
+  var est = __spoofedOffsetEast(new OrigDate(rawUtc), 0);
+  var probe1 = new OrigDate(rawUtc - est * 60000);
+  var offset = __spoofedOffsetEast(probe1, est);
+  var utcEpoch = rawUtc - offset * 60000;
+  var refined = __spoofedOffsetEast(new OrigDate(utcEpoch), offset);
+  if (refined !== offset) {
+    offset = refined;
+    utcEpoch = rawUtc - offset * 60000;
+  }
+  return utcEpoch;
+}
+
+function __spoofedSetHours(h, m, s, ms) {
+  var a = arguments;
+  try {
+    if (isNaN(this.getTime())) return NaN;
+    var p = __spoofedParts(this);
+    var nh = Number(h);
+    var nm = a.length >= 2 ? Number(m) : p.minute;
+    var ns = a.length >= 3 ? Number(s) : p.second;
+    var nms = a.length >= 4 ? Number(ms) : this.getMilliseconds();
+    var e = __composeUtcFromSpoofedLocal(p.year, p.month0, p.day, nh, nm, ns, nms);
+    __origSetTime.call(this, e);
+    return e;
+  } catch (err) {
+    return __origSetHours.apply(this, a);
+  }
+}
+
+function __spoofedSetMinutes(m, s, ms) {
+  var a = arguments;
+  try {
+    if (isNaN(this.getTime())) return NaN;
+    var p = __spoofedParts(this);
+    var nm = Number(m);
+    var ns = a.length >= 2 ? Number(s) : p.second;
+    var nms = a.length >= 3 ? Number(ms) : this.getMilliseconds();
+    var e = __composeUtcFromSpoofedLocal(p.year, p.month0, p.day, p.hour, nm, ns, nms);
+    __origSetTime.call(this, e);
+    return e;
+  } catch (err) {
+    return __origSetMinutes.apply(this, a);
+  }
+}
+
+function __spoofedSetSeconds(s, ms) {
+  var a = arguments;
+  try {
+    if (isNaN(this.getTime())) return NaN;
+    var p = __spoofedParts(this);
+    var ns = Number(s);
+    var nms = a.length >= 2 ? Number(ms) : this.getMilliseconds();
+    var e = __composeUtcFromSpoofedLocal(p.year, p.month0, p.day, p.hour, p.minute, ns, nms);
+    __origSetTime.call(this, e);
+    return e;
+  } catch (err) {
+    return __origSetSeconds.apply(this, a);
+  }
+}
+
+function __spoofedSetDate(d) {
+  var a = arguments;
+  try {
+    if (isNaN(this.getTime())) return NaN;
+    var p = __spoofedParts(this);
+    var e = __composeUtcFromSpoofedLocal(
+      p.year, p.month0, Number(d), p.hour, p.minute, p.second, this.getMilliseconds()
+    );
+    __origSetTime.call(this, e);
+    return e;
+  } catch (err) {
+    return __origSetDate.apply(this, a);
+  }
+}
+
+function __spoofedSetMonth(m, d) {
+  var a = arguments;
+  try {
+    if (isNaN(this.getTime())) return NaN;
+    var p = __spoofedParts(this);
+    var nMonth = Number(m);
+    var nDay = a.length >= 2 ? Number(d) : p.day;
+    var e = __composeUtcFromSpoofedLocal(
+      p.year, nMonth, nDay, p.hour, p.minute, p.second, this.getMilliseconds()
+    );
+    __origSetTime.call(this, e);
+    return e;
+  } catch (err) {
+    return __origSetMonth.apply(this, a);
+  }
+}
+
+function __spoofedSetFullYear(y, m, d) {
+  var a = arguments;
+  try {
+    var epoch = this.getTime();
+    // Spec: setFullYear on a NaN date starts from epoch 0.
+    var p = isNaN(epoch) ? __spoofedParts(new OrigDate(0)) : __spoofedParts(this);
+    var ms = isNaN(epoch) ? 0 : this.getMilliseconds();
+    var nYear = Number(y);
+    var nMonth = a.length >= 2 ? Number(m) : p.month0;
+    var nDay = a.length >= 3 ? Number(d) : p.day;
+    var e = __composeUtcFromSpoofedLocal(nYear, nMonth, nDay, p.hour, p.minute, p.second, ms);
+    __origSetTime.call(this, e);
+    return e;
+  } catch (err) {
+    return __origSetFullYear.apply(this, a);
+  }
+}
+
+function __installSetter(name, fn) {
+  __register(fn, name);
+  OrigDate.prototype[name] = fn;
+}
+__installSetter("setHours", __spoofedSetHours);
+__installSetter("setMinutes", __spoofedSetMinutes);
+__installSetter("setSeconds", __spoofedSetSeconds);
+__installSetter("setDate", __spoofedSetDate);
+__installSetter("setMonth", __spoofedSetMonth);
+__installSetter("setFullYear", __spoofedSetFullYear);
 
 // --- Temporal.Now override ---
 // Temporal.Now.timeZoneId() returns the system zone, and the plain*ISO /
