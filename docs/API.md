@@ -132,6 +132,10 @@ Installed on `Permissions.prototype` preserving native descriptor flags.
 | `Intl.DateTimeFormat.prototype.formatRange`        | Inherits spoofed timezone from the constructor (feature-gated)              |
 | `Intl.DateTimeFormat.prototype.formatRangeToParts` | Inherits spoofed timezone from the constructor (feature-gated)              |
 
+### Constructor subclassing fidelity (`new.target`)
+
+`Date` and `Intl.DateTimeFormat` are the only two constructors the extension replaces, and both honor `new.target`: construction routes through `Reflect.construct(Original, args, new.target)`. So `class X extends Date {}` / `class X extends Intl.DateTimeFormat {}`, and `Reflect.construct(Date, args, F)`, yield an instance carrying the caller's prototype — `new X() instanceof X` is `true` and `Object.getPrototypeOf(new X()) === X.prototype`, exactly like native — while the spoofing (epoch adjustment for `Date`, spoofed-zone injection for `Intl.DateTimeFormat`) still applies through the subclass. A plain-function override that `return`ed a fresh instance would discard `new.target`, making `new X() instanceof X` false — a deterministic tell, and a break of legitimate subclassing. Installed identically across the top-level, same-origin iframe, and worker realms.
+
 ### Temporal (feature-detected)
 
 | API                                                  | Override Behavior                               |
@@ -143,6 +147,28 @@ Installed on `Permissions.prototype` preserving native descriptor flags.
 | `Temporal.Now.zonedDateTimeISO`                      | Passes spoofed tz when no arg                   |
 | `Temporal.ZonedDateTime.prototype.offsetNanoseconds` | Passthrough getter; kept for `toString` masking |
 | `Temporal.ZonedDateTime.prototype.offset`            | Passthrough getter; kept for `toString` masking |
+
+### Worker-scope overrides (`SPOOF_CORE`)
+
+Web / Shared / Service Workers get a fresh global that never passes through the main-world content-script injection, so `Date` / `Intl.DateTimeFormat` / `Temporal.Now` inside a worker would otherwise report the **real** timezone. The extension closes this by prepending a self-contained ES5 spoofing payload (`SPOOF_CORE`, `src/shared/worker-payload.ts`) to worker scripts — via the content-script `Worker` / `SharedWorker` constructor wrapper for blob / data / nested workers on every engine, and via the Firefox `webRequest.filterResponseData` listener for URL-based / module / service workers (see [Known Limitations](#known-limitations) for the engine matrix; geolocation isn't exposed to workers, so this is a timezone-only concern).
+
+The payload reaches **full parity with the main realm** — every timezone-affecting surface is overridden with identical behavior:
+
+| Surface (in worker scope)                                                               | Override behavior                                                                                                                                                                                                                                          |
+| --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Date` constructor + `Date.parse`                                                       | `new.target`-aware (subclassing / `Reflect.construct` preserve the subclass prototype); ambiguous-string and multi-arg construction epoch-adjusted to the spoofed zone; no-`new` `Date()` returns a spoofed-zone string (CreepJS `valid.date` consistency) |
+| `Date.prototype.getTimezoneOffset`                                                      | Intl-derived spoofed offset (engine truncation matched)                                                                                                                                                                                                    |
+| `Date.prototype` local getters (`getHours`…`getFullYear`, `getDay`)                     | Read in the spoofed zone                                                                                                                                                                                                                                   |
+| `Date.prototype.getMilliseconds`                                                        | Passthrough (timezone-independent); registered for `toString` masking                                                                                                                                                                                      |
+| `Date.prototype` local setters (`setHours`…`setFullYear`)                               | Components interpreted in the spoofed zone, DST-refined; round-trip against the spoofed getters                                                                                                                                                            |
+| `Date.prototype.{toString,toDateString,toTimeString,toLocale*}`                         | Formatted in the spoofed zone                                                                                                                                                                                                                              |
+| `Intl.DateTimeFormat` constructor + `resolvedOptions`                                   | `new.target`-aware; injects the spoofed zone when none is explicit                                                                                                                                                                                         |
+| `Temporal.Now.{timeZoneId,plainDateTimeISO,plainDateISO,plainTimeISO,zonedDateTimeISO}` | Spoofed identifier / spoofed zone when no explicit arg (feature-detected)                                                                                                                                                                                  |
+| `Function.prototype.toString`                                                           | Masks every override as `[native code]`; derives the engine-specific surround format at runtime                                                                                                                                                            |
+
+**Native-method shape fidelity.** Every non-constructor override above is installed through a concise-method wrapper (`__nativeMethod`, the worker-payload twin of the main realm's `stripConstruct`), so it has **no own `prototype` and no `[[Construct]]` slot** — matching native methods, where `new Date.prototype.getHours()` and `Reflect.construct(Date.prototype.getHours, [])` throw `TypeError` — and carries the correct native `name` / `length` / `[native code]` toString. The two real constructors (`Date`, `Intl.DateTimeFormat`) keep their own `prototype` and `[[Construct]]`. Without this, a naive `function(){}` override would carry a `prototype` and be constructable, a worker-side tell distinct from the timezone value.
+
+Not applicable in worker scope (correctly absent): geolocation, permissions, `document.lastModified`, WebRTC, XSLT, iframe / DOM cascade — those APIs don't exist there.
 
 ### Document overrides
 
@@ -342,6 +368,30 @@ Validates that timezone spoofing is installed in iframe realms:
 | `new DOMParser().parseFromString("", "text/html").lastModified` | DOMParser-constructed document's lastModified offset matches          |
 | `iframe.contentDocument.lastModified`                           | Iframe realm's lastModified offset matches                            |
 
+### Worker Timezone Tests
+
+Validates timezone spoofing across every Worker construction pattern. Each surface has three cards — an Intl-zone reach check, a `Temporal.Now.timeZoneId()` reach check, and a full Date/Intl/Temporal parity signature — plus a native-method fidelity card. Blob / data / nested workers are patched on every engine (constructor interception) and live under `timezone-stealth`; URL-based / SharedWorker / importScripts / module workers are patched only on Firefox (`filterResponseData`) and reclassify to `known-limitations` on Chromium/Safari; ServiceWorkers are always `known-limitations`.
+
+| Surface                                                   | What's tested                                                                                                                                                                                                                                                                                                                         |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Blob-URL / data-URL / nested Worker                       | Reported Intl zone, Temporal zone, and full parity signature match the main thread (all engines)                                                                                                                                                                                                                                      |
+| URL-based classic / SharedWorker / importScripts / module | Same, on Firefox; documented reach limitation on Chromium/Safari                                                                                                                                                                                                                                                                      |
+| ServiceWorker                                             | Same, documented as a known limitation (stable browser-managed URL rules out interception)                                                                                                                                                                                                                                            |
+| Full parity signature                                     | Intl zone, `getTimezoneOffset`, ambiguous/multi-arg construction, `Date.parse`, all local getters, a `setHours` round-trip, the formatter family, and `Temporal.Now` — every field must equal the main thread's                                                                                                                       |
+| Native-method fidelity (per surface)                      | Every override in the worker has no own `prototype`, is not constructable, and matches native `name` / `length` / `[native code]` toString; the two constructors stay constructable. Served-surface cards **skip** when the payload didn't reach the worker (unpatched = vacuously native), deferring to that surface's timezone card |
+
+### Constructor Subclassing Tests (`new.target`)
+
+Validates that replacing `Date` and `Intl.DateTimeFormat` preserves native constructor semantics (see [Constructor subclassing fidelity](#constructor-subclassing-fidelity-newtarget)):
+
+| Surface                                   | What's tested                                                                              |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `class X extends Date {}`                 | `new X() instanceof X` and `Object.getPrototypeOf(new X()) === X.prototype`                |
+| `Reflect.construct(Date, [], F)`          | Result's prototype is `F.prototype`                                                        |
+| `class X extends Intl.DateTimeFormat {}`  | Same subclass-prototype fidelity, with the spoofed zone still applied through the subclass |
+| Iframe realm (Date + Intl.DateTimeFormat) | Same checks against a same-origin iframe's constructors                                    |
+| Worker realm (Date + Intl.DateTimeFormat) | Same checks inside the worker payload, with the spoof still intact                         |
+
 ## Injected Script Architecture
 
 The injected script runs in page context and overrides browser APIs. It's organized as modular TypeScript files bundled into a single IIFE by Vite.
@@ -364,6 +414,7 @@ Order matters — each module depends on the ones before it:
 12. **document-overrides** — `Document.prototype.lastModified` getter
 13. **iframe-patching** — `contentWindow`/`contentDocument` getter overrides
 14. **dom-insertion** — DOM method wrapping + MutationObserver fallback
+15. **worker-patching** — `Worker` / `SharedWorker` constructor wrappers that prepend the `SPOOF_CORE` payload to blob / data / nested workers (all engines) and announce URL-based worker requests to the background for the Firefox `filterResponseData` path
 
 ### Key Modules
 
@@ -443,6 +494,14 @@ Feature-detected Temporal API overrides. Overrides `Temporal.Now` methods when a
 
 - `timeZoneId()` — returns spoofed identifier
 - `plainDateTimeISO()`, `plainDateISO()`, `plainTimeISO()`, `zonedDateTimeISO()` — pass spoofed identifier when no explicit timezone argument provided
+
+#### worker-patching.ts
+
+Wraps the `Worker` and `SharedWorker` constructors so worker realms receive the spoofing payload. For blob / data / nested workers it prepends `SPOOF_CORE` at construction time (every engine) and recursively wraps `self.Worker` inside each worker so nested workers to any depth are covered. For URL-based workers it announces the URL to the background (`ANNOUNCE_WORKER_FETCH`) and passes the original URL through, so the Firefox `webRequest.filterResponseData` listener can prepend the payload at the network layer. Skipped in cross-origin frame contexts.
+
+#### worker-payload.ts
+
+Defines `SPOOF_CORE` — the self-contained ES5 spoofing payload injected into worker scopes — and `buildStandaloneWorkerPayload(identifier)`, which wraps it in an IIFE with the spoofed IANA id substituted. Shared by both `worker-patching.ts` (content-script path) and `src/background/worker-request-filter.ts` (Firefox `filterResponseData` path) so both paths inject byte-identical behavior. Provides full main-realm parity — `Date` constructor / `Date.parse`, `getTimezoneOffset`, local getters and setters, `getMilliseconds`, the formatter family, `Intl.DateTimeFormat` + `resolvedOptions`, and `Temporal.Now.*` — with `new.target`-aware constructors and, via the `__nativeMethod` concise-method wrapper, native method shape (no `prototype` / `[[Construct]]`, correct `name` / `length` / `[native code]` toString). See [Worker-scope overrides](#worker-scope-overrides-spoof_core).
 
 ### Content Script → Injected Script Communication
 
@@ -729,7 +788,7 @@ Timeout: 10s (IP detection), 5s per geo service | Retry: 2x exponential backoff 
 
    Rewriting URL-based workers to blob URLs is deliberately avoided because blob wrapping fails on strict-CSP origins (breaking the site's worker entirely), shifts `self.location` which breaks relative `fetch`/`import` calls inside the worker, and can't preserve module-worker `import` resolution. The `filterResponseData` path has cleaner failure modes: on the rare site that ships Subresource Integrity on worker scripts, the browser rejects the modified bytes, our `onerror` handler disconnects, the original response serves unmodified, and the site keeps working (with no protection on that origin).
 
-   CreepJS's `code:` worker-fingerprint hash is closed on Firefox: the payload derives the engine-specific `"[native code]"` surround format at runtime and matches Firefox's multi-line shape, so spoofed `Intl.DateTimeFormat`, `Date` prototype methods, `Worker`, and `importScripts` all pass the native-shape check.
+   Where the payload does reach a worker (blob/data/nested on every engine; URL-based/module/service on Firefox), it provides full main-realm parity and native-indistinguishable overrides — see [Worker-scope overrides](#worker-scope-overrides-spoof_core). Every override matches native method shape (no own `prototype`, no `[[Construct]]`, correct `name` / `length` / `[native code]` toString), the `Date` and `Intl.DateTimeFormat` constructors are `new.target`-aware, and CreepJS's `code:` worker-fingerprint hash is closed on Firefox: the payload derives the engine-specific `"[native code]"` surround format at runtime and matches Firefox's multi-line shape, so spoofed `Intl.DateTimeFormat`, `Date` constructor + prototype methods, `Worker`, and `importScripts` all pass the native-shape check.
 
 2. **XSLT/EXSLT datetime (Firefox only) — closed, with edges.** `XSLTProcessor` runs inside a C++ engine (libxslt on Gecko) that doesn't round-trip through JavaScript date machinery, so EXSLT's `date:date-time()` emits an ISO datetime carrying the real system UTC offset, bypassing every Date/Intl/Temporal override — the ground-truth surface arkenfox's TZP uses. The result is still delivered back through the JS `XSLTProcessor` API, so GeoSpoof wraps `transformToFragment` / `transformToDocument` (`src/content/injected/xslt-overrides.ts`), walks the result's text nodes, and rewrites any offset-bearing ISO datetime within ~10s of the current instant into the spoofed zone (the tight "is it now?" gate avoids corrupting legitimate datetimes in transformed content). The iframe patcher installs the same wrap on each same-origin iframe realm's `XSLTProcessor`. Residual edges: cross-origin iframe XSLT can't be reached (see #4). Chromium/WebKit don't ship EXSLT, and Firefox is winding XSLT down behind `dom.xslt.enabled` (FF151+; when off, no EXSLT date is produced and this no-ops), so the surface is shrinking regardless.
 

@@ -95,6 +95,13 @@ interface WorkerResult {
    * didn't compute one (older/unpatched path).
    */
   sig?: TzSignature | null
+  /**
+   * Native-method fidelity divergences, computed inside the worker via the
+   * shared `self.__methodFidelity` helper. Empty array ⇒ every override is
+   * indistinguishable from native. Consumed by the per-surface method-fidelity
+   * cards. Null when the served probe didn't compute one (older probe).
+   */
+  fidelity?: ReadonlyArray<string> | null
 }
 
 // ---------------------------------------------------------------------------
@@ -297,6 +304,7 @@ async function runSharedWorker(scriptUrl: string): Promise<WorkerResult> {
             offsetMinutes: number
             temporalTimeZone?: string | null
             sig?: TzSignature | null
+            fidelity?: ReadonlyArray<string> | null
           }
         | { ok: false; error: string }
       if (data && typeof data === "object" && "ok" in data) {
@@ -306,6 +314,7 @@ async function runSharedWorker(scriptUrl: string): Promise<WorkerResult> {
             offsetMinutes: data.offsetMinutes,
             temporalTimeZone: data.temporalTimeZone ?? null,
             sig: data.sig ?? null,
+            fidelity: data.fidelity ?? null,
           })
         } else {
           reject(new Error(`SharedWorker reported error: ${data.error}`))
@@ -346,6 +355,7 @@ function waitForWorkerResult(worker: Worker): Promise<WorkerResult> {
             offsetMinutes: number
             temporalTimeZone?: string | null
             sig?: TzSignature | null
+            fidelity?: ReadonlyArray<string> | null
           }
         | { ok: false; error: string }
       if (data && typeof data === "object" && "ok" in data) {
@@ -355,6 +365,7 @@ function waitForWorkerResult(worker: Worker): Promise<WorkerResult> {
             offsetMinutes: data.offsetMinutes,
             temporalTimeZone: data.temporalTimeZone ?? null,
             sig: data.sig ?? null,
+            fidelity: data.fidelity ?? null,
           })
         } else {
           reject(new Error(`Worker reported error: ${data.error}`))
@@ -836,6 +847,7 @@ async function runServiceWorker(scriptUrl: string): Promise<WorkerResult> {
               offsetMinutes: number
               temporalTimeZone?: string | null
               sig?: TzSignature | null
+              fidelity?: ReadonlyArray<string> | null
             }
           | { ok: false; error: string }
         if (data && typeof data === "object" && "ok" in data) {
@@ -845,6 +857,7 @@ async function runServiceWorker(scriptUrl: string): Promise<WorkerResult> {
               offsetMinutes: data.offsetMinutes,
               temporalTimeZone: data.temporalTimeZone ?? null,
               sig: data.sig ?? null,
+              fidelity: data.fidelity ?? null,
             })
           } else {
             reject(new Error(`ServiceWorker reported error: ${data.error}`))
@@ -1421,6 +1434,13 @@ function sigFromResult(result: WorkerResult): TzSignature {
   return result.sig
 }
 
+function fidelityFromResult(result: WorkerResult): ReadonlyArray<string> {
+  if (result.fidelity == null) {
+    throw new SkipTestError("worker did not report method fidelity")
+  }
+  return result.fidelity
+}
+
 const urlWorkerFullParityTest = buildWorkerFullParityTest({
   id: "tampering.worker.url-classic-full-timezone-parity",
   name: "URL-based classic Worker matches the main thread across the full Date/Intl/Temporal surface",
@@ -1469,6 +1489,465 @@ const serviceWorkerFullParityTest = buildWorkerFullParityTest({
 })
 
 // ---------------------------------------------------------------------------
+// Native-method fidelity (indistinguishability proof)
+//
+// The parity cards above prove the payload spoofs the RIGHT VALUES. This proves
+// the payload's overrides have the right SHAPE: a native prototype method /
+// static is not a constructor — it has no own `prototype`, no `[[Construct]]`
+// slot (so `new fn()` / `Reflect.construct(fn, [])` throw "not a constructor"),
+// and a spec-defined name / length / "[native code]" toString. A naive
+// `function(){}` override carries both a `prototype` and `[[Construct]]`, which
+// a fingerprinter running INSIDE a worker can detect directly. Like the
+// completeness proof, shape is surface-independent (one payload, installed
+// synchronously before worker code), so proving it on the all-engine inline
+// surfaces (blob / data / nested) plus the per-surface reach cards covers the
+// matrix. Self-verifying: a clean browser passes (native already satisfies the
+// invariants); only a naive override fails.
+// ---------------------------------------------------------------------------
+
+/**
+ * Inside a worker: verify every spoofed Date/Intl/Temporal method is
+ * indistinguishable from a native method (no own `prototype`, no
+ * `[[Construct]]`, native name/length/[native code] toString) and that the two
+ * real constructors stay constructable with an own prototype. Returns the list
+ * of divergences (empty ⇒ all native-faithful).
+ *
+ * MUST stay self-contained — globals only, no closures or imports — because it
+ * is serialized with `.toString()` and injected into a Worker so the worker
+ * runs byte-identical logic. Single source of truth for both inline + nested.
+ */
+function collectMethodFidelityFailures(): Array<string> {
+  const failures: Array<string> = []
+  // Isolate [[Construct]] from the function body: passing `fn` as new.target
+  // against Array never runs fn's body — it throws ONLY if fn lacks
+  // [[Construct]]. (A plain construct-and-catch would misreport methods whose
+  // body throws for unrelated reasons, e.g. a getter called on a non-Date.)
+  const hasConstruct = (fn: unknown): boolean => {
+    try {
+      Reflect.construct(Array, [], fn as new () => unknown)
+      return true
+    } catch {
+      return false
+    }
+  }
+  const checkMethod = (
+    label: string,
+    fn: unknown,
+    wantName: string,
+    wantLength: number
+  ): void => {
+    if (typeof fn !== "function") {
+      failures.push(label + ": not a function")
+      return
+    }
+    if (Object.prototype.hasOwnProperty.call(fn, "prototype")) {
+      failures.push(label + ": has own prototype")
+    }
+    if (hasConstruct(fn)) failures.push(label + ": constructable")
+    const f = fn as { name: string; length: number }
+    if (f.name !== wantName) failures.push(label + ": name=" + f.name)
+    if (f.length !== wantLength) {
+      failures.push(label + ": length=" + f.length + " want " + wantLength)
+    }
+    if (Function.prototype.toString.call(fn).indexOf("[native code]") === -1) {
+      failures.push(label + ": toString not native")
+    }
+  }
+  const checkCtor = (label: string, fn: unknown): void => {
+    if (typeof fn !== "function") {
+      failures.push(label + ": not a function")
+      return
+    }
+    if (!Object.prototype.hasOwnProperty.call(fn, "prototype")) {
+      failures.push(label + ": missing own prototype")
+    }
+    if (!hasConstruct(fn)) failures.push(label + ": not constructable")
+  }
+
+  const DP = Date.prototype as unknown as Record<string, unknown>
+  // Getters + formatters + getTimezoneOffset — all native arity 0.
+  const zeroArity = [
+    "getHours",
+    "getMinutes",
+    "getSeconds",
+    "getMilliseconds",
+    "getDate",
+    "getDay",
+    "getMonth",
+    "getFullYear",
+    "getTimezoneOffset",
+    "toString",
+    "toDateString",
+    "toTimeString",
+    "toLocaleString",
+    "toLocaleDateString",
+    "toLocaleTimeString",
+  ]
+  for (const name of zeroArity) {
+    checkMethod(name, DP[name], name, 0)
+  }
+  // Local wall-clock setters — spec arities.
+  const setters: Array<[string, number]> = [
+    ["setHours", 4],
+    ["setMinutes", 3],
+    ["setSeconds", 2],
+    ["setDate", 1],
+    ["setMonth", 2],
+    ["setFullYear", 3],
+  ]
+  for (const [setterName, setterLen] of setters) {
+    checkMethod(setterName, DP[setterName], setterName, setterLen)
+  }
+  checkMethod(
+    "resolvedOptions",
+    (Intl.DateTimeFormat.prototype as unknown as Record<string, unknown>)
+      .resolvedOptions,
+    "resolvedOptions",
+    0
+  )
+  checkMethod(
+    "Date.parse",
+    (Date as unknown as Record<string, unknown>).parse,
+    "parse",
+    1
+  )
+  checkMethod(
+    "Function.prototype.toString",
+    Function.prototype.toString,
+    "toString",
+    0
+  )
+
+  const T = (globalThis as { Temporal?: { Now?: Record<string, unknown> } })
+    .Temporal
+  if (T && T.Now) {
+    const now = T.Now
+    const tnames = [
+      "timeZoneId",
+      "plainDateTimeISO",
+      "plainDateISO",
+      "plainTimeISO",
+      "zonedDateTimeISO",
+    ]
+    for (const tname of tnames) {
+      checkMethod("Temporal.Now." + tname, now[tname], tname, 0)
+    }
+  }
+
+  // The two real constructors must stay constructable with an own prototype.
+  checkCtor("Date", Date)
+  checkCtor("Intl.DateTimeFormat", Intl.DateTimeFormat)
+  return failures
+}
+
+/** Worker source that runs the fidelity probe and posts the divergences back. */
+const FIDELITY_WORKER_SOURCE = `self.onmessage = function () {
+  try {
+    var f = (${collectMethodFidelityFailures.toString()});
+    self.postMessage({ ok: true, failures: f() });
+  } catch (err) {
+    self.postMessage({ ok: false, error: err && err.message ? err.message : String(err) });
+  }
+};`
+
+/** Outer-worker source that relays a nested child's fidelity result upward. */
+const NESTED_FIDELITY_WORKER_SOURCE = `self.onmessage = function (e) {
+  try {
+    var childSrc = ${JSON.stringify(FIDELITY_WORKER_SOURCE)};
+    var url = URL.createObjectURL(new Blob([childSrc], { type: "application/javascript" }));
+    var child = new Worker(url);
+    child.onmessage = function (ev) {
+      try { child.terminate(); URL.revokeObjectURL(url); } catch (x) { /* cleanup */ }
+      self.postMessage(ev.data);
+    };
+    child.onerror = function () { self.postMessage({ ok: false, error: "nested child worker error" }); };
+    child.postMessage(e.data);
+  } catch (err) {
+    self.postMessage({ ok: false, error: err && err.message ? err.message : String(err) });
+  }
+};`
+
+/** Post to a fidelity worker, resolve the reported divergences, clean up. */
+function awaitWorkerFidelity(
+  worker: Worker,
+  cleanup: () => void
+): Promise<ReadonlyArray<string>> {
+  return new Promise<ReadonlyArray<string>>((resolve, reject) => {
+    const timer = setTimeout(
+      () =>
+        reject(
+          new Error(`Worker did not respond within ${WORKER_TIMEOUT_MS}ms`)
+        ),
+      WORKER_TIMEOUT_MS
+    )
+    worker.onmessage = (event: MessageEvent<unknown>) => {
+      clearTimeout(timer)
+      const data = event.data as
+        | { ok: true; failures: ReadonlyArray<string> }
+        | { ok: false; error: string }
+      if (data && typeof data === "object" && "ok" in data) {
+        if (data.ok) resolve(data.failures)
+        else reject(new Error(data.error))
+      } else {
+        reject(new Error("Worker returned an unexpected message shape"))
+      }
+    }
+    worker.onerror = () => {
+      clearTimeout(timer)
+      reject(new Error("Worker error"))
+    }
+    worker.postMessage({ start: true })
+  }).finally(() => {
+    try {
+      worker.terminate()
+    } catch {
+      /* cleanup */
+    }
+    cleanup()
+  })
+}
+
+function runFidelityViaBlob(): Promise<ReadonlyArray<string>> {
+  assertBlobWorkerApis()
+  const url = URL.createObjectURL(
+    new Blob([FIDELITY_WORKER_SOURCE], { type: "application/javascript" })
+  )
+  return awaitWorkerFidelity(new Worker(url), () => {
+    try {
+      URL.revokeObjectURL(url)
+    } catch {
+      /* cleanup */
+    }
+  })
+}
+
+function runFidelityViaData(): Promise<ReadonlyArray<string>> {
+  if (typeof Worker === "undefined") {
+    throw new SkipTestError("Worker API not available")
+  }
+  const dataUrl = `data:application/javascript,${encodeURIComponent(FIDELITY_WORKER_SOURCE)}`
+  return awaitWorkerFidelity(new Worker(dataUrl), () => {})
+}
+
+function runFidelityViaNested(): Promise<ReadonlyArray<string>> {
+  assertBlobWorkerApis()
+  const url = URL.createObjectURL(
+    new Blob([NESTED_FIDELITY_WORKER_SOURCE], {
+      type: "application/javascript",
+    })
+  )
+  return awaitWorkerFidelity(new Worker(url), () => {
+    try {
+      URL.revokeObjectURL(url)
+    } catch {
+      /* cleanup */
+    }
+  })
+}
+
+/**
+ * Build a native-method fidelity card for an all-engine inline worker surface.
+ * Runs the shared probe in the worker and passes when it reports no
+ * divergences.
+ */
+function buildWorkerMethodFidelityTest(cfg: {
+  id: string
+  name: string
+  surfaceLabel: string
+  group?: TestGroupId
+  run: () => Promise<ReadonlyArray<string>>
+}): TestDefinition {
+  return buildBehavioralTest<boolean>({
+    id: cfg.id,
+    group: cfg.group ?? "timezone-stealth",
+    name: cfg.name,
+    description:
+      `Proves the worker spoofing payload's method overrides are INDISTINGUISHABLE from native methods on the ${cfg.surfaceLabel} surface. ` +
+      "A native prototype method / static has no own `prototype`, no `[[Construct]]` slot (so `new fn()` and `Reflect.construct(fn, [])` throw), and a spec-defined name / length / `[native code]` toString. A naive `function(){}` override carries a prototype and `[[Construct]]`, which a worker-side fingerprinter can detect. Checks every spoofed getter, setter, formatter, getTimezoneOffset, resolvedOptions, Date.parse, Function.prototype.toString and Temporal.Now.* — and confirms the two real constructors (Date, Intl.DateTimeFormat) stay constructable with an own prototype.",
+    technique: `Run a self-contained fidelity probe inside a ${cfg.surfaceLabel}: for each override assert no own prototype, not constructable (Reflect.construct(Array, [], fn) isolates [[Construct]] from the body), native name/length, and [native code] toString. Clean browsers pass; a naive override fails listing the diverging methods.`,
+    codeSnippet: `// inside the worker, for each override fn:
+!Object.prototype.hasOwnProperty.call(fn, "prototype")   // native: true
+try { Reflect.construct(Array, [], fn); /* fail */ } catch { /* not constructable: pass */ }`,
+    expected: async () => {
+      if (typeof Worker === "undefined") {
+        return { skipReason: "Worker API not available in this browser" }
+      }
+      return {
+        value: true,
+        describe: "all worker overrides indistinguishable from native",
+      }
+    },
+    observe: async () => {
+      let failures: ReadonlyArray<string>
+      try {
+        failures = await cfg.run()
+      } catch (err) {
+        if (err instanceof SkipTestError) throw err
+        throw new SkipTestError(
+          `${cfg.surfaceLabel} method fidelity unavailable: ${err instanceof Error ? err.message : String(err)}`
+        )
+      }
+      return {
+        value: failures.length === 0,
+        describe: failures.length
+          ? `diverged from native: ${failures.join("; ")}`
+          : "all worker overrides indistinguishable from native",
+      }
+    },
+  })
+}
+
+const blobWorkerMethodFidelityTest = buildWorkerMethodFidelityTest({
+  id: "tampering.worker.blob-method-native-fidelity",
+  name: "Blob Worker overrides are indistinguishable from native methods",
+  surfaceLabel: "blob-URL Worker",
+  run: runFidelityViaBlob,
+})
+
+const dataUrlWorkerMethodFidelityTest = buildWorkerMethodFidelityTest({
+  id: "tampering.worker.data-method-native-fidelity",
+  name: "Data-URL Worker overrides are indistinguishable from native methods",
+  surfaceLabel: "data-URL Worker",
+  run: runFidelityViaData,
+})
+
+const nestedWorkerMethodFidelityTest = buildWorkerMethodFidelityTest({
+  id: "tampering.worker.nested-method-native-fidelity",
+  name: "Nested Worker overrides are indistinguishable from native methods",
+  surfaceLabel: "nested Worker-in-Worker",
+  run: runFidelityViaNested,
+})
+
+/**
+ * Build a native-method fidelity card for a SERVED worker surface.
+ *
+ * Unlike the inline surfaces (blob / data / nested), which the Worker-
+ * constructor interception patches on every engine, served workers are only
+ * patched where `webRequest.filterResponseData` exists (Firefox). On
+ * Chromium/Safari the served worker runs UNPATCHED — its methods are literally
+ * the native ones, so a "looks native" assertion would pass vacuously (there is
+ * no override to detect). That green would be misleading: it credits stealth on
+ * a surface that actually leaks.
+ *
+ * So this builder first confirms the payload reached the worker — the worker's
+ * timezone must equal the spoofed main-thread zone — and SKIPS when it didn't,
+ * deferring to that surface's timezone card for the documented reach limitation.
+ * Only when the payload is present (Firefox served, or any patched surface) does
+ * it assert the overrides are indistinguishable from native.
+ */
+function buildServedWorkerMethodFidelityTest(cfg: {
+  id: string
+  name: string
+  surfaceLabel: string
+  group: TestGroupId
+  available: () => string | null
+  run: () => Promise<WorkerResult>
+}): TestDefinition {
+  return buildBehavioralTest<boolean>({
+    id: cfg.id,
+    group: cfg.group,
+    name: cfg.name,
+    description:
+      `Proves the worker spoofing payload's method overrides are INDISTINGUISHABLE from native methods on the ${cfg.surfaceLabel} surface — but only where the payload actually reaches it. ` +
+      "A native prototype method / static has no own `prototype`, no `[[Construct]]` slot, and a spec-defined name / length / `[native code]` toString; a naive `function(){}` override carries a prototype and `[[Construct]]`. " +
+      `Served workers are patched only where webRequest.filterResponseData exists (Firefox); on Chromium/Safari the ${cfg.surfaceLabel} runs unpatched with genuinely native methods, so this card first checks the payload reached the worker (its timezone matches the spoofed main-thread zone) and SKIPS when it didn't — a "looks native" pass on an unpatched surface would be vacuous. See this surface's timezone card for the reach limitation.`,
+    technique: `Read the fidelity the served probe computes via self.__methodFidelity, but first gate on payload reach: if the worker's timezone doesn't match the spoofed main-thread zone, the payload isn't installed on this engine and the card skips. When present, assert no override has an own prototype, is constructable (Reflect.construct(Array, [], fn)), or diverges in name/length/[native code] toString.`,
+    codeSnippet: `// gate: worker must actually be patched, else skip (unpatched = vacuously native)
+if (workerTimeZone !== mainThreadSpoofedZone) skip()
+// then, for each override fn:
+!Object.prototype.hasOwnProperty.call(fn, "prototype")   // must be true`,
+    expected: async () => {
+      const unavailable = cfg.available()
+      if (unavailable) return { skipReason: unavailable }
+      return {
+        value: true,
+        describe: "all worker overrides indistinguishable from native",
+      }
+    },
+    observe: async () => {
+      const mainTz = getMainThreadTimezone()
+      let result: WorkerResult
+      try {
+        result = await cfg.run()
+      } catch (err) {
+        if (err instanceof SkipTestError) throw err
+        throw new SkipTestError(
+          `${cfg.surfaceLabel} method fidelity unavailable: ${err instanceof Error ? err.message : String(err)}`
+        )
+      }
+      // Gate on payload reach: an unpatched served worker reports the real zone
+      // and has native methods, so asserting "looks native" would pass without
+      // proving anything. Skip instead and let the timezone card document it.
+      if (mainTz && result.timeZone && result.timeZone !== mainTz) {
+        throw new SkipTestError(
+          `payload did not reach the ${cfg.surfaceLabel} on this engine ` +
+            `(worker reports "${result.timeZone}", main thread "${mainTz}") — ` +
+            `method shape is only meaningful where the payload is installed; see the timezone card`
+        )
+      }
+      const failures = fidelityFromResult(result)
+      return {
+        value: failures.length === 0,
+        describe: failures.length
+          ? `diverged from native: ${failures.join("; ")}`
+          : "all worker overrides indistinguishable from native",
+      }
+    },
+  })
+}
+
+// Served-worker method fidelity — same engine split as the parity cards, but
+// reach-gated: meaningful (and green) on Firefox where filterResponseData
+// installs the payload; skipped on Chromium/Safari where the served worker runs
+// unpatched (so a "native" pass would be vacuous — the timezone card documents
+// the leak).
+
+const urlWorkerMethodFidelityTest = buildServedWorkerMethodFidelityTest({
+  id: "tampering.worker.url-classic-method-native-fidelity",
+  name: "URL-based classic Worker overrides are indistinguishable from native methods",
+  surfaceLabel: "URL-based classic Worker",
+  group: urlWorkerGroup,
+  available: workerApiAvailable,
+  run: () => runUrlWorker("/workers/classic-probe.js"),
+})
+
+const sharedWorkerMethodFidelityTest = buildServedWorkerMethodFidelityTest({
+  id: "tampering.worker.shared-worker-method-native-fidelity",
+  name: "SharedWorker overrides are indistinguishable from native methods",
+  surfaceLabel: "SharedWorker",
+  group: urlWorkerGroup,
+  available: sharedWorkerApiAvailable,
+  run: () => runSharedWorker("/workers/shared-probe.js"),
+})
+
+const importScriptsMethodFidelityTest = buildServedWorkerMethodFidelityTest({
+  id: "tampering.worker.importscripts-method-native-fidelity",
+  name: "importScripts-loaded code sees overrides indistinguishable from native methods",
+  surfaceLabel: "importScripts-loaded code",
+  group: urlWorkerGroup,
+  available: workerApiAvailable,
+  run: () => runImportScriptsWorker("/workers/importscripts-probe.js"),
+})
+
+const moduleWorkerMethodFidelityTest = buildServedWorkerMethodFidelityTest({
+  id: "tampering.worker.module-method-native-fidelity",
+  name: "Module Worker overrides are indistinguishable from native methods",
+  surfaceLabel: "module Worker",
+  group: urlWorkerGroup,
+  available: workerApiAvailable,
+  run: () => runModuleWorker("/workers/module-probe.js"),
+})
+
+const serviceWorkerMethodFidelityTest = buildServedWorkerMethodFidelityTest({
+  id: "known-limitation.worker.service-worker-method-native-fidelity",
+  name: "ServiceWorker overrides are indistinguishable from native methods",
+  surfaceLabel: "ServiceWorker",
+  group: "known-limitations",
+  available: serviceWorkerApiAvailable,
+  run: () => runServiceWorker("/workers/service-probe.js"),
+})
+
+// ---------------------------------------------------------------------------
 // Manifest
 // ---------------------------------------------------------------------------
 
@@ -1497,4 +1976,13 @@ export const workerTimezoneTests: ReadonlyArray<TestDefinition> = [
   serviceWorkerTimezoneTest,
   serviceWorkerTemporalTest,
   serviceWorkerFullParityTest,
+  // Native-method fidelity — one per surface (same engine split as above).
+  blobWorkerMethodFidelityTest,
+  dataUrlWorkerMethodFidelityTest,
+  nestedWorkerMethodFidelityTest,
+  urlWorkerMethodFidelityTest,
+  sharedWorkerMethodFidelityTest,
+  importScriptsMethodFidelityTest,
+  moduleWorkerMethodFidelityTest,
+  serviceWorkerMethodFidelityTest,
 ]

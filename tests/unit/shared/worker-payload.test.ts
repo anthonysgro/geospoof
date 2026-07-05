@@ -329,3 +329,185 @@ describe("worker payload SPOOF_CORE — constructor toString masking", () => {
     ).toContain("[native code]");
   });
 });
+
+describe("worker payload SPOOF_CORE — new.target / subclassing fidelity", () => {
+  it("preserves the subclass prototype for Date (extends + Reflect.construct)", () => {
+    const realm = spoofedDateInRealm("Asia/Kolkata");
+    const r = realm.evalInRealm<{
+      subInstance: boolean;
+      subProto: boolean;
+      reflectProto: boolean;
+      noNewString: boolean;
+    }>(`(function () {
+      // Use self.Date — in this VM harness the spoofed constructor is installed
+      // on self, whereas the VM's global Date stays native. In a real worker
+      // self IS the global, so self.Date === Date.
+      var SpoofedDate = self.Date;
+      class MyDate extends SpoofedDate {}
+      var d = new MyDate();
+      function Fake() {}
+      var x = Reflect.construct(SpoofedDate, [0], Fake);
+      return {
+        subInstance: d instanceof MyDate,
+        subProto: Object.getPrototypeOf(d) === MyDate.prototype,
+        reflectProto: Object.getPrototypeOf(x) === Fake.prototype,
+        noNewString: typeof SpoofedDate() === "string",
+      };
+    })()`);
+    expect(r.subInstance).toBe(true);
+    expect(r.subProto).toBe(true);
+    expect(r.reflectProto).toBe(true);
+    expect(r.noNewString).toBe(true);
+  });
+
+  it("still spoofs the zone on a Date subclass instance", () => {
+    const realm = spoofedDateInRealm("Asia/Kolkata");
+    // 12:00 IST == 06:30 UTC — the epoch adjustment must still apply through
+    // the subclass path.
+    const epoch = realm.evalInRealm<number>(`(function () {
+      class MyDate extends self.Date {}
+      return new MyDate("2020-06-01T12:00:00").getTime();
+    })()`);
+    expect(epoch).toBe(Date.UTC(2020, 5, 1, 6, 30, 0));
+  });
+
+  it("preserves the subclass prototype for Intl.DateTimeFormat and still spoofs", () => {
+    const realm = spoofedDateInRealm("Asia/Kolkata");
+    const r = realm.evalInRealm<{
+      subInstance: boolean;
+      subProto: boolean;
+      tz: string;
+    }>(`(function () {
+      class MyDTF extends Intl.DateTimeFormat {}
+      var f = new MyDTF();
+      return {
+        subInstance: f instanceof MyDTF,
+        subProto: Object.getPrototypeOf(f) === MyDTF.prototype,
+        tz: f.resolvedOptions().timeZone,
+      };
+    })()`);
+    expect(r.subInstance).toBe(true);
+    expect(r.subProto).toBe(true);
+    expect(r.tz).toBe("Asia/Kolkata");
+  });
+});
+
+describe("worker payload SPOOF_CORE — native-method fidelity ([[Construct]] / prototype / arity)", () => {
+  // A native prototype method / static is not a constructor: no own "prototype"
+  // property, no [[Construct]] slot, and a spec-defined arity. Each spoofed
+  // override must match, or a worker-side fingerprinter can distinguish it.
+  const METHOD_CASES: ReadonlyArray<{ expr: string; name: string; length: number }> = [
+    { expr: "Date.prototype.getHours", name: "getHours", length: 0 },
+    { expr: "Date.prototype.getMinutes", name: "getMinutes", length: 0 },
+    { expr: "Date.prototype.getSeconds", name: "getSeconds", length: 0 },
+    { expr: "Date.prototype.getMilliseconds", name: "getMilliseconds", length: 0 },
+    { expr: "Date.prototype.getDate", name: "getDate", length: 0 },
+    { expr: "Date.prototype.getDay", name: "getDay", length: 0 },
+    { expr: "Date.prototype.getMonth", name: "getMonth", length: 0 },
+    { expr: "Date.prototype.getFullYear", name: "getFullYear", length: 0 },
+    { expr: "Date.prototype.getTimezoneOffset", name: "getTimezoneOffset", length: 0 },
+    { expr: "Date.prototype.toString", name: "toString", length: 0 },
+    { expr: "Date.prototype.toTimeString", name: "toTimeString", length: 0 },
+    { expr: "Date.prototype.toDateString", name: "toDateString", length: 0 },
+    { expr: "Date.prototype.toLocaleString", name: "toLocaleString", length: 0 },
+    { expr: "Date.prototype.toLocaleDateString", name: "toLocaleDateString", length: 0 },
+    { expr: "Date.prototype.toLocaleTimeString", name: "toLocaleTimeString", length: 0 },
+    { expr: "Date.prototype.setHours", name: "setHours", length: 4 },
+    { expr: "Date.prototype.setMinutes", name: "setMinutes", length: 3 },
+    { expr: "Date.prototype.setSeconds", name: "setSeconds", length: 2 },
+    { expr: "Date.prototype.setDate", name: "setDate", length: 1 },
+    { expr: "Date.prototype.setMonth", name: "setMonth", length: 2 },
+    { expr: "Date.prototype.setFullYear", name: "setFullYear", length: 3 },
+    {
+      expr: "Intl.DateTimeFormat.prototype.resolvedOptions",
+      name: "resolvedOptions",
+      length: 0,
+    },
+    { expr: "self.Date.parse", name: "parse", length: 1 },
+    { expr: "Function.prototype.toString", name: "toString", length: 0 },
+  ];
+
+  it.each(METHOD_CASES)(
+    "$expr is non-constructable, prototype-less, native-looking (name/length)",
+    ({ expr, name, length }) => {
+      const realm = spoofedDateInRealm("Asia/Kolkata");
+      const r = realm.evalInRealm<{
+        hasProto: boolean;
+        constructable: boolean;
+        name: string;
+        length: number;
+        native: boolean;
+      }>(`(function () {
+        var fn = ${expr};
+        // Isolate [[Construct]] from the body: fn as new.target against Array
+        // throws ONLY if fn lacks [[Construct]] — fn's own body never runs.
+        var constructable = false;
+        try { Reflect.construct(Array, [], fn); constructable = true; } catch (e) {}
+        return {
+          hasProto: Object.prototype.hasOwnProperty.call(fn, "prototype"),
+          constructable: constructable,
+          name: fn.name,
+          length: fn.length,
+          native: Function.prototype.toString.call(fn).indexOf("[native code]") !== -1,
+        };
+      })()`);
+      expect(r.hasProto).toBe(false);
+      expect(r.constructable).toBe(false);
+      expect(r.name).toBe(name);
+      expect(r.length).toBe(length);
+      expect(r.native).toBe(true);
+    }
+  );
+
+  it("keeps the spoofed constructors (Date, Intl.DateTimeFormat) constructable with an own prototype", () => {
+    const realm = spoofedDateInRealm("Asia/Kolkata");
+    const r = realm.evalInRealm<{
+      dateProto: boolean;
+      dateConstructable: boolean;
+      dtfProto: boolean;
+      dtfConstructable: boolean;
+    }>(`(function () {
+      var okDate = false;
+      try { Reflect.construct(Array, [], self.Date); okDate = true; } catch (e) {}
+      var okDTF = false;
+      try { Reflect.construct(Array, [], Intl.DateTimeFormat); okDTF = true; } catch (e) {}
+      return {
+        dateProto: Object.prototype.hasOwnProperty.call(self.Date, "prototype"),
+        dateConstructable: okDate,
+        dtfProto: Object.prototype.hasOwnProperty.call(Intl.DateTimeFormat, "prototype"),
+        dtfConstructable: okDTF,
+      };
+    })()`);
+    expect(r.dateProto).toBe(true);
+    expect(r.dateConstructable).toBe(true);
+    expect(r.dtfProto).toBe(true);
+    expect(r.dtfConstructable).toBe(true);
+  });
+
+  it("strips prototype + [[Construct]] from Temporal.Now.* when Temporal is present", () => {
+    const realm = spoofedDateInRealm("Asia/Kolkata");
+    if (realm.evalInRealm<string>("typeof Temporal") === "undefined") {
+      // The Node VM realm has no Temporal; covered in-browser + on the /test
+      // dashboard for Temporal-capable engines.
+      return;
+    }
+    const r = realm.evalInRealm<Array<{ name: string; hasProto: boolean; constructable: boolean }>>(
+      `["timeZoneId","plainDateTimeISO","plainDateISO","plainTimeISO","zonedDateTimeISO"].map(
+        function (n) {
+          var fn = Temporal.Now[n];
+          var constructable = false;
+          try { Reflect.construct(Array, [], fn); constructable = true; } catch (e) {}
+          return {
+            name: n,
+            hasProto: Object.prototype.hasOwnProperty.call(fn, "prototype"),
+            constructable: constructable,
+          };
+        }
+      )`
+    );
+    for (const entry of r) {
+      expect(entry.hasProto, entry.name).toBe(false);
+      expect(entry.constructable, entry.name).toBe(false);
+    }
+  });
+});

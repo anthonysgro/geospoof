@@ -72,6 +72,11 @@ export function installDateConstructorOn(realm: DateConstructorRealm): void {
     // (Firefox). No-op once seeded or once the settings event has arrived.
     // Iframe realms pass no seed (patched after bootstrap).
     seed?.();
+
+    // Capture new.target so subclassing / Reflect.construct preserve the
+    // caller's prototype (native fidelity). Undefined ⇒ called without `new`.
+    const nt: AnyFunction | undefined = new.target as AnyFunction | undefined;
+
     // Called as function (without new) — return current time string.
     //
     // Native `Date()` returns a string of the current time formatted
@@ -87,31 +92,33 @@ export function installDateConstructorOn(realm: DateConstructorRealm): void {
     // Fix: construct a pristine instance and stringify it through the
     // same prototype chain that `new Date()` uses — our spoofed
     // toString formats in the spoofed zone, so both sides agree.
-    if (!new.target) {
+    if (!nt) {
       if (!spoofingEnabled || !timezoneData) {
         return OriginalDate();
       }
       return new OriginalDate().toString();
     }
 
-    // When spoofing is disabled, delegate entirely to OriginalDate
-    if (!spoofingEnabled || !timezoneData) {
-      if (args.length === 0) return new OriginalDate();
-      if (args.length === 1) return new OriginalDate(args[0] as number | string);
-      return new OriginalDate(
-        args[0] as number,
-        args[1] as number,
-        (args[2] ?? 1) as number,
-        (args[3] ?? 0) as number,
-        (args[4] ?? 0) as number,
-        (args[5] ?? 0) as number,
-        (args[6] ?? 0) as number
+    // Construct through `new.target` so `class X extends Date {}` and
+    // `Reflect.construct(Date, args, X)` yield an instance with X.prototype,
+    // exactly like native. For the ordinary `new Date(...)` case nt is
+    // DateOverride itself, whose prototype IS OriginalDate.prototype — so the
+    // result is identical to `new OriginalDate(...)`.
+    const construct = (ctorArgs: ReadonlyArray<unknown>): object =>
+      Reflect.construct(
+        OriginalDate as unknown as new (...a: unknown[]) => object,
+        ctorArgs,
+        nt as unknown as new (...a: unknown[]) => object
       );
+
+    // When spoofing is disabled, delegate (still honoring new.target).
+    if (!spoofingEnabled || !timezoneData) {
+      return construct(args);
     }
 
     // No arguments — current time
     if (args.length === 0) {
-      return new OriginalDate();
+      return construct([]);
     }
 
     // Single argument
@@ -121,16 +128,16 @@ export function installDateConstructorOn(realm: DateConstructorRealm): void {
 
       // Single numeric argument — absolute epoch, no adjustment
       if (typeof arg === "number") {
-        return new OriginalDate(arg);
+        return construct([arg]);
       }
 
       // Single string argument
       if (typeof arg === "string") {
         try {
           const parsed = new OriginalDate(arg);
-          // If unparseable (NaN), return invalid Date as-is
+          // If unparseable (NaN), construct an invalid Date (with nt.prototype)
           if (isNaN(parsed.getTime())) {
-            return parsed;
+            return construct([arg]);
           }
           // If ambiguous, apply epoch adjustment
           if (isAmbiguousDateString(arg)) {
@@ -145,31 +152,35 @@ export function installDateConstructorOn(realm: DateConstructorRealm): void {
               original: parsed.getTime(),
               adjusted: parsed.getTime() + adjustment,
             });
-            return new OriginalDate(parsed.getTime() + adjustment);
+            return construct([parsed.getTime() + adjustment]);
           }
           // Explicit timezone string — pass through
-          return parsed;
+          return construct([arg]);
         } catch {
           // Fall back to original behavior on error
-          return new OriginalDate(arg);
+          return construct([arg]);
         }
       }
 
       // Any other single argument (Date object, null, undefined, boolean, etc.)
-      return new OriginalDate(arg as number | string);
+      return construct([arg]);
     }
 
-    // Multi-argument (2+ numeric): year, month, [day, hours, minutes, seconds, ms]
+    // Multi-argument (2+): year, month, [day, hours, minutes, seconds, ms]
+    const multiArgs: ReadonlyArray<unknown> = [
+      args[0],
+      args[1],
+      args[2] ?? 1,
+      args[3] ?? 0,
+      args[4] ?? 0,
+      args[5] ?? 0,
+      args[6] ?? 0,
+    ];
     try {
-      const parsed = new OriginalDate(
-        args[0] as number,
-        args[1] as number,
-        (args[2] ?? 1) as number,
-        (args[3] ?? 0) as number,
-        (args[4] ?? 0) as number,
-        (args[5] ?? 0) as number,
-        (args[6] ?? 0) as number
-      );
+      const parsed = Reflect.construct(
+        OriginalDate as unknown as new (...a: unknown[]) => object,
+        multiArgs
+      ) as Date;
       const adjustment = computeEpochAdjustment(
         parsed,
         timezoneData.identifier,
@@ -181,18 +192,10 @@ export function installDateConstructorOn(realm: DateConstructorRealm): void {
         original: parsed.getTime(),
         adjusted: parsed.getTime() + adjustment,
       });
-      return new OriginalDate(parsed.getTime() + adjustment);
+      return construct([parsed.getTime() + adjustment]);
     } catch {
       // Fall back to original behavior on error
-      return new OriginalDate(
-        args[0] as number,
-        args[1] as number,
-        (args[2] ?? 1) as number,
-        (args[3] ?? 0) as number,
-        (args[4] ?? 0) as number,
-        (args[5] ?? 0) as number,
-        (args[6] ?? 0) as number
-      );
+      return construct(multiArgs);
     }
   }
 

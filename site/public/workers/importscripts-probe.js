@@ -26,6 +26,9 @@ self.onmessage = function (e) {
     if (imported && sigBase != null && self.__tzSignature) {
       imported.sig = self.__tzSignature(sigBase)
     }
+    if (imported && self.__methodFidelity) {
+      imported.fidelity = self.__methodFidelity()
+    }
     self.postMessage({
       ok: true,
       direct: direct,

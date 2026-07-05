@@ -8,6 +8,7 @@
  */
 
 import { buildStandardBattery } from "../helpers/standard-battery"
+import { SkipTestError, buildBehavioralTest } from "../helpers/behavioral"
 import type { TestDefinition } from "../types"
 
 /**
@@ -210,6 +211,159 @@ const functionToStringBattery: ReadonlyArray<TestDefinition> =
     expectedLength: 0,
   })
 
+// ---------------------------------------------------------------------------
+// new.target / subclassing fidelity
+//
+// Native Date and Intl.DateTimeFormat are real constructors: subclassing and
+// Reflect.construct preserve the caller's prototype. A plain-function override
+// that `return`s a fresh instance discards `new.target`, so `new X() instanceof
+// X` becomes false — a deterministic tell that the constructor was replaced,
+// and it breaks legitimate `class X extends Date {}` code. These assert the
+// overrides honor new.target. Self-verifying: on a clean browser the natives
+// already pass; only a naive override fails.
+// ---------------------------------------------------------------------------
+
+/**
+ * True when subclassing `ctor` and `Reflect.construct(ctor, [], Fake)` both
+ * preserve the intended prototype (native constructor semantics).
+ */
+function subclassPreservesPrototype(ctor: unknown): boolean {
+  const Ctor = ctor as new (...a: Array<unknown>) => object
+  class Sub extends Ctor {}
+  const inst = new Sub()
+  const Fake = function FakeCtor() {} as unknown as new (
+    ...a: Array<unknown>
+  ) => object
+  const reflected = Reflect.construct(Ctor, [], Fake) as object
+  return (
+    inst instanceof Sub &&
+    Object.getPrototypeOf(inst) ===
+      (Sub as unknown as { prototype: object }).prototype &&
+    Object.getPrototypeOf(reflected) ===
+      (Fake as unknown as { prototype: object }).prototype
+  )
+}
+
+const SUBCLASS_SNIPPET = `class X extends Date {}
+new X() instanceof X                                   // must be true
+Object.getPrototypeOf(Reflect.construct(Date, [], function F(){})) === F.prototype`
+
+const dateSubclassFidelityTest = buildBehavioralTest<boolean>({
+  id: "timezone-stealth.date-subclass-fidelity",
+  group: "timezone-stealth",
+  name: "Date subclassing / Reflect.construct preserve the subclass prototype",
+  description:
+    "Native Date is a real constructor: `class X extends Date {}` yields instances whose prototype is X.prototype, and `Reflect.construct(Date, [], F)` yields F.prototype. An override that returns a fresh Date discards new.target, so `new X() instanceof X` becomes false — a deterministic tell that Date was replaced (and it breaks legitimate subclassing). The override now constructs via Reflect.construct(OriginalDate, args, new.target).",
+  technique:
+    "class X extends Date {} → assert new X() instanceof X and prototype === X.prototype; Reflect.construct(Date, [], F) → assert prototype === F.prototype.",
+  codeSnippet: SUBCLASS_SNIPPET,
+  expected: async () => ({ value: true, describe: "prototype preserved" }),
+  observe: async () => {
+    const pass = subclassPreservesPrototype(Date)
+    return {
+      value: pass,
+      describe: pass
+        ? "subclass + Reflect.construct preserve prototype"
+        : "prototype not preserved",
+    }
+  },
+})
+
+const dtfSubclassFidelityTest = buildBehavioralTest<boolean>({
+  id: "timezone-stealth.datetimeformat-subclass-fidelity",
+  group: "timezone-stealth",
+  name: "Intl.DateTimeFormat subclassing / Reflect.construct preserve the subclass prototype",
+  description:
+    "Same new.target fidelity for Intl.DateTimeFormat: `class X extends Intl.DateTimeFormat {}` must yield X.prototype instances. The override now constructs via Reflect.construct(NativeDateTimeFormat, args, new.target) so subclassing works and the spoofed timezone injection is preserved.",
+  technique:
+    "class X extends Intl.DateTimeFormat {} → assert new X() instanceof X and prototype === X.prototype; Reflect.construct(Intl.DateTimeFormat, [], F) → assert prototype === F.prototype.",
+  codeSnippet: `class X extends Intl.DateTimeFormat {}\nnew X() instanceof X // must be true`,
+  expected: async () => ({ value: true, describe: "prototype preserved" }),
+  observe: async () => {
+    const pass = subclassPreservesPrototype(Intl.DateTimeFormat)
+    return {
+      value: pass,
+      describe: pass
+        ? "subclass + Reflect.construct preserve prototype"
+        : "prototype not preserved",
+    }
+  },
+})
+
+const iframeDateSubclassFidelityTest = buildBehavioralTest<boolean>({
+  id: "tampering.iframe-realm.date-subclass-fidelity",
+  group: "timezone-stealth",
+  name: "Iframe-realm Date subclassing preserves the subclass prototype",
+  description:
+    "The cross-realm counterpart: the extension patches same-origin iframe realms, so the iframe's Date override must also honor new.target. Creates a same-origin iframe and asserts `class X extends iframe.Date {}` and `Reflect.construct(iframe.Date, [], F)` preserve the intended prototype.",
+  technique:
+    "Create a same-origin iframe, then subclass its Date and Reflect.construct against it; assert prototypes are preserved.",
+  codeSnippet: `const w = iframe.contentWindow\nclass X extends w.Date {}\nnew X() instanceof X // must be true`,
+  expected: async () => ({
+    value: true,
+    describe: "iframe-realm prototype preserved",
+  }),
+  observe: async () => {
+    if (typeof document === "undefined" || !document.body) {
+      throw new SkipTestError("no document.body to attach an iframe to")
+    }
+    const frame = document.createElement("iframe")
+    frame.style.display = "none"
+    document.body.appendChild(frame)
+    try {
+      const win = frame.contentWindow as (Window & typeof globalThis) | null
+      if (!win)
+        return { value: false, describe: "iframe exposed no contentWindow" }
+      const pass = subclassPreservesPrototype(win.Date)
+      return {
+        value: pass,
+        describe: pass
+          ? "iframe Date subclass preserves prototype"
+          : "iframe Date prototype not preserved",
+      }
+    } finally {
+      frame.remove()
+    }
+  },
+})
+
+const iframeDtfSubclassFidelityTest = buildBehavioralTest<boolean>({
+  id: "tampering.iframe-realm.datetimeformat-subclass-fidelity",
+  group: "timezone-stealth",
+  name: "Iframe-realm Intl.DateTimeFormat subclassing preserves the subclass prototype",
+  description:
+    "Cross-realm new.target fidelity for the iframe's Intl.DateTimeFormat override. Creates a same-origin iframe and asserts subclassing / Reflect.construct against its Intl.DateTimeFormat preserve the intended prototype.",
+  technique:
+    "Create a same-origin iframe, subclass its Intl.DateTimeFormat and Reflect.construct against it; assert prototypes are preserved.",
+  codeSnippet: `const w = iframe.contentWindow\nclass X extends w.Intl.DateTimeFormat {}\nnew X() instanceof X // must be true`,
+  expected: async () => ({
+    value: true,
+    describe: "iframe-realm prototype preserved",
+  }),
+  observe: async () => {
+    if (typeof document === "undefined" || !document.body) {
+      throw new SkipTestError("no document.body to attach an iframe to")
+    }
+    const frame = document.createElement("iframe")
+    frame.style.display = "none"
+    document.body.appendChild(frame)
+    try {
+      const win = frame.contentWindow as (Window & typeof globalThis) | null
+      if (!win)
+        return { value: false, describe: "iframe exposed no contentWindow" }
+      const pass = subclassPreservesPrototype(win.Intl.DateTimeFormat)
+      return {
+        value: pass,
+        describe: pass
+          ? "iframe Intl.DateTimeFormat subclass preserves prototype"
+          : "iframe Intl.DateTimeFormat prototype not preserved",
+      }
+    } finally {
+      frame.remove()
+    }
+  },
+})
+
 export const timezoneStealthTests: ReadonlyArray<TestDefinition> = [
   ...dateProtoBatteries,
   ...dateStaticBatteries,
@@ -217,4 +371,8 @@ export const timezoneStealthTests: ReadonlyArray<TestDefinition> = [
   ...intlBatteries,
   ...temporalBatteries,
   ...functionToStringBattery,
+  dateSubclassFidelityTest,
+  dtfSubclassFidelityTest,
+  iframeDateSubclassFidelityTest,
+  iframeDtfSubclassFidelityTest,
 ]

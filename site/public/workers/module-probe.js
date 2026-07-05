@@ -17,12 +17,14 @@ self.onmessage = function (e) {
     const sigBase = e && e.data && e.data.sigBase
     const sig =
       sigBase != null && self.__tzSignature ? self.__tzSignature(sigBase) : null
+    const fidelity = self.__methodFidelity ? self.__methodFidelity() : null
     self.postMessage({
       ok: true,
       timeZone,
       offsetMinutes,
       temporalTimeZone,
       sig,
+      fidelity,
     })
   } catch (err) {
     self.postMessage({

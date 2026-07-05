@@ -162,6 +162,23 @@ export function installDateTimeFormatOverridesOn(
       // `Intl.DateTimeFormat().resolvedOptions().timeZone` read in the page's
       // first script. Seed from the early bootstrap global if present.
       seed?.();
+
+      // Honor new.target so `class X extends Intl.DateTimeFormat {}` and
+      // `Reflect.construct` preserve the subclass prototype (native fidelity).
+      // For the ordinary `new Intl.DateTimeFormat()` case new.target is this
+      // override, whose prototype IS NativeDateTimeFormat.prototype; when called
+      // without `new` (Intl.DateTimeFormat() as a function still returns an
+      // instance) we fall back to the native constructor as the target.
+      const newTarget = (new.target ?? NativeDateTimeFormat) as unknown as new (
+        ...a: unknown[]
+      ) => object;
+      const build = (opts: Intl.DateTimeFormatOptions | undefined): Intl.DateTimeFormat =>
+        Reflect.construct(
+          NativeDateTimeFormat as unknown as new (...a: unknown[]) => object,
+          [locales, opts],
+          newTarget
+        ) as Intl.DateTimeFormat;
+
       try {
         const hasExplicitTimezone = options?.timeZone != null;
         // Treat explicit timezone matching the spoofed timezone as non-explicit
@@ -176,22 +193,17 @@ export function installDateTimeFormatOverridesOn(
         if (spoofingEnabled && timezoneData && (!hasExplicitTimezone || matchesSpoofedTz)) {
           // Inject spoofed timezone when caller did NOT provide an explicit one,
           // or when the explicit timezone matches the spoofed timezone
-          const opts2: Intl.DateTimeFormatOptions = {
-            ...options,
-            timeZone: timezoneData.identifier,
-          };
           logger.debug(
             "Intl.DateTimeFormat: injecting timezone, original",
             options?.timeZone ?? "(none)",
             "injected",
             timezoneData.identifier
           );
-          const instance = new NativeDateTimeFormat(locales, opts2);
           // Do NOT add to explicitTimezoneInstances — treat as default-timezone instance
-          return instance;
+          return build({ ...options, timeZone: timezoneData.identifier });
         }
 
-        const instance = new NativeDateTimeFormat(locales, options);
+        const instance = build(options);
         if (hasExplicitTimezone) {
           explicitTimezoneInstances.add(instance);
         }
@@ -204,7 +216,7 @@ export function installDateTimeFormatOverridesOn(
         // stack would carry our injected frame. Scrub it so the genuine native
         // error can't be used to read the extension id, then rethrow.
         try {
-          return new NativeDateTimeFormat(locales, options);
+          return build(options);
         } catch (err) {
           stripExtensionFramesFromStack(err);
           throw err;

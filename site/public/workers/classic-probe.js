@@ -15,12 +15,14 @@ self.onmessage = function (e) {
     var sigBase = e && e.data && e.data.sigBase
     var sig =
       sigBase != null && self.__tzSignature ? self.__tzSignature(sigBase) : null
+    var fidelity = self.__methodFidelity ? self.__methodFidelity() : null
     self.postMessage({
       ok: true,
       timeZone: timeZone,
       offsetMinutes: offsetMinutes,
       temporalTimeZone: temporalTimeZone,
       sig: sig,
+      fidelity: fidelity,
     })
   } catch (err) {
     self.postMessage({

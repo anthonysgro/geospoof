@@ -74,15 +74,66 @@ function __register(fn, nativeName) {
     // in that case toString masking alone has to carry the stealth.
   }
 }
-var __maskedToString = function toString() {
-  var name = __overrideRegistry.get(this);
-  if (name !== undefined) {
-    return __nativeP1 + name + __nativeP2;
+// Concise-method form (the ES2015 { m(){} }.m syntax) so the installed
+// toString has NO own "prototype" and NO [[Construct]] slot — exactly like a
+// native method. A plain function expression would carry both and be a tell.
+var __maskedToString = {
+  toString() {
+    var name = __overrideRegistry.get(this);
+    if (name !== undefined) {
+      return __nativeP1 + name + __nativeP2;
+    }
+    return __nativeToString.call(this);
   }
-  return __nativeToString.call(this);
-};
+}.toString;
 __register(__maskedToString, "toString");
 Function.prototype.toString = __maskedToString;
+
+// --- Native-method fidelity wrapper ---
+// A native prototype method / static is NOT a constructor: it has no own
+// "prototype" property and no [[Construct]] internal slot, so
+// "new Date.prototype.getHours()" and "Reflect.construct(Array, [], getHours)"
+// throw "not a constructor". A plain "function foo(){}" override carries both a
+// prototype and [[Construct]], which a fingerprinter running inside a worker
+// can detect (hasOwnProperty("prototype"), Reflect.construct-with-new.target).
+//
+// __nativeMethod wraps a spoofing implementation in a concise method — the only
+// callable form that is simultaneously non-constructable, prototype-less, AND
+// binds 'this' dynamically (an arrow can't carry 'this'; a function expression
+// carries [[Construct]]). It also stamps the native name + arity and registers
+// the wrapper for toString masking, so length/name/toString probes pass too.
+// Mirrors the main realm's stripConstruct + disguiseAsNative. Constructors
+// (SpoofedDate / SpoofedDTF) are intentionally NOT routed through this — they
+// must keep their prototype and [[Construct]].
+function __nativeMethod(fn, name, length) {
+  var wrapped = {
+    m() {
+      return Reflect.apply(fn, this, Array.prototype.slice.call(arguments));
+    }
+  }.m;
+  try {
+    Object.defineProperty(wrapped, "name", {
+      value: name,
+      configurable: true,
+      enumerable: false,
+      writable: false
+    });
+  } catch (e) {
+    // non-configurable name on some engines — toString masking still carries it.
+  }
+  try {
+    Object.defineProperty(wrapped, "length", {
+      value: length,
+      configurable: true,
+      enumerable: false,
+      writable: false
+    });
+  } catch (e) {
+    // best effort — length rarely non-configurable.
+  }
+  __register(wrapped, name);
+  return wrapped;
+}
 
 // --- Intl.DateTimeFormat override ---
 var OrigDTF = Intl.DateTimeFormat;
@@ -91,14 +142,18 @@ var explicitTzInstances = new WeakSet();
 
 function SpoofedDTF() {
   var args = Array.prototype.slice.call(arguments);
+  // Honor new.target so subclassing / Reflect.construct preserve the subclass
+  // prototype; when called without new (DateTimeFormat() still returns an
+  // instance) fall back to the native constructor as the target.
+  var nt = new.target || OrigDTF;
   var opts = args[1];
   if (opts && typeof opts === "object" && "timeZone" in opts) {
-    var instance = new OrigDTF(args[0], opts);
+    var instance = Reflect.construct(OrigDTF, [args[0], opts], nt);
     explicitTzInstances.add(instance);
     return instance;
   }
   var newOpts = Object.assign({}, opts || {}, { timeZone: __tz_id });
-  return new OrigDTF(args[0], newOpts);
+  return Reflect.construct(OrigDTF, [args[0], newOpts], nt);
 }
 SpoofedDTF.prototype = OrigDTF.prototype;
 SpoofedDTF.supportedLocalesOf = OrigDTF.supportedLocalesOf;
@@ -111,19 +166,18 @@ Object.defineProperty(Intl, "DateTimeFormat", {
 });
 
 var origRO = origResolvedOptions;
-var spoofedRO = function resolvedOptions() {
+var spoofedRO = __nativeMethod(function resolvedOptions() {
   var result = origRO.call(this);
   if (!explicitTzInstances.has(this)) {
     result.timeZone = __tz_id;
   }
   return result;
-};
-__register(spoofedRO, "resolvedOptions");
+}, "resolvedOptions", 0);
 OrigDTF.prototype.resolvedOptions = spoofedRO;
 
 // --- Date.prototype.getTimezoneOffset override ---
 var origGTZO = Date.prototype.getTimezoneOffset;
-var spoofedGTZO = function getTimezoneOffset() {
+var spoofedGTZO = __nativeMethod(function getTimezoneOffset() {
   try {
     var fmt = new OrigDTF("en-US", { timeZone: __tz_id, timeZoneName: "shortOffset" });
     var parts = fmt.formatToParts(this);
@@ -141,35 +195,31 @@ var spoofedGTZO = function getTimezoneOffset() {
   } catch(e) {
     return origGTZO.call(this);
   }
-};
-__register(spoofedGTZO, "getTimezoneOffset");
+}, "getTimezoneOffset", 0);
 Date.prototype.getTimezoneOffset = spoofedGTZO;
 
 // --- Date.prototype.toLocaleString family ---
 var origTLS = Date.prototype.toLocaleString;
 var origTLDS = Date.prototype.toLocaleDateString;
 var origTLTS = Date.prototype.toLocaleTimeString;
-var spoofedTLS = function toLocaleString() {
+var spoofedTLS = __nativeMethod(function toLocaleString() {
   var args = Array.prototype.slice.call(arguments);
   var opts = args[1] && typeof args[1] === "object" ? Object.assign({}, args[1]) : {};
   if (!("timeZone" in opts)) opts.timeZone = __tz_id;
   return origTLS.call(this, args[0], opts);
-};
-var spoofedTLDS = function toLocaleDateString() {
+}, "toLocaleString", 0);
+var spoofedTLDS = __nativeMethod(function toLocaleDateString() {
   var args = Array.prototype.slice.call(arguments);
   var opts = args[1] && typeof args[1] === "object" ? Object.assign({}, args[1]) : {};
   if (!("timeZone" in opts)) opts.timeZone = __tz_id;
   return origTLDS.call(this, args[0], opts);
-};
-var spoofedTLTS = function toLocaleTimeString() {
+}, "toLocaleDateString", 0);
+var spoofedTLTS = __nativeMethod(function toLocaleTimeString() {
   var args = Array.prototype.slice.call(arguments);
   var opts = args[1] && typeof args[1] === "object" ? Object.assign({}, args[1]) : {};
   if (!("timeZone" in opts)) opts.timeZone = __tz_id;
   return origTLTS.call(this, args[0], opts);
-};
-__register(spoofedTLS, "toLocaleString");
-__register(spoofedTLDS, "toLocaleDateString");
-__register(spoofedTLTS, "toLocaleTimeString");
+}, "toLocaleTimeString", 0);
 Date.prototype.toLocaleString = spoofedTLS;
 Date.prototype.toLocaleDateString = spoofedTLDS;
 Date.prototype.toLocaleTimeString = spoofedTLTS;
@@ -225,9 +275,8 @@ function spoofedGetter(name) {
 }
 for (var si = 0; si < getterNames.length; si++) {
   var gName = getterNames[si];
-  var gFn = spoofedGetter(gName);
-  __register(gFn, gName);
-  Date.prototype[gName] = gFn;
+  // All local Date getters have native arity 0.
+  Date.prototype[gName] = __nativeMethod(spoofedGetter(gName), gName, 0);
 }
 
 // getMilliseconds is timezone-independent (whole-minute offsets don't affect
@@ -235,10 +284,9 @@ for (var si = 0; si < getterNames.length; si++) {
 // is masked consistently with the other getters, matching the main realm which
 // also registers a passthrough here.
 var __origGetMs = Date.prototype.getMilliseconds;
-var __spoofedGetMs = function getMilliseconds() {
+var __spoofedGetMs = __nativeMethod(function getMilliseconds() {
   return __origGetMs.call(this);
-};
-__register(__spoofedGetMs, "getMilliseconds");
+}, "getMilliseconds", 0);
 Date.prototype.getMilliseconds = __spoofedGetMs;
 
 // --- Date.prototype.toString / toTimeString / toDateString ---
@@ -262,7 +310,7 @@ function getGmtOffset(d) {
   return "GMT" + sign + h + m;
 }
 
-Date.prototype.toString = function toString() {
+Date.prototype.toString = __nativeMethod(function toString() {
   if (isNaN(this.getTime())) return "Invalid Date";
   var f = new OrigDTF("en-US", {
     timeZone: __tz_id, weekday: "short", month: "short",
@@ -276,10 +324,9 @@ Date.prototype.toString = function toString() {
   var tzName = getLongTzName(this);
   return get("weekday") + " " + get("month") + " " + get("day") + " " + get("year") + " " +
     hr + ":" + get("minute") + ":" + get("second") + " " + offset + " (" + tzName + ")";
-};
-__register(Date.prototype.toString, "toString");
+}, "toString", 0);
 
-Date.prototype.toTimeString = function toTimeString() {
+Date.prototype.toTimeString = __nativeMethod(function toTimeString() {
   if (isNaN(this.getTime())) return "Invalid Date";
   var f = new OrigDTF("en-US", {
     timeZone: __tz_id, hour: "2-digit", minute: "2-digit",
@@ -291,10 +338,9 @@ Date.prototype.toTimeString = function toTimeString() {
   var offset = getGmtOffset(this);
   var tzName = getLongTzName(this);
   return hr + ":" + get("minute") + ":" + get("second") + " " + offset + " (" + tzName + ")";
-};
-__register(Date.prototype.toTimeString, "toTimeString");
+}, "toTimeString", 0);
 
-Date.prototype.toDateString = function toDateString() {
+Date.prototype.toDateString = __nativeMethod(function toDateString() {
   if (isNaN(this.getTime())) return "Invalid Date";
   var f = new OrigDTF("en-US", {
     timeZone: __tz_id, weekday: "short", month: "short",
@@ -303,8 +349,7 @@ Date.prototype.toDateString = function toDateString() {
   var p = f.formatToParts(this);
   var get = function(t) { for (var i=0;i<p.length;i++) if(p[i].type===t) return p[i].value; return ""; };
   return get("weekday") + " " + get("month") + " " + get("day") + " " + get("year");
-};
-__register(Date.prototype.toDateString, "toDateString");
+}, "toDateString", 0);
 
 // --- Date constructor + Date.parse override ---
 // The prototype overrides above spoof how an existing Date is READ. But
@@ -415,8 +460,8 @@ function __spoofedDateParse(str) {
   return epoch;
 }
 
-function __multiArgDate(args) {
-  return new OrigDate(
+function __multiArgList(args) {
+  return [
     args[0],
     args[1],
     args[2] != null ? args[2] : 1,
@@ -424,40 +469,51 @@ function __multiArgDate(args) {
     args[4] != null ? args[4] : 0,
     args[5] != null ? args[5] : 0,
     args[6] != null ? args[6] : 0
-  );
+  ];
+}
+
+function __multiArgDate(args) {
+  return Reflect.construct(OrigDate, __multiArgList(args));
 }
 
 function SpoofedDate() {
   var args = Array.prototype.slice.call(arguments);
+  var nt = new.target;
   // Called without new → current time as a string. Native returns a
   // system-zone string; route through the spoofed toString so it matches
   // "new Date().toString()" (CreepJS valid.date consistency).
-  if (new.target === undefined) {
+  if (nt === undefined) {
     return new OrigDate().toString();
   }
-  if (args.length === 0) return new OrigDate();
+  // Construct through new.target so subclassing / Reflect.construct preserve
+  // the caller's prototype (native fidelity). For the ordinary new Date() case
+  // nt is SpoofedDate, whose prototype IS OrigDate.prototype.
+  var construct = function (ctorArgs) {
+    return Reflect.construct(OrigDate, ctorArgs, nt);
+  };
+  if (args.length === 0) return construct([]);
   if (args.length === 1) {
     var a = args[0];
-    if (typeof a === "number") return new OrigDate(a);
+    if (typeof a === "number") return construct([a]);
     if (typeof a === "string") {
       try {
         var parsed = new OrigDate(a);
-        if (isNaN(parsed.getTime())) return parsed;
+        if (isNaN(parsed.getTime())) return construct([a]);
         if (__isAmbiguousDateString(a)) {
-          return new OrigDate(parsed.getTime() + __computeEpochAdjustment(parsed));
+          return construct([parsed.getTime() + __computeEpochAdjustment(parsed)]);
         }
-        return parsed;
+        return construct([a]);
       } catch (e) {
-        return new OrigDate(a);
+        return construct([a]);
       }
     }
-    return new OrigDate(a);
+    return construct([a]);
   }
   try {
     var p = __multiArgDate(args);
-    return new OrigDate(p.getTime() + __computeEpochAdjustment(p));
+    return construct([p.getTime() + __computeEpochAdjustment(p)]);
   } catch (e) {
-    return __multiArgDate(args);
+    return construct(__multiArgList(args));
   }
 }
 
@@ -482,9 +538,8 @@ for (var __dsi = 0; __dsi < __dateStatics.length; __dsi++) {
   var __spd = Object.getOwnPropertyDescriptor(OrigDate, __sp);
   if (__spd) Object.defineProperty(SpoofedDate, __sp, __spd);
 }
-__register(__spoofedDateParse, "parse");
 Object.defineProperty(SpoofedDate, "parse", {
-  value: __spoofedDateParse,
+  value: __nativeMethod(__spoofedDateParse, "parse", 1),
   configurable: true,
   enumerable: false,
   writable: true,
@@ -689,16 +744,17 @@ function __spoofedSetFullYear(y, m, d) {
   }
 }
 
-function __installSetter(name, fn) {
-  __register(fn, name);
-  OrigDate.prototype[name] = fn;
+function __installSetter(name, fn, length) {
+  OrigDate.prototype[name] = __nativeMethod(fn, name, length);
 }
-__installSetter("setHours", __spoofedSetHours);
-__installSetter("setMinutes", __spoofedSetMinutes);
-__installSetter("setSeconds", __spoofedSetSeconds);
-__installSetter("setDate", __spoofedSetDate);
-__installSetter("setMonth", __spoofedSetMonth);
-__installSetter("setFullYear", __spoofedSetFullYear);
+// Native arities: setHours(4) setMinutes(3) setSeconds(2) setDate(1)
+// setMonth(2) setFullYear(3).
+__installSetter("setHours", __spoofedSetHours, 4);
+__installSetter("setMinutes", __spoofedSetMinutes, 3);
+__installSetter("setSeconds", __spoofedSetSeconds, 2);
+__installSetter("setDate", __spoofedSetDate, 1);
+__installSetter("setMonth", __spoofedSetMonth, 2);
+__installSetter("setFullYear", __spoofedSetFullYear, 3);
 
 // --- Temporal.Now override ---
 // Temporal.Now.timeZoneId() returns the system zone, and the plain*ISO /
@@ -719,10 +775,11 @@ if (typeof Temporal !== "undefined" && Temporal && Temporal.Now) {
     var __origZDTISO = __TNow.zonedDateTimeISO.bind(__TNow);
 
     var __installNow = function(name, fn) {
-      __register(fn, name);
+      // All Temporal.Now.* methods have native arity 0.
+      var wrapped = __nativeMethod(fn, name, 0);
       var d = Object.getOwnPropertyDescriptor(__TNow, name);
       Object.defineProperty(__TNow, name, {
-        value: fn,
+        value: wrapped,
         writable: d ? d.writable : true,
         configurable: d ? d.configurable : true,
         enumerable: d ? d.enumerable : false

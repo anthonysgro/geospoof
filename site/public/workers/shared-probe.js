@@ -21,12 +21,14 @@ self.onconnect = function (e) {
         sigBase != null && self.__tzSignature
           ? self.__tzSignature(sigBase)
           : null
+      var fidelity = self.__methodFidelity ? self.__methodFidelity() : null
       port.postMessage({
         ok: true,
         timeZone: timeZone,
         offsetMinutes: offsetMinutes,
         temporalTimeZone: temporalTimeZone,
         sig: sig,
+        fidelity: fidelity,
       })
     } catch (err) {
       port.postMessage({
