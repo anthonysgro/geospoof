@@ -22,6 +22,9 @@ self.onconnect = function (e) {
           ? self.__tzSignature(sigBase)
           : null
       var fidelity = self.__methodFidelity ? self.__methodFidelity() : null
+      var offsetConsistency = self.__offsetConsistency
+        ? self.__offsetConsistency()
+        : null
       port.postMessage({
         ok: true,
         timeZone: timeZone,
@@ -29,6 +32,7 @@ self.onconnect = function (e) {
         temporalTimeZone: temporalTimeZone,
         sig: sig,
         fidelity: fidelity,
+        offsetConsistency: offsetConsistency,
       })
     } catch (err) {
       port.postMessage({

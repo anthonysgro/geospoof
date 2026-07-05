@@ -16,6 +16,9 @@ self.onmessage = function (e) {
     var sig =
       sigBase != null && self.__tzSignature ? self.__tzSignature(sigBase) : null
     var fidelity = self.__methodFidelity ? self.__methodFidelity() : null
+    var offsetConsistency = self.__offsetConsistency
+      ? self.__offsetConsistency()
+      : null
     self.postMessage({
       ok: true,
       timeZone: timeZone,
@@ -23,6 +26,7 @@ self.onmessage = function (e) {
       temporalTimeZone: temporalTimeZone,
       sig: sig,
       fidelity: fidelity,
+      offsetConsistency: offsetConsistency,
     })
   } catch (err) {
     self.postMessage({

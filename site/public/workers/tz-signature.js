@@ -161,3 +161,164 @@ self.__methodFidelity = function () {
   checkCtor("Intl.DateTimeFormat", Intl.DateTimeFormat)
   return failures
 }
+
+/**
+ * Cross-method offset self-consistency probe for served worker surfaces.
+ *
+ * The served twin of `computeWorkerOffsetConsistency()` in worker-timezone.ts
+ * (used by the inline blob/data/nested cards) — keep the two in lockstep.
+ *
+ * For Jan 15 and Jul 15 of several years it resolves the UTC offset via all six
+ * independent surfaces (getTimezoneOffset, epoch arithmetic, Date.parse, Intl
+ * shortOffset, component arithmetic, Temporal offsetNanoseconds) and checks they
+ * agree to within the per-era tolerance (1 minute pre-1906 for sub-minute LMT
+ * rounding, exact otherwise). Returns `{ ok, describe }`.
+ *
+ * This is a SELF-consistency check: a clean/unpatched worker is natively
+ * consistent and passes; it only fails when a spoofing payload is present but
+ * one of its override paths disagrees with the others.
+ */
+self.__offsetConsistency = function () {
+  var years = [1879, 1952, 1976, 2025]
+  var seasons = [
+    { label: "Jan", month: 1, day: 15 },
+    { label: "Jul", month: 7, day: 15 },
+  ]
+  var pad = function (n) {
+    return String(n).padStart(2, "0")
+  }
+  var offsets = function (year, month, day, hour) {
+    var r = {}
+    try {
+      r.getTimezoneOffset = new Date(
+        year,
+        month - 1,
+        day,
+        hour,
+        0,
+        0
+      ).getTimezoneOffset()
+    } catch (e) {
+      r.getTimezoneOffset = null
+    }
+    try {
+      var l = new Date(year, month - 1, day, hour, 0, 0).getTime()
+      var u = Date.UTC(year, month - 1, day, hour, 0, 0)
+      r.epochArithmetic = Math.round((l - u) / 60000)
+    } catch (e) {
+      r.epochArithmetic = null
+    }
+    try {
+      var iso =
+        year + "-" + pad(month) + "-" + pad(day) + "T" + pad(hour) + ":00:00"
+      r.dateParse = Math.round(
+        (Date.parse(iso) - Date.parse(iso + "Z")) / 60000
+      )
+    } catch (e) {
+      r.dateParse = null
+    }
+    try {
+      var d = new Date(year, month - 1, day, hour, 0, 0)
+      var p = new Intl.DateTimeFormat("en-US", {
+        timeZoneName: "shortOffset",
+      }).formatToParts(d)
+      var t = ""
+      for (var i = 0; i < p.length; i++) {
+        if (p[i].type === "timeZoneName") t = p[i].value
+      }
+      var m = /^GMT(?:([+-])(\d{1,2})(?::?(\d{2}))?)?$/.exec(t)
+      if (!m) r.intlShortOffset = null
+      else if (!m[1]) r.intlShortOffset = 0
+      else {
+        var east =
+          (m[1] === "-" ? -1 : 1) *
+          (parseInt(m[2], 10) * 60 + (m[3] ? parseInt(m[3], 10) : 0))
+        r.intlShortOffset = -east
+      }
+    } catch (e) {
+      r.intlShortOffset = null
+    }
+    try {
+      var dc = new Date(year, month - 1, day, hour, 0, 0)
+      var lc = Date.UTC(
+        dc.getFullYear(),
+        dc.getMonth(),
+        dc.getDate(),
+        dc.getHours(),
+        dc.getMinutes(),
+        dc.getSeconds()
+      )
+      var uc = Date.UTC(
+        dc.getUTCFullYear(),
+        dc.getUTCMonth(),
+        dc.getUTCDate(),
+        dc.getUTCHours(),
+        dc.getUTCMinutes(),
+        dc.getUTCSeconds()
+      )
+      r.componentArithmetic = Math.round((uc - lc) / 60000)
+    } catch (e) {
+      r.componentArithmetic = null
+    }
+    try {
+      var T = self.Temporal
+      if (
+        !T ||
+        !T.Now ||
+        typeof T.Now.timeZoneId !== "function" ||
+        !T.Instant ||
+        typeof T.Instant.from !== "function"
+      ) {
+        r.temporalOffset = null
+      } else {
+        var isoUtc =
+          year + "-" + pad(month) + "-" + pad(day) + "T" + pad(hour) + ":00:00Z"
+        var zdt = T.Instant.from(isoUtc).toZonedDateTimeISO(T.Now.timeZoneId())
+        r.temporalOffset = Math.round(-Number(zdt.offsetNanoseconds) / 1e9 / 60)
+      }
+    } catch (e) {
+      r.temporalOffset = null
+    }
+    return r
+  }
+  var problems = []
+  for (var y = 0; y < years.length; y++) {
+    var tol = years[y] < 1970 ? 1 : 0
+    for (var s = 0; s < seasons.length; s++) {
+      var o = offsets(years[y], seasons[s].month, seasons[s].day, 12)
+      var keys = Object.keys(o).filter(function (k) {
+        return o[k] !== null
+      })
+      var vals = keys.map(function (k) {
+        return o[k]
+      })
+      if (!vals.length) {
+        problems.push(
+          years[y] + " " + seasons[s].label + ": no methods returned a value"
+        )
+        continue
+      }
+      if (Math.max.apply(null, vals) - Math.min.apply(null, vals) > tol) {
+        var by = {}
+        keys.forEach(function (k) {
+          var v = String(o[k])
+          ;(by[v] = by[v] || []).push(k)
+        })
+        var brk = Object.keys(by)
+          .map(function (v) {
+            return v + ": [" + by[v].join(", ") + "]"
+          })
+          .join(" | ")
+        problems.push(
+          years[y] + " " + seasons[s].label + " (tol " + tol + "m): " + brk
+        )
+      }
+    }
+  }
+  return {
+    ok: problems.length === 0,
+    describe: problems.length
+      ? problems.join(" ; ")
+      : "all six methods agree across " + years.join(", "),
+  }
+}

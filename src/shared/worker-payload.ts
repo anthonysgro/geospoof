@@ -185,13 +185,20 @@ var spoofedGTZO = __nativeMethod(function getTimezoneOffset() {
     for (var i = 0; i < parts.length; i++) {
       if (parts[i].type === "timeZoneName") { tzPart = parts[i].value; break; }
     }
-    var m = /^GMT(?:([+-])(\\d{1,2})(?::?(\\d{2}))?)?$/.exec(tzPart);
+    // Match the optional :SS group too. Modern V8 emits seconds for pre-1906
+    // sub-minute LMT offsets (e.g. "GMT+9:18:59"); without this the regex fails
+    // and we fall through to the native offset — leaking the REAL system zone.
+    var m = /^GMT(?:([+-])(\\d{1,2})(?::?(\\d{2}))?(?::(\\d{2}))?)?$/.exec(tzPart);
     if (!m) return origGTZO.call(this);
     if (!m[1]) return 0;
     var h = parseInt(m[2], 10);
     var min = m[3] ? parseInt(m[3], 10) : 0;
-    var east = (m[1] === "-" ? -1 : 1) * (h * 60 + min);
-    return -east;
+    var sec = m[4] ? parseInt(m[4], 10) : 0;
+    var east = (m[1] === "-" ? -1 : 1) * (h * 60 + min + sec / 60);
+    var west = -east;
+    // V8 truncates sub-minute offsets to a whole minute here; SpiderMonkey keeps
+    // the fraction. Match the host engine (see __engineTruncatesOffset below).
+    return __engineTruncatesOffset ? Math.trunc(west) : west;
   } catch(e) {
     return origGTZO.call(this);
   }
@@ -379,14 +386,17 @@ var __engineTruncatesOffset = (function () {
   }
 })();
 
-// Parse "GMT±HH:MM" / "GMT±HHMM" / "GMT" into minutes east of UTC, or null.
+// Parse "GMT±HH:MM:SS" / "GMT±HH:MM" / "GMT±HHMM" / "GMT" into minutes east of
+// UTC (fractional for sub-minute LMT offsets), or null. The :SS group keeps
+// full precision so worker offsets match the main realm and native engine.
 function __parseOffsetEast(tzPart) {
-  var m = /^GMT(?:([+-])(\\d{1,2})(?::?(\\d{2}))?)?$/.exec(tzPart);
+  var m = /^GMT(?:([+-])(\\d{1,2})(?::?(\\d{2}))?(?::(\\d{2}))?)?$/.exec(tzPart);
   if (!m) return null;
   if (!m[1]) return 0;
   var h = parseInt(m[2], 10);
   var mn = m[3] ? parseInt(m[3], 10) : 0;
-  return (m[1] === "+" ? 1 : -1) * (h * 60 + mn);
+  var sc = m[4] ? parseInt(m[4], 10) : 0;
+  return (m[1] === "+" ? 1 : -1) * (h * 60 + mn + sc / 60);
 }
 
 // Spoofed-zone offset (minutes east of UTC) at a given instant.
@@ -420,11 +430,45 @@ function __isAmbiguousDateString(str) {
   return !explicit;
 }
 
+// Real system IANA zone id, resolved via the NATIVE (pre-spoof) resolvedOptions
+// so it isn't masked by our own DateTimeFormat override. Cached for the realm.
+var __realTzId;
+function __getRealTzId() {
+  if (__realTzId !== undefined) return __realTzId;
+  try {
+    __realTzId = origResolvedOptions.call(new OrigDTF()).timeZone;
+  } catch (e) {
+    __realTzId = "UTC";
+  }
+  return __realTzId;
+}
+
+// Real system offset (minutes east of UTC) at an instant, at FULL sub-minute
+// precision. Must NOT use getTimezoneOffset(): V8 truncates it while the native
+// Date constructor keeps the fraction, and mixing the two leaks the dropped
+// seconds into the adjustment (the "186.9333 vs 186.4667" Sao_Paulo drift).
+function __realOffsetEast(date) {
+  try {
+    var f = new OrigDTF("en-US", { timeZone: __getRealTzId(), timeZoneName: "shortOffset" });
+    var parts = f.formatToParts(date);
+    var tzPart = "GMT";
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i].type === "timeZoneName") { tzPart = parts[i].value; break; }
+    }
+    var off = __parseOffsetEast(tzPart);
+    return off === null ? -origGTZO.call(date) : off;
+  } catch (e) {
+    return -origGTZO.call(date);
+  }
+}
+
 // ms to add to an epoch so a real-zone interpretation becomes a spoofed-zone
-// one. Mirrors computeEpochAdjustment: resolve the spoofed offset at the
-// wall-clock instant, refine once for DST boundaries, truncate on V8.
+// one. Mirrors computeEpochAdjustment: resolve real + spoofed offsets at the
+// same (full) precision, refine once for DST boundaries. No truncation here —
+// both engines' constructors interpret local time at full precision; only
+// getTimezoneOffset rounds, and it does so on its own path.
 function __computeEpochAdjustment(parsedDate) {
-  var realOffset = origGTZO.call(parsedDate); // minutes, positive = west
+  var realOffset = -__realOffsetEast(parsedDate); // minutes, positive = west, full precision
   var utcEpoch = parsedDate.getTime() + realOffset * 60000;
   try {
     var est = __spoofedOffsetEast(new OrigDate(utcEpoch), 0);
@@ -434,10 +478,7 @@ function __computeEpochAdjustment(parsedDate) {
       var refined = new OrigDate(utcEpoch - spoofedOffset * 60000);
       spoofedOffset = __spoofedOffsetEast(refined, spoofedOffset);
     }
-    var effective = __engineTruncatesOffset
-      ? Math.trunc(spoofedOffset)
-      : spoofedOffset;
-    return Math.round((-effective - realOffset) * 60000);
+    return Math.round((-spoofedOffset - realOffset) * 60000);
   } catch (e) {
     return 0;
   }

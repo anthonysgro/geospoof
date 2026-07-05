@@ -79,6 +79,16 @@ const urlWorkerGroup: TestGroupId = engineHasResponseFilter
 
 const WORKER_TIMEOUT_MS = 5_000
 
+/**
+ * Verdict of the six-method offset self-consistency check run inside a worker.
+ * `ok` is true when every surface agrees within the per-era tolerance;
+ * `describe` lists the per-date breakdown when they don't.
+ */
+interface OffsetConsistency {
+  ok: boolean
+  describe: string
+}
+
 interface WorkerResult {
   timeZone: string
   offsetMinutes: number
@@ -102,6 +112,12 @@ interface WorkerResult {
    * cards. Null when the served probe didn't compute one (older probe).
    */
   fidelity?: ReadonlyArray<string> | null
+  /**
+   * Six-method offset self-consistency verdict, computed inside the worker via
+   * the shared `self.__offsetConsistency` helper. Null when the probe didn't
+   * compute one. Consumed by the per-surface offset-consistency cards.
+   */
+  offsetConsistency?: OffsetConsistency | null
 }
 
 // ---------------------------------------------------------------------------
@@ -305,6 +321,7 @@ async function runSharedWorker(scriptUrl: string): Promise<WorkerResult> {
             temporalTimeZone?: string | null
             sig?: TzSignature | null
             fidelity?: ReadonlyArray<string> | null
+            offsetConsistency?: OffsetConsistency | null
           }
         | { ok: false; error: string }
       if (data && typeof data === "object" && "ok" in data) {
@@ -315,6 +332,7 @@ async function runSharedWorker(scriptUrl: string): Promise<WorkerResult> {
             temporalTimeZone: data.temporalTimeZone ?? null,
             sig: data.sig ?? null,
             fidelity: data.fidelity ?? null,
+            offsetConsistency: data.offsetConsistency ?? null,
           })
         } else {
           reject(new Error(`SharedWorker reported error: ${data.error}`))
@@ -356,6 +374,7 @@ function waitForWorkerResult(worker: Worker): Promise<WorkerResult> {
             temporalTimeZone?: string | null
             sig?: TzSignature | null
             fidelity?: ReadonlyArray<string> | null
+            offsetConsistency?: OffsetConsistency | null
           }
         | { ok: false; error: string }
       if (data && typeof data === "object" && "ok" in data) {
@@ -366,6 +385,7 @@ function waitForWorkerResult(worker: Worker): Promise<WorkerResult> {
             temporalTimeZone: data.temporalTimeZone ?? null,
             sig: data.sig ?? null,
             fidelity: data.fidelity ?? null,
+            offsetConsistency: data.offsetConsistency ?? null,
           })
         } else {
           reject(new Error(`Worker reported error: ${data.error}`))
@@ -1948,10 +1968,443 @@ const serviceWorkerMethodFidelityTest = buildServedWorkerMethodFidelityTest({
 })
 
 // ---------------------------------------------------------------------------
+// Cross-method offset consistency, evaluated INSIDE a worker.
+//
+// The per-surface reach cards prove the payload arrives; the full-parity card
+// proves it's complete at one instant. This card proves the payload is
+// SELF-CONSISTENT across historical time: inside a blob worker it resolves the
+// UTC offset via all six independent surfaces (getTimezoneOffset, epoch
+// arithmetic, Date.parse, Intl shortOffset, component arithmetic, Temporal
+// offsetNanoseconds) for Jan/Jul of several years and asserts they agree to
+// within the per-era tolerance. It's the worker twin of the main-thread
+// `cross-method-offsets` test and directly exercises the worker payload's
+// getTimezoneOffset truncation + epoch-adjustment precision, where a regression
+// would surface as a >1-minute split on pre-1906 sub-minute LMT dates (e.g.
+// Asia/Tokyo +9:18:59, America/Sao_Paulo -3:06:28). Consistency is
+// surface-independent (one shared payload), so proving it on the all-engine
+// blob surface covers the matrix without duplicating the logic per served probe.
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve the UTC offset (minutes west of UTC, Date convention) via all six
+ * surfaces for Jan 15 and Jul 15 of several years, and report whether they all
+ * agree to within the per-era tolerance (1 minute pre-1906 for sub-minute LMT
+ * rounding, exact otherwise).
+ *
+ * MUST be self-contained (globals only, no closures/imports) — it is serialized
+ * with `.toString()` and injected into a Worker so worker and main thread run
+ * byte-identical logic.
+ */
+function computeWorkerOffsetConsistency(): { ok: boolean; describe: string } {
+  const years = [1879, 1952, 1976, 2025]
+  const seasons = [
+    { label: "Jan", month: 1, day: 15 },
+    { label: "Jul", month: 7, day: 15 },
+  ]
+  const pad = (n: number): string => String(n).padStart(2, "0")
+  const offsets = (
+    year: number,
+    month: number,
+    day: number,
+    hour: number
+  ): Record<string, number | null> => {
+    const r: Record<string, number | null> = {}
+    try {
+      r.getTimezoneOffset = new Date(
+        year,
+        month - 1,
+        day,
+        hour,
+        0,
+        0
+      ).getTimezoneOffset()
+    } catch {
+      r.getTimezoneOffset = null
+    }
+    try {
+      const local = new Date(year, month - 1, day, hour, 0, 0).getTime()
+      const utcEpoch = Date.UTC(year, month - 1, day, hour, 0, 0)
+      r.epochArithmetic = Math.round((local - utcEpoch) / 60000)
+    } catch {
+      r.epochArithmetic = null
+    }
+    try {
+      const iso = `${year}-${pad(month)}-${pad(day)}T${pad(hour)}:00:00`
+      r.dateParse = Math.round(
+        (Date.parse(iso) - Date.parse(`${iso}Z`)) / 60000
+      )
+    } catch {
+      r.dateParse = null
+    }
+    try {
+      const d = new Date(year, month - 1, day, hour, 0, 0)
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZoneName: "shortOffset",
+      }).formatToParts(d)
+      let tzName = ""
+      for (const p of parts) if (p.type === "timeZoneName") tzName = p.value
+      const m = /^GMT(?:([+-])(\d{1,2})(?::?(\d{2}))?)?$/.exec(tzName)
+      if (!m) r.intlShortOffset = null
+      else if (!m[1]) r.intlShortOffset = 0
+      else {
+        const east =
+          (m[1] === "-" ? -1 : 1) *
+          (parseInt(m[2], 10) * 60 + (m[3] ? parseInt(m[3], 10) : 0))
+        r.intlShortOffset = -east
+      }
+    } catch {
+      r.intlShortOffset = null
+    }
+    try {
+      const d = new Date(year, month - 1, day, hour, 0, 0)
+      const lc = Date.UTC(
+        d.getFullYear(),
+        d.getMonth(),
+        d.getDate(),
+        d.getHours(),
+        d.getMinutes(),
+        d.getSeconds()
+      )
+      const uc = Date.UTC(
+        d.getUTCFullYear(),
+        d.getUTCMonth(),
+        d.getUTCDate(),
+        d.getUTCHours(),
+        d.getUTCMinutes(),
+        d.getUTCSeconds()
+      )
+      r.componentArithmetic = Math.round((uc - lc) / 60000)
+    } catch {
+      r.componentArithmetic = null
+    }
+    try {
+      const T = (
+        globalThis as {
+          Temporal?: {
+            Now?: { timeZoneId?: () => string }
+            Instant?: {
+              from?: (s: string) => {
+                toZonedDateTimeISO: (tz: string) => {
+                  offsetNanoseconds: number
+                }
+              }
+            }
+          }
+        }
+      ).Temporal
+      if (
+        !T?.Now?.timeZoneId ||
+        typeof T.Now.timeZoneId !== "function" ||
+        !T.Instant?.from
+      ) {
+        r.temporalOffset = null
+      } else {
+        const isoUtc = `${year}-${pad(month)}-${pad(day)}T${pad(hour)}:00:00Z`
+        const zdt = T.Instant.from(isoUtc).toZonedDateTimeISO(
+          T.Now.timeZoneId()
+        )
+        r.temporalOffset = Math.round(-Number(zdt.offsetNanoseconds) / 1e9 / 60)
+      }
+    } catch {
+      r.temporalOffset = null
+    }
+    return r
+  }
+  const problems: Array<string> = []
+  for (const yr of years) {
+    const tol = yr < 1970 ? 1 : 0
+    for (const season of seasons) {
+      const o = offsets(yr, season.month, season.day, 12)
+      const entries = Object.keys(o).filter((k) => o[k] !== null)
+      const vals = entries.map((k) => o[k] as number)
+      if (!vals.length) {
+        problems.push(`${yr} ${season.label}: no methods returned a value`)
+        continue
+      }
+      if (Math.max(...vals) - Math.min(...vals) > tol) {
+        const byVal: Record<string, Array<string>> = {}
+        for (const k of entries) {
+          const key = String(o[k])
+          ;(byVal[key] ??= []).push(k)
+        }
+        const breakdown = Object.keys(byVal)
+          .map((v) => `${v}: [${byVal[v].join(", ")}]`)
+          .join(" | ")
+        problems.push(`${yr} ${season.label} (tol ${tol}m): ${breakdown}`)
+      }
+    }
+  }
+  return {
+    ok: problems.length === 0,
+    describe: problems.length
+      ? problems.join(" ; ")
+      : `all six methods agree across ${years.join(", ")}`,
+  }
+}
+
+/** Worker source that runs the offset-consistency check and posts the result. */
+const OFFSET_CONSISTENCY_WORKER_SOURCE = `self.onmessage = function () {
+  try {
+    var f = (${computeWorkerOffsetConsistency.toString()});
+    var res = f();
+    self.postMessage({ ok: true, allConsistent: res.ok, describe: res.describe });
+  } catch (err) {
+    self.postMessage({ ok: false, error: err && err.message ? err.message : String(err) });
+  }
+};`
+
+/**
+ * Outer-worker source that spawns a child blob Worker to run the offset check
+ * and relays the verdict up — exercises the nested (Worker-in-Worker) path,
+ * where the payload must recursively wrap `self.Worker` inside the parent.
+ */
+const NESTED_OFFSET_CONSISTENCY_WORKER_SOURCE = `self.onmessage = function () {
+  try {
+    var childSrc = ${JSON.stringify(OFFSET_CONSISTENCY_WORKER_SOURCE)};
+    var url = URL.createObjectURL(new Blob([childSrc], { type: "application/javascript" }));
+    var child = new Worker(url);
+    child.onmessage = function (ev) {
+      try { child.terminate(); URL.revokeObjectURL(url); } catch (x) { /* cleanup */ }
+      self.postMessage(ev.data);
+    };
+    child.onerror = function () { self.postMessage({ ok: false, error: "nested child worker error" }); };
+    child.postMessage(null);
+  } catch (err) {
+    self.postMessage({ ok: false, error: err && err.message ? err.message : String(err) });
+  }
+};`
+
+/** Post to an offset-consistency worker, resolve its verdict, then clean up. */
+function awaitWorkerOffset(
+  worker: Worker,
+  cleanup: () => void
+): Promise<OffsetConsistency> {
+  return new Promise<OffsetConsistency>((resolve, reject) => {
+    const timer = setTimeout(
+      () =>
+        reject(
+          new Error(`Worker did not respond within ${WORKER_TIMEOUT_MS}ms`)
+        ),
+      WORKER_TIMEOUT_MS
+    )
+    worker.onmessage = (event: MessageEvent<unknown>) => {
+      clearTimeout(timer)
+      const data = event.data as
+        | { ok: true; allConsistent: boolean; describe: string }
+        | { ok: false; error: string }
+      if (data && typeof data === "object" && "ok" in data) {
+        if (data.ok)
+          resolve({ ok: data.allConsistent, describe: data.describe })
+        else reject(new Error(data.error))
+      } else {
+        reject(new Error("Worker returned an unexpected message shape"))
+      }
+    }
+    worker.onerror = () => {
+      clearTimeout(timer)
+      reject(new Error("Worker error"))
+    }
+    worker.postMessage(null)
+  }).finally(() => {
+    try {
+      worker.terminate()
+    } catch {
+      /* cleanup */
+    }
+    cleanup()
+  })
+}
+
+function runOffsetViaBlob(): Promise<OffsetConsistency> {
+  assertBlobWorkerApis()
+  const url = URL.createObjectURL(
+    new Blob([OFFSET_CONSISTENCY_WORKER_SOURCE], {
+      type: "application/javascript",
+    })
+  )
+  return awaitWorkerOffset(new Worker(url), () => {
+    try {
+      URL.revokeObjectURL(url)
+    } catch {
+      /* cleanup */
+    }
+  })
+}
+
+function runOffsetViaData(): Promise<OffsetConsistency> {
+  if (typeof Worker === "undefined") {
+    throw new SkipTestError("Worker API not available")
+  }
+  const dataUrl = `data:application/javascript,${encodeURIComponent(OFFSET_CONSISTENCY_WORKER_SOURCE)}`
+  return awaitWorkerOffset(new Worker(dataUrl), () => {})
+}
+
+function runOffsetViaNested(): Promise<OffsetConsistency> {
+  assertBlobWorkerApis()
+  const url = URL.createObjectURL(
+    new Blob([NESTED_OFFSET_CONSISTENCY_WORKER_SOURCE], {
+      type: "application/javascript",
+    })
+  )
+  return awaitWorkerOffset(new Worker(url), () => {
+    try {
+      URL.revokeObjectURL(url)
+    } catch {
+      /* cleanup */
+    }
+  })
+}
+
+/** Extract the offset-consistency verdict a served probe reported, or skip. */
+function consistencyFromResult(result: WorkerResult): OffsetConsistency {
+  if (result.offsetConsistency == null) {
+    throw new SkipTestError(
+      "worker did not report an offset-consistency verdict"
+    )
+  }
+  return result.offsetConsistency
+}
+
+/**
+ * Build a per-surface offset self-consistency card. Runs the six-method check
+ * inside the given worker surface and passes when every surface agrees within
+ * the per-era tolerance. Because a clean/unpatched worker is natively
+ * consistent, this passes on every engine and only fails when a spoofing
+ * payload REACHES the surface but one of its offset paths diverges — the exact
+ * regression that produced the Asia/Tokyo and America/Sao_Paulo splits.
+ */
+function buildWorkerOffsetConsistencyTest(cfg: {
+  id: string
+  name: string
+  surfaceLabel: string
+  group?: TestGroupId
+  run: () => Promise<OffsetConsistency>
+}): TestDefinition {
+  return buildBehavioralTest<boolean>({
+    id: cfg.id,
+    group: cfg.group ?? "internal-consistency",
+    name: cfg.name,
+    description:
+      `Proves the worker spoofing payload stays SELF-CONSISTENT on the ${cfg.surfaceLabel} surface. ` +
+      "All six independent offset-resolution surfaces (getTimezoneOffset, epoch arithmetic, Date.parse, Intl " +
+      "shortOffset, component arithmetic, Temporal offsetNanoseconds) must report the same UTC offset for a given " +
+      "instant. A divergence beyond the per-era tolerance means one of the worker payload's override paths " +
+      "(getTimezoneOffset truncation, the Date-constructor / Date.parse epoch adjustment, the component getters, or " +
+      "Temporal) disagrees with the others — the exact regression that produced the Asia/Tokyo (+9:18:59) and " +
+      "America/Sao_Paulo (-3:06:28) sub-minute-LMT splits. Pre-1906 dates allow up to 1 minute of spread; modern " +
+      "dates must agree exactly. Self-verifying: a clean browser passes (natively consistent), so a red result is " +
+      "always a payload bug.",
+    technique: `In a ${cfg.surfaceLabel}, compute the UTC offset via each of the six methods for Jan 15 and Jul 15 of 1879, 1952, 1976 and 2025, and verify each date's values agree within the per-era tolerance (1 minute pre-1906, exact otherwise).`,
+    codeSnippet: `// inside the worker, for each year/season:
+const m1 = new Date(y, mo, 15, 12).getTimezoneOffset()
+const m2 = (new Date(y, mo, 15, 12).getTime() - Date.UTC(y, mo, 15, 12)) / 60000
+// + Date.parse, Intl shortOffset, component diff, Temporal offsetNanoseconds
+// all six must agree within tolerance`,
+    expected: async () => {
+      if (typeof Worker === "undefined") {
+        return { skipReason: "Worker API not available in this browser" }
+      }
+      return { value: true, describe: "all methods agree within tolerance" }
+    },
+    observe: async () => {
+      let res: OffsetConsistency
+      try {
+        res = await cfg.run()
+      } catch (err) {
+        if (err instanceof SkipTestError) throw err
+        throw new SkipTestError(
+          `${cfg.surfaceLabel} offset consistency unavailable: ${err instanceof Error ? err.message : String(err)}`
+        )
+      }
+      return { value: res.ok, describe: res.describe }
+    },
+  })
+}
+
+const blobWorkerOffsetConsistencyTest = buildWorkerOffsetConsistencyTest({
+  id: "tampering.worker.blob-offset-consistency",
+  name: "Blob Worker resolves one consistent UTC offset across all six surfaces",
+  surfaceLabel: "blob-URL Worker",
+  run: runOffsetViaBlob,
+})
+
+const dataUrlWorkerOffsetConsistencyTest = buildWorkerOffsetConsistencyTest({
+  id: "tampering.worker.data-offset-consistency",
+  name: "Data-URL Worker resolves one consistent UTC offset across all six surfaces",
+  surfaceLabel: "data-URL Worker",
+  run: runOffsetViaData,
+})
+
+const nestedWorkerOffsetConsistencyTest = buildWorkerOffsetConsistencyTest({
+  id: "tampering.worker.nested-offset-consistency",
+  name: "Nested Worker resolves one consistent UTC offset across all six surfaces",
+  surfaceLabel: "nested Worker-in-Worker",
+  run: runOffsetViaNested,
+})
+
+const urlWorkerOffsetConsistencyTest = buildWorkerOffsetConsistencyTest({
+  id: "tampering.worker.url-classic-offset-consistency",
+  name: "URL-based classic Worker resolves one consistent UTC offset across all six surfaces",
+  surfaceLabel: "URL-based classic Worker",
+  run: async () =>
+    consistencyFromResult(await runUrlWorker("/workers/classic-probe.js")),
+})
+
+const sharedWorkerOffsetConsistencyTest = buildWorkerOffsetConsistencyTest({
+  id: "tampering.worker.shared-worker-offset-consistency",
+  name: "SharedWorker resolves one consistent UTC offset across all six surfaces",
+  surfaceLabel: "SharedWorker",
+  run: async () =>
+    consistencyFromResult(await runSharedWorker("/workers/shared-probe.js")),
+})
+
+const importScriptsWorkerOffsetConsistencyTest =
+  buildWorkerOffsetConsistencyTest({
+    id: "tampering.worker.importscripts-offset-consistency",
+    name: "importScripts-loaded code resolves one consistent UTC offset across all six surfaces",
+    surfaceLabel: "importScripts-loaded code",
+    run: async () =>
+      consistencyFromResult(
+        await runImportScriptsWorker("/workers/importscripts-probe.js")
+      ),
+  })
+
+const moduleWorkerOffsetConsistencyTest = buildWorkerOffsetConsistencyTest({
+  id: "tampering.worker.module-offset-consistency",
+  name: "Module Worker resolves one consistent UTC offset across all six surfaces",
+  surfaceLabel: "module Worker",
+  run: async () =>
+    consistencyFromResult(await runModuleWorker("/workers/module-probe.js")),
+})
+
+const serviceWorkerOffsetConsistencyTest = buildWorkerOffsetConsistencyTest({
+  id: "known-limitation.worker.service-worker-offset-consistency",
+  name: "ServiceWorker resolves one consistent UTC offset across all six surfaces",
+  surfaceLabel: "ServiceWorker",
+  // Service workers can't be intercepted (same-origin HTTPS + browser-managed
+  // lifecycle rules out blob/network prepending), so the payload never reaches
+  // them on any engine — a documented known limitation, matching the other
+  // service-worker cards. The check still runs (a SW is natively self-consistent
+  // in the real zone), so it won't false-flag; it lives here for classification.
+  group: "known-limitations",
+  run: async () =>
+    consistencyFromResult(await runServiceWorker("/workers/service-probe.js")),
+})
+
+// ---------------------------------------------------------------------------
 // Manifest
 // ---------------------------------------------------------------------------
 
 export const workerTimezoneTests: ReadonlyArray<TestDefinition> = [
+  // Cross-method offset self-consistency — one per surface.
+  blobWorkerOffsetConsistencyTest,
+  dataUrlWorkerOffsetConsistencyTest,
+  nestedWorkerOffsetConsistencyTest,
+  urlWorkerOffsetConsistencyTest,
+  sharedWorkerOffsetConsistencyTest,
+  importScriptsWorkerOffsetConsistencyTest,
+  moduleWorkerOffsetConsistencyTest,
+  serviceWorkerOffsetConsistencyTest,
   blobWorkerTimezoneTest,
   blobWorkerTemporalTest,
   blobWorkerFullParityTest,

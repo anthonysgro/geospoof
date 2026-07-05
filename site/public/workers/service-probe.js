@@ -36,6 +36,9 @@ self.addEventListener("message", function (event) {
     var sig =
       sigBase != null && self.__tzSignature ? self.__tzSignature(sigBase) : null
     var fidelity = self.__methodFidelity ? self.__methodFidelity() : null
+    var offsetConsistency = self.__offsetConsistency
+      ? self.__offsetConsistency()
+      : null
     var channelName =
       (event.data && event.data.channel) || "geospoof-service-probe"
     var bc = new BroadcastChannel(channelName)
@@ -46,6 +49,7 @@ self.addEventListener("message", function (event) {
       temporalTimeZone: temporalTimeZone,
       sig: sig,
       fidelity: fidelity,
+      offsetConsistency: offsetConsistency,
     })
     bc.close()
   } catch (err) {

@@ -29,6 +29,9 @@ self.onmessage = function (e) {
     if (imported && self.__methodFidelity) {
       imported.fidelity = self.__methodFidelity()
     }
+    if (imported && self.__offsetConsistency) {
+      imported.offsetConsistency = self.__offsetConsistency()
+    }
     self.postMessage({
       ok: true,
       direct: direct,
