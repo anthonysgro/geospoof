@@ -13,6 +13,7 @@ pub mod controller;
 pub mod error;
 pub mod hold;
 pub mod idevice_controller;
+pub mod session;
 pub mod state_machine;
 pub mod types;
 
@@ -23,6 +24,7 @@ pub use controller::{DeviceController, DeviceEvent};
 pub use error::DeviceError;
 pub use hold::{hold_location, HoldConfig, HoldOutcome};
 pub use idevice_controller::IdeviceController;
+pub use session::{SessionState, SpoofSession};
 pub use state_machine::{remediation_for, transition, Event, Remediation};
 pub use types::{Coordinate, DeviceInfo, DeviceState, DeviceStatus, InvalidCoordinate};
 

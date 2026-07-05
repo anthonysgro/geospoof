@@ -12,10 +12,11 @@ use async_trait::async_trait;
 
 use crate::controller::{DeviceController, DeviceEvent};
 use crate::error::DeviceError;
-use crate::types::{Coordinate, DeviceStatus};
+use crate::types::{Coordinate, DeviceInfo, DeviceStatus};
 
 /// Configurable, observable fake device.
 pub struct MockDeviceController {
+    info: DeviceInfo,
     status: DeviceStatus,
     status_err: Option<DeviceError>,
     mount: Mutex<VecDeque<Result<(), DeviceError>>>,
@@ -33,6 +34,12 @@ impl MockDeviceController {
     /// A device with all preconditions satisfied and every operation succeeding.
     pub fn ready() -> Self {
         Self {
+            info: DeviceInfo {
+                udid: "MOCK-UDID".to_string(),
+                name: "Mock iPhone".to_string(),
+                product_type: "iPhone0,0".to_string(),
+                ios_version: "26.0".to_string(),
+            },
             status: DeviceStatus {
                 trusted: true,
                 developer_mode: true,
@@ -105,6 +112,10 @@ impl MockDeviceController {
 
 #[async_trait]
 impl DeviceController for MockDeviceController {
+    async fn device_info(&self) -> Result<DeviceInfo, DeviceError> {
+        Ok(self.info.clone())
+    }
+
     async fn status(&self) -> Result<DeviceStatus, DeviceError> {
         match &self.status_err {
             Some(err) => Err(err.clone()),

@@ -1,0 +1,24 @@
+[package]
+name = "geospoof-gps-agent"
+description = "Headless GeoSpoof GPS agent: reconciles a desired-location file to the device."
+version.workspace = true
+edition.workspace = true
+license-file.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "geospoof-gps-agent"
+path = "src/main.rs"
+
+[dependencies]
+geospoof-gps-core = { path = "../core" }
+# Exact pins (DEPENDENCY_POLICY.md).
+serde = { version = "=1.0.228", features = ["derive"] }
+serde_json = "=1.0.150"
+tokio = { version = "=1.52.3", features = ["rt-multi-thread", "macros", "time"] }
+tracing = "=0.1.44"
+tracing-subscriber = { version = "=0.3.23", features = ["env-filter"] }
+
+[dev-dependencies]
+geospoof-gps-core = { path = "../core", features = ["mock"] }

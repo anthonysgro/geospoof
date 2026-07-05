@@ -10,6 +10,8 @@ use async_trait::async_trait;
 use crate::error::DeviceError;
 use crate::types::{Coordinate, DeviceInfo, DeviceStatus};
 
+// DeviceInfo is used by `device_info` below.
+
 /// Hardware hotplug events, distinct from the state-machine [`crate::state_machine::Event`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DeviceEvent {
@@ -25,6 +27,9 @@ pub enum DeviceEvent {
 /// returned rather than panicking, so a host can surface remediation.
 #[async_trait]
 pub trait DeviceController: Send + Sync {
+    /// Basic, non-PII device identity (name / model / iOS). (Requirement 8)
+    async fn device_info(&self) -> Result<DeviceInfo, DeviceError>;
+
     /// Snapshot the current preconditions (trust / Developer Mode / DDI).
     async fn status(&self) -> Result<DeviceStatus, DeviceError>;
 

@@ -139,7 +139,12 @@ Using location spoofing may violate terms of service of streaming, financial, or
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+GeoSpoof is **open source (MIT)** — with one scoped exception.
+
+- **The browser extension and everything else in this repo:** [MIT](LICENSE). Use, modify, and redistribute freely, including commercially.
+- **The native GPS core (`gps/` directory):** source-available under the [Functional Source License (FSL-1.1-MIT)](gps/LICENSE). You can read, audit, modify, and use it for any purpose **except a Competing Use** — you can't ship it in a commercial product or service that substitutes for GeoSpoof or offers substantially similar functionality. Each release converts to MIT two years after it ships.
+
+All source is public and auditable. See [LICENSE](LICENSE) and [gps/LICENSE](gps/LICENSE) for the full terms.
 
 ## Links
 

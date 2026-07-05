@@ -6,7 +6,9 @@ actual CoreLocation report the same place.
 
 This lives as a subfolder of the GeoSpoof monorepo. It is a **separate product** from
 the browser extension, built and released independently (its own CI + release
-workflow). License: **MIT** (same as the rest of the repo).
+workflow). License: **FSL-1.1-MIT** — source-available, converts to MIT two years
+after each release; see [LICENSE](LICENSE). (The rest of the repo, including the
+browser extension, is MIT.)
 
 ## What it is
 

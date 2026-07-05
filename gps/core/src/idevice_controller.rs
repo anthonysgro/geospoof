@@ -66,7 +66,7 @@ impl IdeviceController {
     }
 
     /// Report basic, non-PII device identity (name / model / iOS). (Requirement 8)
-    pub async fn device_info(&self) -> Result<DeviceInfo, DeviceError> {
+    async fn query_device_info(&self) -> Result<DeviceInfo, DeviceError> {
         let provider = self.provider().await?;
         let mut lockdown = LockdownClient::connect(&*provider)
             .await
@@ -138,6 +138,10 @@ impl IdeviceController {
 
 #[async_trait]
 impl DeviceController for IdeviceController {
+    async fn device_info(&self) -> Result<DeviceInfo, DeviceError> {
+        self.query_device_info().await
+    }
+
     async fn status(&self) -> Result<DeviceStatus, DeviceError> {
         let provider = self.provider().await?;
         let mut lockdown = LockdownClient::connect(&*provider)

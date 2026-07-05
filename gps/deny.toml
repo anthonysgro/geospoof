@@ -7,8 +7,9 @@
 ignore = []
 
 [licenses]
-# Permissive-only allow-list. Everything shipped must be MIT-compatible (the product
-# is MIT). Additions require review.
+# Our own code is source-available under FSL-1.1-MIT, but every third-party dependency
+# we ship must be permissive/MIT-compatible. This allow-list governs dependencies;
+# additions require review.
 allow = [
     "MIT",
     "Apache-2.0",
@@ -24,6 +25,9 @@ allow = [
     "BSL-1.0",
 ]
 confidence-threshold = 0.8
+# Our own workspace crates (publish = false) are licensed via license-file (FSL-1.1-MIT,
+# not an SPDX id). Skip them in the license check — this allow-list is for dependencies.
+private = { ignore = true }
 
 [bans]
 # We pin idevice exactly; discourage wildcard version requirements. Duplicate

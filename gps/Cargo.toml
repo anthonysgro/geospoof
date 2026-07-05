@@ -1,11 +1,12 @@
 [workspace]
 resolver = "2"
-members = ["core", "ffi"]
+members = ["core", "ffi", "agent"]
 
 [workspace.package]
 version = "0.0.1"
 edition = "2021"
-license = "MIT"
+# Source-available under FSL-1.1-MIT (not an SPDX id, so reference the file).
+license-file = "LICENSE"
 authors = ["GeoSpoof"]
 repository = "https://github.com/anthonysgro/geospoof"
 

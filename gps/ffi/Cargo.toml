@@ -3,7 +3,7 @@ name = "geospoof-gps-ffi"
 description = "C ABI over geospoof-gps-core for embedding in native hosts."
 version.workspace = true
 edition.workspace = true
-license.workspace = true
+license-file.workspace = true
 repository.workspace = true
 # App-internal crate; never published to crates.io.
 publish = false

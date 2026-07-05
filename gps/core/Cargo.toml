@@ -3,7 +3,7 @@ name = "geospoof-gps-core"
 description = "Host-agnostic core for GeoSpoof GPS: iOS device control over idevice."
 version.workspace = true
 edition.workspace = true
-license.workspace = true
+license-file.workspace = true
 repository.workspace = true
 # App-internal crate; never published to crates.io.
 publish = false
