@@ -4,13 +4,29 @@
 //! establish the userspace tunnel, mount the Developer Disk Image, and apply/clear a
 //! simulated location.
 //!
-//! This is the workspace scaffold (task 2). The real surface arrives in later tasks:
-//! the `DeviceController` trait + mock (task 5–6), the state machine and hold-loop
-//! (task 7–9), and the `IdeviceController` implementation (task 13).
+//! Section B (this scaffold's substance) provides the hardware-independent pieces:
+//! the [`DeviceController`] seam (task 5), a scriptable [`mock`] (task 6), the pure
+//! device [`state_machine`] (task 7), and the async [`hold`] loop (task 9). The real
+//! `IdeviceController` implementation lands in a later task (13).
 
-// Keep `idevice` linked while the real implementation is pending, so the dependency is
-// resolved/locked and the target feature set compiles.
+// Keep `idevice` linked until the real implementation (task 13) uses it, so the
+// dependency stays resolved/locked and the target feature set keeps compiling.
 use idevice as _;
+
+pub mod controller;
+pub mod error;
+pub mod hold;
+pub mod state_machine;
+pub mod types;
+
+#[cfg(any(test, feature = "mock"))]
+pub mod mock;
+
+pub use controller::{DeviceController, DeviceEvent};
+pub use error::DeviceError;
+pub use hold::{hold_location, HoldConfig, HoldOutcome};
+pub use state_machine::{remediation_for, transition, Event, Remediation};
+pub use types::{Coordinate, DeviceInfo, DeviceState, DeviceStatus, InvalidCoordinate};
 
 /// Version of the core, surfaced across the FFI boundary.
 pub const CORE_VERSION: &str = env!("CARGO_PKG_VERSION");
