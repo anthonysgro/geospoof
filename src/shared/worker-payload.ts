@@ -364,23 +364,16 @@ Date.prototype.toDateString = __nativeMethod(function toDateString() {
 var OrigDate = Date;
 var OrigDateParse = Date.parse;
 
-// Engine truncation of sub-minute historical offsets (Chrome/V8 truncates to
-// whole minutes when interpreting ambiguous strings; Firefox keeps fractional).
-// Detected the same way as state.ts so the adjustment matches the engine's own
-// parsing for pre-1900 LMT dates.
+// Engine truncation of sub-minute historical offsets: V8 (Chrome/Chromium/Edge)
+// truncates getTimezoneOffset to whole minutes; SpiderMonkey (Firefox) keeps the
+// fraction. Keyed off engine identity to match state.ts. The old approach probed
+// the Intl shortOffset string for a ":SS" component, but modern V8 now emits
+// seconds there while still truncating getTimezoneOffset, so that probe
+// misclassified current Chrome. InternalError is a SpiderMonkey-only global; its
+// absence means a V8-like (truncating) engine.
 var __engineTruncatesOffset = (function () {
   try {
-    var probe = new OrigDate(OrigDate.UTC(1879, 0, 15, 13, 0, 0));
-    var f = new OrigDTF("en-US", {
-      timeZone: "Asia/Kolkata",
-      timeZoneName: "shortOffset",
-    });
-    var parts = f.formatToParts(probe);
-    var val = "GMT";
-    for (var i = 0; i < parts.length; i++) {
-      if (parts[i].type === "timeZoneName") { val = parts[i].value; break; }
-    }
-    return !/:(\\d{2})$/.test(val);
+    return typeof InternalError === "undefined";
   } catch (e) {
     return true;
   }

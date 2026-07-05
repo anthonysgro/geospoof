@@ -35,35 +35,33 @@ export const ANNOUNCE_EVENT_NAME: string = (process.env.EVENT_NAME || "__x_evt")
 export const SETTINGS_WAIT_TIMEOUT = 3000;
 
 /**
- * True when the engine truncates sub-minute historical offsets to integers (Chrome/V8).
+ * True when the engine truncates sub-minute historical offsets to an integer in
+ * `Date.prototype.getTimezoneOffset()` (V8: Chrome/Chromium/Edge). SpiderMonkey
+ * (Firefox/Thunderbird) preserves the fractional value.
  *
- * Detection strategy: use a known timezone with a well-documented sub-minute LMT
- * offset that is stable across all IANA database versions, probed at a UTC instant
- * where that offset applies. This avoids dependence on the real system timezone
- * (which may itself have an integer 1879 offset, giving a false positive on Firefox).
+ * Detection strategy: key off engine identity, NOT a behavioral probe of another
+ * surface. This flag governs how `getTimezoneOffset` rounds, but `getTimezoneOffset`
+ * cannot be probed for an arbitrary zone (it only ever reports the real system
+ * zone), so there is no direct behavioral probe available.
  *
- * Asia/Kolkata (Madras Mean Time) had offset +5:21:10 = 321.1666... minutes until
- * 1906-01-01. We probe at 1879-01-15T13:00:00Z — well within the LMT era.
- * Chrome returns -321 (truncated); Firefox returns -321.1666... (fractional).
+ * The previous approach probed the Intl `shortOffset` string for a sub-minute zone
+ * and inferred truncation from whether it carried a `:SS` component. That inference
+ * no longer holds: modern V8 emits seconds in `shortOffset` (e.g. "GMT+9:18:59" for
+ * Asia/Tokyo pre-1888) while STILL truncating `getTimezoneOffset` to whole minutes.
+ * One surface can no longer predict the other, so the probe misclassified current
+ * Chrome as Firefox-like and leaked a fractional `getTimezoneOffset`.
  *
- * Using Intl.DateTimeFormat shortOffset is more reliable than getTimezoneOffset
- * because it doesn't depend on the system timezone at all.
+ * `InternalError` is a SpiderMonkey-only global exposed to web content; V8 (and
+ * JavaScriptCore) do not define it. Anything that is not positively identified as
+ * SpiderMonkey is treated as truncating, matching V8 (the dominant target) and the
+ * previous default-truncate fallback.
  */
 function detectEngineTruncatesOffset(): boolean {
   try {
-    const probe = new Date(Date.UTC(1879, 0, 15, 13, 0, 0));
-    const fmt = new Intl.DateTimeFormat("en-US", {
-      timeZone: "Asia/Kolkata",
-      timeZoneName: "shortOffset",
-    });
-    const parts = fmt.formatToParts(probe);
-    const tzVal = parts.find((p) => p.type === "timeZoneName")?.value ?? "GMT";
-    // Firefox returns "GMT+5:21:10" (sub-second precision preserved)
-    // Chrome returns "GMT+5:21" (truncated to minutes)
-    // If the string contains seconds (:10), the engine preserves sub-minute offsets
-    return !/:(\d{2})$/.test(tzVal);
+    // SpiderMonkey preserves fractional sub-minute offsets → does not truncate.
+    return typeof (globalThis as { InternalError?: unknown }).InternalError === "undefined";
   } catch {
-    // Fallback: assume truncation (Chrome-like behavior) on any error
+    // Fallback: assume truncation (V8-like behavior) on any error.
     return true;
   }
 }

@@ -9,11 +9,28 @@ import {
   OriginalDate,
   OriginalDateTimeFormat,
   originalGetTimezoneOffset,
-  engineTruncatesOffset,
+  originalResolvedOptions,
 } from "./state";
 import { createLogger } from "@/shared/utils/debug-logger";
 
 const logger = createLogger("INJ");
+
+/**
+ * Resolve the REAL system IANA timezone id via the native (pre-override)
+ * Intl.DateTimeFormat, cached for the lifetime of the realm. Used to compute the
+ * real system offset at full sub-minute precision (see computeEpochAdjustment),
+ * independent of the spoofed timezone. Falls back to "UTC" if resolution fails.
+ */
+let _realTimeZoneId: string | undefined;
+function getRealTimeZoneId(): string {
+  if (_realTimeZoneId !== undefined) return _realTimeZoneId;
+  try {
+    _realTimeZoneId = originalResolvedOptions.call(new OriginalDateTimeFormat()).timeZone;
+  } catch {
+    _realTimeZoneId = "UTC";
+  }
+  return _realTimeZoneId;
+}
 
 /** Validate that an unknown value conforms to the TimezoneData interface. */
 export function validateTimezoneData(tz: unknown): tz is TimezoneData {
@@ -362,8 +379,19 @@ export function computeEpochAdjustment(
   timezoneId: string,
   fallbackOffset: number
 ): number {
-  // (a) Real system offset in minutes (positive = west of UTC, getTimezoneOffset convention)
-  const realOffset = originalGetTimezoneOffset.call(parsedDate);
+  // (a) Real system offset in minutes (positive = west of UTC, getTimezoneOffset
+  //     convention), resolved at FULL sub-minute precision.
+  //
+  //     We cannot use getTimezoneOffset() here: on V8 it truncates sub-minute
+  //     historical LMT offsets to a whole minute, while the native Date
+  //     constructor (which produced parsedDate.getTime()) uses the full-precision
+  //     offset. Mixing the two leaks the dropped fraction into the adjustment —
+  //     e.g. spoofing America/Sao_Paulo (LMT -3:06:28) from a machine also in
+  //     Sao_Paulo produced 186.9333 instead of the native 186.4667. Resolving the
+  //     real offset via Intl (same shortOffset path as the spoofed offset) keeps
+  //     both sides at the same precision so the fraction cancels correctly.
+  const realEastFallback = -originalGetTimezoneOffset.call(parsedDate);
+  const realOffset = -getIntlBasedOffset(parsedDate, getRealTimeZoneId(), realEastFallback);
 
   // (b) Compute the wall-clock time as a UTC epoch.
   //     parsedDate.getTime() is the UTC instant the browser chose when parsing
@@ -398,18 +426,14 @@ export function computeEpochAdjustment(
       logger.debug("computeEpochAdjustment: DST refinement", originalOffset, spoofedOffset);
     }
 
-    // (f) On Chrome/V8, the native Date constructor uses the truncated integer
-    //     offset (same as getTimezoneOffset()) when interpreting ambiguous date
-    //     strings. To match native epoch values exactly, truncate the spoofed
-    //     offset the same way. Firefox uses the full fractional offset, so we
-    //     only truncate when the engine truncates.
-    const effectiveOffset = engineTruncatesOffset ? Math.trunc(spoofedOffset) : spoofedOffset;
-
-    if (engineTruncatesOffset) {
-      logger.trace("computeEpochAdjustment: truncation", spoofedOffset, effectiveOffset);
-    }
-
-    return Math.round((-effectiveOffset - realOffset) * 60000);
+    // (f) Both engines' native Date constructors interpret ambiguous local-time
+    //     inputs using the FULL sub-minute offset (only getTimezoneOffset() rounds,
+    //     and it does so on a separate code path). Keeping full precision here makes
+    //     the epoch — and therefore getTime/valueOf/Date.parse/component arithmetic —
+    //     match what a real browser in the spoofed zone reports (e.g. Asia/Tokyo 1879
+    //     resolves to -558.9833, not -558 or -560). getTimezoneOffset's per-engine
+    //     truncation is applied only in its own override, not here.
+    return Math.round((-spoofedOffset - realOffset) * 60000);
   } catch {
     // Fall back to a simple adjustment using the fallback offset on any error.
     const adjustment = Math.round((-fallbackOffset - realOffset) * 60000);
