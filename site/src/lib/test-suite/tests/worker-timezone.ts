@@ -827,8 +827,17 @@ async function runServiceWorker(scriptUrl: string): Promise<WorkerResult> {
       } catch {
         /* best effort — proceed to register regardless */
       }
+      // `updateViaCache: "none"` is critical: the default ("imports") bypasses
+      // the HTTP cache only for the MAIN script, serving `importScripts()`ed
+      // files (here, tz-signature.js) from cache. That let a stale
+      // tz-signature.js linger — with `__tzSignature` (so `sig` worked) but
+      // WITHOUT a newly-added helper like `__offsetConsistency` — so the probe
+      // reported that field as null and its card skipped ("did not report a
+      // verdict"). "none" forces the imported helper to be re-fetched too, so
+      // the SW always runs the current probe code.
       registration = await navigator.serviceWorker.register(scriptUrl, {
         scope: "/workers/",
+        updateViaCache: "none",
       })
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
@@ -868,6 +877,7 @@ async function runServiceWorker(scriptUrl: string): Promise<WorkerResult> {
               temporalTimeZone?: string | null
               sig?: TzSignature | null
               fidelity?: ReadonlyArray<string> | null
+              offsetConsistency?: OffsetConsistency | null
             }
           | { ok: false; error: string }
         if (data && typeof data === "object" && "ok" in data) {
@@ -878,6 +888,7 @@ async function runServiceWorker(scriptUrl: string): Promise<WorkerResult> {
               temporalTimeZone: data.temporalTimeZone ?? null,
               sig: data.sig ?? null,
               fidelity: data.fidelity ?? null,
+              offsetConsistency: data.offsetConsistency ?? null,
             })
           } else {
             reject(new Error(`ServiceWorker reported error: ${data.error}`))
@@ -2377,16 +2388,18 @@ const moduleWorkerOffsetConsistencyTest = buildWorkerOffsetConsistencyTest({
     consistencyFromResult(await runModuleWorker("/workers/module-probe.js")),
 })
 
+// The service-worker offset card is `internal-consistency`, NOT
+// `known-limitations`, because it measures a different axis than the SW
+// reach/parity cards. Those cross-realm cards fail because the SW leaks the
+// real zone (a documented limitation). This one asks whether the SW's six
+// offset surfaces agree WITH EACH OTHER — a partial-spoof detector. It passes
+// today (a native realm is self-consistent) and would go red if a payload ever
+// reached the SW and spoofed some surfaces but not others, so it's a genuine
+// regression guard rather than a leak demonstration.
 const serviceWorkerOffsetConsistencyTest = buildWorkerOffsetConsistencyTest({
-  id: "known-limitation.worker.service-worker-offset-consistency",
+  id: "tampering.worker.service-worker-offset-consistency",
   name: "ServiceWorker resolves one consistent UTC offset across all six surfaces",
   surfaceLabel: "ServiceWorker",
-  // Service workers can't be intercepted (same-origin HTTPS + browser-managed
-  // lifecycle rules out blob/network prepending), so the payload never reaches
-  // them on any engine — a documented known limitation, matching the other
-  // service-worker cards. The check still runs (a SW is natively self-consistent
-  // in the real zone), so it won't false-flag; it lives here for classification.
-  group: "known-limitations",
   run: async () =>
     consistencyFromResult(await runServiceWorker("/workers/service-probe.js")),
 })
