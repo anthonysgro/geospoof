@@ -20,6 +20,9 @@ pub enum DeviceError {
     /// The Developer Disk Image is not mounted.
     #[error("Developer Disk Image is not mounted")]
     DdiNotMounted,
+    /// No Developer Disk Image files are available to mount (carries guidance).
+    #[error("{0}")]
+    DdiUnavailable(String),
     /// Mounting the Developer Disk Image failed.
     #[error("failed to mount the Developer Disk Image: {0}")]
     MountFailed(String),

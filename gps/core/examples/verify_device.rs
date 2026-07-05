@@ -30,7 +30,7 @@ async fn main() {
         std::process::exit(1);
     };
     println!("device: {udid}");
-    let controller = IdeviceController::new(udid);
+    let controller = IdeviceController::new(udid.clone());
 
     match controller.device_info().await {
         Ok(info) => println!(
@@ -67,6 +67,18 @@ async fn main() {
             Ok(()) => println!("clear OK -> location should revert to real GPS"),
             Err(e) => eprintln!("clear FAILED: {e}"),
         },
-        other => eprintln!("unknown command '{other}' (use: status | set <lat> <lon> | clear)"),
+        "mount" => match args.get(2) {
+            Some(dir) => {
+                let controller = IdeviceController::new(udid).with_ddi_dir(dir.clone());
+                match controller.mount_ddi().await {
+                    Ok(()) => println!("mount OK -> developer image mounted"),
+                    Err(e) => eprintln!("mount FAILED: {e}"),
+                }
+            }
+            None => eprintln!("usage: verify_device mount <ddi_dir>"),
+        },
+        other => {
+            eprintln!("unknown command '{other}' (use: status | set <lat> <lon> | clear | mount <ddi_dir>)")
+        }
     }
 }

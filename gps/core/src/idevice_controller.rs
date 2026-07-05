@@ -11,6 +11,8 @@
 //! - `mount_ddi` cannot auto-source the personalized DDI yet (design §8 / task 16).
 //! - `next_event` (usbmux hotplug streaming) is not implemented yet.
 
+use std::path::{Path, PathBuf};
+
 use async_trait::async_trait;
 
 use idevice::core_device_proxy::CoreDeviceProxy;
@@ -32,6 +34,8 @@ const LABEL: &str = "geospoof-gps";
 /// A `DeviceController` for a specific device (by UDID), backed by `idevice`.
 pub struct IdeviceController {
     udid: String,
+    /// Optional folder holding a user-provided personalized DDI (clean 3-file layout).
+    ddi_dir: Option<PathBuf>,
 }
 
 enum LocationOp {
@@ -42,7 +46,17 @@ enum LocationOp {
 impl IdeviceController {
     /// Target a specific device by UDID.
     pub fn new(udid: impl Into<String>) -> Self {
-        Self { udid: udid.into() }
+        Self {
+            udid: udid.into(),
+            ddi_dir: None,
+        }
+    }
+
+    /// Point at a folder containing a user-provided DDI (Image.dmg / BuildManifest.plist
+    /// / Image.dmg.trustcache) for `mount_ddi` to use.
+    pub fn with_ddi_dir(mut self, dir: impl Into<PathBuf>) -> Self {
+        self.ddi_dir = Some(dir.into());
+        self
     }
 
     /// List the UDIDs of USB-connected devices (usbmux discovery).
@@ -164,12 +178,19 @@ impl DeviceController for IdeviceController {
         if self.ddi_mounted().await {
             return Ok(());
         }
-        // Auto-mounting the personalized DDI needs a DDI source (image + build manifest
-        // + trust cache). Sourcing/provenance is unresolved (design §8) and is exactly
-        // what the Phase-0 gate (task 16) probes on stable iOS 26.
-        Err(DeviceError::UnsupportedOs(
-            "developer image not mounted; auto-mount needs a DDI source (Phase-0/task 16)".into(),
-        ))
+        // Mount a user-provided DDI. Non-Send session types → run on a current-thread
+        // runtime inside spawn_blocking (same pattern as location ops).
+        let udid = self.udid.clone();
+        let ddi_dir = self.ddi_dir.clone();
+        tokio::task::spawn_blocking(move || {
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .map_err(|e| DeviceError::Io(e.to_string()))?;
+            rt.block_on(mount_ddi_session(&udid, ddi_dir.as_deref()))
+        })
+        .await
+        .map_err(|e| DeviceError::Io(e.to_string()))?
     }
 
     async fn set_location(&self, coordinate: Coordinate) -> Result<(), DeviceError> {
@@ -198,6 +219,63 @@ async fn build_provider(udid: &str) -> Result<Box<dyn IdeviceProvider>, DeviceEr
         .map_err(|_| DeviceError::NotConnected)?;
     let addr = UsbmuxdAddr::from_env_var().map_err(|e| DeviceError::Io(e.to_string()))?;
     Ok(Box::new(dev.to_provider(addr, LABEL)))
+}
+
+/// Mount a user-provided personalized DDI over a fresh software tunnel. idevice does
+/// the Apple TSS personalization internally. `!Send`; runs inside `spawn_blocking`.
+async fn mount_ddi_session(udid: &str, ddi_dir: Option<&Path>) -> Result<(), DeviceError> {
+    // Locate the user-sourced DDI first (guidance error if absent) — no download/host.
+    let files = crate::ddi::locate_ddi(ddi_dir)?;
+
+    let provider = build_provider(udid).await?;
+
+    // Device ECID (UniqueChipID) for personalization.
+    let mut lockdown = LockdownClient::connect(&*provider)
+        .await
+        .map_err(|e| DeviceError::Io(e.to_string()))?;
+    if let Ok(pairing) = provider.get_pairing_file().await {
+        let _ = lockdown.start_session(&pairing).await;
+    }
+    let unique_chip_id = lockdown
+        .get_value(Some("UniqueChipID"), None)
+        .await
+        .ok()
+        .and_then(|v| v.as_unsigned_integer())
+        .ok_or_else(|| DeviceError::Io("could not read UniqueChipID".to_string()))?;
+
+    // RSD tunnel.
+    let proxy = CoreDeviceProxy::connect(&*provider)
+        .await
+        .map_err(|e| DeviceError::TunnelFailed(e.to_string()))?;
+    let rsd_port = proxy.tunnel_info().server_rsd_port;
+    let mut adapter = proxy
+        .create_software_tunnel()
+        .map_err(|e| DeviceError::TunnelFailed(e.to_string()))?
+        .to_async_handle();
+    let stream = adapter
+        .connect(rsd_port)
+        .await
+        .map_err(|e| DeviceError::TunnelFailed(e.to_string()))?;
+    let mut handshake = RsdHandshake::new(stream)
+        .await
+        .map_err(|e| DeviceError::ServiceUnavailable(e.to_string()))?;
+
+    let mut mounter = ImageMounter::connect_rsd(&mut adapter, &mut handshake)
+        .await
+        .map_err(|e| DeviceError::ServiceUnavailable(e.to_string()))?;
+    mounter
+        .mount_personalized_rsd(
+            &mut adapter,
+            &mut handshake,
+            files.image,
+            files.trust_cache,
+            &files.build_manifest,
+            None,
+            unique_chip_id,
+        )
+        .await
+        .map_err(|e| DeviceError::MountFailed(e.to_string()))?;
+    Ok(())
 }
 
 /// Run one DVT location op over a fresh software tunnel. The session types are `!Send`,

@@ -10,6 +10,7 @@
 //! `IdeviceController` implementation lands in a later task (13).
 
 pub mod controller;
+pub mod ddi;
 pub mod error;
 pub mod hold;
 pub mod idevice_controller;

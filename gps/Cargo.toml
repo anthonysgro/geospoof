@@ -23,4 +23,5 @@ idevice = { version = "=0.1.64", features = [
     "location_simulation",
     "tunnel_tcp_stack",
     "mobile_image_mounter",
+    "tss",
 ] }
