@@ -8,13 +8,13 @@
 //! `IdeviceController` (task 13); the `mock`-feature constructors back it with the
 //! mock so the whole ABI is testable without hardware.
 
-use std::ffi::{c_char, CString};
-use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::ffi::{CString, c_char};
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::ptr;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use geospoof_gps_core::{hold_location, Coordinate, DeviceController, HoldConfig, HoldOutcome};
+use geospoof_gps_core::{Coordinate, DeviceController, HoldConfig, HoldOutcome, hold_location};
 
 /// Result code returned by fallible entrypoints.
 #[repr(i32)]
@@ -157,7 +157,7 @@ fn guard<F: FnOnce(&GgContext) -> GgCode>(ptr: *mut GgContext, f: F) -> GgCode {
 }
 
 /// ABI version. Bump on any incompatible change to the exported interface.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn gg_abi_version() -> u32 {
     1
 }
@@ -165,7 +165,7 @@ pub extern "C" fn gg_abi_version() -> u32 {
 /// Create a context backed by a ready mock device. Test/dev only. Returns null on
 /// runtime-creation failure; free with [`gg_free`].
 #[cfg(feature = "mock")]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn gg_init_mock() -> *mut GgContext {
     let controller = Arc::new(geospoof_gps_core::mock::MockDeviceController::ready());
     init_with(controller, test_config())
@@ -173,7 +173,7 @@ pub extern "C" fn gg_init_mock() -> *mut GgContext {
 
 /// Create a context whose device reports errors (exercises the error path). Test only.
 #[cfg(feature = "mock")]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn gg_init_mock_unavailable() -> *mut GgContext {
     let controller = Arc::new(
         geospoof_gps_core::mock::MockDeviceController::ready()
@@ -196,14 +196,16 @@ fn test_config() -> HoldConfig {
 ///
 /// # Safety
 /// `ctx` must be null or a pointer returned by a `gg_init*` function, not yet freed.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn gg_free(ctx: *mut GgContext) {
-    if ctx.is_null() {
-        return;
+    unsafe {
+        if ctx.is_null() {
+            return;
+        }
+        let ctx = Box::from_raw(ctx);
+        ctx.stop_internal();
+        drop(ctx);
     }
-    let ctx = Box::from_raw(ctx);
-    ctx.stop_internal();
-    drop(ctx);
 }
 
 /// Return the last error message as a newly allocated C string (free with
@@ -211,15 +213,17 @@ pub unsafe extern "C" fn gg_free(ctx: *mut GgContext) {
 ///
 /// # Safety
 /// `ctx` must be null or a valid context pointer.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn gg_last_error(ctx: *const GgContext) -> *mut c_char {
-    if ctx.is_null() {
-        return ptr::null_mut();
-    }
-    let ctx = &*ctx;
-    match &*ctx.last_error.lock().expect("lock") {
-        Some(cs) => cs.clone().into_raw(),
-        None => ptr::null_mut(),
+    unsafe {
+        if ctx.is_null() {
+            return ptr::null_mut();
+        }
+        let ctx = &*ctx;
+        match &*ctx.last_error.lock().expect("lock") {
+            Some(cs) => cs.clone().into_raw(),
+            None => ptr::null_mut(),
+        }
     }
 }
 
@@ -227,10 +231,12 @@ pub unsafe extern "C" fn gg_last_error(ctx: *const GgContext) -> *mut c_char {
 ///
 /// # Safety
 /// `s` must be null or a pointer returned by [`gg_last_error`], not yet freed.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn gg_string_free(s: *mut c_char) {
-    if !s.is_null() {
-        drop(CString::from_raw(s));
+    unsafe {
+        if !s.is_null() {
+            drop(CString::from_raw(s));
+        }
     }
 }
 
@@ -238,30 +244,32 @@ pub unsafe extern "C" fn gg_string_free(s: *mut c_char) {
 ///
 /// # Safety
 /// `ctx` must be null or valid; `out` must be null or point to a writable `GgStatus`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn gg_device_status(ctx: *mut GgContext, out: *mut GgStatus) -> GgCode {
-    if out.is_null() {
-        return GgCode::NullArg;
-    }
-    let mut result = None;
-    let code = guard(ctx, |c| match c.status() {
-        Ok(s) => {
-            result = Some(s);
-            GgCode::Ok
+    unsafe {
+        if out.is_null() {
+            return GgCode::NullArg;
         }
-        Err(()) => GgCode::Device,
-    });
-    if let Some(s) = result {
-        *out = s;
+        let mut result = None;
+        let code = guard(ctx, |c| match c.status() {
+            Ok(s) => {
+                result = Some(s);
+                GgCode::Ok
+            }
+            Err(()) => GgCode::Device,
+        });
+        if let Some(s) = result {
+            *out = s;
+        }
+        code
     }
-    code
 }
 
 /// Start holding a simulated location.
 ///
 /// # Safety
 /// `ctx` must be null or a valid context pointer.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn gg_spoof_start(ctx: *mut GgContext, lat: f64, lon: f64) -> GgCode {
     guard(ctx, |c| match Coordinate::new(lat, lon) {
         Ok(coord) => c.start(coord),
@@ -276,7 +284,7 @@ pub unsafe extern "C" fn gg_spoof_start(ctx: *mut GgContext, lat: f64, lon: f64)
 ///
 /// # Safety
 /// `ctx` must be null or a valid context pointer.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn gg_spoof_stop(ctx: *mut GgContext) -> GgCode {
     guard(ctx, |c| {
         c.stop_internal();
@@ -288,12 +296,14 @@ pub unsafe extern "C" fn gg_spoof_stop(ctx: *mut GgContext) -> GgCode {
 ///
 /// # Safety
 /// `ctx` must be null or valid; `out` must be null or point to a writable `GgSession`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn gg_poll_session(ctx: *const GgContext, out: *mut GgSession) -> GgCode {
-    if ctx.is_null() || out.is_null() {
-        return GgCode::NullArg;
+    unsafe {
+        if ctx.is_null() || out.is_null() {
+            return GgCode::NullArg;
+        }
+        let session = *(&*ctx).session.lock().expect("lock");
+        *out = session;
+        GgCode::Ok
     }
-    let session = *(&*ctx).session.lock().expect("lock");
-    *out = session;
-    GgCode::Ok
 }

@@ -67,6 +67,24 @@ async fn main() {
             Ok(()) => println!("clear OK -> location should revert to real GPS"),
             Err(e) => eprintln!("clear FAILED: {e}"),
         },
+        "read-app" => {
+            let bundle_id = args.get(2).map(String::as_str);
+            let filename = args.get(3).map(String::as_str).unwrap_or("desired.json");
+            match bundle_id {
+                Some(bundle_id) => match controller.read_app_file(bundle_id, filename).await {
+                    Ok(bytes) => {
+                        println!(
+                            "--- {bundle_id} Documents/{filename} ({} bytes) ---",
+                            bytes.len()
+                        );
+                        println!("{}", String::from_utf8_lossy(&bytes));
+                    }
+                    Err(e) => eprintln!("read-app FAILED: {e}"),
+                },
+                None => eprintln!("usage: verify_device read-app <bundle-id> [filename]"),
+            }
+        }
+
         "mount" => match args.get(2) {
             Some(dir) => {
                 let controller = IdeviceController::new(udid).with_ddi_dir(dir.clone());
@@ -78,7 +96,9 @@ async fn main() {
             None => eprintln!("usage: verify_device mount <ddi_dir>"),
         },
         other => {
-            eprintln!("unknown command '{other}' (use: status | set <lat> <lon> | clear | mount <ddi_dir>)")
+            eprintln!(
+                "unknown command '{other}' (use: status | set <lat> <lon> | clear | mount <ddi_dir>)"
+            )
         }
     }
 }

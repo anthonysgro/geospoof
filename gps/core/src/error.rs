@@ -38,4 +38,19 @@ pub enum DeviceError {
     /// A lower-level I/O error.
     #[error("device I/O error: {0}")]
     Io(String),
+    /// The operation exceeded its time budget (never hang — always resolve).
+    #[error("the operation timed out")]
+    Timeout,
+}
+
+impl DeviceError {
+    /// Whether this failure suggests the Developer Disk Image isn't mounted, so
+    /// mounting on demand might recover it. (Not `DdiUnavailable` — that means no DDI
+    /// files exist to mount, which mounting can't fix.)
+    pub fn suggests_missing_ddi(&self) -> bool {
+        matches!(
+            self,
+            DeviceError::DdiNotMounted | DeviceError::ServiceUnavailable(_)
+        )
+    }
 }

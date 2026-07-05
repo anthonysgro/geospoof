@@ -1480,10 +1480,59 @@ final class SpoofController: ObservableObject {
         (dict as NSDictionary).write(to: plistURL, atomically: true)
         Log.bridge.debug("writePending → enabled=\(enabled) vpnSync=\(vpnSyncEnabled) resync=\(resync) loc=\(location.map { "\($0.latitude),\($0.longitude)" } ?? "nil")")
 
+        // Mirror the chosen location into the app's Documents as desired.json so
+        // the GeoSpoof GPS desktop agent can read it over AFC/house_arrest and
+        // drive the iPhone's system GPS to match (design §10i).
+        writeGpsDesiredState()
+
         // Reload widgets. Debounced so rapid successive writePending calls
         // (e.g. enable + setLocation + timezone resolve all firing together)
         // coalesce into one reload instead of hammering WidgetKit's rate limit.
         Self.scheduleWidgetReload()
+    }
+
+    /// Write the current desired location to `Documents/desired.json` for the
+    /// GeoSpoof GPS desktop agent (design §10i). The agent reads this over
+    /// AFC/house_arrest (which vends the app's Documents) and drives the iPhone's
+    /// real system GPS to match — so the browser spoof, VPN exit, and device GPS
+    /// all agree on one location. Schema mirrors the agent's `DesiredState`
+    /// (`version`/`enabled`/`latitude`/`longitude`/`provenance`); written
+    /// atomically so the agent never reads a half-written file. Metadata only —
+    /// no effect on the extension bridge above.
+    private func writeGpsDesiredState() {
+        guard let docs = FileManager.default
+            .urls(for: .documentDirectory, in: .userDomainMask).first else {
+            Log.bridge.error("GPS desired.json: Documents directory unavailable")
+            return
+        }
+        let url = docs.appendingPathComponent("desired.json")
+
+        // Only "enabled" for GPS when there's an actual coordinate to apply
+        // (e.g. mid-VPN-sync with no location yet is not an instruction to spoof).
+        let active = enabled && location != nil
+        let provenance = vpnSyncEnabled ? "vpn-sync" : "manual"
+        var obj: [String: Any] = [
+            "version": 1,
+            "enabled": active,
+            "provenance": provenance,
+        ]
+        if active, let location {
+            obj["latitude"] = location.latitude
+            obj["longitude"] = location.longitude
+        }
+
+        guard let data = try? JSONSerialization.data(
+            withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]
+        ) else {
+            Log.bridge.error("GPS desired.json: serialization failed")
+            return
+        }
+        do {
+            try data.write(to: url, options: .atomic)
+            Log.bridge.debug("GPS desired.json → enabled=\(active) provenance=\(provenance)")
+        } catch {
+            Log.bridge.error("GPS desired.json write failed: \(error.localizedDescription)")
+        }
     }
 
     /// Debounce token for widget reloads — ensures at most one reload fires

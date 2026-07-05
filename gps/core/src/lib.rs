@@ -23,10 +23,10 @@ pub mod mock;
 
 pub use controller::{DeviceController, DeviceEvent};
 pub use error::DeviceError;
-pub use hold::{hold_location, HoldConfig, HoldOutcome};
+pub use hold::{HoldConfig, HoldOutcome, hold_location};
 pub use idevice_controller::IdeviceController;
 pub use session::{SessionState, SpoofSession};
-pub use state_machine::{remediation_for, transition, Event, Remediation};
+pub use state_machine::{Event, Remediation, remediation_for, transition};
 pub use types::{Coordinate, DeviceInfo, DeviceState, DeviceStatus, InvalidCoordinate};
 
 /// Version of the core, surfaced across the FFI boundary.

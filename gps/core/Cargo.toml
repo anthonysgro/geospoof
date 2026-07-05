@@ -19,6 +19,7 @@ idevice.workspace = true
 async-trait = "=0.1.89"
 thiserror = "=2.0.18"
 tokio = { version = "=1.52.3", features = ["rt", "time", "sync", "macros"] }
+plist = "=1.10.0"
 
 [dev-dependencies]
 # test-util enables paused-time control for deterministic hold-loop tests.

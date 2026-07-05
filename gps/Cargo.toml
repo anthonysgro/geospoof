@@ -1,10 +1,10 @@
 [workspace]
-resolver = "2"
+resolver = "3"
 members = ["core", "ffi", "agent"]
 
 [workspace.package]
 version = "0.0.1"
-edition = "2021"
+edition = "2024"
 # Source-available under FSL-1.1-MIT (not an SPDX id, so reference the file).
 license-file = "LICENSE"
 authors = ["GeoSpoof"]
@@ -24,4 +24,8 @@ idevice = { version = "=0.1.64", features = [
     "tunnel_tcp_stack",
     "mobile_image_mounter",
     "tss",
+    # Cross-device control: read the iOS app's desired.json from its Documents over the
+    # same usbmux/Wi-Fi link (house_arrest vends the container; afc reads it). §10i.
+    "afc",
+    "house_arrest",
 ] }

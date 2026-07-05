@@ -6,6 +6,26 @@ use serde::{Deserialize, Serialize};
 /// Contract schema version. Bump on an incompatible change.
 pub const CONTRACT_VERSION: u32 = 1;
 
+/// Where the chosen location came from — the "one consistent location" source that
+/// also drives the browser geolocation spoof (design §10b). Metadata only: it lets the
+/// source app / UX confirm the device is aligned to (e.g.) the VPN exit; it never
+/// changes how the coordinate is applied.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Provenance {
+    /// Matched to this device's VPN/network exit region.
+    VpnSync,
+    /// Manually chosen (map / search / coordinate entry).
+    Manual,
+    /// Pushed from the GeoSpoof app (iOS/macOS) as source of truth.
+    FromApp,
+    /// Unrecognized or unset — also the forward-compatible catch-all so a newer source
+    /// writing a future provenance never breaks an older agent.
+    #[default]
+    #[serde(other)]
+    Unknown,
+}
+
 /// Desired location — written by the source-of-truth app, read by the agent.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DesiredState {
@@ -14,9 +34,8 @@ pub struct DesiredState {
     pub enabled: bool,
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
-    /// "vpn-sync" | "manual" | "from-app"
     #[serde(default)]
-    pub provenance: String,
+    pub provenance: Provenance,
 }
 
 fn default_version() -> u32 {
@@ -31,19 +50,34 @@ impl DesiredState {
             enabled: false,
             latitude: None,
             longitude: None,
-            provenance: String::new(),
+            provenance: Provenance::Unknown,
         }
     }
 
-    /// A manual set at the given coordinate.
-    pub fn manual(latitude: f64, longitude: f64) -> Self {
+    /// An enabled desired state at `(latitude, longitude)` with the given source.
+    pub fn enabled_at(latitude: f64, longitude: f64, provenance: Provenance) -> Self {
         Self {
             version: CONTRACT_VERSION,
             enabled: true,
             latitude: Some(latitude),
             longitude: Some(longitude),
-            provenance: "manual".to_string(),
+            provenance,
         }
+    }
+
+    /// A manual set at the given coordinate.
+    pub fn manual(latitude: f64, longitude: f64) -> Self {
+        Self::enabled_at(latitude, longitude, Provenance::Manual)
+    }
+
+    /// A set matched to the device's VPN/network exit (the headline sync feature).
+    pub fn vpn_sync(latitude: f64, longitude: f64) -> Self {
+        Self::enabled_at(latitude, longitude, Provenance::VpnSync)
+    }
+
+    /// A set pushed from the GeoSpoof app as source of truth.
+    pub fn from_app(latitude: f64, longitude: f64) -> Self {
+        Self::enabled_at(latitude, longitude, Provenance::FromApp)
     }
 
     /// The coordinate pair, if both are present.
@@ -82,7 +116,87 @@ pub struct StatusReport {
     pub connected: bool,
     pub device: Option<DeviceSummary>,
     pub session: SessionReport,
+    /// The source of the location currently being applied — echoes the desired
+    /// `provenance` while active so the source app/UX can confirm the consistency
+    /// source (e.g. "GPS synced to VPN"). `Unknown` when idle.
+    #[serde(default)]
+    pub provenance: Provenance,
     pub remediation: String,
     pub error: Option<String>,
     pub pro: bool,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn provenance_serializes_kebab_case() {
+        assert_eq!(
+            serde_json::to_string(&Provenance::VpnSync).unwrap(),
+            "\"vpn-sync\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Provenance::FromApp).unwrap(),
+            "\"from-app\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Provenance::Manual).unwrap(),
+            "\"manual\""
+        );
+    }
+
+    #[test]
+    fn provenance_round_trips() {
+        for p in [
+            Provenance::VpnSync,
+            Provenance::Manual,
+            Provenance::FromApp,
+            Provenance::Unknown,
+        ] {
+            let json = serde_json::to_string(&p).unwrap();
+            let back: Provenance = serde_json::from_str(&json).unwrap();
+            assert_eq!(p, back);
+        }
+    }
+
+    #[test]
+    fn unknown_provenance_string_is_forward_compatible() {
+        // A newer source writing a provenance we don't know must NOT break an older
+        // agent — it decodes to Unknown rather than erroring.
+        let p: Provenance = serde_json::from_str("\"satellite-uplink\"").unwrap();
+        assert_eq!(p, Provenance::Unknown);
+    }
+
+    #[test]
+    fn desired_state_backward_compatible_and_typed() {
+        // Old on-disk form with a known string still decodes to the typed variant.
+        let json = r#"{"enabled":true,"latitude":48.0,"longitude":2.0,"provenance":"vpn-sync"}"#;
+        let ds: DesiredState = serde_json::from_str(json).unwrap();
+        assert_eq!(ds.provenance, Provenance::VpnSync);
+        assert_eq!(ds.coordinate(), Some((48.0, 2.0)));
+
+        // Missing provenance defaults to Unknown (no error).
+        let json = r#"{"enabled":false}"#;
+        let ds: DesiredState = serde_json::from_str(json).unwrap();
+        assert_eq!(ds.provenance, Provenance::Unknown);
+    }
+
+    #[test]
+    fn constructors_set_source_and_coordinate() {
+        assert_eq!(
+            DesiredState::manual(1.0, 2.0).provenance,
+            Provenance::Manual
+        );
+        assert_eq!(
+            DesiredState::vpn_sync(1.0, 2.0).provenance,
+            Provenance::VpnSync
+        );
+        assert_eq!(
+            DesiredState::from_app(1.0, 2.0).provenance,
+            Provenance::FromApp
+        );
+        assert!(DesiredState::vpn_sync(1.0, 2.0).enabled);
+        assert_eq!(DesiredState::disabled().provenance, Provenance::Unknown);
+    }
 }

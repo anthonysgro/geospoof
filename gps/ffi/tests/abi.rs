@@ -10,9 +10,9 @@
 use std::ptr;
 
 use geospoof_gps_ffi::{
-    gg_abi_version, gg_device_status, gg_free, gg_init_mock, gg_init_mock_unavailable,
-    gg_last_error, gg_poll_session, gg_spoof_start, gg_spoof_stop, gg_string_free, GgCode,
-    GgSession, GgStatus,
+    GgCode, GgSession, GgStatus, gg_abi_version, gg_device_status, gg_free, gg_init_mock,
+    gg_init_mock_unavailable, gg_last_error, gg_poll_session, gg_spoof_start, gg_spoof_stop,
+    gg_string_free,
 };
 
 fn blank_status() -> GgStatus {

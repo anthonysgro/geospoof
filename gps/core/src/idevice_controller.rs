@@ -12,12 +12,15 @@
 //! - `next_event` (usbmux hotplug streaming) is not implemented yet.
 
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use async_trait::async_trait;
 
+use idevice::afc::opcode::AfcFopenMode;
 use idevice::core_device_proxy::CoreDeviceProxy;
 use idevice::dvt::location_simulation::LocationSimulationClient;
 use idevice::dvt::remote_server::RemoteServerClient;
+use idevice::house_arrest::HouseArrestClient;
 use idevice::lockdown::LockdownClient;
 use idevice::mobile_image_mounter::ImageMounter;
 use idevice::provider::IdeviceProvider;
@@ -30,6 +33,25 @@ use crate::error::DeviceError;
 use crate::types::{Coordinate, DeviceInfo, DeviceStatus};
 
 const LABEL: &str = "geospoof-gps";
+
+/// Time budgets so no device op can ever hang the customer indefinitely (design §10a).
+/// Quick reads (status/identity) resolve fast; location set/clear open a fresh tunnel;
+/// mounting uploads a ~15 MB image + Apple TSS round-trip, so it gets the most headroom.
+const STATUS_TIMEOUT: Duration = Duration::from_secs(15);
+const OP_TIMEOUT: Duration = Duration::from_secs(30);
+const MOUNT_TIMEOUT: Duration = Duration::from_secs(180);
+
+/// Run `fut` with a deadline, mapping expiry to [`DeviceError::Timeout`] so the caller
+/// always gets a definite outcome instead of blocking forever.
+async fn with_timeout<T>(
+    budget: Duration,
+    fut: impl std::future::Future<Output = Result<T, DeviceError>>,
+) -> Result<T, DeviceError> {
+    match tokio::time::timeout(budget, fut).await {
+        Ok(result) => result,
+        Err(_elapsed) => Err(DeviceError::Timeout),
+    }
+}
 
 /// A `DeviceController` for a specific device (by UDID), backed by `idevice`.
 pub struct IdeviceController {
@@ -68,10 +90,15 @@ impl IdeviceController {
             .get_devices()
             .await
             .map_err(|e| DeviceError::Io(e.to_string()))?;
+        // Accept USB *and* network (Wi-Fi) devices so a spoof can hold over Wi-Fi after
+        // the cable is unplugged (design: wireless hold). A device paired over USB then
+        // reachable over Wi-Fi can appear under both connection types — dedup by UDID,
+        // preserving discovery order.
+        let mut seen = std::collections::HashSet::new();
         Ok(devices
             .into_iter()
-            .filter(|d| d.connection_type == Connection::Usb)
-            .map(|d| d.udid)
+            .filter(|d| matches!(d.connection_type, Connection::Usb | Connection::Network(_)))
+            .filter_map(|d| seen.insert(d.udid.clone()).then_some(d.udid))
             .collect())
     }
 
@@ -115,6 +142,26 @@ impl IdeviceController {
         })
     }
 
+    /// Report trust / Developer Mode / DDI status. `ddi_mounted` is advisory only
+    /// (unreliable on betas), so a failure to probe it is not fatal.
+    async fn query_status(&self) -> Result<DeviceStatus, DeviceError> {
+        let provider = self.provider().await?;
+        let mut lockdown = LockdownClient::connect(&*provider)
+            .await
+            .map_err(|_| DeviceError::NotConnected)?;
+        let trusted = match provider.get_pairing_file().await {
+            Ok(pairing) => lockdown.start_session(&pairing).await.is_ok(),
+            Err(_) => false,
+        };
+        let ddi_mounted = self.ddi_mounted().await;
+        Ok(DeviceStatus {
+            trusted,
+            // TODO(task follow-up): detect Developer Mode via the amfi service.
+            developer_mode: trusted,
+            ddi_mounted,
+        })
+    }
+
     /// Open a DVT location-simulation session and run one op.
     ///
     /// The idevice RemoteServer session types are `!Send` across arbitrary lifetimes,
@@ -153,59 +200,110 @@ impl IdeviceController {
 #[async_trait]
 impl DeviceController for IdeviceController {
     async fn device_info(&self) -> Result<DeviceInfo, DeviceError> {
-        self.query_device_info().await
+        with_timeout(STATUS_TIMEOUT, self.query_device_info()).await
     }
 
     async fn status(&self) -> Result<DeviceStatus, DeviceError> {
-        let provider = self.provider().await?;
-        let mut lockdown = LockdownClient::connect(&*provider)
-            .await
-            .map_err(|_| DeviceError::NotConnected)?;
-        let trusted = match provider.get_pairing_file().await {
-            Ok(pairing) => lockdown.start_session(&pairing).await.is_ok(),
-            Err(_) => false,
-        };
-        let ddi_mounted = self.ddi_mounted().await;
-        Ok(DeviceStatus {
-            trusted,
-            // TODO(task follow-up): detect Developer Mode via the amfi service.
-            developer_mode: trusted,
-            ddi_mounted,
-        })
+        with_timeout(STATUS_TIMEOUT, self.query_status()).await
     }
 
+    /// Mount a user-provided DDI on demand. Callers mount only after a spoof attempt
+    /// fails with a DDI-shaped error (see the reconciler) — never blindly — so the
+    /// already-mounted case never re-mounts (that was the hang). No pre-check here:
+    /// `copy_devices` is unreliable on betas and probing it is what stalled.
     async fn mount_ddi(&self) -> Result<(), DeviceError> {
-        if self.ddi_mounted().await {
-            return Ok(());
-        }
-        // Mount a user-provided DDI. Non-Send session types → run on a current-thread
-        // runtime inside spawn_blocking (same pattern as location ops).
+        // Non-Send session types → run on a current-thread runtime inside spawn_blocking
+        // (same pattern as location ops).
         let udid = self.udid.clone();
         let ddi_dir = self.ddi_dir.clone();
-        tokio::task::spawn_blocking(move || {
-            let rt = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .map_err(|e| DeviceError::Io(e.to_string()))?;
-            rt.block_on(mount_ddi_session(&udid, ddi_dir.as_deref()))
-        })
-        .await
-        .map_err(|e| DeviceError::Io(e.to_string()))?
+        let op = async move {
+            tokio::task::spawn_blocking(move || {
+                let rt = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .map_err(|e| DeviceError::Io(e.to_string()))?;
+                rt.block_on(mount_ddi_session(&udid, ddi_dir.as_deref()))
+            })
+            .await
+            .map_err(|e| DeviceError::Io(e.to_string()))?
+        };
+        with_timeout(MOUNT_TIMEOUT, op).await
     }
 
     async fn set_location(&self, coordinate: Coordinate) -> Result<(), DeviceError> {
-        self.run_location_op(LocationOp::Set(coordinate.latitude, coordinate.longitude))
-            .await
+        with_timeout(
+            OP_TIMEOUT,
+            self.run_location_op(LocationOp::Set(coordinate.latitude, coordinate.longitude)),
+        )
+        .await
     }
 
     async fn clear_location(&self) -> Result<(), DeviceError> {
-        self.run_location_op(LocationOp::Clear).await
+        with_timeout(OP_TIMEOUT, self.run_location_op(LocationOp::Clear)).await
     }
 
     async fn next_event(&self) -> Option<DeviceEvent> {
         // TODO(task follow-up): stream usbmux hotplug events.
         None
     }
+
+    /// Read a file from an installed app's Documents over house_arrest + AFC, using the
+    /// same usbmux link (USB or Wi-Fi) as the rest of the controller (design §10i). Runs
+    /// on a current-thread runtime inside `spawn_blocking` (the idevice session types are
+    /// `!Send`; same pattern as the location/mount ops).
+    async fn read_app_file(&self, bundle_id: &str, filename: &str) -> Result<Vec<u8>, DeviceError> {
+        let udid = self.udid.clone();
+        let bundle_id = bundle_id.to_string();
+        let filename = filename.to_string();
+        let op = async move {
+            tokio::task::spawn_blocking(move || {
+                let rt = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .map_err(|e| DeviceError::Io(e.to_string()))?;
+                rt.block_on(read_app_file_session(&udid, &bundle_id, &filename))
+            })
+            .await
+            .map_err(|e| DeviceError::Io(e.to_string()))?
+        };
+        with_timeout(OP_TIMEOUT, op).await
+    }
+}
+
+/// Read `filename` from an app's Documents via house_arrest **VendDocuments** + AFC.
+/// This is the ONLY path — the same one App Store builds use (dev/prod parity), so dev
+/// testing exercises exactly what customers get. VendDocuments requires the app to set
+/// `UIFileSharingEnabled`.
+///
+/// IMPORTANT (verified on iOS 27): VendDocuments vends the app's **container root**, not
+/// Documents directly, so a file at `Documents/<name>` on disk is read at the AFC path
+/// `Documents/<name>` (NOT `/<name>`), and listing the root is denied — we open the known
+/// path directly rather than enumerate. We do NOT fall back to VendContainer (dev-signed
+/// only); that would diverge from prod and mask a missing `UIFileSharingEnabled`.
+/// `!Send`; runs inside `spawn_blocking`.
+async fn read_app_file_session(
+    udid: &str,
+    bundle_id: &str,
+    filename: &str,
+) -> Result<Vec<u8>, DeviceError> {
+    let provider = build_provider(udid).await?;
+    let house = HouseArrestClient::connect(&*provider)
+        .await
+        .map_err(|e| DeviceError::ServiceUnavailable(e.to_string()))?;
+    let mut afc = house
+        .vend_documents(bundle_id)
+        .await
+        .map_err(|e| DeviceError::ServiceUnavailable(e.to_string()))?;
+    let mut fd = afc
+        .open(format!("Documents/{filename}"), AfcFopenMode::RdOnly)
+        .await
+        .map_err(|e| DeviceError::Io(e.to_string()))?;
+    let bytes = fd
+        .read_entire()
+        .await
+        .map_err(|e| DeviceError::Io(e.to_string()))?;
+    let _ = fd.close().await;
+    Ok(bytes)
 }
 
 /// Build a usbmux provider for a specific device UDID.

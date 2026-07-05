@@ -45,4 +45,18 @@ pub trait DeviceController: Send + Sync {
 
     /// Await the next hotplug event; `None` when the event source ends.
     async fn next_event(&self) -> Option<DeviceEvent>;
+
+    /// Read a file from an installed app's Documents over the device link (host file
+    /// access via house_arrest + AFC). Used to pull the source-of-truth desired state
+    /// the GeoSpoof iOS app writes, over the same Wi-Fi link used to spoof (design
+    /// §10i). Default: unsupported (controllers that can't do host file access).
+    async fn read_app_file(
+        &self,
+        _bundle_id: &str,
+        _filename: &str,
+    ) -> Result<Vec<u8>, DeviceError> {
+        Err(DeviceError::ServiceUnavailable(
+            "reading app files is not supported by this controller".to_string(),
+        ))
+    }
 }

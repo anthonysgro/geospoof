@@ -5,8 +5,8 @@
 //! per-call result sequences (for retry/backoff tests) plus call counting.
 
 use std::collections::VecDeque;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use async_trait::async_trait;
 
@@ -25,6 +25,8 @@ pub struct MockDeviceController {
     set_default: Result<(), DeviceError>,
     clear_default: Result<(), DeviceError>,
     events: Mutex<VecDeque<DeviceEvent>>,
+    /// Scripted result for `read_app_file` (the AFC desired-state source).
+    app_file: Mutex<Option<Result<Vec<u8>, DeviceError>>>,
     set_calls: AtomicUsize,
     clear_calls: AtomicUsize,
     mount_calls: AtomicUsize,
@@ -52,6 +54,7 @@ impl MockDeviceController {
             set_default: Ok(()),
             clear_default: Ok(()),
             events: Mutex::new(VecDeque::new()),
+            app_file: Mutex::new(None),
             set_calls: AtomicUsize::new(0),
             clear_calls: AtomicUsize::new(0),
             mount_calls: AtomicUsize::new(0),
@@ -91,6 +94,13 @@ impl MockDeviceController {
     /// Script hotplug events returned by `next_event`.
     pub fn with_events(self, events: Vec<DeviceEvent>) -> Self {
         *self.events.lock().expect("mock lock") = events.into();
+        self
+    }
+
+    /// Script the bytes (or error) returned by `read_app_file` — the AFC desired-state
+    /// source. Set the desired.json the agent should read from the "app".
+    pub fn with_app_file(self, result: Result<Vec<u8>, DeviceError>) -> Self {
+        *self.app_file.lock().expect("mock lock") = Some(result);
         self
     }
 
@@ -142,5 +152,19 @@ impl DeviceController for MockDeviceController {
 
     async fn next_event(&self) -> Option<DeviceEvent> {
         self.events.lock().expect("mock lock").pop_front()
+    }
+
+    async fn read_app_file(
+        &self,
+        _bundle_id: &str,
+        _filename: &str,
+    ) -> Result<Vec<u8>, DeviceError> {
+        match &*self.app_file.lock().expect("mock lock") {
+            Some(Ok(bytes)) => Ok(bytes.clone()),
+            Some(Err(e)) => Err(e.clone()),
+            None => Err(DeviceError::ServiceUnavailable(
+                "no app file scripted".to_string(),
+            )),
+        }
     }
 }

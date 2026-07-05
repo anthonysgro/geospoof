@@ -10,7 +10,7 @@ use tokio::sync::watch;
 use tokio::task::JoinHandle;
 
 use crate::controller::DeviceController;
-use crate::hold::{hold_location, HoldConfig, HoldOutcome};
+use crate::hold::{HoldConfig, HoldOutcome, hold_location};
 use crate::types::Coordinate;
 
 /// Current session state.
@@ -50,9 +50,11 @@ impl SpoofSession {
         *self.state.lock().expect("lock")
     }
 
-    /// Start (or restart) holding `coordinate`. Cancels any prior hold first.
+    /// Start (or re-target) holding `coordinate`. Cancels any prior hold first — but
+    /// does NOT clear the device, so switching from one location to another goes A→B
+    /// directly without flashing the real GPS in between. (Only [`stop`] clears.)
     pub async fn start(&self, coordinate: Coordinate) {
-        self.stop().await;
+        self.cancel_task().await;
         let (tx, rx) = watch::channel(false);
         let controller = Arc::clone(&self.controller);
         let config = self.config.clone();
@@ -72,9 +74,10 @@ impl SpoofSession {
         *self.handle.lock().expect("lock") = Some(handle);
     }
 
-    /// Stop holding: cancel the loop, join it, clear the device, return to idle.
-    /// Idempotent.
-    pub async fn stop(&self) {
+    /// Cancel and join the hold task if running. Does NOT clear the device or change
+    /// state. Shared by [`start`] (switch coordinates without a revert flash) and
+    /// [`stop`] (which then clears). Returns whether a task was actually running.
+    async fn cancel_task(&self) -> bool {
         // Take handles out under the lock, then await OUTSIDE the lock (no std Mutex
         // guard held across `.await`).
         let cancel = self.cancel.lock().expect("lock").take();
@@ -86,8 +89,15 @@ impl SpoofSession {
         if let Some(handle) = handle {
             let _ = handle.await;
         }
-        // Only clear when a hold was actually running — avoids a redundant device
-        // call (and a double-clear when start() calls stop() first).
+        was_running
+    }
+
+    /// Stop holding: cancel the loop, join it, clear the device, return to idle.
+    /// Idempotent. Unlike [`start`], this DOES clear — stopping means "go back to the
+    /// real location."
+    pub async fn stop(&self) {
+        let was_running = self.cancel_task().await;
+        // Only clear when a hold was actually running — avoids a redundant device call.
         if was_running {
             let _ = self.controller.clear_location().await;
         }
@@ -134,6 +144,32 @@ mod tests {
 
         session.stop().await;
         assert_eq!(session.state(), SessionState::Idle);
+        assert_eq!(mock.clear_calls(), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn switching_coordinates_does_not_clear() {
+        // Changing location must go A→B directly, never clearing to the real location
+        // in between (that was the visible hiccup on location change).
+        let mock = Arc::new(MockDeviceController::ready());
+        let session = SpoofSession::new(mock.clone(), fast_config());
+        let a = Coordinate::new(35.0, 139.0).unwrap();
+        let b = Coordinate::new(48.0, 2.0).unwrap();
+
+        session.start(a).await;
+        for _ in 0..50 {
+            if mock.set_calls() >= 1 {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+            tokio::task::yield_now().await;
+        }
+
+        session.start(b).await; // switch A → B
+        assert_eq!(session.state(), SessionState::Spoofing(b));
+        assert_eq!(mock.clear_calls(), 0, "switching must not clear the device");
+
+        session.stop().await; // disabling DOES clear
         assert_eq!(mock.clear_calls(), 1);
     }
 
