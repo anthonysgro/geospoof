@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 #
-# Build the GeoSpoof GPS desktop deliverable: a near-headless background agent packaged
-# as "GeoSpoof GPS.app" inside a Developer-ID-signed, notarized DMG (design §13e / §17).
+# Build the GeoSpoof GPS desktop deliverable: "GeoSpoof GPS.app" inside a Developer-ID-
+# signed, notarized DMG (design §13e / §17 / §19).
 #
-# The app bundles the Rust agent binary; double-clicking it (or running
-# `install-service`) registers a per-user LaunchAgent that runs the agent. The iOS app
-# remains the sole control surface.
+# The app is a menu-bar-only Swift app (the CFBundleExecutable) that supervises the Rust
+# agent, which rides along as an embedded helper at Contents/Helpers/. The iOS app
+# remains the sole *location* control surface; the menu bar app is status + lifecycle
+# (Pause/Resume, Open at Login, Quit).
 #
 # Runs end-to-end LOCALLY WITHOUT credentials (produces an unsigned DMG for inspection).
 # Signing + notarization turn on when the relevant environment variables are present:
@@ -22,10 +23,12 @@ set -euo pipefail
 
 APP_NAME="GeoSpoof GPS"
 BUNDLE_ID="com.moonloaf.geospoof.gps"
-BIN_NAME="geospoof-gps-agent"
+BIN_NAME="geospoof-gps-agent"      # Rust agent (embedded helper)
+MENU_NAME="GeoSpoofGPSMenu"        # Swift menu-bar app (CFBundleExecutable)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GPS_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+DESKTOP_DIR="$GPS_ROOT/desktop"    # SwiftPM package for the menu-bar app
 TARGET_DIR="$GPS_ROOT/target"
 OUT_DIR="$TARGET_DIR/pkg"
 
@@ -61,32 +64,48 @@ if grep -q '^aarch64-apple-darwin$' <<<"$INSTALLED_TARGETS" \
     "$TARGET_DIR/x86_64-apple-darwin/release/$BIN_NAME" \
     -output "$BIN_UNIVERSAL"
 else
-  echo "==> (only host arch installed; building a single-arch binary)"
+  echo "==> (only host arch installed; building a single-arch agent binary)"
   cargo build --release -p "$BIN_NAME" --manifest-path "$GPS_ROOT/Cargo.toml"
   cp "$TARGET_DIR/release/$BIN_NAME" "$BIN_UNIVERSAL"
 fi
 lipo -info "$BIN_UNIVERSAL" || true
 
+# Build the Swift menu-bar app (universal — the Swift toolchain ships both arch SDKs).
+echo "==> swift build (menu-bar app, universal)"
+swift build --package-path "$DESKTOP_DIR" -c release --arch arm64 --arch x86_64
+MENU_BIN="$(swift build --package-path "$DESKTOP_DIR" -c release --arch arm64 --arch x86_64 --show-bin-path)/$MENU_NAME"
+if [[ ! -x "$MENU_BIN" ]]; then
+  echo "error: menu-bar binary not found at $MENU_BIN" >&2
+  exit 1
+fi
+lipo -info "$MENU_BIN" || true
+
 # ---------------------------------------------------------------------------
 # 2. Assemble GeoSpoof GPS.app
+#    Contents/MacOS/<menu app>  — the CFBundleExecutable (the UI)
+#    Contents/Helpers/<agent>   — the embedded worker the menu app supervises
 # ---------------------------------------------------------------------------
 APP="$OUT_DIR/$APP_NAME.app"
 echo "==> Assembling $APP_NAME.app"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Helpers" "$APP/Contents/Resources"
 sed "s/__VERSION__/$VERSION/g" "$SCRIPT_DIR/Info.plist.in" > "$APP/Contents/Info.plist"
-cp "$BIN_UNIVERSAL" "$APP/Contents/MacOS/$BIN_NAME"
-chmod +x "$APP/Contents/MacOS/$BIN_NAME"
+cp "$MENU_BIN" "$APP/Contents/MacOS/$MENU_NAME"
+chmod +x "$APP/Contents/MacOS/$MENU_NAME"
+cp "$BIN_UNIVERSAL" "$APP/Contents/Helpers/$BIN_NAME"
+chmod +x "$APP/Contents/Helpers/$BIN_NAME"
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 
 # ---------------------------------------------------------------------------
 # 3. Code sign (Developer ID + hardened runtime) — only if an identity is set.
 # ---------------------------------------------------------------------------
 if [[ -n "${SIGN_IDENTITY:-}" ]]; then
-  echo "==> codesign (Developer ID, hardened runtime)"
+  echo "==> codesign (Developer ID, hardened runtime) — inside-out"
+  # Sign the embedded helper FIRST, then the outer app (which seals the main executable
+  # and the nested helper). Both get the hardened runtime + entitlements + a timestamp.
   codesign --force --timestamp --options runtime \
     --entitlements "$SCRIPT_DIR/entitlements.plist" \
     --sign "$SIGN_IDENTITY" \
-    "$APP/Contents/MacOS/$BIN_NAME"
+    "$APP/Contents/Helpers/$BIN_NAME"
   codesign --force --timestamp --options runtime \
     --entitlements "$SCRIPT_DIR/entitlements.plist" \
     --sign "$SIGN_IDENTITY" \

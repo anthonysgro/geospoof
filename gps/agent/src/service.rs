@@ -14,6 +14,7 @@
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::Duration;
 
 /// launchd job label (also the plist filename stem).
 pub const LAUNCH_AGENT_LABEL: &str = "com.moonloaf.geospoof.gps";
@@ -134,12 +135,46 @@ pub fn install() -> io::Result<PathBuf> {
 
     let domain = gui_domain()?;
     let target = format!("{domain}/{LAUNCH_AGENT_LABEL}");
-    // Boot out any prior instance so bootstrap doesn't fail with "service already
-    // loaded"; ignore its error (it fails cleanly when nothing is loaded).
+    let plist_str = plist_path.to_string_lossy().to_string();
+
+    // Reload robustly. Reinstalling over a running agent is the common case (upgrading
+    // the DMG), and `bootout` tears the old job down ASYNCHRONOUSLY — our SIGTERM handler
+    // clears the spoof over the tunnel before exiting, which takes a beat. A `bootstrap`
+    // fired immediately then races the still-exiting job and fails with EIO (exit 5,
+    // "service already loaded"). So: boot out, WAIT for it to actually unload, then
+    // bootstrap with a short retry as a safety net.
     let _ = launchctl(&["bootout", &target]);
-    launchctl(&["bootstrap", &domain, &plist_path.to_string_lossy()])?;
-    // Ensure it's running right now (bootstrap starts RunAtLoad jobs, but kickstart
-    // makes "start immediately" explicit and also covers a reload).
+    for _ in 0..20 {
+        if !is_installed() {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(150));
+    }
+
+    let mut last_err = None;
+    for attempt in 0u64..5 {
+        match launchctl(&["bootstrap", &domain, &plist_str]) {
+            Ok(()) => {
+                last_err = None;
+                break;
+            }
+            Err(e) => {
+                last_err = Some(e);
+                std::thread::sleep(Duration::from_millis(200 + attempt * 200));
+                let _ = launchctl(&["bootout", &target]);
+            }
+        }
+    }
+    // A failed bootstrap is only fatal if the service isn't actually loaded — if it ended
+    // up loaded despite the error (a benign "already loaded"), treat that as success.
+    if let Some(e) = last_err
+        && !is_installed()
+    {
+        return Err(e);
+    }
+
+    // Ensure it's running right now with the current binary/plist (bootstrap starts
+    // RunAtLoad jobs, but kickstart makes "start now / restart" explicit).
     let _ = launchctl(&["kickstart", "-k", &target]);
     Ok(plist_path)
 }

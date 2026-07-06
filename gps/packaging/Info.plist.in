@@ -9,7 +9,7 @@
     <key>CFBundleIdentifier</key>
     <string>com.moonloaf.geospoof.gps</string>
     <key>CFBundleExecutable</key>
-    <string>geospoof-gps-agent</string>
+    <string>GeoSpoofGPSMenu</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -24,5 +24,9 @@
     <true/>
     <key>NSHumanReadableCopyright</key>
     <string>GeoSpoof</string>
+    <!-- Shown in the macOS local-network permission prompt (the agent discovers the
+         iPhone on the LAN via mDNS). -->
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>GeoSpoof GPS uses your local network to find your iPhone and sync its location.</string>
 </dict>
 </plist>

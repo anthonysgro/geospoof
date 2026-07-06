@@ -1,0 +1,143 @@
+import AppKit
+import Foundation
+import ServiceManagement
+
+/// The menu-bar-only controller. No Dock icon, no window — the status item is the whole
+/// UI (design §19). Supervises the agent, reflects its status, and offers lifecycle
+/// controls (Pause/Resume, Open at Login, Quit).
+@MainActor
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+    private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+    private let supervisor = AgentSupervisor()
+    private let menu = NSMenu()
+    private var pollTimer: Timer?
+    private var state = MenuState(kind: .starting, title: "Starting…", detail: nil)
+
+    func applicationDidFinishLaunching(_: Notification) {
+        // Accessory app: lives only in the menu bar (no Dock icon, no app-switcher entry).
+        NSApp.setActivationPolicy(.accessory)
+
+        menu.delegate = self
+        statusItem.menu = menu
+        supervisor.onStateChange = { [weak self] in self?.refresh() }
+
+        supervisor.start()
+        refresh()
+        // Poll status.json; the agent rewrites it ~every second.
+        pollTimer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.refresh() }
+        }
+    }
+
+    // MARK: - Status polling
+
+    private func refresh() {
+        let status = Self.readStatus()
+        state = MenuState.derive(agentRunning: supervisor.isRunning,
+                                 paused: supervisor.paused,
+                                 status: status)
+        if let button = statusItem.button {
+            if let img = NSImage(systemSymbolName: state.symbolName,
+                                 accessibilityDescription: "GeoSpoof GPS") {
+                img.isTemplate = true // monochrome; adapts to light/dark menu bar.
+                button.image = img
+                button.title = ""
+            } else {
+                // These are all base SF Symbols (present since macOS 11), so this branch
+                // shouldn't hit — but never leave the status item invisible/zero-width:
+                // fall back to a short text label so it's always visible and clickable.
+                button.image = nil
+                button.title = "GPS"
+            }
+            button.toolTip = "GeoSpoof GPS — \(state.title)"
+        }
+    }
+
+    // MARK: - Menu (rebuilt on open for freshest state)
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        refresh()
+        menu.removeAllItems()
+
+        let header = NSMenuItem(title: state.title, action: nil, keyEquivalent: "")
+        header.isEnabled = false
+        menu.addItem(header)
+        if let detail = state.detail {
+            let d = NSMenuItem(title: detail, action: nil, keyEquivalent: "")
+            d.isEnabled = false
+            menu.addItem(d)
+        }
+
+        menu.addItem(.separator())
+
+        if supervisor.paused {
+            menu.addItem(item("Resume GPS syncing", #selector(resume)))
+        } else {
+            menu.addItem(item("Pause GPS syncing", #selector(pause)))
+        }
+
+        let login = item("Open at Login", #selector(toggleLoginItem))
+        login.state = (SMAppService.mainApp.status == .enabled) ? .on : .off
+        menu.addItem(login)
+
+        menu.addItem(item("Open Logs", #selector(openLogs)))
+
+        menu.addItem(.separator())
+        menu.addItem(item("Quit GeoSpoof GPS", #selector(quit)))
+    }
+
+    private func item(_ title: String, _ action: Selector) -> NSMenuItem {
+        let it = NSMenuItem(title: title, action: action, keyEquivalent: "")
+        it.target = self
+        return it
+    }
+
+    // MARK: - Actions
+
+    @objc private func pause() { supervisor.pause() }
+    @objc private func resume() { supervisor.resume() }
+
+    @objc private func toggleLoginItem() {
+        do {
+            if SMAppService.mainApp.status == .enabled {
+                try SMAppService.mainApp.unregister()
+            } else {
+                try SMAppService.mainApp.register()
+            }
+        } catch {
+            NSLog("GeoSpoofGPSMenu: login-item toggle failed: \(error.localizedDescription)")
+        }
+    }
+
+    @objc private func openLogs() {
+        let log = Self.logDir().appendingPathComponent("agent.log")
+        let target = FileManager.default.fileExists(atPath: log.path) ? log : Self.logDir()
+        NSWorkspace.shared.open(target)
+    }
+
+    @objc private func quit() {
+        // Stop the agent (which clears the spoofed location over the tunnel) before we go,
+        // so quitting reverts the iPhone promptly instead of leaving a dangling session.
+        supervisor.stopForQuit {
+            NSApp.terminate(nil)
+        }
+    }
+
+    // MARK: - Paths
+
+    private static func appSupportDir() -> URL {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        return home.appendingPathComponent("Library/Application Support/GeoSpoof GPS")
+    }
+
+    private static func logDir() -> URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Logs/GeoSpoof GPS")
+    }
+
+    private static func readStatus() -> GpsStatus? {
+        let url = appSupportDir().appendingPathComponent("status.json")
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        return try? JSONDecoder().decode(GpsStatus.self, from: data)
+    }
+}

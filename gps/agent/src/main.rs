@@ -139,8 +139,12 @@ fn install_service() {
             );
         }
         Err(e) => {
+            // Keep the technical detail in the log/stderr; show the user something
+            // actionable rather than a raw launchctl error.
             eprintln!("could not install the background agent: {e}");
-            notify_dialog(&format!("GeoSpoof GPS could not start:\n{e}"));
+            notify_dialog(
+                "GeoSpoof GPS couldn't start its background service.\n\nQuit GeoSpoof GPS and open it again. If it keeps happening, reinstall from the DMG.",
+            );
         }
     }
 }
