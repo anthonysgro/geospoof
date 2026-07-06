@@ -3,7 +3,7 @@ resolver = "3"
 members = ["core", "ffi", "agent"]
 
 [workspace.package]
-version = "0.0.1"
+version = "0.1.0"
 edition = "2024"
 # Source-available under FSL-1.1-MIT (not an SPDX id, so reference the file).
 license-file = "LICENSE"
