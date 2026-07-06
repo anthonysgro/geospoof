@@ -351,24 +351,63 @@ struct GpsView: View {
         }
     }
 
+    /// Non-Pro gate for the GPS tab. Leads with the value (what device GPS does +
+    /// concrete benefits) before the ask, so a paywalled user understands what
+    /// they'd unlock. The CTA uses the app-wide `glassButtonStyle` (Liquid Glass
+    /// on OS 26, bordered fallback below) at `.large` so it matches every other
+    /// primary button and gets a full 44pt tap target. Restore lives in Settings
+    /// and on the paywall itself, so it's intentionally not duplicated here.
     private var proPitchSection: some View {
         Section {
-            VStack(alignment: .leading, spacing: 10) {
-                Label("Device GPS", systemImage: "location.circle.fill")
-                    .font(.headline)
-                Text("Spoof your iPhone’s real system GPS — not just the browser — to match your chosen location, controlled from your Mac. A GeoSpoof Pro feature.")
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "location.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(.brand)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Device GPS")
+                            .font(.headline)
+                        Text("Included with GeoSpoof Pro")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                Text("Move your iPhone’s real system GPS — not just the browser — to your chosen location, controlled from your Mac.")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    pitchPoint("Works in every app, including Find My")
+                    pitchPoint("Follows your VPN, or a location you pick")
+                    pitchPoint("Driven from the GeoSpoof GPS app on your Mac")
+                }
+
                 Button {
                     router.showPaywall = true
                 } label: {
-                    Text("Upgrade to Pro")
+                    Label("Upgrade to Pro", systemImage: "sparkles")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .glassButtonStyle(prominent: true)
+                .controlSize(.large)
                 .padding(.top, 2)
+                .accessibilityHint("Opens GeoSpoof Pro upgrade options")
             }
             .padding(.vertical, 4)
+        }
+    }
+
+    /// One benefit row in the Pro pitch — a green check plus a short line.
+    private func pitchPoint(_ text: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundColor(.green)
+                .accessibilityHidden(true)
+            Text(text)
+                .font(.subheadline)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
