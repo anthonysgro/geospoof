@@ -516,16 +516,17 @@ struct MacSettingsView: View {
                         Text("Auto (real check)").tag(0)
                         Text("Force Founder").tag(1)
                         Text("Force Not Pro").tag(2)
+                        Text("Force Subscription").tag(3)
                     } label: {
                         Label("Pro Override", systemImage: "wand.and.stars")
                     }
                     .onChange(of: debugProOverride) { value in
-                        ProStore.setDebugFounderOverride(value == 1 ? true : (value == 2 ? false : nil))
+                        ProStore.setDebugProOverride(value)
                     }
                 } header: {
                     Text("Debug")
                 } footer: {
-                    Text("Founder status normally comes from the App Store original-download version, which isn't available in dev builds / the simulator. Use Force Founder / Force Not Pro to test both states.")
+                    Text("Founder status normally comes from the App Store original-download version, which isn't available in dev builds / the simulator. Force Founder / Not Pro / Subscription to test each tier. (Overrides the app's local Pro gate only — the GPS agent still needs a real signed purchase.)")
                 }
                 #endif
             }

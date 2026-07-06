@@ -6,6 +6,7 @@
 
 mod contract;
 mod discovery;
+mod entitlement;
 mod keepawake;
 mod reconcile;
 mod service;

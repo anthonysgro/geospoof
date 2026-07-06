@@ -36,13 +36,50 @@ pub struct DesiredState {
     pub longitude: Option<f64>,
     #[serde(default)]
     pub provenance: Provenance,
-    /// The source-of-truth app's Pro entitlement (StoreKit), passed over the link so the
-    /// agent gates on the *app's* real entitlement rather than a local stub. `None` when
-    /// the writer doesn't send it (older app, or the local-file/CLI dev path) — the agent
-    /// then falls back to its env/file dev stub. This is the honest entitlement source:
-    /// the phone already knows (founder / lifetime / active subscription) via StoreKit.
+    /// DEPRECATED unsigned entitlement flag. Historically the app passed its StoreKit
+    /// `isPro` as a bare bool — but a bare bool in this file is trivially forgeable by
+    /// anyone who can write it, so it must NOT be trusted for the real gate. Superseded by
+    /// [`DesiredState::entitlement`] (Apple-signed, verified offline on the Mac). Retained
+    /// only as a last-resort fallback for the local-file / CLI dev path (`--dev` builds),
+    /// never as the production authority. `None` when unset.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pro: Option<bool>,
+    /// Signed proof of the app's Pro entitlement — the tamper-resistant replacement for
+    /// `pro`. Carries Apple-signed StoreKit JWS blobs that the agent verifies OFFLINE
+    /// (signature + X.509 chain to the Apple Root CA + bundle id) before granting Pro, so
+    /// a forged `desired.json` can't unlock the feature. `None` on the dev/CLI path or
+    /// from an app build that predates signed proofs (agent then falls back to the dev
+    /// stub). See [`EntitlementProof`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub entitlement: Option<EntitlementProof>,
+}
+
+/// Apple-signed StoreKit entitlement material, produced on the iPhone and verified on the
+/// Mac. Every field is a JWS (compact JWT) string exactly as StoreKit's
+/// `jwsRepresentation` yields it; the agent verifies each against Apple's certificate
+/// chain and derives Pro itself. We send BOTH channels because "who is Pro" spans two
+/// StoreKit concepts:
+///   * `app_transaction` → the signed `AppTransaction`, whose `originalApplicationVersion`
+///     determines the **founder** grant (there is no purchase transaction for founders).
+///   * `transactions` → the signed current entitlement transactions (the **lifetime**
+///     non-consumable and/or an **active subscription**), each carrying product id,
+///     expiry, and revocation.
+///
+/// `isPro = founder(app_transaction) || ownsLifetime(transactions) ||
+/// activeSubscription(transactions)` — mirroring the app's own `ProStore` logic, but
+/// cryptographically verified rather than asserted.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct EntitlementProof {
+    /// Signed `AppTransaction` JWS. Establishes the founder grant (via
+    /// `originalApplicationVersion`) and the owning bundle id. `None` if the app couldn't
+    /// produce it (e.g. offline first launch); the other channel can still grant Pro.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub app_transaction: Option<String>,
+    /// Signed current-entitlement transaction JWSs (lifetime non-consumable and/or the
+    /// active auto-renewable subscription). Empty when the user has no purchase (e.g. a
+    /// pure founder), which is fine — founder is proven via `app_transaction`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub transactions: Vec<String>,
 }
 
 fn default_version() -> u32 {
@@ -59,6 +96,7 @@ impl DesiredState {
             longitude: None,
             provenance: Provenance::Unknown,
             pro: None,
+            entitlement: None,
         }
     }
 
@@ -71,6 +109,7 @@ impl DesiredState {
             longitude: Some(longitude),
             provenance,
             pro: None,
+            entitlement: None,
         }
     }
 
@@ -226,6 +265,54 @@ mod tests {
         // We omit `pro` when None so we don't imply an entitlement we don't have.
         let out = serde_json::to_string(&DesiredState::disabled()).unwrap();
         assert!(!out.contains("\"pro\""));
+    }
+
+    #[test]
+    fn entitlement_proof_round_trips_and_is_optional() {
+        // Full proof: an AppTransaction JWS plus two entitlement transaction JWSs.
+        let json = r#"{
+            "enabled": true,
+            "latitude": 48.0,
+            "longitude": 2.0,
+            "entitlement": {
+                "app_transaction": "eyJhbGc.appTx.sig",
+                "transactions": ["eyJhbGc.sub.sig", "eyJhbGc.lifetime.sig"]
+            }
+        }"#;
+        let ds: DesiredState = serde_json::from_str(json).unwrap();
+        let proof = ds.entitlement.expect("proof present");
+        assert_eq!(proof.app_transaction.as_deref(), Some("eyJhbGc.appTx.sig"));
+        assert_eq!(proof.transactions.len(), 2);
+
+        // Founder-only: an AppTransaction but no purchase transactions.
+        let json = r#"{"enabled":false,"entitlement":{"app_transaction":"eyJhbGc.appTx.sig"}}"#;
+        let ds: DesiredState = serde_json::from_str(json).unwrap();
+        let proof = ds.entitlement.unwrap();
+        assert!(proof.app_transaction.is_some());
+        assert!(proof.transactions.is_empty());
+
+        // Absent entitlement decodes to None (older app / dev path) — never an error.
+        let json = r#"{"enabled":false}"#;
+        let ds: DesiredState = serde_json::from_str(json).unwrap();
+        assert!(ds.entitlement.is_none());
+    }
+
+    #[test]
+    fn entitlement_proof_omitted_when_empty() {
+        // We never serialize an empty proof (or empty transactions) so we don't imply
+        // material we don't have.
+        let out = serde_json::to_string(&DesiredState::disabled()).unwrap();
+        assert!(!out.contains("\"entitlement\""));
+
+        let mut ds = DesiredState::manual(1.0, 2.0);
+        ds.entitlement = Some(EntitlementProof {
+            app_transaction: Some("jws".to_string()),
+            transactions: vec![],
+        });
+        let out = serde_json::to_string(&ds).unwrap();
+        assert!(out.contains("\"app_transaction\""));
+        // Empty transactions vec is omitted.
+        assert!(!out.contains("\"transactions\""));
     }
 
     #[test]

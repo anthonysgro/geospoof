@@ -18,6 +18,43 @@ use crate::contract::{
     CONTRACT_VERSION, DesiredState, DeviceSummary, Provenance, SessionReport, StatusReport,
 };
 
+/// Resolve the Pro entitlement gate for this tick.
+///
+/// The Apple-**signed** [`EntitlementProof`](crate::contract::EntitlementProof), verified
+/// offline in [`crate::entitlement`], is the sole authority when present — a forged or
+/// absent-but-claimed entitlement can't be overridden by the legacy unsigned `pro` bool,
+/// so presence of a signed proof that fails verification correctly denies Pro.
+///
+/// Only when NO signed proof is sent do we fall back, and then **only in debug builds**
+/// (CLI / local dev): first the deprecated unsigned app bool, else the construction-time
+/// env/file stub. Release builds require a valid signed proof — no signed proof ⇒ not Pro,
+/// so a hand-written `desired.json` can't unlock the feature.
+fn resolve_pro(desired: &DesiredState, stub: bool) -> bool {
+    if let Some(proof) = &desired.entitlement {
+        let pro = crate::entitlement::verify_pro(proof);
+        tracing::debug!(
+            has_app_transaction = proof.app_transaction.is_some(),
+            transaction_count = proof.transactions.len(),
+            verified_pro = pro,
+            "resolve_pro: verified signed entitlement proof"
+        );
+        return pro;
+    }
+    tracing::debug!(
+        legacy_pro = ?desired.pro,
+        "resolve_pro: no signed entitlement in desired.json (phone sent none)"
+    );
+    #[cfg(debug_assertions)]
+    {
+        desired.pro.unwrap_or(stub)
+    }
+    #[cfg(not(debug_assertions))]
+    {
+        let _ = (desired, stub);
+        false
+    }
+}
+
 /// Owns the device controller + spoof session and reconciles desired → actual.
 pub struct Reconciler {
     controller: Arc<dyn DeviceController>,
@@ -58,9 +95,10 @@ impl Reconciler {
     /// but you're not Pro / idle" (connected, not spoofing) from "can't reach the device"
     /// (disconnected). See design §18.
     pub async fn reconcile(&self, desired: &DesiredState, reached: bool) -> StatusReport {
-        // Entitlement is the *app's* StoreKit truth when it sends it (`desired.pro`);
-        // otherwise fall back to the local dev stub (env/file) captured at construction.
-        let pro = desired.pro.unwrap_or(self.pro);
+        // Entitlement gate: the Apple-SIGNED proof (verified offline against Apple's cert
+        // chain) is authoritative; the legacy unsigned `pro` bool is only a debug-time dev
+        // fallback and can never override a signed proof. See `resolve_pro`.
+        let pro = resolve_pro(desired, self.pro);
 
         // Entitlement gate — no Pro, no spoofing. But reaching a non-entitled device is a
         // DISTINCT state from being disconnected, so report `connected` per `reached`
@@ -108,6 +146,7 @@ impl Reconciler {
                 }
             }
         } else if !matches!(self.session.state(), SessionState::Idle) {
+            tracing::info!("GPS sync disabled — stopping spoof and clearing device location");
             self.session.stop().await;
         }
 
@@ -171,6 +210,7 @@ impl Reconciler {
                 }
             }
         } else if !matches!(self.session.state(), SessionState::Idle) {
+            tracing::info!("GPS sync disabled — stopping spoof and clearing device location");
             self.session.stop().await;
         }
 
@@ -489,6 +529,25 @@ mod tests {
         desired.pro = Some(false);
         let report = r.reconcile(&desired, true).await;
         assert!(!report.pro);
+        assert_eq!(report.session, SessionReport::Idle);
+        assert_eq!(report.remediation, "GeoSpoof Pro required");
+    }
+
+    #[tokio::test]
+    async fn signed_proof_is_authoritative_over_unsigned_bool() {
+        // A signed entitlement is present but forged (fails offline verification), while
+        // the legacy unsigned bool claims Pro. The signed channel wins and can't be
+        // spoofed, so we must refuse — a forged proof never unlocks, regardless of `pro`.
+        let mock = Arc::new(MockDeviceController::ready());
+        let r = Reconciler::new(mock, fast_config(), true);
+        let mut desired = DesiredState::manual(48.0, 2.0);
+        desired.pro = Some(true);
+        desired.entitlement = Some(crate::contract::EntitlementProof {
+            app_transaction: Some("forged.app.transaction".to_string()),
+            transactions: vec!["forged.tx".to_string()],
+        });
+        let report = r.reconcile(&desired, true).await;
+        assert!(!report.pro, "a forged signed proof must not grant Pro");
         assert_eq!(report.session, SessionReport::Idle);
         assert_eq!(report.remediation, "GeoSpoof Pro required");
     }

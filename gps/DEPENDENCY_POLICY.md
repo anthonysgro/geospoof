@@ -28,6 +28,26 @@ product. Mitigations:
   major breaks DDI mounting before upstream catches up — see design §10a.5).
 - **Track releases** deliberately; upstream fixes where practical to reduce fork drift.
 
+## The `app-store-server-library` dependency (entitlement verification)
+
+The agent verifies the app's Apple-signed StoreKit entitlement OFFLINE (Requirement 6)
+via `app-store-server-library` (`=4.3.0`, `default-features = false`) — a faithful Rust
+port of Apple's official App Store Server Library. Chosen deliberately:
+
+- **Don't hand-roll crypto.** JWS signature + X.509 chain validation to the Apple root is
+  security-critical; a maintained port of Apple's own library is safer than bespoke code.
+- **Pure Rust, no OpenSSL/ring.** Its non-optional tree is RustCrypto only
+  (`jsonwebtoken` with `rust_crypto`, `p256`/`p384`, `x509-cert`, `der`, `spki`, `sha2`,
+  `rsa`, `base64`) — consistent with the "no OpenSSL" posture idevice already sets.
+- **`default-features = false`** drops the network client (`reqwest`), OCSP, and `regex`:
+  we verify offline only, so none are pulled.
+- **License:** MIT (the crate and every transitive dep are on the allow-list).
+- **Advisory:** it pulls `rsa`, which carries `RUSTSEC-2023-0071` (Marvin) — already
+  ignored for idevice (same crate), so no new advisory surface.
+
+The embedded trust anchor `gps/agent/assets/AppleRootCA-G3.cer` is Apple's PUBLIC root
+CA (not a secret); it's git-tracked via a `!` exception to the global `*.cer` ignore.
+
 ## Supply-chain gates (CI-enforced)
 
 - **`cargo-deny`** (`gps/deny.toml`): security advisories, a **permissive-only license

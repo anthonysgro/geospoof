@@ -253,11 +253,15 @@ struct GpsView: View {
 
     /// Where to send users to get the desktop app. TODO: confirm final URL.
     private let downloadURL = URL(string: "https://www.geospoof.com/gps")!
+    /// Support contact for founders whose grant can't be auto-verified on this device
+    /// (see `founderSupportLink`). TODO: confirm final URL.
+    private let supportURL = URL(string: "https://www.geospoof.com/support")!
     private let refreshTimer = Timer.publish(every: 3, on: .main, in: .common).autoconnect()
 
     var body: some View {
         AdaptiveNavigationStack {
             Form {
+                experimentalSection
                 switch phase {
                 case .notPro:
                     proPitchSection
@@ -299,6 +303,35 @@ struct GpsView: View {
     }
 
     // MARK: Sections
+
+    /// Always-visible banner: device GPS needs a Mac + a one-time pairing and rides Apple's
+    /// developer tooling, so we set the expectation up front that it's still experimental.
+    private var experimentalSection: some View {
+        Section {
+            Label {
+                Text("Experimental feature")
+            } icon: {
+                Image(systemName: "flask.fill")
+            }
+            .font(.subheadline)
+            .foregroundColor(.secondary)
+        }
+    }
+
+    /// Escape hatch for a founding supporter whose grant can't be auto-verified on this
+    /// device — e.g. they became a founder on macOS or via the legacy iOS-15 heuristic, so
+    /// this iPhone's signed App Store record doesn't prove it. Founder and lifetime are
+    /// identical in-product, so support just issues a free lifetime code, which then
+    /// verifies through the normal signed path.
+    private var founderSupportLink: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Founding supporter and can’t access?")
+                .font(.footnote)
+                .foregroundColor(.secondary)
+            Link("Contact support", destination: supportURL)
+                .font(.footnote)
+        }
+    }
 
     private var aboutSection: some View {
         Section {
@@ -362,6 +395,12 @@ struct GpsView: View {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundColor(.orange)
                 Text(message)
+            }
+            // When the blocker is specifically "Pro required" — which a genuine founder can
+            // hit if this device's signed record can't prove the grant — offer the founder
+            // support path (free lifetime code) rather than leaving them stuck.
+            if message.localizedCaseInsensitiveContains("Pro required") {
+                founderSupportLink
             }
         } header: {
             Text("Action needed")
@@ -568,16 +607,17 @@ struct SettingsView: View {
                         Text("Auto (real check)").tag(0)
                         Text("Force Founder").tag(1)
                         Text("Force Not Pro").tag(2)
+                        Text("Force Subscription").tag(3)
                     } label: {
                         Label("Pro Override", systemImage: "wand.and.stars")
                     }
                     .onChange(of: debugProOverride) { value in
-                        ProStore.setDebugFounderOverride(value == 1 ? true : (value == 2 ? false : nil))
+                        ProStore.setDebugProOverride(value)
                     }
                 } header: {
                     Text("Debug")
                 } footer: {
-                    Text("Founder status normally comes from the App Store original-download version, which isn't available on the simulator. Use Force Founder / Force Not Pro to test both states.")
+                    Text("Founder status normally comes from the App Store original-download version, which isn't available on the simulator. Force Founder / Not Pro / Subscription to test each tier. (Overrides the app's local Pro gate only — the GPS agent still needs a real signed purchase.)")
                 }
                 #endif
             }

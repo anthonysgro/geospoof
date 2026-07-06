@@ -678,6 +678,12 @@ final class SpoofController: ObservableObject {
     /// the gate from ProStore (which isn't in the widget target). Defaults
     /// false — the safe state — until ProStore resolves and broadcasts.
     private var cachedIsPro = false
+    /// Signed StoreKit entitlement proof (JWS), fed by `proEntitlementDidChange` from
+    /// ProStore and mirrored into `desired.json` so the GeoSpoof GPS agent verifies Pro
+    /// OFFLINE (the tamper-resistant replacement for the `pro` bool). Empty until ProStore
+    /// resolves and broadcasts.
+    private var cachedAppTransactionJWS: String?
+    private var cachedEntitlementTransactionsJWS: [String] = []
     /// Periodic exit-IP check while VPN sync is on. Catches same-tunnel VPN
     /// server switches, which fire no NWPathMonitor event. On macOS it runs
     /// continuously (the app keeps running when not frontmost); on iOS it's
@@ -1369,9 +1375,16 @@ final class SpoofController: ObservableObject {
             // *before* hopping to the MainActor Task — capturing `note` itself
             // in the @Sendable closure is an error under Swift 6.
             let isPro = note.userInfo?["isPro"] as? Bool
+            // Signed proof rides the same broadcast. `entitlementTransactionsJWS` is always
+            // present (may be empty → clears a lapsed sub); the app-transaction JWS is only
+            // present once resolved, so update it only when sent (never clobber with nil).
+            let appTxJWS = note.userInfo?["appTransactionJWS"] as? String
+            let txJWS = note.userInfo?["entitlementTransactionsJWS"] as? [String]
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 if let isPro { self.cachedIsPro = isPro }
+                if let appTxJWS { self.cachedAppTransactionJWS = appTxJWS }
+                if let txJWS { self.cachedEntitlementTransactionsJWS = txJWS }
                 if self.autoSyncBlocked { self.vpnResyncTask?.cancel() }
                 self.writePending()
             }
@@ -1541,8 +1554,24 @@ final class SpoofController: ObservableObject {
             "version": 1,
             "enabled": active,
             "provenance": provenance,
+            // Legacy unsigned flag: the agent treats it as a debug-only fallback and
+            // ignores it in release (it's forgeable). The signed `entitlement` below is
+            // the authority.
             "pro": cachedIsPro,
         ]
+        // Apple-signed StoreKit proof the agent verifies OFFLINE (signature + cert chain)
+        // to gate Pro tamper-resistantly. Mirrors the agent's `EntitlementProof`; omit
+        // empty sub-fields so we never imply material we don't have.
+        var entitlement: [String: Any] = [:]
+        if let appTxJWS = cachedAppTransactionJWS {
+            entitlement["app_transaction"] = appTxJWS
+        }
+        if !cachedEntitlementTransactionsJWS.isEmpty {
+            entitlement["transactions"] = cachedEntitlementTransactionsJWS
+        }
+        if !entitlement.isEmpty {
+            obj["entitlement"] = entitlement
+        }
         if active, let location {
             obj["latitude"] = location.latitude
             obj["longitude"] = location.longitude

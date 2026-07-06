@@ -22,6 +22,18 @@ tracing-subscriber = { version = "=0.3.23", features = ["env-filter"] }
 # LAN discovery of the device's `_remotepairing._tcp` endpoint (idevice has no mDNS
 # browser). Used to find the phone's IP without depending on usbmuxd re-arming Wi-Fi sync.
 mdns-sd = "=0.20.1"
+# Offline verification of Apple-signed StoreKit entitlement (JWS + X.509 chain to the
+# Apple Root CA). A faithful Rust port of Apple's official App Store Server Library, so
+# we don't hand-roll security-critical ECDSA chain validation. `default-features = false`
+# drops the network client (reqwest) + OCSP + regex — we verify OFFLINE only. Its
+# non-optional tree is pure RustCrypto (jsonwebtoken/rust_crypto, p256, p384, x509-cert,
+# der, rsa), MIT-licensed, no OpenSSL/ring. The `rsa` Marvin advisory it pulls is already
+# ignored for idevice in deny.toml (same crate), so no new advisory surface.
+app-store-server-library = { version = "=4.3.0", default-features = false }
+# Time handling for the entitlement verifier (subscription expiry). Already in-tree via
+# app-store-server-library (which decodes StoreKit dates as chrono `DateTime`); named
+# directly here so we can compare `expires_date` to now. MIT/Apache.
+chrono = "=0.4.45"
 
 [dev-dependencies]
 geospoof-gps-core = { path = "../core", features = ["mock"] }

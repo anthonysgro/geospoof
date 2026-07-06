@@ -525,11 +525,18 @@ async fn read_app_file_session(
         .open(format!("Documents/{filename}"), AfcFopenMode::RdOnly)
         .await
         .map_err(|e| DeviceError::Io(e.to_string()))?;
-    let bytes = fd
+    // idevice PANICS if an AFC file descriptor is dropped without `.close().await`
+    // (afc/inner_file.rs). A read error — e.g. racing the app's ATOMIC rewrite of
+    // desired.json when the user toggles sync off — must still close the fd, or the panic
+    // crashes the session thread and tears down the DVT tunnel before we can clear the
+    // spoof (the device then reverts only on its ~1–2 min timeout). Capture the result,
+    // always close, then propagate.
+    let read = fd
         .read_entire()
         .await
-        .map_err(|e| DeviceError::Io(e.to_string()))?;
+        .map_err(|e| DeviceError::Io(e.to_string()));
     let _ = fd.close().await;
+    let bytes = read?;
     Ok(bytes)
 }
 
@@ -556,10 +563,14 @@ async fn write_app_file_session(
         .open(format!("Documents/{filename}"), AfcFopenMode::WrOnly)
         .await
         .map_err(|e| DeviceError::Io(e.to_string()))?;
-    fd.write_entire(bytes)
+    // Always close the fd, even on write error — see the read helper: a dropped-unclosed
+    // AFC descriptor panics idevice and kills the session thread.
+    let written = fd
+        .write_entire(bytes)
         .await
-        .map_err(|e| DeviceError::Io(e.to_string()))?;
+        .map_err(|e| DeviceError::Io(e.to_string()));
     let _ = fd.close().await;
+    written?;
     Ok(())
 }
 
@@ -843,11 +854,18 @@ async fn afc_read_rsd(
         .open(format!("Documents/{filename}"), AfcFopenMode::RdOnly)
         .await
         .map_err(|e| DeviceError::Io(e.to_string()))?;
-    let bytes = fd
+    // idevice PANICS if an AFC file descriptor is dropped without `.close().await`
+    // (afc/inner_file.rs). A read error — e.g. racing the app's ATOMIC rewrite of
+    // desired.json when the user toggles sync off — must still close the fd, or the panic
+    // crashes the session thread and tears down the DVT tunnel before we can clear the
+    // spoof (the device then reverts only on its ~1–2 min timeout). Capture the result,
+    // always close, then propagate.
+    let read = fd
         .read_entire()
         .await
-        .map_err(|e| DeviceError::Io(e.to_string()))?;
+        .map_err(|e| DeviceError::Io(e.to_string()));
     let _ = fd.close().await;
+    let bytes = read?;
     Ok(bytes)
 }
 
@@ -871,10 +889,14 @@ async fn afc_write_rsd(
         .open(format!("Documents/{filename}"), AfcFopenMode::WrOnly)
         .await
         .map_err(|e| DeviceError::Io(e.to_string()))?;
-    fd.write_entire(bytes)
+    // Always close the fd, even on write error — see the read helper: a dropped-unclosed
+    // AFC descriptor panics idevice and kills the session thread.
+    let written = fd
+        .write_entire(bytes)
         .await
-        .map_err(|e| DeviceError::Io(e.to_string()))?;
+        .map_err(|e| DeviceError::Io(e.to_string()));
     let _ = fd.close().await;
+    written?;
     Ok(())
 }
 

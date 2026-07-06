@@ -79,6 +79,23 @@ struct AppVersion: Comparable, CustomStringConvertible {
     var description: String { components.map(String.init).joined(separator: ".") }
 }
 
+// MARK: - Debug Pro override
+
+/// Debug-only Pro override (Settings → Pro Override). Forces exactly one entitlement source
+/// so each tier's UI can be exercised without real StoreKit (e.g. on the simulator, where
+/// `originalAppVersion` and purchases aren't available). Compiled behavior is gated to
+/// DEBUG — in release the override always resolves to `.auto`.
+///
+/// NOTE: an override only changes the app's LOCAL `isPro`. It does NOT produce a signed
+/// StoreKit proof, so the GeoSpoof GPS desktop agent still won't grant Pro from it — test
+/// the desktop/GPS path with a real (or StoreKit-config) purchase instead.
+enum DebugProOverride: Int {
+    case auto = 0 // real check
+    case founder = 1 // force founding-supporter grant
+    case notPro = 2 // force no entitlement
+    case subscription = 3 // force an active subscription
+}
+
 // MARK: - ProStore
 
 @MainActor
@@ -137,11 +154,11 @@ final class ProStore: ObservableObject {
     private enum Key {
         static let isFounder  = "pro_isFounder"
         static let originalAppVersion = "pro_originalAppVersion"
-        /// Debug-only override read from standard UserDefaults. Set to a Bool
-        /// to force founder status on/off in sandbox/TestFlight, where
-        /// `originalAppVersion` is unreliable. Remove the key to use the real
-        /// value. (Never set in production builds.)
-        static let debugFounderOverride = "debug_pro_founderOverride"
+        /// Debug-only override read from standard UserDefaults. Stores a
+        /// `DebugProOverride` raw Int to force a Pro tier (founder / not-Pro /
+        /// subscription) where real StoreKit isn't available (simulator / dev builds).
+        /// Absent = auto (real check). Never set in production builds.
+        static let debugProOverride = "debug_pro_override"
     }
 
     /// Keys in `NSUbiquitousKeyValueStore` (iCloud), synced per-Apple-ID across
@@ -229,6 +246,16 @@ final class ProStore: ObservableObject {
     /// frequently-called `recomputeFounder()` doesn't spam the network.
     private var cloudKitGrantPushed = false
 
+    /// Signed StoreKit entitlement proof (JWS strings), captured during entitlement /
+    /// founder resolution and broadcast via `proEntitlementDidChange` so `SpoofModel` can
+    /// write it into `desired.json`. The GeoSpoof GPS desktop agent verifies these OFFLINE
+    /// (Apple signature + X.509 chain) — the tamper-resistant replacement for the unsigned
+    /// `pro` bool. `appTransactionJWS` proves the founder grant (via its
+    /// `originalAppVersion`); each entry in `entitlementTransactionsJWS` is a current
+    /// lifetime / active-subscription transaction.
+    private var appTransactionJWS: String?
+    private var entitlementTransactionsJWS: [String] = []
+
     private var updatesTask: Task<Void, Never>?
 
     private init() {
@@ -287,18 +314,14 @@ final class ProStore: ObservableObject {
     /// Falls back to the cached value if `AppTransaction` can't be read (e.g.
     /// offline on a cold first launch).
     func resolveFounderStatus() async {
-        // Debug override wins, for testing both paths. Bypasses iCloud entirely
-        // (read and write) so the non-founder path stays testable even if a
-        // previous run set the cloud bit on this Apple ID.
-        if let override = debugFounderOverride() {
-            localFounder = override
-            cloudFounder = false
-            isFounder = override
-            cache.set(override, forKey: Key.isFounder)
-            cache.set("debug-override", forKey: Key.originalAppVersion)
-            persistIsPro()
+        #if DEBUG
+        // Debug override wins, for testing each tier. Bypasses iCloud entirely (read and
+        // write) so any path stays testable even if a previous run synced a grant.
+        if debugProOverride() != .auto {
+            applyDebugOverride()
             return
         }
+        #endif
 
         if #available(iOS 16.0, macOS 13.0, *) {
             await resolveFounderViaAppTransaction()
@@ -325,6 +348,10 @@ final class ProStore: ObservableObject {
                 Log.pro.warn("AppTransaction unverified; keeping cached founder=\(self.isFounder)")
                 return
             }
+
+            // Capture the signed AppTransaction JWS for the GPS agent: it's how the agent
+            // proves the founder grant offline (there's no purchase transaction to send).
+            appTransactionJWS = result.jwsRepresentation
 
             let originalString = appTransaction.originalAppVersion
             guard let original = AppVersion(string: originalString) else {
@@ -401,7 +428,7 @@ final class ProStore: ObservableObject {
     @objc nonisolated private func cloudStoreDidChange(_ note: Notification) {
         Task { @MainActor [weak self] in
             guard let self else { return }
-            if self.debugFounderOverride() != nil { return }
+            if self.debugProOverride() != .auto { return }
             if self.cloud.bool(forKey: CloudKey.founder), !self.cloudFounder {
                 self.cloudFounder = true
                 self.recomputeFounder()
@@ -415,7 +442,7 @@ final class ProStore: ObservableObject {
     @objc nonisolated private func appBecameActive() {
         Task { @MainActor [weak self] in
             guard let self else { return }
-            if self.debugFounderOverride() != nil { return }
+            if self.debugProOverride() != .auto { return }
             self.cloud.synchronize()
             if self.cloud.bool(forKey: CloudKey.founder), !self.cloudFounder {
                 self.cloudFounder = true
@@ -431,7 +458,7 @@ final class ProStore: ObservableObject {
     /// ON. Silent on no-account / network failure — the grant just stays at
     /// whatever the local check and KVS produced.
     private func refreshCloudKitFounder() {
-        if debugFounderOverride() != nil { return }
+        if debugProOverride() != .auto { return }
         Task { [weak self] in
             let granted = await FounderCloud.fetchGranted()
             guard granted else { return }
@@ -443,32 +470,63 @@ final class ProStore: ObservableObject {
         }
     }
 
-    private func debugFounderOverride() -> Bool? {
+    /// The active debug override (`.auto` in release, or when no override is set).
+    private func debugProOverride() -> DebugProOverride {
         #if DEBUG
-        guard UserDefaults.standard.object(forKey: Key.debugFounderOverride) != nil else { return nil }
-        return UserDefaults.standard.bool(forKey: Key.debugFounderOverride)
+        let raw = (UserDefaults.standard.object(forKey: Key.debugProOverride) as? Int) ?? 0
+        return DebugProOverride(rawValue: raw) ?? .auto
         #else
-        return nil
+        return .auto
         #endif
     }
 
     #if DEBUG
-    /// Current debug override as a picker tag: 0 = auto (real check), 1 = force
-    /// founder, 2 = force not-founder.
-    static func debugProOverrideSelection() -> Int {
-        guard UserDefaults.standard.object(forKey: Key.debugFounderOverride) != nil else { return 0 }
-        return UserDefaults.standard.bool(forKey: Key.debugFounderOverride) ? 1 : 2
+    /// Force the published entitlement state to match the debug override, then broadcast.
+    /// Sets exactly one Pro source so `isPro`/`status` reflect the chosen tier. Only ever
+    /// runs while an override is active (release resolves to `.auto`, so this isn't called).
+    private func applyDebugOverride() {
+        let ov = debugProOverride()
+        localFounder = (ov == .founder)
+        cloudFounder = false
+        cloudKitFounder = false
+        isFounder = (ov == .founder)
+        ownsLifetime = false
+        if ov == .subscription {
+            activeProductIDs = [ProductID.annual]
+            subscriptionDetails = SubscriptionDetails(
+                planName: "Annual (debug)",
+                renewalDate: Calendar.current.date(byAdding: .year, value: 1, to: .now),
+                autoRenews: true,
+                transactionID: 0
+            )
+        } else {
+            activeProductIDs = []
+            subscriptionDetails = nil
+        }
+        cache.set(isFounder, forKey: Key.isFounder)
+        cache.set("debug-override", forKey: Key.originalAppVersion)
+        persistIsPro()
     }
 
-    /// Set (or clear with `nil`) the founder override and immediately re-resolve
-    /// so the UI updates without a relaunch. DEBUG only.
-    static func setDebugFounderOverride(_ value: Bool?) {
-        if let value {
-            UserDefaults.standard.set(value, forKey: Key.debugFounderOverride)
+    /// Current debug override as a picker tag (see `DebugProOverride`): 0 = auto, 1 =
+    /// founder, 2 = not Pro, 3 = subscription.
+    static func debugProOverrideSelection() -> Int {
+        (UserDefaults.standard.object(forKey: Key.debugProOverride) as? Int) ?? 0
+    }
+
+    /// Set the override to a picker tag (0 = auto, which clears it) and immediately
+    /// re-resolve so the UI updates without a relaunch. DEBUG only. Re-runs both resolvers
+    /// so clearing back to auto restores the real founder + entitlement state.
+    static func setDebugProOverride(_ tag: Int) {
+        if tag == DebugProOverride.auto.rawValue {
+            UserDefaults.standard.removeObject(forKey: Key.debugProOverride)
         } else {
-            UserDefaults.standard.removeObject(forKey: Key.debugFounderOverride)
+            UserDefaults.standard.set(tag, forKey: Key.debugProOverride)
         }
-        Task { await ProStore.shared.resolveFounderStatus() }
+        Task {
+            await ProStore.shared.resolveFounderStatus()
+            await ProStore.shared.refreshEntitlements()
+        }
     }
     #endif
 
@@ -615,10 +673,21 @@ final class ProStore: ObservableObject {
     /// Recompute active entitlements (subscriptions + the lifetime non-
     /// consumable) from StoreKit and cache the result. Safe to call repeatedly.
     func refreshEntitlements() async {
+        #if DEBUG
+        // An active debug override owns the entitlement state; don't let the real (usually
+        // empty on simulator) scan clobber it.
+        if debugProOverride() != .auto {
+            applyDebugOverride()
+            return
+        }
+        #endif
         var active: Set<String> = []
         var activeTransaction: StoreKit.Transaction?
         var lifetimeOwned = false
         var lifetimeTxnID: UInt64?
+        // Apple-signed JWS of each entitlement we count, for the GPS agent's offline
+        // verification. Collected in lockstep with the accepted transactions below.
+        var proofJWS: [String] = []
         #if DEBUG
         // DIAGNOSTIC counters (DEBUG only): distinguish "StoreKit yielded
         // nothing" (env / simulator state) from "yielded something we filtered
@@ -645,6 +714,7 @@ final class ProStore: ObservableObject {
             if transaction.productID == ProductID.lifetime {
                 lifetimeOwned = true
                 lifetimeTxnID = transaction.id
+                proofJWS.append(result.jwsRepresentation)
                 continue
             }
 
@@ -656,10 +726,12 @@ final class ProStore: ObservableObject {
             if let expiry = transaction.expirationDate, expiry < .now { continue }
             active.insert(transaction.productID)
             activeTransaction = transaction
+            proofJWS.append(result.jwsRepresentation)
         }
         activeProductIDs = active
         ownsLifetime = lifetimeOwned
         lifetimeTransactionID = lifetimeTxnID
+        entitlementTransactionsJWS = proofJWS
         #if DEBUG
         Log.pro.info("refreshEntitlements: seen=\(seen) unverified=\(unverifiedSeen) active=\(active) lifetime=\(lifetimeOwned) isFounder=\(self.isFounder) isPro=\(self.isPro)")
         #endif
@@ -726,10 +798,22 @@ final class ProStore: ObservableObject {
     /// auto-sync gate) can react. Intentionally does NOT touch the App Group —
     /// see the file header.
     private func persistIsPro() {
+        // Broadcast the gate + the signed entitlement proof together, so SpoofModel can
+        // mirror both into `desired.json` for the GPS agent. `entitlementTransactionsJWS`
+        // is always included (possibly empty — a lapsed sub clears it); the app-transaction
+        // JWS is included only once resolved (omit-when-nil so a pre-resolution broadcast
+        // can't clobber a value another path already set).
+        var info: [String: Any] = [
+            "isPro": isPro,
+            "entitlementTransactionsJWS": entitlementTransactionsJWS,
+        ]
+        if let appTransactionJWS {
+            info["appTransactionJWS"] = appTransactionJWS
+        }
         NotificationCenter.default.post(
             name: .proEntitlementDidChange,
             object: nil,
-            userInfo: ["isPro": isPro]
+            userInfo: info
         )
     }
 }
