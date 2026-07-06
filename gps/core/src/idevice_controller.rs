@@ -47,6 +47,12 @@ const LABEL: &str = "geospoof-gps";
 const STATUS_TIMEOUT: Duration = Duration::from_secs(15);
 const OP_TIMEOUT: Duration = Duration::from_secs(30);
 const MOUNT_TIMEOUT: Duration = Duration::from_secs(180);
+/// Bounds the whole overlay-tunnel establishment (RemotePairing connect + pair-verify +
+/// tunnel-listener connect + TLS-PSK). On a firewalled network (corporate/public Wi-Fi
+/// blocking device-to-device traffic) the raw `TcpStream::connect` can hang on the OS
+/// default for minutes; this makes a blocked attempt fail fast so the run loop can report
+/// "can't reach your iPhone" and retry (or the caller can fall back to USB).
+const TUNNEL_CONNECT_TIMEOUT: Duration = Duration::from_secs(12);
 
 /// The device's `_remotepairing._tcp` port (used for the overlay/remote transport, §10j).
 const REMOTEPAIRING_PORT: u16 = 49152;
@@ -771,7 +777,9 @@ async fn session_loop(
     // Establish once. On any failure, return — queued/next commands error via dropped
     // reply channels, and the controller rebuilds on the next attempt.
     let built = match &overlay {
-        Some(target) => overlay_adapter(target).await,
+        // Bound the overlay establishment so a firewalled network fails fast instead of
+        // hanging on a dropped TCP connect (see TUNNEL_CONNECT_TIMEOUT).
+        Some(target) => with_timeout(TUNNEL_CONNECT_TIMEOUT, overlay_adapter(target)).await,
         None => usbmux_adapter(&udid).await,
     };
     let Ok((mut adapter, rsd_port)) = built else {

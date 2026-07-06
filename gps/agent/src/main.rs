@@ -25,6 +25,11 @@ use reconcile::Reconciler;
 
 const AGENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 const POLL_INTERVAL: Duration = Duration::from_secs(1);
+/// How many consecutive ~1s ticks of failing to reach the device before we escalate the
+/// status from a neutral "looking…" to actionable "can't reach — try USB" guidance. Keeps
+/// a transient blip from alarming, but surfaces a real problem (e.g. a network blocking
+/// device-to-device traffic) quickly.
+const UNREACHABLE_TICKS: u32 = 6;
 
 #[tokio::main]
 async fn main() {
@@ -391,12 +396,15 @@ async fn run(dir: &Path) {
     let overlay_host: Option<IpAddr> = std::env::var("GEOSPOOF_OVERLAY_HOST")
         .ok()
         .and_then(|s| s.trim().parse().ok());
-    let tunnel = overlay_host.is_some() || rp_path.exists();
+    // Transport is now chosen per-connection (USB-first, wireless fallback) in
+    // `connect_controller`, not fixed up front — a plugged-in cable is the most reliable
+    // path and works on networks that block mDNS / device-to-device traffic.
     tracing::info!(
         pro,
         source = %source.describe(),
-        transport = if tunnel { "tunnel" } else { "usbmux" },
-        "agent started"
+        bootstrapped = rp_path.exists(),
+        overlay_override = overlay_host.is_some(),
+        "agent started (transport: USB-first, wireless fallback)"
     );
 
     // Last desired state we successfully resolved. Cached so a momentary source read
@@ -407,6 +415,9 @@ async fn run(dir: &Path) {
     // every tick floods the log (92 MB after a day). Log at info only on a state change;
     // everything else stays at debug (opt-in via RUST_LOG).
     let mut last_logged: Option<(SessionReport, bool, bool)> = None;
+    // Consecutive ticks we've failed to reach the device — drives the escalated
+    // "can't reach — try USB" status (see UNREACHABLE_TICKS).
+    let mut reach_fail_streak: u32 = 0;
     // Prevent idle sleep while actively spoofing so the Wi-Fi hold isn't dropped
     // (design §10h). Released automatically when idle/disconnected and on shutdown.
     let mut keep_awake = KeepAwake::new();
@@ -417,24 +428,37 @@ async fn run(dir: &Path) {
         // (Re)connect whenever we have no live controller. In tunnel mode this
         // rediscovers the device (possibly at a new IP) after a drop — the key to
         // resuming when the phone rejoins Wi-Fi.
-        if current.is_none() {
-            let controller = connect_controller(overlay_host, tunnel, &rp_path).await;
-            if let Some(controller) = controller {
-                tracing::info!(
-                    transport = if tunnel { "tunnel" } else { "usbmux" },
-                    "device connected"
-                );
-                let reconciler = Reconciler::new(Arc::clone(&controller), config.clone(), pro)
-                    .tunnel_mode(tunnel);
-                current = Some((controller, reconciler));
-            }
+        if current.is_none()
+            && let Some((controller, is_tunnel)) = connect_controller(overlay_host, &rp_path).await
+        {
+            tracing::info!(
+                transport = if is_tunnel { "tunnel" } else { "usbmux" },
+                "device connected"
+            );
+            let reconciler = Reconciler::new(Arc::clone(&controller), config.clone(), pro)
+                .tunnel_mode(is_tunnel);
+            current = Some((controller, reconciler));
         }
 
         if let Some((controller, reconciler)) = &current {
             let (desired, reached) =
                 resolve_desired(&source, controller.as_ref(), dir, &last_desired).await;
             last_desired = desired.clone();
-            let report = reconciler.reconcile(&desired, reached).await;
+            let mut report = reconciler.reconcile(&desired, reached).await;
+            if reached {
+                reach_fail_streak = 0;
+            } else {
+                reach_fail_streak = reach_fail_streak.saturating_add(1);
+            }
+            // Reached the device but the transport keeps failing (e.g. mDNS found the phone
+            // but the network blocks the tunnel port) and there's no more specific
+            // guidance — escalate to actionable "can't reach — try USB" help.
+            if !report.connected
+                && report.remediation.is_empty()
+                && reach_fail_streak >= UNREACHABLE_TICKS
+            {
+                report.remediation = unreachable_remediation(rp_path.exists());
+            }
             let summary = (report.session, report.connected, report.pro);
             if last_logged != Some(summary) {
                 tracing::info!(
@@ -466,7 +490,15 @@ async fn run(dir: &Path) {
                 keep_awake.set(false);
             }
         } else {
-            write_status(dir, &disconnected_report(pro));
+            // No controller: either nothing plugged in and nothing found on the LAN, or
+            // discovery is blocked. Escalate to actionable guidance after a few misses.
+            reach_fail_streak = reach_fail_streak.saturating_add(1);
+            let remediation = if reach_fail_streak >= UNREACHABLE_TICKS {
+                unreachable_remediation(rp_path.exists())
+            } else {
+                "Looking for your iPhone…".to_string()
+            };
+            write_status(dir, &disconnected_report(pro, remediation));
             keep_awake.set(false);
         }
 
@@ -510,39 +542,65 @@ async fn shutdown_signal() {
     let _ = tokio::signal::ctrl_c().await;
 }
 
-/// Find and construct a controller for the current transport: an explicit overlay host, a
-/// mDNS-discovered LAN device over the remote-pairing tunnel, or (legacy) usbmux. Returns
-/// `None` when no device is reachable this tick.
+/// Choose and construct a controller for this connection attempt, returning it plus whether
+/// it uses the (wireless) tunnel transport. `None` when no device is reachable this tick.
+///
+/// Preference order (USB-first): an explicit `GEOSPOOF_OVERLAY_HOST` override → a
+/// physically-connected USB device (usbmux) → the mDNS-discovered LAN device over the
+/// remote-pairing tunnel. USB is preferred because a cable is the most reliable path and
+/// works on networks that block mDNS / device-to-device traffic (corporate/public Wi-Fi) —
+/// so a bootstrapped user who plugs in is served over USB rather than being stuck on a
+/// blocked wireless path (the §16 "prefer tunnel" note is about *wireless* usbmux not
+/// re-arming, which doesn't apply to a physical cable).
 async fn connect_controller(
     overlay_host: Option<IpAddr>,
-    tunnel: bool,
     rp_path: &Path,
-) -> Option<Arc<dyn DeviceController>> {
+) -> Option<(Arc<dyn DeviceController>, bool)> {
+    // 1. Explicit overlay host (manual / testing override).
     if let Some(ip) = overlay_host {
-        return Some(Arc::new(
-            IdeviceController::new("overlay").with_overlay(ip, rp_path.to_path_buf()),
+        let c = Arc::new(IdeviceController::new("overlay").with_overlay(ip, rp_path.to_path_buf()));
+        return Some((c as Arc<dyn DeviceController>, true));
+    }
+    // 2. USB-first: a physically-connected device is the most reliable transport.
+    if let Ok(mut udids) = IdeviceController::list_udids().await
+        && let Some(udid) = udids.drain(..).next()
+    {
+        return Some((
+            Arc::new(IdeviceController::new(udid)) as Arc<dyn DeviceController>,
+            false,
         ));
     }
-    if tunnel {
-        // Discover the phone's `_remotepairing._tcp` endpoint on the LAN (mDNS browse is
-        // blocking, so run it off the async runtime).
+    // 3. Wireless: discover the phone's `_remotepairing._tcp` endpoint via mDNS (requires a
+    //    prior bootstrap). Blocking browse runs off the async runtime.
+    if rp_path.exists() {
         let found = tokio::task::spawn_blocking(|| {
             discovery::discover_remotepairing(Duration::from_secs(3))
         })
         .await
         .ok()
         .flatten();
-        return found.map(|(ip, _port)| {
-            Arc::new(IdeviceController::new("overlay").with_overlay(ip, rp_path.to_path_buf()))
-                as Arc<dyn DeviceController>
-        });
+        if let Some((ip, _port)) = found {
+            let c =
+                Arc::new(IdeviceController::new("overlay").with_overlay(ip, rp_path.to_path_buf()));
+            return Some((c as Arc<dyn DeviceController>, true));
+        }
     }
-    // Legacy usbmux.
-    let udid = IdeviceController::list_udids()
-        .await
-        .ok()
-        .and_then(|mut v| v.drain(..).next());
-    udid.map(|u| Arc::new(IdeviceController::new(u)) as Arc<dyn DeviceController>)
+    None
+}
+
+/// Actionable remediation when we can't reach the iPhone. If the user has bootstrapped
+/// (so wireless was expected), point them at the common culprit — a network blocking
+/// device-to-device traffic — and the reliable fallback (USB). Otherwise it's first-time
+/// setup, which needs a cable anyway.
+fn unreachable_remediation(bootstrapped: bool) -> String {
+    if bootstrapped {
+        "Can't reach your iPhone. If you're on Wi-Fi, some networks (corporate or public) \
+         block connections between devices — connect your iPhone with a USB cable, or try \
+         another network."
+            .to_string()
+    } else {
+        "Connect your iPhone with a USB cable to finish setup.".to_string()
+    }
 }
 
 /// Publish the status report back to the controlling iOS app's Documents over the device
@@ -637,7 +695,7 @@ fn read_status(dir: &Path) -> Option<StatusReport> {
     serde_json::from_str(&s).ok()
 }
 
-fn disconnected_report(pro: bool) -> StatusReport {
+fn disconnected_report(pro: bool, remediation: String) -> StatusReport {
     StatusReport {
         version: CONTRACT_VERSION,
         agent_version: AGENT_VERSION.to_string(),
@@ -645,7 +703,7 @@ fn disconnected_report(pro: bool) -> StatusReport {
         device: None,
         session: SessionReport::Idle,
         provenance: contract::Provenance::Unknown,
-        remediation: "Connect your iPhone".to_string(),
+        remediation,
         error: None,
         pro,
         updated_at: contract::now_epoch(),
@@ -704,7 +762,7 @@ mod tests {
     async fn publishes_status_to_app_in_ios_mode() {
         // In IosApp mode the agent writes status.json back to the phone (§13e).
         let mock = MockDeviceController::ready();
-        let report = disconnected_report(true);
+        let report = disconnected_report(true, "disconnected".to_string());
         publish_status_to_app(&ios_source(), &mock, &report).await;
 
         let written = mock.written_app_files();
@@ -719,7 +777,12 @@ mod tests {
     async fn local_file_mode_does_not_publish_to_app() {
         // Local-file (CLI/testing) mode has no phone to publish to — must not write.
         let mock = MockDeviceController::ready();
-        publish_status_to_app(&DesiredSource::LocalFile, &mock, &disconnected_report(true)).await;
+        publish_status_to_app(
+            &DesiredSource::LocalFile,
+            &mock,
+            &disconnected_report(true, "disconnected".to_string()),
+        )
+        .await;
         assert!(mock.written_app_files().is_empty());
     }
 
@@ -728,7 +791,12 @@ mod tests {
         // An AFC write blip must be swallowed (best-effort), never propagate/panic.
         let mock =
             MockDeviceController::ready().with_write_app_file_err(DeviceError::Io("blip".into()));
-        publish_status_to_app(&ios_source(), &mock, &disconnected_report(true)).await;
+        publish_status_to_app(
+            &ios_source(),
+            &mock,
+            &disconnected_report(true, "disconnected".to_string()),
+        )
+        .await;
         assert!(mock.written_app_files().is_empty());
     }
 }
