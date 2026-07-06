@@ -100,7 +100,10 @@ fi
 # 4. Notarize + staple the .app — only if App Store Connect creds are set.
 #    (Notarize the app before wrapping it in the DMG, then also staple the DMG.)
 # ---------------------------------------------------------------------------
-notarize() {
+# Submit an artifact to the Apple notary service and wait for the verdict. notarytool
+# accepts a .zip / .dmg / .pkg upload envelope; STAPLING is done separately against the
+# real bundle (`stapler` cannot staple a .zip).
+notarize_submit() {
   local path="$1"
   echo "==> notarytool submit $(basename "$path")"
   xcrun notarytool submit "$path" \
@@ -108,16 +111,18 @@ notarize() {
     --key-id "$ASC_KEY_ID" \
     --issuer "$ASC_ISSUER_ID" \
     --wait
-  xcrun stapler staple "$path"
 }
 
 CAN_NOTARIZE=0
 if [[ -n "${SIGN_IDENTITY:-}" && -n "${ASC_API_KEY_PATH:-}" \
   && -n "${ASC_KEY_ID:-}" && -n "${ASC_ISSUER_ID:-}" ]]; then
   CAN_NOTARIZE=1
+  # Zip the .app only as the upload envelope, then staple the .app BUNDLE itself so the
+  # ticket travels with it inside the DMG.
   ZIP="$OUT_DIR/$BIN_NAME-notarize.zip"
   /usr/bin/ditto -c -k --keepParent "$APP" "$ZIP"
-  notarize "$ZIP"
+  notarize_submit "$ZIP"
+  xcrun stapler staple "$APP"
   rm -f "$ZIP"
 else
   echo "==> (notarization creds unset — skipping notarize/staple of the app)"
@@ -141,7 +146,9 @@ if [[ -n "${SIGN_IDENTITY:-}" ]]; then
   codesign --force --timestamp --sign "$SIGN_IDENTITY" "$DMG"
 fi
 if [[ "$CAN_NOTARIZE" == "1" ]]; then
-  notarize "$DMG"
+  # A DMG can be stapled directly (unlike a zip).
+  notarize_submit "$DMG"
+  xcrun stapler staple "$DMG"
 fi
 
 echo ""
