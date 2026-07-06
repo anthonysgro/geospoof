@@ -315,6 +315,10 @@ async fn run(dir: &Path) {
     // failure doesn't drop the hold (design §10i).
     let mut last_desired = DesiredState::disabled();
     let mut current: Option<(Arc<dyn DeviceController>, Reconciler)> = None;
+    // Last (session, connected, pro) we logged at info. The loop ticks ~1/s; logging
+    // every tick floods the log (92 MB after a day). Log at info only on a state change;
+    // everything else stays at debug (opt-in via RUST_LOG).
+    let mut last_logged: Option<(SessionReport, bool, bool)> = None;
     // Prevent idle sleep while actively spoofing so the Wi-Fi hold isn't dropped
     // (design §10h). Released automatically when idle/disconnected and on shutdown.
     let mut keep_awake = KeepAwake::new();
@@ -343,12 +347,18 @@ async fn run(dir: &Path) {
                 resolve_desired(&source, controller.as_ref(), dir, &last_desired).await;
             last_desired = desired.clone();
             let report = reconciler.reconcile(&desired, reached).await;
-            tracing::info!(
-                session = ?report.session,
-                connected = report.connected,
-                pro = report.pro,
-                "reconciled"
-            );
+            let summary = (report.session, report.connected, report.pro);
+            if last_logged != Some(summary) {
+                tracing::info!(
+                    session = ?report.session,
+                    connected = report.connected,
+                    pro = report.pro,
+                    "reconciled"
+                );
+                last_logged = Some(summary);
+            } else {
+                tracing::debug!(session = ?report.session, "reconciled (unchanged)");
+            }
             write_status(dir, &report);
             // Publish status back to the controlling iOS app (over the same transport) so
             // the phone can show state + remediation (design §13e).

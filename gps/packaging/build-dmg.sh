@@ -95,6 +95,28 @@ cp "$BIN_UNIVERSAL" "$APP/Contents/Helpers/$BIN_NAME"
 chmod +x "$APP/Contents/Helpers/$BIN_NAME"
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 
+# App icon (Finder / DMG). Generated from the committed 1024px logo into an .icns so it's
+# reproducible in CI. Absent logo just means the generic app icon (menu-bar glyph is an
+# SF Symbol either way, so the running app always looks right).
+ICON_SRC="$DESKTOP_DIR/geospoof-gps-logo.png"
+if [[ -f "$ICON_SRC" ]]; then
+  echo "==> Generating AppIcon.icns"
+  ICONSET="$OUT_DIR/AppIcon.iconset"
+  rm -rf "$ICONSET"; mkdir -p "$ICONSET"
+  for sz in 16 32 128 256 512; do
+    sips -z "$sz" "$sz" "$ICON_SRC" --out "$ICONSET/icon_${sz}x${sz}.png" >/dev/null
+    d=$((sz * 2))
+    sips -z "$d" "$d" "$ICON_SRC" --out "$ICONSET/icon_${sz}x${sz}@2x.png" >/dev/null
+  done
+  iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
+  rm -rf "$ICONSET"
+else
+  echo "==> (no logo at $ICON_SRC — skipping app icon)"
+fi
+
+# Menu-bar glyph is a state-aware SF Symbol rendered by the app (no asset needed) — a full
+# logo shrunk to menu-bar size looked muddy, so the logo is used only for the app icon.
+
 # ---------------------------------------------------------------------------
 # 3. Code sign (Developer ID + hardened runtime) — only if an identity is set.
 # ---------------------------------------------------------------------------

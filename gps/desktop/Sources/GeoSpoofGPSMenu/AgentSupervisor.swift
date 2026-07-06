@@ -10,6 +10,7 @@ final class AgentSupervisor {
     private static let iosAppBundleID = "com.moonloaf.geospoof"
 
     private var process: Process?
+    private var logHandle: FileHandle?
     private(set) var paused = false
     private var quitting = false
 
@@ -77,10 +78,17 @@ final class AgentSupervisor {
         var env = ProcessInfo.processInfo.environment
         env["GEOSPOOF_APP_BUNDLE_ID"] = Self.iosAppBundleID
 
+        let logHandle = openLogHandle()
+
         let p = Process()
         p.executableURL = url
         p.arguments = ["run"]
         p.environment = env
+        if let logHandle {
+            // The agent logs to stderr; capture both streams into the bounded log file.
+            p.standardOutput = logHandle
+            p.standardError = logHandle
+        }
         p.terminationHandler = { [weak self] _ in
             // Off-main; hop back and relaunch unless we stopped it on purpose.
             DispatchQueue.main.async {
@@ -96,10 +104,32 @@ final class AgentSupervisor {
         do {
             try p.run()
             process = p
+            self.logHandle = logHandle // retain for the process lifetime
             notify()
         } catch {
             NSLog("GeoSpoofGPSMenu: failed to launch agent: \(error.localizedDescription)")
         }
+    }
+
+    /// Open the agent log for appending, capping it across (re)launches so a chatty agent
+    /// never balloons the file (it grew to ~90 MB before this cap). Returns nil on failure
+    /// (the agent still runs; its output just isn't captured to the file).
+    private func openLogHandle() -> FileHandle? {
+        let fm = FileManager.default
+        let dir = fm.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Logs/GeoSpoof GPS")
+        try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        let url = dir.appendingPathComponent("agent.log")
+        if let attrs = try? fm.attributesOfItem(atPath: url.path),
+           let size = attrs[.size] as? UInt64, size > 1_000_000 {
+            try? Data().write(to: url) // truncate
+        }
+        if !fm.fileExists(atPath: url.path) {
+            fm.createFile(atPath: url.path, contents: nil)
+        }
+        let handle = try? FileHandle(forWritingTo: url)
+        _ = try? handle?.seekToEnd()
+        return handle
     }
 
     private func terminate(graceful: Bool, wait: Bool) {

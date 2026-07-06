@@ -37,20 +37,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                                  paused: supervisor.paused,
                                  status: status)
         if let button = statusItem.button {
-            if let img = NSImage(systemSymbolName: state.symbolName,
-                                 accessibilityDescription: "GeoSpoof GPS") {
-                img.isTemplate = true // monochrome; adapts to light/dark menu bar.
+            if let img = menuBarImage(for: state) {
                 button.image = img
                 button.title = ""
             } else {
-                // These are all base SF Symbols (present since macOS 11), so this branch
-                // shouldn't hit — but never leave the status item invisible/zero-width:
-                // fall back to a short text label so it's always visible and clickable.
+                // Never leave the status item invisible/zero-width: fall back to a short
+                // text label so it's always visible and clickable.
                 button.image = nil
                 button.title = "GPS"
             }
             button.toolTip = "GeoSpoof GPS — \(state.title)"
         }
+    }
+
+    /// The status-bar glyph: a state-aware SF Symbol (monochrome template that adapts to
+    /// the light/dark menu bar and reads cleanly at 18pt). The brand logo is used for the
+    /// app icon (Finder/DMG), not the menu bar — a full logo shrunk to menu-bar size looks
+    /// muddy and can't reflect state.
+    private func menuBarImage(for state: MenuState) -> NSImage? {
+        let img = NSImage(systemSymbolName: state.symbolName,
+                          accessibilityDescription: "GeoSpoof GPS")
+        img?.isTemplate = true
+        return img
     }
 
     // MARK: - Menu (rebuilt on open for freshest state)
