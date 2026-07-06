@@ -36,6 +36,13 @@ pub struct DesiredState {
     pub longitude: Option<f64>,
     #[serde(default)]
     pub provenance: Provenance,
+    /// The source-of-truth app's Pro entitlement (StoreKit), passed over the link so the
+    /// agent gates on the *app's* real entitlement rather than a local stub. `None` when
+    /// the writer doesn't send it (older app, or the local-file/CLI dev path) — the agent
+    /// then falls back to its env/file dev stub. This is the honest entitlement source:
+    /// the phone already knows (founder / lifetime / active subscription) via StoreKit.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pro: Option<bool>,
 }
 
 fn default_version() -> u32 {
@@ -51,6 +58,7 @@ impl DesiredState {
             latitude: None,
             longitude: None,
             provenance: Provenance::Unknown,
+            pro: None,
         }
     }
 
@@ -62,6 +70,7 @@ impl DesiredState {
             latitude: Some(latitude),
             longitude: Some(longitude),
             provenance,
+            pro: None,
         }
     }
 
@@ -195,6 +204,28 @@ mod tests {
         let json = r#"{"enabled":false}"#;
         let ds: DesiredState = serde_json::from_str(json).unwrap();
         assert_eq!(ds.provenance, Provenance::Unknown);
+    }
+
+    #[test]
+    fn pro_entitlement_round_trips_and_is_backward_compatible() {
+        // The app passes its StoreKit entitlement as `pro`.
+        let json = r#"{"enabled":true,"latitude":48.0,"longitude":2.0,"pro":true}"#;
+        let ds: DesiredState = serde_json::from_str(json).unwrap();
+        assert_eq!(ds.pro, Some(true));
+
+        let json = r#"{"enabled":false,"pro":false}"#;
+        let ds: DesiredState = serde_json::from_str(json).unwrap();
+        assert_eq!(ds.pro, Some(false));
+
+        // An older app that doesn't send `pro` decodes to None (agent falls back to its
+        // dev stub) — never an error.
+        let json = r#"{"enabled":false}"#;
+        let ds: DesiredState = serde_json::from_str(json).unwrap();
+        assert_eq!(ds.pro, None);
+
+        // We omit `pro` when None so we don't imply an entitlement we don't have.
+        let out = serde_json::to_string(&DesiredState::disabled()).unwrap();
+        assert!(!out.contains("\"pro\""));
     }
 
     #[test]

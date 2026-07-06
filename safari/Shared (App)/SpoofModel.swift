@@ -1531,10 +1531,17 @@ final class SpoofController: ObservableObject {
         // without explicit consent (Find My, every app is affected).
         let active = deviceGpsEnabled && location != nil
         let provenance = vpnSyncEnabled ? "vpn-sync" : "manual"
+        // Pass our StoreKit entitlement to the desktop agent as the source of truth for
+        // the GPS Pro gate (design §18) — the phone already knows (founder / lifetime /
+        // active subscription) via ProStore, bridged here as `cachedIsPro`. The agent
+        // reads this over the link instead of relying on a local dev stub, so a real Pro
+        // member is never wrongly told "GeoSpoof Pro required". Refreshed on every
+        // entitlement change (observeProEntitlement → writePending).
         var obj: [String: Any] = [
             "version": 1,
             "enabled": active,
             "provenance": provenance,
+            "pro": cachedIsPro,
         ]
         if active, let location {
             obj["latitude"] = location.latitude

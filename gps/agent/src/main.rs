@@ -250,26 +250,34 @@ impl DesiredSource {
 /// Resolve the desired state from the configured source. On any read/parse failure
 /// return the cached `last` state, so a transient source hiccup (e.g. an AFC blip while
 /// the phone is still reachable) never drops the hold.
+///
+/// Returns `(desired, reached)` where `reached` is whether we actually read the state
+/// from the device this tick — proof the device is reachable, used to report `connected`
+/// honestly (design §18). For the local-file dev path there's no device read, so
+/// `reached` is reported `true` (the tunnel `connected` logic that uses it doesn't apply
+/// to the usbmux/local path).
 async fn resolve_desired(
     source: &DesiredSource,
     controller: &dyn DeviceController,
     dir: &Path,
     last: &DesiredState,
-) -> DesiredState {
+) -> (DesiredState, bool) {
     match source {
-        DesiredSource::LocalFile => read_desired(dir),
+        DesiredSource::LocalFile => (read_desired(dir), true),
         DesiredSource::IosApp { bundle_id } => {
             match controller.read_app_file(bundle_id, "desired.json").await {
+                // A successful read means we reached the device (`reached = true`), even
+                // if the bytes don't parse — that's a content problem, not connectivity.
                 Ok(bytes) => match serde_json::from_slice::<DesiredState>(&bytes) {
-                    Ok(desired) => desired,
+                    Ok(desired) => (desired, true),
                     Err(e) => {
                         tracing::warn!("invalid desired.json from app: {e}");
-                        last.clone()
+                        (last.clone(), true)
                     }
                 },
                 Err(e) => {
                     tracing::debug!("app desired read failed ({e}); using cached desired");
-                    last.clone()
+                    (last.clone(), false)
                 }
             }
         }
@@ -327,17 +335,30 @@ async fn run(dir: &Path) {
         }
 
         if let Some((controller, reconciler)) = &current {
-            let desired = resolve_desired(&source, controller.as_ref(), dir, &last_desired).await;
+            let (desired, reached) =
+                resolve_desired(&source, controller.as_ref(), dir, &last_desired).await;
             last_desired = desired.clone();
-            let report = reconciler.reconcile(&desired).await;
-            tracing::info!(session = ?report.session, connected = report.connected, "reconciled");
+            let report = reconciler.reconcile(&desired, reached).await;
+            tracing::info!(
+                session = ?report.session,
+                connected = report.connected,
+                pro = report.pro,
+                "reconciled"
+            );
             write_status(dir, &report);
             // Publish status back to the controlling iOS app (over the same transport) so
             // the phone can show state + remediation (design §13e).
             publish_status_to_app(&source, controller.as_ref(), &report).await;
             keep_awake.set(should_keep_awake(report.session));
-            if !report.connected {
-                // Unreachable — drop so the next tick reconnects/rediscovers (§16).
+            // Reconnect (rediscover) only on a genuine reachability problem: either we
+            // failed to read the device this tick (`!reached` — it may have moved/left, so
+            // keep searching), or we're actively spoofing (Pro + a location) but the
+            // attempt didn't land. When the device IS reachable but we're idle by choice —
+            // not entitled, or spoofing toggled off in the app — `connected` is false yet
+            // nothing is wrong; reconnecting then would just thrash mDNS discovery. Keep
+            // the controller and idle quietly (design §18).
+            let lost_device = !reached || (report.pro && desired.enabled && !report.connected);
+            if lost_device {
                 tracing::info!("device unreachable; will reconnect");
                 current = None;
                 keep_awake.set(false);
@@ -546,7 +567,9 @@ mod tests {
         let json = br#"{"version":1,"enabled":true,"latitude":48.0,"longitude":2.0,"provenance":"vpn-sync"}"#.to_vec();
         let mock = MockDeviceController::ready().with_app_file(Ok(json));
         let last = DesiredState::disabled();
-        let desired = resolve_desired(&ios_source(), &mock, Path::new("/tmp"), &last).await;
+        let (desired, reached) =
+            resolve_desired(&ios_source(), &mock, Path::new("/tmp"), &last).await;
+        assert!(reached, "a successful read means the device was reached");
         assert!(desired.enabled);
         assert_eq!(desired.coordinate(), Some((48.0, 2.0)));
         assert_eq!(desired.provenance, contract::Provenance::VpnSync);
@@ -558,7 +581,9 @@ mod tests {
         let mock =
             MockDeviceController::ready().with_app_file(Err(DeviceError::Io("blip".to_string())));
         let last = DesiredState::vpn_sync(35.0, 139.0);
-        let desired = resolve_desired(&ios_source(), &mock, Path::new("/tmp"), &last).await;
+        let (desired, reached) =
+            resolve_desired(&ios_source(), &mock, Path::new("/tmp"), &last).await;
+        assert!(!reached, "a read failure means the device was not reached");
         assert_eq!(desired, last);
     }
 
@@ -566,7 +591,10 @@ mod tests {
     async fn ios_source_invalid_json_falls_back_to_cache() {
         let mock = MockDeviceController::ready().with_app_file(Ok(b"not json".to_vec()));
         let last = DesiredState::manual(1.0, 2.0);
-        let desired = resolve_desired(&ios_source(), &mock, Path::new("/tmp"), &last).await;
+        let (desired, reached) =
+            resolve_desired(&ios_source(), &mock, Path::new("/tmp"), &last).await;
+        // Bytes arrived (device reached) but didn't parse → keep cache, still reached.
+        assert!(reached);
         assert_eq!(desired, last);
     }
 

@@ -51,22 +51,37 @@ impl Reconciler {
     }
 
     /// Reconcile once against `desired`, returning the resulting status.
-    pub async fn reconcile(&self, desired: &DesiredState) -> StatusReport {
-        // Entitlement gate — no Pro, no spoofing.
-        if !self.pro {
+    ///
+    /// `reached` is whether the agent actually reached the device this tick (e.g. the
+    /// desired-state read over the tunnel succeeded). It lets us report `connected`
+    /// honestly even when there's nothing to spoof — distinguishing "found your iPhone
+    /// but you're not Pro / idle" (connected, not spoofing) from "can't reach the device"
+    /// (disconnected). See design §18.
+    pub async fn reconcile(&self, desired: &DesiredState, reached: bool) -> StatusReport {
+        // Entitlement is the *app's* StoreKit truth when it sends it (`desired.pro`);
+        // otherwise fall back to the local dev stub (env/file) captured at construction.
+        let pro = desired.pro.unwrap_or(self.pro);
+
+        // Entitlement gate — no Pro, no spoofing. But reaching a non-entitled device is a
+        // DISTINCT state from being disconnected, so report `connected` per `reached`
+        // (tunnel transport only; usbmux can't prove reachability without a status probe
+        // we skip here). This is what lets the UI show "upgrade to Pro" vs "can't connect".
+        if !pro {
             self.session.stop().await;
+            let connected = self.tunnel_mode && reached;
             return self.report(
-                false,
+                connected,
                 None,
                 Provenance::Unknown,
                 "GeoSpoof Pro required".to_string(),
                 None,
+                pro,
             );
         }
 
         // Tunnel transport: no usbmux status/identity available — try directly (§16).
         if self.tunnel_mode {
-            return self.reconcile_over_tunnel(desired).await;
+            return self.reconcile_over_tunnel(desired, reached, pro).await;
         }
 
         let (status, status_error) = match self.controller.status().await {
@@ -122,14 +137,27 @@ impl Reconciler {
         } else {
             Provenance::Unknown
         };
-        self.report(status.is_some(), device, provenance, remediation, error)
+        self.report(
+            status.is_some(),
+            device,
+            provenance,
+            remediation,
+            error,
+            pro,
+        )
     }
 
     /// Reconcile over the remote-pairing tunnel (§16): no usbmux, so we can't probe
     /// trust/Developer Mode/identity — we just attempt (a live tunnel is the readiness
     /// proof) and let a concrete failure surface the remediation. `connected` is derived
-    /// from the session/attempt rather than a usbmux status call.
-    async fn reconcile_over_tunnel(&self, desired: &DesiredState) -> StatusReport {
+    /// from the session/attempt (or a successful device read this tick, `reached`) rather
+    /// than a usbmux status call.
+    async fn reconcile_over_tunnel(
+        &self,
+        desired: &DesiredState,
+        reached: bool,
+        pro: bool,
+    ) -> StatusReport {
         let mut attempt_error: Option<DeviceError> = None;
 
         if desired.enabled {
@@ -147,8 +175,12 @@ impl Reconciler {
         }
 
         let spoofing = matches!(self.session.state(), SessionState::Spoofing(_));
-        // A live spoof, or a successful attempt this tick, proves we reached the device.
+        // A live spoof, a successful attempt this tick, or simply having reached the
+        // device (a successful desired read) all prove connectivity. The last one is what
+        // keeps an idle-but-reachable agent from looking "disconnected" (e.g. spoofing
+        // toggled off in the app) and thrashing reconnects.
         let connected = spoofing
+            || reached
             || (desired.enabled && desired.coordinate().is_some() && attempt_error.is_none());
         let remediation = match (&attempt_error, self.session.state()) {
             (Some(e), _) => remediation_for_error(e),
@@ -170,6 +202,7 @@ impl Reconciler {
             provenance,
             remediation,
             attempt_error.map(|e| e.to_string()),
+            pro,
         )
     }
 
@@ -198,6 +231,7 @@ impl Reconciler {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn report(
         &self,
         connected: bool,
@@ -205,6 +239,7 @@ impl Reconciler {
         provenance: Provenance,
         remediation: String,
         error: Option<String>,
+        pro: bool,
     ) -> StatusReport {
         StatusReport {
             version: CONTRACT_VERSION,
@@ -215,7 +250,7 @@ impl Reconciler {
             provenance,
             remediation,
             error,
-            pro: self.pro,
+            pro,
             updated_at: crate::contract::now_epoch(),
         }
     }
@@ -311,7 +346,7 @@ mod tests {
     async fn not_pro_refuses_and_reports() {
         let mock = Arc::new(MockDeviceController::ready());
         let r = Reconciler::new(mock, fast_config(), false);
-        let report = r.reconcile(&DesiredState::manual(48.0, 2.0)).await;
+        let report = r.reconcile(&DesiredState::manual(48.0, 2.0), true).await;
         assert!(!report.pro);
         assert_eq!(report.session, SessionReport::Idle);
         assert_eq!(report.remediation, "GeoSpoof Pro required");
@@ -321,7 +356,9 @@ mod tests {
     async fn enabled_on_ready_device_starts_spoofing() {
         let mock = Arc::new(MockDeviceController::ready());
         let r = Reconciler::new(mock, fast_config(), true);
-        let report = r.reconcile(&DesiredState::manual(48.8584, 2.2945)).await;
+        let report = r
+            .reconcile(&DesiredState::manual(48.8584, 2.2945), true)
+            .await;
         assert!(report.pro && report.connected);
         assert_eq!(report.session, SessionReport::Spoofing);
         assert!(report.device.is_some());
@@ -333,7 +370,9 @@ mod tests {
         // confirm "GPS synced to VPN".
         let mock = Arc::new(MockDeviceController::ready());
         let r = Reconciler::new(mock, fast_config(), true);
-        let report = r.reconcile(&DesiredState::vpn_sync(48.8584, 2.2945)).await;
+        let report = r
+            .reconcile(&DesiredState::vpn_sync(48.8584, 2.2945), true)
+            .await;
         assert_eq!(report.session, SessionReport::Spoofing);
         assert_eq!(report.provenance, Provenance::VpnSync);
     }
@@ -342,8 +381,8 @@ mod tests {
     async fn provenance_clears_to_unknown_when_disabled() {
         let mock = Arc::new(MockDeviceController::ready());
         let r = Reconciler::new(mock, fast_config(), true);
-        r.reconcile(&DesiredState::vpn_sync(48.0, 2.0)).await;
-        let report = r.reconcile(&DesiredState::disabled()).await;
+        r.reconcile(&DesiredState::vpn_sync(48.0, 2.0), true).await;
+        let report = r.reconcile(&DesiredState::disabled(), true).await;
         assert_eq!(report.session, SessionReport::Idle);
         assert_eq!(report.provenance, Provenance::Unknown);
     }
@@ -354,7 +393,7 @@ mod tests {
         // still attempt — the DDI flag is advisory, not a gate.
         let mock = Arc::new(MockDeviceController::ready().with_status(status(true, true, false)));
         let r = Reconciler::new(mock, fast_config(), true);
-        let report = r.reconcile(&DesiredState::manual(48.0, 2.0)).await;
+        let report = r.reconcile(&DesiredState::manual(48.0, 2.0), true).await;
         assert_eq!(report.session, SessionReport::Spoofing);
     }
 
@@ -367,7 +406,7 @@ mod tests {
                 .with_mount_results(vec![Ok(())]),
         );
         let r = Reconciler::new(mock.clone(), fast_config(), true);
-        let report = r.reconcile(&DesiredState::manual(48.0, 2.0)).await;
+        let report = r.reconcile(&DesiredState::manual(48.0, 2.0), true).await;
         assert_eq!(
             mock.mount_calls(),
             1,
@@ -382,7 +421,7 @@ mod tests {
         // (this is the re-mount that used to hang).
         let mock = Arc::new(MockDeviceController::ready());
         let r = Reconciler::new(mock.clone(), fast_config(), true);
-        let report = r.reconcile(&DesiredState::manual(48.0, 2.0)).await;
+        let report = r.reconcile(&DesiredState::manual(48.0, 2.0), true).await;
         assert_eq!(
             mock.mount_calls(),
             0,
@@ -397,7 +436,7 @@ mod tests {
             MockDeviceController::ready().with_set_default(Err(DeviceError::NotConnected)),
         );
         let r = Reconciler::new(mock.clone(), fast_config(), true);
-        let report = r.reconcile(&DesiredState::manual(48.0, 2.0)).await;
+        let report = r.reconcile(&DesiredState::manual(48.0, 2.0), true).await;
         assert_eq!(
             mock.mount_calls(),
             0,
@@ -416,7 +455,7 @@ mod tests {
                 .with_mount_results(vec![Err(DeviceError::MountFailed("device locked".into()))]),
         );
         let r = Reconciler::new(mock.clone(), fast_config(), true);
-        let report = r.reconcile(&DesiredState::manual(48.0, 2.0)).await;
+        let report = r.reconcile(&DesiredState::manual(48.0, 2.0), true).await;
         assert_eq!(mock.mount_calls(), 1);
         assert_eq!(report.session, SessionReport::Idle);
         assert!(report.remediation.contains("Unlock your iPhone"));
@@ -426,8 +465,8 @@ mod tests {
     async fn disabled_stops_spoofing() {
         let mock = Arc::new(MockDeviceController::ready());
         let r = Reconciler::new(mock, fast_config(), true);
-        r.reconcile(&DesiredState::manual(48.0, 2.0)).await;
-        let report = r.reconcile(&DesiredState::disabled()).await;
+        r.reconcile(&DesiredState::manual(48.0, 2.0), true).await;
+        let report = r.reconcile(&DesiredState::disabled(), true).await;
         assert_eq!(report.session, SessionReport::Idle);
     }
 
@@ -435,9 +474,59 @@ mod tests {
     async fn untrusted_device_does_not_start() {
         let mock = Arc::new(MockDeviceController::ready().with_status(status(false, false, false)));
         let r = Reconciler::new(mock, fast_config(), true);
-        let report = r.reconcile(&DesiredState::manual(48.0, 2.0)).await;
+        let report = r.reconcile(&DesiredState::manual(48.0, 2.0), true).await;
         assert_eq!(report.session, SessionReport::Idle);
         assert_eq!(report.remediation, "Tap Trust on your iPhone");
+    }
+
+    #[tokio::test]
+    async fn app_entitlement_overrides_stub_off() {
+        // Constructor stub says Pro, but the app (desired.pro) says NOT Pro — the app is
+        // the source of truth, so we refuse.
+        let mock = Arc::new(MockDeviceController::ready());
+        let r = Reconciler::new(mock, fast_config(), true);
+        let mut desired = DesiredState::manual(48.0, 2.0);
+        desired.pro = Some(false);
+        let report = r.reconcile(&desired, true).await;
+        assert!(!report.pro);
+        assert_eq!(report.session, SessionReport::Idle);
+        assert_eq!(report.remediation, "GeoSpoof Pro required");
+    }
+
+    #[tokio::test]
+    async fn app_entitlement_enables_when_stub_off() {
+        // Constructor stub says NOT Pro, but the app (desired.pro) says Pro — app wins.
+        let mock = Arc::new(MockDeviceController::ready());
+        let r = Reconciler::new(mock, fast_config(), false);
+        let mut desired = DesiredState::manual(48.0, 2.0);
+        desired.pro = Some(true);
+        let report = r.reconcile(&desired, true).await;
+        assert!(report.pro);
+        assert_eq!(report.session, SessionReport::Spoofing);
+    }
+
+    #[tokio::test]
+    async fn tunnel_idle_but_reached_reports_connected() {
+        // Spoofing off in the app, but we reached the device — must report connected, not
+        // a false "disconnected" that would thrash reconnects (design §18).
+        let mock = Arc::new(MockDeviceController::ready());
+        let r = Reconciler::new(mock, fast_config(), true).tunnel_mode(true);
+        let report = r.reconcile(&DesiredState::disabled(), true).await;
+        assert!(report.connected);
+        assert_eq!(report.session, SessionReport::Idle);
+    }
+
+    #[tokio::test]
+    async fn tunnel_not_pro_but_reached_is_connected_not_disconnected() {
+        // Found the device but the app says not Pro: connected=true + pro=false — the
+        // "upgrade to Pro" state, distinct from "can't reach the device".
+        let mock = Arc::new(MockDeviceController::ready());
+        let r = Reconciler::new(mock, fast_config(), true).tunnel_mode(true);
+        let mut desired = DesiredState::disabled();
+        desired.pro = Some(false);
+        let report = r.reconcile(&desired, true).await;
+        assert!(report.connected);
+        assert!(!report.pro);
     }
 
     #[test]
