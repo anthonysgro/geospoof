@@ -352,7 +352,7 @@ struct GpsView: View {
         } header: {
             Text("Set up")
         } footer: {
-            Text("1. Install GeoSpoof GPS on your Mac.\n2. Connect this iPhone with a cable and tap Trust.\n3. Follow the one-time setup in the Mac app.\nThen your chosen location will sync to your iPhone’s GPS.")
+            Text("1. Install GeoSpoof GPS on your Mac and open it.\n2. Connect this iPhone with a cable.\n3. Follow the setup steps in the Mac app (Trust · Developer Mode · Pair).\nThen your chosen location syncs to your iPhone’s GPS automatically — over Wi-Fi from then on.")
         }
     }
 

@@ -54,6 +54,7 @@ struct MenuState: Equatable {
         case searching // running, but no reachable device yet
         case connectedIdle
         case spoofing
+        case lost // was spoofing, lost the device mid-session
     }
 
     var kind: Kind
@@ -68,6 +69,7 @@ struct MenuState: Equatable {
         case .searching, .starting: return "location.slash"
         case .notPro: return "lock"
         case .paused: return "pause.circle"
+        case .lost: return "exclamationmark.triangle.fill"
         }
     }
 
@@ -84,6 +86,10 @@ struct MenuState: Equatable {
         if !s.pro {
             return MenuState(kind: .notPro, title: "Not GeoSpoof Pro",
                              detail: "Device GPS is a Pro feature")
+        }
+        if s.session == "lost" {
+            return MenuState(kind: .lost, title: "Lost connection",
+                             detail: "Reconnecting to your iPhone…")
         }
         if !s.connected {
             let d = s.remediation.isEmpty ? "Looking for your iPhone" : s.remediation

@@ -92,6 +92,14 @@ async fn main() {
             ),
             None => println!("no status yet (is the agent running?)"),
         },
+        "doctor" => {
+            init_logging();
+            doctor(&dir).await;
+        }
+        "mount-ddi" => {
+            init_logging();
+            mount_ddi_cmd().await;
+        }
         "install-service" => install_service(),
         "uninstall-service" => uninstall_service(),
         "service-status" => {
@@ -107,9 +115,88 @@ async fn main() {
         "help" if running_from_app_bundle() => install_service(),
         _ => {
             eprintln!(
-                "geospoof-gps-agent <run|bootstrap|set LAT LON|clear|status|\
+                "geospoof-gps-agent <run|bootstrap|doctor|mount-ddi|set LAT LON|clear|status|\
                  install-service|uninstall-service|service-status>"
             );
+        }
+    }
+}
+
+/// Print device setup health as JSON for the setup wizard (menu app). Probes over USB
+/// (usbmux/lockdown), so it reflects the plugged-in device; every field is the "not yet"
+/// state when nothing is connected. `ready` means all setup steps are complete.
+///
+/// Honest limits (idevice): Developer Mode isn't separately detectable yet (mirrors
+/// `trusted`), and DDI detection is unreliable on betas — so the wizard treats those two
+/// as best-effort hints and confirms by actually trying to spoof.
+async fn doctor(dir: &Path) {
+    // Testing hook: GEOSPOOF_DOCTOR_FAKE=<json object> makes doctor echo that state
+    // verbatim, so the setup wizard's every state (missing device, untrusted, no DDI, …)
+    // can be previewed without device gymnastics. Unset in normal use.
+    if let Ok(fake) = std::env::var("GEOSPOOF_DOCTOR_FAKE")
+        && !fake.trim().is_empty()
+    {
+        println!("{fake}");
+        return;
+    }
+
+    let bootstrapped = rp_pairing_path(dir).exists();
+    let mut usb_connected = false;
+    let mut device_name: Option<String> = None;
+    let mut trusted = false;
+    let mut developer_mode = false;
+    let mut ddi_mounted = false;
+
+    if let Ok(mut udids) = IdeviceController::list_udids().await
+        && let Some(udid) = udids.drain(..).next()
+    {
+        usb_connected = true;
+        let controller = IdeviceController::new(udid);
+        if let Ok(info) = controller.device_info().await {
+            device_name = Some(info.name);
+        }
+        if let Ok(status) = controller.status().await {
+            trusted = status.trusted;
+            developer_mode = status.developer_mode;
+            ddi_mounted = status.ddi_mounted;
+        }
+    }
+
+    let ready = trusted && developer_mode && ddi_mounted && bootstrapped;
+    let report = serde_json::json!({
+        "usb_connected": usb_connected,
+        "device_name": device_name,
+        "trusted": trusted,
+        "developer_mode": developer_mode,
+        "ddi_mounted": ddi_mounted,
+        "bootstrapped": bootstrapped,
+        "ready": ready,
+    });
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&report).unwrap_or_default()
+    );
+}
+
+/// Mount the Developer Disk Image over USB (the setup wizard's "Prepare developer image"
+/// button). Exits non-zero with a message on failure so the wizard can surface it.
+async fn mount_ddi_cmd() {
+    let udid = match IdeviceController::list_udids().await {
+        Ok(mut v) => v.drain(..).next(),
+        Err(e) => {
+            eprintln!("device discovery failed: {e}");
+            std::process::exit(1);
+        }
+    };
+    let Some(udid) = udid else {
+        eprintln!("no iPhone found over USB — connect it, unlock, and tap Trust");
+        std::process::exit(1);
+    };
+    match IdeviceController::new(udid).mount_ddi().await {
+        Ok(()) => println!("developer image mounted"),
+        Err(e) => {
+            eprintln!("mount failed: {e}");
+            std::process::exit(1);
         }
     }
 }

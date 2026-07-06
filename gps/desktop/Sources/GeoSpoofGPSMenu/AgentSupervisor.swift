@@ -20,18 +20,6 @@ final class AgentSupervisor {
 
     var isRunning: Bool { process?.isRunning ?? false }
 
-    /// Resolve the bundled agent binary: `…/GeoSpoof GPS.app/Contents/Helpers/…`. A
-    /// `GEOSPOOF_AGENT_PATH` override supports `swift run` during development.
-    private func agentURL() -> URL? {
-        if let override = ProcessInfo.processInfo.environment["GEOSPOOF_AGENT_PATH"],
-           !override.isEmpty {
-            return URL(fileURLWithPath: override)
-        }
-        let helper = Bundle.main.bundleURL
-            .appendingPathComponent("Contents/Helpers/geospoof-gps-agent")
-        return FileManager.default.isExecutableFile(atPath: helper.path) ? helper : nil
-    }
-
     func start() {
         paused = false
         spawn()
@@ -71,7 +59,7 @@ final class AgentSupervisor {
 
     private func spawn() {
         guard !paused, !quitting, process?.isRunning != true else { return }
-        guard let url = agentURL() else {
+        guard let url = AgentBinary.url() else {
             NSLog("GeoSpoofGPSMenu: agent binary not found; cannot start")
             return
         }
