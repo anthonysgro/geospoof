@@ -1,0 +1,107 @@
+name: Release GeoSpoof GPS DMG (manual)
+
+# Builds the GeoSpoof GPS desktop agent as a Developer-ID-signed, notarized macOS DMG
+# (design §13e / §17) and uploads it as a workflow artifact. Optionally attaches it to
+# an existing GitHub Release when `attach_to_tag` is provided.
+#
+# The heavy lifting lives in gps/packaging/build-dmg.sh; this workflow just provisions
+# the signing identity + App Store Connect key and calls it.
+#
+# Reuses the EXISTING secrets from release-macos-dmg.yml — nothing new to configure:
+#   MACOS_DEVELOPER_ID_P12 / MACOS_DEVELOPER_ID_P12_PASSWORD  Developer ID Application cert
+#   MACOS_KEYCHAIN_PASSWORD                                   temp keychain password
+#   ASC_API_KEY_P8                                            App Store Connect API key (.p8)
+#
+# The App Store Connect key id + issuer id are NOT secrets (they're identifiers, already
+# committed in safari/fastlane/Fastfile), so they default to the repo's known values
+# below. Override with optional ASC_KEY_ID / ASC_ISSUER_ID secrets if the key ever rotates.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version WITHOUT the v prefix (e.g. 0.1.0). Defaults to the workspace Cargo.toml version if empty."
+        required: false
+      attach_to_tag:
+        description: "Optional existing release tag (e.g. v0.1.0) to attach the DMG to. Leave empty to only upload an artifact."
+        required: false
+
+jobs:
+  build-dmg:
+    runs-on: macos-26
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Rust toolchain + Apple targets
+        run: |
+          rustup update stable
+          rustup default stable
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
+      - name: Select newest Xcode
+        run: |
+          LATEST=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          echo "Selecting $LATEST"
+          sudo xcode-select -s "$LATEST"
+          xcodebuild -version
+
+      - name: Import Developer ID certificate
+        env:
+          CERT_P12_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_P12 }}
+          CERT_PASSWORD: ${{ secrets.MACOS_DEVELOPER_ID_P12_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
+          echo "$CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$RUNNER_TEMP/cert.p12" -P "$CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/cert.p12"
+
+      - name: Resolve signing identity
+        run: |
+          IDENTITY=$(security find-identity -v -p codesigning | grep -m1 "Developer ID Application" | sed -E 's/.*"(.*)"/\1/')
+          if [ -z "$IDENTITY" ]; then echo "No Developer ID Application identity found" >&2; exit 1; fi
+          echo "SIGN_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+
+      - name: Place App Store Connect API key
+        env:
+          ASC_API_KEY_BASE64: ${{ secrets.ASC_API_KEY_P8 }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/asc"
+          echo "$ASC_API_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/asc/AuthKey.p8"
+          chmod 600 "$RUNNER_TEMP/asc/AuthKey.p8"
+          echo "ASC_API_KEY_PATH=$RUNNER_TEMP/asc/AuthKey.p8" >> "$GITHUB_ENV"
+
+      - name: Build, sign, notarize DMG
+        env:
+          VERSION: ${{ inputs.version }}
+          # Default to the repo's known ASC identifiers (safari/fastlane/Fastfile);
+          # override via secrets only if the key rotates.
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID || 'BXMZW4LMSP' }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID || '2a0c5baa-92b0-489c-b4c7-b1771b5e6df8' }}
+        run: bash gps/packaging/build-dmg.sh
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: geospoof-gps-dmg
+          path: gps/target/pkg/*.dmg
+          if-no-files-found: error
+
+      - name: Attach DMG to existing release
+        if: ${{ inputs.attach_to_tag != '' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.attach_to_tag }}
+          draft: false
+          files: gps/target/pkg/*.dmg
+
+      - name: Clean up keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/build.keychain-db" || true

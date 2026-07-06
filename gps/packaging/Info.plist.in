@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>GeoSpoof GPS</string>
+    <key>CFBundleDisplayName</key>
+    <string>GeoSpoof GPS</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.moonloaf.geospoof.gps</string>
+    <key>CFBundleExecutable</key>
+    <string>geospoof-gps-agent</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>__VERSION__</string>
+    <key>CFBundleVersion</key>
+    <string>__VERSION__</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+    <!-- Background agent: no Dock icon. The iOS app is the control surface; this app's
+         only role is to run the device-driving agent (design §13e). -->
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSHumanReadableCopyright</key>
+    <string>GeoSpoof</string>
+</dict>
+</plist>

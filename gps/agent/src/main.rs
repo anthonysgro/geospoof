@@ -8,6 +8,7 @@ mod contract;
 mod discovery;
 mod keepawake;
 mod reconcile;
+mod service;
 
 use std::net::IpAddr;
 use std::path::{Path, PathBuf};
@@ -91,10 +92,85 @@ async fn main() {
             ),
             None => println!("no status yet (is the agent running?)"),
         },
+        "install-service" => install_service(),
+        "uninstall-service" => uninstall_service(),
+        "service-status" => {
+            if service::is_installed() {
+                println!("GeoSpoof GPS background agent is installed and running");
+            } else {
+                println!("GeoSpoof GPS background agent is not installed");
+            }
+        }
+        // No subcommand: if we were double-clicked inside the .app bundle (LaunchServices
+        // runs the executable with no args), treat that as "set me up" — install + start
+        // the background agent and confirm with a dialog. Otherwise print usage.
+        "help" if running_from_app_bundle() => install_service(),
         _ => {
-            eprintln!("geospoof-gps-agent <run|bootstrap|set LAT LON|clear|status>");
+            eprintln!(
+                "geospoof-gps-agent <run|bootstrap|set LAT LON|clear|status|\
+                 install-service|uninstall-service|service-status>"
+            );
         }
     }
+}
+
+/// True when this executable lives inside a macOS `.app` bundle (…/GeoSpoof
+/// GPS.app/Contents/MacOS/…), i.e. it was launched from /Applications rather than run
+/// directly from a build dir.
+fn running_from_app_bundle() -> bool {
+    std::env::current_exe()
+        .ok()
+        .and_then(|p| p.to_str().map(|s| s.contains(".app/Contents/MacOS/")))
+        .unwrap_or(false)
+}
+
+/// Install + start the per-user LaunchAgent, reporting the outcome. When launched
+/// interactively from the bundle, also surface a native dialog so the user gets
+/// feedback (a headless agent shows nothing otherwise).
+fn install_service() {
+    match service::install() {
+        Ok(path) => {
+            println!(
+                "GeoSpoof GPS is now running in the background (LaunchAgent: {}).",
+                path.display()
+            );
+            notify_dialog(
+                "GeoSpoof GPS is now running in the background.\n\nControl it from the GeoSpoof app on your iPhone.",
+            );
+        }
+        Err(e) => {
+            eprintln!("could not install the background agent: {e}");
+            notify_dialog(&format!("GeoSpoof GPS could not start:\n{e}"));
+        }
+    }
+}
+
+fn uninstall_service() {
+    match service::uninstall() {
+        Ok(()) => println!("GeoSpoof GPS background agent removed."),
+        Err(e) => eprintln!("could not remove the background agent: {e}"),
+    }
+}
+
+/// Best-effort native dialog (only meaningful when launched from the bundle). Never
+/// fatal — a missing/blocked `osascript` just means no popup.
+fn notify_dialog(message: &str) {
+    if !running_from_app_bundle() {
+        return;
+    }
+    let script = format!(
+        "display dialog {} with title \"GeoSpoof GPS\" buttons {{\"OK\"}} default button \"OK\"",
+        applescript_quote(message)
+    );
+    let _ = std::process::Command::new("osascript")
+        .arg("-e")
+        .arg(script)
+        .status();
+}
+
+/// Quote a string as an AppleScript string literal (escape `\` and `"`).
+fn applescript_quote(s: &str) -> String {
+    format!("\"{}\"", s.replace('\\', "\\\\").replace('"', "\\\""))
 }
 
 /// One-time USB setup for the overlay (remote) transport (§10j): mint + persist the
