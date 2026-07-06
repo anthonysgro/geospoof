@@ -4,7 +4,18 @@
 [advisories]
 # Fail the build on known vulnerabilities (RustSec). Add IDs here only with a
 # documented rationale + tracking link if a fix is genuinely unavailable.
-ignore = []
+ignore = [
+    # RUSTSEC-2023-0071 — "Marvin Attack" RSA timing sidechannel in the `rsa` crate.
+    # No fixed version exists (upstream constant-time work in progress:
+    # https://github.com/RustCrypto/RSA/issues/626). `rsa` is a HARD transitive dep of
+    # idevice (device pairing/lockdown crypto) — `cargo tree -i rsa` shows idevice 0.1.64
+    # as the sole source, so it can't be dropped without dropping the engine. Not
+    # exploitable in our threat model: RSA is used only for LOCAL device pairing over USB
+    # / a private overlay, and the advisory's own workaround notes local use on a
+    # non-compromised machine is fine (no attacker-observable decryption timing). Mirrored
+    # in .cargo/audit.toml. Revisit when idevice ships the constant-time `rsa` fix.
+    "RUSTSEC-2023-0071",
+]
 
 [licenses]
 # Our own code is source-available under FSL-1.1-MIT, but every third-party dependency
