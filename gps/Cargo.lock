@@ -823,7 +823,7 @@ dependencies = [
 
 [[package]]
 name = "geospoof-gps-agent"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "app-store-server-library",
  "chrono",
@@ -838,7 +838,7 @@ dependencies = [
 
 [[package]]
 name = "geospoof-gps-core"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "async-trait",
  "idevice",
@@ -850,7 +850,7 @@ dependencies = [
 
 [[package]]
 name = "geospoof-gps-ffi"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "cbindgen",
  "geospoof-gps-core",
