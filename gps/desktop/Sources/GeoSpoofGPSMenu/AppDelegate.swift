@@ -66,6 +66,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             // light mode, white in dark), matching every other menu-bar icon. State is
             // conveyed by the menu header + tooltip, not by recoloring the icon.
             button.contentTintColor = nil
+            // Dim the glyph when we're not actively spoofing (idle / paused / searching /
+            // not set up) so an active spoof reads as the "lit up" state at a glance —
+            // opacity only, so the icon's shape and adaptive color stay the same.
+            button.alphaValue = (state.kind == .spoofing) ? 1.0 : 0.5
             button.toolTip = "GeoSpoof GPS — \(state.title)"
         }
     }
