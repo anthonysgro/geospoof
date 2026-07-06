@@ -545,13 +545,13 @@ async fn shutdown_signal() {
 /// Choose and construct a controller for this connection attempt, returning it plus whether
 /// it uses the (wireless) tunnel transport. `None` when no device is reachable this tick.
 ///
-/// Preference order (USB-first): an explicit `GEOSPOOF_OVERLAY_HOST` override → a
-/// physically-connected USB device (usbmux) → the mDNS-discovered LAN device over the
-/// remote-pairing tunnel. USB is preferred because a cable is the most reliable path and
-/// works on networks that block mDNS / device-to-device traffic (corporate/public Wi-Fi) —
-/// so a bootstrapped user who plugs in is served over USB rather than being stuck on a
-/// blocked wireless path (the §16 "prefer tunnel" note is about *wireless* usbmux not
-/// re-arming, which doesn't apply to a physical cable).
+/// Preference order (cable-first): an explicit `GEOSPOOF_OVERLAY_HOST` override → a device
+/// on a USB **cable** (usbmux, `Connection::Usb` only) → the mDNS-discovered LAN device
+/// over the remote-pairing tunnel. A cable is preferred because it's the most reliable path
+/// and works on networks that block mDNS / device-to-device traffic (corporate/public
+/// Wi-Fi). Wireless deliberately uses the tunnel, NOT usbmux Wi-Fi sync — the tunnel
+/// survives the phone roaming better (§16). So a cabled user is served over USB, and a
+/// wireless user over the tunnel, never the flaky usbmux-over-Wi-Fi path.
 async fn connect_controller(
     overlay_host: Option<IpAddr>,
     rp_path: &Path,
@@ -561,8 +561,11 @@ async fn connect_controller(
         let c = Arc::new(IdeviceController::new("overlay").with_overlay(ip, rp_path.to_path_buf()));
         return Some((c as Arc<dyn DeviceController>, true));
     }
-    // 2. USB-first: a physically-connected device is the most reliable transport.
-    if let Ok(mut udids) = IdeviceController::list_udids().await
+    // 2. Cable-first: a device on a USB *cable* is the most reliable transport and works on
+    //    networks that block device-to-device traffic. Wi-Fi-sync usbmux is intentionally
+    //    excluded (cable only) — wireless goes through the tunnel below, which survives the
+    //    phone roaming better than usbmux Wi-Fi sync (§16).
+    if let Ok(mut udids) = IdeviceController::list_cable_udids().await
         && let Some(udid) = udids.drain(..).next()
     {
         return Some((

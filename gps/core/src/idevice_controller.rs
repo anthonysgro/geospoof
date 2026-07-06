@@ -181,6 +181,26 @@ impl IdeviceController {
             .collect())
     }
 
+    /// UDIDs of devices connected by a USB **cable** only (excludes usbmuxd Wi-Fi-sync,
+    /// `Connection::Network`). Used to prefer a physical cable over the wireless path: a
+    /// cable is the most reliable transport and works on networks that block
+    /// device-to-device traffic. Wireless is intentionally left to the RemotePairing
+    /// tunnel, which survives the phone roaming better than usbmux Wi-Fi sync (§16).
+    pub async fn list_cable_udids() -> Result<Vec<String>, DeviceError> {
+        let mut usbmuxd = UsbmuxdConnection::default()
+            .await
+            .map_err(|e| DeviceError::Io(e.to_string()))?;
+        let devices = usbmuxd
+            .get_devices()
+            .await
+            .map_err(|e| DeviceError::Io(e.to_string()))?;
+        Ok(devices
+            .into_iter()
+            .filter(|d| matches!(d.connection_type, Connection::Usb))
+            .map(|d| d.udid)
+            .collect())
+    }
+
     async fn provider(&self) -> Result<Box<dyn IdeviceProvider>, DeviceError> {
         build_provider(&self.udid).await
     }
