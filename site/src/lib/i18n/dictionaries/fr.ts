@@ -55,6 +55,7 @@ export const fr: Dictionary = {
       blog: "Blog",
       support: "Assistance",
       about: "À propos",
+      feedback: "Votre avis",
       privacy: "Politique de confidentialité",
       terms: "Conditions d’utilisation",
       github: "GitHub",
@@ -1091,5 +1092,23 @@ export const fr: Dictionary = {
       howToDesc:
         "Masquez la barre de notification que Chrome affiche lorsque la simulation au niveau du moteur de GeoSpoof est active, en lançant Chrome avec l’option {flag}.",
     },
+  },
+  feedback: {
+    meta: {
+      title: "Envoyer un avis — GeoSpoof",
+      description:
+        "Une idée, un bug à signaler ou juste envie de dire bonjour ? Envoyez votre avis à l'équipe GeoSpoof — nous lisons chaque message.",
+      ogTitle: "Envoyer un avis à GeoSpoof",
+    },
+    heading: "Merci d'utiliser GeoSpoof",
+    subhead:
+      "GeoSpoof est développé par une toute petite équipe, et chaque message aide vraiment à façonner la suite. Qu'il s'agisse d'un bug, d'une idée de fonctionnalité ou d'un simple bonjour, nous serions ravis de vous lire.",
+    emailLabel: "Envoyez votre avis à",
+    emailHint:
+      "Copiez l'adresse ci-dessous ou touchez-la pour ouvrir votre application de messagerie.",
+    copy: "Copier",
+    copied: "✓ Copié",
+    copyAria: "Copier l'adresse e-mail pour les avis",
+    closing: "Merci de nous aider à améliorer GeoSpoof.",
   },
 }

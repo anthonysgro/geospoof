@@ -52,6 +52,7 @@ function getFooterGroups(t: Dictionary): Array<FooterGroup> {
       title: t.footer.groups.company,
       links: [
         { label: t.footer.links.about, href: "/about" },
+        { label: t.footer.links.feedback, href: "/feedback" },
         { label: t.footer.links.privacy, href: "/privacy" },
         { label: t.footer.links.terms, href: "/terms" },
         {

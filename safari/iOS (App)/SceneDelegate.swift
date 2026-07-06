@@ -256,6 +256,8 @@ struct GpsView: View {
     /// Support contact for founders whose grant can't be auto-verified on this device
     /// (see `founderSupportLink`). TODO: confirm final URL.
     private let supportURL = URL(string: "https://www.geospoof.com/support")!
+    /// Feedback for this (experimental) feature.
+    private let feedbackURL = URL(string: "https://www.geospoof.com/feedback")!
     private let refreshTimer = Timer.publish(every: 3, on: .main, in: .common).autoconnect()
 
     var body: some View {
@@ -315,6 +317,15 @@ struct GpsView: View {
             }
             .font(.subheadline)
             .foregroundColor(.secondary)
+
+            Link(destination: feedbackURL) {
+                Label("Give Feedback", systemImage: "text.bubble")
+            }
+            Link(destination: supportURL) {
+                Label("Contact Support", systemImage: "questionmark.circle")
+            }
+        } footer: {
+            Text("Device GPS is new — tell us what’s working or what isn’t.")
         }
     }
 
@@ -596,6 +607,9 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    Link(destination: URL(string: "https://www.geospoof.com/feedback?utm_source=ios-app&utm_medium=app&utm_campaign=feedback")!) {
+                        Label("Give Feedback", systemImage: "text.bubble")
+                    }
                     Link(destination: URL(string: "https://www.geospoof.com/support?utm_source=ios-app&utm_medium=app&utm_campaign=support")!) {
                         Label("Help & Support", systemImage: "questionmark.circle")
                     }

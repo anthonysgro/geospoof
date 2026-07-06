@@ -55,6 +55,7 @@ export const de: Dictionary = {
       blog: "Blog",
       support: "Support",
       about: "Über uns",
+      feedback: "Feedback",
       privacy: "Datenschutzerklärung",
       terms: "Nutzungsbedingungen",
       github: "GitHub",
@@ -1091,5 +1092,23 @@ export const de: Dictionary = {
       howToDesc:
         "Blende die Benachrichtigungsleiste aus, die Chrome zeigt, solange die Fälschung auf Engine-Ebene von GeoSpoof aktiv ist, indem du Chrome mit dem Parameter {flag} startest.",
     },
+  },
+  feedback: {
+    meta: {
+      title: "Feedback senden — GeoSpoof",
+      description:
+        "Hast du eine Idee, einen Fehler zu melden oder möchtest einfach Hallo sagen? Sende dein Feedback an das GeoSpoof-Team — wir lesen jede Nachricht.",
+      ogTitle: "Feedback an GeoSpoof senden",
+    },
+    heading: "Danke, dass du GeoSpoof nutzt",
+    subhead:
+      "GeoSpoof wird von einem winzigen Team entwickelt, und jede Nachricht hilft wirklich dabei, die weitere Richtung zu bestimmen. Ob Fehler, Funktionsidee oder einfach ein Hallo — wir freuen uns, von dir zu hören.",
+    emailLabel: "Sende dein Feedback an",
+    emailHint:
+      "Kopiere die Adresse unten oder tippe darauf, um deine E-Mail-App zu öffnen.",
+    copy: "Kopieren",
+    copied: "✓ Kopiert",
+    copyAria: "E-Mail-Adresse für Feedback kopieren",
+    closing: "Danke, dass du hilfst, GeoSpoof besser zu machen.",
   },
 }

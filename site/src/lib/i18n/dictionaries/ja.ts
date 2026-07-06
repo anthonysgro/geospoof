@@ -55,6 +55,7 @@ export const ja: Dictionary = {
       blog: "ブログ",
       support: "サポート",
       about: "概要",
+      feedback: "フィードバック",
       privacy: "プライバシーポリシー",
       terms: "利用規約",
       github: "GitHub",
@@ -1071,5 +1072,23 @@ export const ja: Dictionary = {
       howToDesc:
         "Chrome を {flag} フラグ付きで起動して、GeoSpoof のエンジンレベルの偽装が有効な間に Chrome が表示する通知バーを非表示にします。",
     },
+  },
+  feedback: {
+    meta: {
+      title: "フィードバックを送る — GeoSpoof",
+      description:
+        "アイデアや不具合のご報告、ちょっとした挨拶でも大歓迎です。GeoSpoof チームにフィードバックをお送りください。すべてのメッセージに目を通しています。",
+      ogTitle: "GeoSpoof にフィードバックを送る",
+    },
+    heading: "GeoSpoof をご利用いただきありがとうございます",
+    subhead:
+      "GeoSpoof はごく小さなチームで開発しており、いただくメッセージの一つひとつが今後の方向性を決める大きな助けになります。不具合でも、機能のご提案でも、ちょっとした挨拶でも、ぜひお聞かせください。",
+    emailLabel: "フィードバックの送り先",
+    emailHint:
+      "下のアドレスをコピーするか、タップしてメールアプリを開いてください。",
+    copy: "コピー",
+    copied: "✓ コピーしました",
+    copyAria: "フィードバック用のメールアドレスをコピー",
+    closing: "GeoSpoof をより良くするためのご協力に感謝します。",
   },
 }

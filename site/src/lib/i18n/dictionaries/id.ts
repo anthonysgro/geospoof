@@ -55,6 +55,7 @@ export const id: Dictionary = {
       blog: "Blog",
       support: "Dukungan",
       about: "Tentang",
+      feedback: "Masukan",
       privacy: "Kebijakan Privasi",
       terms: "Ketentuan Layanan",
       github: "GitHub",
@@ -1079,5 +1080,23 @@ export const id: Dictionary = {
       howToDesc:
         "Sembunyikan bilah notifikasi yang ditampilkan Chrome saat Pemalsuan Tingkat Mesin GeoSpoof aktif, dengan menjalankan Chrome menggunakan flag {flag}.",
     },
+  },
+  feedback: {
+    meta: {
+      title: "Kirim Masukan — GeoSpoof",
+      description:
+        "Punya ide, bug untuk dilaporkan, atau sekadar ingin menyapa? Kirim masukan Anda ke tim GeoSpoof — kami membaca setiap pesan.",
+      ogTitle: "Kirim masukan ke GeoSpoof",
+    },
+    heading: "Terima kasih telah menggunakan GeoSpoof",
+    subhead:
+      "GeoSpoof dibuat oleh tim yang sangat kecil, dan setiap pesan benar-benar membantu menentukan arah pengembangannya. Baik itu bug, ide fitur, atau sekadar sapaan — kami senang mendengar dari Anda.",
+    emailLabel: "Kirim masukan Anda ke",
+    emailHint:
+      "Salin alamat di bawah, atau ketuk untuk membuka aplikasi email Anda.",
+    copy: "Salin",
+    copied: "✓ Tersalin",
+    copyAria: "Salin alamat email untuk masukan",
+    closing: "Terima kasih telah membantu membuat GeoSpoof lebih baik.",
   },
 }

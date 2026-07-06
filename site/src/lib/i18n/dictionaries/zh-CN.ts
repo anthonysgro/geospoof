@@ -68,6 +68,7 @@ export const zhCN: Dictionary = {
       blog: "博客",
       support: "支持",
       about: "关于",
+      feedback: "反馈",
       privacy: "隐私政策",
       terms: "服务条款",
       github: "GitHub",
@@ -1048,5 +1049,22 @@ export const zhCN: Dictionary = {
       howToDesc:
         "通过用 {flag} 标志启动 Chrome，隐藏 GeoSpoof 引擎级伪装开启时 Chrome 显示的通知栏。",
     },
+  },
+  feedback: {
+    meta: {
+      title: "发送反馈 — GeoSpoof",
+      description:
+        "有想法、发现了问题，或者只是想打个招呼？把反馈发送给 GeoSpoof 团队——我们会阅读每一条消息。",
+      ogTitle: "向 GeoSpoof 发送反馈",
+    },
+    heading: "感谢你使用 GeoSpoof",
+    subhead:
+      "GeoSpoof 由一个很小的团队打造，你的每一条消息都真切地影响着它未来的方向。无论是问题反馈、功能建议，还是只想问声好，我们都很想听到你的声音。",
+    emailLabel: "把反馈发送到",
+    emailHint: "复制下面的地址，或点击它打开你的邮件应用。",
+    copy: "复制",
+    copied: "✓ 已复制",
+    copyAria: "复制反馈邮箱地址",
+    closing: "感谢你帮助 GeoSpoof 变得更好。",
   },
 }

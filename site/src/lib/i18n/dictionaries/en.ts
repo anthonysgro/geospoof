@@ -55,6 +55,7 @@ export const en = {
       blog: "Blog",
       support: "Support",
       about: "About",
+      feedback: "Feedback",
       privacy: "Privacy Policy",
       terms: "Terms of Service",
       github: "GitHub",
@@ -1074,6 +1075,23 @@ export const en = {
       howToDesc:
         "Hide the notification bar Chrome shows while GeoSpoof's Engine-level Spoofing is on, by launching Chrome with the {flag} flag.",
     },
+  },
+  feedback: {
+    meta: {
+      title: "Send Feedback — GeoSpoof",
+      description:
+        "Have an idea, a bug to report, or just want to say hi? Send your feedback to the GeoSpoof team — we read every message.",
+      ogTitle: "Send feedback to GeoSpoof",
+    },
+    heading: "Thank you for using GeoSpoof",
+    subhead:
+      "GeoSpoof is built by a tiny team, and every message genuinely helps shape where it goes next. Whether it's a bug, a feature idea, or just a hello — we'd love to hear from you.",
+    emailLabel: "Send your feedback to",
+    emailHint: "Copy the address below, or tap it to open your email app.",
+    copy: "Copy",
+    copied: "✓ Copied",
+    copyAria: "Copy the feedback email address",
+    closing: "Thank you for helping make GeoSpoof better.",
   },
 } as const
 

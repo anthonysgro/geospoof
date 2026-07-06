@@ -18,6 +18,7 @@ import { Route as Char123LocaleChar125TermsRouteImport } from './routes/{-$local
 import { Route as Char123LocaleChar125SupportRouteImport } from './routes/{-$locale}.support'
 import { Route as Char123LocaleChar125SpoofTimezoneRouteImport } from './routes/{-$locale}.spoof-timezone'
 import { Route as Char123LocaleChar125PrivacyRouteImport } from './routes/{-$locale}.privacy'
+import { Route as Char123LocaleChar125FeedbackRouteImport } from './routes/{-$locale}.feedback'
 import { Route as Char123LocaleChar125EngineLevelSpoofingRouteImport } from './routes/{-$locale}.engine-level-spoofing'
 import { Route as Char123LocaleChar125AboutRouteImport } from './routes/{-$locale}.about'
 import { Route as Char123LocaleChar125SpoofLocationIndexRouteImport } from './routes/{-$locale}.spoof-location.index'
@@ -77,6 +78,12 @@ const Char123LocaleChar125PrivacyRoute =
   Char123LocaleChar125PrivacyRouteImport.update({
     id: '/privacy',
     path: '/privacy',
+    getParentRoute: () => Char123LocaleChar125Route,
+  } as any)
+const Char123LocaleChar125FeedbackRoute =
+  Char123LocaleChar125FeedbackRouteImport.update({
+    id: '/feedback',
+    path: '/feedback',
     getParentRoute: () => Char123LocaleChar125Route,
   } as any)
 const Char123LocaleChar125EngineLevelSpoofingRoute =
@@ -139,6 +146,7 @@ export interface FileRoutesByFullPath {
   '/{-$locale}': typeof Char123LocaleChar125RouteWithChildren
   '/{-$locale}/about': typeof Char123LocaleChar125AboutRoute
   '/{-$locale}/engine-level-spoofing': typeof Char123LocaleChar125EngineLevelSpoofingRoute
+  '/{-$locale}/feedback': typeof Char123LocaleChar125FeedbackRoute
   '/{-$locale}/privacy': typeof Char123LocaleChar125PrivacyRoute
   '/{-$locale}/spoof-timezone': typeof Char123LocaleChar125SpoofTimezoneRoute
   '/{-$locale}/support': typeof Char123LocaleChar125SupportRoute
@@ -158,6 +166,7 @@ export interface FileRoutesByTo {
   '/test': typeof TestRoute
   '/{-$locale}/about': typeof Char123LocaleChar125AboutRoute
   '/{-$locale}/engine-level-spoofing': typeof Char123LocaleChar125EngineLevelSpoofingRoute
+  '/{-$locale}/feedback': typeof Char123LocaleChar125FeedbackRoute
   '/{-$locale}/privacy': typeof Char123LocaleChar125PrivacyRoute
   '/{-$locale}/spoof-timezone': typeof Char123LocaleChar125SpoofTimezoneRoute
   '/{-$locale}/support': typeof Char123LocaleChar125SupportRoute
@@ -179,6 +188,7 @@ export interface FileRoutesById {
   '/{-$locale}': typeof Char123LocaleChar125RouteWithChildren
   '/{-$locale}/about': typeof Char123LocaleChar125AboutRoute
   '/{-$locale}/engine-level-spoofing': typeof Char123LocaleChar125EngineLevelSpoofingRoute
+  '/{-$locale}/feedback': typeof Char123LocaleChar125FeedbackRoute
   '/{-$locale}/privacy': typeof Char123LocaleChar125PrivacyRoute
   '/{-$locale}/spoof-timezone': typeof Char123LocaleChar125SpoofTimezoneRoute
   '/{-$locale}/support': typeof Char123LocaleChar125SupportRoute
@@ -201,6 +211,7 @@ export interface FileRouteTypes {
     | '/{-$locale}'
     | '/{-$locale}/about'
     | '/{-$locale}/engine-level-spoofing'
+    | '/{-$locale}/feedback'
     | '/{-$locale}/privacy'
     | '/{-$locale}/spoof-timezone'
     | '/{-$locale}/support'
@@ -220,6 +231,7 @@ export interface FileRouteTypes {
     | '/test'
     | '/{-$locale}/about'
     | '/{-$locale}/engine-level-spoofing'
+    | '/{-$locale}/feedback'
     | '/{-$locale}/privacy'
     | '/{-$locale}/spoof-timezone'
     | '/{-$locale}/support'
@@ -240,6 +252,7 @@ export interface FileRouteTypes {
     | '/{-$locale}'
     | '/{-$locale}/about'
     | '/{-$locale}/engine-level-spoofing'
+    | '/{-$locale}/feedback'
     | '/{-$locale}/privacy'
     | '/{-$locale}/spoof-timezone'
     | '/{-$locale}/support'
@@ -326,6 +339,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char123LocaleChar125PrivacyRouteImport
       parentRoute: typeof Char123LocaleChar125Route
     }
+    '/{-$locale}/feedback': {
+      id: '/{-$locale}/feedback'
+      path: '/feedback'
+      fullPath: '/{-$locale}/feedback'
+      preLoaderRoute: typeof Char123LocaleChar125FeedbackRouteImport
+      parentRoute: typeof Char123LocaleChar125Route
+    }
     '/{-$locale}/engine-level-spoofing': {
       id: '/{-$locale}/engine-level-spoofing'
       path: '/engine-level-spoofing'
@@ -395,6 +415,7 @@ declare module '@tanstack/react-router' {
 interface Char123LocaleChar125RouteChildren {
   Char123LocaleChar125AboutRoute: typeof Char123LocaleChar125AboutRoute
   Char123LocaleChar125EngineLevelSpoofingRoute: typeof Char123LocaleChar125EngineLevelSpoofingRoute
+  Char123LocaleChar125FeedbackRoute: typeof Char123LocaleChar125FeedbackRoute
   Char123LocaleChar125PrivacyRoute: typeof Char123LocaleChar125PrivacyRoute
   Char123LocaleChar125SpoofTimezoneRoute: typeof Char123LocaleChar125SpoofTimezoneRoute
   Char123LocaleChar125SupportRoute: typeof Char123LocaleChar125SupportRoute
@@ -415,6 +436,7 @@ const Char123LocaleChar125RouteChildren: Char123LocaleChar125RouteChildren = {
   Char123LocaleChar125AboutRoute: Char123LocaleChar125AboutRoute,
   Char123LocaleChar125EngineLevelSpoofingRoute:
     Char123LocaleChar125EngineLevelSpoofingRoute,
+  Char123LocaleChar125FeedbackRoute: Char123LocaleChar125FeedbackRoute,
   Char123LocaleChar125PrivacyRoute: Char123LocaleChar125PrivacyRoute,
   Char123LocaleChar125SpoofTimezoneRoute:
     Char123LocaleChar125SpoofTimezoneRoute,

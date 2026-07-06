@@ -55,6 +55,7 @@ export const es: Dictionary = {
       blog: "Blog",
       support: "Soporte",
       about: "Acerca de",
+      feedback: "Comentarios",
       privacy: "Política de privacidad",
       terms: "Términos del servicio",
       github: "GitHub",
@@ -1086,5 +1087,23 @@ export const es: Dictionary = {
       howToDesc:
         "Oculta la barra de notificación que Chrome muestra mientras el Falseo a nivel de motor de GeoSpoof está activado, iniciando Chrome con el parámetro {flag}.",
     },
+  },
+  feedback: {
+    meta: {
+      title: "Enviar comentarios — GeoSpoof",
+      description:
+        "¿Tienes una idea, un error que reportar o solo quieres saludar? Envía tus comentarios al equipo de GeoSpoof: leemos cada mensaje.",
+      ogTitle: "Envía comentarios a GeoSpoof",
+    },
+    heading: "Gracias por usar GeoSpoof",
+    subhead:
+      "GeoSpoof lo desarrolla un equipo diminuto, y cada mensaje ayuda de verdad a decidir hacia dónde va. Ya sea un error, una idea de función o simplemente un hola, nos encantaría saber de ti.",
+    emailLabel: "Envía tus comentarios a",
+    emailHint:
+      "Copia la dirección de abajo o tócala para abrir tu app de correo.",
+    copy: "Copiar",
+    copied: "✓ Copiado",
+    copyAria: "Copiar la dirección de correo para comentarios",
+    closing: "Gracias por ayudar a mejorar GeoSpoof.",
   },
 }

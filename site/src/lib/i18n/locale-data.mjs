@@ -40,7 +40,12 @@ export const localeList = [
   { code: "fr", name: "Français", shortLabel: "FR", ogLocale: "fr_FR" },
   { code: "id", name: "Bahasa Indonesia", shortLabel: "ID", ogLocale: "id_ID" },
   { code: "ja", name: "日本語", shortLabel: "日本語", ogLocale: "ja_JP" },
-  { code: "pt-BR", name: "Português (BR)", shortLabel: "PT", ogLocale: "pt_BR" },
+  {
+    code: "pt-BR",
+    name: "Português (BR)",
+    shortLabel: "PT",
+    ogLocale: "pt_BR",
+  },
   { code: "ru", name: "Русский", shortLabel: "RU", ogLocale: "ru_RU" },
   { code: "zh-CN", name: "简体中文", shortLabel: "中文", ogLocale: "zh_CN" },
 ]
@@ -62,6 +67,7 @@ export const localizedBasePaths = [
   "/",
   "/about",
   "/support",
+  "/feedback",
   "/verify",
   "/privacy",
   "/terms",
