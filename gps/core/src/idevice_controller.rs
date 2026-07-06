@@ -7,7 +7,8 @@
 //! Known follow-ups (need hardware to finalize):
 //! - `set`/`clear` open a fresh CoreDeviceProxy software tunnel per call. Correct but
 //!   heavy for the 5s hold re-apply — hold a persistent session later (perf).
-//! - `status.developer_mode` is best-effort (proper detection needs the amfi service).
+//! - `status.developer_mode` is read from the amfi service; when amfi is unreachable we
+//!   fall back to the optimistic `trusted` value for the reconcile gate (try-first).
 //! - `mount_ddi` cannot auto-source the personalized DDI yet (design §8 / task 16).
 //! - `next_event` (usbmux hotplug streaming) is not implemented yet.
 
@@ -18,6 +19,7 @@ use std::time::Duration;
 use async_trait::async_trait;
 
 use idevice::afc::opcode::AfcFopenMode;
+use idevice::amfi::AmfiClient;
 use idevice::core_device_proxy::CoreDeviceProxy;
 use idevice::dvt::location_simulation::LocationSimulationClient;
 use idevice::dvt::remote_server::RemoteServerClient;
@@ -253,12 +255,26 @@ impl IdeviceController {
             Err(_) => false,
         };
         let ddi_mounted = self.ddi_mounted().await;
+        // Real Developer Mode status from amfi. When amfi can't answer (unreachable /
+        // older iOS), fall back to the optimistic `trusted` value so the reconcile gate
+        // still tries (try-first; a real attempt is the ground truth). The setup doctor
+        // uses `developer_mode_status` directly and shows "unknown" instead of guessing.
+        let developer_mode = self.developer_mode_status().await.unwrap_or(trusted);
         Ok(DeviceStatus {
             trusted,
-            // TODO(task follow-up): detect Developer Mode via the amfi service.
-            developer_mode: trusted,
+            developer_mode,
             ddi_mounted,
         })
+    }
+
+    /// Definitive Developer Mode state from the amfi service (`com.apple.amfi.lockdown`):
+    /// `Some(true)` / `Some(false)` when the device answers, `None` when we can't reach
+    /// amfi (service unavailable on older iOS, or a transient failure) — the caller
+    /// decides how to treat "unknown" (the doctor surfaces it; the gate stays optimistic).
+    pub async fn developer_mode_status(&self) -> Option<bool> {
+        let provider = self.provider().await.ok()?;
+        let mut amfi = AmfiClient::connect(&*provider).await.ok()?;
+        amfi.get_developer_mode_status().await.ok()
     }
 
     /// Open a DVT location-simulation session and run one op.

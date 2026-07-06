@@ -21,8 +21,22 @@ struct DoctorReport: Codable, Equatable {
     var usbConnected: Bool
     var deviceName: String?
     var trusted: Bool
-    var developerMode: Bool
-    var ddiMounted: Bool
+    /// Tri-state: `true`/`false` when confirmed via amfi, `nil` when the agent couldn't
+    /// determine it (amfi unreachable / older iOS) — the wizard asks the user to confirm.
+    var developerMode: Bool?
+    /// `true` when a mounted developer image was detected; `nil` when unconfirmed (a
+    /// negative isn't reliable, so the agent never reports a confident `false`).
+    var ddiMounted: Bool?
+    /// Whether a developer image is *available to mount at all* (the user's folder if it
+    /// holds one, else Xcode's copy) — distinct from `ddiMounted` (currently on the device).
+    var ddiSourceFound: Bool
+    /// Where that image would come from: `"xcode"`, `"custom"`, or `nil` if none found.
+    var ddiSource: String?
+    /// The actual folder the image loads from (Xcode's path or the custom one) — shown to
+    /// the user and used as the folder picker's starting location.
+    var ddiSourceDir: String?
+    /// The user's chosen custom folder, if one is set (shown so they can change/clear it).
+    var ddiCustomDir: String?
     var bootstrapped: Bool
     var ready: Bool
 
@@ -32,6 +46,10 @@ struct DoctorReport: Codable, Equatable {
         case trusted
         case developerMode = "developer_mode"
         case ddiMounted = "ddi_mounted"
+        case ddiSourceFound = "ddi_source_found"
+        case ddiSource = "ddi_source"
+        case ddiSourceDir = "ddi_source_dir"
+        case ddiCustomDir = "ddi_custom_dir"
         case bootstrapped
         case ready
     }
@@ -79,5 +97,18 @@ enum AgentControl {
         let result = run(["doctor"])
         guard let data = result.stdout.data(using: .utf8) else { return nil }
         return try? JSONDecoder().decode(DoctorReport.self, from: data)
+    }
+
+    /// Persist the user's chosen custom developer-image folder, so every mount path
+    /// (including the background agent) uses it. Returns the agent's outcome.
+    @discardableResult
+    static func setDDIDir(_ path: String) -> Output {
+        run(["set-ddi-dir", path])
+    }
+
+    /// Clear the custom folder and revert to Xcode's on-disk copy.
+    @discardableResult
+    static func clearDDIDir() -> Output {
+        run(["clear-ddi-dir"])
     }
 }

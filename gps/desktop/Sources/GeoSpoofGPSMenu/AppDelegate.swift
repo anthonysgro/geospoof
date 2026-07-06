@@ -62,32 +62,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 button.image = nil
                 button.title = "GPS"
             }
-            // Health at a glance: tint the (template) glyph by state — green when
-            // spoofing, amber when it needs attention, red when a session dropped, and
-            // the default menu-bar color otherwise. nil = adopt the menu bar's own color.
-            button.contentTintColor = Self.tintColor(for: state.kind)
+            // Standard menu-bar look: a template glyph adopts the bar's own color (black in
+            // light mode, white in dark), matching every other menu-bar icon. State is
+            // conveyed by the menu header + tooltip, not by recoloring the icon.
+            button.contentTintColor = nil
             button.toolTip = "GeoSpoof GPS — \(state.title)"
         }
     }
 
-    /// The status-bar glyph: a state-aware SF Symbol (monochrome template that adapts to
-    /// the light/dark menu bar and reads cleanly at 18pt). The brand logo is used for the
-    /// app icon (Finder/DMG), not the menu bar — a full logo shrunk to menu-bar size looks
-    /// muddy and can't reflect state.
-    /// Health tint for the menu-bar glyph. `nil` = the menu bar's default color (adapts to
-    /// light/dark) for neutral states, so we only add color when it carries meaning.
-    private static func tintColor(for kind: MenuState.Kind) -> NSColor? {
-        switch kind {
-        case .spoofing: return .systemGreen // all good, actively spoofing
-        case .searching: return .systemOrange // running but can't reach the phone
-        case .lost: return .systemRed // dropped mid-session
-        case .connectedIdle, .starting, .notPro, .paused: return nil // neutral
-        }
-    }
-
+    /// The status-bar glyph: one fixed SF Symbol, sized to match the system menu-bar icons
+    /// (~18pt) and rendered as a monochrome template so it adopts the bar's own color
+    /// (black in light mode, white in dark) exactly like every other menu-bar icon. The
+    /// brand logo is the app icon (Finder/DMG), not this — a full logo shrunk to menu-bar
+    /// size looks muddy.
     private func menuBarImage(for state: MenuState) -> NSImage? {
+        let config = NSImage.SymbolConfiguration(pointSize: 18, weight: .regular)
         let img = NSImage(systemSymbolName: state.symbolName,
-                          accessibilityDescription: "GeoSpoof GPS")
+                          accessibilityDescription: "GeoSpoof GPS")?
+            .withSymbolConfiguration(config)
         img?.isTemplate = true
         return img
     }

@@ -18,13 +18,38 @@
 #
 # Optional:
 #   VERSION            override the version string (default: workspace Cargo.toml).
+#   DEBUG=1            build a LOCAL-ONLY debug agent (see below). Default: release.
 #
+# DEBUG=1 builds the agent (and menu app) in the debug profile. This matters for the Pro
+# entitlement gate: the RELEASE agent grants Pro only from an Apple-signed StoreKit proof
+# it can verify against the Production/Sandbox environments, and ignores the unsigned
+# `pro` flag. A DEBUG agent additionally accepts the Xcode/LocalTesting StoreKit
+# environments and falls back to the unsigned `pro` bool — so it pairs with a DEBUG build
+# of the iOS app running Xcode's local .storekit config (whose AppTransaction is signed by
+# Xcode's test cert, not Apple's, and so can't verify against the production chain). Use it
+# to test the GPS flow end-to-end without a real signed purchase. NEVER distribute a debug
+# build — it can be unlocked by an unsigned flag.
 set -euo pipefail
 
 APP_NAME="GeoSpoof GPS"
 BUNDLE_ID="com.moonloaf.geospoof.gps"
 BIN_NAME="geospoof-gps-agent"      # Rust agent (embedded helper)
 MENU_NAME="GeoSpoofGPSMenu"        # Swift menu-bar app (CFBundleExecutable)
+
+# Build profile. Release is the shippable artifact; DEBUG=1 is a local-only test build
+# whose agent honors debug/unsigned entitlements (see the header note above).
+if [[ "${DEBUG:-0}" == "1" ]]; then
+  CARGO_PROFILE_FLAG=""      # cargo's debug profile is the no-flag default
+  CARGO_PROFILE_DIR="debug"
+  SWIFT_CONFIG="debug"
+  DMG_SUFFIX="-debug"
+  echo "==> DEBUG build — local testing ONLY (honors debug/unsigned entitlements; DO NOT distribute)"
+else
+  CARGO_PROFILE_FLAG="--release"
+  CARGO_PROFILE_DIR="release"
+  SWIFT_CONFIG="release"
+  DMG_SUFFIX=""
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GPS_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -47,8 +72,8 @@ mkdir -p "$OUT_DIR"
 # ---------------------------------------------------------------------------
 build_target() {
   local triple="$1"
-  echo "==> cargo build --release --target $triple"
-  cargo build --release --target "$triple" -p "$BIN_NAME" --manifest-path "$GPS_ROOT/Cargo.toml"
+  echo "==> cargo build ${CARGO_PROFILE_FLAG:-(debug)} --target $triple"
+  cargo build $CARGO_PROFILE_FLAG --target "$triple" -p "$BIN_NAME" --manifest-path "$GPS_ROOT/Cargo.toml"
 }
 
 INSTALLED_TARGETS="$(rustup target list --installed 2>/dev/null || true)"
@@ -60,20 +85,20 @@ if grep -q '^aarch64-apple-darwin$' <<<"$INSTALLED_TARGETS" \
   build_target x86_64-apple-darwin
   echo "==> lipo -> universal binary"
   lipo -create \
-    "$TARGET_DIR/aarch64-apple-darwin/release/$BIN_NAME" \
-    "$TARGET_DIR/x86_64-apple-darwin/release/$BIN_NAME" \
+    "$TARGET_DIR/aarch64-apple-darwin/$CARGO_PROFILE_DIR/$BIN_NAME" \
+    "$TARGET_DIR/x86_64-apple-darwin/$CARGO_PROFILE_DIR/$BIN_NAME" \
     -output "$BIN_UNIVERSAL"
 else
   echo "==> (only host arch installed; building a single-arch agent binary)"
-  cargo build --release -p "$BIN_NAME" --manifest-path "$GPS_ROOT/Cargo.toml"
-  cp "$TARGET_DIR/release/$BIN_NAME" "$BIN_UNIVERSAL"
+  cargo build $CARGO_PROFILE_FLAG -p "$BIN_NAME" --manifest-path "$GPS_ROOT/Cargo.toml"
+  cp "$TARGET_DIR/$CARGO_PROFILE_DIR/$BIN_NAME" "$BIN_UNIVERSAL"
 fi
 lipo -info "$BIN_UNIVERSAL" || true
 
 # Build the Swift menu-bar app (universal — the Swift toolchain ships both arch SDKs).
-echo "==> swift build (menu-bar app, universal)"
-swift build --package-path "$DESKTOP_DIR" -c release --arch arm64 --arch x86_64
-MENU_BIN="$(swift build --package-path "$DESKTOP_DIR" -c release --arch arm64 --arch x86_64 --show-bin-path)/$MENU_NAME"
+echo "==> swift build (menu-bar app, universal, $SWIFT_CONFIG)"
+swift build --package-path "$DESKTOP_DIR" -c "$SWIFT_CONFIG" --arch arm64 --arch x86_64
+MENU_BIN="$(swift build --package-path "$DESKTOP_DIR" -c "$SWIFT_CONFIG" --arch arm64 --arch x86_64 --show-bin-path)/$MENU_NAME"
 if [[ ! -x "$MENU_BIN" ]]; then
   echo "error: menu-bar binary not found at $MENU_BIN" >&2
   exit 1
@@ -172,7 +197,7 @@ fi
 # ---------------------------------------------------------------------------
 # 5. Build the DMG (drag-to-Applications layout).
 # ---------------------------------------------------------------------------
-DMG="$OUT_DIR/GeoSpoof-GPS-v$VERSION.dmg"
+DMG="$OUT_DIR/GeoSpoof-GPS-v$VERSION$DMG_SUFFIX.dmg"
 STAGE="$OUT_DIR/dmg-stage"
 echo "==> Building DMG"
 rm -rf "$STAGE"

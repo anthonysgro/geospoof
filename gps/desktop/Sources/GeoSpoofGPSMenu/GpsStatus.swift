@@ -61,17 +61,17 @@ struct MenuState: Equatable {
     var title: String
     var detail: String?
 
-    /// SF Symbol for the status-bar glyph (template image; adapts to light/dark).
-    var symbolName: String {
-        switch kind {
-        case .spoofing: return "location.fill"
-        case .connectedIdle: return "location"
-        case .searching, .starting: return "location.slash"
-        case .notPro: return "lock"
-        case .paused: return "pause.circle"
-        case .lost: return "exclamationmark.triangle.fill"
-        }
-    }
+    /// The status-bar glyph. We keep ONE distinctive, recognizable symbol for every state
+    /// and convey state through color instead (see `AppDelegate.tintColor`) rather than
+    /// swapping the shape — a menu-bar icon should stay identifiable at a glance. Template
+    /// image, so it adapts to the light/dark menu bar.
+    ///
+    /// To try a different icon, change this one string. Good candidates (all legible at
+    /// menu-bar size): "paperplane.circle", "sensor.radiowaves.left.and.right",
+    /// "location.viewfinder", "dot.radiowaves.left.and.right".
+    static let menuBarSymbol = "paperplane.circle"
+
+    var symbolName: String { Self.menuBarSymbol }
 
     /// Derive the menu state from whether the agent is running/paused and the latest
     /// status report (nil / stale ⇒ we haven't heard from a reachable device).

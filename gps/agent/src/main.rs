@@ -104,8 +104,15 @@ async fn main() {
         }
         "mount-ddi" => {
             init_logging();
-            mount_ddi_cmd().await;
+            // Optional folder holding the DDI (clean trio or Xcode Restore bundle). Falls
+            // back to the persisted folder / GEOSPOOF_DDI_DIR, then Xcode's on-disk copy.
+            let dir_arg = args.get(2).map(PathBuf::from);
+            mount_ddi_cmd(dir_arg, &dir).await;
         }
+        // Persist / clear the custom developer-image folder the setup wizard chose, so the
+        // background agent uses it across restarts. `set-ddi-dir <path>` / `clear-ddi-dir`.
+        "set-ddi-dir" => set_ddi_dir(&dir, args.get(2).map(String::as_str)),
+        "clear-ddi-dir" => set_ddi_dir(&dir, None),
         "install-service" => install_service(),
         "uninstall-service" => uninstall_service(),
         "service-status" => {
@@ -121,7 +128,8 @@ async fn main() {
         "help" if running_from_app_bundle() => install_service(),
         _ => {
             eprintln!(
-                "geospoof-gps-agent <run|bootstrap|doctor|mount-ddi|set LAT LON|clear|status|\
+                "geospoof-gps-agent <run|bootstrap|doctor|mount-ddi [DDI_DIR]|\
+                 set-ddi-dir PATH|clear-ddi-dir|set LAT LON|clear|status|\
                  install-service|uninstall-service|service-status>"
             );
         }
@@ -130,11 +138,16 @@ async fn main() {
 
 /// Print device setup health as JSON for the setup wizard (menu app). Probes over USB
 /// (usbmux/lockdown), so it reflects the plugged-in device; every field is the "not yet"
-/// state when nothing is connected. `ready` means all setup steps are complete.
+/// state when nothing is connected. `ready` means all setup steps are confirmed.
 ///
-/// Honest limits (idevice): Developer Mode isn't separately detectable yet (mirrors
-/// `trusted`), and DDI detection is unreliable on betas — so the wizard treats those two
-/// as best-effort hints and confirms by actually trying to spoof.
+/// Honesty model — a field is only `true` when we actually confirmed it:
+/// - `trusted` / `usb_connected` / `bootstrapped`: reliably detectable booleans.
+/// - `developer_mode`: read from the amfi service — `true`/`false` when the device
+///   answers, `null` when amfi can't be reached (older iOS / transient), i.e. "unknown".
+/// - `ddi_mounted`: a positive detection is trustworthy (`true`); a negative is unreliable
+///   (esp. on betas), so we report `null` (unconfirmed) rather than a confident `false`.
+///
+/// The wizard renders `null` as "we couldn't verify — please confirm", never a green check.
 async fn doctor(dir: &Path) {
     // Testing hook: GEOSPOOF_DOCTOR_FAKE=<json object> makes doctor echo that state
     // verbatim, so the setup wizard's every state (missing device, untrusted, no DDI, …)
@@ -150,8 +163,10 @@ async fn doctor(dir: &Path) {
     let mut usb_connected = false;
     let mut device_name: Option<String> = None;
     let mut trusted = false;
-    let mut developer_mode = false;
-    let mut ddi_mounted = false;
+    // Tri-state: Some(true)/Some(false) = confirmed, None = couldn't determine ("unknown").
+    let mut developer_mode: Option<bool> = None;
+    // Some(true) = confirmed mounted; None = unconfirmed (we never assert a confident "no").
+    let mut ddi_mounted: Option<bool> = None;
 
     if let Ok(mut udids) = IdeviceController::list_udids().await
         && let Some(udid) = udids.drain(..).next()
@@ -163,18 +178,50 @@ async fn doctor(dir: &Path) {
         }
         if let Ok(status) = controller.status().await {
             trusted = status.trusted;
-            developer_mode = status.developer_mode;
-            ddi_mounted = status.ddi_mounted;
+            // Positive DDI detection is trustworthy; a negative is unreliable, so map it to
+            // "unconfirmed" (None) rather than a confident false.
+            ddi_mounted = if status.ddi_mounted { Some(true) } else { None };
         }
+        // Real Developer Mode from amfi (None when the service can't answer).
+        developer_mode = controller.developer_mode_status().await;
     }
 
-    let ready = trusted && developer_mode && ddi_mounted && bootstrapped;
+    // Whether a DDI is *available to mount* (distinct from currently mounted): the user's
+    // persisted folder if it holds one, else Xcode's copy. Lets the wizard show "Prepare"
+    // vs "Install Xcode / choose a folder", and which source it'd use.
+    let custom_ddi = resolve_ddi_dir(dir);
+    let ddi_source = geospoof_gps_core::ddi::locate_ddi_source(custom_ddi.as_deref());
+    let (ddi_source_found, ddi_source_kind) = match &ddi_source {
+        Some(s) => (
+            true,
+            match s.kind {
+                geospoof_gps_core::ddi::DdiSourceKind::Xcode => Some("xcode"),
+                geospoof_gps_core::ddi::DdiSourceKind::Custom => Some("custom"),
+            },
+        ),
+        None => (false, None),
+    };
+    // The actual folder the image would load from (Xcode's path or the custom one), so the
+    // UI can show the current location and open the folder picker there.
+    let ddi_source_dir = ddi_source.as_ref().and_then(|s| s.dir.to_str());
+
+    // "Ready" requires everything we can confirm to be confirmed — an unknown never
+    // counts as ready, so we never claim setup is complete when we couldn't verify it.
+    let ready = usb_connected
+        && trusted
+        && bootstrapped
+        && developer_mode == Some(true)
+        && ddi_mounted == Some(true);
     let report = serde_json::json!({
         "usb_connected": usb_connected,
         "device_name": device_name,
         "trusted": trusted,
-        "developer_mode": developer_mode,
-        "ddi_mounted": ddi_mounted,
+        "developer_mode": developer_mode, // true | false | null(unknown)
+        "ddi_mounted": ddi_mounted,        // true | null(unconfirmed)
+        "ddi_source_found": ddi_source_found, // is a DDI available to mount at all
+        "ddi_source": ddi_source_kind,        // "xcode" | "custom" | null
+        "ddi_source_dir": ddi_source_dir,     // the folder it loads from (xcode or custom)
+        "ddi_custom_dir": custom_ddi.as_ref().and_then(|p| p.to_str()), // user's folder, if set
         "bootstrapped": bootstrapped,
         "ready": ready,
     });
@@ -186,7 +233,7 @@ async fn doctor(dir: &Path) {
 
 /// Mount the Developer Disk Image over USB (the setup wizard's "Prepare developer image"
 /// button). Exits non-zero with a message on failure so the wizard can surface it.
-async fn mount_ddi_cmd() {
+async fn mount_ddi_cmd(dir_arg: Option<PathBuf>, data_dir: &Path) {
     let udid = match IdeviceController::list_udids().await {
         Ok(mut v) => v.drain(..).next(),
         Err(e) => {
@@ -198,7 +245,11 @@ async fn mount_ddi_cmd() {
         eprintln!("no iPhone found over USB — connect it, unlock, and tap Trust");
         std::process::exit(1);
     };
-    match IdeviceController::new(udid).mount_ddi().await {
+    // DDI source precedence: explicit arg → persisted folder / GEOSPOOF_DDI_DIR → Xcode's
+    // on-disk copy (resolved in core::ddi::locate_ddi when no folder is provided).
+    let ddi_dir = dir_arg.or_else(|| resolve_ddi_dir(data_dir));
+    let controller = apply_ddi(IdeviceController::new(udid), ddi_dir.as_deref());
+    match controller.mount_ddi().await {
         Ok(()) => println!("developer image mounted"),
         Err(e) => {
             eprintln!("mount failed: {e}");
@@ -310,7 +361,19 @@ async fn bootstrap(dir: &Path) {
 fn init_logging() {
     // Local, PII-redacted logging (task 14b). We log states/errors only — never
     // device serials, phone numbers, or coordinates.
-    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    //
+    // Default verbosity is `info` in release. In a DEBUG build we raise our own crate to
+    // `debug` by default so the entitlement / reconcile decision logs (why Pro was granted
+    // or denied, per StoreKit environment) land in agent.log with no RUST_LOG needed —
+    // baked into the binary so it can't be lost by launchd not forwarding an env var. An
+    // explicit RUST_LOG still overrides.
+    let default_filter = if cfg!(debug_assertions) {
+        "info,geospoof_gps_agent=debug"
+    } else {
+        "info"
+    };
+    let filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(default_filter));
     tracing_subscriber::fmt()
         .with_env_filter(filter)
         .with_writer(std::io::stderr)
@@ -396,14 +459,19 @@ async fn run(dir: &Path) {
     let overlay_host: Option<IpAddr> = std::env::var("GEOSPOOF_OVERLAY_HOST")
         .ok()
         .and_then(|s| s.trim().parse().ok());
+    // Custom developer-image folder (persisted wizard choice / env), applied to every
+    // controller we build so on-demand DDI mounts use it instead of Xcode's copy.
+    let ddi_dir = resolve_ddi_dir(dir);
     // Transport is now chosen per-connection (USB-first, wireless fallback) in
     // `connect_controller`, not fixed up front — a plugged-in cable is the most reliable
     // path and works on networks that block mDNS / device-to-device traffic.
     tracing::info!(
         pro,
+        build = build_profile(),
         source = %source.describe(),
         bootstrapped = rp_path.exists(),
         overlay_override = overlay_host.is_some(),
+        ddi_override = ddi_dir.is_some(),
         "agent started (transport: USB-first, wireless fallback)"
     );
 
@@ -429,7 +497,8 @@ async fn run(dir: &Path) {
         // rediscovers the device (possibly at a new IP) after a drop — the key to
         // resuming when the phone rejoins Wi-Fi.
         if current.is_none()
-            && let Some((controller, is_tunnel)) = connect_controller(overlay_host, &rp_path).await
+            && let Some((controller, is_tunnel)) =
+                connect_controller(overlay_host, &rp_path, ddi_dir.as_deref()).await
         {
             tracing::info!(
                 transport = if is_tunnel { "tunnel" } else { "usbmux" },
@@ -555,10 +624,14 @@ async fn shutdown_signal() {
 async fn connect_controller(
     overlay_host: Option<IpAddr>,
     rp_path: &Path,
+    ddi_dir: Option<&Path>,
 ) -> Option<(Arc<dyn DeviceController>, bool)> {
     // 1. Explicit overlay host (manual / testing override).
     if let Some(ip) = overlay_host {
-        let c = Arc::new(IdeviceController::new("overlay").with_overlay(ip, rp_path.to_path_buf()));
+        let c = Arc::new(apply_ddi(
+            IdeviceController::new("overlay").with_overlay(ip, rp_path.to_path_buf()),
+            ddi_dir,
+        ));
         return Some((c as Arc<dyn DeviceController>, true));
     }
     // 2. Cable-first: a device on a USB *cable* is the most reliable transport and works on
@@ -569,7 +642,7 @@ async fn connect_controller(
         && let Some(udid) = udids.drain(..).next()
     {
         return Some((
-            Arc::new(IdeviceController::new(udid)) as Arc<dyn DeviceController>,
+            Arc::new(apply_ddi(IdeviceController::new(udid), ddi_dir)) as Arc<dyn DeviceController>,
             false,
         ));
     }
@@ -583,8 +656,10 @@ async fn connect_controller(
         .ok()
         .flatten();
         if let Some((ip, _port)) = found {
-            let c =
-                Arc::new(IdeviceController::new("overlay").with_overlay(ip, rp_path.to_path_buf()));
+            let c = Arc::new(apply_ddi(
+                IdeviceController::new("overlay").with_overlay(ip, rp_path.to_path_buf()),
+                ddi_dir,
+            ));
             return Some((c as Arc<dyn DeviceController>, true));
         }
     }
@@ -627,6 +702,91 @@ async fn publish_status_to_app(
             }
         }
         Err(e) => tracing::warn!("cannot serialize status for app: {e}"),
+    }
+}
+
+/// `"debug"` or `"release"` — surfaced in the startup log so a support log immediately
+/// shows which agent is running. It matters for the Pro gate: a debug agent honors the
+/// Xcode/LocalTesting StoreKit environments and the unsigned `pro` fallback, a release
+/// agent only trusts Apple-signed Production/Sandbox proofs. If a "Pro required" report
+/// surprises you, check this line first — the LaunchAgent may still point at an old
+/// release binary in /Applications.
+const fn build_profile() -> &'static str {
+    if cfg!(debug_assertions) {
+        "debug"
+    } else {
+        "release"
+    }
+}
+
+/// File in the data dir persisting the user's chosen custom DDI folder (one path, UTF-8).
+/// Written by `set-ddi-dir`, removed by `clear-ddi-dir`, read by every mount path — so the
+/// background agent uses the same folder across restarts without a fixed env var.
+fn ddi_config_path(dir: &Path) -> PathBuf {
+    dir.join("ddi-dir")
+}
+
+/// The persisted custom DDI folder, if one was set and is non-empty.
+fn persisted_ddi_dir(dir: &Path) -> Option<PathBuf> {
+    let raw = std::fs::read_to_string(ddi_config_path(dir)).ok()?;
+    let trimmed = raw.trim();
+    (!trimmed.is_empty()).then(|| PathBuf::from(trimmed))
+}
+
+/// Resolve the effective custom DDI folder: the `GEOSPOOF_DDI_DIR` env (for CLI / dev
+/// override) wins, else the persisted choice (set from the setup wizard). `None` means fall
+/// back to Xcode's on-disk copy (see `geospoof_gps_core::ddi::locate_ddi`). The folder may
+/// hold a clean trio (`Image.dmg` / `BuildManifest.plist` / `Image.dmg.trustcache`) or an
+/// Xcode Restore bundle.
+fn resolve_ddi_dir(dir: &Path) -> Option<PathBuf> {
+    std::env::var_os("GEOSPOOF_DDI_DIR")
+        .map(PathBuf::from)
+        .filter(|p| !p.as_os_str().is_empty())
+        .or_else(|| persisted_ddi_dir(dir))
+}
+
+/// Apply a custom DDI folder to a freshly built controller, so the reconcile loop's
+/// on-demand mount uses it instead of Xcode's copy.
+fn apply_ddi(controller: IdeviceController, ddi_dir: Option<&Path>) -> IdeviceController {
+    match ddi_dir {
+        Some(d) => controller.with_ddi_dir(d.to_path_buf()),
+        None => controller,
+    }
+}
+
+/// Persist (or clear) the custom DDI folder used by all mount paths. `clear-ddi-dir`
+/// removes it (revert to Xcode's copy). Best-effort; prints the outcome.
+fn set_ddi_dir(dir: &Path, path: Option<&str>) {
+    if let Err(e) = std::fs::create_dir_all(dir) {
+        eprintln!("cannot create data dir: {e}");
+        std::process::exit(1);
+    }
+    let config = ddi_config_path(dir);
+    match path {
+        Some(p) if !p.trim().is_empty() => {
+            let chosen = p.trim();
+            // Reject a folder that clearly isn't a DDI up front (clearer than a mount-time
+            // failure). Accepts either layout — clean trio or Xcode Restore bundle.
+            if !geospoof_gps_core::ddi::has_ddi(Path::new(chosen)) {
+                eprintln!(
+                    "That folder doesn't contain a developer image. Expected Image.dmg (with \
+                     BuildManifest.plist and Image.dmg.trustcache) or an Xcode Restore bundle \
+                     (BuildManifest.plist)."
+                );
+                std::process::exit(1);
+            }
+            match std::fs::write(&config, chosen) {
+                Ok(()) => println!("developer image folder set: {chosen}"),
+                Err(e) => {
+                    eprintln!("could not save the folder: {e}");
+                    std::process::exit(1);
+                }
+            }
+        }
+        _ => {
+            let _ = std::fs::remove_file(&config);
+            println!("developer image folder cleared (using Xcode's copy)");
+        }
     }
 }
 

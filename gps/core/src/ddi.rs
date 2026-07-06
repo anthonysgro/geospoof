@@ -22,9 +22,28 @@ const CLEAN_TRUST_CACHE: &str = "Image.dmg.trustcache";
 /// Xcode's standard on-disk DDI location (macOS).
 const XCODE_DDI: &str = "/Library/Developer/DeveloperDiskImages/iOS_DDI";
 
-const GUIDANCE: &str = "No developer image found. Install Xcode (or run \
-    `xcode-select --install`) and connect your device once so Apple provisions it, or \
-    point GeoSpoof GPS at a DDI folder.";
+const GUIDANCE: &str = "No developer image found. Install Xcode from the Mac App Store \
+    and open it once with your iPhone connected (it provisions the image), or point \
+    GeoSpoof GPS at a folder that already has one. (The Command Line Tools alone do not \
+    include the developer image.)";
+
+/// Where a locatable DDI is coming from — surfaced so the UI can say "using Xcode's image"
+/// vs "using your folder", and offer to change it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DdiSourceKind {
+    /// Xcode's standard on-disk copy at [`XCODE_DDI`].
+    Xcode,
+    /// A folder the user pointed us at.
+    Custom,
+}
+
+/// A locatable DDI source: its kind and the folder it lives in. Presence means the marker
+/// files exist; the bytes are only read at mount time.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DdiSource {
+    pub kind: DdiSourceKind,
+    pub dir: PathBuf,
+}
 
 /// The three artifacts needed to mount a personalized DDI (iOS 17+).
 pub struct DdiFiles {
@@ -112,17 +131,45 @@ fn manifest_component_path(manifest: &[u8], component: &str) -> Result<String, D
         .ok_or_else(guidance)
 }
 
-/// Locate a DDI: an explicit user folder if given, else Xcode's standard on-disk
-/// location, else the guidance error.
-pub fn locate_ddi(custom_dir: Option<&Path>) -> Result<DdiFiles, DeviceError> {
-    if let Some(dir) = custom_dir {
-        return DdiFiles::load_from_dir(dir);
+/// Cheap check for whether `dir` looks like it holds a DDI, by testing for the marker
+/// files of either layout (clean trio or Restore bundle, incl. a nested `Restore/`). Does
+/// NOT read the (large) image bytes — use [`DdiFiles::load_from_dir`] for that.
+pub fn has_ddi(dir: &Path) -> bool {
+    dir.join(CLEAN_IMAGE).exists()
+        || dir.join(CLEAN_MANIFEST).exists()
+        || dir.join("Restore").join(CLEAN_MANIFEST).exists()
+}
+
+/// Locate a usable DDI *source* without reading it: the user's `custom_dir` if it holds
+/// one, else Xcode's on-disk copy, else `None`. Lets the UI show where the image will come
+/// from (and whether to offer "Install Xcode" vs "Prepare") before committing to a mount.
+pub fn locate_ddi_source(custom_dir: Option<&Path>) -> Option<DdiSource> {
+    if let Some(dir) = custom_dir
+        && has_ddi(dir)
+    {
+        return Some(DdiSource {
+            kind: DdiSourceKind::Custom,
+            dir: dir.to_path_buf(),
+        });
     }
     let xcode = PathBuf::from(XCODE_DDI);
-    if xcode.exists() {
-        return DdiFiles::load_from_dir(&xcode);
+    if has_ddi(&xcode) {
+        return Some(DdiSource {
+            kind: DdiSourceKind::Xcode,
+            dir: xcode,
+        });
     }
-    Err(guidance())
+    None
+}
+
+/// Load a DDI for mounting: an explicit user folder if given, else Xcode's standard
+/// on-disk location, else the guidance error. Mirrors [`locate_ddi_source`] but reads the
+/// bytes.
+pub fn locate_ddi(custom_dir: Option<&Path>) -> Result<DdiFiles, DeviceError> {
+    match locate_ddi_source(custom_dir) {
+        Some(source) => DdiFiles::load_from_dir(&source.dir),
+        None => Err(guidance()),
+    }
 }
 
 #[cfg(test)]
@@ -172,6 +219,36 @@ mod tests {
         let dir = tmp("empty");
         let err = DdiFiles::load_from_dir(&dir).unwrap_err();
         assert!(matches!(err, DeviceError::DdiUnavailable(_)));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn has_ddi_detects_both_layouts_and_rejects_empty() {
+        let empty = tmp("has-empty");
+        assert!(!has_ddi(&empty));
+        std::fs::remove_dir_all(&empty).ok();
+
+        let clean = tmp("has-clean");
+        std::fs::write(clean.join(CLEAN_IMAGE), b"img").unwrap();
+        assert!(has_ddi(&clean));
+        std::fs::remove_dir_all(&clean).ok();
+
+        let restore = tmp("has-restore");
+        std::fs::create_dir_all(restore.join("Restore")).unwrap();
+        std::fs::write(restore.join("Restore").join(CLEAN_MANIFEST), b"m").unwrap();
+        assert!(has_ddi(&restore));
+        std::fs::remove_dir_all(&restore).ok();
+    }
+
+    #[test]
+    fn locate_source_prefers_valid_custom_dir() {
+        // A custom folder that holds a DDI is reported as the Custom source, regardless of
+        // whether Xcode is installed on this machine.
+        let dir = tmp("src-custom");
+        std::fs::write(dir.join(CLEAN_IMAGE), b"img").unwrap();
+        let source = locate_ddi_source(Some(&dir)).expect("custom source");
+        assert_eq!(source.kind, DdiSourceKind::Custom);
+        assert_eq!(source.dir, dir);
         std::fs::remove_dir_all(&dir).ok();
     }
 

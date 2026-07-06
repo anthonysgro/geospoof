@@ -23,6 +23,9 @@ idevice = { version = "=0.1.64", features = [
     "location_simulation",
     "tunnel_tcp_stack",
     "mobile_image_mounter",
+    # AMFI (com.apple.amfi.lockdown): lets us read the real Developer Mode status off the
+    # device instead of guessing, so the setup doctor never shows a green it can't back up.
+    "amfi",
     "tss",
     # Cross-device control: read the iOS app's desired.json from its Documents over the
     # same usbmux/Wi-Fi link (house_arrest vends the container; afc reads it). §10i.
