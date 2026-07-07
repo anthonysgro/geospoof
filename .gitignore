@@ -48,20 +48,4 @@ npm-debug.log*
 *.provisionprofile
 *.p8
 
-# Exception: the Apple Root CA - G3 is a PUBLIC trust anchor (not a secret). It's embedded
-# in the GPS agent to verify Apple-signed StoreKit entitlement offline, so it must ship.
-!gps/agent/assets/AppleRootCA-G3.cer
-
 assets/Proton_Assets/*
-
-# GeoSpoof GPS (Rust/Swift desktop product under /gps)
-gps/target/
-gps/**/target/
-# SwiftPM build output for the menu-bar app (generated; like Rust's target/).
-gps/desktop/.build/
-gps/**/.build/
-# Throwaway spike probe: keep locally as a reference for the Rust port, but never commit/ship it (§10j).
-gps/scripts/remote_probe.py
-# iOS device-tooling working files (never source; created by go-ios/idevice in CWD)
-devimages/
-selfIdentity.plist

@@ -233,15 +233,12 @@ git log --oneline --decorate # see commits with tags
 
 ## License & Contribution Terms
 
-GeoSpoof is dual-licensed by directory:
-
-- **Everything except `gps/`** (the browser extension, site, docs, assets) is [MIT](LICENSE).
-- **The `gps/` directory** (the native GPS core) is source-available under the [Functional Source License, FSL-1.1-MIT](gps/LICENSE). Each release converts to MIT two years after it ships.
+GeoSpoof (the browser extension, site, docs, and assets in this repository) is licensed under [MIT](LICENSE).
 
 By submitting a contribution (a pull request, patch, or any code, docs, or other material), you agree that:
 
-1. Your contribution is licensed under the license of the directory it touches — MIT for the extension and everything outside `gps/`, and FSL-1.1-MIT for anything inside `gps/` (including its eventual conversion to MIT under the FSL's Grant of Future License).
+1. Your contribution is licensed under the [MIT License](LICENSE).
 2. You have the right to submit the work under that license, and you grant the maintainer the rights described below.
 3. You sign off on the [Developer Certificate of Origin](https://developercertificate.org/) for each commit (add a `Signed-off-by:` line with `git commit -s`), certifying you authored the contribution or otherwise have the right to submit it under these terms.
 
-To keep the `gps/` future-MIT grant clean and allow the project's licensing to be maintained over time, you also grant the maintainer a perpetual, irrevocable, worldwide, royalty-free license to use, relicense, and sublicense your contribution as part of GeoSpoof. If you cannot agree to these terms for a particular contribution, note it in your pull request so it can be handled separately.
+To allow the project's licensing to be maintained over time, you also grant the maintainer a perpetual, irrevocable, worldwide, royalty-free license to use, relicense, and sublicense your contribution as part of GeoSpoof. If you cannot agree to these terms for a particular contribution, note it in your pull request so it can be handled separately.
