@@ -31,6 +31,7 @@ export async function loadAllTests(): Promise<ReadonlyArray<TestDefinition>> {
     { xsltDatetimeLeakTests },
     { webrtcLeakTests },
     { ipCountryMatchTests },
+    { toStringStackLeakTests },
   ] = await Promise.all([
     import("./geolocation"),
     import("./values-correctness"),
@@ -49,6 +50,7 @@ export async function loadAllTests(): Promise<ReadonlyArray<TestDefinition>> {
     import("./xslt-datetime-leak"),
     import("./webrtc-leak"),
     import("./ip-country-match"),
+    import("./tostring-stack-leak"),
   ])
 
   return [
@@ -70,5 +72,6 @@ export async function loadAllTests(): Promise<ReadonlyArray<TestDefinition>> {
     ...xsltDatetimeLeakTests,
     ...webrtcLeakTests,
     ...ipCountryMatchTests,
+    ...toStringStackLeakTests,
   ]
 }

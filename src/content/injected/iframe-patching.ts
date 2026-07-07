@@ -45,7 +45,7 @@ import {
   stripConstruct,
   registerOverride,
   disguiseAsNative,
-  nativeTypeErrorMessage,
+  stripExtensionFramesFromStack,
 } from "./function-masking";
 import { buildPermissionsQueryOverride } from "./permissions";
 import {
@@ -135,13 +135,18 @@ export function patchIframeWindow(iframeWindow: Window): void {
         if (nativeName !== undefined) {
           return iframeNativeP1 + nativeName + iframeNativeP2;
         }
-        // Pre-check: throw TypeError directly for non-functions (same
-        // reason as the main window override — single stack frame).
-        if (typeof this !== "function") {
-          throw new TypeError(nativeTypeErrorMessage);
+        // Delegate the reject case to the iframe realm's native toString so it
+        // produces the genuine builtin frame + per-engine message, then scrub
+        // our injected-script frame from the thrown error — same fix and same
+        // reasoning as the main-realm toString override (a hand-thrown error
+        // would be missing the native frame that a clean browser shows).
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+          return (iframeOrigCall as any).call(iframeOrigToString, this) as string;
+        } catch (err) {
+          stripExtensionFramesFromStack(err);
+          throw err;
         }
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-        return (iframeOrigCall as any).call(iframeOrigToString, this) as string;
       },
     }.toString;
     logger.debug("[patchIframeWindow] section 1 (toString) complete");

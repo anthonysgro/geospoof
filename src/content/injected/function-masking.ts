@@ -12,14 +12,6 @@ import type { AnyFunction } from "./types";
 import { overrideRegistry, originalFunctionToString, originalCall } from "./state";
 
 /**
- * The native TypeError message thrown when toString is called on a non-function.
- * Captured during `initFunctionMasking()` and exported so iframe-patching can
- * throw the same message for consistency.
- */
-export let nativeTypeErrorMessage =
-  "Function.prototype.toString requires that 'this' be a Function";
-
-/**
  * This injected script's own URL, captured once at module load from a throwaway
  * stack. In a `world: "MAIN"` content script this is the
  * `chrome-extension://<id>/…` (or `moz-extension://…` / `safari-web-extension://…`)
@@ -260,20 +252,6 @@ export function installScrubbedAccessor(
  * all subsequent `registerOverride` calls are masked by the patched toString.
  */
 export function initFunctionMasking(): void {
-  // Capture the native TypeError message thrown when toString is called on
-  // a non-function. We throw this ourselves in the pre-check below so that
-  // only ONE "Function.toString" frame appears in Chrome's stack trace.
-  // Without this, delegating to the original toString creates a second
-  // native frame, shifting the caller frames and failing arkenfox test "o".
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-    (originalCall as any).call(originalFunctionToString, Object.create(Function));
-  } catch (e: unknown) {
-    if (e instanceof TypeError) {
-      nativeTypeErrorMessage = e.message;
-    }
-  }
-
   // Derive the engine-specific "[native code]" surround format by
   // splitting a known-native function's toString output. Chrome/V8
   // returns "function Number() { [native code] }" (single line) and
@@ -302,15 +280,30 @@ export function initFunctionMasking(): void {
       if (nativeName !== undefined) {
         return nativeP1 + nativeName + nativeP2;
       }
-      // Pre-check: throw TypeError directly for non-functions so only one
-      // "Function.toString" frame appears in Chrome's stack trace. Without
-      // this, the native toString adds a second frame that shifts the
-      // caller chain and fails arkenfox's stack validation.
-      if (typeof this !== "function") {
-        throw new TypeError(nativeTypeErrorMessage);
+      // Delegate every non-masked receiver to the original native toString.
+      // For a valid function this returns its native source string; for a
+      // receiver the native toString rejects (e.g. a non-function `this` — the
+      // `const f = x.toString; f()` detach pattern a fingerprinter uses) the
+      // engine throws its genuine TypeError, carrying the authentic
+      // `at Object.toString (<anonymous>)` builtin frame and per-engine message.
+      // We then scrub only our injected-script frame from that error's stack so
+      // a page can't read the extension id off it.
+      //
+      // Delegating — rather than throwing our own `new TypeError` — is the whole
+      // point: a hand-thrown error has NO native builtin frame, so scrubbing our
+      // frame would leave the stack one frame short of what a clean browser
+      // produces, which is itself a tell. Delegate + scrub reproduces the native
+      // stack exactly (verified against the extension-off stack). This mirrors
+      // the delegate-then-scrub pattern every other override path already uses
+      // (see reproduceNativeGeoError, the permissions query override, and the
+      // stripConstruct wrapper).
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+        return (originalCall as any).call(originalFunctionToString, this);
+      } catch (err) {
+        stripExtensionFramesFromStack(err);
+        throw err;
       }
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-      return (originalCall as any).call(originalFunctionToString, this);
     },
   }.toString;
   registerOverride(toStringMethod, "toString");
