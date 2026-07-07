@@ -1,0 +1,435 @@
+import * as React from "react"
+import { createFileRoute } from "@tanstack/react-router"
+import { Apple, ExternalLink, FlaskConical, ListChecks } from "lucide-react"
+import type { Locale } from "@/lib/i18n"
+import {
+  buildAlternateLinks,
+  buildOgLocaleMeta,
+  format,
+  getDictionary,
+  localizedPath,
+  toLocale,
+} from "@/lib/i18n"
+import { Navigation } from "@/components/landing/Navigation"
+import { Footer } from "@/components/landing/Footer"
+import { SkipLink } from "@/components/landing/SkipLink"
+import { Section } from "@/components/landing/Section"
+import { Badge } from "@/components/ui/badge"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
+import { cn } from "@/lib/utils"
+import { SITE_URL } from "@/lib/blog"
+import { useTranslations } from "@/hooks/use-i18n"
+import { useTheme } from "@/hooks/use-theme"
+import { LocaleLink } from "@/components/LocaleLink"
+
+const GITHUB_REPO = "anthonysgro/geospoof"
+/** Stable fallback link — the full releases list (GPS builds are named `GeoSpoof GPS v…`). */
+const RELEASES_URL = `https://github.com/${GITHUB_REPO}/releases`
+/** GeoSpoof GPS ships on its own `gps-v*` tag track, separate from the extension's `v*`. */
+const GPS_TAG_PREFIX = "gps-v"
+/** GeoSpoof iOS app — the control surface that sets the location (Pro unlocks device GPS). */
+const APP_STORE_URL =
+  "https://apps.apple.com/app/apple-store/id6765719745?pt=128299974&ct=gps&mt=8"
+/** Xcode on the Mac App Store — provides the iOS developer image GeoSpoof GPS mounts. */
+const XCODE_URL = "https://apps.apple.com/app/xcode/id497799835"
+
+/**
+ * Build the `head` payload for the GeoSpoof GPS page in a given locale:
+ * localized title/description/OG + self-canonical + hreflang cluster.
+ */
+export function buildGpsHead(locale: Locale) {
+  const m = getDictionary(locale).gps.meta
+  const canonical = `${SITE_URL}${localizedPath("/gps", locale)}`
+  return {
+    meta: [
+      { title: m.title },
+      { name: "description", content: m.description },
+      { property: "og:type", content: "website" },
+      ...buildOgLocaleMeta(locale),
+      { property: "og:url", content: canonical },
+      { property: "og:title", content: m.ogTitle },
+      { property: "og:description", content: m.description },
+      { name: "twitter:url", content: canonical },
+      { name: "twitter:title", content: m.ogTitle },
+      { name: "twitter:description", content: m.description },
+    ],
+    links: [
+      { rel: "canonical", href: canonical },
+      ...buildAlternateLinks("/gps", SITE_URL),
+    ],
+  }
+}
+
+export const Route = createFileRoute("/{-$locale}/gps")({
+  component: GpsPage,
+  head: ({ params }) => buildGpsHead(toLocale(params.locale)),
+})
+
+/** Minimal shape of the GitHub Releases API entries we read. */
+interface GithubRelease {
+  tag_name: string
+  draft: boolean
+  prerelease: boolean
+  assets: Array<{ name: string; browser_download_url: string }>
+}
+
+interface ResolvedRelease {
+  version: string
+  dmgUrl: string
+}
+
+/**
+ * Resolve the latest GeoSpoof GPS DMG at runtime.
+ *
+ * GitHub's `releases/latest` points at the newest release across BOTH tracks
+ * (extension `v*` + GPS `gps-v*`), so it can't be trusted to return a GPS
+ * build. Instead we page through the releases list and pick the first
+ * published `gps-v*` release that carries a `.dmg` asset.
+ *
+ * Returns `null` until resolved (and if the request fails), so the UI can fall
+ * back to the stable "all releases" link — which works during SSR/prerender
+ * and offline.
+ */
+function useLatestGpsRelease(): ResolvedRelease | null {
+  const [release, setRelease] = React.useState<ResolvedRelease | null>(null)
+
+  React.useEffect(() => {
+    const controller = new AbortController()
+    fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases?per_page=30`, {
+      headers: { Accept: "application/vnd.github+json" },
+      signal: controller.signal,
+    })
+      .then((res) =>
+        res.ok ? (res.json() as Promise<Array<GithubRelease>>) : null
+      )
+      .then((releases) => {
+        if (!releases) return
+        const latest = releases.find(
+          (r) =>
+            !r.draft &&
+            !r.prerelease &&
+            r.tag_name.startsWith(GPS_TAG_PREFIX) &&
+            r.assets.some((a) => a.name.endsWith(".dmg"))
+        )
+        if (!latest) return
+        const dmg = latest.assets.find((a) => a.name.endsWith(".dmg"))
+        if (!dmg) return
+        setRelease({
+          version: latest.tag_name.slice(GPS_TAG_PREFIX.length),
+          dmgUrl: dmg.browser_download_url,
+        })
+      })
+      .catch(() => {
+        /* leave the fallback link in place */
+      })
+    return () => controller.abort()
+  }, [])
+
+  return release
+}
+
+function DownloadCard() {
+  const { t } = useTranslations()
+  const d = t.gps.download
+  const release = useLatestGpsRelease()
+
+  return (
+    <div className="mx-auto flex max-w-xl flex-col items-center">
+      <a
+        href={release ? release.dmgUrl : RELEASES_URL}
+        {...(release ? {} : { target: "_blank", rel: "noopener noreferrer" })}
+        className={cn(
+          "inline-flex min-h-14 w-full items-center justify-center gap-2 sm:w-auto",
+          "rounded-brand bg-(--color-brand) px-8 text-lg font-semibold text-white",
+          "shadow-md transition-all hover:bg-(--color-brand-dark) hover:shadow-lg",
+          "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+        )}
+      >
+        <Apple className="size-5" aria-hidden="true" />
+        {d.cta}
+      </a>
+
+      <p
+        className="mt-3 min-h-5 text-sm text-(--color-canvas-muted)"
+        aria-live="polite"
+      >
+        {release ? `${d.versionLabel}: v${release.version}` : d.resolving}
+      </p>
+
+      <p className="mt-1 max-w-md text-center text-xs text-(--color-canvas-muted)">
+        {d.note}
+      </p>
+
+      <a
+        href={RELEASES_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-(--color-brand) hover:underline"
+      >
+        {d.allReleases}
+        <ExternalLink className="size-3.5" aria-hidden="true" />
+      </a>
+    </div>
+  )
+}
+
+function StructuredData() {
+  const { locale, t } = useTranslations()
+  const g = t.gps
+  const pageUrl = `${SITE_URL}${localizedPath("/gps", locale)}`
+
+  const softwareApplicationSchema = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "GeoSpoof GPS",
+    description: g.meta.description,
+    url: pageUrl,
+    image: `${SITE_URL}/icon.png`,
+    applicationCategory: "UtilitiesApplication",
+    operatingSystem: "macOS 13+",
+    downloadUrl: RELEASES_URL,
+    author: { "@type": "Person", name: "Anthony Sgro" },
+  }
+
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: g.hero.breadcrumbHome,
+        item: `${SITE_URL}${localizedPath("/", locale)}`,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: g.hero.breadcrumb,
+        item: pageUrl,
+      },
+    ],
+  }
+
+  return (
+    <script
+      type="application/ld+json"
+      // Static, app-authored schema (no user input).
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify([softwareApplicationSchema, breadcrumbSchema]),
+      }}
+    />
+  )
+}
+
+/**
+ * Side-by-side product shots of the GeoSpoof app driving the iPhone's GPS.
+ * Theme-aware (light/dark PNGs are full device renders with their own rounding
+ * and transparency, so we use a drop-shadow, not a box shadow or clip).
+ */
+function GpsPhones() {
+  const { resolvedTheme } = useTheme()
+  const { t } = useTranslations()
+  const isDark = resolvedTheme === "dark"
+  const img1 = isDark
+    ? "/images/gps/gps-1-dark.png"
+    : "/images/gps/gps-1-light.png"
+  const img2 = isDark
+    ? "/images/gps/gps-2-dark.png"
+    : "/images/gps/gps-2-light.png"
+
+  return (
+    <Section narrow className="pt-0! pb-14! md:pb-20!">
+      <div className="flex items-end justify-center gap-4 sm:gap-8">
+        <img
+          src={img1}
+          alt={format(t.gps.screenshotAlt, { n: 1 })}
+          width={1135}
+          height={2315}
+          loading="lazy"
+          decoding="async"
+          className="h-auto w-40 drop-shadow-2xl sm:w-52 md:w-60"
+        />
+        <img
+          src={img2}
+          alt={format(t.gps.screenshotAlt, { n: 2 })}
+          width={1135}
+          height={2315}
+          loading="lazy"
+          decoding="async"
+          className="h-auto w-40 drop-shadow-2xl sm:w-52 md:w-60"
+        />
+      </div>
+    </Section>
+  )
+}
+
+/** A single "What you'll need" bullet — brand dot + rich (possibly linked) content. */
+function ReqItem({ children }: { children: React.ReactNode }) {
+  return (
+    <li className="flex gap-2.5 text-sm text-(--color-canvas-muted)">
+      <span
+        className="mt-2 size-1.5 shrink-0 rounded-full bg-(--color-brand)"
+        aria-hidden="true"
+      />
+      <span className="leading-relaxed">{children}</span>
+    </li>
+  )
+}
+
+/** External link styled for inline use inside a requirement bullet. */
+function ReqLink({
+  href,
+  children,
+}: {
+  href: string
+  children: React.ReactNode
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="font-medium text-(--color-brand) hover:underline"
+    >
+      {children}
+    </a>
+  )
+}
+
+export function GpsPage() {
+  const { t } = useTranslations()
+  const g = t.gps
+
+  return (
+    <div className="min-h-screen bg-(--color-canvas)">
+      <SkipLink />
+      <Navigation />
+      <main id="main-content">
+        {/* Hero + download */}
+        <Section className="pt-12! pb-8! md:pt-20! md:pb-12!">
+          <Breadcrumb className="mx-auto mb-8 max-w-3xl">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <LocaleLink to="/">{g.hero.breadcrumbHome}</LocaleLink>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>{g.hero.breadcrumb}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+          <div className="mx-auto max-w-3xl text-center">
+            <Badge
+              variant="outline"
+              className="mb-4 border-brand/30 bg-brand/10 tracking-wide text-(--color-brand) uppercase"
+            >
+              {g.hero.badge}
+            </Badge>
+            <h1 className="mb-5 text-4xl leading-tight font-bold text-(--color-canvas-foreground) md:text-5xl">
+              {g.hero.headingPre}
+              <span className="text-(--color-brand)">
+                {g.hero.headingEmphasis}
+              </span>
+              {g.hero.headingPost}
+            </h1>
+            <p className="mx-auto mb-6 max-w-2xl text-base text-(--color-canvas-muted) md:text-lg">
+              {g.hero.intro}
+            </p>
+
+            {/* Experimental notice — this is an early, optional add-on. */}
+            <div
+              role="note"
+              className="mx-auto mb-8 flex max-w-2xl items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-left"
+            >
+              <FlaskConical
+                className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400"
+                aria-hidden="true"
+              />
+              <div>
+                <p className="text-sm font-semibold text-(--color-canvas-foreground)">
+                  {g.experimental.title}
+                </p>
+                <p className="mt-1 text-sm text-(--color-canvas-muted)">
+                  {g.experimental.body}
+                </p>
+              </div>
+            </div>
+
+            <DownloadCard />
+          </div>
+        </Section>
+
+        {/* Product shots — the GeoSpoof app that drives the iPhone's GPS. */}
+        <GpsPhones />
+
+        {/* What you'll need — shown before the steps so people can gather it first. */}
+        <Section narrow className="py-12! md:py-16!">
+          <div className="rounded-2xl border border-(--color-canvas-border) bg-brand/5 p-6 md:p-8">
+            <div className="mb-4 flex items-center gap-2 text-(--color-brand)">
+              <ListChecks className="size-6" aria-hidden="true" />
+              <h2 className="text-xl font-bold text-(--color-canvas-foreground) md:text-2xl">
+                {g.requirements.title}
+              </h2>
+            </div>
+            <ul className="space-y-3">
+              <ReqItem>{g.requirements.macos}</ReqItem>
+              <ReqItem>
+                {g.requirements.appPre}
+                <ReqLink href={APP_STORE_URL}>{g.requirements.appLink}</ReqLink>
+                {g.requirements.appPost}
+              </ReqItem>
+              <ReqItem>{g.requirements.iphone}</ReqItem>
+              <ReqItem>
+                {g.requirements.xcodePre}
+                <ReqLink href={XCODE_URL}>{g.requirements.xcodeLink}</ReqLink>
+                {g.requirements.xcodePost}
+              </ReqItem>
+            </ul>
+            <p className="mt-5 border-t border-(--color-canvas-border) pt-4 text-xs text-(--color-canvas-muted)">
+              {g.sourceNote}
+            </p>
+          </div>
+        </Section>
+
+        {/* Setup guide — mirrors the in-app "Set Up…" wizard, step for step. */}
+        <Section narrow className="py-12! md:py-16!">
+          <h2 className="mb-3 text-2xl font-bold text-(--color-canvas-foreground) md:text-3xl">
+            {g.setup.title}
+          </h2>
+          <p className="mb-8 text-(--color-canvas-muted)">{g.setup.intro}</p>
+          <ol className="space-y-5">
+            {g.setup.steps.map((step, i) => (
+              <li key={step.name} className="flex gap-4">
+                <span
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand/10 text-sm font-bold text-(--color-brand)"
+                  aria-hidden="true"
+                >
+                  {i + 1}
+                </span>
+                <div>
+                  <h3 className="font-semibold text-(--color-canvas-foreground)">
+                    {step.name}
+                  </h3>
+                  <p className="mt-1 text-sm text-(--color-canvas-muted)">
+                    {step.text}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </Section>
+      </main>
+      <Footer />
+      <StructuredData />
+    </div>
+  )
+}

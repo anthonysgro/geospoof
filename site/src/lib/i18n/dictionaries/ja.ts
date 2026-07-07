@@ -49,6 +49,7 @@ export const ja: Dictionary = {
       spoofEdge: "Edge で位置情報を偽装",
       spoofSafari: "Safari で位置情報を偽装",
       spoofTimezone: "タイムゾーンを偽装",
+      gps: "Mac 用 GeoSpoof GPS",
       needVpn: "VPN は必要ですか？",
       testProtection: "保護状況をテスト",
       engineLevel: "エンジンレベルの偽装（Chrome）",
@@ -1090,5 +1091,87 @@ export const ja: Dictionary = {
     copied: "✓ コピーしました",
     copyAria: "フィードバック用のメールアドレスをコピー",
     closing: "GeoSpoof をより良くするためのご協力に感謝します。",
+  },
+  gps: {
+    meta: {
+      title: "Mac 用 GeoSpoof GPS をダウンロード | GeoSpoof",
+      description:
+        "GeoSpoof GPS は、接続した iPhone の実際の GPS 位置を、あなたの偽装した位置に合わせる macOS メニューバーアプリです。署名・公証済みの DMG をダウンロードしてください。",
+      ogTitle: "Mac 用 GeoSpoof GPS をダウンロード",
+    },
+    experimental: {
+      label: "実験的機能",
+      title: "初期段階の実験的な機能です",
+      body: "GeoSpoof GPS は新しく、さまざまな端末での検証がまだ進行中です。細かな不具合や、初回のみ必要な設定手順があることをご了承ください。GeoSpoof の他の機能はこれなしでも動作します。これは iPhone の実際の GPS を合わせるための任意の追加機能です。",
+    },
+    hero: {
+      breadcrumbHome: "ホーム",
+      breadcrumb: "GeoSpoof GPS",
+      badge: "macOS · メニューバーアプリ",
+      headingPre: "iPhone の",
+      headingEmphasis: "実際の GPS",
+      headingPost: "を偽装した位置に合わせる",
+      intro:
+        "GeoSpoof GPS は、接続した iPhone のシステムレベルの位置情報を、GeoSpoof で選んだ場所に設定する macOS のメニューバー用コンパニオンです。ブラウザと端末の実際の GPS が同じ位置を示すようになります。",
+    },
+    download: {
+      cta: "Mac 用をダウンロード",
+      resolving: "最新バージョンを取得しています…",
+      versionLabel: "最新バージョン",
+      allReleases: "GitHub ですべてのリリースを見る",
+      note: "Apple Silicon と Intel に対応したユニバーサルビルド。Developer ID で署名され、Apple により公証済みです。",
+    },
+    setup: {
+      title: "GeoSpoof GPS をセットアップ",
+      intro:
+        "メニューバーのアイコンから「セットアップ…」を選ぶと、ウィザードが各手順を進むごとにチェックしていきます。セットアップを終えるには iPhone をケーブルで接続してください。完了後は Wi-Fi 経由で動作し続けます。",
+      steps: [
+        {
+          name: "アプリをインストール",
+          text: "DMG をダウンロードし、GeoSpoof GPS を「アプリケーション」フォルダにドラッグします。メニューバーから動作し、Dock アイコンもウインドウもありません。初回起動時にセットアップウィザードが開きます。",
+        },
+        {
+          name: "iPhone を接続",
+          text: "iPhone を USB ケーブルで Mac に接続し、ロックを解除します。表示されない場合は、別のケーブルや USB ポートを試してください。",
+        },
+        {
+          name: "このコンピュータを信頼",
+          text: "iPhone に確認が表示されたら「信頼」をタップします。表示されない場合は、iPhone の 設定 ▸ 一般 ▸ 転送または iPhone をリセット ▸ リセット ▸ 位置情報とプライバシーをリセット を実行してから接続し直してください。",
+        },
+        {
+          name: "デベロッパモードを有効化",
+          text: "iPhone で 設定 ▸ プライバシーとセキュリティ ▸ デベロッパモード を開いてオンにし、求められたら再起動します。デベロッパモードは、iPhone を一度 Mac に接続した後にのみ表示されます。",
+        },
+        {
+          name: "この Mac とペアリング",
+          text: "セットアップウィンドウで「ペアリング」をクリックします。Mac が iPhone の GPS を制御できるようにする、一度きりの安全なハンドシェイクです。実行中は iPhone のロックを解除し、接続したままにしてください。",
+        },
+        {
+          name: "デベロッパイメージを準備",
+          text: "「準備」をクリックして iOS のデベロッパイメージをマウントします。これにより GeoSpoof GPS が iPhone の実際のシステム位置を変更できるようになります。Xcode のコピーを利用します。Mac App Store から Xcode をインストールし、iPhone を接続した状態で一度開くか、すでにイメージがあるフォルダをアプリに指定してください。",
+        },
+        {
+          name: "GeoSpoof で場所を選ぶ",
+          text: "いつも通り GeoSpoof で位置を設定します。iPhone のシステムレベルの GPS がそれに追従し、ケーブルを抜いて Wi-Fi に切り替えた後も同期を保ちます。",
+        },
+      ],
+    },
+    requirements: {
+      title: "必要なもの",
+      macos: "macOS 13（Ventura）以降。",
+      appPre: "",
+      appLink: "iPhone 用 GeoSpoof アプリ",
+      appPost:
+        "と GeoSpoof Pro。アプリが操作の中心で（位置を設定します）、端末の実際の GPS を変更する機能は Pro 機能です。",
+      iphone:
+        "デベロッパモードを有効にした iPhone。初回セットアップでは USB ケーブルで接続します。",
+      xcodePre: "Xcode — Apple の無料の開発者向けアプリ（",
+      xcodeLink: "Mac App Store",
+      xcodePost:
+        "）。ビルド作業は不要です。インストールして、iPhone を接続した状態で一度開くだけで、セットアップが完了し iOS デベロッパイメージが用意されます。ダウンロードは大きめなので、15 GB ほどの空き容量を確保してください。すでにデベロッパイメージがある場合は、代わりにそのフォルダをアプリに指定できます。",
+    },
+    screenshotAlt: "iPhone 上の GeoSpoof GPS — スクリーンショット {n}",
+    sourceNote:
+      "GeoSpoof GPS はソース公開されており、ブラウザ拡張機能とは別にバージョン管理されています。",
   },
 }

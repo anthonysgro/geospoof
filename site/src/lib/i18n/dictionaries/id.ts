@@ -49,6 +49,7 @@ export const id: Dictionary = {
       spoofEdge: "Palsukan lokasi di Edge",
       spoofSafari: "Palsukan lokasi di Safari",
       spoofTimezone: "Palsukan zona waktu",
+      gps: "GeoSpoof GPS untuk Mac",
       needVpn: "Apakah Anda perlu VPN?",
       testProtection: "Uji perlindungan Anda",
       engineLevel: "Pemalsuan tingkat mesin (Chrome)",
@@ -1098,5 +1099,87 @@ export const id: Dictionary = {
     copied: "✓ Tersalin",
     copyAria: "Salin alamat email untuk masukan",
     closing: "Terima kasih telah membantu membuat GeoSpoof lebih baik.",
+  },
+  gps: {
+    meta: {
+      title: "Unduh GeoSpoof GPS untuk Mac | GeoSpoof",
+      description:
+        "GeoSpoof GPS adalah aplikasi bilah menu macOS yang menyetel lokasi GPS asli iPhone yang terhubung agar sesuai dengan lokasi palsu Anda. Unduh DMG yang ditandatangani dan dinotarisasi.",
+      ogTitle: "Unduh GeoSpoof GPS untuk Mac",
+    },
+    experimental: {
+      label: "Eksperimental",
+      title: "Fitur baru yang masih eksperimental",
+      body: "GeoSpoof GPS masih baru dan sedang diuji di berbagai perangkat, jadi harap maklum jika ada kekurangan dan beberapa langkah penyiapan sekali jalan. Bagian lain GeoSpoof tetap berfungsi tanpanya — ini tambahan opsional untuk menyamakan GPS asli iPhone Anda.",
+    },
+    hero: {
+      breadcrumbHome: "Beranda",
+      breadcrumb: "GeoSpoof GPS",
+      badge: "macOS · Aplikasi bilah menu",
+      headingPre: "Samakan ",
+      headingEmphasis: "GPS asli",
+      headingPost: " iPhone Anda dengan lokasi palsu Anda",
+      intro:
+        "GeoSpoof GPS adalah pendamping bilah menu macOS yang menyetel lokasi tingkat sistem iPhone yang terhubung ke tempat yang Anda pilih di GeoSpoof — sehingga browser dan GPS asli ponsel Anda menyampaikan cerita yang sama.",
+    },
+    download: {
+      cta: "Unduh untuk Mac",
+      resolving: "Mencari versi terbaru…",
+      versionLabel: "Versi terbaru",
+      allReleases: "Lihat semua rilis di GitHub",
+      note: "Build universal untuk Apple Silicon dan Intel. Ditandatangani dengan Developer ID dan dinotarisasi oleh Apple.",
+    },
+    setup: {
+      title: "Siapkan GeoSpoof GPS",
+      intro:
+        "Buka ikon bilah menu dan pilih “Siapkan…” — panduan akan menandai setiap langkah saat Anda mengerjakannya. Hubungkan iPhone dengan kabel untuk menyelesaikan penyiapan; setelah selesai, GeoSpoof GPS tetap bekerja melalui Wi-Fi.",
+      steps: [
+        {
+          name: "Pasang aplikasinya",
+          text: "Unduh DMG dan seret GeoSpoof GPS ke folder Applications. Aplikasi berjalan dari bilah menu — tanpa ikon Dock, tanpa jendela — dan membuka panduan penyiapan saat pertama kali dijalankan.",
+        },
+        {
+          name: "Hubungkan iPhone Anda",
+          text: "Sambungkan iPhone ke Mac Anda dengan kabel USB dan buka kuncinya. Jika tidak muncul, coba kabel atau port USB lain.",
+        },
+        {
+          name: "Percayai komputer ini",
+          text: "Ketuk Percayai di iPhone Anda saat diminta. Jika tidak ada permintaan, atur ulang di ponsel melalui Pengaturan ▸ Umum ▸ Transfer atau Atur Ulang iPhone ▸ Atur Ulang ▸ Atur Ulang Lokasi & Privasi, lalu sambungkan kembali.",
+        },
+        {
+          name: "Aktifkan Mode Pengembang",
+          text: "Di iPhone Anda, buka Pengaturan ▸ Privasi & Keamanan ▸ Mode Pengembang, aktifkan, lalu mulai ulang saat diminta. Mode Pengembang baru muncul setelah iPhone terhubung ke Mac Anda sekali.",
+        },
+        {
+          name: "Pasangkan dengan Mac ini",
+          text: "Di jendela penyiapan, klik Pasangkan — jabat tangan aman sekali jalan yang memungkinkan Mac Anda mengendalikan GPS iPhone. Jaga ponsel tetap tidak terkunci dan terhubung selama prosesnya.",
+        },
+        {
+          name: "Siapkan citra pengembang",
+          text: "Klik Siapkan untuk memasang citra pengembang iOS, yang membuat GeoSpoof GPS bisa memindahkan lokasi sistem asli iPhone Anda. Ini memakai salinan dari Xcode — pasang Xcode dari Mac App Store dan buka sekali dengan iPhone terhubung, atau arahkan aplikasi ke folder yang sudah berisi citra.",
+        },
+        {
+          name: "Pilih lokasi di GeoSpoof",
+          text: "Setel lokasi Anda seperti biasa di GeoSpoof. GPS tingkat sistem iPhone Anda mengikutinya dan tetap selaras, bahkan setelah Anda mencabut kabel dan beralih ke Wi-Fi.",
+        },
+      ],
+    },
+    requirements: {
+      title: "Yang Anda perlukan",
+      macos: "macOS 13 (Ventura) atau lebih baru.",
+      appPre: "Aplikasi ",
+      appLink: "GeoSpoof untuk iPhone",
+      appPost:
+        " dengan GeoSpoof Pro. Aplikasi ini adalah pusat kendali Anda — ia yang menyetel lokasi — dan memindahkan GPS asli perangkat adalah fitur Pro.",
+      iphone:
+        "iPhone dengan Mode Pengembang aktif, terhubung lewat kabel USB untuk penyiapan pertama.",
+      xcodePre: "Xcode — aplikasi pengembang gratis dari Apple, di ",
+      xcodeLink: "Mac App Store",
+      xcodePost:
+        ". Anda tidak membangun apa pun: cukup pasang dan buka sekali dengan iPhone terhubung, agar ia menyelesaikan penyiapan dan menyediakan citra pengembang iOS. Ini unduhan besar — sisakan sekitar 15 GB ruang kosong. Sudah punya citra pengembang? Anda bisa mengarahkan aplikasi ke folder itu.",
+    },
+    screenshotAlt: "GeoSpoof GPS di iPhone — tangkapan layar {n}",
+    sourceNote:
+      "GeoSpoof GPS tersedia kode sumbernya dan diberi versi terpisah dari ekstensi browser.",
   },
 }

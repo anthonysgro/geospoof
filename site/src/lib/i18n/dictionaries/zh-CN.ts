@@ -62,6 +62,7 @@ export const zhCN: Dictionary = {
       spoofEdge: "在 Edge 中伪造位置",
       spoofSafari: "在 Safari 中伪造位置",
       spoofTimezone: "伪造时区",
+      gps: "Mac 版 GeoSpoof GPS",
       needVpn: "你需要 VPN 吗？",
       testProtection: "测试你的防护",
       engineLevel: "引擎级伪装（Chrome）",
@@ -1066,5 +1067,85 @@ export const zhCN: Dictionary = {
     copied: "✓ 已复制",
     copyAria: "复制反馈邮箱地址",
     closing: "感谢你帮助 GeoSpoof 变得更好。",
+  },
+  gps: {
+    meta: {
+      title: "为 Mac 下载 GeoSpoof GPS | GeoSpoof",
+      description:
+        "GeoSpoof GPS 是一款 macOS 菜单栏应用，可将已连接 iPhone 的真实 GPS 位置设置为与你的伪装位置一致。下载已签名并公证的 DMG。",
+      ogTitle: "为 Mac 下载 GeoSpoof GPS",
+    },
+    experimental: {
+      label: "实验性功能",
+      title: "尚处早期的实验性功能",
+      body: "GeoSpoof GPS 是新功能，仍在各类设备上验证中，因此可能存在一些粗糙之处，并需要一次性的设置步骤。GeoSpoof 的其余功能无需它也可使用——这是一个可选的附加功能，用于让 iPhone 的真实 GPS 保持一致。",
+    },
+    hero: {
+      breadcrumbHome: "首页",
+      breadcrumb: "GeoSpoof GPS",
+      badge: "macOS · 菜单栏应用",
+      headingPre: "让 iPhone 的",
+      headingEmphasis: "真实 GPS",
+      headingPost: "与你的伪装位置一致",
+      intro:
+        "GeoSpoof GPS 是一款 macOS 菜单栏伴侣应用，可将已连接 iPhone 的系统级位置设置为你在 GeoSpoof 中选择的地点——让浏览器和手机的真实 GPS 呈现一致的位置。",
+    },
+    download: {
+      cta: "下载 Mac 版",
+      resolving: "正在获取最新版本…",
+      versionLabel: "最新版本",
+      allReleases: "在 GitHub 查看所有版本",
+      note: "面向 Apple Silicon 与 Intel 的通用版本。已使用 Developer ID 签名并经 Apple 公证。",
+    },
+    setup: {
+      title: "设置 GeoSpoof GPS",
+      intro:
+        "点按菜单栏图标并选择“设置…”——向导会随着你的操作逐项打勾。用数据线连接 iPhone 以完成设置；完成后，GeoSpoof GPS 会继续通过 Wi-Fi 工作。",
+      steps: [
+        {
+          name: "安装应用",
+          text: "下载 DMG，并将 GeoSpoof GPS 拖入“应用程序”文件夹。它在菜单栏中运行——没有 Dock 图标，也没有窗口——并会在首次启动时打开设置向导。",
+        },
+        {
+          name: "连接 iPhone",
+          text: "用 USB 数据线将 iPhone 连接到 Mac 并解锁。如果没有出现，换一根数据线或另一个 USB 端口试试。",
+        },
+        {
+          name: "信任此电脑",
+          text: "当 iPhone 提示时，点按“信任”。如果没有出现提示，在手机上前往 设置 ▸ 通用 ▸ 传输或还原 iPhone ▸ 还原 ▸ 还原位置与隐私，然后重新连接。",
+        },
+        {
+          name: "开启开发者模式",
+          text: "在 iPhone 上前往 设置 ▸ 隐私与安全性 ▸ 开发者模式，将其开启并按提示重启。开发者模式只有在 iPhone 连接过 Mac 一次之后才会出现。",
+        },
+        {
+          name: "与此 Mac 配对",
+          text: "在设置窗口中点击“配对”——这是一次性的安全握手，让你的 Mac 能够驱动 iPhone 的 GPS。配对过程中请保持手机解锁并连接。",
+        },
+        {
+          name: "准备开发者映像",
+          text: "点击“准备”以挂载 iOS 开发者映像，正是它让 GeoSpoof GPS 能够更改 iPhone 的真实系统位置。它会使用 Xcode 的副本——从 Mac App Store 安装 Xcode 并在连接 iPhone 的情况下打开一次，或让应用指向一个已包含映像的文件夹。",
+        },
+        {
+          name: "在 GeoSpoof 中选择位置",
+          text: "像往常一样在 GeoSpoof 中设置位置。iPhone 的系统级 GPS 会随之跟随并保持一致，即使你拔掉数据线切换到 Wi-Fi 也是如此。",
+        },
+      ],
+    },
+    requirements: {
+      title: "你需要准备",
+      macos: "macOS 13（Ventura）或更高版本。",
+      appPre: "iPhone 上的 ",
+      appLink: "GeoSpoof 应用",
+      appPost:
+        "，以及 GeoSpoof Pro。这个应用是你的控制中心——由它来设置位置——而更改设备的真实 GPS 是 Pro 功能。",
+      iphone: "一部已开启开发者模式的 iPhone，首次设置时通过 USB 数据线连接。",
+      xcodePre: "Xcode——Apple 免费的开发者应用，来自 ",
+      xcodeLink: "Mac App Store",
+      xcodePost:
+        "。你无需构建任何东西：只需安装它，并在连接 iPhone 的情况下打开一次，让它完成设置并提供 iOS 开发者映像。它的下载很大——请预留约 15 GB 的可用空间。已经有开发者映像了？可以改为让应用指向那个文件夹。",
+    },
+    screenshotAlt: "iPhone 上的 GeoSpoof GPS——截图 {n}",
+    sourceNote: "GeoSpoof GPS 源码可查看，并与浏览器扩展分开进行版本管理。",
   },
 }

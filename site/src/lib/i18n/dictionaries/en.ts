@@ -49,6 +49,7 @@ export const en = {
       spoofEdge: "Spoof location in Edge",
       spoofSafari: "Spoof location in Safari",
       spoofTimezone: "Spoof timezone",
+      gps: "GeoSpoof GPS for Mac",
       needVpn: "Do you need a VPN?",
       testProtection: "Test your protection",
       engineLevel: "Engine-level Spoofing (Chrome)",
@@ -1092,6 +1093,88 @@ export const en = {
     copied: "✓ Copied",
     copyAria: "Copy the feedback email address",
     closing: "Thank you for helping make GeoSpoof better.",
+  },
+  gps: {
+    meta: {
+      title: "Download GeoSpoof GPS for Mac | GeoSpoof",
+      description:
+        "GeoSpoof GPS is a macOS menu-bar app that sets your connected iPhone's real GPS location to match your spoofed location. Download the signed, notarized DMG.",
+      ogTitle: "Download GeoSpoof GPS for Mac",
+    },
+    experimental: {
+      label: "Experimental",
+      title: "An early, experimental feature",
+      body: "GeoSpoof GPS is new and still being proven across devices, so expect rough edges and a few one-time setup steps. The rest of GeoSpoof works without it — this is an optional add-on for matching your iPhone's real GPS.",
+    },
+    hero: {
+      breadcrumbHome: "Home",
+      breadcrumb: "GeoSpoof GPS",
+      badge: "macOS · Menu-bar app",
+      headingPre: "Match your iPhone's ",
+      headingEmphasis: "real GPS",
+      headingPost: " to your spoofed location",
+      intro:
+        "GeoSpoof GPS is a macOS menu-bar companion that sets a connected iPhone's system-level location to the place you pick in GeoSpoof — so your browser and your phone's actual GPS tell the same story.",
+    },
+    download: {
+      cta: "Download for Mac",
+      resolving: "Finding the latest version…",
+      versionLabel: "Latest version",
+      allReleases: "View all releases on GitHub",
+      note: "Universal build for Apple Silicon and Intel. Developer ID-signed and notarized by Apple.",
+    },
+    setup: {
+      title: "Set up GeoSpoof GPS",
+      intro:
+        "Open the menu-bar icon and choose “Set Up…” — the wizard checks each step off as you go. Connect your iPhone with a cable to finish setup; once it's done, GeoSpoof GPS keeps working over Wi-Fi.",
+      steps: [
+        {
+          name: "Install the app",
+          text: "Download the DMG and drag GeoSpoof GPS into Applications. It runs from your menu bar — no Dock icon, no window — and opens the setup wizard on first launch.",
+        },
+        {
+          name: "Connect your iPhone",
+          text: "Plug your iPhone into your Mac with a USB cable and unlock it. If it doesn't appear, try a different cable or USB port.",
+        },
+        {
+          name: "Trust this computer",
+          text: "Tap Trust on your iPhone when it asks. If no prompt appears, reset it on the phone under Settings ▸ General ▸ Transfer or Reset iPhone ▸ Reset ▸ Reset Location & Privacy, then reconnect.",
+        },
+        {
+          name: "Enable Developer Mode",
+          text: "On your iPhone, go to Settings ▸ Privacy & Security ▸ Developer Mode, turn it on, and restart when asked. Developer Mode only appears after the iPhone has been connected to your Mac once.",
+        },
+        {
+          name: "Pair with this Mac",
+          text: "In the setup window, click Pair — a one-time secure handshake that lets your Mac drive the iPhone's GPS. Keep the phone unlocked and connected while it runs.",
+        },
+        {
+          name: "Prepare the developer image",
+          text: "Click Prepare to mount the iOS developer image, which is what lets GeoSpoof GPS move your iPhone's real system location. It uses Xcode's copy — install Xcode from the Mac App Store and open it once with your iPhone connected, or point the app at a folder that already contains an image.",
+        },
+        {
+          name: "Pick a location in GeoSpoof",
+          text: "Set your location as usual in GeoSpoof. Your iPhone's system-level GPS follows it and stays aligned, even after you unplug and switch to Wi-Fi.",
+        },
+      ],
+    },
+    requirements: {
+      title: "What you'll need",
+      macos: "macOS 13 (Ventura) or later.",
+      appPre: "The ",
+      appLink: "GeoSpoof app for iPhone",
+      appPost:
+        " with GeoSpoof Pro. The app is your control surface — it sets the location — and moving the device's real GPS is a Pro feature.",
+      iphone:
+        "An iPhone with Developer Mode enabled, connected by USB cable for first-time setup.",
+      xcodePre: "Xcode — Apple's free developer app from the ",
+      xcodeLink: "Mac App Store",
+      xcodePost:
+        ". You don't build anything: just install it and open it once with your iPhone connected, so it finishes setup and provides the iOS developer image. It's a big download — set aside about 15 GB of free space. Already have a developer image? You can point the app at that folder instead.",
+    },
+    screenshotAlt: "GeoSpoof GPS on iPhone — screenshot {n}",
+    sourceNote:
+      "GeoSpoof GPS is source-available and versioned separately from the browser extension.",
   },
 } as const
 

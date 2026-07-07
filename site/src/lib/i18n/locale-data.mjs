@@ -73,6 +73,7 @@ export const localizedBasePaths = [
   "/terms",
   "/engine-level-spoofing",
   "/vpn",
+  "/gps",
   "/spoof-timezone",
   "/spoof-location",
   "/spoof-location/chrome",
