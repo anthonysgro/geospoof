@@ -18,7 +18,11 @@
 import type { AnyFunction } from "./types";
 import { OriginalDate as CapturedOriginalDate, spoofingEnabled, timezoneData } from "./state";
 import { isAmbiguousDateString, computeEpochAdjustment } from "./timezone-helpers";
-import { registerOverride, disguiseAsNative } from "./function-masking";
+import {
+  registerOverride,
+  disguiseAsNative,
+  stripExtensionFramesFromStack,
+} from "./function-masking";
 import { seedFromBootstrap } from "./bootstrap";
 import { createLogger } from "@/shared/utils/debug-logger";
 
@@ -67,135 +71,144 @@ export function installDateConstructorOn(realm: DateConstructorRealm): void {
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function DateOverride(this: any, ...args: any[]): any {
-    // Close the document_start race for `new Date()` snapshots taken in the
-    // page's first script — seed from the early bootstrap global if present
-    // (Firefox). No-op once seeded or once the settings event has arrived.
-    // Iframe realms pass no seed (patched after bootstrap).
-    seed?.();
+    // Scrub our injected frames from any native throw (e.g. `new Date(Symbol())`
+    // / BigInt coercion) so the extension id can't be read off the stack. This
+    // raw constructor bypasses the stripConstruct scrub net (a constructor can't
+    // be a method-shorthand), so the scrub lives inline here.
+    try {
+      // Close the document_start race for `new Date()` snapshots taken in the
+      // page's first script — seed from the early bootstrap global if present
+      // (Firefox). No-op once seeded or once the settings event has arrived.
+      // Iframe realms pass no seed (patched after bootstrap).
+      seed?.();
 
-    // Capture new.target so subclassing / Reflect.construct preserve the
-    // caller's prototype (native fidelity). Undefined ⇒ called without `new`.
-    const nt: AnyFunction | undefined = new.target as AnyFunction | undefined;
+      // Capture new.target so subclassing / Reflect.construct preserve the
+      // caller's prototype (native fidelity). Undefined ⇒ called without `new`.
+      const nt: AnyFunction | undefined = new.target as AnyFunction | undefined;
 
-    // Called as function (without new) — return current time string.
-    //
-    // Native `Date()` returns a string of the current time formatted
-    // in the SYSTEM timezone. If we passed through to the native we'd
-    // produce a system-zone string here while `new Date().toString()`
-    // produces a SPOOFED-zone string (because the instance's
-    // `.toString()` goes through our overridden Date.prototype.toString).
-    //
-    // That inconsistency is detectable: CreepJS's `valid.date` check
-    // compares `new Date() == Date()`, and the two sides coerce to
-    // strings with different timezone labels when system ≠ spoofed.
-    //
-    // Fix: construct a pristine instance and stringify it through the
-    // same prototype chain that `new Date()` uses — our spoofed
-    // toString formats in the spoofed zone, so both sides agree.
-    if (!nt) {
-      if (!spoofingEnabled || !timezoneData) {
-        return OriginalDate();
+      // Called as function (without new) — return current time string.
+      //
+      // Native `Date()` returns a string of the current time formatted
+      // in the SYSTEM timezone. If we passed through to the native we'd
+      // produce a system-zone string here while `new Date().toString()`
+      // produces a SPOOFED-zone string (because the instance's
+      // `.toString()` goes through our overridden Date.prototype.toString).
+      //
+      // That inconsistency is detectable: CreepJS's `valid.date` check
+      // compares `new Date() == Date()`, and the two sides coerce to
+      // strings with different timezone labels when system ≠ spoofed.
+      //
+      // Fix: construct a pristine instance and stringify it through the
+      // same prototype chain that `new Date()` uses — our spoofed
+      // toString formats in the spoofed zone, so both sides agree.
+      if (!nt) {
+        if (!spoofingEnabled || !timezoneData) {
+          return OriginalDate();
+        }
+        return new OriginalDate().toString();
       }
-      return new OriginalDate().toString();
-    }
 
-    // Construct through `new.target` so `class X extends Date {}` and
-    // `Reflect.construct(Date, args, X)` yield an instance with X.prototype,
-    // exactly like native. For the ordinary `new Date(...)` case nt is
-    // DateOverride itself, whose prototype IS OriginalDate.prototype — so the
-    // result is identical to `new OriginalDate(...)`.
-    const construct = (ctorArgs: ReadonlyArray<unknown>): object =>
-      Reflect.construct(
-        OriginalDate as unknown as new (...a: unknown[]) => object,
-        ctorArgs,
-        nt as unknown as new (...a: unknown[]) => object
-      );
+      // Construct through `new.target` so `class X extends Date {}` and
+      // `Reflect.construct(Date, args, X)` yield an instance with X.prototype,
+      // exactly like native. For the ordinary `new Date(...)` case nt is
+      // DateOverride itself, whose prototype IS OriginalDate.prototype — so the
+      // result is identical to `new OriginalDate(...)`.
+      const construct = (ctorArgs: ReadonlyArray<unknown>): object =>
+        Reflect.construct(
+          OriginalDate as unknown as new (...a: unknown[]) => object,
+          ctorArgs,
+          nt as unknown as new (...a: unknown[]) => object
+        );
 
-    // When spoofing is disabled, delegate (still honoring new.target).
-    if (!spoofingEnabled || !timezoneData) {
-      return construct(args);
-    }
+      // When spoofing is disabled, delegate (still honoring new.target).
+      if (!spoofingEnabled || !timezoneData) {
+        return construct(args);
+      }
 
-    // No arguments — current time
-    if (args.length === 0) {
-      return construct([]);
-    }
+      // No arguments — current time
+      if (args.length === 0) {
+        return construct([]);
+      }
 
-    // Single argument
-    if (args.length === 1) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const arg = args[0];
+      // Single argument
+      if (args.length === 1) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const arg = args[0];
 
-      // Single numeric argument — absolute epoch, no adjustment
-      if (typeof arg === "number") {
+        // Single numeric argument — absolute epoch, no adjustment
+        if (typeof arg === "number") {
+          return construct([arg]);
+        }
+
+        // Single string argument
+        if (typeof arg === "string") {
+          try {
+            const parsed = new OriginalDate(arg);
+            // If unparseable (NaN), construct an invalid Date (with nt.prototype)
+            if (isNaN(parsed.getTime())) {
+              return construct([arg]);
+            }
+            // If ambiguous, apply epoch adjustment
+            if (isAmbiguousDateString(arg)) {
+              const adjustment = computeEpochAdjustment(
+                parsed,
+                timezoneData.identifier,
+                timezoneData.offset
+              );
+              logger.trace("Date constructor (string): epoch adjustment", {
+                input: arg,
+                adjustment,
+                original: parsed.getTime(),
+                adjusted: parsed.getTime() + adjustment,
+              });
+              return construct([parsed.getTime() + adjustment]);
+            }
+            // Explicit timezone string — pass through
+            return construct([arg]);
+          } catch {
+            // Fall back to original behavior on error
+            return construct([arg]);
+          }
+        }
+
+        // Any other single argument (Date object, null, undefined, boolean, etc.)
         return construct([arg]);
       }
 
-      // Single string argument
-      if (typeof arg === "string") {
-        try {
-          const parsed = new OriginalDate(arg);
-          // If unparseable (NaN), construct an invalid Date (with nt.prototype)
-          if (isNaN(parsed.getTime())) {
-            return construct([arg]);
-          }
-          // If ambiguous, apply epoch adjustment
-          if (isAmbiguousDateString(arg)) {
-            const adjustment = computeEpochAdjustment(
-              parsed,
-              timezoneData.identifier,
-              timezoneData.offset
-            );
-            logger.trace("Date constructor (string): epoch adjustment", {
-              input: arg,
-              adjustment,
-              original: parsed.getTime(),
-              adjusted: parsed.getTime() + adjustment,
-            });
-            return construct([parsed.getTime() + adjustment]);
-          }
-          // Explicit timezone string — pass through
-          return construct([arg]);
-        } catch {
-          // Fall back to original behavior on error
-          return construct([arg]);
-        }
+      // Multi-argument (2+): year, month, [day, hours, minutes, seconds, ms]
+      const multiArgs: ReadonlyArray<unknown> = [
+        args[0],
+        args[1],
+        args[2] ?? 1,
+        args[3] ?? 0,
+        args[4] ?? 0,
+        args[5] ?? 0,
+        args[6] ?? 0,
+      ];
+      try {
+        const parsed = Reflect.construct(
+          OriginalDate as unknown as new (...a: unknown[]) => object,
+          multiArgs
+        ) as Date;
+        const adjustment = computeEpochAdjustment(
+          parsed,
+          timezoneData.identifier,
+          timezoneData.offset
+        );
+        logger.trace("Date constructor (multi-arg): epoch adjustment", {
+          input: args,
+          adjustment,
+          original: parsed.getTime(),
+          adjusted: parsed.getTime() + adjustment,
+        });
+        return construct([parsed.getTime() + adjustment]);
+      } catch {
+        // Fall back to original behavior on error
+        return construct(multiArgs);
       }
-
-      // Any other single argument (Date object, null, undefined, boolean, etc.)
-      return construct([arg]);
-    }
-
-    // Multi-argument (2+): year, month, [day, hours, minutes, seconds, ms]
-    const multiArgs: ReadonlyArray<unknown> = [
-      args[0],
-      args[1],
-      args[2] ?? 1,
-      args[3] ?? 0,
-      args[4] ?? 0,
-      args[5] ?? 0,
-      args[6] ?? 0,
-    ];
-    try {
-      const parsed = Reflect.construct(
-        OriginalDate as unknown as new (...a: unknown[]) => object,
-        multiArgs
-      ) as Date;
-      const adjustment = computeEpochAdjustment(
-        parsed,
-        timezoneData.identifier,
-        timezoneData.offset
-      );
-      logger.trace("Date constructor (multi-arg): epoch adjustment", {
-        input: args,
-        adjustment,
-        original: parsed.getTime(),
-        adjusted: parsed.getTime() + adjustment,
-      });
-      return construct([parsed.getTime() + adjustment]);
-    } catch {
-      // Fall back to original behavior on error
-      return construct(multiArgs);
+    } catch (err) {
+      stripExtensionFramesFromStack(err);
+      throw err;
     }
   }
 
@@ -206,38 +219,43 @@ export function installDateConstructorOn(realm: DateConstructorRealm): void {
    * override, returning the corrected epoch number.
    */
   const dateParseOverride = (str: string): number => {
-    // When spoofing is disabled, delegate entirely to OriginalDateParse
-    if (!spoofingEnabled || !timezoneData) {
-      return OriginalDateParse(str);
-    }
-
     try {
-      const epoch = OriginalDateParse(str);
-      // If unparseable, return NaN
-      if (isNaN(epoch)) {
-        return NaN;
+      // When spoofing is disabled, delegate entirely to OriginalDateParse
+      if (!spoofingEnabled || !timezoneData) {
+        return OriginalDateParse(str);
       }
-      // If ambiguous, apply epoch adjustment
-      if (isAmbiguousDateString(str)) {
-        const parsed = new OriginalDate(epoch);
-        const adjustment = computeEpochAdjustment(
-          parsed,
-          timezoneData.identifier,
-          timezoneData.offset
-        );
-        logger.trace("Date.parse: epoch adjustment", {
-          input: str,
-          adjustment,
-          original: epoch,
-          adjusted: epoch + adjustment,
-        });
-        return epoch + adjustment;
+
+      try {
+        const epoch = OriginalDateParse(str);
+        // If unparseable, return NaN
+        if (isNaN(epoch)) {
+          return NaN;
+        }
+        // If ambiguous, apply epoch adjustment
+        if (isAmbiguousDateString(str)) {
+          const parsed = new OriginalDate(epoch);
+          const adjustment = computeEpochAdjustment(
+            parsed,
+            timezoneData.identifier,
+            timezoneData.offset
+          );
+          logger.trace("Date.parse: epoch adjustment", {
+            input: str,
+            adjustment,
+            original: epoch,
+            adjusted: epoch + adjustment,
+          });
+          return epoch + adjustment;
+        }
+        // Explicit timezone string — pass through
+        return epoch;
+      } catch {
+        // Fall back to original behavior on error
+        return OriginalDateParse(str);
       }
-      // Explicit timezone string — pass through
-      return epoch;
-    } catch {
-      // Fall back to original behavior on error
-      return OriginalDateParse(str);
+    } catch (err) {
+      stripExtensionFramesFromStack(err);
+      throw err;
     }
   };
 

@@ -307,6 +307,34 @@ export type NativeGeoMethod = (...args: Array<unknown>) => unknown;
 const GEO_NOOP = (): void => {};
 
 /**
+ * Deliver a spoofed result to a page-supplied geolocation callback WITHOUT any
+ * frame of ours on the stack.
+ *
+ * We schedule the callback itself as the task/microtask entry — bound to its
+ * argument and to `undefined` `this` — rather than calling it from inside a
+ * wrapper closure we own. If the page's callback throws, the uncaught error's
+ * `.stack` AND its `ErrorEvent.filename` then name only the page's own code,
+ * matching a native browser (which dispatches geolocation callbacks from C++
+ * with no JS caller frame).
+ *
+ * Why not catch-then-scrub-then-rethrow: rethrowing re-surfaces the error from
+ * OUR line, which moves `ErrorEvent.filename` onto `chrome-extension://…/
+ * injected.js` — trading a stack-channel leak for a filename-channel one.
+ * Detaching the call is the only way to keep BOTH channels native-clean.
+ *
+ * `delayMs === undefined` → microtask (matches native's sub-millisecond cache
+ * hit); otherwise a `setTimeout` of the given delay (fresh-fix latency).
+ */
+function deliverToCallback<A>(cb: (arg: A) => void, arg: A, delayMs?: number): void {
+  const bound = cb.bind(undefined, arg);
+  if (delayMs === undefined) {
+    queueMicrotask(bound);
+  } else {
+    setTimeout(bound, delayMs);
+  }
+}
+
+/**
  * Whether a geolocation call's `this` and arguments are valid per WebIDL, so
  * the override can proceed. Mirrors the checks the native methods perform:
  *   - `this` must implement the Geolocation interface,
@@ -463,11 +491,9 @@ export function buildGeolocationOverrides(realm: GeolocationOverrideRealm): Geol
       coords: { lat: position.coords.latitude, lon: position.coords.longitude },
       delay: `${delay.toFixed(1)}ms`,
     });
-    setTimeout(() => {
-      if (successCallback) {
-        successCallback(position as GeolocationPosition);
-      }
-    }, delay);
+    // Deliver detached (callback is the timer entry) so a throwing page callback
+    // reports only its own frames in both stack and ErrorEvent.filename.
+    deliverToCallback(successCallback, position as GeolocationPosition, delay);
   };
 
   /**
@@ -495,9 +521,8 @@ export function buildGeolocationOverrides(realm: GeolocationOverrideRealm): Geol
         const position = realm.buildPosition();
         rememberPosition(position);
         logger.debug("getCurrentPosition: prompt granted, substituting spoofed coords");
-        if (successCallback) {
-          successCallback(position as GeolocationPosition);
-        }
+        // Detached delivery (microtask) — no wrapper frame of ours on the stack.
+        deliverToCallback(successCallback, position as GeolocationPosition);
       },
       errorCallback,
       options
@@ -534,9 +559,9 @@ export function buildGeolocationOverrides(realm: GeolocationOverrideRealm): Geol
       const cached = consumeCachedPosition(options);
       if (cached) {
         logger.debug("getCurrentPosition: cache hit, returning immediately");
-        queueMicrotask(() => {
-          successCallback(cached as GeolocationPosition);
-        });
+        // Detached microtask delivery — matches native cache-hit timing and
+        // keeps a throwing callback's stack/filename free of our frames.
+        deliverToCallback(successCallback, cached as GeolocationPosition);
         return;
       }
     }
@@ -568,7 +593,7 @@ export function buildGeolocationOverrides(realm: GeolocationOverrideRealm): Geol
             `getCurrentPosition: settings timed out after ${waited.toFixed(1)}ms, returning TIMEOUT error`
           );
           if (errorCallback) {
-            errorCallback({
+            deliverToCallback(errorCallback, {
               code: GeolocationPositionError.TIMEOUT,
               message: "Settings not received in time",
               PERMISSION_DENIED: GeolocationPositionError.PERMISSION_DENIED,
@@ -629,7 +654,8 @@ export function buildGeolocationOverrides(realm: GeolocationOverrideRealm): Geol
           (realPosition) => {
             if (!spoofingEnabled || !spoofedLocation) return;
             sampleNativeToJsonOrder(realPosition);
-            successCallback(realm.buildPosition() as GeolocationPosition);
+            // Detached delivery — no wrapper frame of ours on the stack.
+            deliverToCallback(successCallback, realm.buildPosition() as GeolocationPosition);
           },
           errorCallback,
           options

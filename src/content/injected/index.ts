@@ -59,6 +59,25 @@
 //    IP country/region against browser-reported geolocation. Closing
 //    this requires a VPN exit in the spoofed region (hence VPN Sync).
 //
+// 7. Re-dispatched error event `isTrusted === false` — When a throw from
+//    one of our overrides goes UNCAUGHT, window.onerror's `source` and the
+//    error event's `filename` would otherwise name our injected script
+//    (chrome-extension://<id>/…), leaking the extension id. The
+//    error-report-sanitizer closes that by suppressing the id-bearing event
+//    and re-emitting a sanitized twin. But a dispatchEvent()-generated event
+//    is `isTrusted === false` per spec (only user-agent-generated events are
+//    `true`, and there is no scripted path to forge a trusted one), so the
+//    re-emitted event reports `false` where a genuine uncaught error reports
+//    `true`. This is NON-IDENTIFYING — it reveals "an error was re-dispatched,"
+//    never which extension — and is observable only by an addEventListener(
+//    'error') handler that deliberately triggers one of our overrides uncaught
+//    and inspects `isTrusted` (window.onerror receives positional args and
+//    can't see it). We accept it because the alternative — not re-dispatching —
+//    leaves the actual extension id in window.onerror's `source`, which is far
+//    worse. Crucially, ONLY `error`/`unhandledrejection` are touched: the
+//    `isTrusted` checks that matter in the wild (user-interaction events like
+//    click/keydown, used by anti-bot code) are never affected.
+//
 // ────────────────────────────────────────────────────────────────────
 
 // 1. Settings listener — MUST be installed first so the window is ready
@@ -80,6 +99,16 @@ installSettingsListener();
 //    subsequent override is indistinguishable from native code.
 import { initFunctionMasking } from "./function-masking";
 initFunctionMasking();
+
+// 2b. Error-report sanitizer — installed right after function masking (so the
+//     self-URL is captured) and BEFORE any behaviour override can throw. Closes
+//     the extension-id leak on the UNCAUGHT error path: when an override's throw
+//     goes uncaught, window.onerror / the error event report a `filename` naming
+//     our injected.js — a channel the .stack scrubs can't reach. Ungated (runs
+//     in every frame, including cross-origin) because Date/Intl overrides throw
+//     there too. A no-op on engines that anonymize content-script frames.
+import { installErrorReportSanitizer } from "./error-report-sanitizer";
+installErrorReportSanitizer();
 
 // 3. State module loads eagerly — original API references are captured at
 //    import time, before any overrides replace them.

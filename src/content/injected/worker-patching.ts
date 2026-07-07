@@ -64,7 +64,12 @@
  */
 
 import { timezoneData, spoofingEnabled, ANNOUNCE_EVENT_NAME } from "./state";
-import { registerOverride, disguiseAsNative, stripConstruct } from "./function-masking";
+import {
+  registerOverride,
+  disguiseAsNative,
+  stripConstruct,
+  stripExtensionFramesFromStack,
+} from "./function-masking";
 import { seedFromBootstrap } from "./bootstrap";
 import { SPOOF_CORE } from "@/shared/worker-payload";
 import { createLogger } from "@/shared/utils/debug-logger";
@@ -641,56 +646,64 @@ function installWorkerOverride(): void {
     scriptURL: string | URL,
     options?: WorkerOptions
   ): Worker {
-    seedFromBootstrap();
-    const urlStr = scriptURL instanceof URL ? scriptURL.href : String(scriptURL);
-    const isInline = urlStr.startsWith("blob:") || urlStr.startsWith("data:");
-
-    // URL-based workers (http/https/relative): announce so Firefox's
-    // webRequest filter patches the response, then pass through. Do
-    // NOT rewrite to a blob — that would break `self.location` drift,
-    // hit CSP worker-src restrictions, and make module imports fail.
-    if (!isInline) {
-      const announceUrl = resolveAnnounceableUrl(scriptURL);
-      if (announceUrl) announceWorkerFetch(announceUrl);
-      return new RealWorker(scriptURL, options);
-    }
-
-    // Module workers with inline URLs: blob-wrapping breaks relative
-    // `import` resolution. Pass through unpatched. In practice module
-    // workers with blob/data URLs are rare — bundlers ship module
-    // workers as http URLs which hit the announce path above.
-    if (options?.type === "module") {
-      return new RealWorker(scriptURL, options);
-    }
-
-    // Inline classic workers: blob-wrap. The site's CSP already allows
-    // blob/data URLs (it just constructed one), so our wrapped blob
-    // stays within the same allowance.
-    const payload = generateInlineWorkerPayload(window.location.href);
-    if (!payload) return new RealWorker(scriptURL, options);
-
+    // Scrub injected frames from any native throw (e.g. String(Symbol) coercion
+    // on the scriptURL, or a native constructor rejection) so the extension id
+    // can't be read off the stack. Raw constructor — bypasses stripConstruct.
     try {
-      if (urlStr.startsWith("blob:")) {
-        const blobUrl = createInlinedBlobWorkerUrl(urlStr, payload);
-        if (blobUrl) return new RealWorker(blobUrl, options);
-        // Couldn't read the source (revoked, cross-origin, etc.) —
-        // fall through to unpatched rather than re-injecting an
-        // `importScripts(blob:)` bootstrap that would be blocked
-        // under strict `script-src` CSPs.
+      seedFromBootstrap();
+      const urlStr = scriptURL instanceof URL ? scriptURL.href : String(scriptURL);
+      const isInline = urlStr.startsWith("blob:") || urlStr.startsWith("data:");
+
+      // URL-based workers (http/https/relative): announce so Firefox's
+      // webRequest filter patches the response, then pass through. Do
+      // NOT rewrite to a blob — that would break `self.location` drift,
+      // hit CSP worker-src restrictions, and make module imports fail.
+      if (!isInline) {
+        const announceUrl = resolveAnnounceableUrl(scriptURL);
+        if (announceUrl) announceWorkerFetch(announceUrl);
         return new RealWorker(scriptURL, options);
       }
 
-      // data: URL — decode inline, prepend payload, create fresh blob.
-      const source = decodeDataUrl(urlStr);
-      if (source !== null) {
-        const patchedUrl = createPatchedBlobUrl(source, payload);
-        return new RealWorker(patchedUrl, options);
+      // Module workers with inline URLs: blob-wrapping breaks relative
+      // `import` resolution. Pass through unpatched. In practice module
+      // workers with blob/data URLs are rare — bundlers ship module
+      // workers as http URLs which hit the announce path above.
+      if (options?.type === "module") {
+        return new RealWorker(scriptURL, options);
       }
-      // Couldn't decode — fall through to unpatched.
-      return new RealWorker(scriptURL, options);
+
+      // Inline classic workers: blob-wrap. The site's CSP already allows
+      // blob/data URLs (it just constructed one), so our wrapped blob
+      // stays within the same allowance.
+      const payload = generateInlineWorkerPayload(window.location.href);
+      if (!payload) return new RealWorker(scriptURL, options);
+
+      try {
+        if (urlStr.startsWith("blob:")) {
+          const blobUrl = createInlinedBlobWorkerUrl(urlStr, payload);
+          if (blobUrl) return new RealWorker(blobUrl, options);
+          // Couldn't read the source (revoked, cross-origin, etc.) —
+          // fall through to unpatched rather than re-injecting an
+          // `importScripts(blob:)` bootstrap that would be blocked
+          // under strict `script-src` CSPs.
+          return new RealWorker(scriptURL, options);
+        }
+
+        // data: URL — decode inline, prepend payload, create fresh blob.
+        const source = decodeDataUrl(urlStr);
+        if (source !== null) {
+          const patchedUrl = createPatchedBlobUrl(source, payload);
+          return new RealWorker(patchedUrl, options);
+        }
+        // Couldn't decode — fall through to unpatched.
+        return new RealWorker(scriptURL, options);
+      } catch (err) {
+        logger.debug("[worker-patching] inline Worker wrap failed, falling back:", err);
+        return new RealWorker(scriptURL, options);
+      }
     } catch (err) {
-      logger.debug("[worker-patching] inline Worker wrap failed, falling back:", err);
-      return new RealWorker(scriptURL, options);
+      stripExtensionFramesFromStack(err);
+      throw err;
     }
   } as unknown as typeof Worker;
 
@@ -722,42 +735,48 @@ function installSharedWorkerOverride(): void {
     scriptURL: string | URL,
     options?: string | WorkerOptions
   ): SharedWorker {
-    seedFromBootstrap();
-    const opts: WorkerOptions | undefined =
-      typeof options === "string" ? { name: options } : options;
-
-    const urlStr = scriptURL instanceof URL ? scriptURL.href : String(scriptURL);
-    const isInline = urlStr.startsWith("blob:") || urlStr.startsWith("data:");
-
-    // URL-based: announce + pass through. Same rationale as Worker.
-    if (!isInline) {
-      const announceUrl = resolveAnnounceableUrl(scriptURL);
-      if (announceUrl) announceWorkerFetch(announceUrl);
-      return new RealSharedWorker(scriptURL, options);
-    }
-
-    if (opts?.type === "module") {
-      return new RealSharedWorker(scriptURL, options);
-    }
-
-    const payload = generateInlineWorkerPayload(window.location.href);
-    if (!payload) return new RealSharedWorker(scriptURL, options);
-
+    // Scrub injected frames from any native throw (see SpoofedWorker above).
     try {
-      if (urlStr.startsWith("blob:")) {
-        const blobUrl = createInlinedBlobWorkerUrl(urlStr, payload);
-        if (blobUrl) return new RealSharedWorker(blobUrl, options);
+      seedFromBootstrap();
+      const opts: WorkerOptions | undefined =
+        typeof options === "string" ? { name: options } : options;
+
+      const urlStr = scriptURL instanceof URL ? scriptURL.href : String(scriptURL);
+      const isInline = urlStr.startsWith("blob:") || urlStr.startsWith("data:");
+
+      // URL-based: announce + pass through. Same rationale as Worker.
+      if (!isInline) {
+        const announceUrl = resolveAnnounceableUrl(scriptURL);
+        if (announceUrl) announceWorkerFetch(announceUrl);
         return new RealSharedWorker(scriptURL, options);
       }
-      const source = decodeDataUrl(urlStr);
-      if (source !== null) {
-        const patchedUrl = createPatchedBlobUrl(source, payload);
-        return new RealSharedWorker(patchedUrl, options);
+
+      if (opts?.type === "module") {
+        return new RealSharedWorker(scriptURL, options);
       }
-      return new RealSharedWorker(scriptURL, options);
+
+      const payload = generateInlineWorkerPayload(window.location.href);
+      if (!payload) return new RealSharedWorker(scriptURL, options);
+
+      try {
+        if (urlStr.startsWith("blob:")) {
+          const blobUrl = createInlinedBlobWorkerUrl(urlStr, payload);
+          if (blobUrl) return new RealSharedWorker(blobUrl, options);
+          return new RealSharedWorker(scriptURL, options);
+        }
+        const source = decodeDataUrl(urlStr);
+        if (source !== null) {
+          const patchedUrl = createPatchedBlobUrl(source, payload);
+          return new RealSharedWorker(patchedUrl, options);
+        }
+        return new RealSharedWorker(scriptURL, options);
+      } catch (err) {
+        logger.debug("[worker-patching] inline SharedWorker wrap failed, falling back:", err);
+        return new RealSharedWorker(scriptURL, options);
+      }
     } catch (err) {
-      logger.debug("[worker-patching] inline SharedWorker wrap failed, falling back:", err);
-      return new RealSharedWorker(scriptURL, options);
+      stripExtensionFramesFromStack(err);
+      throw err;
     }
   } as unknown as typeof SharedWorker;
 

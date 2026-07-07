@@ -61,6 +61,17 @@ export function stripExtensionFramesFromStack(err: unknown): void {
   }
 }
 
+/**
+ * This injected script's own resource URL (`chrome-extension://<id>/…`), or
+ * `null` when it couldn't be determined. Exposed for the error-report
+ * sanitizer, which needs to recognize our-origin uncaught errors to scrub the
+ * `ErrorEvent.filename` / `window.onerror` `source` channel (which
+ * `stripExtensionFramesFromStack` — a `.stack`-only scrub — can't reach).
+ */
+export function getSelfScriptUrl(): string | null {
+  return SELF_SCRIPT_URL;
+}
+
 /** Register a function in the override registry for toString masking. */
 export function registerOverride(fn: AnyFunction, nativeName: string): void {
   overrideRegistry.set(fn, nativeName);
@@ -121,8 +132,25 @@ export function stripConstruct(fn: AnyFunction): AnyFunction {
       // leaks "Object.apply" which fails the arkenfox validScope check.
       // Reflect.apply doesn't appear as "Object.apply" in the stack.
       try {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, prefer-rest-params
-        return Reflect.apply(fn, this, Array.prototype.slice.call(arguments) as unknown[]);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, prefer-rest-params
+        const result = Reflect.apply(fn, this, Array.prototype.slice.call(arguments) as unknown[]);
+        // Async twin of the catch below: a Promise-returning WebIDL op
+        // (permissions.query, RTCPeerConnection.getStats, serviceWorker.register)
+        // does NOT throw on a foreign `this` — it REJECTS, and the rejection's
+        // Error carries our injected frame. A synchronous try/catch can't see
+        // that, so if the override returned a thenable we attach a rejection
+        // scrub. This closes the async stack leak for every method routed
+        // through here — present and future — instead of each Promise-returning
+        // override having to hand-roll its own `.catch` scrub.
+        if (result != null && typeof (result as { then?: unknown }).then === "function") {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          return (result as Promise<any>).then(undefined, (err: unknown) => {
+            stripExtensionFramesFromStack(err);
+            throw err;
+          });
+        }
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        return result;
       } catch (err) {
         // Single choke point for every installOverride-wrapped method: when the
         // wrapped override throws (its own brand/arg error, or the native error

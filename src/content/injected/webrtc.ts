@@ -167,18 +167,28 @@ export function buildRTCPeerConnectionWrapper(
   // when protection is active.
   class WrappedRTCPeerConnection extends NativeCtor {
     constructor(configuration?: RTCConfiguration) {
-      if (webrtcProtectionEnabled) {
-        const blocked = buildBlockingConfig(configuration);
-        logger.debug(
-          "[webrtc] RTCPeerConnection constructed with protection active — ICE gathering will produce zero candidates",
-          {
-            originalConfig: configuration,
-            blockedConfig: blocked,
-          }
-        );
-        super(blocked);
-      } else {
-        super(configuration);
+      try {
+        if (webrtcProtectionEnabled) {
+          const blocked = buildBlockingConfig(configuration);
+          logger.debug(
+            "[webrtc] RTCPeerConnection constructed with protection active — ICE gathering will produce zero candidates",
+            {
+              originalConfig: configuration,
+              blockedConfig: blocked,
+            }
+          );
+          super(blocked);
+        } else {
+          super(configuration);
+        }
+      } catch (err) {
+        // A config the native constructor rejects (e.g. a non-object argument)
+        // throws from super() through this subclass frame — which lives in the
+        // injected script. Scrub our frames before the error reaches the page.
+        // (No `this` access before/after — we only rethrow — so wrapping super()
+        // is legal in a derived constructor.)
+        stripExtensionFramesFromStack(err);
+        throw err;
       }
     }
   }

@@ -47,6 +47,7 @@ import {
   disguiseAsNative,
   stripExtensionFramesFromStack,
 } from "./function-masking";
+import { installErrorReportSanitizerOn } from "./error-report-sanitizer";
 import { buildPermissionsQueryOverride } from "./permissions";
 import {
   createGeolocationPosition,
@@ -101,6 +102,19 @@ export function patchIframeWindow(iframeWindow: Window): void {
       }
     })(),
   });
+
+  // ── 0. Error-report sanitizer ─────────────────────────────────────────
+  // Install first so an uncaught throw from any override below (in this iframe
+  // realm) has its filename/onerror-source scrubbed too — the .stack scrubs
+  // can't reach that channel. Same reasoning as the top-realm install.
+  try {
+    installErrorReportSanitizerOn(iframeWindow as Window & typeof globalThis);
+  } catch (err) {
+    logger.debug(
+      "[patchIframeWindow] section 0 (error sanitizer) threw:",
+      err instanceof Error ? err.message : String(err)
+    );
+  }
 
   // ── 1. toString masking ──────────────────────────────────────────────
   try {
