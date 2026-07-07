@@ -1120,7 +1120,6 @@ export const en = {
       cta: "Download for Mac",
       resolving: "Finding the latest version…",
       versionLabel: "Latest version",
-      allReleases: "View all releases on GitHub",
       note: "Universal build for Apple Silicon and Intel. Developer ID-signed and notarized by Apple.",
     },
     setup: {

@@ -1137,7 +1137,6 @@ export const ru: Dictionary = {
       cta: "Скачать для Mac",
       resolving: "Ищем последнюю версию…",
       versionLabel: "Последняя версия",
-      allReleases: "Все выпуски на GitHub",
       note: "Универсальная сборка для Apple Silicon и Intel. Подписана Developer ID и заверена Apple.",
     },
     setup: {

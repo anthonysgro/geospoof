@@ -1126,7 +1126,6 @@ export const id: Dictionary = {
       cta: "Unduh untuk Mac",
       resolving: "Mencari versi terbaru…",
       versionLabel: "Versi terbaru",
-      allReleases: "Lihat semua rilis di GitHub",
       note: "Build universal untuk Apple Silicon dan Intel. Ditandatangani dengan Developer ID dan dinotarisasi oleh Apple.",
     },
     setup: {

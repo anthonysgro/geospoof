@@ -1136,7 +1136,6 @@ export const ptBR: Dictionary = {
       cta: "Baixar para Mac",
       resolving: "Buscando a versão mais recente…",
       versionLabel: "Versão mais recente",
-      allReleases: "Ver todas as versões no GitHub",
       note: "Build universal para Apple Silicon e Intel. Assinado com Developer ID e notarizado pela Apple.",
     },
     setup: {

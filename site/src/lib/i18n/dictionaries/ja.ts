@@ -1118,7 +1118,6 @@ export const ja: Dictionary = {
       cta: "Mac 用をダウンロード",
       resolving: "最新バージョンを取得しています…",
       versionLabel: "最新バージョン",
-      allReleases: "GitHub ですべてのリリースを見る",
       note: "Apple Silicon と Intel に対応したユニバーサルビルド。Developer ID で署名され、Apple により公証済みです。",
     },
     setup: {

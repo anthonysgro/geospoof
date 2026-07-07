@@ -1,6 +1,6 @@
 import * as React from "react"
 import { createFileRoute } from "@tanstack/react-router"
-import { Apple, ExternalLink, FlaskConical, ListChecks } from "lucide-react"
+import { Apple, FlaskConical, ListChecks } from "lucide-react"
 import type { Locale } from "@/lib/i18n"
 import {
   buildAlternateLinks,
@@ -29,11 +29,17 @@ import { useTranslations } from "@/hooks/use-i18n"
 import { useTheme } from "@/hooks/use-theme"
 import { LocaleLink } from "@/components/LocaleLink"
 
-const GITHUB_REPO = "anthonysgro/geospoof"
-/** Stable fallback link — the full releases list (GPS builds are named `GeoSpoof GPS v…`). */
-const RELEASES_URL = `https://github.com/${GITHUB_REPO}/releases`
-/** GeoSpoof GPS ships on its own `gps-v*` tag track, separate from the extension's `v*`. */
-const GPS_TAG_PREFIX = "gps-v"
+/**
+ * GeoSpoof GPS is built + notarized by the private `geospoof-gps` repo's CI and
+ * published to the CDN (not GitHub Releases — the repo is private). The site
+ * links the stable alias, which always points at the newest build and works
+ * during SSR/prerender with no JS, and reads a small pointer for the version.
+ */
+const GPS_CDN_BASE = "https://cdn.geospoof.com/gps"
+/** Stable download alias — always the latest build. Safe as an SSR href. */
+const GPS_LATEST_DMG = `${GPS_CDN_BASE}/latest.dmg`
+/** Version pointer the UI fetches to display the current version number. */
+const GPS_LATEST_JSON = `${GPS_CDN_BASE}/latest.json`
 /** GeoSpoof iOS app — the control surface that sets the location (Pro unlocks device GPS). */
 const APP_STORE_URL =
   "https://apps.apple.com/app/apple-store/id6765719745?pt=128299974&ct=gps&mt=8"
@@ -72,12 +78,11 @@ export const Route = createFileRoute("/{-$locale}/gps")({
   head: ({ params }) => buildGpsHead(toLocale(params.locale)),
 })
 
-/** Minimal shape of the GitHub Releases API entries we read. */
-interface GithubRelease {
-  tag_name: string
-  draft: boolean
-  prerelease: boolean
-  assets: Array<{ name: string; browser_download_url: string }>
+/** Shape of the CDN `gps/latest.json` pointer written by the release workflow. */
+interface LatestGpsManifest {
+  version: string
+  dmg: string
+  date?: string
 }
 
 interface ResolvedRelease {
@@ -86,48 +91,29 @@ interface ResolvedRelease {
 }
 
 /**
- * Resolve the latest GeoSpoof GPS DMG at runtime.
- *
- * GitHub's `releases/latest` points at the newest release across BOTH tracks
- * (extension `v*` + GPS `gps-v*`), so it can't be trusted to return a GPS
- * build. Instead we page through the releases list and pick the first
- * published `gps-v*` release that carries a `.dmg` asset.
- *
- * Returns `null` until resolved (and if the request fails), so the UI can fall
- * back to the stable "all releases" link — which works during SSR/prerender
- * and offline.
+ * Resolve the latest GeoSpoof GPS version at runtime from the CDN pointer
+ * (`gps/latest.json`). Returns `null` until resolved (and if the request
+ * fails), in which case the UI keeps the stable `latest.dmg` download link,
+ * which works during SSR/prerender and offline.
  */
 function useLatestGpsRelease(): ResolvedRelease | null {
   const [release, setRelease] = React.useState<ResolvedRelease | null>(null)
 
   React.useEffect(() => {
     const controller = new AbortController()
-    fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases?per_page=30`, {
-      headers: { Accept: "application/vnd.github+json" },
+    fetch(GPS_LATEST_JSON, {
+      headers: { Accept: "application/json" },
       signal: controller.signal,
     })
       .then((res) =>
-        res.ok ? (res.json() as Promise<Array<GithubRelease>>) : null
+        res.ok ? (res.json() as Promise<LatestGpsManifest>) : null
       )
-      .then((releases) => {
-        if (!releases) return
-        const latest = releases.find(
-          (r) =>
-            !r.draft &&
-            !r.prerelease &&
-            r.tag_name.startsWith(GPS_TAG_PREFIX) &&
-            r.assets.some((a) => a.name.endsWith(".dmg"))
-        )
-        if (!latest) return
-        const dmg = latest.assets.find((a) => a.name.endsWith(".dmg"))
-        if (!dmg) return
-        setRelease({
-          version: latest.tag_name.slice(GPS_TAG_PREFIX.length),
-          dmgUrl: dmg.browser_download_url,
-        })
+      .then((data) => {
+        if (!data || !data.version || !data.dmg) return
+        setRelease({ version: data.version, dmgUrl: data.dmg })
       })
       .catch(() => {
-        /* leave the fallback link in place */
+        /* leave the stable latest.dmg link in place */
       })
     return () => controller.abort()
   }, [])
@@ -143,8 +129,7 @@ function DownloadCard() {
   return (
     <div className="mx-auto flex max-w-xl flex-col items-center">
       <a
-        href={release ? release.dmgUrl : RELEASES_URL}
-        {...(release ? {} : { target: "_blank", rel: "noopener noreferrer" })}
+        href={release ? release.dmgUrl : GPS_LATEST_DMG}
         className={cn(
           "inline-flex min-h-14 w-full items-center justify-center gap-2 sm:w-auto",
           "rounded-brand bg-(--color-brand) px-8 text-lg font-semibold text-white",
@@ -166,16 +151,6 @@ function DownloadCard() {
       <p className="mt-1 max-w-md text-center text-xs text-(--color-canvas-muted)">
         {d.note}
       </p>
-
-      <a
-        href={RELEASES_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-(--color-brand) hover:underline"
-      >
-        {d.allReleases}
-        <ExternalLink className="size-3.5" aria-hidden="true" />
-      </a>
     </div>
   )
 }
@@ -194,7 +169,7 @@ function StructuredData() {
     image: `${SITE_URL}/icon.png`,
     applicationCategory: "UtilitiesApplication",
     operatingSystem: "macOS 13+",
-    downloadUrl: RELEASES_URL,
+    downloadUrl: GPS_LATEST_DMG,
     author: { "@type": "Person", name: "Anthony Sgro" },
   }
 

@@ -1094,7 +1094,6 @@ export const zhCN: Dictionary = {
       cta: "下载 Mac 版",
       resolving: "正在获取最新版本…",
       versionLabel: "最新版本",
-      allReleases: "在 GitHub 查看所有版本",
       note: "面向 Apple Silicon 与 Intel 的通用版本。已使用 Developer ID 签名并经 Apple 公证。",
     },
     setup: {

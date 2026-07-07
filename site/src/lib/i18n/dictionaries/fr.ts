@@ -1138,7 +1138,6 @@ export const fr: Dictionary = {
       cta: "Télécharger pour Mac",
       resolving: "Recherche de la dernière version…",
       versionLabel: "Dernière version",
-      allReleases: "Voir toutes les versions sur GitHub",
       note: "Build universel pour Apple Silicon et Intel. Signé avec un Developer ID et notarié par Apple.",
     },
     setup: {

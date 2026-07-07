@@ -1133,7 +1133,6 @@ export const es: Dictionary = {
       cta: "Descargar para Mac",
       resolving: "Buscando la última versión…",
       versionLabel: "Última versión",
-      allReleases: "Ver todas las versiones en GitHub",
       note: "Compilación universal para Apple Silicon e Intel. Firmada con Developer ID y notarizada por Apple.",
     },
     setup: {

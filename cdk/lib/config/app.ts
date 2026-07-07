@@ -29,6 +29,23 @@ export interface CustomDomainConfig {
   readonly hostedZone?: HostedZoneConfig;
 }
 
+/**
+ * Lets a private GitHub repo's CI publish the GeoSpoof GPS `.dmg` to the CDN
+ * bucket (under the `gps/` prefix) via GitHub OIDC — no long-lived AWS keys.
+ * When set, the stack provisions a scoped IAM role the release workflow assumes.
+ */
+export interface GpsReleaseConfig {
+  /** "owner/repo" of the private GPS repo whose Actions may publish. */
+  readonly githubRepo: string;
+  /**
+   * ARN of an EXISTING GitHub Actions OIDC provider in this account, if one is
+   * already present. Leave undefined to have CDK create it. Note: an account
+   * can hold only ONE provider for token.actions.githubusercontent.com, so if
+   * you (or another stack) already created it, import it here by ARN.
+   */
+  readonly oidcProviderArn?: string;
+}
+
 export interface GeoTzCdnEnv {
   readonly name: EnvName;
   readonly account: string;
@@ -39,6 +56,12 @@ export interface GeoTzCdnEnv {
   readonly retainBucket: boolean;
   /** Optional custom domain. Until a cert/zone is supplied, we serve on the *.cloudfront.net domain. */
   readonly customDomain?: CustomDomainConfig;
+  /**
+   * Optional: when set, provisions an OIDC-assumable IAM role so the named
+   * private repo's CI can publish the GPS `.dmg` to this CDN. Prod-only in
+   * practice (the public /gps page downloads from prod).
+   */
+  readonly gpsRelease?: GpsReleaseConfig;
   /**
    * Email for the 5xx alarm + cost-budget notifications. Sourced from the
    * GEOSPOOF_ALARM_EMAIL env var so it stays out of this public repo. If unset,
@@ -104,6 +127,12 @@ export const environments: Record<EnvName, GeoTzCdnEnv> = {
       // is created + DNS-validated out of band and imported here by ARN.
       certificateArn:
         "arn:aws:acm:us-east-1:682844365870:certificate/b30009e9-6b97-4ce5-a893-ab59fd22b51d",
+    },
+    // The private geospoof-gps repo's release workflow publishes the signed,
+    // notarized DMG to this (prod) CDN under gps/. If the account already has a
+    // GitHub OIDC provider, add its ARN as `oidcProviderArn` to import it.
+    gpsRelease: {
+      githubRepo: "anthonysgro/geospoof-gps",
     },
   },
 };
