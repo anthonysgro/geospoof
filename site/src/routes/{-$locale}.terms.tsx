@@ -252,10 +252,13 @@ export function TermsPage() {
             <TermsSection title="6. Intellectual Property">
               <p>
                 The GeoSpoof name, logo, and associated branding are the
-                property of the developer. The underlying source code is
-                available under the MIT License. Nothing in these Terms grants
-                you rights to use the GeoSpoof name or branding beyond what is
-                necessary to describe your use of the Extension.
+                property of the developer. <strong>GeoSpoof™ is a trademark of
+                Anthony Sgro.</strong> The underlying source code is available
+                under the MIT License, but that license covers the code only and
+                does not grant any rights in the GeoSpoof name, logo, or marks.
+                Nothing in these Terms grants you rights to use the GeoSpoof name
+                or branding beyond nominative fair use necessary to accurately
+                describe your use of the Extension.
               </p>
             </TermsSection>
 

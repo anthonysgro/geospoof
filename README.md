@@ -143,6 +143,8 @@ The GeoSpoof browser extension and everything in this repository is **open sourc
 
 The native GeoSpoof GPS desktop core (the Rust/Swift device product) is developed separately as a closed-source product and is not part of this repository.
 
+**Trademarks:** The MIT license covers the source code only, not the brand. **GeoSpoof™ is a trademark of Anthony Sgro.** You're free to use and fork the code under MIT, but the GeoSpoof name and logo aren't licensed with it — please don't brand a fork or derivative product as "GeoSpoof" in a way that could confuse users about its source.
+
 ## Links
 
 - [Website — geospoof.com](https://geospoof.com/?utm_source=github&utm_medium=readme)

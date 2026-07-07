@@ -137,6 +137,15 @@ export function Footer({ className, ...props }: FooterProps) {
         <p className="text-small mt-10 border-t border-(--color-canvas-border) pt-6 text-(--color-canvas-muted)">
           {format(t.footer.copyright, { year: currentYear })}
         </p>
+        {/*
+          Trademark attribution. Intentionally hardcoded (not localized): a
+          trademark notice is a fixed legal/brand statement and the mark name
+          does not translate. Uses ™ (unregistered) — switch to ® only once the
+          USPTO registration issues.
+        */}
+        <p className="text-small mt-2 text-(--color-canvas-muted)">
+          GeoSpoof™ is a trademark of Anthony Sgro.
+        </p>
       </div>
     </footer>
   )
