@@ -30,10 +30,16 @@ export interface GpsDownloadsProps {
  *   - s3:PutObject under `<prefix>/*` on the CDN bucket
  *   - cloudfront:CreateInvalidation on this one distribution
  *
- * The workflow uploads three objects under `<prefix>/`:
+ * The workflow uploads these objects under `<prefix>/`:
  *   - GeoSpoof-GPS-v<version>.dmg  (immutable, versioned archive)
  *   - latest.dmg                   (stable download URL; short TTL + invalidated)
  *   - latest.json                  (version pointer for the /gps page UI)
+ *   - appcast.xml                  (Sparkle auto-update feed; short TTL + invalidated,
+ *                                   EdDSA-signed, enclosure points at the versioned DMG)
+ *
+ * No extra IAM is needed for the appcast: it lives under `<prefix>/`, so the
+ * `s3:PutObject` on `<prefix>/*` and the distribution `CreateInvalidation` grant
+ * below already cover uploading and invalidating it.
  */
 export class GpsDownloads extends Construct {
   readonly publishRole: iam.Role;
