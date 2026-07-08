@@ -1110,7 +1110,7 @@ export const id: Dictionary = {
     experimental: {
       label: "Eksperimental",
       title: "Fitur baru yang masih eksperimental",
-      body: "GeoSpoof GPS masih baru dan sedang diuji di berbagai perangkat, jadi harap maklum jika ada kekurangan dan beberapa langkah penyiapan sekali jalan. Bagian lain GeoSpoof tetap berfungsi tanpanya — ini tambahan opsional untuk menyamakan GPS asli iPhone Anda.",
+      body: "GeoSpoof GPS masih baru dan sedang diuji di berbagai perangkat, jadi harap maklum jika ada beberapa kekurangan dan sedikit penyiapan awal. Ini tambahan opsional. Bagian lain GeoSpoof tetap berfungsi baik tanpanya.",
     },
     hero: {
       breadcrumbHome: "Beranda",
@@ -1121,7 +1121,7 @@ export const id: Dictionary = {
       headingEmphasis: "GPS asli",
       headingPost: " iPhone Anda dengan lokasi palsu Anda",
       intro:
-        "GeoSpoof GPS adalah pendamping bilah menu macOS yang menyetel lokasi tingkat sistem iPhone yang terhubung ke tempat yang Anda pilih di GeoSpoof — sehingga browser dan GPS asli ponsel Anda menyampaikan cerita yang sama.",
+        "GeoSpoof GPS adalah pendamping bilah menu macOS yang menyetel lokasi tingkat sistem iPhone yang terhubung ke tempat yang Anda pilih di GeoSpoof. Browser dan GPS asli ponsel Anda menyampaikan cerita yang sama.",
     },
     download: {
       cta: "Unduh untuk Mac",
@@ -1132,35 +1132,55 @@ export const id: Dictionary = {
     setup: {
       title: "Siapkan GeoSpoof GPS",
       intro:
-        "Buka ikon bilah menu dan pilih “Siapkan…” — panduan akan menandai setiap langkah saat Anda mengerjakannya. Hubungkan iPhone dengan kabel untuk menyelesaikan penyiapan; setelah selesai, GeoSpoof GPS tetap bekerja melalui Wi-Fi.",
+        "Buka ikon bilah menu dan pilih “Siapkan…”. Panduan akan menandai setiap langkah saat Anda mengerjakannya. Hubungkan iPhone dengan kabel untuk menyelesaikan penyiapan. Setelah itu, GeoSpoof GPS tetap bekerja melalui Wi-Fi.",
       steps: [
         {
           name: "Pasang aplikasinya",
-          text: "Unduh DMG dan seret GeoSpoof GPS ke folder Applications. Aplikasi berjalan dari bilah menu — tanpa ikon Dock, tanpa jendela — dan membuka panduan penyiapan saat pertama kali dijalankan.",
+          text: "Buka DMG, seret GeoSpoof GPS ke folder Applications, lalu jalankan. Aplikasi berjalan dari bilah menu (tanpa ikon Dock, tanpa jendela) dan membuka panduan penyiapan saat pertama kali dijalankan.",
+        },
+        {
+          name: "Izinkan akses Jaringan Lokal",
+          text: "Saat pertama kali dijalankan, macOS meminta akses Jaringan Lokal. Klik Izinkan agar GeoSpoof GPS dapat menemukan iPhone Anda dan berkomunikasi dengannya. Tanpa izin ini, aplikasi tidak dapat melihat ponsel Anda.",
+          bullets: [
+            "Melewatkan permintaannya? Aktifkan di Pengaturan Sistem ▸ Privasi & Keamanan ▸ Jaringan Lokal ▸ GeoSpoof GPS.",
+            "Pesan “Perangkat tidak ditemukan” yang macet biasanya menandakan izin ini mati.",
+          ],
         },
         {
           name: "Hubungkan iPhone Anda",
-          text: "Sambungkan iPhone ke Mac Anda dengan kabel USB dan buka kuncinya. Jika tidak muncul, coba kabel atau port USB lain.",
+          text: "Sambungkan iPhone ke Mac Anda dan buka kuncinya. Gunakan kabel yang mendukung data, karena sebagian hanya untuk mengisi daya. Jika tidak muncul, coba kabel atau port lain.",
         },
         {
           name: "Percayai komputer ini",
-          text: "Ketuk Percayai di iPhone Anda saat diminta. Jika tidak ada permintaan, atur ulang di ponsel melalui Pengaturan ▸ Umum ▸ Transfer atau Atur Ulang iPhone ▸ Atur Ulang ▸ Atur Ulang Lokasi & Privasi, lalu sambungkan kembali.",
+          text: "Saat iPhone bertanya apakah akan mempercayai komputer ini, ketuk Percayai dan masukkan kode sandi Anda. Ini memungkinkan Mac dan ponsel Anda saling berkomunikasi.",
+          bullets: [
+            "Tidak ada permintaan? Jaga ponsel tetap tidak terkunci, lalu cabut dan colokkan kembali kabelnya. Peringatan hanya muncul saat layar tidak terkunci.",
+            "Masih tidak ada? Kunci dan buka kunci ponsel (atau mulai ulang) lalu sambungkan kembali.",
+            "Hanya sebagai upaya terakhir: Pengaturan ▸ Umum ▸ Transfer atau Atur Ulang iPhone ▸ Atur Ulang ▸ Atur Ulang Lokasi & Privasi, lalu sambungkan kembali dan ketuk Percayai.",
+          ],
         },
         {
           name: "Aktifkan Mode Pengembang",
-          text: "Di iPhone Anda, buka Pengaturan ▸ Privasi & Keamanan ▸ Mode Pengembang, aktifkan, lalu mulai ulang saat diminta. Mode Pengembang baru muncul setelah iPhone terhubung ke Mac Anda sekali.",
+          text: "Di iPhone Anda, buka Pengaturan ▸ Privasi & Keamanan ▸ Mode Pengembang, aktifkan, lalu mulai ulang saat diminta. Ini baru muncul setelah ponsel terhubung ke Mac Anda setidaknya sekali.",
         },
         {
           name: "Pasangkan dengan Mac ini",
-          text: "Di jendela penyiapan, klik Pasangkan — jabat tangan aman sekali jalan yang memungkinkan Mac Anda mengendalikan GPS iPhone. Jaga ponsel tetap tidak terkunci dan terhubung selama prosesnya.",
+          text: "Di jendela penyiapan, klik Pasangkan. Jabat tangan aman sekali jalan ini memungkinkan Mac Anda mengendalikan GPS iPhone. Jaga ponsel tetap tidak terkunci dan terhubung selama prosesnya.",
         },
         {
           name: "Siapkan citra pengembang",
-          text: "Klik Siapkan untuk memasang citra pengembang iOS, yang membuat GeoSpoof GPS bisa memindahkan lokasi sistem asli iPhone Anda. Ini memakai salinan dari Xcode — pasang Xcode dari Mac App Store dan buka sekali dengan iPhone terhubung, atau arahkan aplikasi ke folder yang sudah berisi citra.",
+          text: "Klik Siapkan. GeoSpoof GPS memasang Developer Disk Image dari Apple di iPhone Anda, komponen yang memungkinkan penyetelan lokasi asli perangkat.",
+          bullets: [
+            "Apa itu: citra sistem kecil bertanda tangan Apple (DDI) yang mengaktifkan fitur pengembang, seperti menyetel lokasi GPS asli di iPhone Anda.",
+            "Cara memperolehnya: disertakan di dalam Xcode. Pasang Xcode gratis dari Mac App Store dan buka sekali dengan iPhone terhubung. GeoSpoof GPS akan menemukan dan memakai salinan itu untuk Anda. Tanpa proyek, tanpa build, tidak ada yang perlu dikompilasi.",
+            "Pakai milik Anda: sudah punya citra pengembang? Arahkan GeoSpoof GPS ke folder itu dan lewati unduhan Xcode.",
+          ],
+          link: { label: "Dapatkan Xcode di Mac App Store" },
         },
         {
           name: "Pilih lokasi di GeoSpoof",
           text: "Setel lokasi Anda seperti biasa di GeoSpoof. GPS tingkat sistem iPhone Anda mengikutinya dan tetap selaras, bahkan setelah Anda mencabut kabel dan beralih ke Wi-Fi.",
+          link: { label: "Dapatkan GeoSpoof untuk iPhone" },
         },
       ],
     },
@@ -1170,16 +1190,22 @@ export const id: Dictionary = {
       appPre: "Aplikasi ",
       appLink: "GeoSpoof untuk iPhone",
       appPost:
-        " dengan GeoSpoof Pro. Aplikasi ini adalah pusat kendali Anda — ia yang menyetel lokasi — dan memindahkan GPS asli perangkat adalah fitur Pro.",
+        " dengan GeoSpoof Pro. Aplikasi ini adalah pusat kendali Anda yang menyetel lokasi, dan memindahkan GPS asli perangkat adalah fitur Pro.",
       iphone:
         "iPhone dengan Mode Pengembang aktif, terhubung lewat kabel USB untuk penyiapan pertama.",
-      xcodePre: "Xcode — aplikasi pengembang gratis dari Apple, di ",
+      xcodePre: "Xcode, aplikasi pengembang gratis dari Apple, di ",
       xcodeLink: "Mac App Store",
       xcodePost:
-        ". Anda tidak membangun apa pun: cukup pasang dan buka sekali dengan iPhone terhubung, agar ia menyelesaikan penyiapan dan menyediakan citra pengembang iOS. Ini unduhan besar — sisakan sekitar 15 GB ruang kosong. Sudah punya citra pengembang? Anda bisa mengarahkan aplikasi ke folder itu.",
+        ". Anda tidak membangun apa pun: pasang lalu buka sekali dengan iPhone terhubung agar ia menyediakan citra pengembang iOS. Ini unduhan besar, jadi sisakan sekitar 15 GB ruang kosong. Sudah punya citra pengembang? Anda bisa mengarahkan aplikasi ke folder itu.",
     },
     menuShotAlt: "Aplikasi bilah menu GeoSpoof GPS di macOS",
-    screenshotAlt: "GeoSpoof GPS di iPhone — tangkapan layar {n}",
+    screenshotAlt: "GeoSpoof GPS di iPhone, tangkapan layar {n}",
+    help: {
+      title: "Masih terkendala?",
+      body: "Jika sebuah langkah tidak selesai, halaman dukungan kami punya lebih banyak solusi. Menemukan bug atau punya ide? Kami senang mendengarnya.",
+      supportLink: "Dapatkan bantuan",
+      feedbackLink: "Kirim masukan",
+    },
     sourceNote:
       "GeoSpoof GPS tersedia kode sumbernya dan diberi versi terpisah dari ekstensi browser.",
   },

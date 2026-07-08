@@ -1120,7 +1120,7 @@ export const ptBR: Dictionary = {
     experimental: {
       label: "Experimental",
       title: "Um recurso novo e experimental",
-      body: "O GeoSpoof GPS é novo e ainda está sendo testado em diferentes dispositivos, então espere alguns detalhes ásperos e alguns passos de configuração únicos. O resto do GeoSpoof funciona sem ele — este é um complemento opcional para alinhar o GPS real do seu iPhone.",
+      body: "O GeoSpoof GPS é novo e ainda está sendo testado em diferentes dispositivos, então espere alguns detalhes ásperos e um pouco de configuração inicial. É um complemento opcional. O resto do GeoSpoof funciona bem sem ele.",
     },
     hero: {
       breadcrumbHome: "Início",
@@ -1131,7 +1131,7 @@ export const ptBR: Dictionary = {
       headingEmphasis: "GPS real",
       headingPost: " do seu iPhone com sua localização falsificada",
       intro:
-        "O GeoSpoof GPS é um companheiro da barra de menus do macOS que ajusta a localização no nível do sistema de um iPhone conectado para o lugar que você escolhe no GeoSpoof — para que seu navegador e o GPS real do celular contem a mesma história.",
+        "O GeoSpoof GPS é um companheiro da barra de menus do macOS que ajusta a localização no nível do sistema de um iPhone conectado para o lugar que você escolhe no GeoSpoof. Seu navegador e o GPS real do celular contam a mesma história.",
     },
     download: {
       cta: "Baixar para Mac",
@@ -1142,35 +1142,55 @@ export const ptBR: Dictionary = {
     setup: {
       title: "Configure o GeoSpoof GPS",
       intro:
-        "Abra o ícone da barra de menus e escolha “Configurar…” — o assistente marca cada passo conforme você avança. Conecte seu iPhone com um cabo para concluir a configuração; depois disso, o GeoSpoof GPS continua funcionando por Wi-Fi.",
+        "Abra o ícone da barra de menus e escolha “Configurar…”. O assistente marca cada passo conforme você avança. Conecte seu iPhone com um cabo para concluir a configuração. Depois disso, o GeoSpoof GPS continua funcionando por Wi-Fi.",
       steps: [
         {
           name: "Instale o app",
-          text: "Baixe o DMG e arraste o GeoSpoof GPS para a pasta Aplicativos. Ele roda pela barra de menus — sem ícone no Dock, sem janela — e abre o assistente de configuração na primeira vez.",
+          text: "Abra o DMG, arraste o GeoSpoof GPS para a pasta Aplicativos e abra-o. Ele roda pela barra de menus (sem ícone no Dock, sem janela) e abre o assistente de configuração na primeira vez.",
+        },
+        {
+          name: "Permita o acesso à Rede Local",
+          text: "No primeiro início, o macOS pede acesso à Rede Local. Clique em Permitir para que o GeoSpoof GPS possa encontrar seu iPhone e se comunicar com ele. Sem isso, o app não enxerga seu celular.",
+          bullets: [
+            "Perdeu o aviso? Ative em Ajustes do Sistema ▸ Privacidade e Segurança ▸ Rede Local ▸ GeoSpoof GPS.",
+            "Um “Nenhum dispositivo encontrado” que não sai do lugar costuma indicar que essa permissão está desativada.",
+          ],
         },
         {
           name: "Conecte seu iPhone",
-          text: "Conecte seu iPhone ao Mac com um cabo USB e desbloqueie-o. Se não aparecer, tente outro cabo ou porta USB.",
+          text: "Conecte seu iPhone ao Mac e desbloqueie-o. Use um cabo com transferência de dados, já que alguns só carregam. Se não aparecer, tente outro cabo ou porta.",
         },
         {
           name: "Confie neste computador",
-          text: "Toque em Confiar no seu iPhone quando ele pedir. Se nenhum aviso aparecer, redefina no celular em Ajustes ▸ Geral ▸ Transferir ou Redefinir iPhone ▸ Redefinir ▸ Redefinir Localização e Privacidade e reconecte.",
+          text: "Quando o iPhone perguntar se deve confiar neste computador, toque em Confiar e digite seu código. Isso permite que o Mac e o celular se comuniquem.",
+          bullets: [
+            "Sem aviso? Mantenha o celular desbloqueado, depois desconecte e reconecte o cabo. O alerta só aparece com a tela desbloqueada.",
+            "Ainda nada? Bloqueie e desbloqueie o celular (ou reinicie-o) e reconecte.",
+            "Apenas como último recurso: Ajustes ▸ Geral ▸ Transferir ou Redefinir iPhone ▸ Redefinir ▸ Redefinir Localização e Privacidade, depois reconecte e toque em Confiar.",
+          ],
         },
         {
           name: "Ative o Modo de Desenvolvedor",
-          text: "No seu iPhone, vá em Ajustes ▸ Privacidade e Segurança ▸ Modo de Desenvolvedor, ative-o e reinicie quando solicitado. O Modo de Desenvolvedor só aparece depois de conectar o iPhone ao seu Mac uma vez.",
+          text: "No seu iPhone, vá em Ajustes ▸ Privacidade e Segurança ▸ Modo de Desenvolvedor, ative-o e reinicie quando solicitado. Ele só aparece depois de conectar o iPhone ao seu Mac pelo menos uma vez.",
         },
         {
           name: "Emparelhe com este Mac",
-          text: "Na janela de configuração, clique em Emparelhar — um handshake seguro e único que permite ao seu Mac controlar o GPS do iPhone. Mantenha o celular desbloqueado e conectado durante o processo.",
+          text: "Na janela de configuração, clique em Emparelhar. Esse handshake seguro e único permite ao seu Mac controlar o GPS do iPhone. Mantenha o celular desbloqueado e conectado durante o processo.",
         },
         {
           name: "Prepare a imagem de desenvolvedor",
-          text: "Clique em Preparar para montar a imagem de desenvolvedor do iOS, que é o que permite ao GeoSpoof GPS mover a localização real do sistema do seu iPhone. Ele usa a cópia do Xcode — instale o Xcode pela Mac App Store e abra-o uma vez com o iPhone conectado, ou indique ao app uma pasta que já tenha uma imagem.",
+          text: "Clique em Preparar. O GeoSpoof GPS monta a Imagem de Disco de Desenvolvedor da Apple no seu iPhone, a peça que permite definir a localização real do dispositivo.",
+          bullets: [
+            "O que é: uma pequena imagem de sistema assinada pela Apple (a DDI) que ativa recursos de desenvolvedor, como definir uma localização GPS real no seu iPhone.",
+            "Onde conseguir: vem dentro do Xcode. Instale o Xcode grátis pela Mac App Store e abra-o uma vez com o iPhone conectado. O GeoSpoof GPS encontra e usa essa cópia por você. Sem projeto, sem build, nada para compilar.",
+            "Use a sua: já tem uma imagem de desenvolvedor? Aponte o GeoSpoof GPS para essa pasta e pule o download do Xcode.",
+          ],
+          link: { label: "Baixar o Xcode na Mac App Store" },
         },
         {
           name: "Escolha um local no GeoSpoof",
           text: "Defina sua localização como sempre no GeoSpoof. O GPS no nível do sistema do iPhone a acompanha e se mantém alinhado, mesmo depois de desconectar e passar para o Wi-Fi.",
+          link: { label: "Baixar o GeoSpoof para iPhone" },
         },
       ],
     },
@@ -1180,16 +1200,22 @@ export const ptBR: Dictionary = {
       appPre: "O ",
       appLink: "app do GeoSpoof para iPhone",
       appPost:
-        " com o GeoSpoof Pro. O app é o seu painel de controle — é ele que define a localização — e mover o GPS real do dispositivo é um recurso Pro.",
+        " com o GeoSpoof Pro. O app é o seu painel de controle que define a localização, e mover o GPS real do dispositivo é um recurso Pro.",
       iphone:
         "Um iPhone com o Modo de Desenvolvedor ativado, conectado por cabo USB na primeira configuração.",
-      xcodePre: "Xcode — o app de desenvolvedor gratuito da Apple, na ",
+      xcodePre: "Xcode, o app de desenvolvedor gratuito da Apple, na ",
       xcodeLink: "Mac App Store",
       xcodePost:
-        ". Você não compila nada: basta instalar e abrir uma vez com o iPhone conectado, para que ele conclua a configuração e forneça a imagem de desenvolvedor do iOS. É um download grande — reserve cerca de 15 GB de espaço livre. Já tem uma imagem de desenvolvedor? Você pode apontar o app para essa pasta.",
+        ". Você não compila nada: instale e abra uma vez com o iPhone conectado para que ele forneça a imagem de desenvolvedor do iOS. É um download grande, então reserve cerca de 15 GB de espaço livre. Já tem uma imagem de desenvolvedor? Você pode apontar o app para essa pasta.",
     },
     menuShotAlt: "App da barra de menus GeoSpoof GPS no macOS",
-    screenshotAlt: "GeoSpoof GPS no iPhone — captura {n}",
+    screenshotAlt: "GeoSpoof GPS no iPhone, captura {n}",
+    help: {
+      title: "Ainda travado?",
+      body: "Se um passo não for concluído, nossa página de suporte tem mais soluções. Encontrou um bug ou tem uma ideia? Vamos adorar saber.",
+      supportLink: "Obter ajuda",
+      feedbackLink: "Enviar feedback",
+    },
     sourceNote:
       "O GeoSpoof GPS tem código disponível e é versionado separadamente da extensão do navegador.",
   },

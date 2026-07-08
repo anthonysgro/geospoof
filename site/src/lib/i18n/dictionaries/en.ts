@@ -1104,7 +1104,7 @@ export const en = {
     experimental: {
       label: "Experimental",
       title: "An early, experimental feature",
-      body: "GeoSpoof GPS is new and still being proven across devices, so expect rough edges and a few one-time setup steps. The rest of GeoSpoof works without it — this is an optional add-on for matching your iPhone's real GPS.",
+      body: "GeoSpoof GPS is new and still being proven across devices, so expect a few rough edges and some one-time setup. It's an optional add-on. The rest of GeoSpoof works fine without it.",
     },
     hero: {
       breadcrumbHome: "Home",
@@ -1115,7 +1115,7 @@ export const en = {
       headingEmphasis: "real GPS",
       headingPost: " to your spoofed location",
       intro:
-        "GeoSpoof GPS is a macOS menu-bar companion that sets a connected iPhone's system-level location to the place you pick in GeoSpoof — so your browser and your phone's actual GPS tell the same story.",
+        "GeoSpoof GPS is a macOS menu-bar companion that sets a connected iPhone's system-level location to the place you pick in GeoSpoof. Your browser and your phone's real GPS tell the same story.",
     },
     download: {
       cta: "Download for Mac",
@@ -1126,35 +1126,55 @@ export const en = {
     setup: {
       title: "Set up GeoSpoof GPS",
       intro:
-        "Open the menu-bar icon and choose “Set Up…” — the wizard checks each step off as you go. Connect your iPhone with a cable to finish setup; once it's done, GeoSpoof GPS keeps working over Wi-Fi.",
+        "Open the menu-bar icon and choose “Set Up…”. The wizard checks each step off as you go. Connect your iPhone with a cable to finish setup, then it keeps working over Wi-Fi.",
       steps: [
         {
           name: "Install the app",
-          text: "Download the DMG and drag GeoSpoof GPS into Applications. It runs from your menu bar — no Dock icon, no window — and opens the setup wizard on first launch.",
+          text: "Open the DMG, drag GeoSpoof GPS into Applications, then launch it. It lives in your menu bar (no Dock icon, no window) and opens the setup wizard the first time it runs.",
+        },
+        {
+          name: "Allow Local Network access",
+          text: "On first launch, macOS asks for Local Network access. Click Allow so GeoSpoof GPS can find and talk to your iPhone. Without it, the app can't see your phone.",
+          bullets: [
+            "Missed the prompt? Turn it on under System Settings ▸ Privacy & Security ▸ Local Network ▸ GeoSpoof GPS.",
+            "A stuck “No device found” is the usual sign this permission is off.",
+          ],
         },
         {
           name: "Connect your iPhone",
-          text: "Plug your iPhone into your Mac with a USB cable and unlock it. If it doesn't appear, try a different cable or USB port.",
+          text: "Plug your iPhone into your Mac and unlock it. Use a data-capable cable, since some are charge-only. If it doesn't appear, try another cable or port.",
         },
         {
           name: "Trust this computer",
-          text: "Tap Trust on your iPhone when it asks. If no prompt appears, reset it on the phone under Settings ▸ General ▸ Transfer or Reset iPhone ▸ Reset ▸ Reset Location & Privacy, then reconnect.",
+          text: "When your iPhone asks whether to trust this computer, tap Trust and enter your passcode. That lets your Mac and phone talk to each other.",
+          bullets: [
+            "No prompt? Keep the phone unlocked, then unplug and replug the cable. The alert only shows while the screen is unlocked.",
+            "Still nothing? Lock and unlock the phone (or restart it) and reconnect.",
+            "Last resort only: Settings ▸ General ▸ Transfer or Reset iPhone ▸ Reset ▸ Reset Location & Privacy, then reconnect and tap Trust.",
+          ],
         },
         {
           name: "Enable Developer Mode",
-          text: "On your iPhone, go to Settings ▸ Privacy & Security ▸ Developer Mode, turn it on, and restart when asked. Developer Mode only appears after the iPhone has been connected to your Mac once.",
+          text: "On your iPhone, open Settings ▸ Privacy & Security ▸ Developer Mode, switch it on, and restart when prompted. It only appears after the phone has connected to your Mac at least once.",
         },
         {
           name: "Pair with this Mac",
-          text: "In the setup window, click Pair — a one-time secure handshake that lets your Mac drive the iPhone's GPS. Keep the phone unlocked and connected while it runs.",
+          text: "In the setup window, click Pair. This one-time secure handshake lets your Mac drive the iPhone's GPS. Keep the phone unlocked and connected while it runs.",
         },
         {
           name: "Prepare the developer image",
-          text: "Click Prepare to mount the iOS developer image, which is what lets GeoSpoof GPS move your iPhone's real system location. It uses Xcode's copy — install Xcode from the Mac App Store and open it once with your iPhone connected, or point the app at a folder that already contains an image.",
+          text: "Click Prepare. GeoSpoof GPS mounts Apple's Developer Disk Image on your iPhone, the piece that allows setting the device's real location.",
+          bullets: [
+            "What it is: a small, Apple-signed system image (the DDI) that turns on developer features like setting a real GPS location on your iPhone.",
+            "Where to get it: it ships inside Xcode. Install Xcode free from the Mac App Store and open it once with your iPhone connected. GeoSpoof GPS finds and uses that copy for you. No project, no build, nothing to compile.",
+            "Bring your own: already have a developer image? Point GeoSpoof GPS at that folder instead and skip the Xcode download.",
+          ],
+          link: { label: "Get Xcode on the Mac App Store" },
         },
         {
           name: "Pick a location in GeoSpoof",
           text: "Set your location as usual in GeoSpoof. Your iPhone's system-level GPS follows it and stays aligned, even after you unplug and switch to Wi-Fi.",
+          link: { label: "Get GeoSpoof for iPhone" },
         },
       ],
     },
@@ -1164,16 +1184,22 @@ export const en = {
       appPre: "The ",
       appLink: "GeoSpoof app for iPhone",
       appPost:
-        " with GeoSpoof Pro. The app is your control surface — it sets the location — and moving the device's real GPS is a Pro feature.",
+        " with GeoSpoof Pro. The app is your control surface that sets the location, and moving the device's real GPS is a Pro feature.",
       iphone:
         "An iPhone with Developer Mode enabled, connected by USB cable for first-time setup.",
-      xcodePre: "Xcode — Apple's free developer app from the ",
+      xcodePre: "Xcode, Apple's free developer app from the ",
       xcodeLink: "Mac App Store",
       xcodePost:
-        ". You don't build anything: just install it and open it once with your iPhone connected, so it finishes setup and provides the iOS developer image. It's a big download — set aside about 15 GB of free space. Already have a developer image? You can point the app at that folder instead.",
+        ". You don't build anything: install it, then open it once with your iPhone connected so it provides the iOS developer image. It's a big download, so set aside about 15 GB of free space. Already have a developer image? You can point the app at that folder instead.",
     },
     menuShotAlt: "GeoSpoof GPS menu-bar app on macOS",
-    screenshotAlt: "GeoSpoof GPS on iPhone — screenshot {n}",
+    screenshotAlt: "GeoSpoof GPS on iPhone, screenshot {n}",
+    help: {
+      title: "Still stuck?",
+      body: "If a step won't complete, our support page has more fixes. Found a bug or have an idea? We'd love to hear it.",
+      supportLink: "Get help",
+      feedbackLink: "Send feedback",
+    },
     sourceNote:
       "GeoSpoof GPS is source-available and versioned separately from the browser extension.",
   },
@@ -1185,8 +1211,19 @@ export const en = {
  * define the required shape (every key, correctly nested) without forcing
  * other locales to use the literal English text — `fr.nav.home` can be
  * "Accueil" yet still be type-checked against the canonical structure.
+ *
+ * Arrays are widened to *homogeneous, variable-length* arrays (not the fixed
+ * tuples `as const` would otherwise produce), keyed off the union of their
+ * element types. This is deliberate: locales legitimately differ in list
+ * length (a translation may split or merge bullets), and a step that carries
+ * optional `bullets` in English shouldn't force every other locale to add the
+ * same field. Element shapes are still type-checked against the English union.
  */
-type Widen<T> = T extends string ? string : { [K in keyof T]: Widen<T[K]> }
+type Widen<T> = T extends string
+  ? string
+  : T extends ReadonlyArray<infer E>
+    ? ReadonlyArray<Widen<E>>
+    : { [K in keyof T]: Widen<T[K]> }
 
 /** The canonical dictionary shape every locale must implement. */
 export type Dictionary = Widen<typeof en>

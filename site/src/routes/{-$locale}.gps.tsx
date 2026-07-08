@@ -46,6 +46,64 @@ const APP_STORE_URL =
 const XCODE_URL = "https://apps.apple.com/app/xcode/id497799835"
 
 /**
+ * Screenshots that illustrate specific setup steps, keyed by the step's index
+ * in `t.gps.setup.steps`. Kept out of the i18n dictionary because the asset
+ * paths are locale-independent; the alt text is English since the screenshots
+ * themselves show the English UI. `width`/`height` are the intrinsic pixel
+ * dimensions so the browser can reserve space and avoid layout shift.
+ */
+const SETUP_STEP_IMAGES: Partial<
+  Record<
+    number,
+    {
+      src: string
+      alt: string
+      width: number
+      height: number
+      /** Optional Tailwind max-width override; otherwise picked by aspect ratio. */
+      maxWidthClass?: string
+    }
+  >
+> = {
+  // Step 1 — Install the app
+  0: {
+    src: "/images/gps/gps-dmg-install.png",
+    alt: "The GeoSpoof GPS disk image open in Finder, with the app icon being dragged onto the Applications folder.",
+    width: 1342,
+    height: 1104,
+    // This shot is wide; cap it smaller so it doesn't dominate the guide.
+    maxWidthClass: "max-w-xs",
+  },
+  // Step 2 — Allow Local Network access
+  1: {
+    src: "/images/gps/geospoof-gps-local-network-settings.jpg",
+    alt: "macOS System Settings, Privacy & Security ▸ Local Network, with the GeoSpoof GPS toggle switched on.",
+    width: 996,
+    height: 484,
+  },
+  // Step 5 — Enable Developer Mode
+  4: {
+    src: "/images/gps/ios-developer-mode-on.jpg",
+    alt: "iPhone Settings, Privacy & Security ▸ Developer Mode, with the toggle switched on.",
+    width: 1206,
+    height: 1307,
+  },
+}
+
+/**
+ * Outbound links attached to specific setup steps, keyed by the step's index in
+ * `t.gps.setup.steps` (mirrors `SETUP_STEP_IMAGES`). The URL lives here because
+ * it's locale-independent; the visible label comes from the step's `link.label`
+ * in the dictionary so it stays translatable.
+ */
+const SETUP_STEP_LINK_HREFS: Partial<Record<number, string>> = {
+  // Step 7 — Prepare the developer image → get Xcode (ships the developer image).
+  6: XCODE_URL,
+  // Step 8 — Pick a location in GeoSpoof → get the iOS app (the control surface).
+  7: APP_STORE_URL,
+}
+
+/**
  * Build the `head` payload for the GeoSpoof GPS page in a given locale:
  * localized title/description/OG + self-canonical + hreflang cluster.
  */
@@ -427,26 +485,99 @@ export function GpsPage() {
           </h2>
           <p className="mb-8 text-(--color-canvas-muted)">{g.setup.intro}</p>
           <GpsMenuShot />
-          <ol className="space-y-5">
-            {g.setup.steps.map((step, i) => (
-              <li key={step.name} className="flex gap-4">
-                <span
-                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand/10 text-sm font-bold text-(--color-brand)"
-                  aria-hidden="true"
-                >
-                  {i + 1}
-                </span>
-                <div>
-                  <h3 className="font-semibold text-(--color-canvas-foreground)">
-                    {step.name}
-                  </h3>
-                  <p className="mt-1 text-sm text-(--color-canvas-muted)">
-                    {step.text}
-                  </p>
-                </div>
-              </li>
-            ))}
+          <ol className="space-y-6 md:space-y-8">
+            {g.setup.steps.map((step, i) => {
+              const bullets = "bullets" in step ? step.bullets : undefined
+              const image = SETUP_STEP_IMAGES[i]
+              const link = "link" in step ? step.link : undefined
+              const linkHref = SETUP_STEP_LINK_HREFS[i]
+              return (
+                <li key={step.name} className="flex gap-4">
+                  <span
+                    className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand/10 text-sm font-bold text-(--color-brand)"
+                    aria-hidden="true"
+                  >
+                    {i + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-semibold text-(--color-canvas-foreground)">
+                      {step.name}
+                    </h3>
+                    <p className="mt-1 text-sm leading-relaxed text-(--color-canvas-muted)">
+                      {step.text}
+                    </p>
+                    {bullets && bullets.length > 0 && (
+                      <ul className="mt-3 space-y-1.5">
+                        {bullets.map((bullet) => (
+                          <li
+                            key={bullet}
+                            className="flex gap-2.5 text-sm leading-relaxed text-(--color-canvas-muted)"
+                          >
+                            <span
+                              className="mt-2 size-1.5 shrink-0 rounded-full bg-(--color-brand)"
+                              aria-hidden="true"
+                            />
+                            <span>{bullet}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {link && linkHref && (
+                      <a
+                        href={linkHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-(--color-brand) hover:underline"
+                      >
+                        {link.label}
+                      </a>
+                    )}
+                    {image && (
+                      <img
+                        src={image.src}
+                        alt={image.alt}
+                        width={image.width}
+                        height={image.height}
+                        loading="lazy"
+                        decoding="async"
+                        className={cn(
+                          "mt-4 h-auto w-full rounded-xl border border-(--color-canvas-border) shadow-sm",
+                          image.maxWidthClass ??
+                            (image.height > image.width
+                              ? "max-w-[16rem]"
+                              : "max-w-md")
+                        )}
+                      />
+                    )}
+                  </div>
+                </li>
+              )
+            })}
           </ol>
+
+          {/* Still stuck? Route people to support, and invite feedback. */}
+          <div className="mt-10 rounded-2xl border border-(--color-canvas-border) bg-brand/5 p-6 md:p-8">
+            <h3 className="text-lg font-bold text-(--color-canvas-foreground)">
+              {g.help.title}
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-(--color-canvas-muted)">
+              {g.help.body}
+            </p>
+            <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
+              <LocaleLink
+                to="/support"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-(--color-brand) hover:underline"
+              >
+                {g.help.supportLink}
+              </LocaleLink>
+              <LocaleLink
+                to="/feedback"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-(--color-brand) hover:underline"
+              >
+                {g.help.feedbackLink}
+              </LocaleLink>
+            </div>
+          </div>
         </Section>
       </main>
       <Footer />
