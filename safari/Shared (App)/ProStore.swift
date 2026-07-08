@@ -351,35 +351,61 @@ final class ProStore: ObservableObject {
 
     @available(iOS 16.0, macOS 13.0, *)
     private func resolveFounderViaAppTransaction() async {
-        do {
-            let result = try await AppTransaction.shared
-            guard case .verified(let appTransaction) = result else {
-                // Couldn't verify — keep cached value rather than revoking.
-                Log.pro.warn("AppTransaction unverified; keeping cached founder=\(self.isFounder)")
-                return
-            }
+        // Apple's documented pattern: read the cached `AppTransaction.shared` first (silent,
+        // no prompt), and only fall back to `AppTransaction.refresh()` if that fails —
+        // "If your app fails to get an AppTransaction by accessing the shared property, see
+        // refresh()." `refresh()` fetches from the App Store and can present a one-time
+        // Apple Account sign-in, so we gate it: it runs ONLY when the silent path failed AND
+        // we have no previously-persisted signed proof to fall back on. That's what makes a
+        // fresh install obtain the founder proof without the user having to delete/reinstall,
+        // while never nagging a user who already has (or can silently get) the receipt.
 
-            // Capture the signed AppTransaction JWS for the GPS agent: it's how the agent
-            // proves the founder grant offline (there's no purchase transaction to send).
-            // Persist it too, so a later launch that can't re-verify still has the proof to
-            // send — the founder grant is permanent, so its evidence must be durable.
-            appTransactionJWS = result.jwsRepresentation
-            cache.set(result.jwsRepresentation, forKey: Key.appTransactionJWS)
-
-            let originalString = appTransaction.originalAppVersion
-            guard let original = AppVersion(string: originalString) else {
-                Log.pro.warn("Unparseable originalAppVersion '\(originalString)'; founder=false")
-                applyFounder(false, originalVersion: originalString)
-                return
-            }
-
-            let founder = original < Self.founderCutoff
-            Log.pro.info("Founder check: original \(original) < cutoff \(Self.founderCutoff) => \(founder)")
-            applyFounder(founder, originalVersion: originalString)
-        } catch {
-            // Network/StoreKit hiccup. Don't downgrade an existing grant.
-            Log.pro.warn("AppTransaction.shared failed (\(error.localizedDescription)); keeping cached founder=\(self.isFounder)")
+        // 1. Silent path — the locally-cached transaction.
+        if let result = try? await AppTransaction.shared,
+           case .verified(let appTransaction) = result {
+            captureFounderProof(appTransaction, jws: result.jwsRepresentation)
+            return
         }
+
+        // 2. Silent path didn't yield a verified transaction. If we already persisted a
+        //    signed proof on a prior launch, keep using it — no fetch, no sign-in prompt.
+        if appTransactionJWS != nil {
+            Log.pro.warn("AppTransaction.shared unavailable; using previously cached signed proof (founder=\(self.isFounder))")
+            return
+        }
+
+        // 3. No proof at all yet — actively fetch it (may present a one-time sign-in). This
+        //    is the fresh-install recovery that avoids the delete/reinstall workaround.
+        if let refreshed = try? await AppTransaction.refresh(),
+           case .verified(let appTransaction) = refreshed {
+            Log.pro.info("AppTransaction obtained via refresh() fallback")
+            captureFounderProof(appTransaction, jws: refreshed.jwsRepresentation)
+            return
+        }
+
+        // Neither path worked (offline with no cache, or StoreKit error). Don't downgrade an
+        // existing grant — keep the cached founder status; we'll try again next launch.
+        Log.pro.warn("AppTransaction unavailable (shared + refresh); keeping cached founder=\(self.isFounder)")
+    }
+
+    /// Record the signed AppTransaction as the GPS agent's founder proof and resolve founder
+    /// status from its `originalAppVersion`. Persists the JWS so a later launch that can't
+    /// re-verify still has durable proof to send (the founder grant is permanent).
+    @available(iOS 16.0, macOS 13.0, *)
+    private func captureFounderProof(_ appTransaction: AppTransaction, jws: String) {
+        appTransactionJWS = jws
+        cache.set(jws, forKey: Key.appTransactionJWS)
+
+        let originalString = appTransaction.originalAppVersion
+        guard let original = AppVersion(string: originalString) else {
+            Log.pro.warn("Unparseable originalAppVersion '\(originalString)'; founder=false")
+            applyFounder(false, originalVersion: originalString)
+            return
+        }
+
+        let founder = original < Self.founderCutoff
+        Log.pro.info("Founder check: original \(original) < cutoff \(Self.founderCutoff) => \(founder)")
+        applyFounder(founder, originalVersion: originalString)
     }
 
     /// Best-effort "this user installed before the Pro release" signal for the
