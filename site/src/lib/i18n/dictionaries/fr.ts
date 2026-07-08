@@ -1211,6 +1211,32 @@ export const fr: Dictionary = {
       xcodePost:
         ". Vous ne compilez rien : installez-le et ouvrez-le une fois avec votre iPhone connecté pour qu'il fournisse l'image de développeur iOS. C'est un gros téléchargement, alors prévoyez environ 15 Go d'espace libre. Vous avez déjà une image de développeur ? Vous pouvez plutôt indiquer ce dossier à l'app.",
     },
+    howItWorks: {
+      title: "Comment ça marche",
+      intro:
+        "Une localisation cohérente entre votre navigateur et votre téléphone, entièrement pilotée depuis l'app GeoSpoof que vous utilisez déjà.",
+      steps: [
+        {
+          title: "Vous choisissez, il suit",
+          body: "Choisissez un lieu dans l'app GeoSpoof comme d'habitude. Ce choix est la seule source de vérité, et GeoSpoof GPS sur votre Mac le reflète sur votre iPhone — pour que le spoof du navigateur et le vrai GPS de l'appareil racontent enfin la même histoire.",
+        },
+        {
+          title: "Votre Mac déplace le GPS",
+          body: "Via un appairage sécurisé et unique, l'app de la barre de menus utilise la simulation de localisation développeur d'Apple pour définir la position système de votre iPhone. Aucun jailbreak, rien à compiler — le même mécanisme que les développeurs utilisent déjà dans Xcode.",
+        },
+        {
+          title: "Le câble une fois, puis sans fil",
+          body: "La configuration initiale passe par un câble USB. Ensuite, tout fonctionne en Wi-Fi et se reconnecte tout seul lorsque votre téléphone quitte le réseau puis le rejoint.",
+        },
+        {
+          title: "Reste stable, revient proprement",
+          body: "L'app maintient votre position et bascule instantanément quand vous en choisissez une autre. Mettez la synchronisation en pause ou quittez l'app, et votre iPhone revient aussitôt à son vrai GPS — sans spoof résiduel.",
+        },
+      ],
+      privacyTitle: "Rien qu'à vous",
+      privacyBody:
+        "Tout se passe directement entre votre Mac et votre iPhone : votre position ne touche jamais nos serveurs. Pro est vérifié à l'aide de reçus signés par Apple, et chaque mise à jour est notariée par Apple et sa signature est contrôlée avant l'installation.",
+    },
     menuShotAlt: "App GeoSpoof GPS dans la barre de menus sur macOS",
     screenshotAlt: "GeoSpoof GPS sur iPhone, capture {n}",
     help: {

@@ -1166,6 +1166,32 @@ export const zhCN: Dictionary = {
       xcodePost:
         "。你无需构建任何东西：安装它，并在连接 iPhone 的情况下打开一次，让它提供 iOS 开发者映像。它的下载很大，请预留约 15 GB 的可用空间。已经有开发者映像了？可以改为让应用指向那个文件夹。",
     },
+    howItWorks: {
+      title: "工作原理",
+      intro:
+        "让浏览器和手机保持一致的位置，全部由你已经在用的 GeoSpoof 应用来控制。",
+      steps: [
+        {
+          title: "你来选，它跟随",
+          body: "像往常一样在 GeoSpoof 应用里选择位置。这个选择就是唯一的事实来源，Mac 上的 GeoSpoof GPS 会把它同步到你的 iPhone——让浏览器的伪装和设备真实的 GPS 终于说法一致。",
+        },
+        {
+          title: "你的 Mac 来移动 GPS",
+          body: "通过一次性的安全配对，菜单栏应用使用 Apple 自带的开发者位置模拟来设置 iPhone 的系统级位置。无需越狱，无需编译任何东西——正是开发者在 Xcode 中已经使用的机制。",
+        },
+        {
+          title: "首次用线，之后无线",
+          body: "首次设置需要 USB 数据线。之后便可通过 Wi-Fi 工作，并在手机离开网络又重新加入时自动重连。",
+        },
+        {
+          title: "稳稳保持，干净还原",
+          body: "应用会锁定你的位置，选择新地点时立即切换。暂停同步或退出应用，你的 iPhone 会立刻恢复到真实 GPS——不留任何伪装痕迹。",
+        },
+      ],
+      privacyTitle: "只属于你",
+      privacyBody:
+        "一切都在你的 Mac 与 iPhone 之间直接完成，你的位置绝不会经过我们的服务器。Pro 通过 Apple 签名的收据进行验证，每次更新都经过 Apple 公证，并在安装前校验签名。",
+    },
     menuShotAlt: "macOS 上的 GeoSpoof GPS 菜单栏应用",
     screenshotAlt: "iPhone 上的 GeoSpoof GPS，截图 {n}",
     help: {

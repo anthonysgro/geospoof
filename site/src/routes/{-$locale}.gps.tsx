@@ -1,6 +1,15 @@
 import * as React from "react"
 import { createFileRoute } from "@tanstack/react-router"
-import { Apple, FlaskConical, ListChecks } from "lucide-react"
+import {
+  Apple,
+  FlaskConical,
+  ListChecks,
+  MapPin,
+  RotateCcw,
+  ShieldCheck,
+  Waypoints,
+  Wifi,
+} from "lucide-react"
 import type { Locale } from "@/lib/i18n"
 import {
   buildAlternateLinks,
@@ -330,6 +339,70 @@ function GpsPhones() {
 }
 
 /**
+ * "How it works" — a customer-facing explainer that sits between the product
+ * shots and the setup guide. Four short cards on the flow (pick → drive →
+ * wireless → revert) plus a privacy/trust callout. Copy lives in the i18n
+ * dictionary (`t.gps.howItWorks`); the icons are locale-independent so they're
+ * paired to the steps by index here.
+ */
+const HOW_IT_WORKS_ICONS = [MapPin, Waypoints, Wifi, RotateCcw] as const
+
+function HowItWorks() {
+  const { t } = useTranslations()
+  const h = t.gps.howItWorks
+
+  return (
+    <Section narrow className="py-12! md:py-16!">
+      <h2 className="mb-3 text-2xl font-bold text-(--color-canvas-foreground) md:text-3xl">
+        {h.title}
+      </h2>
+      <p className="mb-8 max-w-2xl text-(--color-canvas-muted)">{h.intro}</p>
+
+      {/* Menu-bar app shot — the UI everything below refers to. */}
+      <GpsMenuShot />
+
+      <ol className="grid gap-5 sm:grid-cols-2">
+        {h.steps.map((step, i) => {
+          const Icon = HOW_IT_WORKS_ICONS[i] ?? MapPin
+          return (
+            <li
+              key={step.title}
+              className="rounded-2xl border border-(--color-canvas-border) bg-(--color-canvas) p-6"
+            >
+              <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-brand/10 text-(--color-brand)">
+                <Icon className="size-5" aria-hidden="true" />
+              </div>
+              <h3 className="font-semibold text-(--color-canvas-foreground)">
+                {step.title}
+              </h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-(--color-canvas-muted)">
+                {step.body}
+              </p>
+            </li>
+          )
+        })}
+      </ol>
+
+      {/* Privacy / trust callout — styled like the setup guide's boxes. */}
+      <div className="mt-6 flex items-start gap-3 rounded-2xl border border-(--color-canvas-border) bg-brand/5 p-6 md:p-8">
+        <ShieldCheck
+          className="mt-0.5 size-6 shrink-0 text-(--color-brand)"
+          aria-hidden="true"
+        />
+        <div>
+          <h3 className="text-lg font-bold text-(--color-canvas-foreground)">
+            {h.privacyTitle}
+          </h3>
+          <p className="mt-2 text-sm leading-relaxed text-(--color-canvas-muted)">
+            {h.privacyBody}
+          </p>
+        </div>
+      </div>
+    </Section>
+  )
+}
+
+/**
  * Screenshot of the GeoSpoof GPS macOS menu-bar app, shown at the top of the
  * setup guide so people recognise the UI the steps refer to. Theme-aware PNGs
  * carry their own window chrome, so we render as-is with a soft drop-shadow.
@@ -476,6 +549,9 @@ export function GpsPage() {
         {/* Product shots — the GeoSpoof app that drives the iPhone's GPS. */}
         <GpsPhones />
 
+        {/* How it works — the customer-facing explainer, before the setup steps. */}
+        <HowItWorks />
+
         {/* Setup guide — mirrors the in-app "Set Up…" wizard, step for step. */}
         <Section
           id={SETUP_SECTION_ID}
@@ -511,8 +587,6 @@ export function GpsPage() {
             </ul>
           </div>
 
-          {/* Menu-bar app shot, shown just above the steps so people recognise the UI they refer to. */}
-          <GpsMenuShot />
           <ol className="space-y-6 md:space-y-8">
             {g.setup.steps.map((step, i) => {
               const bullets = "bullets" in step ? step.bullets : undefined

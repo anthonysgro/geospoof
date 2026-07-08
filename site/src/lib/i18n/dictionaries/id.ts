@@ -1199,6 +1199,32 @@ export const id: Dictionary = {
       xcodePost:
         ". Anda tidak membangun apa pun: pasang lalu buka sekali dengan iPhone terhubung agar ia menyediakan citra pengembang iOS. Ini unduhan besar, jadi sisakan sekitar 15 GB ruang kosong. Sudah punya citra pengembang? Anda bisa mengarahkan aplikasi ke folder itu.",
     },
+    howItWorks: {
+      title: "Cara kerjanya",
+      intro:
+        "Satu lokasi yang konsisten di browser dan ponsel Anda, sepenuhnya dikendalikan dari aplikasi GeoSpoof yang sudah Anda pakai.",
+      steps: [
+        {
+          title: "Anda memilih, ia mengikuti",
+          body: "Pilih lokasi di aplikasi GeoSpoof seperti biasa. Pilihan itu adalah satu-satunya sumber kebenaran, dan GeoSpoof GPS di Mac Anda mencerminkannya ke iPhone — sehingga spoof browser dan GPS asli perangkat akhirnya menceritakan hal yang sama.",
+        },
+        {
+          title: "Mac Anda menggerakkan GPS",
+          body: "Melalui pemasangan yang aman dan sekali saja, aplikasi bilah menu memakai simulasi lokasi developer milik Apple untuk mengatur lokasi tingkat sistem iPhone Anda. Tanpa jailbreak, tanpa membangun apa pun — mekanisme yang sama yang sudah dipakai developer di Xcode.",
+        },
+        {
+          title: "Kabel sekali, lalu nirkabel",
+          body: "Penyiapan pertama kali dilakukan lewat kabel USB. Setelah itu ia bekerja melalui Wi-Fi, dan menyambung kembali dengan sendirinya saat ponsel Anda keluar dari jaringan lalu bergabung lagi.",
+        },
+        {
+          title: "Tetap stabil, kembali bersih",
+          body: "Aplikasi menjaga lokasi Anda tetap terkunci dan berpindah seketika saat Anda memilih tempat baru. Jeda sinkronisasi atau tutup aplikasinya, dan iPhone Anda langsung kembali ke GPS aslinya — tanpa spoof yang tertinggal.",
+        },
+      ],
+      privacyTitle: "Hanya milik Anda",
+      privacyBody:
+        "Semuanya terjadi langsung antara Mac dan iPhone Anda, jadi lokasi Anda tidak pernah menyentuh server kami. Pro diverifikasi dengan tanda terima bertanda tangan Apple, dan setiap pembaruan dinotarisasi oleh Apple serta diperiksa tanda tangannya sebelum dipasang.",
+    },
     menuShotAlt: "Aplikasi bilah menu GeoSpoof GPS di macOS",
     screenshotAlt: "GeoSpoof GPS di iPhone, tangkapan layar {n}",
     help: {

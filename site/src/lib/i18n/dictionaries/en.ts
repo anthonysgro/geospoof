@@ -1193,6 +1193,32 @@ export const en = {
       xcodePost:
         ". It's a big download, so set aside about 15 GB of free space. (You don't build anything; the setup steps below explain how it's used.)",
     },
+    howItWorks: {
+      title: "How it works",
+      intro:
+        "One consistent location across your browser and your phone, driven entirely from the GeoSpoof app you already use.",
+      steps: [
+        {
+          title: "You pick, it follows",
+          body: "Choose a location in the GeoSpoof app the way you always do. That choice is the single source of truth, and GeoSpoof GPS on your Mac mirrors it to your iPhone — so the browser spoof and the device's real GPS finally tell the same story.",
+        },
+        {
+          title: "Your Mac moves the GPS",
+          body: "Over a secure, one-time pairing, the menu-bar app uses Apple's own developer location simulation to set your iPhone's system-level location. No jailbreak, nothing to build — the same mechanism developers already use in Xcode.",
+        },
+        {
+          title: "Cable once, then wireless",
+          body: "First-time setup runs over a USB cable. After that it works over Wi-Fi, and quietly reconnects on its own when your phone roams off the network and back again.",
+        },
+        {
+          title: "Holds steady, reverts clean",
+          body: "The app keeps your location locked in and switches instantly when you pick somewhere new. Pause syncing or quit, and your iPhone snaps back to its real GPS right away — no spoof left behind.",
+        },
+      ],
+      privacyTitle: "Yours alone",
+      privacyBody:
+        "It all happens directly between your Mac and your iPhone, so your location never touches our servers. Pro is verified with Apple-signed receipts, and every update is notarized by Apple and signature-checked before it installs.",
+    },
     menuShotAlt: "GeoSpoof GPS menu-bar app on macOS",
     screenshotAlt: "GeoSpoof GPS on iPhone, screenshot {n}",
     help: {

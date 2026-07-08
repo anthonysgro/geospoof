@@ -154,6 +154,12 @@ final class ProStore: ObservableObject {
     private enum Key {
         static let isFounder  = "pro_isFounder"
         static let originalAppVersion = "pro_originalAppVersion"
+        /// The last VERIFIED signed `AppTransaction` JWS. Persisted so the GPS agent's
+        /// founder proof survives launches where `AppTransaction.shared` can't be
+        /// re-verified (offline, transient StoreKit/beta-OS hiccup) — the founder grant is
+        /// permanent, so its Apple-signed evidence must be durable too, not re-derived
+        /// live every launch. Only ever written from a `.verified` result.
+        static let appTransactionJWS = "pro_appTransactionJWS"
         /// Debug-only override read from standard UserDefaults. Stores a
         /// `DebugProOverride` raw Int to force a Pro tier (founder / not-Pro /
         /// subscription) where real StoreKit isn't available (simulator / dev builds).
@@ -265,6 +271,10 @@ final class ProStore: ObservableObject {
         localFounder = cache.bool(forKey: Key.isFounder)
         cloudFounder = cloud.bool(forKey: CloudKey.founder)
         isFounder = localFounder || cloudFounder
+        // Restore the last verified AppTransaction JWS so we can hand the GPS agent its
+        // founder proof even on a launch where `AppTransaction.shared` doesn't re-verify
+        // (offline / transient). Refreshed whenever a new verified one arrives.
+        appTransactionJWS = cache.string(forKey: Key.appTransactionJWS)
 
         // React when the founder bit arrives from another device — e.g. the
         // user was a founder on iPhone and just installed the Mac app fresh.
@@ -351,7 +361,10 @@ final class ProStore: ObservableObject {
 
             // Capture the signed AppTransaction JWS for the GPS agent: it's how the agent
             // proves the founder grant offline (there's no purchase transaction to send).
+            // Persist it too, so a later launch that can't re-verify still has the proof to
+            // send — the founder grant is permanent, so its evidence must be durable.
             appTransactionJWS = result.jwsRepresentation
+            cache.set(result.jwsRepresentation, forKey: Key.appTransactionJWS)
 
             let originalString = appTransaction.originalAppVersion
             guard let original = AppVersion(string: originalString) else {

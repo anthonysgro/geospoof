@@ -1212,6 +1212,32 @@ export const de: Dictionary = {
       xcodePost:
         ". Du baust nichts: Installiere es und öffne es einmal mit verbundenem iPhone, damit es das iOS-Entwickler-Image bereitstellt. Es ist ein großer Download, plane also etwa 15 GB freien Speicher ein. Du hast schon ein Entwickler-Image? Dann kannst du die App stattdessen auf diesen Ordner verweisen.",
     },
+    howItWorks: {
+      title: "So funktioniert es",
+      intro:
+        "Ein einheitlicher Standort in deinem Browser und auf deinem Handy – vollständig gesteuert über die GeoSpoof-App, die du bereits nutzt.",
+      steps: [
+        {
+          title: "Du wählst, es folgt",
+          body: "Wähle einen Standort in der GeoSpoof-App wie gewohnt. Diese Auswahl ist die einzige Quelle der Wahrheit, und GeoSpoof GPS auf deinem Mac spiegelt sie auf dein iPhone – so erzählen der Browser-Spoof und das echte GPS des Geräts endlich dieselbe Geschichte.",
+        },
+        {
+          title: "Dein Mac bewegt das GPS",
+          body: "Über eine sichere, einmalige Kopplung nutzt die Menüleisten-App Apples eigene Entwickler-Standortsimulation, um den systemweiten Standort deines iPhones zu setzen. Kein Jailbreak, nichts zu kompilieren – dasselbe Verfahren, das Entwickler bereits in Xcode verwenden.",
+        },
+        {
+          title: "Einmal per Kabel, dann drahtlos",
+          body: "Die Ersteinrichtung läuft über ein USB-Kabel. Danach funktioniert es über WLAN und verbindet sich von selbst wieder, wenn dein Handy das Netzwerk verlässt und erneut beitritt.",
+        },
+        {
+          title: "Bleibt stabil, setzt sauber zurück",
+          body: "Die App hält deinen Standort fest und wechselt sofort, wenn du einen neuen wählst. Pausiere die Synchronisierung oder beende die App, und dein iPhone springt umgehend zu seinem echten GPS zurück – ohne zurückgebliebenen Spoof.",
+        },
+      ],
+      privacyTitle: "Nur für dich",
+      privacyBody:
+        "Alles läuft direkt zwischen deinem Mac und deinem iPhone ab, dein Standort erreicht also nie unsere Server. Pro wird mit von Apple signierten Belegen überprüft, und jedes Update wird von Apple notariell beglaubigt und vor der Installation signaturgeprüft.",
+    },
     menuShotAlt: "GeoSpoof GPS Menüleisten-App unter macOS",
     screenshotAlt: "GeoSpoof GPS auf dem iPhone, Screenshot {n}",
     help: {
