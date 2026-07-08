@@ -1138,6 +1138,7 @@ export const de: Dictionary = {
     },
     download: {
       cta: "Für Mac herunterladen",
+      setupCta: "Einrichtungsanleitung",
       resolving: "Neueste Version wird gesucht…",
       versionLabel: "Neueste Version",
       note: "Universal-Build für Apple Silicon und Intel. Mit Developer ID signiert und von Apple notarisiert.",
@@ -1219,7 +1220,5 @@ export const de: Dictionary = {
       supportLink: "Hilfe erhalten",
       feedbackLink: "Feedback senden",
     },
-    sourceNote:
-      "GeoSpoof GPS ist quelloffen einsehbar und wird unabhängig von der Browser-Erweiterung versioniert.",
   },
 }

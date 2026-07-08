@@ -1119,6 +1119,7 @@ export const en = {
     },
     download: {
       cta: "Download for Mac",
+      setupCta: "Set up guide",
       resolving: "Finding the latest version…",
       versionLabel: "Latest version",
       note: "Universal build for Apple Silicon and Intel. Developer ID-signed and notarized by Apple.",
@@ -1190,7 +1191,7 @@ export const en = {
       xcodePre: "Xcode, Apple's free developer app from the ",
       xcodeLink: "Mac App Store",
       xcodePost:
-        ". You don't build anything: install it, then open it once with your iPhone connected so it provides the iOS developer image. It's a big download, so set aside about 15 GB of free space. Already have a developer image? You can point the app at that folder instead.",
+        ". It's a big download, so set aside about 15 GB of free space. (You don't build anything; the setup steps below explain how it's used.)",
     },
     menuShotAlt: "GeoSpoof GPS menu-bar app on macOS",
     screenshotAlt: "GeoSpoof GPS on iPhone, screenshot {n}",
@@ -1200,8 +1201,6 @@ export const en = {
       supportLink: "Get help",
       feedbackLink: "Send feedback",
     },
-    sourceNote:
-      "GeoSpoof GPS is source-available and versioned separately from the browser extension.",
   },
 } as const
 

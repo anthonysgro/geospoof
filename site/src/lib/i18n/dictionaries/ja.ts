@@ -1117,6 +1117,7 @@ export const ja: Dictionary = {
     },
     download: {
       cta: "Mac 用をダウンロード",
+      setupCta: "セットアップガイド",
       resolving: "最新バージョンを取得しています…",
       versionLabel: "最新バージョン",
       note: "Apple Silicon と Intel に対応したユニバーサルビルド。Developer ID で署名され、Apple により公証済みです。",
@@ -1198,7 +1199,5 @@ export const ja: Dictionary = {
       supportLink: "ヘルプを見る",
       feedbackLink: "フィードバックを送る",
     },
-    sourceNote:
-      "GeoSpoof GPS はソース公開されており、ブラウザ拡張機能とは別にバージョン管理されています。",
   },
 }

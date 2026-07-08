@@ -1137,6 +1137,7 @@ export const fr: Dictionary = {
     },
     download: {
       cta: "Télécharger pour Mac",
+      setupCta: "Guide de configuration",
       resolving: "Recherche de la dernière version…",
       versionLabel: "Dernière version",
       note: "Build universel pour Apple Silicon et Intel. Signé avec un Developer ID et notarié par Apple.",
@@ -1218,7 +1219,5 @@ export const fr: Dictionary = {
       supportLink: "Obtenir de l'aide",
       feedbackLink: "Envoyer un avis",
     },
-    sourceNote:
-      "GeoSpoof GPS est à source ouverte et versionné séparément de l'extension de navigateur.",
   },
 }

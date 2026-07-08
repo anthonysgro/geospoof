@@ -1125,6 +1125,7 @@ export const id: Dictionary = {
     },
     download: {
       cta: "Unduh untuk Mac",
+      setupCta: "Panduan penyiapan",
       resolving: "Mencari versi terbaru…",
       versionLabel: "Versi terbaru",
       note: "Build universal untuk Apple Silicon dan Intel. Ditandatangani dengan Developer ID dan dinotarisasi oleh Apple.",
@@ -1206,7 +1207,5 @@ export const id: Dictionary = {
       supportLink: "Dapatkan bantuan",
       feedbackLink: "Kirim masukan",
     },
-    sourceNote:
-      "GeoSpoof GPS tersedia kode sumbernya dan diberi versi terpisah dari ekstensi browser.",
   },
 }

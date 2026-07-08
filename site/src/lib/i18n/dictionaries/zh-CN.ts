@@ -1093,6 +1093,7 @@ export const zhCN: Dictionary = {
     },
     download: {
       cta: "下载 Mac 版",
+      setupCta: "设置指南",
       resolving: "正在获取最新版本…",
       versionLabel: "最新版本",
       note: "面向 Apple Silicon 与 Intel 的通用版本。已使用 Developer ID 签名并经 Apple 公证。",
@@ -1173,6 +1174,5 @@ export const zhCN: Dictionary = {
       supportLink: "获取帮助",
       feedbackLink: "发送反馈",
     },
-    sourceNote: "GeoSpoof GPS 源码可查看，并与浏览器扩展分开进行版本管理。",
   },
 }

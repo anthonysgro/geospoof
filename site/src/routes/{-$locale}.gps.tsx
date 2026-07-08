@@ -45,6 +45,9 @@ const APP_STORE_URL =
 /** Xcode on the Mac App Store — provides the iOS developer image GeoSpoof GPS mounts. */
 const XCODE_URL = "https://apps.apple.com/app/xcode/id497799835"
 
+/** Anchor id for the setup guide section; the hero's "Set up guide" button scrolls here. */
+const SETUP_SECTION_ID = "setup"
+
 /**
  * Screenshots that illustrate specific setup steps, keyed by the step's index
  * in `t.gps.setup.steps`. Kept out of the i18n dictionary because the asset
@@ -183,20 +186,44 @@ function DownloadCard() {
   const d = t.gps.download
   const release = useLatestGpsRelease()
 
+  // Smooth-scroll to the setup guide. Falls back to the native #setup jump if
+  // JS is unavailable or the target isn't found (e.g. during prerender).
+  const handleSetupClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    const el = document.getElementById(SETUP_SECTION_ID)
+    if (!el) return
+    e.preventDefault()
+    el.scrollIntoView({ behavior: "smooth" })
+  }
+
   return (
     <div className="mx-auto flex max-w-xl flex-col items-center">
-      <a
-        href={release ? release.dmgUrl : GPS_LATEST_DMG}
-        className={cn(
-          "inline-flex min-h-14 w-full items-center justify-center gap-2 sm:w-auto",
-          "rounded-brand bg-(--color-brand) px-8 text-lg font-semibold text-white",
-          "shadow-md transition-all hover:bg-(--color-brand-dark) hover:shadow-lg",
-          "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
-        )}
-      >
-        <Apple className="size-5" aria-hidden="true" />
-        {d.cta}
-      </a>
+      <div className="flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row">
+        <a
+          href={release ? release.dmgUrl : GPS_LATEST_DMG}
+          className={cn(
+            "inline-flex min-h-14 w-full items-center justify-center gap-2 sm:w-auto",
+            "rounded-brand bg-(--color-brand) px-8 text-lg font-semibold text-white",
+            "shadow-md transition-all hover:bg-(--color-brand-dark) hover:shadow-lg",
+            "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+          )}
+        >
+          <Apple className="size-5" aria-hidden="true" />
+          {d.cta}
+        </a>
+        <a
+          href={`#${SETUP_SECTION_ID}`}
+          onClick={handleSetupClick}
+          className={cn(
+            "inline-flex min-h-14 w-full items-center justify-center gap-2 sm:w-auto",
+            "rounded-brand border border-(--color-canvas-border) px-8 text-lg font-semibold text-(--color-canvas-foreground)",
+            "transition-all hover:border-(--color-brand) hover:bg-brand/5",
+            "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+          )}
+        >
+          <ListChecks className="size-5" aria-hidden="true" />
+          {d.setupCta}
+        </a>
+      </div>
 
       <p
         className="mt-3 min-h-5 text-sm text-(--color-canvas-muted)"
@@ -449,14 +476,24 @@ export function GpsPage() {
         {/* Product shots — the GeoSpoof app that drives the iPhone's GPS. */}
         <GpsPhones />
 
-        {/* What you'll need — shown before the steps so people can gather it first. */}
-        <Section narrow className="py-12! md:py-16!">
-          <div className="rounded-2xl border border-(--color-canvas-border) bg-brand/5 p-6 md:p-8">
+        {/* Setup guide — mirrors the in-app "Set Up…" wizard, step for step. */}
+        <Section
+          id={SETUP_SECTION_ID}
+          narrow
+          className="scroll-mt-24 py-12! md:py-16!"
+        >
+          <h2 className="mb-3 text-2xl font-bold text-(--color-canvas-foreground) md:text-3xl">
+            {g.setup.title}
+          </h2>
+          <p className="mb-8 text-(--color-canvas-muted)">{g.setup.intro}</p>
+
+          {/* What you'll need — right under the setup header so people can gather prerequisites first. */}
+          <div className="mb-10 rounded-2xl border border-(--color-canvas-border) bg-brand/5 p-6 md:p-8">
             <div className="mb-4 flex items-center gap-2 text-(--color-brand)">
               <ListChecks className="size-6" aria-hidden="true" />
-              <h2 className="text-xl font-bold text-(--color-canvas-foreground) md:text-2xl">
+              <h3 className="text-xl font-bold text-(--color-canvas-foreground) md:text-2xl">
                 {g.requirements.title}
-              </h2>
+              </h3>
             </div>
             <ul className="space-y-3">
               <ReqItem>{g.requirements.macos}</ReqItem>
@@ -472,18 +509,9 @@ export function GpsPage() {
                 {g.requirements.xcodePost}
               </ReqItem>
             </ul>
-            <p className="mt-5 border-t border-(--color-canvas-border) pt-4 text-xs text-(--color-canvas-muted)">
-              {g.sourceNote}
-            </p>
           </div>
-        </Section>
 
-        {/* Setup guide — mirrors the in-app "Set Up…" wizard, step for step. */}
-        <Section narrow className="py-12! md:py-16!">
-          <h2 className="mb-3 text-2xl font-bold text-(--color-canvas-foreground) md:text-3xl">
-            {g.setup.title}
-          </h2>
-          <p className="mb-8 text-(--color-canvas-muted)">{g.setup.intro}</p>
+          {/* Menu-bar app shot, shown just above the steps so people recognise the UI they refer to. */}
           <GpsMenuShot />
           <ol className="space-y-6 md:space-y-8">
             {g.setup.steps.map((step, i) => {

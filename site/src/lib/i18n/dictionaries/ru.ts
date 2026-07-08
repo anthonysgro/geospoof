@@ -1136,6 +1136,7 @@ export const ru: Dictionary = {
     },
     download: {
       cta: "Скачать для Mac",
+      setupCta: "Руководство по настройке",
       resolving: "Ищем последнюю версию…",
       versionLabel: "Последняя версия",
       note: "Универсальная сборка для Apple Silicon и Intel. Подписана Developer ID и заверена Apple.",
@@ -1217,7 +1218,5 @@ export const ru: Dictionary = {
       supportLink: "Получить помощь",
       feedbackLink: "Отправить отзыв",
     },
-    sourceNote:
-      "Исходный код GeoSpoof GPS доступен, а версии выходят отдельно от браузерного расширения.",
   },
 }

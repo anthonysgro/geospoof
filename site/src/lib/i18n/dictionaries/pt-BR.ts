@@ -1135,6 +1135,7 @@ export const ptBR: Dictionary = {
     },
     download: {
       cta: "Baixar para Mac",
+      setupCta: "Guia de configuração",
       resolving: "Buscando a versão mais recente…",
       versionLabel: "Versão mais recente",
       note: "Build universal para Apple Silicon e Intel. Assinado com Developer ID e notarizado pela Apple.",
@@ -1216,7 +1217,5 @@ export const ptBR: Dictionary = {
       supportLink: "Obter ajuda",
       feedbackLink: "Enviar feedback",
     },
-    sourceNote:
-      "O GeoSpoof GPS tem código disponível e é versionado separadamente da extensão do navegador.",
   },
 }
