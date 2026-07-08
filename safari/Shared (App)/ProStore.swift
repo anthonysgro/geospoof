@@ -484,6 +484,12 @@ final class ProStore: ObservableObject {
     /// Force the published entitlement state to match the debug override, then broadcast.
     /// Sets exactly one Pro source so `isPro`/`status` reflect the chosen tier. Only ever
     /// runs while an override is active (release resolves to `.auto`, so this isn't called).
+    ///
+    /// For the `.subscription` override: the UI state is faked (so the force-subscription
+    /// flow works without a real purchase), but we also collect real signed JWS from
+    /// `Transaction.currentEntitlements` if any exist — that way the GPS agent can verify
+    /// the subscription cryptographically (the full tested path), rather than falling back
+    /// to the unsigned legacy `pro` bool (which only a debug agent would accept).
     private func applyDebugOverride() {
         let ov = debugProOverride()
         localFounder = (ov == .founder)
@@ -499,6 +505,29 @@ final class ProStore: ObservableObject {
                 autoRenews: true,
                 transactionID: 0
             )
+            // Collect real transaction JWS from StoreKit so the GPS agent can
+            // verify the subscription cryptographically. This is the key difference
+            // from the old path that left `entitlementTransactionsJWS` empty:
+            // with an empty array the agent saw transaction_count=0 and said "Not Pro"
+            // even on a debug build that accepts Xcode-env proofs.
+            Task {
+                var proofJWS: [String] = []
+                for await result in Transaction.currentEntitlements {
+                    if let tx = acceptableTransaction(result) {
+                        proofJWS.append(result.jwsRepresentation)
+                        _ = tx // silence unused warning
+                    }
+                }
+                // Only update if we actually found something — if no purchase exists yet
+                // (user hasn't bought the sub in the local StoreKit config), leave it
+                // empty so the agent falls back to the debug unsigned bool as before.
+                if !proofJWS.isEmpty {
+                    self.entitlementTransactionsJWS = proofJWS
+                }
+                self.persistIsPro()
+            }
+            // Broadcast immediately with whatever JWS we already have (may be empty on
+            // the first call before the Task above finishes; the Task re-broadcasts).
         } else {
             activeProductIDs = []
             subscriptionDetails = nil
