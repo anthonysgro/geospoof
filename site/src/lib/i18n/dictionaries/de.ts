@@ -1127,6 +1127,7 @@ export const de: Dictionary = {
     hero: {
       breadcrumbHome: "Startseite",
       breadcrumb: "GeoSpoof GPS",
+      iconAlt: "App-Symbol von GeoSpoof GPS",
       badge: "macOS · Menüleisten-App",
       headingPre: "Bring den ",
       headingEmphasis: "echten GPS-Standort",
@@ -1190,6 +1191,7 @@ export const de: Dictionary = {
       xcodePost:
         ". Du baust nichts: Installiere es einfach und öffne es einmal mit verbundenem iPhone, damit es die Einrichtung abschließt und das iOS-Entwickler-Image bereitstellt. Es ist ein großer Download – plane etwa 15 GB freien Speicher ein. Du hast schon ein Entwickler-Image? Dann kannst du die App stattdessen auf diesen Ordner verweisen.",
     },
+    menuShotAlt: "GeoSpoof GPS Menüleisten-App unter macOS",
     screenshotAlt: "GeoSpoof GPS auf dem iPhone – Screenshot {n}",
     sourceNote:
       "GeoSpoof GPS ist quelloffen einsehbar und wird unabhängig von der Browser-Erweiterung versioniert.",

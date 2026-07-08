@@ -1125,6 +1125,7 @@ export const ru: Dictionary = {
     hero: {
       breadcrumbHome: "Главная",
       breadcrumb: "GeoSpoof GPS",
+      iconAlt: "Значок приложения GeoSpoof GPS",
       badge: "macOS · Приложение в строке меню",
       headingPre: "Приведите ",
       headingEmphasis: "реальный GPS",
@@ -1188,6 +1189,7 @@ export const ru: Dictionary = {
       xcodePost:
         ". Ничего собирать не нужно: просто установите его и один раз откройте с подключённым iPhone, чтобы он завершил настройку и предоставил образ разработчика iOS. Загрузка большая — освободите около 15 ГБ места. Уже есть образ разработчика? Тогда можно указать приложению эту папку.",
     },
+    menuShotAlt: "Приложение GeoSpoof GPS в строке меню на macOS",
     screenshotAlt: "GeoSpoof GPS на iPhone — снимок экрана {n}",
     sourceNote:
       "Исходный код GeoSpoof GPS доступен, а версии выходят отдельно от браузерного расширения.",

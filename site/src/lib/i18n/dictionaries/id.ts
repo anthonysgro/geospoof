@@ -1115,6 +1115,7 @@ export const id: Dictionary = {
     hero: {
       breadcrumbHome: "Beranda",
       breadcrumb: "GeoSpoof GPS",
+      iconAlt: "Ikon aplikasi GeoSpoof GPS",
       badge: "macOS · Aplikasi bilah menu",
       headingPre: "Samakan ",
       headingEmphasis: "GPS asli",
@@ -1177,6 +1178,7 @@ export const id: Dictionary = {
       xcodePost:
         ". Anda tidak membangun apa pun: cukup pasang dan buka sekali dengan iPhone terhubung, agar ia menyelesaikan penyiapan dan menyediakan citra pengembang iOS. Ini unduhan besar — sisakan sekitar 15 GB ruang kosong. Sudah punya citra pengembang? Anda bisa mengarahkan aplikasi ke folder itu.",
     },
+    menuShotAlt: "Aplikasi bilah menu GeoSpoof GPS di macOS",
     screenshotAlt: "GeoSpoof GPS di iPhone — tangkapan layar {n}",
     sourceNote:
       "GeoSpoof GPS tersedia kode sumbernya dan diberi versi terpisah dari ekstensi browser.",

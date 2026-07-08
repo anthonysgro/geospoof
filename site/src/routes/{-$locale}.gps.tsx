@@ -14,7 +14,6 @@ import { Navigation } from "@/components/landing/Navigation"
 import { Footer } from "@/components/landing/Footer"
 import { SkipLink } from "@/components/landing/SkipLink"
 import { Section } from "@/components/landing/Section"
-import { Badge } from "@/components/ui/badge"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -220,8 +219,8 @@ function GpsPhones() {
     : "/images/gps/gps-2-light.png"
 
   return (
-    <Section narrow className="pt-0! pb-14! md:pb-20!">
-      <div className="flex items-end justify-center gap-4 sm:gap-8">
+    <Section className="pt-0! pb-14! md:pb-20!">
+      <div className="flex items-end justify-center gap-6 sm:gap-10">
         <img
           src={img1}
           alt={format(t.gps.screenshotAlt, { n: 1 })}
@@ -229,7 +228,7 @@ function GpsPhones() {
           height={2315}
           loading="lazy"
           decoding="async"
-          className="h-auto w-40 drop-shadow-2xl sm:w-52 md:w-60"
+          className="h-auto w-48 drop-shadow-2xl sm:w-64 md:w-80"
         />
         <img
           src={img2}
@@ -238,10 +237,61 @@ function GpsPhones() {
           height={2315}
           loading="lazy"
           decoding="async"
-          className="h-auto w-40 drop-shadow-2xl sm:w-52 md:w-60"
+          className="h-auto w-48 drop-shadow-2xl sm:w-64 md:w-80"
         />
       </div>
     </Section>
+  )
+}
+
+/**
+ * Screenshot of the GeoSpoof GPS macOS menu-bar app, shown at the top of the
+ * setup guide so people recognise the UI the steps refer to. Theme-aware PNGs
+ * carry their own window chrome, so we render as-is with a soft drop-shadow.
+ */
+function GpsMenuShot() {
+  const { resolvedTheme } = useTheme()
+  const { t } = useTranslations()
+  const src =
+    resolvedTheme === "dark"
+      ? "/images/gps/gps-desktop-menu-icon-1-dark.png"
+      : "/images/gps/gps-desktop-menu-icon-1-light.png"
+
+  return (
+    <img
+      src={src}
+      alt={t.gps.menuShotAlt}
+      width={744}
+      height={700}
+      loading="lazy"
+      decoding="async"
+      className="mx-auto mb-10 h-auto w-full max-w-md drop-shadow-2xl"
+    />
+  )
+}
+
+/**
+ * Theme-aware GeoSpoof GPS app icon shown above the hero heading. The two PNGs
+ * are the shipped iOS app icons (Default = light, Dark = dark) with their own
+ * rounding baked in, so we let them render as-is and only add a soft shadow.
+ */
+function HeroIcon() {
+  const { resolvedTheme } = useTheme()
+  const { t } = useTranslations()
+  const src =
+    resolvedTheme === "dark"
+      ? "/images/gps/Icon-iOS-Dark-1024@1x.png"
+      : "/images/gps/Icon-iOS-Default-1024@1x.png"
+
+  return (
+    <img
+      src={src}
+      alt={t.gps.hero.iconAlt}
+      width={1024}
+      height={1024}
+      decoding="async"
+      className="mx-auto mb-8 size-40 drop-shadow-2xl sm:size-48 md:size-64"
+    />
   )
 }
 
@@ -303,12 +353,7 @@ export function GpsPage() {
             </BreadcrumbList>
           </Breadcrumb>
           <div className="mx-auto max-w-3xl text-center">
-            <Badge
-              variant="outline"
-              className="mb-4 border-brand/30 bg-brand/10 tracking-wide text-(--color-brand) uppercase"
-            >
-              {g.hero.badge}
-            </Badge>
+            <HeroIcon />
             <h1 className="mb-5 text-4xl leading-tight font-bold text-(--color-canvas-foreground) md:text-5xl">
               {g.hero.headingPre}
               <span className="text-(--color-brand)">
@@ -381,6 +426,7 @@ export function GpsPage() {
             {g.setup.title}
           </h2>
           <p className="mb-8 text-(--color-canvas-muted)">{g.setup.intro}</p>
+          <GpsMenuShot />
           <ol className="space-y-5">
             {g.setup.steps.map((step, i) => (
               <li key={step.name} className="flex gap-4">

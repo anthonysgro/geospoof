@@ -1109,6 +1109,7 @@ export const en = {
     hero: {
       breadcrumbHome: "Home",
       breadcrumb: "GeoSpoof GPS",
+      iconAlt: "GeoSpoof GPS app icon",
       badge: "macOS · Menu-bar app",
       headingPre: "Match your iPhone's ",
       headingEmphasis: "real GPS",
@@ -1171,6 +1172,7 @@ export const en = {
       xcodePost:
         ". You don't build anything: just install it and open it once with your iPhone connected, so it finishes setup and provides the iOS developer image. It's a big download — set aside about 15 GB of free space. Already have a developer image? You can point the app at that folder instead.",
     },
+    menuShotAlt: "GeoSpoof GPS menu-bar app on macOS",
     screenshotAlt: "GeoSpoof GPS on iPhone — screenshot {n}",
     sourceNote:
       "GeoSpoof GPS is source-available and versioned separately from the browser extension.",

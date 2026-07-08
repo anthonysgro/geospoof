@@ -606,6 +606,11 @@ final class SpoofController: ObservableObject {
     /// location. Default off — moving the real device location is consequential
     /// (Find My, every app), so it's an explicit opt-in, never automatic.
     @Published var deviceGpsEnabled = false
+    /// The controller (Mac) the user chose to drive THIS phone's GPS, by stable controller
+    /// id (controller-arbitration). `nil` in the common single-Mac case — the agent's sole
+    /// present controller drives with no prompt; set only when two+ Macs are present and the
+    /// user picks one. Mirrored into `desired.json` as `owner_id`.
+    @Published var selectedControllerId: String?
     /// Site-scoping state. Mutated via the explicit setters below (which write
     /// the pending bridge record) and by adoption in refreshFromExtension /
     /// restoreLocalPending (which set them directly, no echo). No didSet, so
@@ -699,6 +704,8 @@ final class SpoofController: ObservableObject {
         loadFavorites()
         // Restore the device-GPS opt-in (§13) so the toggle survives relaunch.
         deviceGpsEnabled = UserDefaults(suiteName: suite)?.bool(forKey: "gps_deviceEnabled") ?? false
+        // Restore the chosen controlling Mac (controller-arbitration), if any.
+        selectedControllerId = UserDefaults(suiteName: suite)?.string(forKey: "gps_ownerId")
         // Restore our own last-written desired state BEFORE reconciling with the
         // extension. The app keeps no other durable copy of its toggle/location
         // state, so on a cold launch (iOS terminating the backgrounded app, or
@@ -1087,6 +1094,22 @@ final class SpoofController: ObservableObject {
         Log.location.info("Device GPS sync \(value ? "enabled" : "disabled")")
         deviceGpsEnabled = value
         UserDefaults(suiteName: suite)?.set(value, forKey: "gps_deviceEnabled")
+        writePending()
+    }
+
+    /// Choose which Mac (by controller id) drives this phone's GPS, or `nil` to let the
+    /// sole present controller drive automatically (controller-arbitration). Persisted and
+    /// mirrored into `desired.json` as `owner_id`. No-op if unchanged.
+    func setSelectedController(_ id: String?) {
+        guard selectedControllerId != id else { return }
+        Log.location.info("GPS controlling Mac → \(id ?? "auto")")
+        selectedControllerId = id
+        let defaults = UserDefaults(suiteName: suite)
+        if let id {
+            defaults?.set(id, forKey: "gps_ownerId")
+        } else {
+            defaults?.removeObject(forKey: "gps_ownerId")
+        }
         writePending()
     }
 
@@ -1571,6 +1594,12 @@ final class SpoofController: ObservableObject {
         }
         if !entitlement.isEmpty {
             obj["entitlement"] = entitlement
+        }
+        // The chosen controlling Mac (controller-arbitration). Omitted in the single-Mac
+        // case so the agent's sole-controller drives automatically; set only when the user
+        // picked among multiple Macs. The agent stands down on any Mac not named here.
+        if let ownerId = selectedControllerId, !ownerId.isEmpty {
+            obj["owner_id"] = ownerId
         }
         if active, let location {
             obj["latitude"] = location.latitude

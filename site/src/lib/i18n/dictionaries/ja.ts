@@ -1107,6 +1107,7 @@ export const ja: Dictionary = {
     hero: {
       breadcrumbHome: "ホーム",
       breadcrumb: "GeoSpoof GPS",
+      iconAlt: "GeoSpoof GPS アプリのアイコン",
       badge: "macOS · メニューバーアプリ",
       headingPre: "iPhone の",
       headingEmphasis: "実際の GPS",
@@ -1169,6 +1170,7 @@ export const ja: Dictionary = {
       xcodePost:
         "）。ビルド作業は不要です。インストールして、iPhone を接続した状態で一度開くだけで、セットアップが完了し iOS デベロッパイメージが用意されます。ダウンロードは大きめなので、15 GB ほどの空き容量を確保してください。すでにデベロッパイメージがある場合は、代わりにそのフォルダをアプリに指定できます。",
     },
+    menuShotAlt: "macOS の GeoSpoof GPS メニューバーアプリ",
     screenshotAlt: "iPhone 上の GeoSpoof GPS — スクリーンショット {n}",
     sourceNote:
       "GeoSpoof GPS はソース公開されており、ブラウザ拡張機能とは別にバージョン管理されています。",

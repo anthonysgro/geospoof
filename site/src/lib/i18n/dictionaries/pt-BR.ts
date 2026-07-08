@@ -1125,6 +1125,7 @@ export const ptBR: Dictionary = {
     hero: {
       breadcrumbHome: "Início",
       breadcrumb: "GeoSpoof GPS",
+      iconAlt: "Ícone do app GeoSpoof GPS",
       badge: "macOS · App da barra de menus",
       headingPre: "Alinhe o ",
       headingEmphasis: "GPS real",
@@ -1187,6 +1188,7 @@ export const ptBR: Dictionary = {
       xcodePost:
         ". Você não compila nada: basta instalar e abrir uma vez com o iPhone conectado, para que ele conclua a configuração e forneça a imagem de desenvolvedor do iOS. É um download grande — reserve cerca de 15 GB de espaço livre. Já tem uma imagem de desenvolvedor? Você pode apontar o app para essa pasta.",
     },
+    menuShotAlt: "App da barra de menus GeoSpoof GPS no macOS",
     screenshotAlt: "GeoSpoof GPS no iPhone — captura {n}",
     sourceNote:
       "O GeoSpoof GPS tem código disponível e é versionado separadamente da extensão do navegador.",

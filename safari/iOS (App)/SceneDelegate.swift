@@ -194,40 +194,91 @@ struct GpsStatus: Codable, Equatable {
     }
 }
 
-/// Polls the agent's `status.json` from the app's Documents. The desktop agent
-/// rewrites it every few seconds over AFC; if it goes stale the Mac agent isn't
-/// running, so we treat the feature as "waiting for your Mac".
+/// One controller (Mac) entry from the agent roster under
+/// `Documents/controllers/<id>.json` (controller-arbitration). Mirrors the agent's
+/// `ControllerReport`: identity (`id`, `name`) plus a flattened `StatusReport` — the same
+/// flat JSON decodes into both the identity fields here and a `GpsStatus`.
+struct GpsController: Identifiable, Equatable {
+    let id: String
+    let name: String
+    let status: GpsStatus
+
+    /// Fresh if the agent's own timestamp is within the staleness window (matches the
+    /// agent's `CONTROLLER_FRESH_SECS`). A missing timestamp counts as stale.
+    var isFresh: Bool {
+        guard let updatedAt = status.updatedAt else { return false }
+        return Date().timeIntervalSince1970 - updatedAt <= GpsStatusStore.freshWindow
+    }
+
+    /// Decode one `controllers/<id>.json` payload. `nil` if identity or status won't parse.
+    init?(data: Data) {
+        struct Ident: Decodable { let id: String; let name: String }
+        guard let ident = try? JSONDecoder().decode(Ident.self, from: data),
+              let status = try? JSONDecoder().decode(GpsStatus.self, from: data) else {
+            return nil
+        }
+        self.id = ident.id
+        self.name = ident.name
+        self.status = status
+    }
+}
+
+/// Reads the agent roster from this app's `Documents/controllers/` (each Mac writes one
+/// `<id>.json` self-file over AFC — controller-arbitration). Exposes the fresh roster plus
+/// a single display `status`: the user-selected controller's, or the sole controller's when
+/// only one is present. If it goes stale/empty the Mac agent isn't running, so the feature
+/// reads as "waiting for your Mac".
 @MainActor
 final class GpsStatusStore: ObservableObject {
+    /// The display status: the selected (owner) controller's, or the sole controller's.
     @Published private(set) var status: GpsStatus?
-    /// True when there's no fresh status (agent not running / never set up).
+    /// The fresh roster of Macs currently able to drive this phone.
+    @Published private(set) var controllers: [GpsController] = []
+    /// True when there's no fresh display status (no owner/sole controller present).
     @Published private(set) var isStale = true
 
-    /// The agent ticks ~every 5s; allow slack before calling it stale.
-    private static let freshWindow: TimeInterval = 20
+    /// The agent refreshes each self-file well within this window; older ⇒ that Mac is gone.
+    static let freshWindow: TimeInterval = 20
 
-    func reload() {
+    /// Reload the roster and resolve the display status for `selectedId` (the user's chosen
+    /// controlling Mac, or nil for auto/sole).
+    func reload(selectedId: String?) {
+        controllers = Self.readRoster()
+        // Display status: the explicitly-selected controller if it's present; else, when
+        // exactly one controller is present, that sole one; else none (ambiguous — the UI
+        // asks the user to choose).
+        let owner: GpsController?
+        if let selectedId, let picked = controllers.first(where: { $0.id == selectedId }) {
+            owner = picked
+        } else if controllers.count == 1 {
+            owner = controllers.first
+        } else {
+            owner = nil
+        }
+        status = owner?.status
+        isStale = owner == nil
+    }
+
+    /// Read + freshness-filter every `controllers/<id>.json`. Empty if the directory is
+    /// absent (no Mac has announced yet). The `.json` filter also skips the agent's
+    /// hidden `.<id>.json.tmp` atomic-write scratch files.
+    private static func readRoster() -> [GpsController] {
         guard let docs = FileManager.default
             .urls(for: .documentDirectory, in: .userDomainMask).first else {
-            status = nil; isStale = true; return
+            return []
         }
-        let url = docs.appendingPathComponent("status.json")
-        guard let data = try? Data(contentsOf: url) else {
-            status = nil; isStale = true; return
+        let dir = docs.appendingPathComponent("controllers")
+        guard let urls = try? FileManager.default.contentsOfDirectory(
+            at: dir, includingPropertiesForKeys: nil
+        ) else {
+            return []
         }
-        let decoded = try? JSONDecoder().decode(GpsStatus.self, from: data)
-        status = decoded
-        // Freshness comes from the report's own `updated_at` (agent clock), not the
-        // file's mtime — the agent can't rewrite the file once it loses the device, so
-        // a lingering file would otherwise look live. Comparing timestamps also survives
-        // AFC quirks. A report without a timestamp (older agent) is treated as stale.
-        // A small negative age (agent clock slightly ahead) still counts as fresh.
-        if let updatedAt = decoded?.updatedAt {
-            let age = Date().timeIntervalSince1970 - updatedAt
-            isStale = age > Self.freshWindow
-        } else {
-            isStale = true
-        }
+        return urls
+            .filter { $0.pathExtension == "json" }
+            .compactMap { try? Data(contentsOf: $0) }
+            .compactMap { GpsController(data: $0) }
+            .filter { $0.isFresh }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 }
 
@@ -235,6 +286,9 @@ final class GpsStatusStore: ObservableObject {
 private enum GpsPhase: Equatable {
     case notPro
     case waitingForMac
+    /// Two or more Macs can drive this phone and none is chosen (or the chosen one left):
+    /// the user must pick which Mac controls it (controller-arbitration).
+    case chooseController
     case setupNeeded(String)
     case ready
     case spoofing
@@ -270,30 +324,76 @@ struct GpsView: View {
                 case .waitingForMac:
                     aboutSection
                     waitingSection
+                case .chooseController:
+                    chooseControllerSection
                 case .setupNeeded(let message):
                     setupNeededSection(message)
+                    controllingMacSection
                     syncToggleSection
                 case .ready:
                     connectedSection(active: false)
+                    controllingMacSection
                     syncToggleSection
                 case .spoofing:
                     connectedSection(active: true)
+                    controllingMacSection
                     syncToggleSection
                 case .lost:
                     lostSection
+                    controllingMacSection
                     syncToggleSection
                 }
             }
             .groupedFormStyle()
             .tint(.brand)
             .navigationTitle("GPS")
-            .onAppear { statusStore.reload() }
-            .onReceive(refreshTimer) { _ in statusStore.reload() }
+            .onAppear { refreshStatus() }
+            .onReceive(refreshTimer) { _ in refreshStatus() }
         }
+    }
+
+    /// Reload the roster for the current selection, then keep the selection sensible as the
+    /// roster changes (auto-drive a sole Mac; drop a selection whose Mac has left).
+    private func refreshStatus() {
+        statusStore.reload(selectedId: controller.selectedControllerId)
+        reconcileSelection()
+    }
+
+    /// Keep the controlling-Mac selection consistent with who's actually present:
+    ///   * exactly one Mac ⇒ it drives automatically (clear any explicit pick, so the
+    ///     agent's sole-controller path applies and a departed Mac fails over cleanly);
+    ///   * two+ Macs ⇒ drop a selection that names a Mac no longer present (the UI then
+    ///     re-prompts); a valid selection is kept.
+    private func reconcileSelection() {
+        let present = statusStore.controllers
+        switch present.count {
+        case 0:
+            break // waiting for a Mac; keep the selection for when one returns
+        case 1:
+            if controller.selectedControllerId != nil { controller.setSelectedController(nil) }
+        default:
+            if let sel = controller.selectedControllerId,
+               !present.contains(where: { $0.id == sel }) {
+                controller.setSelectedController(nil)
+            }
+        }
+    }
+
+    /// Two+ Macs present and no valid choice ⇒ the user must pick which one controls.
+    private var needsControllerChoice: Bool {
+        let present = statusStore.controllers
+        guard present.count >= 2 else { return false }
+        if let sel = controller.selectedControllerId,
+           present.contains(where: { $0.id == sel }) {
+            return false
+        }
+        return true
     }
 
     private var phase: GpsPhase {
         if !pro.isPro { return .notPro }
+        // Resolve the "which Mac" ambiguity before reading a single status.
+        if needsControllerChoice { return .chooseController }
         guard let s = statusStore.status, !statusStore.isStale else { return .waitingForMac }
         if s.session == "lost" { return .lost }
         if !s.connected {
@@ -456,6 +556,57 @@ struct GpsView: View {
             Text("Action needed")
         } footer: {
             Text("Complete this step on your iPhone or in the GeoSpoof GPS app on your Mac.")
+        }
+    }
+
+    /// Picker shown when two or more Macs can drive this phone and none is chosen yet
+    /// (controller-arbitration). Tapping one records it as the owner; every other Mac then
+    /// stands down. A single-Mac user never sees this.
+    private var chooseControllerSection: some View {
+        Section {
+            ForEach(statusStore.controllers) { c in
+                Button {
+                    controller.setSelectedController(c.id)
+                } label: {
+                    HStack {
+                        Image(systemName: "desktopcomputer")
+                            .foregroundColor(.brand)
+                        Text(c.name)
+                            .foregroundColor(.primary)
+                        Spacer()
+                        if controller.selectedControllerId == c.id {
+                            Image(systemName: "checkmark")
+                                .foregroundColor(.brand)
+                        }
+                    }
+                }
+            }
+        } header: {
+            Text("Choose your Mac")
+        } footer: {
+            Text("More than one Mac can control this iPhone. Pick which one drives your GPS — the others stand by.")
+        }
+    }
+
+    /// When two+ Macs are present, a compact picker so the user can switch which one is in
+    /// charge. Hidden in the common single-Mac case.
+    @ViewBuilder
+    private var controllingMacSection: some View {
+        if statusStore.controllers.count >= 2 {
+            Section {
+                Picker(selection: Binding(
+                    get: { controller.selectedControllerId ?? "" },
+                    set: { controller.setSelectedController($0.isEmpty ? nil : $0) }
+                )) {
+                    ForEach(statusStore.controllers) { c in
+                        Text(c.name).tag(c.id)
+                    }
+                } label: {
+                    Label("Controlling Mac", systemImage: "desktopcomputer")
+                }
+            } footer: {
+                Text("Only this Mac drives your iPhone’s GPS. The others stand by.")
+            }
         }
     }
 

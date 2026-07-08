@@ -1083,6 +1083,7 @@ export const zhCN: Dictionary = {
     hero: {
       breadcrumbHome: "首页",
       breadcrumb: "GeoSpoof GPS",
+      iconAlt: "GeoSpoof GPS 应用图标",
       badge: "macOS · 菜单栏应用",
       headingPre: "让 iPhone 的",
       headingEmphasis: "真实 GPS",
@@ -1144,6 +1145,7 @@ export const zhCN: Dictionary = {
       xcodePost:
         "。你无需构建任何东西：只需安装它，并在连接 iPhone 的情况下打开一次，让它完成设置并提供 iOS 开发者映像。它的下载很大——请预留约 15 GB 的可用空间。已经有开发者映像了？可以改为让应用指向那个文件夹。",
     },
+    menuShotAlt: "macOS 上的 GeoSpoof GPS 菜单栏应用",
     screenshotAlt: "iPhone 上的 GeoSpoof GPS——截图 {n}",
     sourceNote: "GeoSpoof GPS 源码可查看，并与浏览器扩展分开进行版本管理。",
   },
