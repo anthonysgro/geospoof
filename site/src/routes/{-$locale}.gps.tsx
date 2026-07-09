@@ -102,6 +102,13 @@ const SETUP_STEP_IMAGES: Partial<
     width: 996,
     height: 484,
   },
+  // Step 4 — Trust this computer
+  3: {
+    src: "/images/gps/trust-this-computer.png",
+    alt: "The “Trust This Computer?” alert on an iPhone, with the Trust button highlighted.",
+    width: 971,
+    height: 630,
+  },
   // Step 5 — Enable Developer Mode
   4: {
     src: "/images/gps/ios-developer-mode-on.jpg",
