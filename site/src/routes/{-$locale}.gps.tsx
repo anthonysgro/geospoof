@@ -74,6 +74,12 @@ const SETUP_STEP_IMAGES: Partial<
       height: number
       /** Optional Tailwind max-width override; otherwise picked by aspect ratio. */
       maxWidthClass?: string
+      /**
+       * Transparent render (not a rectangular screenshot): skip the framed
+       * border/background and render bare with just a drop-shadow, like the
+       * other transparent PNGs on this page.
+       */
+      bare?: boolean
     }
   >
 > = {
@@ -81,8 +87,8 @@ const SETUP_STEP_IMAGES: Partial<
   0: {
     src: "/images/gps/gps-dmg-install.png",
     alt: "The GeoSpoof GPS disk image open in Finder, with the app icon being dragged onto the Applications folder.",
-    width: 1342,
-    height: 1104,
+    width: 1598,
+    height: 1258,
     // This shot is wide; cap it smaller so it doesn't dominate the guide.
     maxWidthClass: "max-w-xs",
   },
@@ -643,7 +649,13 @@ export function GpsPage() {
                         loading="lazy"
                         decoding="async"
                         className={cn(
-                          "mt-4 h-auto w-full rounded-xl border border-(--color-canvas-border) shadow-sm",
+                          "mt-4 h-auto w-full",
+                          // Framed for rectangular screenshots; bare (no border
+                          // or shadow — a drop-shadow would trace the alpha
+                          // silhouette and look odd) for transparent renders.
+                          image.bare
+                            ? ""
+                            : "rounded-xl border border-(--color-canvas-border) shadow-sm",
                           image.maxWidthClass ??
                             (image.height > image.width
                               ? "max-w-[16rem]"
