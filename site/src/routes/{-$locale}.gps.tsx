@@ -108,6 +108,8 @@ const SETUP_STEP_IMAGES: Partial<
     alt: "The “Trust This Computer?” alert on an iPhone, with the Trust button highlighted.",
     width: 971,
     height: 630,
+    // Cap it small so the dialog shot doesn't dominate the step.
+    maxWidthClass: "max-w-xs",
   },
   // Step 5 — Enable Developer Mode
   4: {
