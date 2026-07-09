@@ -2,6 +2,8 @@ import * as React from "react"
 import { createFileRoute } from "@tanstack/react-router"
 import {
   Apple,
+  ArrowRight,
+  Check,
   FlaskConical,
   ListChecks,
   MapPin,
@@ -32,6 +34,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { cn } from "@/lib/utils"
+import { PROTON_DISCOUNT } from "@/lib/affiliate"
 import { SITE_URL } from "@/lib/blog"
 import { useTranslations } from "@/hooks/use-i18n"
 import { useTheme } from "@/hooks/use-theme"
@@ -404,7 +407,78 @@ function HowItWorks() {
           </p>
         </div>
       </div>
+
+      {/* The one signal GPS sync (and the extension) can't change: your IP. */}
+      <IpVpnCallout />
     </Section>
+  )
+}
+
+/**
+ * The IP-address / VPN honesty callout, reused verbatim from the verify page
+ * (`t.verify.vpnCard` + `t.vpn.whyProton`, shared copy so there's nothing new
+ * to translate). GeoSpoof GPS aligns the device's location, but the IP is still
+ * the one signal neither the extension nor device GPS can change — the honest
+ * spot for it is right after "How it works". Links to the /vpn hub (disclosure,
+ * "why Proton", alternatives) rather than straight to the affiliate URL.
+ */
+function IpVpnCallout() {
+  const { t } = useTranslations()
+  const c = t.verify.vpnCard
+
+  return (
+    <div className="mx-auto mt-6 flex max-w-3xl flex-col gap-4 rounded-2xl border border-brand/40 bg-brand/5 p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between md:p-6">
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-brand/15 text-(--color-brand)">
+          <Wifi className="size-5" aria-hidden="true" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm leading-relaxed font-medium text-(--color-canvas-foreground)">
+            {c.line1}
+          </p>
+          <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+            {[t.vpn.whyProton.reason1Title, t.vpn.whyProton.reason2Title].map(
+              (feature) => (
+                <li
+                  key={feature}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-(--color-canvas-foreground)"
+                >
+                  <Check
+                    className="size-3.5 shrink-0 text-(--color-brand)"
+                    aria-hidden="true"
+                  />
+                  {feature}
+                </li>
+              )
+            )}
+          </ul>
+        </div>
+      </div>
+      <div className="flex min-w-0 flex-col gap-2 self-stretch sm:max-w-xs sm:self-center">
+        <LocaleLink
+          to="/vpn"
+          className={cn(
+            "group inline-flex w-full items-center justify-center gap-1.5 text-center",
+            "rounded-brand bg-(--color-brand) px-5 py-2.5 text-sm font-semibold text-white",
+            "shadow-sm transition-all hover:bg-(--color-brand-dark) hover:shadow-md",
+            "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) focus-visible:ring-offset-2"
+          )}
+        >
+          {c.cta}
+          <ArrowRight
+            className="size-4 shrink-0 transition-transform group-hover:translate-x-0.5"
+            aria-hidden="true"
+          />
+        </LocaleLink>
+        <p className="text-center text-xs text-(--color-canvas-muted)">
+          {format(c.priceNote, { discount: PROTON_DISCOUNT })}
+          <span className="mx-2 opacity-40" aria-hidden="true">
+            •
+          </span>
+          {c.guaranteeNote}
+        </p>
+      </div>
+    </div>
   )
 }
 
