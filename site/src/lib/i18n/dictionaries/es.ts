@@ -1155,6 +1155,17 @@ export const es: Dictionary = {
           ],
         },
         {
+          name: "Instala Xcode",
+          text: "GeoSpoof GPS necesita la imagen de disco de desarrollador de Apple, y viene dentro de Xcode. Empieza esta descarga primero: es grande (varios GB), así que déjala instalarse en segundo plano mientras haces los pasos rápidos del iPhone de abajo.",
+          bullets: [
+            "Instala Xcode (gratis) desde la Mac App Store y ábrelo una vez.",
+            "En el primer arranque muestra una pantalla de “Seleccionar plataformas”. Marca macOS y deja el resto (incluida iOS) sin marcar, luego continúa: no necesitas el SDK de iOS ni el Simulador; la imagen de desarrollador forma parte de la configuración base de Xcode de todos modos.",
+            "Deja que termine “Instalando componentes” y cierra Xcode. Sin proyecto, sin compilación, nada que construir y sin cuenta de pago de Apple Developer.",
+            "¿Ya tienes una imagen de desarrollador? Indica esa carpeta a GeoSpoof GPS y sáltate por completo la descarga de Xcode.",
+          ],
+          link: { label: "Obtener Xcode en la Mac App Store" },
+        },
+        {
           name: "Conecta tu iPhone",
           text: "Conecta tu iPhone a tu Mac y desbloquéalo. Usa un cable con datos, ya que algunos solo cargan. Si no aparece, prueba con otro cable o puerto.",
         },
@@ -1177,13 +1188,9 @@ export const es: Dictionary = {
         },
         {
           name: "Prepara la imagen de desarrollador",
-          text: "Haz clic en Preparar. GeoSpoof GPS monta la imagen de disco de desarrollador de Apple en tu iPhone, la pieza que permite fijar la ubicación real del dispositivo.",
-          bullets: [
-            "Qué es: una pequeña imagen de sistema firmada por Apple (la DDI) que activa funciones de desarrollador, como fijar una ubicación GPS real en tu iPhone.",
-            "Dónde conseguirla: viene dentro de Xcode. Instala Xcode gratis desde la Mac App Store y ábrelo una vez con tu iPhone conectado. GeoSpoof GPS encuentra y usa esa copia por ti. Sin proyecto, sin compilación, nada que construir.",
-            "Usa la tuya: ¿ya tienes una imagen de desarrollador? Indica esa carpeta a GeoSpoof GPS y sáltate la descarga de Xcode.",
-          ],
-          link: { label: "Obtener Xcode en la Mac App Store" },
+          text: "Requiere Xcode instalado (arriba). Con tu iPhone conectado y desbloqueado, haz clic en Preparar. GeoSpoof GPS personaliza la imagen de disco de desarrollador (DDI) de Apple para tu dispositivo y la monta: la pieza que permite a una app fijar tu ubicación GPS real. Está firmada por Apple y se hace por ti; no hay nada que configurar.",
+          powerUserNote:
+            "¿No encuentra la imagen? Si Preparar dice que no encuentra la imagen de desarrollador, puede que la configuración de Xcode no haya terminado de instalarla. Abre la Terminal, ejecuta esto y vuelve a hacer clic en Preparar:",
         },
         {
           name: "Elige una ubicación en GeoSpoof",

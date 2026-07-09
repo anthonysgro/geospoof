@@ -102,8 +102,16 @@ const SETUP_STEP_IMAGES: Partial<
     width: 996,
     height: 484,
   },
-  // Step 4 — Trust this computer
-  3: {
+  // Step 3 — Install Xcode (Xcode's first-launch platform picker)
+  2: {
+    src: "/images/gps/xcode-prompt.webp",
+    alt: "Xcode's first-launch “Select platforms to install” screen, with macOS checked and iOS and the other platforms left unchecked.",
+    width: 996,
+    height: 1308,
+    maxWidthClass: "max-w-xs",
+  },
+  // Step 5 — Trust this computer
+  4: {
     src: "/images/gps/trust-this-computer.png",
     alt: "The “Trust This Computer?” alert on an iPhone, with the Trust button highlighted.",
     width: 971,
@@ -111,12 +119,21 @@ const SETUP_STEP_IMAGES: Partial<
     // Cap it small so the dialog shot doesn't dominate the step.
     maxWidthClass: "max-w-xs",
   },
-  // Step 5 — Enable Developer Mode
-  4: {
+  // Step 6 — Enable Developer Mode
+  5: {
     src: "/images/gps/ios-developer-mode-on.jpg",
     alt: "iPhone Settings, Privacy & Security ▸ Developer Mode, with the toggle switched on.",
     width: 1206,
     height: 1307,
+  },
+  // Step 9 — Pick a location in GeoSpoof (setup complete, GPS active)
+  8: {
+    src: "/images/gps/setup-complete.png",
+    alt: "The GeoSpoof GPS menu-bar panel showing setup complete with GPS active.",
+    width: 990,
+    height: 1372,
+    // Tall shot; keep it on the smaller side so it doesn't dominate the step.
+    maxWidthClass: "max-w-[24rem]",
   },
 }
 
@@ -127,10 +144,23 @@ const SETUP_STEP_IMAGES: Partial<
  * in the dictionary so it stays translatable.
  */
 const SETUP_STEP_LINK_HREFS: Partial<Record<number, string>> = {
-  // Step 7 — Prepare the developer image → get Xcode (ships the developer image).
-  6: XCODE_URL,
-  // Step 8 — Pick a location in GeoSpoof → get the iOS app (the control surface).
-  7: APP_STORE_URL,
+  // Step 3 — Install Xcode → get Xcode (ships the developer image).
+  2: XCODE_URL,
+  // Step 9 — Pick a location in GeoSpoof → get the iOS app (the control surface).
+  8: APP_STORE_URL,
+}
+
+/**
+ * Optional terminal snippet shown under a step's `powerUserNote`, keyed by the
+ * step's index in `t.gps.setup.steps`. The command is locale-independent (it's
+ * code), so it lives here rather than in the dictionary; the introducing prose
+ * is the step's translatable `powerUserNote`.
+ */
+const SETUP_STEP_CODE: Partial<Record<number, string>> = {
+  // Step 8 — provision the personalized iOS developer image (iOS 17+) if Prepare
+  // reports it's missing. This is the modern devicectl path; the old
+  // XcodeSystemResources.pkg installer predates the personalized DDI.
+  7: "xcrun devicectl manage ddis update",
 }
 
 /**
@@ -682,6 +712,9 @@ export function GpsPage() {
               const image = SETUP_STEP_IMAGES[i]
               const link = "link" in step ? step.link : undefined
               const linkHref = SETUP_STEP_LINK_HREFS[i]
+              const powerUserNote =
+                "powerUserNote" in step ? step.powerUserNote : undefined
+              const code = SETUP_STEP_CODE[i]
               return (
                 <li key={step.name} className="flex gap-4">
                   <span
@@ -722,6 +755,19 @@ export function GpsPage() {
                       >
                         {link.label}
                       </a>
+                    )}
+                    {/* Secondary power-user note + copy-pasteable command. */}
+                    {powerUserNote && code && (
+                      <div className="mt-4">
+                        <p className="text-sm leading-relaxed text-(--color-canvas-muted)">
+                          {powerUserNote}
+                        </p>
+                        <pre className="mt-2 overflow-x-auto rounded-lg border border-(--color-canvas-border) bg-black/5 p-3 text-xs leading-relaxed dark:bg-white/10">
+                          <code className="font-mono text-(--color-canvas-foreground)">
+                            {code}
+                          </code>
+                        </pre>
+                      </div>
                     )}
                     {image && (
                       <img

@@ -1116,6 +1116,17 @@ export const zhCN: Dictionary = {
           ],
         },
         {
+          name: "安装 Xcode",
+          text: "GeoSpoof GPS 需要 Apple 的开发者磁盘映像，而它随 Xcode 一同提供。请先开始这个下载——它很大（数 GB），让它在后台安装，同时你去完成下面这些快速的 iPhone 步骤。",
+          bullets: [
+            "从 Mac App Store 免费安装 Xcode 并打开一次。",
+            "首次启动时会出现“选择平台”界面。勾选 macOS，其余（包括 iOS）保持不勾选，然后继续——你不需要 iOS SDK 或模拟器；无论如何，开发者映像都属于 Xcode 的基础安装内容。",
+            "等待“正在安装组件”完成，然后退出 Xcode。无需项目、无需构建、不用编译任何东西，也不需要付费的 Apple Developer 账号。",
+            "已经有开发者映像了？让 GeoSpoof GPS 指向那个文件夹，即可完全跳过 Xcode 的下载。",
+          ],
+          link: { label: "在 Mac App Store 获取 Xcode" },
+        },
+        {
           name: "连接 iPhone",
           text: "将 iPhone 连接到 Mac 并解锁。请使用支持数据传输的数据线，因为有些只能充电。如果没有出现，换一根数据线或另一个端口试试。",
         },
@@ -1138,13 +1149,9 @@ export const zhCN: Dictionary = {
         },
         {
           name: "准备开发者映像",
-          text: "点击“准备”。GeoSpoof GPS 会在你的 iPhone 上挂载 Apple 的开发者磁盘映像，正是这个组件让设置设备的真实位置成为可能。",
-          bullets: [
-            "它是什么：一个由 Apple 签名的小型系统映像（DDI），用于开启开发者功能，例如在 iPhone 上设置真实的 GPS 位置。",
-            "从哪里获取：它随 Xcode 一同提供。从 Mac App Store 免费安装 Xcode，并在连接 iPhone 的情况下打开一次。GeoSpoof GPS 会自动找到并使用那份副本。无需项目、无需构建，也不用编译任何东西。",
-            "使用你自己的：已经有开发者映像了？让 GeoSpoof GPS 指向那个文件夹，即可跳过 Xcode 的下载。",
-          ],
-          link: { label: "在 Mac App Store 获取 Xcode" },
+          text: "需要已安装 Xcode（见上）。在 iPhone 已连接并解锁的情况下，点击“准备”。GeoSpoof GPS 会将 Apple 的开发者磁盘映像（DDI）个性化到你的设备并挂载它——正是这个组件让应用能够设置你的真实 GPS 位置。它由 Apple 签名并为你自动完成；无需任何配置。",
+          powerUserNote:
+            "找不到映像？如果“准备”提示找不到开发者映像，可能是 Xcode 的安装尚未完成铺设。请打开“终端”，运行以下命令，然后再次点击“准备”：",
         },
         {
           name: "在 GeoSpoof 中选择位置",

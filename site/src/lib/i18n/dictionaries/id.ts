@@ -1148,6 +1148,17 @@ export const id: Dictionary = {
           ],
         },
         {
+          name: "Pasang Xcode",
+          text: "GeoSpoof GPS membutuhkan Developer Disk Image dari Apple, dan itu disertakan di dalam Xcode. Mulai unduhan ini lebih dulu — ukurannya besar (beberapa GB), jadi biarkan terpasang di latar belakang sambil Anda mengerjakan langkah-langkah iPhone yang cepat di bawah.",
+          bullets: [
+            "Pasang Xcode (gratis) dari Mac App Store dan buka sekali.",
+            "Pada peluncuran pertama muncul layar “Select platforms”. Centang macOS dan biarkan sisanya (termasuk iOS) tidak dicentang, lalu lanjutkan — Anda tidak memerlukan SDK iOS atau Simulator; citra pengembang tetap menjadi bagian dari penyiapan dasar Xcode.",
+            "Biarkan “Installing components” selesai, lalu tutup Xcode. Tanpa proyek, tanpa build, tidak ada yang perlu dikompilasi, dan tanpa akun Apple Developer berbayar.",
+            "Sudah punya citra pengembang? Arahkan GeoSpoof GPS ke folder itu dan lewati unduhan Xcode sepenuhnya.",
+          ],
+          link: { label: "Dapatkan Xcode di Mac App Store" },
+        },
+        {
           name: "Hubungkan iPhone Anda",
           text: "Sambungkan iPhone ke Mac Anda dan buka kuncinya. Gunakan kabel yang mendukung data, karena sebagian hanya untuk mengisi daya. Jika tidak muncul, coba kabel atau port lain.",
         },
@@ -1170,13 +1181,9 @@ export const id: Dictionary = {
         },
         {
           name: "Siapkan citra pengembang",
-          text: "Klik Siapkan. GeoSpoof GPS memasang Developer Disk Image dari Apple di iPhone Anda, komponen yang memungkinkan penyetelan lokasi asli perangkat.",
-          bullets: [
-            "Apa itu: citra sistem kecil bertanda tangan Apple (DDI) yang mengaktifkan fitur pengembang, seperti menyetel lokasi GPS asli di iPhone Anda.",
-            "Cara memperolehnya: disertakan di dalam Xcode. Pasang Xcode gratis dari Mac App Store dan buka sekali dengan iPhone terhubung. GeoSpoof GPS akan menemukan dan memakai salinan itu untuk Anda. Tanpa proyek, tanpa build, tidak ada yang perlu dikompilasi.",
-            "Pakai milik Anda: sudah punya citra pengembang? Arahkan GeoSpoof GPS ke folder itu dan lewati unduhan Xcode.",
-          ],
-          link: { label: "Dapatkan Xcode di Mac App Store" },
+          text: "Memerlukan Xcode terpasang (di atas). Dengan iPhone terhubung dan tidak terkunci, klik Siapkan. GeoSpoof GPS mempersonalisasi Developer Disk Image (DDI) dari Apple untuk perangkat Anda dan memasangnya — komponen yang memungkinkan sebuah aplikasi menyetel lokasi GPS asli Anda. Ini bertanda tangan Apple dan dikerjakan untuk Anda; tidak ada yang perlu dikonfigurasi.",
+          powerUserNote:
+            "Citra tidak ditemukan? Jika Siapkan mengatakan tidak dapat menemukan citra pengembang, penyiapan Xcode mungkin belum selesai memasangnya. Buka Terminal, jalankan ini, lalu klik Siapkan lagi:",
         },
         {
           name: "Pilih lokasi di GeoSpoof",
