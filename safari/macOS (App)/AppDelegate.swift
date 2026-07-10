@@ -15,9 +15,8 @@ import SwiftUI
 struct GeoSpoofApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
-    /// One shared controller backs both the main window and the menu bar item,
-    /// so VPN sync / bridge state stays identical whether the window is open or
-    /// the user has closed it and lives in the menu bar.
+    /// Shared controller backing the main window, so VPN sync / bridge state
+    /// stays consistent across the app's views.
     @StateObject private var controller = SpoofController()
 
     var body: some Scene {
@@ -25,28 +24,15 @@ struct GeoSpoofApp: App {
             MacRootView(controller: controller)
         }
         .windowResizability(.contentSize)
-
-        MenuBarExtra {
-            MenuBarContent(controller: controller)
-        } label: {
-            // Menu-bar template glyph (16pt, rendered as a template image so it
-            // tints for light/dark menu bars and the selected state). Dimmed when
-            // protection is off so the icon still signals state at a glance.
-            Image("MenuBarIcon")
-                .opacity(controller.enabled ? 1.0 : 0.5)
-        }
-        .menuBarExtraStyle(.window)
     }
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate {
 
-    // When all windows close, demote to an agent (no dock icon) so the app
-    // stays alive as a menu-bar item without cluttering the dock. The dock
-    // icon comes back when the user reopens the window from the menu bar.
+    // GeoSpoof is a standalone window app (no menu-bar item), so quit normally
+    // when the last window closes rather than lingering as a background agent.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        NSApp.setActivationPolicy(.accessory)
-        return false
+        true
     }
 
 }
@@ -146,213 +132,6 @@ private func applyAppearance(_ mode: AppearanceMode) {
     case .system: NSApp.appearance = nil
     case .light: NSApp.appearance = NSAppearance(named: .aqua)
     case .dark: NSApp.appearance = NSAppearance(named: .darkAqua)
-    }
-}
-
-// MARK: - Menu bar item content
-
-/// Popover shown from the macOS menu bar item. A calm, professional control
-/// surface: a quiet location summary up top, clean toggle rows, quick-activate
-/// favorites, and footer commands. Backed by the same shared `SpoofController`
-/// as the main window.
-struct MenuBarContent: View {
-    @ObservedObject var controller: SpoofController
-    @Environment(\.openWindow) private var openWindow
-
-    var body: some View {
-        VStack(spacing: 0) {
-            locationSummary
-            Divider()
-            VStack(spacing: 0) {
-                row(
-                    icon: "antenna.radiowaves.left.and.right",
-                    iconOn: controller.vpnSyncEnabled,
-                    title: "Sync with VPN",
-                    busy: controller.isSyncing,
-                    binding: Binding(get: { controller.vpnSyncEnabled }, set: { controller.setVPNSync($0) })
-                )
-                row(
-                    icon: "shield.lefthalf.filled",
-                    iconOn: controller.webrtcProtection,
-                    title: "Block WebRTC Leaks",
-                    binding: Binding(get: { controller.webrtcProtection }, set: { controller.setWebRTCProtection($0) })
-                )
-            }
-            .padding(.vertical, 4)
-
-            if !controller.favorites.isEmpty {
-                Divider()
-                favoritesSection
-            }
-
-            Divider()
-            footer
-        }
-        .frame(width: 300)
-    }
-
-    private var isActive: Bool { controller.enabled && controller.hasLocation }
-
-    // MARK: Location header — green + nude, full-wrapping location
-
-    private var locationSummary: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Eyebrow: state + master protection toggle.
-            HStack(spacing: 8) {
-                Image(systemName: isActive ? "location.fill" : "location.slash")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(isActive ? Color.brand : .secondary)
-                Text(stateLabel)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(isActive ? Color.brand : .secondary)
-                    .textCase(.uppercase)
-                    .kerning(0.4)
-                Spacer(minLength: 8)
-                Toggle("", isOn: Binding(
-                    get: { controller.enabled },
-                    set: { controller.setEnabled($0) }
-                ))
-                .toggleStyle(.switch)
-                .controlSize(.small)
-                .labelsHidden()
-            }
-
-            // Location — wraps to as many lines as needed, never truncates.
-            Text(primaryLine)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(.primary)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            if let secondary = secondaryLine {
-                Text(secondary)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(
-            LinearGradient(
-                colors: [Color.brand.opacity(0.12), Color.nude.opacity(0.16)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
-    }
-
-    private var stateLabel: String {
-        controller.enabled ? "Location Protection" : "Protection Off"
-    }
-
-    private var primaryLine: String {
-        if !controller.enabled { return "Protection is off" }
-        if let name = controller.locationName?.displayName, !name.isEmpty { return name }
-        if controller.isSyncing { return "Detecting VPN location…" }
-        return "No location set"
-    }
-
-    private var secondaryLine: String? {
-        if !controller.enabled { return "Your real location is visible to sites" }
-        if controller.vpnSyncEnabled, controller.isSyncing { return "Syncing with VPN…" }
-        if let tz = controller.timezone { return "\(tz.utcOffsetText) · \(tz.identifier)" }
-        if controller.vpnSyncEnabled { return "VPN Sync on" }
-        return nil
-    }
-
-    // MARK: Toggle row
-
-    private func row(
-        icon: String,
-        iconOn: Bool,
-        title: String,
-        busy: Bool = false,
-        binding: Binding<Bool>
-    ) -> some View {
-        HStack(spacing: 11) {
-            Image(systemName: icon)
-                .font(.system(size: 14))
-                .foregroundStyle(iconOn ? Color.brand : .secondary)
-                .frame(width: 22)
-                .animation(.easeInOut(duration: 0.2), value: iconOn)
-            Text(title)
-                .font(.system(size: 13))
-            Spacer()
-            if busy {
-                ProgressView().controlSize(.small).scaleEffect(0.7)
-            }
-            Toggle("", isOn: binding)
-                .toggleStyle(.switch)
-                .controlSize(.small)
-                .labelsHidden()
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 6)
-    }
-
-    // MARK: Favorites
-
-    private var favoritesSection: some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text("Favorites")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, 3)
-
-            ForEach(controller.favorites.prefix(6)) { fav in
-                let active = controller.activeFavorite?.id == fav.id
-                Button { controller.activate(fav) } label: {
-                    HStack(spacing: 11) {
-                        Image(systemName: active ? "checkmark.circle.fill" : "mappin.circle")
-                            .font(.system(size: 14))
-                            .foregroundStyle(active ? Color.brand : .secondary)
-                            .frame(width: 22)
-                        Text(fav.chipTitle)
-                            .font(.system(size: 13))
-                            .lineLimit(1)
-                        Spacer()
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 5)
-                    .background(active ? Color.brand.opacity(0.10) : Color.clear)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.bottom, 6)
-        }
-    }
-
-    // MARK: Footer
-
-    private var footer: some View {
-        HStack {
-            Button {
-                NSApp.setActivationPolicy(.regular)
-                NSApp.activate(ignoringOtherApps: true)
-                openWindow(id: "main")
-            } label: {
-                Text("Open GeoSpoof").font(.system(size: 12))
-            }
-            .buttonStyle(.borderless)
-            .keyboardShortcut("o", modifiers: .command)
-
-            Spacer()
-
-            Button {
-                NSApp.terminate(nil)
-            } label: {
-                Text("Quit").font(.system(size: 12)).foregroundStyle(.secondary)
-            }
-            .buttonStyle(.borderless)
-            .keyboardShortcut("q", modifiers: .command)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
     }
 }
 
