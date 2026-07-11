@@ -23,6 +23,7 @@ import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { SITE_URL } from "@/lib/blog"
 import { useTranslations } from "@/hooks/use-i18n"
+import { GpsSetupGuide } from "@/components/gps/GpsSetupGuide"
 
 const GITHUB_REPO = "anthonysgro/geospoof"
 const LATEST_RELEASE_URL = `https://github.com/${GITHUB_REPO}/releases/latest`
@@ -408,6 +409,14 @@ export function SupportPage() {
                 </AccordionItem>
               ))}
             </Accordion>
+          </div>
+
+          <Separator className="mb-16 bg-(--color-canvas-border)" />
+
+          {/* GeoSpoof GPS setup guide — the full step-by-step, moved here from
+              the /gps page (which now leans on the app's in-app onboarding). */}
+          <div id="setup" className="mb-16 scroll-mt-24">
+            <GpsSetupGuide />
           </div>
 
           <Separator className="mb-16 bg-(--color-canvas-border)" />

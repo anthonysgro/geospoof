@@ -171,8 +171,10 @@ struct GpsDeviceSummary: Codable, Equatable {
     }
 }
 
-/// The status the GeoSpoof GPS desktop agent writes back into this app's Documents
-/// as `status.json` over AFC (design §13e). Mirrors the agent's `StatusReport`.
+/// The per-Mac status the GeoSpoof GPS desktop agent writes back into this app's Documents,
+/// as `controllers/<id>.json` over AFC — one self-file per Mac (controller-arbitration),
+/// not a single `status.json`. Mirrors the agent's `StatusReport`; the flat
+/// `ControllerReport` wraps it with the writing Mac's identity (see `GpsController`).
 struct GpsStatus: Codable, Equatable {
     var version: Int
     var agentVersion: String
