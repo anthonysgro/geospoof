@@ -4,15 +4,16 @@
  */
 
 import type { GeocodeResponse } from "@/shared/types/messages";
-import { loadSettings, applyTheme } from "./settings";
+import { loadSettings, requestSettings, applyTheme } from "./settings";
 import { closeOnboarding } from "./onboarding";
 import { displaySearchResults } from "./search";
 import { updateStatusBadge, renderWebRTCDetails, clearChildren } from "./ui";
 import { handleVpnSync } from "./vpn-sync";
 import { wireEarlyProtectionToggle } from "./early-protection";
 import { wireDebuggerModeToggle } from "./debugger-mode";
-import { applyI18n, t } from "./i18n";
+import { applyI18n, t, initI18n, resetI18nOverride, browserUiLanguage } from "./i18n";
 import { initAccuracyControl } from "./accuracy";
+import { SUPPORTED_UI_LOCALES, resolveUiLocale } from "@/shared/i18n/locales";
 
 // --- Location setting ---
 
@@ -438,6 +439,53 @@ document.getElementById("themeSelect")?.addEventListener("change", (e: Event) =>
   })();
 });
 
+// Language selector — override the popup UI language independently of the
+// browser. Value "" means "follow the browser" (native browser.i18n path);
+// otherwise it's a supported _locales code. Applied live and persisted.
+document.getElementById("languageSelect")?.addEventListener("change", (e: Event) => {
+  const value = (e.target as HTMLSelectElement).value;
+
+  void (async () => {
+    // Persist first so the reload below restores the just-picked value.
+    try {
+      await browser.runtime.sendMessage({
+        type: "SET_UI_LANGUAGE",
+        payload: { language: value },
+      });
+    } catch (error: unknown) {
+      console.error("Failed to save UI language:", error);
+    }
+
+    // Swap the active catalog (or clear it for "System"), then re-translate the
+    // static DOM and re-render dynamic strings via loadSettings().
+    if (value) {
+      await initI18n(resolveUiLocale(value, browserUiLanguage()));
+    } else {
+      resetI18nOverride();
+    }
+    applyI18n();
+    await loadSettings();
+  })();
+});
+
+/**
+ * Populate the language picker with one option per supported locale (labelled
+ * by endonym, never translated). The "System" option ships in the HTML; this
+ * appends the rest from the single shared locale list. Idempotent.
+ */
+function populateLanguageOptions(): void {
+  const select = document.getElementById("languageSelect") as HTMLSelectElement | null;
+  if (!select || select.dataset.populated === "true") return;
+
+  for (const locale of SUPPORTED_UI_LOCALES) {
+    const option = document.createElement("option");
+    option.value = locale.code;
+    option.textContent = locale.endonym;
+    select.appendChild(option);
+  }
+  select.dataset.populated = "true";
+}
+
 // Onboarding close
 document.getElementById("closeOnboarding")?.addEventListener("click", () => {
   void closeOnboarding();
@@ -554,8 +602,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Translate all [data-i18n*] nodes once the DOM is parsed. Happens
   // before loadSettings() so any text we later overwrite dynamically
-  // inherits the localized copy rather than the English fallback.
+  // inherits the localized copy rather than the English fallback. This first
+  // pass uses the native browser-UI-locale path; if the user has a stored
+  // language override, initPopupSettings() re-applies it below.
   applyI18n();
+
+  // Fill the Advanced-section language picker from the shared locale list.
+  populateLanguageOptions();
 
   // Wire the Firefox-only "Instant timezone protection" toggle (requests the
   // optional userScripts permission). Compiles out / no-ops elsewhere.
@@ -623,5 +676,26 @@ document.addEventListener("DOMContentLoaded", () => {
   // ChromeOS) still commonly own an iPhone or iPad, so the App Store link is
   // relevant to them too. The Proton VPN affiliate slot (vpnPromoLink) stays
   // hidden.
-  void loadSettings();
+  void initPopupSettings();
 });
+
+/**
+ * Fetch settings once, apply any stored UI-language override (re-translating
+ * the static DOM into the chosen language), then hand the same settings to
+ * loadSettings() so it renders dynamic strings in that language without a
+ * second GET_SETTINGS round-trip.
+ *
+ * The common case (no override) skips the catalog fetch entirely: the earlier
+ * synchronous applyI18n() already rendered the browser UI locale, so there's no
+ * extra work and no flash.
+ */
+async function initPopupSettings(): Promise<void> {
+  const settings = await requestSettings();
+
+  if (settings.uiLanguage) {
+    await initI18n(resolveUiLocale(settings.uiLanguage, browserUiLanguage()));
+    applyI18n();
+  }
+
+  await loadSettings(settings);
+}

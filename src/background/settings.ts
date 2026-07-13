@@ -5,6 +5,7 @@
 
 import type { AccuracySetting, Favorite, ScopeMode, Settings } from "@/shared/types/settings";
 import { DEFAULT_ACCURACY_M, DEFAULT_SETTINGS } from "@/shared/types/settings";
+import { isSupportedLocale } from "@/shared/i18n/locales";
 import { createLogger } from "@/shared/utils/debug-logger";
 import { normalizeDomain } from "@/shared/utils/scope";
 import { getLastSyncedIp } from "./vpn-sync";
@@ -265,6 +266,15 @@ export function validateSettings(settings: Partial<Settings>): Settings {
   const VALID_THEMES = new Set(["system", "light", "dark"]);
   if (typeof settings.theme === "string" && VALID_THEMES.has(settings.theme)) {
     validated.theme = settings.theme;
+  }
+
+  // uiLanguage: "" (follow browser) or a supported `_locales` code. Anything
+  // else (stale/unknown code, manual storage edit) falls back to the default.
+  if (
+    typeof settings.uiLanguage === "string" &&
+    (settings.uiLanguage === "" || isSupportedLocale(settings.uiLanguage))
+  ) {
+    validated.uiLanguage = settings.uiLanguage;
   }
 
   if (Array.isArray(settings.favorites)) {

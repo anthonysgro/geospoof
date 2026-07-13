@@ -460,6 +460,7 @@ describe("Error Recovery Integration Tests", () => {
         debugLogging: false,
         verbosityLevel: "INFO",
         theme: "system" as const,
+        uiLanguage: "",
         favorites: [],
         scopeMode: "all" as const,
         allowlist: [],

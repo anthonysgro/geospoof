@@ -574,5 +574,13 @@
   "vpnPromo_tag": {
     "message": "Quảng cáo",
     "description": "Small inline marker disclosing that the adjacent Proton VPN link is an affiliate link."
+  },
+  "advanced_language": {
+    "message": "Ngôn ngữ",
+    "description": "Label for the popup UI language selector in Advanced settings."
+  },
+  "advanced_language_system": {
+    "message": "Hệ thống (ngôn ngữ trình duyệt)",
+    "description": "Language selector option that follows the browser's UI language instead of a fixed choice."
   }
 }

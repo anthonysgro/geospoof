@@ -37,6 +37,7 @@ function makeSettings(overrides?: Partial<Settings>): Settings {
     debugLogging: false,
     verbosityLevel: "INFO",
     theme: "system",
+    uiLanguage: "",
     favorites: [],
     scopeMode: "all",
     allowlist: [],

@@ -1402,6 +1402,12 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   margin-top: 12px;
 }
 
+/* Language selector — matches the Theme/Accuracy row spacing so it isn't
+   crammed against the Theme dropdown above it. */
+.language-selector {
+  margin-top: 12px;
+}
+
 /* Accuracy selector */
 .accuracy-selector {
   margin-top: 12px;

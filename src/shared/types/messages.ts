@@ -22,6 +22,7 @@ export type MessageType =
   | "SET_DEBUG_LOGGING"
   | "SET_VERBOSITY_LEVEL"
   | "SET_THEME"
+  | "SET_UI_LANGUAGE"
   | "SAVE_FAVORITE"
   | "REMOVE_FAVORITE"
   | "RENAME_FAVORITE"
@@ -124,6 +125,15 @@ export interface SetVerbosityLevelPayload {
 
 export interface SetThemePayload {
   theme: "system" | "light" | "dark";
+}
+
+/**
+ * Sets the popup UI language override. `language` is a supported `_locales`
+ * code, or `""` to follow the browser UI language. Popup-only preference — no
+ * tab broadcast is needed since it affects nothing outside the popup.
+ */
+export interface SetUiLanguagePayload {
+  language: string;
 }
 
 export interface UpdateSettingsPayload {

@@ -574,5 +574,13 @@
   "advanced_coffee": {
     "message": "☕ Bjud mig på en kaffe",
     "description": "Footer link inviting the user to buy the maintainer a coffee."
+  },
+  "advanced_language": {
+    "message": "Språk",
+    "description": "Label for the popup UI language selector in Advanced settings."
+  },
+  "advanced_language_system": {
+    "message": "System (webbläsarens språk)",
+    "description": "Language selector option that follows the browser's UI language instead of a fixed choice."
   }
 }

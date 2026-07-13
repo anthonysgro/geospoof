@@ -177,6 +177,15 @@ export interface Settings {
   verbosityLevel: string;
   /** UI theme preference */
   theme: "system" | "light" | "dark";
+  /**
+   * Popup UI language override. Empty string (the default) means "follow the
+   * browser UI language" — the popup then localizes via the native
+   * `browser.i18n` path. A non-empty value is a `_locales` code (e.g. "ru",
+   * "pt_BR") the user picked in Advanced settings to force a specific language
+   * regardless of the browser's; see `SUPPORTED_UI_LOCALES` and the override
+   * loader in src/popup/i18n.ts.
+   */
+  uiLanguage: string;
   /** Saved favorite locations */
   favorites: Favorite[];
   /** Which sites are spoofed when `enabled` is true */
@@ -217,6 +226,7 @@ export const DEFAULT_SETTINGS: Settings = {
   debugLogging: false,
   verbosityLevel: "INFO",
   theme: "system",
+  uiLanguage: "",
   favorites: [],
   scopeMode: "all",
   allowlist: [],

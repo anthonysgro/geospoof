@@ -17,6 +17,7 @@ import type {
   SetDebugLoggingPayload,
   SetVerbosityLevelPayload,
   SetThemePayload,
+  SetUiLanguagePayload,
   SaveFavoritePayload,
   RemoveFavoritePayload,
   RenameFavoritePayload,
@@ -318,6 +319,15 @@ export async function handleMessage(
       case "SET_THEME": {
         const { theme } = message.payload as SetThemePayload;
         await updateSettings({ theme });
+        return { success: true };
+      }
+
+      case "SET_UI_LANGUAGE": {
+        const { language } = message.payload as SetUiLanguagePayload;
+        // Persist only; the popup applies the language itself and no tab or
+        // background behavior depends on it. validateSettings sanitizes the
+        // value against the supported-locale whitelist on the next load.
+        await updateSettings({ uiLanguage: language });
         return { success: true };
       }
 

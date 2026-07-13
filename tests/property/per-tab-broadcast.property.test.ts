@@ -45,6 +45,7 @@ function makeSettings(partial: Partial<Settings>): Settings {
     debugLogging: false,
     verbosityLevel: "INFO",
     theme: "system" as const,
+    uiLanguage: "",
     favorites: [],
     scopeMode: "all" as const,
     allowlist: [],

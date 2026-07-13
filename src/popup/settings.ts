@@ -26,12 +26,21 @@ export function applyTheme(theme: "system" | "light" | "dark"): void {
   if (theme === "dark") document.body.classList.add("theme-dark");
 }
 
-/** Load current settings on popup open */
-export async function loadSettings(): Promise<void> {
+/** Fetch the current settings from the background — the popup's single read path. */
+export async function requestSettings(): Promise<Settings> {
+  return (await browser.runtime.sendMessage({ type: "GET_SETTINGS" })) as Settings;
+}
+
+/**
+ * Load current settings on popup open and reflect them into the UI.
+ *
+ * Accepts an already-fetched `preloaded` object so the init path can resolve
+ * the UI language from settings and still reuse the same fetch here (avoiding a
+ * duplicate GET_SETTINGS round-trip).
+ */
+export async function loadSettings(preloaded?: Settings): Promise<void> {
   try {
-    const settings = (await browser.runtime.sendMessage({
-      type: "GET_SETTINGS",
-    })) as Settings;
+    const settings = preloaded ?? (await requestSettings());
     // On Safari the containing app owns onboarding (and on iOS the home-screen
     // Setup card), so suppress the popup's duplicate overlay. Firefox/Chromium
     // have no app, so the popup onboarding is the only first-run guidance.
@@ -131,6 +140,14 @@ export async function loadSettings(): Promise<void> {
       themeSelect.value = settings.theme ?? "system";
     }
     applyTheme(settings.theme ?? "system");
+
+    // Restore language selector state. "" selects the "System" option (follow
+    // the browser UI language); a locale code selects that language. The
+    // option elements are populated at startup from SUPPORTED_UI_LOCALES.
+    const languageSelect = document.getElementById("languageSelect") as HTMLSelectElement | null;
+    if (languageSelect) {
+      languageSelect.value = settings.uiLanguage ?? "";
+    }
 
     // Restore accuracy control state from the stored accuracySetting. Pass the
     // currently-resolved accuracy (the ±Nm in effect) so selecting "Custom"

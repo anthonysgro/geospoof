@@ -54,6 +54,7 @@ const settingsArb: fc.Arbitrary<Settings> = fc.record({
   debugLogging: fc.boolean(),
   verbosityLevel: fc.constantFrom("DEBUG", "INFO", "WARN", "ERROR"),
   theme: fc.constantFrom("system", "light", "dark"),
+  uiLanguage: fc.constantFrom("", "en", "ru", "pt_BR", "zh_CN"),
   favorites: fc.constant([]),
   scopeMode: fc.constantFrom("all", "allowlist", "denylist"),
   allowlist: fc.constant([]),

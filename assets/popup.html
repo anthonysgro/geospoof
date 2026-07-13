@@ -801,6 +801,18 @@
                 </select>
               </label>
             </div>
+            <div class="language-selector">
+              <label class="select-label" for="languageSelect">
+                <span data-i18n="advanced_language">Language</span>
+                <!-- Only the "System" option ships in markup; the locale options
+                     are appended at runtime from SUPPORTED_UI_LOCALES. -->
+                <select id="languageSelect">
+                  <option value="" data-i18n="advanced_language_system">
+                    System (browser default)
+                  </option>
+                </select>
+              </label>
+            </div>
             <label class="toggle-label">
               <span data-i18n="advanced_debugLogging">Debug Logging</span>
               <div class="toggle-wrapper">
