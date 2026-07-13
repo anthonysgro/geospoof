@@ -101,7 +101,7 @@ export const zhCN: Dictionary = {
       metaTitle: "服务条款 | GeoSpoof",
       metaDescription: "GeoSpoof 服务条款——了解规范你使用本扩展的相关条款。",
       heading: "服务条款",
-      lastUpdated: "最后更新：2026 年 7 月 3 日",
+      lastUpdated: "最后更新：2026 年 7 月 10 日",
     },
   },
   testimonials: {

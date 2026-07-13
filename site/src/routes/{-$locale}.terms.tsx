@@ -323,7 +323,116 @@ export function TermsPage() {
               </p>
             </TermsSection>
 
-            <TermsSection title="10. Governing Law">
+            <TermsSection title="10. Export Controls and Sanctions">
+              <p>
+                GeoSpoof is developed and made available from the United
+                States. The Extension and the companion applications
+                (together, the "Software"), and your access to and use of
+                them, are subject to United States export control laws and
+                regulations — including the Export Administration Regulations
+                (the "EAR") administered by the U.S. Department of Commerce,
+                Bureau of Industry and Security ("BIS") — and to the economic
+                sanctions and trade embargo programs administered by the U.S.
+                Department of the Treasury, Office of Foreign Assets Control
+                ("OFAC"), as well as any comparable export, sanctions, or
+                import laws of other jurisdictions applicable to you
+                (collectively, "Trade Control Laws"). You are responsible for
+                complying with all Trade Control Laws that apply to your use of
+                the Software.
+              </p>
+              <p>
+                <strong>Representations.</strong> By installing, accessing, or
+                using the Software, you represent and warrant that:
+              </p>
+              <ul>
+                <li>
+                  you are not located in, ordinarily resident in, organized
+                  under the laws of, or acting on behalf of the government of,
+                  any country or territory that is the target of comprehensive
+                  U.S. economic sanctions or embargo (a "Sanctioned
+                  Jurisdiction");
+                </li>
+                <li>
+                  you are not identified on, nor owned fifty percent or more by
+                  or otherwise acting on behalf of any party identified on, any
+                  restricted-, denied-, or blocked-party list maintained by the
+                  U.S. government or other applicable authority — including
+                  OFAC's Specially Designated Nationals and Blocked Persons
+                  List, and the BIS Entity List, Denied Persons List, and
+                  Unverified List; and
+                </li>
+                <li>
+                  you are not otherwise prohibited under applicable Trade
+                  Control Laws from receiving or using U.S.-origin software or
+                  technology.
+                </li>
+              </ul>
+              <p>
+                <strong>Obligations.</strong> You agree that you will not,
+                directly or indirectly, use, export, re-export, transfer,
+                download, or otherwise make the Software available:
+              </p>
+              <ul>
+                <li>
+                  into, from, or for use in any Sanctioned Jurisdiction, or to
+                  or for the benefit of any restricted, denied, or blocked party
+                  described above;
+                </li>
+                <li>
+                  for any end use that is prohibited by applicable Trade Control
+                  Laws; or
+                </li>
+                <li>
+                  in any manner intended to evade, circumvent, or violate any
+                  export control, economic sanction, or trade embargo — conduct
+                  that is also prohibited under Section 3 (Acceptable Use and
+                  Prohibited Uses).
+                </li>
+              </ul>
+              <p>
+                Sanctions and export-control designations change over time, and
+                you are responsible for confirming that your use is permitted
+                before you install or use the Software. The authoritative,
+                current lists and program details are published by{" "}
+                <a
+                  href="https://ofac.treasury.gov/sanctions-programs-and-country-information"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  OFAC
+                </a>{" "}
+                and BIS, with a combined reference available through the U.S.
+                Government's{" "}
+                <a
+                  href="https://www.trade.gov/consolidated-screening-list"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Consolidated Screening List
+                </a>
+                .
+              </p>
+              <p>
+                Where the Software is distributed through a third-party platform
+                (such as the Apple App Store, Mozilla Add-ons, or the Chrome Web
+                Store), that platform may independently restrict availability by
+                region, and nothing in these Terms limits those controls. We
+                further reserve the right, in our sole discretion and without
+                liability, to decline, suspend, geographically restrict, or
+                terminate access to or distribution of the Software — including
+                direct downloads from our own domains — where we believe in good
+                faith that doing so is necessary or advisable to comply with
+                Trade Control Laws.
+              </p>
+              <p>
+                The representations and obligations in this Section are made each
+                time you access or use the Software and survive termination of
+                these Terms. Any breach of this Section is a material breach of
+                these Terms.
+              </p>
+            </TermsSection>
+
+            <TermsSection title="11. Governing Law">
               <p>
                 These Terms shall be governed by and construed in accordance
                 with the laws of the State of New York, United States, without
@@ -331,7 +440,7 @@ export function TermsPage() {
               </p>
             </TermsSection>
 
-            <TermsSection title="11. Limitation of Actions">
+            <TermsSection title="12. Limitation of Actions">
               <p>
                 Any claim arising out of or relating to these Terms or the
                 Extension must be filed within one (1) year after the claim
@@ -340,7 +449,7 @@ export function TermsPage() {
               </p>
             </TermsSection>
 
-            <TermsSection title="12. Severability">
+            <TermsSection title="13. Severability">
               <p>
                 If any provision of these Terms is found to be unenforceable or
                 invalid under applicable law, that provision shall be modified
@@ -350,7 +459,7 @@ export function TermsPage() {
               </p>
             </TermsSection>
 
-            <TermsSection title="13. Affiliate Links and Recommendations">
+            <TermsSection title="14. Affiliate Links and Recommendations">
               <p>
                 GeoSpoof is free and open source. To help fund its development,
                 the Extension, the companion apps, and the website may include
@@ -373,7 +482,7 @@ export function TermsPage() {
               </p>
             </TermsSection>
 
-            <TermsSection title="14. Changes to Terms">
+            <TermsSection title="15. Changes to Terms">
               <p>
                 We reserve the right to modify these Terms at any time. Changes
                 will be posted on this page with an updated date, and material
@@ -383,7 +492,7 @@ export function TermsPage() {
               </p>
             </TermsSection>
 
-            <TermsSection title="15. Contact and Notices">
+            <TermsSection title="16. Contact and Notices">
               <p>
                 For questions about these Terms, or to send legal notices,
                 contact us at{" "}

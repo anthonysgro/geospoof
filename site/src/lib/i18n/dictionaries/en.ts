@@ -96,7 +96,7 @@ export const en = {
       metaDescription:
         "Terms of Service for GeoSpoof — understand the terms governing your use of the extension.",
       heading: "Terms of Service",
-      lastUpdated: "Last Updated: July 3, 2026",
+      lastUpdated: "Last Updated: July 10, 2026",
     },
   },
   testimonials: {

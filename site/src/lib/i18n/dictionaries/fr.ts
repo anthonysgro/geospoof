@@ -90,7 +90,7 @@ export const fr: Dictionary = {
       metaDescription:
         "Conditions d’utilisation de GeoSpoof — comprenez les conditions régissant votre utilisation de l’extension.",
       heading: "Conditions d’utilisation",
-      lastUpdated: "Dernière mise à jour : 3 juillet 2026",
+      lastUpdated: "Dernière mise à jour : 10 juillet 2026",
     },
   },
   testimonials: {

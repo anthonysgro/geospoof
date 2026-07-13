@@ -90,7 +90,7 @@ export const ptBR: Dictionary = {
       metaDescription:
         "Termos de Serviço do GeoSpoof — entenda os termos que regem o uso da extensão.",
       heading: "Termos de Serviço",
-      lastUpdated: "Última atualização: 3 de julho de 2026",
+      lastUpdated: "Última atualização: 10 de julho de 2026",
     },
   },
   testimonials: {

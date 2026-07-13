@@ -90,7 +90,7 @@ export const es: Dictionary = {
       metaDescription:
         "Términos del servicio de GeoSpoof — conoce las condiciones que rigen el uso de la extensión.",
       heading: "Términos del servicio",
-      lastUpdated: "Última actualización: 3 de julio de 2026",
+      lastUpdated: "Última actualización: 10 de julio de 2026",
     },
   },
   testimonials: {

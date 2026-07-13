@@ -102,7 +102,7 @@ export const ru: Dictionary = {
       metaDescription:
         "Условия использования GeoSpoof — правила, регулирующие использование расширения.",
       heading: "Условия использования",
-      lastUpdated: "Последнее обновление: 3 июля 2026 г.",
+      lastUpdated: "Последнее обновление: 10 июля 2026 г.",
     },
   },
   testimonials: {

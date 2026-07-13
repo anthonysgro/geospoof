@@ -90,7 +90,7 @@ export const id: Dictionary = {
       metaDescription:
         "Ketentuan Layanan GeoSpoof — pahami ketentuan yang mengatur penggunaan ekstensi.",
       heading: "Ketentuan Layanan",
-      lastUpdated: "Terakhir Diperbarui: 3 Juli 2026",
+      lastUpdated: "Terakhir Diperbarui: 10 Juli 2026",
     },
   },
   testimonials: {
