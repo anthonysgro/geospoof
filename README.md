@@ -161,8 +161,6 @@ The native GeoSpoof GPS desktop core (the Rust/Swift device product) is develope
 
 ## Star History
 
-## Star History
-
 <a href="https://www.star-history.com/?repos=anthonysgro%2Fgeospoof&type=date&legend=top-left">
  <picture>
    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=anthonysgro/geospoof&type=date&theme=dark&legend=top-left&sealed_token=yU2IXP9gRuA7I9Fy83YFQ0cG5lEZe81LZeilLF2OFlkSp2nczAdshC2DPR0jIbrZPxB4fc7lM3_GXjqQqNYcO6d2UxNywpbPaGuOy1dswokuhzg08Wo5scMsbvRn9b9pnRcW763SZ3927aF6_8ZA35shdlQnoKkOuutDZiqsNMUlxbw1amErlL-BsGdz" />
