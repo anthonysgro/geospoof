@@ -327,9 +327,9 @@ struct OnboardingView: View {
             return "The first time you browse, Safari asks to allow access. Approving it is what lets GeoSpoof work -- here's what you'll see."
         case .gps:
             #if os(iOS)
-            return "Want more than Safari? GeoSpoof Pro can set your iPhone's real GPS for privacy and app testing, using Apple's developer location simulation from a companion Mac app. It's optional -- browser spoofing is free."
+            return "Want more than Safari? GeoSpoof Pro can set your iPhone's real GPS for privacy and app testing, driven from a companion Mac app -- no jailbreak. It's optional; browser spoofing is free."
             #else
-            return "Want more than Safari? GeoSpoof Pro can set a connected iPhone's real GPS for privacy and app testing, using Apple's developer location simulation right from this Mac. It's optional -- browser spoofing is free."
+            return "Want more than Safari? GeoSpoof Pro can set a connected iPhone's real GPS for privacy and app testing, right from this Mac -- no jailbreak. It's optional; browser spoofing is free."
             #endif
         case .done:
             return "Pick a location and GeoSpoof keeps the real one hidden. You can change it anytime."

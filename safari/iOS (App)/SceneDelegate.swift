@@ -493,7 +493,7 @@ struct GpsView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Device GPS")
                         .font(.headline)
-                    Text("Move your iPhone’s real system GPS to the location you pick — using Apple’s developer location simulation, driven from the GeoSpoof GPS app on your Mac.")
+                    Text("Move your iPhone’s real system GPS to the location you pick, driven from the GeoSpoof GPS app on your Mac.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -532,7 +532,7 @@ struct GpsView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     pitchPoint("System-wide location, for privacy and app testing")
                     pitchPoint("Set it to your VPN, or a location you pick")
-                    pitchPoint("Powered by Apple’s developer location simulation")
+                    pitchPoint("No jailbreak — a secure, one-time Mac pairing")
                 }
 
                 Button {
@@ -575,7 +575,7 @@ struct GpsView: View {
         } header: {
             Text("Set up")
         } footer: {
-            Text("1. Install GeoSpoof GPS on your Mac and open it.\n2. Connect this iPhone with a cable.\n3. Follow the setup steps in the Mac app (Trust · Developer Mode · Pair).\nThen your chosen location syncs to your iPhone’s GPS automatically — over Wi-Fi from then on.")
+            Text("Install GeoSpoof GPS on your Mac and open it — it walks you through the one-time setup. Your chosen location then syncs to this iPhone automatically, over Wi-Fi.")
         }
     }
 
