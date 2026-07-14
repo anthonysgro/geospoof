@@ -1126,7 +1126,8 @@ export const en = {
       setupCta: "Set up guide",
       resolving: "Finding the latest version…",
       versionLabel: "Latest version",
-      note: "Universal build for Apple Silicon and Intel. Developer ID-signed and notarized by Apple.",
+      iosNote: "You'll also need the GeoSpoof iPhone app (Pro).",
+      iosCta: "Get GeoSpoof for iPhone",
     },
     setup: {
       title: "Set up GeoSpoof GPS",

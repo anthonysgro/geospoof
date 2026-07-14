@@ -556,11 +556,11 @@
     "description": "Footer link inviting the user to buy the maintainer a coffee."
   },
   "iosPromo_text": {
-    "message": "Теперь на iPhone, iPad и Mac",
+    "message": "Новое: GeoSpoof GPS для iPhone и Mac",
     "description": "Footer cross-link label announcing the GeoSpoof app is now available across Apple platforms, linking to the App Store."
   },
   "iosPromo_ariaLabel": {
-    "message": "GeoSpoof теперь доступен на iPhone, iPad и Mac",
+    "message": "Новое — GeoSpoof GPS: геолокация на уровне устройства на iPhone и Mac",
     "description": "Accessible label for the footer cross-link to the GeoSpoof Apple app (the visible text sits next to an Apple logo glyph)."
   },
   "vpnPromo_text": {

@@ -1143,7 +1143,8 @@ export const ru: Dictionary = {
       setupCta: "Руководство по настройке",
       resolving: "Ищем последнюю версию…",
       versionLabel: "Последняя версия",
-      note: "Универсальная сборка для Apple Silicon и Intel. Подписана Developer ID и заверена Apple.",
+      iosNote: "Также понадобится приложение GeoSpoof для iPhone (Pro).",
+      iosCta: "Установить GeoSpoof для iPhone",
     },
     setup: {
       title: "Настройка GeoSpoof GPS",

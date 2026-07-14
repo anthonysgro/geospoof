@@ -1124,7 +1124,8 @@ export const ja: Dictionary = {
       setupCta: "セットアップガイド",
       resolving: "最新バージョンを取得しています…",
       versionLabel: "最新バージョン",
-      note: "Apple Silicon と Intel に対応したユニバーサルビルド。Developer ID で署名され、Apple により公証済みです。",
+      iosNote: "GeoSpoof の iPhone アプリ（Pro）も必要です。",
+      iosCta: "iPhone 版 GeoSpoof を入手",
     },
     setup: {
       title: "GeoSpoof GPS をセットアップ",

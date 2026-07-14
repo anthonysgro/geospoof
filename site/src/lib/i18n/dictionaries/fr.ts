@@ -1144,7 +1144,8 @@ export const fr: Dictionary = {
       setupCta: "Guide de configuration",
       resolving: "Recherche de la dernière version…",
       versionLabel: "Dernière version",
-      note: "Build universel pour Apple Silicon et Intel. Signé avec un Developer ID et notarié par Apple.",
+      iosNote: "Vous aurez aussi besoin de l'app GeoSpoof pour iPhone (Pro).",
+      iosCta: "Obtenir GeoSpoof pour iPhone",
     },
     setup: {
       title: "Configurer GeoSpoof GPS",

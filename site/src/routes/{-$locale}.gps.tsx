@@ -51,6 +51,9 @@ const GPS_CDN_BASE = "https://cdn.geospoof.com/gps"
 const GPS_LATEST_DMG = `${GPS_CDN_BASE}/latest.dmg`
 /** Version pointer the UI fetches to display the current version number. */
 const GPS_LATEST_JSON = `${GPS_CDN_BASE}/latest.json`
+/** GeoSpoof iOS app — the control surface for GeoSpoof GPS (Pro unlocks device GPS). */
+const APP_STORE_URL =
+  "https://apps.apple.com/app/apple-store/id6765719745?pt=128299974&ct=gps&mt=8"
 
 /**
  * Build the `head` payload for the GeoSpoof GPS page in a given locale:
@@ -157,7 +160,13 @@ function DownloadCard() {
       </p>
 
       <p className="mt-1 max-w-md text-center text-xs text-(--color-canvas-muted)">
-        {d.note}
+        {d.iosNote}{" "}
+        <a
+          href={APP_STORE_URL}
+          className="font-medium text-(--color-brand) hover:underline"
+        >
+          {d.iosCta}
+        </a>
       </p>
     </div>
   )

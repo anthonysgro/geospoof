@@ -1100,7 +1100,8 @@ export const zhCN: Dictionary = {
       setupCta: "设置指南",
       resolving: "正在获取最新版本…",
       versionLabel: "最新版本",
-      note: "面向 Apple Silicon 与 Intel 的通用版本。已使用 Developer ID 签名并经 Apple 公证。",
+      iosNote: "你还需要 GeoSpoof 的 iPhone 应用（Pro）。",
+      iosCta: "获取 iPhone 版 GeoSpoof",
     },
     setup: {
       title: "设置 GeoSpoof GPS",

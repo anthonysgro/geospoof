@@ -1132,7 +1132,8 @@ export const id: Dictionary = {
       setupCta: "Panduan penyiapan",
       resolving: "Mencari versi terbaru…",
       versionLabel: "Versi terbaru",
-      note: "Build universal untuk Apple Silicon dan Intel. Ditandatangani dengan Developer ID dan dinotarisasi oleh Apple.",
+      iosNote: "Anda juga memerlukan aplikasi GeoSpoof untuk iPhone (Pro).",
+      iosCta: "Dapatkan GeoSpoof untuk iPhone",
     },
     setup: {
       title: "Siapkan GeoSpoof GPS",

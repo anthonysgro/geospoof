@@ -250,7 +250,7 @@ Recommended — accurate to what the app does (spoofs Safari's location), captur
 the "location spoofer" query. Alternatives:
 
 ```
-GeoSpoof - Fake GPS Location   (higher-volume "fake gps" query, but risks misleading — GeoSpoof spoofs Safari, not the device's system GPS)
+GeoSpoof - Fake GPS Location   (higher-volume "fake gps" query, but still risky — device GPS exists only as a Pro feature that needs the Mac companion, so a "Fake GPS" name over-promises for free/iPhone-only users and pulls game-cheat installs)
 GeoSpoof: Spoof Location       (shorter; "spoof location")
 ```
 
@@ -260,11 +260,13 @@ GeoSpoof: Spoof Location       (shorter; "spoof location")
 Safari GPS & Timezone Changer
 ```
 
-Leads with "Safari" so scope is honest up front (this spoofs Safari, not the
-device's system GPS), which keeps out the wrong installs and the 1-star "doesn't
-work in Pokémon GO" reviews. Keeps the high-value `changer` token (→ "location
-changer") plus `gps` and `timezone`, with no wasted stop words. `fake` and
-`safari`'s extra reach are carried by the keyword field instead.
+Leads with "Safari" so scope is honest up front (the app itself spoofs Safari;
+device-level system GPS is a separate Pro feature that needs the Mac companion,
+so the indexed metadata intentionally doesn't lead with it), which keeps out the
+wrong installs and the 1-star "doesn't work in Pokémon GO" reviews. Keeps the
+high-value `changer` token (→ "location changer") plus `gps` and `timezone`,
+with no wasted stop words. `fake` and `safari`'s extra reach are carried by the
+keyword field instead.
 
 ## Keywords field (100 chars — no spaces, no name/subtitle repeats)
 
@@ -291,7 +293,15 @@ location changer, change location, fake location, spoof location, fake gps,
 spoof gps, gps location, location privacy, hide location, vpn location, fake gps,
 spoof geolocation, location emulator, teleport location.
 
-## Promotional text (137 chars)
+## Promotional text (153 chars)
+
+```
+NEW — GeoSpoof GPS moves your iPhone's real system GPS to your chosen location, driven from a Mac companion app. A Pro feature; Safari spoofing stays free.
+```
+
+Not indexed and updatable without review, so this is the place to announce
+GeoSpoof GPS (device-level location). Rotate the previous Auto Background Sync
+line back in later if you want:
 
 ```
 NEW Auto Background Sync: switch VPN servers and your Safari location follows automatically — no manual re-sync, no need to open the app.
@@ -311,6 +321,8 @@ FEATURES
 
 • Auto Background Sync (Pro) — switch VPN servers and your Safari location follows automatically. No manual re-sync, and no need to open the GeoSpoof app.
 
+• Device GPS (Pro) — move your iPhone's real system GPS, not just Safari, to your chosen location. Driven from the GeoSpoof GPS companion app for Mac over a secure, one-time pairing (no jailbreak). Reverts to your real GPS when you turn it off.
+
 • Pick any location — search 33,000+ cities offline, or enter coordinates directly.
 
 • Full signal alignment — Geolocation, timezone, Date, Intl, Temporal, and WebRTC all report the same place. Every browser API that can reveal your location is covered.
@@ -325,9 +337,13 @@ FEATURES
 
 • Private by design — no account, no login, no tracking, no analytics, no developer servers. Open source and auditable.
 
+GEOSPOOF GPS — DEVICE-LEVEL LOCATION (NEW, PRO)
+
+Safari spoofing keeps your browser private. GeoSpoof GPS goes further: it sets your iPhone's real, system-level location to the place you pick, so location-aware apps — not just Safari — match it too. It's driven from a companion Mac app, built for privacy and for testing location-based features. It's an optional Pro feature, requires a Mac for a one-time setup, and is not designed for AR games.
+
 WHAT GEOSPOOF DOES NOT DO
 
-GeoSpoof is not a VPN and does not change your IP address. For full location privacy, use it alongside a VPN. It does not spoof your device's system GPS — it works in Safari. It does not change your browser's language or locale, bypass server-side detection (IP, payment methods, account history), or collect any data about you or your browsing.
+GeoSpoof is not a VPN and does not change your IP address. For full location privacy, use it alongside a VPN. On its own, the GeoSpoof app spoofs Safari; moving your device's real system GPS is a separate Pro feature that uses the GeoSpoof GPS companion app for Mac. It does not change your browser's language or locale, bypass server-side detection (IP, payment methods, account history), or collect any data about you or your browsing.
 
 NOTE
 
