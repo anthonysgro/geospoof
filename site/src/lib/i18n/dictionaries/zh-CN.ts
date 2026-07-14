@@ -1075,6 +1075,10 @@ export const zhCN: Dictionary = {
         "GeoSpoof GPS 是一款 macOS 菜单栏应用，可将已连接 iPhone 的真实 GPS 位置设置为与你的伪装位置一致。下载已签名并公证的 DMG。",
       ogTitle: "为 Mac 下载 GeoSpoof GPS",
     },
+    compat: {
+      label: "注意",
+      body: "GeoSpoof GPS 仅为隐私保护、网页浏览和开发而设计。它不兼容也并非为 Pokémon GO 等 AR 手机游戏而设计。",
+    },
     experimental: {
       label: "实验性功能",
       title: "尚处早期的实验性功能",

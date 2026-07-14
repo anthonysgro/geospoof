@@ -160,7 +160,7 @@ struct HomeView: View {
 // MARK: - GPS (device / system GPS spoofing via the GeoSpoof GPS desktop agent)
 
 /// Redacted device summary from the agent's status report.
-struct GpsDeviceSummary: Codable, Equatable {
+nonisolated struct GpsDeviceSummary: Codable, Equatable {
     var name: String
     var productType: String
     var iosVersion: String
@@ -175,7 +175,7 @@ struct GpsDeviceSummary: Codable, Equatable {
 /// as `controllers/<id>.json` over AFC — one self-file per Mac (controller-arbitration),
 /// not a single `status.json`. Mirrors the agent's `StatusReport`; the flat
 /// `ControllerReport` wraps it with the writing Mac's identity (see `GpsController`).
-struct GpsStatus: Codable, Equatable {
+nonisolated struct GpsStatus: Codable, Equatable {
     var version: Int
     var agentVersion: String
     var connected: Bool
@@ -200,7 +200,7 @@ struct GpsStatus: Codable, Equatable {
 /// `Documents/controllers/<id>.json` (controller-arbitration). Mirrors the agent's
 /// `ControllerReport`: identity (`id`, `name`) plus a flattened `StatusReport` — the same
 /// flat JSON decodes into both the identity fields here and a `GpsStatus`.
-struct GpsController: Identifiable, Equatable {
+nonisolated struct GpsController: Identifiable, Equatable {
     let id: String
     let name: String
     let status: GpsStatus
@@ -240,20 +240,33 @@ final class GpsStatusStore: ObservableObject {
     @Published private(set) var isStale = true
 
     /// The agent refreshes each self-file well within this window; older ⇒ that Mac is gone.
-    static let freshWindow: TimeInterval = 20
+    nonisolated static let freshWindow: TimeInterval = 20
 
     /// Reload the roster and resolve the display status for `selectedId` (the user's chosen
     /// controlling Mac, or nil for auto/sole).
-    func reload(selectedId: String?) {
-        controllers = Self.readRoster()
+    ///
+    /// The disk enumeration + JSON decode in `readRoster` can block for a noticeable time
+    /// (many files, slow/contended storage, iCloud-backed container), so it runs off the
+    /// main thread; only the published-state update touches the main actor. Callers `await`.
+    func reload(selectedId: String?) async {
+        let roster = await Task.detached(priority: .utility) {
+            Self.readRoster()
+        }.value
+        apply(roster: roster, selectedId: selectedId)
+    }
+
+    /// Resolve the display status for a freshly-read roster + current selection and publish
+    /// it. Runs on the main actor (the class is `@MainActor`).
+    private func apply(roster: [GpsController], selectedId: String?) {
+        controllers = roster
         // Display status: the explicitly-selected controller if it's present; else, when
         // exactly one controller is present, that sole one; else none (ambiguous — the UI
         // asks the user to choose).
         let owner: GpsController?
-        if let selectedId, let picked = controllers.first(where: { $0.id == selectedId }) {
+        if let selectedId, let picked = roster.first(where: { $0.id == selectedId }) {
             owner = picked
-        } else if controllers.count == 1 {
-            owner = controllers.first
+        } else if roster.count == 1 {
+            owner = roster.first
         } else {
             owner = nil
         }
@@ -264,7 +277,10 @@ final class GpsStatusStore: ObservableObject {
     /// Read + freshness-filter every `controllers/<id>.json`. Empty if the directory is
     /// absent (no Mac has announced yet). The `.json` filter also skips the agent's
     /// hidden `.<id>.json.tmp` atomic-write scratch files.
-    private static func readRoster() -> [GpsController] {
+    ///
+    /// `nonisolated` so `reload` can run it off the main actor (via `Task.detached`); it
+    /// touches no instance state, and the `[GpsController]` it returns is `Sendable`.
+    nonisolated private static func readRoster() -> [GpsController] {
         guard let docs = FileManager.default
             .urls(for: .documentDirectory, in: .userDomainMask).first else {
             return []
@@ -306,6 +322,7 @@ struct GpsView: View {
     @ObservedObject private var pro = ProStore.shared
     @ObservedObject private var router = AppRouter.shared
     @StateObject private var statusStore = GpsStatusStore()
+    @Environment(\.scenePhase) private var scenePhase
 
     /// Where to send users to get the desktop app. TODO: confirm final URL.
     private let downloadURL = URL(string: "https://www.geospoof.com/gps")!
@@ -326,6 +343,7 @@ struct GpsView: View {
                 case .waitingForMac:
                     aboutSection
                     waitingSection
+                    compatibilitySection
                 case .chooseController:
                     chooseControllerSection
                 case .setupNeeded(let message):
@@ -350,15 +368,33 @@ struct GpsView: View {
             .tint(.brand)
             .navigationTitle("GPS")
             .onAppear { refreshStatus() }
-            .onReceive(refreshTimer) { _ in refreshStatus() }
+            .onChange(of: scenePhase) { phase in
+                // Resume the status poll immediately when the app returns to the foreground,
+                // rather than waiting up to 3s for the next tick.
+                if phase == .active { refreshStatus() }
+            }
+            .onReceive(refreshTimer) { _ in
+                // Only poll while the app is in the foreground. This status read is purely
+                // for display — the device-GPS spoof itself is driven by the Mac agent
+                // reading `desired.json` (written on user actions via writePending(), not
+                // here), so pausing the poll in the background never drops the active spoof.
+                // It just avoids needless main-work + re-renders that can trip the
+                // scene-update watchdog while backgrounded.
+                guard scenePhase == .active else { return }
+                refreshStatus()
+            }
         }
     }
 
     /// Reload the roster for the current selection, then keep the selection sensible as the
     /// roster changes (auto-drive a sole Mac; drop a selection whose Mac has left).
     private func refreshStatus() {
-        statusStore.reload(selectedId: controller.selectedControllerId)
-        reconcileSelection()
+        Task { @MainActor in
+            // `reload` reads + decodes the roster off the main thread, then publishes on the
+            // main actor; `reconcileSelection` then runs against that fresh roster.
+            await statusStore.reload(selectedId: controller.selectedControllerId)
+            reconcileSelection()
+        }
     }
 
     /// Keep the controlling-Mac selection consistent with who's actually present:
@@ -538,6 +574,21 @@ struct GpsView: View {
             Text("Set up")
         } footer: {
             Text("1. Install GeoSpoof GPS on your Mac and open it.\n2. Connect this iPhone with a cable.\n3. Follow the setup steps in the Mac app (Trust · Developer Mode · Pair).\nThen your chosen location syncs to your iPhone’s GPS automatically — over Wi-Fi from then on.")
+        }
+    }
+
+    /// Compatibility caveat, shown beneath the "Waiting for your Mac" setup
+    /// section: device GPS is for privacy/browsing/development, not AR games.
+    /// A single small, muted row so it sets expectations without dominating.
+    private var compatibilitySection: some View {
+        Section {
+            Label {
+                Text("Not for AR games like Pokémon GO — device GPS is for privacy, browsing, and development.")
+            } icon: {
+                Image(systemName: "exclamationmark.triangle")
+            }
+            .font(.footnote)
+            .foregroundColor(.secondary)
         }
     }
 

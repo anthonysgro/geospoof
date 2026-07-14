@@ -1107,6 +1107,10 @@ export const id: Dictionary = {
         "GeoSpoof GPS adalah aplikasi bilah menu macOS yang menyetel lokasi GPS asli iPhone yang terhubung agar sesuai dengan lokasi palsu Anda. Unduh DMG yang ditandatangani dan dinotarisasi.",
       ogTitle: "Unduh GeoSpoof GPS untuk Mac",
     },
+    compat: {
+      label: "Catatan",
+      body: "GeoSpoof GPS dirancang khusus untuk privasi, penjelajahan web, dan pengembangan. Aplikasi ini tidak kompatibel dengan, dan tidak dirancang untuk, gim seluler AR seperti Pokémon GO.",
+    },
     experimental: {
       label: "Eksperimental",
       title: "Fitur baru yang masih eksperimental",

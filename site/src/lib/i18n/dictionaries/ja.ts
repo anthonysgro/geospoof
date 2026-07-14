@@ -1099,6 +1099,10 @@ export const ja: Dictionary = {
         "GeoSpoof GPS は、接続した iPhone の実際の GPS 位置を、あなたの偽装した位置に合わせる macOS メニューバーアプリです。署名・公証済みの DMG をダウンロードしてください。",
       ogTitle: "Mac 用 GeoSpoof GPS をダウンロード",
     },
+    compat: {
+      label: "ご注意",
+      body: "GeoSpoof GPS は、プライバシー保護、ウェブ閲覧、開発のみを目的として設計されています。Pokémon GO のような AR モバイルゲームには対応しておらず、そうした用途向けにも作られていません。",
+    },
     experimental: {
       label: "実験的機能",
       title: "初期段階の実験的な機能です",

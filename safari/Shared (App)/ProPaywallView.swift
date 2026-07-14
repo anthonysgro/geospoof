@@ -193,8 +193,8 @@ struct ProPaywallView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// Universal Purchase reassurance, kept out of the (capped at 5) feature
-    /// rows but still surfaced as a small icon note under the list.
+    /// Universal Purchase reassurance, kept out of the feature rows but still
+    /// surfaced as a small icon note under the list.
     private var universalPurchaseNote: some View {
         (Text(Image(systemName: "ipad.and.iphone")) + Text("  One purchase unlocks iPhone, iPad & Mac"))
             .font(.caption)
@@ -861,14 +861,14 @@ enum ProFeatures {
     /// uneven description lengths are what make the list look ragged. Edit here
     /// to change copy in both places.
     static let all: [ProFeatureItem] = [
+        ProFeatureItem(icon: "location.circle.fill", title: "GPS Spoofing",
+                       detail: "Move your device's real GPS.", tint: .teal),
         ProFeatureItem(icon: "arrow.triangle.2.circlepath", title: "Automatic VPN Sync",
                        detail: "Follows your VPN automatically.", tint: .brand),
         ProFeatureItem(icon: "list.bullet.rectangle", title: "Per-Site Rules",
                        detail: "Spoof only the sites you pick.", tint: .blue),
         ProFeatureItem(icon: "square.grid.2x2", title: "Widgets & Controls",
                        detail: "Switch from your Home Screen.", tint: .orange),
-        ProFeatureItem(icon: "scope", title: "Custom Accuracy",
-                       detail: "Set the accuracy you report.", tint: .purple),
     ]
 }
 

@@ -8,6 +8,7 @@ import {
   MapPin,
   RotateCcw,
   ShieldCheck,
+  TriangleAlert,
   Waypoints,
   Wifi,
 } from "lucide-react"
@@ -495,6 +496,22 @@ export function GpsPage() {
             </div>
 
             <DownloadCard />
+
+            {/* Compatibility caveat — sets expectations for AR-game seekers up
+                front (before they download): device GPS is for privacy,
+                browsing and development, not games like Pokémon GO. */}
+            <p className="mx-auto mt-6 flex max-w-xl items-start justify-center gap-2 text-left text-xs text-(--color-canvas-muted)">
+              <TriangleAlert
+                className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400"
+                aria-hidden="true"
+              />
+              <span>
+                <strong className="font-semibold text-(--color-canvas-foreground)">
+                  {g.compat.label}:
+                </strong>{" "}
+                {g.compat.body}
+              </span>
+            </p>
           </div>
         </Section>
 

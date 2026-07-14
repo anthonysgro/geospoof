@@ -1114,6 +1114,10 @@ export const es: Dictionary = {
         "GeoSpoof GPS es una app de la barra de menús de macOS que ajusta la ubicación GPS real de tu iPhone conectado para que coincida con tu ubicación falseada. Descarga el DMG firmado y notarizado.",
       ogTitle: "Descargar GeoSpoof GPS para Mac",
     },
+    compat: {
+      label: "Nota",
+      body: "GeoSpoof GPS está diseñado exclusivamente para la privacidad, la navegación web y el desarrollo. No es compatible con juegos móviles de realidad aumentada como Pokémon GO, ni está diseñado para ellos.",
+    },
     experimental: {
       label: "Experimental",
       title: "Una función incipiente y experimental",
