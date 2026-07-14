@@ -340,6 +340,8 @@ struct GpsView: View {
                 switch phase {
                 case .notPro:
                     proPitchSection
+                    compatibilitySection
+                    gpsForMacSection
                 case .waitingForMac:
                     aboutSection
                     waitingSection
@@ -491,7 +493,7 @@ struct GpsView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Device GPS")
                         .font(.headline)
-                    Text("Move your iPhone’s real system GPS to your spoof location, driven from the GeoSpoof GPS app on your Mac.")
+                    Text("Move your iPhone’s real system GPS to the location you pick — using Apple’s developer location simulation, driven from the GeoSpoof GPS app on your Mac.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -528,9 +530,9 @@ struct GpsView: View {
                     .foregroundColor(.secondary)
 
                 VStack(alignment: .leading, spacing: 8) {
-                    pitchPoint("Works in every app, including Find My")
-                    pitchPoint("Follows your VPN, or a location you pick")
-                    pitchPoint("Driven from the GeoSpoof GPS app on your Mac")
+                    pitchPoint("System-wide location, for privacy and app testing")
+                    pitchPoint("Set it to your VPN, or a location you pick")
+                    pitchPoint("Powered by Apple’s developer location simulation")
                 }
 
                 Button {
@@ -589,6 +591,17 @@ struct GpsView: View {
             }
             .font(.footnote)
             .foregroundColor(.secondary)
+        }
+    }
+
+    /// Link to the GeoSpoof GPS Mac companion, shown on the non-Pro pitch so a
+    /// prospective buyer can read what it is (and that it needs Pro) before
+    /// upgrading. Same destination as the setup download link.
+    private var gpsForMacSection: some View {
+        Section {
+            Link(destination: downloadURL) {
+                Label("Learn about GeoSpoof GPS for Mac", systemImage: "arrow.up.right")
+            }
         }
     }
 
@@ -758,6 +771,7 @@ struct SettingsView: View {
     @State private var showDebugPaywall = false
     @State private var showDebugProPitch = false
     @State private var showDebugFounderWelcome = false
+    @State private var showDebugOnboarding = false
     @State private var debugProOverride = ProStore.debugProOverrideSelection()
     #endif
 
@@ -860,6 +874,11 @@ struct SettingsView: View {
                     } label: {
                         Label("Show Founder Welcome", systemImage: "sparkles")
                     }
+                    Button {
+                        showDebugOnboarding = true
+                    } label: {
+                        Label("Show Onboarding", systemImage: "hand.wave")
+                    }
                     Picker(selection: $debugProOverride) {
                         Text("Auto (real check)").tag(0)
                         Text("Force Founder").tag(1)
@@ -884,6 +903,9 @@ struct SettingsView: View {
             .sheet(isPresented: $showDebugProPitch) { ProPitchSheet() }
             .sheet(isPresented: $showDebugFounderWelcome) {
                 FounderWelcomeSheet { showDebugFounderWelcome = false }
+            }
+            .adaptiveModalCover(isPresented: $showDebugOnboarding) {
+                OnboardingView { showDebugOnboarding = false }
             }
             #endif
         }

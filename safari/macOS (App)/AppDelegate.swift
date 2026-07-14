@@ -206,6 +206,7 @@ struct MacSettingsView: View {
     @State private var showDebugPaywall = false
     @State private var showDebugProPitch = false
     @State private var showDebugFounderWelcome = false
+    @State private var showDebugOnboarding = false
     @State private var debugProOverride = ProStore.debugProOverrideSelection()
     #endif
 
@@ -291,6 +292,11 @@ struct MacSettingsView: View {
                     } label: {
                         Label("Show Founder Welcome", systemImage: "sparkles")
                     }
+                    Button {
+                        showDebugOnboarding = true
+                    } label: {
+                        Label("Show Onboarding", systemImage: "hand.wave")
+                    }
                     Picker(selection: $debugProOverride) {
                         Text("Auto (real check)").tag(0)
                         Text("Force Founder").tag(1)
@@ -316,6 +322,9 @@ struct MacSettingsView: View {
             .sheet(isPresented: $showDebugProPitch) { ProPitchSheet() }
             .sheet(isPresented: $showDebugFounderWelcome) {
                 FounderWelcomeSheet { showDebugFounderWelcome = false }
+            }
+            .adaptiveModalCover(isPresented: $showDebugOnboarding) {
+                OnboardingView { showDebugOnboarding = false }
             }
             #endif
         }

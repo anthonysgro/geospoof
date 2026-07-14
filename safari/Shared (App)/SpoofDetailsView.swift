@@ -272,6 +272,7 @@ struct OnboardingView: View {
         case welcome
         case enable
         case permission
+        case gps
         case done
     }
 
@@ -280,10 +281,11 @@ struct OnboardingView: View {
         // iOS modal covers only what we can't detect or guide from the home
         // screen: the welcome and the Settings toggle. Activating it for a page
         // (+ the permission prompt and trust info) is handled just-in-time by
-        // the state-driven Setup card on the home screen.
-        [.welcome, .enable]
+        // the state-driven Setup card on the home screen. A closing GPS teaser
+        // introduces the optional Pro device-GPS layer (nothing to set up here).
+        [.welcome, .enable, .gps]
         #else
-        [.welcome, .enable, .permission, .done]
+        [.welcome, .enable, .permission, .gps, .done]
         #endif
     }
 
@@ -296,6 +298,7 @@ struct OnboardingView: View {
         case .welcome: return "globe" // unused — welcome uses the app icon
         case .enable: return "puzzlepiece.extension.fill"
         case .permission: return "lock.shield.fill"
+        case .gps: return "location.circle.fill"
         case .done: return "checkmark.circle.fill"
         }
     }
@@ -305,6 +308,7 @@ struct OnboardingView: View {
         case .welcome: return "Welcome to GeoSpoof"
         case .enable: return "Enable in Safari"
         case .permission: return "When Safari Asks"
+        case .gps: return "Match Your iPhone's Real GPS"
         case .done: return "You're All Set"
         }
     }
@@ -312,7 +316,7 @@ struct OnboardingView: View {
     private func subtitle(_ kind: StepKind) -> String {
         switch kind {
         case .welcome:
-            return "Mask your browser's location and timezone with a tap -- and keep your real whereabouts private."
+            return "Mask the location and timezone you reveal online with a tap -- and keep your real whereabouts private."
         case .enable:
             #if os(iOS)
             return "Turn GeoSpoof on in Safari's extension settings."
@@ -321,6 +325,12 @@ struct OnboardingView: View {
             #endif
         case .permission:
             return "The first time you browse, Safari asks to allow access. Approving it is what lets GeoSpoof work -- here's what you'll see."
+        case .gps:
+            #if os(iOS)
+            return "Want more than Safari? GeoSpoof Pro can set your iPhone's real GPS for privacy and app testing, using Apple's developer location simulation from a companion Mac app. It's optional -- browser spoofing is free."
+            #else
+            return "Want more than Safari? GeoSpoof Pro can set a connected iPhone's real GPS for privacy and app testing, using Apple's developer location simulation right from this Mac. It's optional -- browser spoofing is free."
+            #endif
         case .done:
             return "Pick a location and GeoSpoof keeps the real one hidden. You can change it anytime."
         }
