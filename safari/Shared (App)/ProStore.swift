@@ -255,6 +255,14 @@ final class ProStore: ObservableObject {
     /// Set once we've pushed a positive grant to CloudKit this launch, so a
     /// frequently-called `recomputeFounder()` doesn't spam the network.
     private var cloudKitGrantPushed = false
+    /// Latched true once THIS session verifies a non-production StoreKit
+    /// environment (App Review / TestFlight sandbox, or Xcode StoreKit testing).
+    /// When set, founder is forced OFF and every rail that could turn it back on
+    /// — the app-local cache, the iCloud KVS bit, and the CloudKit grant — is
+    /// ignored, so a bogus grant an earlier build synced to this Apple ID can
+    /// never re-hide the paywall + In-App Purchases from a reviewer or tester.
+    /// Production installs never set this, so real founders are unaffected.
+    private var founderSuppressedByEnvironment = false
 
     /// Signed StoreKit entitlement proof (JWS strings), captured during entitlement /
     /// founder resolution and broadcast via `proEntitlementDidChange` so `SpoofModel` can
@@ -415,7 +423,18 @@ final class ProStore: ObservableObject {
         // that's already cached is preserved (founder is permanent), while a
         // fresh sandbox/review install stays non-Pro and sees the paywall + IAPs.
         guard isProductionEnvironment(appTransaction) else {
-            Log.pro.info("Skipping founder grant: non-production StoreKit environment (originalAppVersion '\(appTransaction.originalAppVersion)' is a sandbox/Xcode sentinel, not a real first install). founder unchanged=\(self.isFounder)")
+            // A VERIFIED non-production transaction is definitive proof we're in
+            // the App Review / TestFlight sandbox or Xcode StoreKit testing. The
+            // paywall + IAPs MUST be reachable here, so force founder OFF for the
+            // session and ignore any cached or iCloud-synced grant: an earlier
+            // buggy build may have pushed a bogus founder bit to the iCloud KVS /
+            // CloudKit rails for this Apple ID, and that residue (which survives
+            // reinstalls and syncs to every device on the account) must never
+            // re-hide the purchases. We never persist `false`, so a genuine
+            // production grant on this same device stays intact for its next
+            // production launch.
+            Log.pro.info("Non-production StoreKit environment (originalAppVersion '\(appTransaction.originalAppVersion)'): forcing founder OFF so the paywall + IAPs are visible.")
+            suppressFounderForNonProduction()
             return
         }
 
@@ -450,6 +469,25 @@ final class ProStore: ObservableObject {
         }
     }
 
+    /// Force founder OFF for this session because we verified a non-production
+    /// StoreKit environment (App Review / TestFlight sandbox, or Xcode). Latches
+    /// `founderSuppressedByEnvironment` so the async iCloud KVS / CloudKit rails
+    /// can't turn it back on, and clears the in-memory synced flags. Never writes
+    /// `false` to the local cache or the cloud rails — a real production grant on
+    /// this device (or another of the user's devices) is preserved.
+    private func suppressFounderForNonProduction() {
+        founderSuppressedByEnvironment = true
+        localFounder = false
+        cloudFounder = false
+        cloudKitFounder = false
+        let was = isFounder
+        isFounder = false
+        if was {
+            Log.pro.info("Founder forced OFF (non-production environment); ignoring cached/synced grant.")
+        }
+        persistIsPro()
+    }
+
     /// Best-effort "this user installed before the Pro release" signal for the
     /// iOS 15 path, where `originalAppVersion` isn't readable. Uses app-local
     /// signals only (no App Group access): a fresh install has neither a
@@ -475,6 +513,14 @@ final class ProStore: ObservableObject {
     /// regenerated macOS receipt reporting a recent `originalAppVersion`, or a
     /// sync that hasn't landed yet. We only ever WRITE `true`, never `false`.
     private func recomputeFounder() {
+        // A verified non-production environment (App Review / TestFlight / Xcode)
+        // suppresses founder unconditionally — no cached or synced bit may
+        // re-enable it, and we must not persist or propagate a grant from here.
+        if founderSuppressedByEnvironment {
+            if isFounder { isFounder = false }
+            persistIsPro()
+            return
+        }
         let everGranted = cache.bool(forKey: Key.isFounder)
         let combined = localFounder || cloudFounder || cloudKitFounder || everGranted
         let was = isFounder
@@ -510,6 +556,7 @@ final class ProStore: ObservableObject {
         Task { @MainActor [weak self] in
             guard let self else { return }
             if self.debugProOverride() != .auto { return }
+            if self.founderSuppressedByEnvironment { return }
             if self.cloud.bool(forKey: CloudKey.founder), !self.cloudFounder {
                 self.cloudFounder = true
                 self.recomputeFounder()
@@ -524,6 +571,7 @@ final class ProStore: ObservableObject {
         Task { @MainActor [weak self] in
             guard let self else { return }
             if self.debugProOverride() != .auto { return }
+            if self.founderSuppressedByEnvironment { return }
             self.cloud.synchronize()
             if self.cloud.bool(forKey: CloudKey.founder), !self.cloudFounder {
                 self.cloudFounder = true
@@ -544,6 +592,7 @@ final class ProStore: ObservableObject {
             let granted = await FounderCloud.fetchGranted()
             guard granted else { return }
             guard let self else { return }
+            if self.founderSuppressedByEnvironment { return }
             if !self.cloudKitFounder {
                 self.cloudKitFounder = true
                 self.recomputeFounder()
