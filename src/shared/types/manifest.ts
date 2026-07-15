@@ -22,6 +22,12 @@ export interface ManifestAction {
   default_icon?: Record<string, string>;
 }
 
+export interface ManifestOptionsUi {
+  page: string;
+  /** When true, opens the options page in a full browser tab instead of an embedded iframe. */
+  open_in_tab?: boolean;
+}
+
 export interface ManifestWebAccessibleResource {
   resources: string[];
   matches: string[];
@@ -36,6 +42,7 @@ export interface Manifest {
   content_scripts: ManifestContentScript[];
   background: ManifestBackground;
   action: ManifestAction;
+  options_ui?: ManifestOptionsUi;
   web_accessible_resources?: ManifestWebAccessibleResource[];
   /** @deprecated MV2 only */
   browser_action?: ManifestAction;

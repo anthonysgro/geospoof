@@ -252,6 +252,27 @@ export function generateManifest(target: BrowserTarget, version: string): Record
     // who never enable debugger mode are never prompted for it. Without the
     // grant we fall back to a `tabs.onUpdated` attach (works, slightly later).
     optional_permissions: ["webNavigation"],
+    // Register the popup UI as an options page — Chromium-only. This is a fix
+    // for mobile Chromium browsers (Cromite / Kiwi on Android): they graft the
+    // desktop popup into the mobile UI, which breaks Android's focus engine, so
+    // tapping a text input in the popup never summons the virtual keyboard and
+    // coordinates/city search can't be typed. The options page opens as a
+    // normal tab (via the extensions manager → Details → "Extension options")
+    // where focus and the keyboard work, giving mobile users a working path to
+    // the exact same UI. Scoped to Chromium because that's the only target with
+    // this bug: Firefox-for-Android generally handles popup focus, and Safari
+    // (macOS/iOS) doesn't have it — so their builds skip the redundant entry.
+    //
+    // `open_in_tab: true` is required, not cosmetic: the default (`false`)
+    // embeds the page in an iframe inside the extensions manager, which
+    // reintroduces the focus/keyboard bug on mobile (see crbug 464769552).
+    // `options_ui` is the MV3-preferred field over the legacy `options_page`.
+    // The page reuses popup.html verbatim — no new build artifact — and its
+    // viewport (width=350) renders as a clean, tappable single column on phone.
+    options_ui: {
+      page: "popup/popup.html",
+      open_in_tab: true,
+    },
     // Chrome-only store name + description. The Chrome Web Store reads both
     // straight from the manifest, so we override the shared
     // `__MSG_extensionName__` / `__MSG_extensionDescription__` with literal,
