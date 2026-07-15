@@ -7,7 +7,11 @@
 //  Three ways to be Pro:
 //    1. Founder grant — anyone whose *first* downloaded version is below
 //       `founderCutoff` (iOS build 40 / macOS 1.22.7) gets Pro free forever.
-//       Resolved from `AppTransaction.originalAppVersion`, synced across the
+//       Resolved from `AppTransaction.originalAppVersion` in PRODUCTION only —
+//       the sandbox/Xcode environments (App Review + TestFlight) report a "1.0"
+//       sentinel that would wrongly grant everyone founder and hide the paywall,
+//       so the grant is never applied there (see `captureFounderProof`). Synced
+//       across the
 //       user's devices via CloudKit (with iCloud KVS kept as a redundant
 //       fallback rail), and made PERMANENT once seen (never revoked, even if a
 //       later read is flaky). Needs no sign-in and no backend of our own. This
@@ -396,6 +400,25 @@ final class ProStore: ObservableObject {
         appTransactionJWS = jws
         cache.set(jws, forKey: Key.appTransactionJWS)
 
+        // The founder grant is derived from `originalAppVersion`, but that value
+        // is only the customer's REAL first-installed version in the PRODUCTION
+        // App Store environment. In the sandbox (which App Review *and* TestFlight
+        // use for purchases) and in Xcode StoreKit testing, it's a fixed sentinel
+        // — the sandbox always reports "1.0" — which parses to [1,0] and is below
+        // every `founderCutoff`. Trusting it there silently grants free founder
+        // Pro to every reviewer/tester, which flips `isPro` on and HIDES the
+        // paywall and all In-App Purchases. That's exactly why App Review reported
+        // it "cannot locate the In-App Purchases, such as Pro Lifetime".
+        //
+        // So resolve the grant ONLY from a production transaction. In any other
+        // environment, leave founder status untouched: a real production grant
+        // that's already cached is preserved (founder is permanent), while a
+        // fresh sandbox/review install stays non-Pro and sees the paywall + IAPs.
+        guard isProductionEnvironment(appTransaction) else {
+            Log.pro.info("Skipping founder grant: non-production StoreKit environment (originalAppVersion '\(appTransaction.originalAppVersion)' is a sandbox/Xcode sentinel, not a real first install). founder unchanged=\(self.isFounder)")
+            return
+        }
+
         let originalString = appTransaction.originalAppVersion
         guard let original = AppVersion(string: originalString) else {
             Log.pro.warn("Unparseable originalAppVersion '\(originalString)'; founder=false")
@@ -406,6 +429,25 @@ final class ProStore: ObservableObject {
         let founder = original < Self.founderCutoff
         Log.pro.info("Founder check: original \(original) < cutoff \(Self.founderCutoff) => \(founder)")
         applyFounder(founder, originalVersion: originalString)
+    }
+
+    /// True only for the PRODUCTION App Store environment, where
+    /// `originalAppVersion` is the customer's real first-installed version and the
+    /// founder comparison is meaningful.
+    ///
+    /// Uses StoreKit's typed `AppTransaction.environment` where available
+    /// (iOS 16.4+ / macOS 13.3+). On iOS 16.0–16.3, where that property doesn't
+    /// exist, fall back to rejecting the sandbox's fixed "1.0" sentinel: a real
+    /// production iOS `originalAppVersion` is a plain build integer (e.g. "40"),
+    /// never the dotted "1.0", and the Mac app's first-ever release was 1.21.10,
+    /// so "1.0" never appears in production on either platform.
+    @available(iOS 16.0, macOS 13.0, *)
+    private func isProductionEnvironment(_ appTransaction: AppTransaction) -> Bool {
+        if #available(iOS 16.4, macOS 13.3, *) {
+            return appTransaction.environment == .production
+        } else {
+            return appTransaction.originalAppVersion != "1.0"
+        }
     }
 
     /// Best-effort "this user installed before the Pro release" signal for the
