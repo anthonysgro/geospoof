@@ -9,6 +9,7 @@ export const en = {
   nav: {
     home: "Home",
     features: "Features",
+    gps: "GPS",
     blog: "Blog",
     support: "Support",
     download: "Download",
@@ -19,17 +20,20 @@ export const en = {
     mainNavAria: "Main navigation",
   },
   hero: {
-    badge: "VPN Companion · Extension",
     // The headline renders as: "{pre}{emphasis}{post}" with `emphasis`
     // highlighted in the brand colour and kept on one line.
     headlinePre: "Finish what ",
     headlineEmphasis: "your VPN",
     headlinePost: " started",
     subhead:
-      "A VPN changes your IP, but your browser still leaks your real location. GeoSpoof matches it to your VPN automatically — and keeps it matched as you switch servers.",
+      "A VPN changes your IP, but your devices still leak your real location. GeoSpoof finishes the job — from your browser to your iPhone's real GPS.",
     downloadFree: "Download Free",
     seeWhatSitesDetect: "See what sites detect",
     allPlatforms: "All platforms & browsers",
+    // Product-ladder hint under the primary CTA: surfaces the paid device-GPS
+    // flagship without displacing the free download above it.
+    gpsBadge: "New",
+    gpsHint: "Move your iPhone's real GPS",
     usersTrust: "Trusted by {count} users",
     usersShort: "{count} users",
     firefoxRating: "Firefox",

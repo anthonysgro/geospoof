@@ -7,6 +7,7 @@ import { ScreenshotsSection } from "@/components/landing/ScreenshotsSection"
 import { DemoVideoSection } from "@/components/landing/DemoVideoSection"
 import { TestimonialsSection } from "@/components/landing/TestimonialsSection"
 import { CompatibilitySection } from "@/components/landing/CompatibilitySection"
+import { PhoneCarouselSection } from "@/components/landing/PhoneCarouselSection"
 import { FeaturedPostSection } from "@/components/landing/FeaturedPostSection"
 import { DownloadSection } from "@/components/landing/DownloadSection"
 import { Footer } from "@/components/landing/Footer"
@@ -37,6 +38,7 @@ export function HomePage() {
         <DemoVideoSection />
         <FeaturesSection />
         <ComparisonSection />
+        <PhoneCarouselSection />
         <CompatibilitySection />
         <FeaturedPostSection />
         <DownloadSection />

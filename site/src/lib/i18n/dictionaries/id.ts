@@ -11,6 +11,7 @@ export const id: Dictionary = {
   nav: {
     home: "Beranda",
     features: "Fitur",
+    gps: "GPS",
     blog: "Blog",
     support: "Dukungan",
     download: "Unduh",
@@ -21,7 +22,6 @@ export const id: Dictionary = {
     mainNavAria: "Navigasi utama",
   },
   hero: {
-    badge: "Pendamping VPN · Ekstensi",
     headlinePre: "Selesaikan apa yang ",
     headlineEmphasis: "VPN Anda",
     headlinePost: " mulai",
@@ -30,6 +30,8 @@ export const id: Dictionary = {
     downloadFree: "Unduh Gratis",
     seeWhatSitesDetect: "Lihat apa yang dideteksi situs",
     allPlatforms: "Semua platform & browser",
+    gpsBadge: "Baru",
+    gpsHint: "Ubah GPS asli iPhone Anda",
     usersTrust: "Dipercaya oleh {count} pengguna",
     usersShort: "{count} pengguna",
     firefoxRating: "Firefox",

@@ -23,6 +23,7 @@ export const ru: Dictionary = {
   nav: {
     home: "Главная",
     features: "Возможности",
+    gps: "GPS",
     blog: "Блог",
     support: "Поддержка",
     download: "Скачать",
@@ -33,7 +34,6 @@ export const ru: Dictionary = {
     mainNavAria: "Основная навигация",
   },
   hero: {
-    badge: "Дополняет VPN · Расширение",
     headlinePre: "Завершите то, что начал ",
     headlineEmphasis: "ваш VPN",
     headlinePost: "",
@@ -42,6 +42,8 @@ export const ru: Dictionary = {
     downloadFree: "Установить бесплатно",
     seeWhatSitesDetect: "Посмотреть, что видят сайты",
     allPlatforms: "Все браузеры и платформы",
+    gpsBadge: "Новинка",
+    gpsHint: "Меняйте реальный GPS вашего iPhone",
     usersTrust: "Нам доверяют {count} пользователей",
     usersShort: "{count} пользователей",
     firefoxRating: "Firefox",

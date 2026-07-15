@@ -15,6 +15,7 @@ function getNavItems(t: Dictionary, locale: Locale): Array<NavItem> {
   return [
     { label: t.nav.home, href: "#" },
     { label: t.nav.features, href: "#features" },
+    { label: t.nav.gps, href: localizedHref("/gps", locale) },
     { label: t.nav.blog, href: localizedHref("/blog", locale) },
     { label: t.nav.support, href: localizedHref("/support", locale) },
   ]

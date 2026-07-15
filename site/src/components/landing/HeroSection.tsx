@@ -1,4 +1,5 @@
 import { motion } from "motion/react"
+import { ArrowRight } from "lucide-react"
 import { Section } from "./Section"
 import type { MouseEvent } from "react"
 import { cn } from "@/lib/utils"
@@ -6,7 +7,6 @@ import { useReducedMotion } from "@/hooks/use-reduced-motion"
 import { useTheme } from "@/hooks/use-theme"
 import { usePlatform } from "@/hooks/use-platform"
 import { getStoreLink } from "@/lib/store-links"
-import { Badge } from "@/components/ui/badge"
 import { useTranslations } from "@/hooks/use-i18n"
 import { LocaleLink } from "@/components/LocaleLink"
 
@@ -147,12 +147,29 @@ export function HeroSection({ className }: { className?: string }) {
             variants: heroTextVariants,
           })}
         >
-          <Badge
-            variant="outline"
-            className="mb-4 border-brand/30 bg-brand/10 tracking-wide text-(--color-brand) uppercase"
+          {/* Announcement pill — the top-of-hero slot is reserved for the
+              newest launch (GeoSpoof GPS) and links straight to its page. */}
+          <LocaleLink
+            to="/gps"
+            className={cn(
+              "group mb-5 inline-flex items-center gap-2 rounded-full",
+              "border border-(--color-brand)/30 bg-(--color-brand)/10 py-1 pr-3 pl-1",
+              "text-sm text-(--color-canvas-foreground)",
+              "transition-colors hover:bg-(--color-brand)/15",
+              "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+            )}
           >
-            {t.hero.badge}
-          </Badge>
+            <span className="rounded-full bg-(--color-brand) px-2 py-0.5 text-xs font-semibold tracking-wide text-white uppercase">
+              {t.hero.gpsBadge}
+            </span>
+            <span className="inline-flex items-center gap-1 font-medium">
+              {t.hero.gpsHint}
+              <ArrowRight
+                className="size-4 shrink-0 transition-transform group-hover:translate-x-0.5"
+                aria-hidden="true"
+              />
+            </span>
+          </LocaleLink>
 
           <h1 className="mb-4 text-4xl leading-tight font-bold text-(--color-canvas-foreground) sm:mb-6 md:text-5xl xl:text-[4.5rem]">
             {t.hero.headlinePre}
@@ -218,6 +235,7 @@ export function HeroSection({ className }: { className?: string }) {
                 {t.hero.seeWhatSitesDetect}
               </LocaleLink>
             </div>
+
             {/* When we've matched a store, still let people reach the others. */}
             {store ? (
               <a

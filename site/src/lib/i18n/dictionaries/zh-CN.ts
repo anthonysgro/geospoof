@@ -24,6 +24,7 @@ export const zhCN: Dictionary = {
   nav: {
     home: "首页",
     features: "功能",
+    gps: "GPS",
     blog: "博客",
     support: "支持",
     download: "下载",
@@ -34,7 +35,6 @@ export const zhCN: Dictionary = {
     mainNavAria: "主导航",
   },
   hero: {
-    badge: "VPN 好搭档 · 扩展",
     headlinePre: "弥补 ",
     headlineEmphasis: "VPN",
     headlinePost: " 覆盖不到的最后一环",
@@ -43,6 +43,8 @@ export const zhCN: Dictionary = {
     downloadFree: "免费安装",
     seeWhatSitesDetect: "查看网站能检测到什么",
     allPlatforms: "所有浏览器和平台",
+    gpsBadge: "全新",
+    gpsHint: "更改你 iPhone 的真实 GPS 位置",
     usersTrust: "深受 {count} 位用户信赖",
     usersShort: "{count} 位用户",
     firefoxRating: "Firefox",

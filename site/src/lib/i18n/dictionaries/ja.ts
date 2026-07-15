@@ -11,6 +11,7 @@ export const ja: Dictionary = {
   nav: {
     home: "ホーム",
     features: "機能",
+    gps: "GPS",
     blog: "ブログ",
     support: "サポート",
     download: "ダウンロード",
@@ -21,7 +22,6 @@ export const ja: Dictionary = {
     mainNavAria: "メインナビゲーション",
   },
   hero: {
-    badge: "VPN のお供 · 拡張機能",
     headlinePre: "あなたの VPN が",
     headlineEmphasis: "始めたこと",
     headlinePost: "を、やり遂げる",
@@ -30,6 +30,8 @@ export const ja: Dictionary = {
     downloadFree: "無料でダウンロード",
     seeWhatSitesDetect: "サイトが検出する内容を見る",
     allPlatforms: "すべてのプラットフォームとブラウザ",
+    gpsBadge: "新機能",
+    gpsHint: "iPhone の実際の GPS 位置を変更",
     usersTrust: "{count}のユーザーに信頼されています",
     usersShort: "{count}のユーザー",
     firefoxRating: "Firefox",

@@ -11,6 +11,7 @@ export const de: Dictionary = {
   nav: {
     home: "Start",
     features: "Funktionen",
+    gps: "GPS",
     blog: "Blog",
     support: "Support",
     download: "Herunterladen",
@@ -21,7 +22,6 @@ export const de: Dictionary = {
     mainNavAria: "Hauptnavigation",
   },
   hero: {
-    badge: "VPN-Begleiter · Erweiterung",
     headlinePre: "Vollende, was ",
     headlineEmphasis: "dein VPN",
     headlinePost: " begonnen hat",
@@ -30,6 +30,8 @@ export const de: Dictionary = {
     downloadFree: "Kostenlos herunterladen",
     seeWhatSitesDetect: "Sieh, was Websites erkennen",
     allPlatforms: "Alle Plattformen und Browser",
+    gpsBadge: "Neu",
+    gpsHint: "Ändere den echten GPS-Standort deines iPhones",
     usersTrust: "{count} Nutzer vertrauen uns",
     usersShort: "{count} Nutzer",
     firefoxRating: "Firefox",
