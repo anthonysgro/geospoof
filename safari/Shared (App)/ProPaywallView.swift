@@ -771,6 +771,7 @@ struct ProDetailView: View {
             }
 
         case .subscribed:
+            switchToLifetimeSection
             Section {
                 manageRow
                 refundRow
@@ -780,6 +781,7 @@ struct ProDetailView: View {
             }
 
         case .lifetime:
+            cancelRedundantSubscriptionSection
             Section {
                 refundRow
                 restoreButton
@@ -803,6 +805,58 @@ struct ProDetailView: View {
             Label("Restore Purchases", systemImage: "arrow.clockwise")
         }
         .disabled(store.purchaseInFlight)
+    }
+
+    /// Offer current subscribers a one-time switch to Lifetime. Buying the
+    /// non-consumable unlocks Pro forever immediately; the subscription is a
+    /// separate product and must be cancelled by the user afterward (see
+    /// `cancelRedundantSubscriptionSection`) — StoreKit can't crossgrade a
+    /// subscription into a non-consumable, and an app can't cancel a
+    /// subscription itself.
+    @ViewBuilder
+    private var switchToLifetimeSection: some View {
+        if store.canUpgradeToLifetime, let lifetime = store.lifetimeProduct {
+            Section {
+                Button {
+                    Task { await store.purchase(lifetime) }
+                } label: {
+                    HStack(spacing: 8) {
+                        Label("Switch to Lifetime", systemImage: "infinity")
+                        Spacer(minLength: 8)
+                        if store.purchaseInFlight {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Text(lifetime.displayPrice)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                }
+                .disabled(store.purchaseInFlight)
+            } header: {
+                Text("Switch to Lifetime")
+            } footer: {
+                Text("Pay once for GeoSpoof Pro forever — no more renewals. You unlock Lifetime right away; then cancel your subscription below so you're not billed again.")
+            }
+        }
+    }
+
+    /// Shown once a Lifetime owner still has an active subscription: they now
+    /// own Pro forever, so the recurring charge is pure waste. We can't cancel
+    /// it for them, so surface a clear, prominent nudge to Manage Subscription.
+    @ViewBuilder
+    private var cancelRedundantSubscriptionSection: some View {
+        if store.hasRedundantSubscription {
+            Section {
+                Label("You own Lifetime — the subscription is no longer needed.", systemImage: "checkmark.seal.fill")
+                    .foregroundStyle(.green)
+                manageRow
+            } header: {
+                Text("Cancel your subscription")
+            } footer: {
+                Text("A subscription is still active on your Apple Account. Cancel it so you're not charged again — your Lifetime access stays forever.")
+            }
+        }
     }
 
     @ViewBuilder

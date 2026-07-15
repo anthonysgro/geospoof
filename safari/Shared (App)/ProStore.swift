@@ -219,6 +219,27 @@ final class ProStore: ObservableObject {
         return .none
     }
 
+    /// True while an auto-renewable subscription is active on this account.
+    var hasActiveSubscription: Bool { !activeProductIDs.isEmpty }
+
+    /// A current subscriber who could pay once for the lifetime unlock instead.
+    /// (`status` is exactly `.subscribed` in this case, since owning lifetime
+    /// would outrank it.) Gated on the lifetime product having loaded so the UI
+    /// can show its price. There is NO StoreKit "crossgrade" from a subscription
+    /// to a non-consumable — the switch is just a normal purchase of the
+    /// lifetime product, after which the user cancels the subscription
+    /// themselves (see `hasRedundantSubscription`).
+    var canUpgradeToLifetime: Bool {
+        hasActiveSubscription && !ownsLifetime && lifetimeProduct != nil
+    }
+
+    /// Owns the lifetime unlock but still has an auto-renewable subscription
+    /// billing on the account — e.g. right after switching to Lifetime. We
+    /// can't cancel it for them (only Apple's Manage Subscriptions can), so the
+    /// UI nudges them to cancel; otherwise they'd keep paying for access they
+    /// already own forever.
+    var hasRedundantSubscription: Bool { ownsLifetime && hasActiveSubscription }
+
     /// Snapshot of the active auto-renewable subscription, for the management
     /// screen (plan name, renewal/expiry, auto-renew flag, and the transaction
     /// id needed to start a refund request). `nil` for founders / non-Pro.
