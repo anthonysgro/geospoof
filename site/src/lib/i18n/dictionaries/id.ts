@@ -27,7 +27,7 @@ export const id: Dictionary = {
     headlineEmphasis: "VPN Anda",
     headlinePost: " mulai",
     subhead:
-      "VPN mengubah IP Anda, tetapi browser Anda tetap membocorkan lokasi asli Anda. GeoSpoof menyesuaikannya dengan VPN Anda secara otomatis — dan menjaganya tetap selaras saat Anda berganti server.",
+      "VPN mengubah IP Anda, tetapi perangkat Anda tetap membocorkan lokasi asli Anda. GeoSpoof menuntaskannya — dari browser hingga GPS asli iPhone Anda.",
     downloadFree: "Unduh Gratis",
     seeWhatSitesDetect: "Lihat apa yang dideteksi situs",
     allPlatforms: "Semua platform & browser",

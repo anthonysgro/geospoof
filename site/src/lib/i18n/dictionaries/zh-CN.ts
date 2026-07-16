@@ -40,7 +40,7 @@ export const zhCN: Dictionary = {
     headlineEmphasis: "VPN",
     headlinePost: " 覆盖不到的最后一环",
     subhead:
-      "VPN 会更改你的 IP，但浏览器仍会泄露你的真实位置。GeoSpoof 会自动将它与你的 VPN 出口区域同步——并在你切换服务器时保持一致。",
+      "VPN 会更改你的 IP，但你的设备仍会泄露真实位置。GeoSpoof 帮你收尾——从浏览器一直到 iPhone 的真实 GPS。",
     downloadFree: "免费安装",
     seeWhatSitesDetect: "查看网站能检测到什么",
     allPlatforms: "所有浏览器和平台",

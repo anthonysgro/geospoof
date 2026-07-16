@@ -27,7 +27,7 @@ export const ja: Dictionary = {
     headlineEmphasis: "始めたこと",
     headlinePost: "を、やり遂げる",
     subhead:
-      "VPN は IP を変えても、ブラウザは本当の位置情報を漏らし続けます。GeoSpoof はそれを自動で VPN に合わせ、サーバーを切り替えても合致した状態を保ちます。",
+      "VPN は IP を変えても、あなたのデバイスは本当の位置情報を漏らし続けます。GeoSpoof が最後まで仕上げます — ブラウザから iPhone の本当の GPS まで。",
     downloadFree: "無料でダウンロード",
     seeWhatSitesDetect: "サイトが検出する内容を見る",
     allPlatforms: "すべてのプラットフォームとブラウザ",

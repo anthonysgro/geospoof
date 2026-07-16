@@ -4,7 +4,6 @@ import {
   Apple,
   ArrowRight,
   Check,
-  FlaskConical,
   MapPin,
   RotateCcw,
   ShieldCheck,
@@ -484,25 +483,6 @@ export function GpsPage() {
             <p className="mx-auto mb-6 max-w-2xl text-base text-(--color-canvas-muted) md:text-lg">
               {g.hero.intro}
             </p>
-
-            {/* Experimental notice — this is an early, optional add-on. */}
-            <div
-              role="note"
-              className="mx-auto mb-8 flex max-w-2xl items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-left"
-            >
-              <FlaskConical
-                className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400"
-                aria-hidden="true"
-              />
-              <div>
-                <p className="text-sm font-semibold text-(--color-canvas-foreground)">
-                  {g.experimental.title}
-                </p>
-                <p className="mt-1 text-sm text-(--color-canvas-muted)">
-                  {g.experimental.body}
-                </p>
-              </div>
-            </div>
 
             <DownloadCard />
 

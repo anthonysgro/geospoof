@@ -27,7 +27,7 @@ export const ptBR: Dictionary = {
     headlineEmphasis: "o seu VPN",
     headlinePost: " começou",
     subhead:
-      "Um VPN muda o seu IP, mas o seu navegador continua revelando a sua localização real. O GeoSpoof a alinha automaticamente ao seu VPN — e a mantém alinhada quando você troca de servidor.",
+      "Um VPN muda o seu IP, mas os seus dispositivos continuam revelando a sua localização real. O GeoSpoof termina o serviço — do navegador ao GPS real do seu iPhone.",
     downloadFree: "Baixar grátis",
     seeWhatSitesDetect: "Veja o que os sites detectam",
     allPlatforms: "Todas as plataformas e navegadores",
