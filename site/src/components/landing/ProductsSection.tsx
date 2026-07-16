@@ -7,7 +7,7 @@ import { useTranslations } from "@/hooks/use-i18n"
 import { LocaleLink } from "@/components/LocaleLink"
 
 const ctaClass = cn(
-  "group mt-auto inline-flex items-center justify-center gap-2",
+  "group inline-flex items-center justify-center gap-2",
   "min-h-12 rounded-brand px-6",
   "text-base font-semibold transition-all",
   "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
@@ -84,7 +84,7 @@ export function ProductsSection({ className }: { className?: string }) {
             onClick={scrollToDownload}
             className={cn(
               ctaClass,
-              "border border-(--color-canvas-border) text-(--color-canvas-foreground)",
+              "mt-auto border border-(--color-canvas-border) text-(--color-canvas-foreground)",
               "hover:bg-(--color-canvas-border)"
             )}
           >
@@ -117,10 +117,16 @@ export function ProductsSection({ className }: { className?: string }) {
             {p.pro.description}
           </p>
           <LocaleLink
+            to="/pro"
+            className="mt-auto text-sm text-(--color-canvas-muted) underline-offset-4 transition-colors hover:text-(--color-canvas-foreground) hover:underline"
+          >
+            {p.pro.priceNote}
+          </LocaleLink>
+          <LocaleLink
             to="/gps"
             className={cn(
               ctaClass,
-              "bg-(--color-brand) text-white shadow-md",
+              "mt-3 bg-(--color-brand) text-white shadow-md",
               "hover:bg-(--color-brand-dark) hover:shadow-lg"
             )}
           >

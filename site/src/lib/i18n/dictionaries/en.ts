@@ -10,6 +10,7 @@ export const en = {
     home: "Home",
     features: "Features",
     gps: "GPS",
+    pro: "Pro",
     blog: "Blog",
     support: "Support",
     download: "Download",
@@ -57,6 +58,65 @@ export const en = {
       description:
         "Move your iPhone's real, system-level GPS to match your spoofed location — driven from a Mac companion app.",
       cta: "Explore GeoSpoof GPS",
+      priceNote: "From $1.99/mo — or $24.99 lifetime",
+    },
+  },
+  pro: {
+    meta: {
+      title: "GeoSpoof Pro — Pricing & Features | GeoSpoof",
+      description:
+        "GeoSpoof Pro unlocks device-level GPS on iPhone, automatic VPN sync, widgets, the MapKit picker, per-site filters, and more. From $1.99/mo, or $24.99 once — billed through the App Store.",
+      ogTitle: "GeoSpoof Pro — Pricing & Features",
+    },
+    hero: {
+      breadcrumbHome: "Home",
+      breadcrumb: "Pro",
+      badge: "GeoSpoof Pro",
+      heading: "Everything GeoSpoof can do, unlocked",
+      subhead:
+        "One subscription unlocks GeoSpoof's advanced tools on iPhone and iPad — including GeoSpoof GPS, which sets your device's real, system-level location.",
+    },
+    pricing: {
+      heading: "Simple pricing",
+      cta: "Get GeoSpoof Pro",
+      fineprint:
+        "Billed through the App Store. Prices may vary by region. Cancel anytime.",
+      monthly: {
+        name: "Monthly",
+        price: "$1.99",
+        period: "/mo",
+        note: "",
+        badge: "",
+      },
+      yearly: {
+        name: "Yearly",
+        price: "$9.99",
+        period: "/yr",
+        note: "Save 58% vs monthly",
+        badge: "Most popular",
+      },
+      lifetime: {
+        name: "Lifetime",
+        price: "$24.99",
+        period: "once",
+        note: "No subscription",
+        badge: "Best value",
+      },
+    },
+    features: {
+      heading: "What's included",
+      items: {
+        everythingFree:
+          "Everything in the free GeoSpoof extension — location & timezone spoofing, WebRTC protection, on every major browser",
+        gps: "GeoSpoof GPS — set your iPhone's real, system-level GPS (with the Mac companion)",
+        vpnSync:
+          "Automatic VPN sync — your location follows your VPN exit region in the background",
+        widgets: "Home Screen widgets and Control Center controls",
+        mapkit: "MapKit location picker — drop a pin anywhere on the map",
+        filters: "Per-site allow and deny filters",
+        advanced: "Advanced controls and fine-tuning",
+        futureUpdates: "Every future update, included as it ships",
+      },
     },
   },
   footer: {
@@ -73,6 +133,7 @@ export const en = {
       spoofSafari: "Spoof location in Safari",
       spoofTimezone: "Spoof timezone",
       gps: "GeoSpoof GPS for Mac",
+      pro: "GeoSpoof Pro",
       needVpn: "Do you need a VPN?",
       testProtection: "Test your protection",
       engineLevel: "Engine-level Spoofing (Chrome)",

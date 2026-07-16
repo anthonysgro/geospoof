@@ -24,6 +24,7 @@ export const ru: Dictionary = {
     home: "Главная",
     features: "Возможности",
     gps: "GPS",
+    pro: "Pro",
     blog: "Блог",
     support: "Поддержка",
     download: "Скачать",
@@ -67,6 +68,66 @@ export const ru: Dictionary = {
       description:
         "Меняет реальное системное местоположение iPhone так, чтобы оно совпало с вашим подменённым местоположением — под управлением приложения-компаньона для Mac.",
       cta: "Открыть GeoSpoof GPS",
+      priceNote: "От $1.99/мес. — или $24.99 навсегда",
+    },
+  },
+  pro: {
+    meta: {
+      title: "GeoSpoof Pro — цены и возможности | GeoSpoof",
+      description:
+        "GeoSpoof Pro открывает GPS на уровне устройства на iPhone, автоматическую синхронизацию с VPN, виджеты, выбор места через MapKit, фильтры для сайтов и другое. От $1.99 в месяц или $24.99 разово — оплата через App Store.",
+      ogTitle: "GeoSpoof Pro — цены и возможности",
+    },
+    hero: {
+      breadcrumbHome: "Главная",
+      breadcrumb: "Pro",
+      badge: "GeoSpoof Pro",
+      heading: "Все возможности GeoSpoof — без ограничений",
+      subhead:
+        "Одна подписка открывает продвинутые инструменты GeoSpoof на iPhone и iPad — включая GeoSpoof GPS, который задаёт реальное системное местоположение вашего устройства.",
+    },
+    pricing: {
+      heading: "Простые цены",
+      cta: "Получить GeoSpoof Pro",
+      fineprint:
+        "Оплата через App Store. Цены могут отличаться в зависимости от региона. Отмена в любое время.",
+      monthly: {
+        name: "Ежемесячно",
+        price: "$1.99",
+        period: "/мес.",
+        note: "",
+        badge: "",
+      },
+      yearly: {
+        name: "Ежегодно",
+        price: "$9.99",
+        period: "/год",
+        note: "На 58% выгоднее помесячной",
+        badge: "Популярный выбор",
+      },
+      lifetime: {
+        name: "Навсегда",
+        price: "$24.99",
+        period: "разово",
+        note: "Без подписки",
+        badge: "Выгоднее всего",
+      },
+    },
+    features: {
+      heading: "Что входит",
+      items: {
+        everythingFree:
+          "Всё из бесплатного расширения GeoSpoof — подмена местоположения и часового пояса, защита от утечек WebRTC, во всех основных браузерах",
+        gps: "GeoSpoof GPS — задавайте реальный системный GPS вашего iPhone (с приложением-компаньоном для Mac)",
+        vpnSync:
+          "Автоматическая синхронизация с VPN — местоположение в фоне следует за регионом выхода вашего VPN",
+        widgets: "Виджеты для домашнего экрана и элементы Пункта управления",
+        mapkit:
+          "Выбор места через MapKit — поставьте булавку в любой точке карты",
+        filters: "Фильтры «разрешить/запретить» для каждого сайта",
+        advanced: "Расширенные настройки и тонкая подстройка",
+        futureUpdates: "Все будущие обновления — включены по мере выхода",
+      },
     },
   },
   footer: {
@@ -83,6 +144,7 @@ export const ru: Dictionary = {
       spoofSafari: "Подмена геолокации в Safari",
       spoofTimezone: "Подмена часового пояса",
       gps: "GeoSpoof GPS для Mac",
+      pro: "GeoSpoof Pro",
       needVpn: "Нужен ли вам VPN?",
       testProtection: "Проверить защиту",
       engineLevel: "Спуфинг на уровне движка (Chrome)",

@@ -12,6 +12,7 @@ export const ja: Dictionary = {
     home: "ホーム",
     features: "機能",
     gps: "GPS",
+    pro: "Pro",
     blog: "ブログ",
     support: "サポート",
     download: "ダウンロード",
@@ -55,6 +56,65 @@ export const ja: Dictionary = {
       description:
         "Mac のコンパニオンアプリから、iPhone の実際のシステム GPS を偽装した位置に合わせます。",
       cta: "GeoSpoof GPS を見る",
+      priceNote: "月額 $1.99 〜 — または買い切り $24.99",
+    },
+  },
+  pro: {
+    meta: {
+      title: "GeoSpoof Pro — 料金と機能 | GeoSpoof",
+      description:
+        "GeoSpoof Pro は、iPhone のデバイスレベル GPS、自動 VPN 同期、ウィジェット、MapKit ピッカー、サイトごとのフィルターなどを解放します。月額 $1.99、または買い切り $24.99 — App Store 経由で課金。",
+      ogTitle: "GeoSpoof Pro — 料金と機能",
+    },
+    hero: {
+      breadcrumbHome: "ホーム",
+      breadcrumb: "Pro",
+      badge: "GeoSpoof Pro",
+      heading: "GeoSpoof のすべてを、解き放つ",
+      subhead:
+        "ひとつのサブスクで、iPhone と iPad の GeoSpoof の高度なツールがすべて使えます。デバイスの実際のシステム位置を設定する GeoSpoof GPS も含まれます。",
+    },
+    pricing: {
+      heading: "シンプルな料金",
+      cta: "GeoSpoof Pro を入手",
+      fineprint:
+        "App Store 経由で課金されます。価格は地域によって異なる場合があります。いつでもキャンセルできます。",
+      monthly: {
+        name: "月額",
+        price: "$1.99",
+        period: "/月",
+        note: "",
+        badge: "",
+      },
+      yearly: {
+        name: "年額",
+        price: "$9.99",
+        period: "/年",
+        note: "月額より58%お得",
+        badge: "人気",
+      },
+      lifetime: {
+        name: "買い切り",
+        price: "$24.99",
+        period: "1回",
+        note: "サブスク不要",
+        badge: "最もお得",
+      },
+    },
+    features: {
+      heading: "含まれるもの",
+      items: {
+        everythingFree:
+          "無料の GeoSpoof 拡張機能のすべて — 位置情報・タイムゾーンの偽装、WebRTC 保護、主要ブラウザすべてで",
+        gps: "GeoSpoof GPS — iPhone の実際のシステム GPS を設定（Mac のコンパニオンアプリと併用）",
+        vpnSync:
+          "自動 VPN 同期 — 位置情報がバックグラウンドで VPN の出口リージョンに追従",
+        widgets: "ホーム画面ウィジェットとコントロールセンターのコントロール",
+        mapkit: "MapKit ロケーションピッカー — 地図上の好きな場所にピンを配置",
+        filters: "サイトごとの許可・拒否フィルター",
+        advanced: "高度なコントロールと微調整",
+        futureUpdates: "今後のすべてのアップデートを、リリース時に無料で",
+      },
     },
   },
   footer: {
@@ -71,6 +131,7 @@ export const ja: Dictionary = {
       spoofSafari: "Safari で位置情報を偽装",
       spoofTimezone: "タイムゾーンを偽装",
       gps: "Mac 用 GeoSpoof GPS",
+      pro: "GeoSpoof Pro",
       needVpn: "VPN は必要ですか？",
       testProtection: "保護状況をテスト",
       engineLevel: "エンジンレベルの偽装（Chrome）",

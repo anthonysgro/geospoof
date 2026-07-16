@@ -12,6 +12,7 @@ export const fr: Dictionary = {
     home: "Accueil",
     features: "Fonctionnalités",
     gps: "GPS",
+    pro: "Pro",
     blog: "Blog",
     support: "Assistance",
     download: "Télécharger",
@@ -55,6 +56,68 @@ export const fr: Dictionary = {
       description:
         "Réglez le vrai GPS système de votre iPhone pour qu’il corresponde à votre position simulée — piloté depuis une app compagnon sur Mac.",
       cta: "Découvrir GeoSpoof GPS",
+      priceNote: "Dès $1.99/mois — ou $24.99 à vie",
+    },
+  },
+  pro: {
+    meta: {
+      title: "GeoSpoof Pro — Tarifs et fonctionnalités | GeoSpoof",
+      description:
+        "GeoSpoof Pro débloque le GPS au niveau de l’appareil sur iPhone, la synchronisation VPN automatique, des widgets, le sélecteur MapKit, des filtres par site et plus encore. Dès $1.99 par mois, ou $24.99 une fois — facturé via l’App Store.",
+      ogTitle: "GeoSpoof Pro — Tarifs et fonctionnalités",
+    },
+    hero: {
+      breadcrumbHome: "Accueil",
+      breadcrumb: "Pro",
+      badge: "GeoSpoof Pro",
+      heading: "Tout ce que GeoSpoof sait faire, débloqué",
+      subhead:
+        "Un seul abonnement débloque les outils avancés de GeoSpoof sur iPhone et iPad — dont GeoSpoof GPS, qui définit la position réelle et système de votre appareil.",
+    },
+    pricing: {
+      heading: "Des tarifs simples",
+      cta: "Obtenir GeoSpoof Pro",
+      fineprint:
+        "Facturé via l’App Store. Les prix peuvent varier selon la région. Annulable à tout moment.",
+      monthly: {
+        name: "Mensuel",
+        price: "$1.99",
+        period: "/mois",
+        note: "",
+        badge: "",
+      },
+      yearly: {
+        name: "Annuel",
+        price: "$9.99",
+        period: "/an",
+        note: "Économisez 58% vs mensuel",
+        badge: "Le plus populaire",
+      },
+      lifetime: {
+        name: "À vie",
+        price: "$24.99",
+        period: "une fois",
+        note: "Sans abonnement",
+        badge: "Meilleur rapport",
+      },
+    },
+    features: {
+      heading: "Ce qui est inclus",
+      items: {
+        everythingFree:
+          "Tout ce que propose l’extension GeoSpoof gratuite — simulation de position et de fuseau horaire, protection WebRTC, sur tous les grands navigateurs",
+        gps: "GeoSpoof GPS — définissez le vrai GPS système de votre iPhone (avec l’app compagnon Mac)",
+        vpnSync:
+          "Synchronisation VPN automatique — votre position suit la région de sortie de votre VPN en arrière-plan",
+        widgets:
+          "Widgets de l’écran d’accueil et commandes du centre de contrôle",
+        mapkit:
+          "Sélecteur de position MapKit — placez un repère n’importe où sur la carte",
+        filters: "Filtres d’autorisation et de blocage par site",
+        advanced: "Réglages avancés et personnalisation fine",
+        futureUpdates:
+          "Toutes les futures mises à jour, incluses dès leur sortie",
+      },
     },
   },
   footer: {
@@ -71,6 +134,7 @@ export const fr: Dictionary = {
       spoofSafari: "Simuler la position dans Safari",
       spoofTimezone: "Simuler le fuseau horaire",
       gps: "GeoSpoof GPS pour Mac",
+      pro: "GeoSpoof Pro",
       needVpn: "Avez-vous besoin d’un VPN ?",
       testProtection: "Testez votre protection",
       engineLevel: "Simulation au niveau du moteur (Chrome)",

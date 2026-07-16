@@ -25,6 +25,7 @@ export const zhCN: Dictionary = {
     home: "首页",
     features: "功能",
     gps: "GPS",
+    pro: "Pro",
     blog: "博客",
     support: "支持",
     download: "下载",
@@ -68,6 +69,63 @@ export const zhCN: Dictionary = {
       description:
         "通过 Mac 伴侣应用，把你 iPhone 的真实系统级 GPS 设置为与你伪造的位置一致。",
       cta: "了解 GeoSpoof GPS",
+      priceNote: "$1.99/月起 — 或 $24.99 永久",
+    },
+  },
+  pro: {
+    meta: {
+      title: "GeoSpoof Pro — 价格与功能 | GeoSpoof",
+      description:
+        "GeoSpoof Pro 解锁 iPhone 的设备级 GPS、自动 VPN 同步、小组件、MapKit 选择器、按站点过滤等功能。$1.99/月起，或 $24.99 一次性买断——通过 App Store 计费。",
+      ogTitle: "GeoSpoof Pro — 价格与功能",
+    },
+    hero: {
+      breadcrumbHome: "首页",
+      breadcrumb: "Pro",
+      badge: "GeoSpoof Pro",
+      heading: "解锁 GeoSpoof 的全部功能",
+      subhead:
+        "一个订阅即可解锁 GeoSpoof 在 iPhone 和 iPad 上的所有高级工具——包括可设置设备真实系统级位置的 GeoSpoof GPS。",
+    },
+    pricing: {
+      heading: "简单定价",
+      cta: "获取 GeoSpoof Pro",
+      fineprint: "通过 App Store 计费。价格可能因地区而异。可随时取消。",
+      monthly: {
+        name: "按月",
+        price: "$1.99",
+        period: "/月",
+        note: "",
+        badge: "",
+      },
+      yearly: {
+        name: "按年",
+        price: "$9.99",
+        period: "/年",
+        note: "比按月省 58%",
+        badge: "最受欢迎",
+      },
+      lifetime: {
+        name: "永久",
+        price: "$24.99",
+        period: "一次性",
+        note: "无需订阅",
+        badge: "超值",
+      },
+    },
+    features: {
+      heading: "包含内容",
+      items: {
+        everythingFree:
+          "免费版 GeoSpoof 扩展的全部功能——位置和时区伪造、WebRTC 保护，支持所有主流浏览器",
+        gps: "GeoSpoof GPS——设置 iPhone 的真实系统级 GPS（配合 Mac 伴侣应用）",
+        vpnSync: "自动 VPN 同步——你的位置在后台跟随 VPN 出口区域",
+        widgets: "主屏幕小组件和控制中心控件",
+        mapkit: "MapKit 位置选择器——在地图上任意位置放置图钉",
+        filters: "按站点的允许/拒绝过滤",
+        advanced: "高级控制与精细调节",
+        futureUpdates: "所有未来更新，随发布即含",
+      },
     },
   },
   footer: {
@@ -84,6 +142,7 @@ export const zhCN: Dictionary = {
       spoofSafari: "在 Safari 中伪造位置",
       spoofTimezone: "伪造时区",
       gps: "Mac 版 GeoSpoof GPS",
+      pro: "GeoSpoof Pro",
       needVpn: "你需要 VPN 吗？",
       testProtection: "测试你的防护",
       engineLevel: "引擎级伪装（Chrome）",

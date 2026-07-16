@@ -12,6 +12,7 @@ export const de: Dictionary = {
     home: "Start",
     features: "Funktionen",
     gps: "GPS",
+    pro: "Pro",
     blog: "Blog",
     support: "Support",
     download: "Herunterladen",
@@ -55,6 +56,66 @@ export const de: Dictionary = {
       description:
         "Setze das echte, systemweite GPS deines iPhones auf deinen gefälschten Standort — gesteuert von einer Mac-Begleit-App.",
       cta: "GeoSpoof GPS entdecken",
+      priceNote: "Ab $1.99/Mon. — oder $24.99 lebenslang",
+    },
+  },
+  pro: {
+    meta: {
+      title: "GeoSpoof Pro — Preise & Funktionen | GeoSpoof",
+      description:
+        "GeoSpoof Pro schaltet Geräte-GPS auf dem iPhone frei, dazu automatische VPN-Synchronisierung, Widgets, den MapKit-Auswähler, Filter pro Website und mehr. Ab $1.99 im Monat oder $24.99 einmalig — abgerechnet über den App Store.",
+      ogTitle: "GeoSpoof Pro — Preise & Funktionen",
+    },
+    hero: {
+      breadcrumbHome: "Start",
+      breadcrumb: "Pro",
+      badge: "GeoSpoof Pro",
+      heading: "Alles, was GeoSpoof kann — freigeschaltet",
+      subhead:
+        "Ein Abo schaltet die erweiterten Tools von GeoSpoof auf iPhone und iPad frei — darunter GeoSpoof GPS, das den echten, systemweiten Standort deines Geräts setzt.",
+    },
+    pricing: {
+      heading: "Einfache Preise",
+      cta: "GeoSpoof Pro holen",
+      fineprint:
+        "Abrechnung über den App Store. Preise können je nach Region variieren. Jederzeit kündbar.",
+      monthly: {
+        name: "Monatlich",
+        price: "$1.99",
+        period: "/Mon.",
+        note: "",
+        badge: "",
+      },
+      yearly: {
+        name: "Jährlich",
+        price: "$9.99",
+        period: "/Jahr",
+        note: "58 % günstiger als monatlich",
+        badge: "Am beliebtesten",
+      },
+      lifetime: {
+        name: "Lebenslang",
+        price: "$24.99",
+        period: "einmalig",
+        note: "Kein Abo",
+        badge: "Bester Wert",
+      },
+    },
+    features: {
+      heading: "Was enthalten ist",
+      items: {
+        everythingFree:
+          "Alles aus der kostenlosen GeoSpoof-Erweiterung — Standort- und Zeitzonen-Fälschung, WebRTC-Schutz, in jedem großen Browser",
+        gps: "GeoSpoof GPS — setze das echte, systemweite GPS deines iPhones (mit der Mac-Begleit-App)",
+        vpnSync:
+          "Automatische VPN-Synchronisierung — dein Standort folgt im Hintergrund der Exit-Region deines VPN",
+        widgets: "Home-Bildschirm-Widgets und Kontrollzentrum-Steuerelemente",
+        mapkit:
+          "MapKit-Standortauswahl — setze eine Markierung an eine beliebige Stelle der Karte",
+        filters: "Zulassen-/Sperren-Filter pro Website",
+        advanced: "Erweiterte Einstellungen und Feinabstimmung",
+        futureUpdates: "Jedes zukünftige Update inklusive, sobald es erscheint",
+      },
     },
   },
   footer: {
@@ -71,6 +132,7 @@ export const de: Dictionary = {
       spoofSafari: "Standort in Safari fälschen",
       spoofTimezone: "Zeitzone fälschen",
       gps: "GeoSpoof GPS für Mac",
+      pro: "GeoSpoof Pro",
       needVpn: "Brauchst du ein VPN?",
       testProtection: "Teste deinen Schutz",
       engineLevel: "Fälschung auf Engine-Ebene (Chrome)",

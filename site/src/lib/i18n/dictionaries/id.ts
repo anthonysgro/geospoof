@@ -12,6 +12,7 @@ export const id: Dictionary = {
     home: "Beranda",
     features: "Fitur",
     gps: "GPS",
+    pro: "Pro",
     blog: "Blog",
     support: "Dukungan",
     download: "Unduh",
@@ -55,6 +56,65 @@ export const id: Dictionary = {
       description:
         "Atur GPS asli tingkat sistem iPhone Anda agar cocok dengan lokasi palsu Anda — dikendalikan dari aplikasi pendamping Mac.",
       cta: "Jelajahi GeoSpoof GPS",
+      priceNote: "Mulai $1.99/bln — atau $24.99 seumur hidup",
+    },
+  },
+  pro: {
+    meta: {
+      title: "GeoSpoof Pro — Harga & Fitur | GeoSpoof",
+      description:
+        "GeoSpoof Pro membuka GPS tingkat perangkat di iPhone, sinkronisasi VPN otomatis, widget, pemilih MapKit, filter per situs, dan lainnya. Mulai $1.99 per bulan, atau $24.99 sekali bayar — ditagih melalui App Store.",
+      ogTitle: "GeoSpoof Pro — Harga & Fitur",
+    },
+    hero: {
+      breadcrumbHome: "Beranda",
+      breadcrumb: "Pro",
+      badge: "GeoSpoof Pro",
+      heading: "Semua kemampuan GeoSpoof, terbuka",
+      subhead:
+        "Satu langganan membuka semua alat canggih GeoSpoof di iPhone dan iPad — termasuk GeoSpoof GPS, yang mengatur lokasi asli tingkat sistem perangkat Anda.",
+    },
+    pricing: {
+      heading: "Harga sederhana",
+      cta: "Dapatkan GeoSpoof Pro",
+      fineprint:
+        "Ditagih melalui App Store. Harga dapat berbeda menurut wilayah. Batalkan kapan saja.",
+      monthly: {
+        name: "Bulanan",
+        price: "$1.99",
+        period: "/bln",
+        note: "",
+        badge: "",
+      },
+      yearly: {
+        name: "Tahunan",
+        price: "$9.99",
+        period: "/thn",
+        note: "Hemat 58% dibanding bulanan",
+        badge: "Terpopuler",
+      },
+      lifetime: {
+        name: "Seumur hidup",
+        price: "$24.99",
+        period: "sekali",
+        note: "Tanpa langganan",
+        badge: "Nilai terbaik",
+      },
+    },
+    features: {
+      heading: "Yang termasuk",
+      items: {
+        everythingFree:
+          "Semua yang ada di ekstensi GeoSpoof gratis — pemalsuan lokasi & zona waktu, perlindungan WebRTC, di semua browser utama",
+        gps: "GeoSpoof GPS — atur GPS asli tingkat sistem iPhone Anda (dengan aplikasi pendamping Mac)",
+        vpnSync:
+          "Sinkronisasi VPN otomatis — lokasi Anda mengikuti wilayah keluar VPN di latar belakang",
+        widgets: "Widget Layar Utama dan kontrol Pusat Kontrol",
+        mapkit: "Pemilih lokasi MapKit — jatuhkan pin di mana saja pada peta",
+        filters: "Filter izinkan dan tolak per situs",
+        advanced: "Kontrol lanjutan dan penyetelan halus",
+        futureUpdates: "Setiap pembaruan mendatang, termasuk begitu dirilis",
+      },
     },
   },
   footer: {
@@ -71,6 +131,7 @@ export const id: Dictionary = {
       spoofSafari: "Palsukan lokasi di Safari",
       spoofTimezone: "Palsukan zona waktu",
       gps: "GeoSpoof GPS untuk Mac",
+      pro: "GeoSpoof Pro",
       needVpn: "Apakah Anda perlu VPN?",
       testProtection: "Uji perlindungan Anda",
       engineLevel: "Pemalsuan tingkat mesin (Chrome)",

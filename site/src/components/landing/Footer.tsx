@@ -37,6 +37,7 @@ function getFooterGroups(t: Dictionary): Array<FooterGroup> {
         { label: t.footer.links.spoofSafari, href: "/spoof-location/safari" },
         { label: t.footer.links.spoofTimezone, href: "/spoof-timezone" },
         { label: t.footer.links.gps, href: "/gps" },
+        { label: t.footer.links.pro, href: "/pro" },
       ],
     },
     {

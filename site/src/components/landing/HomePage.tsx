@@ -55,6 +55,7 @@ export function HomePage() {
         dangerouslySetInnerHTML={{
           __html: JSON.stringify([
             softwareApplicationSchema,
+            iosAppSchema,
             organizationSchema,
             demoVideoSchema,
           ]),
@@ -180,6 +181,65 @@ const softwareApplicationSchema = {
   sameAs: ["https://github.com/anthonysgro/geospoof"],
 }
 
+/** Canonical App Store listing for the GeoSpoof iOS app (no tracking params). */
+const APP_STORE_URL = "https://apps.apple.com/app/id6765719745"
+
+// GeoSpoof for iPhone & iPad — the paid, device-level product, modeled as its
+// own MobileApplication. This is the key fix: without it, GeoSpoof is described
+// to Google + AI answer engines only as a free BrowserApplication, so the
+// revenue product (device-level GPS on iOS) is invisible for queries like
+// "change my iPhone's real GPS". Distinct from the free extension above and the
+// macOS "GeoSpoof GPS" entity on /gps.
+const iosAppSchema = {
+  "@context": "https://schema.org",
+  "@type": "MobileApplication",
+  name: "GeoSpoof for iPhone & iPad",
+  description:
+    "The GeoSpoof app for iPhone and iPad: free Safari geolocation and timezone spoofing, plus GeoSpoof GPS — a Pro upgrade that sets your device's real, system-level GPS to match your spoofed location, driven from a macOS companion app.",
+  url: APP_STORE_URL,
+  image: `${SITE_URL}/icon.png`,
+  applicationCategory: "UtilitiesApplication",
+  operatingSystem: "iOS, iPadOS",
+  downloadUrl: APP_STORE_URL,
+  // Free to download; GeoSpoof Pro (device GPS + advanced tools) is a paid
+  // in-app subscription. US base prices — Apple localizes per storefront.
+  isAccessibleForFree: true,
+  offers: [
+    { "@type": "Offer", price: "0", priceCurrency: "USD" },
+    {
+      "@type": "Offer",
+      name: "GeoSpoof Pro — Monthly",
+      price: "1.99",
+      priceCurrency: "USD",
+    },
+    {
+      "@type": "Offer",
+      name: "GeoSpoof Pro — Yearly",
+      price: "9.99",
+      priceCurrency: "USD",
+    },
+    {
+      "@type": "Offer",
+      name: "GeoSpoof Pro — Lifetime",
+      price: "24.99",
+      priceCurrency: "USD",
+    },
+  ],
+  featureList: [
+    "Spoof Safari geolocation and timezone on iPhone and iPad (free)",
+    "GeoSpoof GPS (Pro): set your iPhone's real, system-level GPS to your spoofed location",
+    "Driven from a macOS companion app — no jailbreak required",
+    "Per-site rules and saved locations",
+  ],
+  author: { "@type": "Person", name: "Anthony Sgro" },
+  publisher: {
+    "@type": "Organization",
+    name: "GeoSpoof",
+    logo: { "@type": "ImageObject", url: `${SITE_URL}/icon.png` },
+  },
+  sameAs: [APP_STORE_URL],
+}
+
 // Organization schema — feeds entity recognition and the logo shown beside
 // results / in knowledge panels.
 const organizationSchema = {
@@ -188,7 +248,7 @@ const organizationSchema = {
   name: "GeoSpoof",
   url: SITE_URL,
   logo: `${SITE_URL}/icon.png`,
-  sameAs: ["https://github.com/anthonysgro/geospoof"],
+  sameAs: ["https://github.com/anthonysgro/geospoof", APP_STORE_URL],
 }
 
 // VideoObject schema — describes the homepage demo clip. The explicit
