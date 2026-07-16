@@ -38,6 +38,25 @@ export const id: Dictionary = {
     mainPhoneAlt: "Aplikasi GeoSpoof — tampilan utama",
     secondaryPhoneAlt: "Aplikasi GeoSpoof — tampilan kedua",
   },
+  products: {
+    eyebrow: "Produk",
+    heading: "Dua produk, satu cerita lokasi",
+    subhead:
+      "Mulai gratis di browser Anda. Turun ke tingkat perangkat di iPhone Anda saat GPS asli Anda perlu ikut menyesuaikan.",
+    free: {
+      badge: "Gratis",
+      title: "GeoSpoof untuk browser Anda",
+      description:
+        "Palsukan geolokasi, zona waktu, dan WebRTC di Chrome, Firefox, Edge, Brave, dan Safari. Tanpa akun, tanpa pelacakan.",
+    },
+    pro: {
+      badge: "Pro",
+      title: "GeoSpoof GPS",
+      description:
+        "Atur GPS asli tingkat sistem iPhone Anda agar cocok dengan lokasi palsu Anda — dikendalikan dari aplikasi pendamping Mac.",
+      cta: "Jelajahi GeoSpoof GPS",
+    },
+  },
   footer: {
     groups: {
       guides: "Panduan",

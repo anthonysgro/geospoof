@@ -1,6 +1,7 @@
 import type { Locale } from "@/lib/i18n"
 import { Navigation } from "@/components/landing/Navigation"
 import { HeroSection } from "@/components/landing/HeroSection"
+import { ProductsSection } from "@/components/landing/ProductsSection"
 import { FeaturesSection } from "@/components/landing/FeaturesSection"
 import { ComparisonSection } from "@/components/landing/ComparisonSection"
 import { ScreenshotsSection } from "@/components/landing/ScreenshotsSection"
@@ -33,6 +34,7 @@ export function HomePage() {
       <Navigation />
       <main id="main-content">
         <HeroSection />
+        <ProductsSection />
         <TestimonialsSection />
         <ScreenshotsSection />
         <DemoVideoSection />

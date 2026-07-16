@@ -50,6 +50,25 @@ export const ru: Dictionary = {
     mainPhoneAlt: "Приложение GeoSpoof — главный экран",
     secondaryPhoneAlt: "Приложение GeoSpoof — второй экран",
   },
+  products: {
+    eyebrow: "Продукты",
+    heading: "Два продукта, одна история о местоположении",
+    subhead:
+      "Начните бесплатно в браузере. Опуститесь на уровень устройства на iPhone, когда нужно, чтобы совпадал и реальный GPS.",
+    free: {
+      badge: "Бесплатно",
+      title: "GeoSpoof для браузера",
+      description:
+        "Подмена геолокации, часового пояса и WebRTC в Chrome, Firefox, Edge, Brave и Safari. Без аккаунта, без слежки.",
+    },
+    pro: {
+      badge: "Pro",
+      title: "GeoSpoof GPS",
+      description:
+        "Меняет реальное системное местоположение iPhone так, чтобы оно совпало с вашим подменённым местоположением — под управлением приложения-компаньона для Mac.",
+      cta: "Открыть GeoSpoof GPS",
+    },
+  },
   footer: {
     groups: {
       guides: "Руководства",

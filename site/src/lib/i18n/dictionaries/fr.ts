@@ -38,6 +38,25 @@ export const fr: Dictionary = {
     mainPhoneAlt: "Application GeoSpoof — écran principal",
     secondaryPhoneAlt: "Application GeoSpoof — écran secondaire",
   },
+  products: {
+    eyebrow: "Produits",
+    heading: "Deux produits, une seule histoire de position",
+    subhead:
+      "Commencez gratuitement dans votre navigateur. Passez au niveau de l’appareil sur votre iPhone quand votre vrai GPS doit suivre.",
+    free: {
+      badge: "Gratuit",
+      title: "GeoSpoof pour votre navigateur",
+      description:
+        "Simulez votre géolocalisation, votre fuseau horaire et le WebRTC sur Chrome, Firefox, Edge, Brave et Safari. Sans compte, sans traçage.",
+    },
+    pro: {
+      badge: "Pro",
+      title: "GeoSpoof GPS",
+      description:
+        "Réglez le vrai GPS système de votre iPhone pour qu’il corresponde à votre position simulée — piloté depuis une app compagnon sur Mac.",
+      cta: "Découvrir GeoSpoof GPS",
+    },
+  },
   footer: {
     groups: {
       guides: "Guides",

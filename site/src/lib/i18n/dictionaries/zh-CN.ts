@@ -51,6 +51,25 @@ export const zhCN: Dictionary = {
     mainPhoneAlt: "GeoSpoof 应用——主界面",
     secondaryPhoneAlt: "GeoSpoof 应用——次要界面",
   },
+  products: {
+    eyebrow: "产品",
+    heading: "两款产品，一个位置故事",
+    subhead:
+      "先在浏览器里免费开始。当你需要连真实 GPS 也保持一致时，就深入到设备层面。",
+    free: {
+      badge: "免费",
+      title: "浏览器版 GeoSpoof",
+      description:
+        "在 Chrome、Firefox、Edge、Brave 和 Safari 上伪造地理位置、时区和 WebRTC。无需账户，无跟踪。",
+    },
+    pro: {
+      badge: "Pro",
+      title: "GeoSpoof GPS",
+      description:
+        "通过 Mac 伴侣应用，把你 iPhone 的真实系统级 GPS 设置为与你伪造的位置一致。",
+      cta: "了解 GeoSpoof GPS",
+    },
+  },
   footer: {
     groups: {
       guides: "指南",

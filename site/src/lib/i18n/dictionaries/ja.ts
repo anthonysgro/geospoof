@@ -38,6 +38,25 @@ export const ja: Dictionary = {
     mainPhoneAlt: "GeoSpoof アプリ — メイン画面",
     secondaryPhoneAlt: "GeoSpoof アプリ — サブ画面",
   },
+  products: {
+    eyebrow: "製品",
+    heading: "2 つの製品、ひとつの位置情報",
+    subhead:
+      "まずはブラウザで無料で。iPhone の本当の GPS まで合わせたくなったら、デバイスレベルへ進みましょう。",
+    free: {
+      badge: "無料",
+      title: "ブラウザ向け GeoSpoof",
+      description:
+        "Chrome、Firefox、Edge、Brave、Safari で位置情報・タイムゾーン・WebRTC を偽装。アカウント不要、トラッキングなし。",
+    },
+    pro: {
+      badge: "Pro",
+      title: "GeoSpoof GPS",
+      description:
+        "Mac のコンパニオンアプリから、iPhone の実際のシステム GPS を偽装した位置に合わせます。",
+      cta: "GeoSpoof GPS を見る",
+    },
+  },
   footer: {
     groups: {
       guides: "ガイド",

@@ -40,6 +40,25 @@ export const en = {
     mainPhoneAlt: "GeoSpoof app — main view",
     secondaryPhoneAlt: "GeoSpoof app — secondary view",
   },
+  products: {
+    eyebrow: "Products",
+    heading: "Two products, one location story",
+    subhead:
+      "Start free in your browser. Go device-deep on your iPhone when you need your real GPS to match.",
+    free: {
+      badge: "Free",
+      title: "GeoSpoof for your browser",
+      description:
+        "Spoof your geolocation, timezone, and WebRTC across Chrome, Firefox, Edge, Brave, and Safari. No account, no tracking.",
+    },
+    pro: {
+      badge: "Pro",
+      title: "GeoSpoof GPS",
+      description:
+        "Move your iPhone's real, system-level GPS to match your spoofed location — driven from a Mac companion app.",
+      cta: "Explore GeoSpoof GPS",
+    },
+  },
   footer: {
     groups: {
       guides: "Guides",
