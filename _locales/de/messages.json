@@ -301,6 +301,14 @@
     "message": "Standort festlegen",
     "description": "Button that applies the manually entered coordinates."
   },
+  "coords_pasteHint": {
+    "message": "Tipp: Füge ein Koordinatenpaar oder einen Geohash ein",
+    "description": "Discovery hint under the coordinate inputs telling the user they can paste a lat/lon pair, DMS, or a geohash instead of typing."
+  },
+  "coords_pasteFailed": {
+    "message": "Koordinaten konnten nicht gelesen werden – versuche ein Koordinatenpaar oder einen Geohash",
+    "description": "Inline error shown under the coordinate inputs when a pasted string looked like a coordinate but could not be parsed."
+  },
   "coords_invalidLat": {
     "message": "Ungültiger Breitengrad. Muss zwischen -90 und 90 liegen.",
     "description": "Validation error shown when latitude is out of range."

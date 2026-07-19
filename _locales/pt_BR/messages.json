@@ -301,6 +301,14 @@
     "message": "Definir localização",
     "description": "Button that applies the manually entered coordinates."
   },
+  "coords_pasteHint": {
+    "message": "Dica: cole um par de coordenadas ou um geohash",
+    "description": "Discovery hint under the coordinate inputs telling the user they can paste a lat/lon pair, DMS, or a geohash instead of typing."
+  },
+  "coords_pasteFailed": {
+    "message": "Não foi possível ler as coordenadas — tente um par de coordenadas ou um geohash",
+    "description": "Inline error shown under the coordinate inputs when a pasted string looked like a coordinate but could not be parsed."
+  },
   "coords_invalidLat": {
     "message": "Latitude inválida. Deve estar entre -90 e 90.",
     "description": "Validation error shown when latitude is out of range."

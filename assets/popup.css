@@ -643,6 +643,17 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   border-color: var(--brand);
 }
 
+.coords-paste-hint {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.coords-paste-hint.error {
+  color: var(--danger);
+}
+
 .manual-coords button {
   width: 100%;
   padding: 10px;

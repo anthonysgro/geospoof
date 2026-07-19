@@ -197,9 +197,17 @@ export async function loadSettings(preloaded?: Settings): Promise<void> {
         if (resyncBtn) resyncBtn.style.display = "block";
       }
     } else {
+      // Not in VPN sync mode: show the tabs and keep whichever input mode the
+      // user currently has selected (default: search). Reloading settings after
+      // applying a location must NOT force the view back to search, or the
+      // coordinates tab would collapse out from under the user every time they
+      // paste coordinates or click Set Location.
+      const coordsTabActive = document
+        .getElementById("coordsModeTab")
+        ?.classList.contains("active");
       if (inputModeTabs) inputModeTabs.style.display = "";
-      if (searchPanel) searchPanel.style.display = "block";
-      if (coordsPanel) coordsPanel.style.display = "none";
+      if (searchPanel) searchPanel.style.display = coordsTabActive ? "none" : "block";
+      if (coordsPanel) coordsPanel.style.display = coordsTabActive ? "block" : "none";
       if (vpnPanel) vpnPanel.style.display = "none";
     }
 

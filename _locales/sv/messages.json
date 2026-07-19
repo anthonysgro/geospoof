@@ -301,6 +301,14 @@
     "message": "Ställ in plats",
     "description": "Button that applies the manually entered coordinates."
   },
+  "coords_pasteHint": {
+    "message": "Tips: klistra in ett koordinatpar eller en geohash",
+    "description": "Discovery hint under the coordinate inputs telling the user they can paste a lat/lon pair, DMS, or a geohash instead of typing."
+  },
+  "coords_pasteFailed": {
+    "message": "Kunde inte läsa koordinater — prova ett koordinatpar eller en geohash",
+    "description": "Inline error shown under the coordinate inputs when a pasted string looked like a coordinate but could not be parsed."
+  },
   "coords_invalidLat": {
     "message": "Ogiltig latitud. Måste vara mellan -90 och 90.",
     "description": "Validation error shown when latitude is out of range."

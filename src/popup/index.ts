@@ -13,6 +13,7 @@ import { wireEarlyProtectionToggle } from "./early-protection";
 import { wireDebuggerModeToggle } from "./debugger-mode";
 import { applyI18n, t, initI18n, resetI18nOverride, browserUiLanguage } from "./i18n";
 import { initAccuracyControl } from "./accuracy";
+import { wireCoordinatePaste } from "./coord-paste";
 import { SUPPORTED_UI_LOCALES, resolveUiLocale } from "@/shared/i18n/locales";
 
 // --- Location setting ---
@@ -621,6 +622,13 @@ document.addEventListener("DOMContentLoaded", () => {
   // Wire the accuracy control (Advanced accordion). State is restored later in
   // loadSettings() from the stored accuracySetting.
   initAccuracyControl();
+
+  // Wire convenient coordinate pasting: pasting a "lat, lon" pair, a DMS string,
+  // or a geohash into the manual-coordinates inputs parses it and applies the
+  // location. Permission-free (uses the paste event, not clipboard.readText()).
+  wireCoordinatePaste((latitude, longitude) => {
+    void setLocation(latitude, longitude);
+  });
 
   const versionLabel = document.getElementById("versionLabel");
   if (versionLabel) {
