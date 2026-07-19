@@ -1145,25 +1145,25 @@ final class SpoofController: ObservableObject {
         writePending()
     }
 
-    /// Add a domain to the given list. The input is lightly normalized here for
-    /// immediate display; the extension re-normalizes authoritatively on adopt
-    /// and pushes the canonical list back. The result distinguishes an invalid
-    /// domain from one that's already present, so the UI can show an accurate
-    /// hint rather than a generic "invalid" message.
+    /// Add a site-filter pattern to the given list. The input is normalized here
+    /// for immediate display; the extension re-normalizes authoritatively on
+    /// adopt and pushes the canonical list back. The result distinguishes an
+    /// invalid pattern from one that's already present, so the UI can show an
+    /// accurate hint rather than a generic "invalid" message.
     @discardableResult
     func addScopeSite(_ raw: String, to mode: ScopeMode) -> ScopeAddResult {
-        guard let domain = Self.normalizeDomainInput(raw) else { return .invalid }
+        guard let pattern = Self.normalizePatternInput(raw) else { return .invalid }
         switch mode {
         case .allowlist:
-            guard !allowlist.contains(domain) else { return .duplicate }
-            allowlist.append(domain)
+            guard !allowlist.contains(pattern) else { return .duplicate }
+            allowlist.append(pattern)
         case .denylist:
-            guard !denylist.contains(domain) else { return .duplicate }
-            denylist.append(domain)
+            guard !denylist.contains(pattern) else { return .duplicate }
+            denylist.append(pattern)
         case .all:
             return .invalid
         }
-        Log.location.info("Scope site added to \(mode.rawValue): \(domain)")
+        Log.location.info("Scope site added to \(mode.rawValue): \(pattern)")
         Haptics.impact(.light)
         writePending()
         return .added
@@ -1190,30 +1190,175 @@ final class SpoofController: ObservableObject {
         }
     }
 
-    /// Light domain cleanup mirroring `normalizeDomain` in
-    /// src/shared/utils/scope.ts: trim, lowercase, strip scheme / a single
-    /// leading `www.` / path / port / query / fragment, and require at least one
-    /// dot with DNS-legal characters. Returns nil for unusable input. The
-    /// extension is the authoritative normalizer; this just keeps obvious junk
-    /// out of the UI and out of the pending record.
-    static func normalizeDomainInput(_ raw: String) -> String? {
-        guard raw.count <= 2048 else { return nil }
-        var s = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if s.hasPrefix("https://") { s.removeFirst("https://".count) }
-        else if s.hasPrefix("http://") { s.removeFirst("http://".count) }
-        while s.hasPrefix("www.") { s.removeFirst("www.".count) }
-        if let cut = s.firstIndex(where: { $0 == "/" || $0 == ":" || $0 == "?" || $0 == "#" }) {
-            s = String(s[s.startIndex..<cut])
+    // MARK: Site-filter pattern parsing
+
+    /// Allowed characters in a single DNS label: lowercase letters, digits, hyphen.
+    private static let patternLabelChars = Set("abcdefghijklmnopqrstuvwxyz0123456789-")
+    /// Allowed characters in a pattern path: URL-path chars plus the `*` wildcard.
+    private static let patternPathChars =
+        Set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._~%/*-")
+    /// ASCII digits, for ports and IPv4 octets.
+    private static let patternDigits = Set("0123456789")
+
+    /// Maximum accepted raw input length before trimming (mirrors MAX_INPUT_LENGTH).
+    private static let patternMaxInputLength = 2048
+    /// Maximum total normalized hostname length (mirrors MAX_HOSTNAME_LENGTH).
+    private static let patternMaxHostnameLength = 253
+    /// Maximum single DNS-label length (mirrors MAX_LABEL_LENGTH).
+    private static let patternMaxLabelLength = 63
+
+    /// Parse and canonicalize a user-entered glob-style URL pattern, or return
+    /// nil when it does not conform to the grammar. This is a byte-for-byte
+    /// Swift port of `parsePattern` in src/shared/utils/scope.ts — the two MUST
+    /// produce identical canonical output for every input, because scope lists
+    /// round-trip across the App Group bridge and are deduped against each
+    /// other's canonical form. Parity is pinned by the shared fixture at
+    /// tests/fixtures/pattern-vectors.json (see PatternParserParityTests).
+    ///
+    /// Grammar: `[scheme://]host[:port][/path]`, where `*` is the only wildcard.
+    ///   host — `*` (any) | `*.labels` (subdomains, e.g. `*.ru`) | an IPv4
+    ///          literal | `localhost` | labels with >= 1 dot (apex + subdomains).
+    ///          A bare single label other than `localhost` is rejected so a bare
+    ///          TLD can't silently match an entire suffix (use `*.com`).
+    ///   port — 1–5 digits (<= 65535), or `*` which collapses to "any" (no suffix).
+    ///   path — URL-path characters + `*`; its case is preserved (host and scheme
+    ///          are lowercased). A bare `/` means "the whole site" and is dropped.
+    ///
+    /// The extension remains the authoritative normalizer; this keeps the app's
+    /// own entry validation in lockstep so valid patterns aren't rejected at the
+    /// door and canonical forms match what the extension will store.
+    static func normalizePatternInput(_ raw: String) -> String? {
+        // Reject over-length input before any other work. JS measures string
+        // length in UTF-16 code units, so match that here.
+        guard raw.utf16.count <= patternMaxInputLength else { return nil }
+
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return nil }
+
+        // Optional scheme (`http` / `https` / `*`), matched case-insensitively
+        // and lowercased in the canonical form. Drop from the ORIGINAL-case
+        // string so the path keeps its case.
+        var scheme = ""
+        var remainder = trimmed
+        let lower = trimmed.lowercased()
+        if lower.hasPrefix("https://") {
+            scheme = "https"
+            remainder = String(trimmed.dropFirst("https://".count))
+        } else if lower.hasPrefix("http://") {
+            scheme = "http"
+            remainder = String(trimmed.dropFirst("http://".count))
+        } else if lower.hasPrefix("*://") {
+            scheme = "*"
+            remainder = String(trimmed.dropFirst("*://".count))
         }
-        guard !s.isEmpty, s.contains(".") else { return nil }
-        let labels = s.split(separator: ".", omittingEmptySubsequences: false)
-        let allowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyz0123456789-")
-        for label in labels {
-            if label.isEmpty || label.count > 63 { return nil }
-            if label.hasPrefix("-") || label.hasSuffix("-") { return nil }
-            if label.unicodeScalars.contains(where: { !allowed.contains($0) }) { return nil }
+
+        // The query and fragment are never matched — drop from the first ? or #.
+        if let cut = remainder.firstIndex(where: { $0 == "?" || $0 == "#" }) {
+            remainder = String(remainder[remainder.startIndex..<cut])
         }
-        return s.count <= 253 ? s : nil
+
+        // Split the authority (`host[:port]`) from the path at the first `/`.
+        // The path keeps its leading `/`.
+        let authority: String
+        var path: String
+        if let slash = remainder.firstIndex(of: "/") {
+            authority = String(remainder[remainder.startIndex..<slash])
+            path = String(remainder[slash...])
+        } else {
+            authority = remainder
+            path = ""
+        }
+
+        // Split the host from an optional port at the first `:`. The host is
+        // lowercased; the path is not.
+        let host: String
+        let port: String
+        let hasPort: Bool
+        if let colon = authority.firstIndex(of: ":") {
+            host = String(authority[authority.startIndex..<colon]).lowercased()
+            port = String(authority[authority.index(after: colon)...])
+            hasPort = true
+        } else {
+            host = authority.lowercased()
+            port = ""
+            hasPort = false
+        }
+
+        // Validate the host.
+        guard isPatternHostValid(host) else { return nil }
+
+        // Validate + normalize the port into a canonical suffix. `*` (any port)
+        // collapses to no suffix — identical in meaning to omitting the port —
+        // and a numeric port is range-checked and stripped of leading zeros.
+        var portPart = ""
+        if hasPort && port != "*" {
+            guard port.count >= 1, port.count <= 5,
+                port.allSatisfy({ patternDigits.contains($0) }),
+                let value = Int(port), value <= 65535
+            else { return nil }
+            portPart = ":\(value)"
+        }
+
+        // A bare "/" path means "the whole site" — treat it as no path so
+        // `example.com/` matches every path and stays idempotent.
+        if path == "/" { path = "" }
+        // A present path may contain only URL-path characters and `*`. Since the
+        // path was split at the first `/`, it always begins with `/` (which is in
+        // the allowed set), so this is equivalent to the TS anchored regex.
+        if !path.isEmpty && !path.allSatisfy({ patternPathChars.contains($0) }) {
+            return nil
+        }
+
+        // Emit the canonical form. The scheme is kept only when explicitly given,
+        // a leading `*.` is preserved, `www.` is NOT stripped, and the path keeps
+        // its original case.
+        let schemePart = scheme.isEmpty ? "" : "\(scheme)://"
+        return "\(schemePart)\(host)\(portPart)\(path)"
+    }
+
+    /// True when `host` is a sequence of one or more valid DNS labels within the
+    /// total hostname length cap. Mirrors `isValidLabelSequence` in scope.ts.
+    private static func isPatternLabelSequence(_ host: String) -> Bool {
+        if host.isEmpty || host.count > patternMaxHostnameLength { return false }
+        // Match JS `split(".")`, which keeps empty labels (Swift omits them by
+        // default), so `a..b` and a trailing dot are rejected as intended.
+        for label in host.split(separator: ".", omittingEmptySubsequences: false) {
+            if label.isEmpty || label.count > patternMaxLabelLength { return false }
+            if label.hasPrefix("-") || label.hasSuffix("-") { return false }
+            if !label.allSatisfy({ patternLabelChars.contains($0) }) { return false }
+        }
+        return true
+    }
+
+    /// True when `host` is a dotted IPv4 literal with four octets, each 0–255.
+    /// Mirrors `isValidIpv4` in scope.ts.
+    private static func isPatternIpv4(_ host: String) -> Bool {
+        let octets = host.split(separator: ".", omittingEmptySubsequences: false)
+        if octets.count != 4 { return false }
+        for octet in octets {
+            if octet.isEmpty || octet.count > 3 { return false }
+            if !octet.allSatisfy({ patternDigits.contains($0) }) { return false }
+            guard let value = Int(octet), value <= 255 else { return false }
+        }
+        return true
+    }
+
+    /// Validate the (already-lowercased) host component of a pattern. Mirrors
+    /// `isValidHost` in scope.ts.
+    private static func isPatternHostValid(_ host: String) -> Bool {
+        if host == "*" { return true }
+        if host.hasPrefix("*.") {
+            let rest = String(host.dropFirst(2))
+            return !rest.contains("*") && isPatternLabelSequence(rest)
+        }
+        if host.contains("*") { return false }
+        if host == "localhost" { return true }
+        // All-digits-and-dots hosts must be a valid IPv4 literal.
+        if !host.isEmpty && host.allSatisfy({ $0 == "." || patternDigits.contains($0) }) {
+            return isPatternIpv4(host)
+        }
+        if !host.contains(".") { return false }
+        return isPatternLabelSequence(host)
     }
 
 

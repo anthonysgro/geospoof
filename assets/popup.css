@@ -2146,6 +2146,19 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   line-height: 1.5;
 }
 
+.scope-syntax-reference {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--brand);
+  text-decoration: none;
+}
+
+.scope-syntax-reference:hover {
+  text-decoration: underline;
+}
+
 .scope-empty {
   color: var(--text-subtle);
   font-size: 13px;

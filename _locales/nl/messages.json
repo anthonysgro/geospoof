@@ -100,8 +100,8 @@
     "description": "Button that adds the typed domain to the active list."
   },
   "filters_invalidDomain": {
-    "message": "Geen geldig domein",
-    "description": "Inline message shown when the typed domain is invalid."
+    "message": "Geen geldig patroon",
+    "description": "Inline message shown when the typed pattern is invalid."
   },
   "filters_emptyList": {
     "message": "Nog geen sites toegevoegd",
@@ -164,8 +164,12 @@
     "description": "Explains the path pattern form (e.g. site.com/app/*) in the syntax reference."
   },
   "filters_syntaxNotes": {
-    "message": "Alleen * is een jokerteken — reguliere expressies worden niet ondersteund. Padpatronen komen alleen overeen met het URL-pad (niet met querystrings of #hash-routes), en een padwijziging wordt van kracht nadat de pagina opnieuw is geladen.",
-    "description": "The unsupported-cases and limitations note at the bottom of the syntax reference."
+    "message": "Alleen * is een jokerteken — reguliere expressies worden niet ondersteund.",
+    "description": "The short capability note at the bottom of the syntax reference."
+  },
+  "filters_syntaxReference": {
+    "message": "Volledige referentie bekijken →",
+    "description": "Link at the bottom of the syntax reference that opens the full Site Filters documentation on GitHub."
   },
   "toggle_locationProtection": {
     "message": "Locatiebescherming",

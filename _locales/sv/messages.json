@@ -100,8 +100,8 @@
     "description": "Button that adds the typed domain to the active list."
   },
   "filters_invalidDomain": {
-    "message": "Inte en giltig domän",
-    "description": "Inline message shown when the typed domain is invalid."
+    "message": "Inte ett giltigt mönster",
+    "description": "Inline message shown when the typed pattern is invalid."
   },
   "filters_emptyList": {
     "message": "Inga webbplatser tillagda ännu",
@@ -164,8 +164,12 @@
     "description": "Explains the path pattern form (e.g. site.com/app/*) in the syntax reference."
   },
   "filters_syntaxNotes": {
-    "message": "Endast * är ett jokertecken – reguljära uttryck stöds inte. Sökvägsmönster matchar bara URL-sökvägen (inte frågesträngar eller #hash-rutter), och en ändring av sökvägen träder i kraft efter att sidan har laddats om.",
-    "description": "The unsupported-cases and limitations note at the bottom of the syntax reference."
+    "message": "Endast * är ett jokertecken – reguljära uttryck stöds inte.",
+    "description": "The short capability note at the bottom of the syntax reference."
+  },
+  "filters_syntaxReference": {
+    "message": "Se fullständig referens →",
+    "description": "Link at the bottom of the syntax reference that opens the full Site Filters documentation on GitHub."
   },
   "toggle_locationProtection": {
     "message": "Platsskydd",

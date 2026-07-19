@@ -100,8 +100,8 @@
     "description": "Button that adds the typed domain to the active list."
   },
   "filters_invalidDomain": {
-    "message": "Tên miền không hợp lệ",
-    "description": "Inline message shown when the typed domain is invalid."
+    "message": "Mẫu không hợp lệ",
+    "description": "Inline message shown when the typed pattern is invalid."
   },
   "filters_emptyList": {
     "message": "Chưa thêm trang web nào",
@@ -164,8 +164,12 @@
     "description": "Explains the path pattern form (e.g. site.com/app/*) in the syntax reference."
   },
   "filters_syntaxNotes": {
-    "message": "Chỉ * là ký tự đại diện — không hỗ trợ biểu thức chính quy. Mẫu đường dẫn chỉ khớp với đường dẫn URL (không khớp chuỗi truy vấn hoặc tuyến #hash), và thay đổi đường dẫn có hiệu lực sau khi tải lại trang.",
-    "description": "The unsupported-cases and limitations note at the bottom of the syntax reference."
+    "message": "Chỉ * là ký tự đại diện — không hỗ trợ biểu thức chính quy.",
+    "description": "The short capability note at the bottom of the syntax reference."
+  },
+  "filters_syntaxReference": {
+    "message": "Xem tài liệu đầy đủ →",
+    "description": "Link at the bottom of the syntax reference that opens the full Site Filters documentation on GitHub."
   },
   "toggle_locationProtection": {
     "message": "Bảo vệ vị trí",

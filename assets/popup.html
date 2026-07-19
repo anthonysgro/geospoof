@@ -549,7 +549,7 @@
             style="display: none"
             data-i18n="filters_invalidDomain"
           >
-            Not a valid domain
+            Not a valid pattern
           </div>
 
           <!-- Inline status for the add-current-site action (restricted page
@@ -593,10 +593,17 @@
                 </div>
               </dl>
               <p class="scope-syntax-note" data-i18n="filters_syntaxNotes">
-                Only * is a wildcard — regular expressions aren't supported. Path patterns match the
-                URL path only (not query strings or #hash routes), and a path change takes effect
-                after the page reloads.
+                Only * is a wildcard — no regular expressions.
               </p>
+              <a
+                class="scope-syntax-reference"
+                href="https://github.com/anthonysgro/geospoof/blob/main/docs/SITE_FILTERS.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                data-i18n="filters_syntaxReference"
+              >
+                See full reference →
+              </a>
             </div>
           </details>
 

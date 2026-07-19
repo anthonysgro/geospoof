@@ -100,8 +100,8 @@
     "description": "Button that adds the typed domain to the active list."
   },
   "filters_invalidDomain": {
-    "message": "Dominio no válido",
-    "description": "Inline message shown when the typed domain is invalid."
+    "message": "Patrón no válido",
+    "description": "Inline message shown when the typed pattern is invalid."
   },
   "filters_emptyList": {
     "message": "Aún no se han añadido sitios",
@@ -164,8 +164,12 @@
     "description": "Explains the path pattern form (e.g. site.com/app/*) in the syntax reference."
   },
   "filters_syntaxNotes": {
-    "message": "Solo * es un comodín; no se admiten expresiones regulares. Los patrones de ruta coinciden solo con la ruta de la URL (no con cadenas de consulta ni rutas #hash), y un cambio de ruta surte efecto después de recargar la página.",
-    "description": "The unsupported-cases and limitations note at the bottom of the syntax reference."
+    "message": "Solo * es un comodín; no se admiten expresiones regulares.",
+    "description": "The short capability note at the bottom of the syntax reference."
+  },
+  "filters_syntaxReference": {
+    "message": "Ver referencia completa →",
+    "description": "Link at the bottom of the syntax reference that opens the full Site Filters documentation on GitHub."
   },
   "toggle_locationProtection": {
     "message": "Protección de ubicación",

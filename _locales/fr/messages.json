@@ -100,8 +100,8 @@
     "description": "Button that adds the typed domain to the active list."
   },
   "filters_invalidDomain": {
-    "message": "Domaine non valide",
-    "description": "Inline message shown when the typed domain is invalid."
+    "message": "Motif non valide",
+    "description": "Inline message shown when the typed pattern is invalid."
   },
   "filters_emptyList": {
     "message": "Aucun site ajouté pour le moment",
@@ -164,8 +164,12 @@
     "description": "Explains the path pattern form (e.g. site.com/app/*) in the syntax reference."
   },
   "filters_syntaxNotes": {
-    "message": "Seul * est un caractère générique ; les expressions régulières ne sont pas prises en charge. Les motifs de chemin ne correspondent qu'au chemin de l'URL (pas aux chaînes de requête ni aux routes #hash), et une modification du chemin prend effet après le rechargement de la page.",
-    "description": "The unsupported-cases and limitations note at the bottom of the syntax reference."
+    "message": "Seul * est un caractère générique ; les expressions régulières ne sont pas prises en charge.",
+    "description": "The short capability note at the bottom of the syntax reference."
+  },
+  "filters_syntaxReference": {
+    "message": "Voir la référence complète →",
+    "description": "Link at the bottom of the syntax reference that opens the full Site Filters documentation on GitHub."
   },
   "toggle_locationProtection": {
     "message": "Protection de localisation",

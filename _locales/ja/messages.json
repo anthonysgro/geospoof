@@ -100,8 +100,8 @@
     "description": "Button that adds the typed domain to the active list."
   },
   "filters_invalidDomain": {
-    "message": "有効なドメインではありません",
-    "description": "Inline message shown when the typed domain is invalid."
+    "message": "有効なパターンではありません",
+    "description": "Inline message shown when the typed pattern is invalid."
   },
   "filters_emptyList": {
     "message": "サイトはまだ追加されていません",
@@ -164,8 +164,12 @@
     "description": "Explains the path pattern form (e.g. site.com/app/*) in the syntax reference."
   },
   "filters_syntaxNotes": {
-    "message": "ワイルドカードは * のみで、正規表現には対応していません。パスパターンは URL のパスのみに一致し（クエリ文字列や #hash ルートは対象外）、パスの変更はページの再読み込み後に反映されます。",
-    "description": "The unsupported-cases and limitations note at the bottom of the syntax reference."
+    "message": "ワイルドカードは * のみで、正規表現には対応していません。",
+    "description": "The short capability note at the bottom of the syntax reference."
+  },
+  "filters_syntaxReference": {
+    "message": "詳細なリファレンスを見る →",
+    "description": "Link at the bottom of the syntax reference that opens the full Site Filters documentation on GitHub."
   },
   "toggle_locationProtection": {
     "message": "位置情報保護",

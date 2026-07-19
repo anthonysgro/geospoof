@@ -100,8 +100,8 @@
     "description": "Button that adds the typed domain to the active list."
   },
   "filters_invalidDomain": {
-    "message": "Not a valid domain",
-    "description": "Inline message shown when the typed domain is invalid."
+    "message": "Not a valid pattern",
+    "description": "Inline message shown when the typed pattern is invalid."
   },
   "filters_emptyList": {
     "message": "No sites added yet",
@@ -164,8 +164,12 @@
     "description": "Explains the path pattern form (e.g. site.com/app/*) in the syntax reference."
   },
   "filters_syntaxNotes": {
-    "message": "Only * is a wildcard — regular expressions aren't supported. Path patterns match the URL path only (not query strings or #hash routes), and a path change takes effect after the page reloads.",
-    "description": "The unsupported-cases and limitations note at the bottom of the syntax reference."
+    "message": "Only * is a wildcard — no regular expressions.",
+    "description": "The short capability note at the bottom of the syntax reference."
+  },
+  "filters_syntaxReference": {
+    "message": "See full reference →",
+    "description": "Link at the bottom of the syntax reference that opens the full Site Filters documentation on GitHub."
   },
   "toggle_locationProtection": {
     "message": "Location Protection",

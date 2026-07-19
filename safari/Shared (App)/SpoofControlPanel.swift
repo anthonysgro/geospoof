@@ -1767,7 +1767,7 @@ private struct AddSiteSheet: View {
             Form {
                 Section {
                     HStack(spacing: 8) {
-                        TextField("example.com", text: $text)
+                        TextField("example.com, *.ru, site.com/app/*", text: $text)
                             .focused($focused)
                             .autocorrectionDisabled(true)
                             #if os(iOS)
@@ -1788,6 +1788,32 @@ private struct AddSiteSheet: View {
                         Text(hint).foregroundStyle(.red)
                     } else {
                         Text(helpText)
+                    }
+                }
+
+                // Collapsible syntax reference — the native counterpart to the
+                // popup's "What patterns can I use?" disclosure. Copy is kept in
+                // sync with the popup's filters_syntax* strings; the code
+                // examples are literal (not localized), the descriptions match.
+                Section {
+                    DisclosureGroup {
+                        patternSyntaxRow("example.com", "The site and all its subdomains")
+                        patternSyntaxRow("*.example.com", "Subdomains only, not example.com itself")
+                        patternSyntaxRow("*.ru", "Any site ending in .ru")
+                        patternSyntaxRow("localhost:3000", "A host on a specific port")
+                        patternSyntaxRow("site.com/app/*", "A path and everything under it")
+                    } label: {
+                        Label("What patterns can I use?", systemImage: "questionmark.circle")
+                    }
+                } footer: {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Only * is a wildcard — no regular expressions.")
+                        if let reference = URL(
+                            string:
+                                "https://github.com/anthonysgro/geospoof/blob/main/docs/SITE_FILTERS.md")
+                        {
+                            Link("See full reference →", destination: reference)
+                        }
                     }
                 }
 
@@ -1836,20 +1862,36 @@ private struct AddSiteSheet: View {
         #endif
     }
 
+    /// One row of the pattern-syntax reference: a monospaced example above its
+    /// plain-language description, mirroring the popup's `scope-syntax-row`.
+    @ViewBuilder
+    private func patternSyntaxRow(_ code: String, _ desc: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(code)
+                .font(.system(.subheadline, design: .monospaced))
+            Text(desc)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 2)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(code): \(desc)")
+    }
+
     private func add() {
         switch onAdd(text) {
         case .added:
-            let domain = SpoofController.normalizeDomainInput(text) ?? text
+            let pattern = SpoofController.normalizePatternInput(text) ?? text
             withAnimation(.easeInOut(duration: 0.2)) {
-                added.removeAll { $0 == domain }
-                added.insert(domain, at: 0)
+                added.removeAll { $0 == pattern }
+                added.insert(pattern, at: 0)
             }
             text = ""
             hint = nil
         case .duplicate:
             hint = "Already added"
         case .invalid:
-            hint = "Not a valid domain"
+            hint = "Not a valid pattern"
         }
         // Keep the keyboard up for the next entry (and up after a correction).
         focused = true

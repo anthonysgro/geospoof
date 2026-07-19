@@ -100,8 +100,8 @@
     "description": "Button that adds the typed domain to the active list."
   },
   "filters_invalidDomain": {
-    "message": "不是有效的域名",
-    "description": "Inline message shown when the typed domain is invalid."
+    "message": "不是有效的模式",
+    "description": "Inline message shown when the typed pattern is invalid."
   },
   "filters_emptyList": {
     "message": "尚未添加网站",
@@ -164,8 +164,12 @@
     "description": "Explains the path pattern form (e.g. site.com/app/*) in the syntax reference."
   },
   "filters_syntaxNotes": {
-    "message": "只有 * 是通配符——不支持正则表达式。路径模式仅匹配 URL 路径（不匹配查询字符串或 #hash 路由），并且路径更改在页面重新加载后生效。",
-    "description": "The unsupported-cases and limitations note at the bottom of the syntax reference."
+    "message": "只有 * 是通配符——不支持正则表达式。",
+    "description": "The short capability note at the bottom of the syntax reference."
+  },
+  "filters_syntaxReference": {
+    "message": "查看完整参考 →",
+    "description": "Link at the bottom of the syntax reference that opens the full Site Filters documentation on GitHub."
   },
   "toggle_locationProtection": {
     "message": "位置保护",

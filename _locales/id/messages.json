@@ -100,8 +100,8 @@
     "description": "Button that adds the typed domain to the active list."
   },
   "filters_invalidDomain": {
-    "message": "Bukan domain yang valid",
-    "description": "Inline message shown when the typed domain is invalid."
+    "message": "Bukan pola yang valid",
+    "description": "Inline message shown when the typed pattern is invalid."
   },
   "filters_emptyList": {
     "message": "Belum ada situs yang ditambahkan",
@@ -164,8 +164,12 @@
     "description": "Explains the path pattern form (e.g. site.com/app/*) in the syntax reference."
   },
   "filters_syntaxNotes": {
-    "message": "Hanya * yang merupakan wildcard — ekspresi reguler tidak didukung. Pola jalur hanya mencocokkan jalur URL (bukan string kueri atau rute #hash), dan perubahan jalur berlaku setelah halaman dimuat ulang.",
-    "description": "The unsupported-cases and limitations note at the bottom of the syntax reference."
+    "message": "Hanya * yang merupakan wildcard — ekspresi reguler tidak didukung.",
+    "description": "The short capability note at the bottom of the syntax reference."
+  },
+  "filters_syntaxReference": {
+    "message": "Lihat referensi lengkap →",
+    "description": "Link at the bottom of the syntax reference that opens the full Site Filters documentation on GitHub."
   },
   "toggle_locationProtection": {
     "message": "Perlindungan Lokasi",

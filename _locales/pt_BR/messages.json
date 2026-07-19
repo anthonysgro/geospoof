@@ -100,8 +100,8 @@
     "description": "Button that adds the typed domain to the active list."
   },
   "filters_invalidDomain": {
-    "message": "Domínio inválido",
-    "description": "Inline message shown when the typed domain is invalid."
+    "message": "Padrão inválido",
+    "description": "Inline message shown when the typed pattern is invalid."
   },
   "filters_emptyList": {
     "message": "Nenhum site adicionado ainda",
@@ -164,8 +164,12 @@
     "description": "Explains the path pattern form (e.g. site.com/app/*) in the syntax reference."
   },
   "filters_syntaxNotes": {
-    "message": "Apenas * é um curinga — expressões regulares não são suportadas. Padrões de caminho correspondem somente ao caminho da URL (não a strings de consulta ou rotas #hash), e uma mudança de caminho entra em vigor após a página ser recarregada.",
-    "description": "The unsupported-cases and limitations note at the bottom of the syntax reference."
+    "message": "Apenas * é um curinga — expressões regulares não são suportadas.",
+    "description": "The short capability note at the bottom of the syntax reference."
+  },
+  "filters_syntaxReference": {
+    "message": "Ver referência completa →",
+    "description": "Link at the bottom of the syntax reference that opens the full Site Filters documentation on GitHub."
   },
   "toggle_locationProtection": {
     "message": "Proteção de localização",

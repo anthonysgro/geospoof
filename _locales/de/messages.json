@@ -100,8 +100,8 @@
     "description": "Button that adds the typed domain to the active list."
   },
   "filters_invalidDomain": {
-    "message": "Keine gültige Domain",
-    "description": "Inline message shown when the typed domain is invalid."
+    "message": "Kein gültiges Muster",
+    "description": "Inline message shown when the typed pattern is invalid."
   },
   "filters_emptyList": {
     "message": "Noch keine Websites hinzugefügt",
@@ -164,8 +164,12 @@
     "description": "Explains the path pattern form (e.g. site.com/app/*) in the syntax reference."
   },
   "filters_syntaxNotes": {
-    "message": "Nur * ist ein Platzhalter – reguläre Ausdrücke werden nicht unterstützt. Pfadmuster berücksichtigen nur den URL-Pfad (nicht Query-Strings oder #hash-Routen), und eine Pfadänderung wird erst nach dem Neuladen der Seite wirksam.",
-    "description": "The unsupported-cases and limitations note at the bottom of the syntax reference."
+    "message": "Nur * ist ein Platzhalter – reguläre Ausdrücke werden nicht unterstützt.",
+    "description": "The short capability note at the bottom of the syntax reference."
+  },
+  "filters_syntaxReference": {
+    "message": "Vollständige Referenz ansehen →",
+    "description": "Link at the bottom of the syntax reference that opens the full Site Filters documentation on GitHub."
   },
   "toggle_locationProtection": {
     "message": "Standortschutz",

@@ -100,8 +100,8 @@
     "description": "Button that adds the typed domain to the active list."
   },
   "filters_invalidDomain": {
-    "message": "Недопустимый домен",
-    "description": "Inline message shown when the typed domain is invalid."
+    "message": "Недопустимый шаблон",
+    "description": "Inline message shown when the typed pattern is invalid."
   },
   "filters_emptyList": {
     "message": "Сайты ещё не добавлены",
@@ -164,8 +164,12 @@
     "description": "Explains the path pattern form (e.g. site.com/app/*) in the syntax reference."
   },
   "filters_syntaxNotes": {
-    "message": "Подстановочный знак только * — регулярные выражения не поддерживаются. Шаблоны пути сопоставляются только с путём URL (без строк запроса и #hash-маршрутов), а изменение пути вступает в силу после перезагрузки страницы.",
-    "description": "The unsupported-cases and limitations note at the bottom of the syntax reference."
+    "message": "Подстановочный знак только * — регулярные выражения не поддерживаются.",
+    "description": "The short capability note at the bottom of the syntax reference."
+  },
+  "filters_syntaxReference": {
+    "message": "Полный справочник →",
+    "description": "Link at the bottom of the syntax reference that opens the full Site Filters documentation on GitHub."
   },
   "toggle_locationProtection": {
     "message": "Защита геолокации",
