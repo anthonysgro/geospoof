@@ -3,7 +3,7 @@
 
 # GeoSpoof
 
-**Your VPN changes your IP address. Your browser is still telling websites where you actually are.**
+**Your VPN changes your IP address. Your device is still telling websites where you actually are.**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Website](https://img.shields.io/badge/Website-geospoof.com-4caf50.svg?logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABTElEQVQ4T41TS1LDMAyV3AXZsGPJJbgGC5qkoXG5Vi/AsAAS8uMi3AdmYiE5dRK7LoMzGSey9J70JCNcWLpNaSQDG1RA/FS7T4y5nhnL5oGQgxARiMjusuR7NAQfjz6QB6DbLQHgEnQ6Rba6NRqAuujnOA/g0GXWldiqFMDrdnI89IXwgwO6SW6T4/3xW85mAN1n5Bze8oVhXbcjEG3qkyYLAIvm2Kt8iAomAKKFZOh8Zsc918/SgWHFHXqouu6YhGmiAOWQk2KV1+mFAHMJ3Jk66yy53wXWwabIb5iFblJCNWW4LtED2FshufeSJu9VMfV87g7bzEZBnU7sZxmIwWkRDpKchexRADGWLJYI6ibRgcXaG22XbnZ3qMyXAxDVE7r+ec5frkJhowDi9DTwVHKkvQN8N+qs/d9l8iaPWysA71l8Mi9qEKb51/8vRNquEc5KgXwAAAAQZGVCRzg1RUVEM0EzRkYzNEI0MzTcy3bJAAAAAElFTkSuQmCC)](https://geospoof.com/?utm_source=github&utm_medium=readme)
@@ -18,10 +18,16 @@
   </p>
 </div>
 
+GeoSpoof now comes in two parts:
+
+- **Browser extension** (this repo — free & open source) — stops websites from geolocating you by overriding the Geolocation API, timezone, `Intl`, WebRTC, and every other signal, so your browser reports a location you choose. Firefox, Chrome, and Safari.
+- **[GeoSpoof GPS](#geospoof-gps-device-level-location)** (Pro — companion app for Mac) — moves your iPhone or iPad's _real, system-level_ GPS to the location you pick, so location-aware apps across the whole device match it, not just the browser.
+
 ## Contents
 
 - [Getting started](#getting-started) — [Install](#install) · [Usage](#usage)
 - [Why GeoSpoof?](#why-geospoof) — [What it does NOT do](#what-this-does-not-do)
+- [GeoSpoof GPS](#geospoof-gps-device-level-location) — device-level location on iPhone & iPad
 - [Overridden APIs](#overridden-apis)
 - [External Services](#external-services)
 - [Featured in](#featured-in)
@@ -104,6 +110,21 @@ GeoSpoof is designed to work alongside a VPN, not replace one.
 - Does NOT track your browsing activity, collect telemetry, or store data on external servers. Some features (city search, VPN sync) call third-party APIs to function. See the [Privacy Policy](PRIVACY_POLICY.md) for exactly what's sent and to whom.
 - Does NOT provide forensic-level anti-fingerprinting. Engine-level API tampering is also detectable by dedicated tools. For extreme threat models, use [Tor Browser](https://www.torproject.org/) or [Mullvad Browser](https://mullvad.net/browser) instead.
 
+## GeoSpoof GPS (device-level location)
+
+The browser extension keeps your **browser** private. GeoSpoof GPS goes a level deeper: it moves your iPhone or iPad's **real, system-level GPS** to the location you choose, so location-aware apps across the whole device match it — not just Safari.
+
+- **Whole-device, not just the browser** — sets the OS-level location every app reads, driven from a companion app for Mac.
+- **Secure one-time pairing** — set up from your Mac over a secure pairing. No jailbreak.
+- **Fully reversible** — reverts to your real GPS the moment you turn it off.
+- **Private by design** — same no-account, no-tracking stance as the extension. Built for privacy and for testing location-based features; not designed for AR games.
+
+GeoSpoof GPS is an optional **Pro** feature — browser and Safari spoofing stay free. It ships as a signed, notarized macOS app.
+
+**Download it at [geospoof.com/gps](https://geospoof.com/gps?utm_source=github&utm_medium=readme).**
+
+> GeoSpoof GPS is a separate, closed-source product and is **not** part of this repository — this repo is the open-source browser extension. See the [Privacy Policy](PRIVACY_POLICY.md) for exactly what each surface sends and to whom.
+
 ## Overridden APIs
 
 When protection is enabled, GeoSpoof overrides browser APIs synchronously at `document_start` before any page JavaScript runs. Covered APIs include:
@@ -148,6 +169,7 @@ The native GeoSpoof GPS desktop core (the Rust/Swift device product) is develope
 ## Links
 
 - [Website — geospoof.com](https://geospoof.com/?utm_source=github&utm_medium=readme)
+- [GeoSpoof GPS — geospoof.com/gps](https://geospoof.com/gps?utm_source=github&utm_medium=readme)
 - [Verify your protection — geospoof.com/verify](https://geospoof.com/verify?utm_source=github&utm_medium=readme)
 - [Community — r/GeoSpoof](https://www.reddit.com/r/geospoof)
 - [User Guide](docs/USER_GUIDE.md)
