@@ -144,6 +144,7 @@ describe("Advanced Filtering syntax keys are present in every locale", () => {
     "filters_syntaxTld",
     "filters_syntaxPort",
     "filters_syntaxPath",
+    "filters_syntaxIdn",
     "filters_syntaxNotes",
   ];
 

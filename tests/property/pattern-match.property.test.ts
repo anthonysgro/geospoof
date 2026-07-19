@@ -208,3 +208,56 @@ describe("matchesPatternList — empty inputs", () => {
     expect(matchesPatternList("https://example.com/", ["("])).toBe(false);
   });
 });
+
+// ═══════════════════════ IDN Pattern Support (feature: idn-pattern-support) ═══════════════════════
+//
+//   - Property IDN-3: IDN match equivalence to Punycode (Req 4.1, 4.2, 4.5, 9.4)
+//
+// A Pattern is stored in Unicode, but a page's host arrives already in A-label
+// (Punycode) form (that is what `tab.url` / `new URL().hostname` yields). A
+// stored Unicode Pattern must therefore match the Punycode URL exactly as an
+// ASCII Pattern matches its own host, for both the apex and subdomains, with the
+// `*.` form excluding the apex.
+
+/** Canonical IDN hosts (NFC + lowercase), spanning Latin/CJK/Cyrillic scripts. */
+const idnHostArb = fc.constantFrom("münchen.de", "café.fr", "日本.jp", "пример.рф", "köln.example");
+
+/** The A-label (Punycode) host a browser puts in a page URL, via the URL parser. */
+const toPunycodeHost = (unicodeHost: string): string => new URL(`https://${unicodeHost}/`).hostname;
+
+describe("matchesPatternList — Property IDN-3: IDN matches its Punycode host", () => {
+  test("a bare IDN pattern matches the apex (Punycode and Unicode URL forms)", () => {
+    fc.assert(
+      fc.property(idnHostArb, (h) => {
+        expect(matchesPatternList(`https://${toPunycodeHost(h)}/`, [h])).toBe(true);
+        expect(matchesPatternList(`https://${h}/`, [h])).toBe(true);
+      })
+    );
+  });
+
+  test("a bare IDN pattern matches subdomains of the Punycode host", () => {
+    fc.assert(
+      fc.property(idnHostArb, subLabelsArb, (h, s) => {
+        expect(matchesPatternList(`https://${s}.${toPunycodeHost(h)}/`, [h])).toBe(true);
+      })
+    );
+  });
+
+  test("the `*.`-prefixed IDN form matches subdomains but not the apex", () => {
+    fc.assert(
+      fc.property(idnHostArb, subLabelsArb, (h, s) => {
+        const punycodeHost = toPunycodeHost(h);
+        expect(matchesPatternList(`https://${punycodeHost}/`, [`*.${h}`])).toBe(false);
+        expect(matchesPatternList(`https://${s}.${punycodeHost}/`, [`*.${h}`])).toBe(true);
+      })
+    );
+  });
+
+  test("an IDN pattern does not match an unrelated host", () => {
+    fc.assert(
+      fc.property(idnHostArb, (h) => {
+        expect(matchesPatternList("https://example.com/", [h])).toBe(false);
+      })
+    );
+  });
+});

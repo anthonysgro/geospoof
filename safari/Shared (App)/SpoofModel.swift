@@ -1192,7 +1192,8 @@ final class SpoofController: ObservableObject {
 
     // MARK: Site-filter pattern parsing
 
-    /// Allowed characters in a single DNS label: lowercase letters, digits, hyphen.
+    /// Allowed ASCII characters in a single DNS label. Non-ASCII U-label
+    /// characters of an IDN are admitted separately (see `isAllowedLabelScalar`).
     private static let patternLabelChars = Set("abcdefghijklmnopqrstuvwxyz0123456789-")
     /// Allowed characters in a pattern path: URL-path chars plus the `*` wildcard.
     private static let patternPathChars =
@@ -1270,16 +1271,20 @@ final class SpoofController: ObservableObject {
         }
 
         // Split the host from an optional port at the first `:`. The host is
-        // lowercased; the path is not.
+        // NFC-normalized then lowercased — mirroring the TS parser's
+        // `.normalize("NFC").toLowerCase()` — so an internationalized (non-ASCII)
+        // host canonicalizes to the identical Unicode form on both sides. The
+        // path is neither normalized nor lowercased.
         let host: String
         let port: String
         let hasPort: Bool
         if let colon = authority.firstIndex(of: ":") {
-            host = String(authority[authority.startIndex..<colon]).lowercased()
+            host = String(authority[authority.startIndex..<colon])
+                .precomposedStringWithCanonicalMapping.lowercased()
             port = String(authority[authority.index(after: colon)...])
             hasPort = true
         } else {
-            host = authority.lowercased()
+            host = authority.precomposedStringWithCanonicalMapping.lowercased()
             port = ""
             hasPort = false
         }
@@ -1316,16 +1321,33 @@ final class SpoofController: ObservableObject {
         return "\(schemePart)\(host)\(portPart)\(path)"
     }
 
+    /// True when scalar `s` is allowed in a host label: an ASCII letter/digit/
+    /// hyphen, or any non-ASCII scalar — a U-label character of an IDN. Mirrors
+    /// the TS `isAllowedLabelChar` (`cp > 0x7F` OR ASCII `[a-z0-9-]`); the host
+    /// reaching this is already NFC-normalized and lowercased, so only lowercase
+    /// ASCII is accepted. Authoritative IDNA validity is deferred to the
+    /// extension's compile-time `toASCII` conversion (the app never matches URLs).
+    private static func isAllowedLabelScalar(_ s: Unicode.Scalar) -> Bool {
+        if s.value > 0x7f { return true }
+        return patternLabelChars.contains(Character(s))
+    }
+
     /// True when `host` is a sequence of one or more valid DNS labels within the
-    /// total hostname length cap. Mirrors `isValidLabelSequence` in scope.ts.
+    /// total hostname length cap. A label is 1–63 UTF-16 code units (measured via
+    /// `utf16.count`, matching the TS parser's `String#length` so the two agree on
+    /// IDN length), has no leading/trailing hyphen, and every scalar satisfies
+    /// `isAllowedLabelScalar` (ASCII `[a-z0-9-]` or a non-ASCII U-label
+    /// character). Mirrors `isValidLabelSequence` in scope.ts.
     private static func isPatternLabelSequence(_ host: String) -> Bool {
-        if host.isEmpty || host.count > patternMaxHostnameLength { return false }
+        if host.isEmpty || host.utf16.count > patternMaxHostnameLength { return false }
         // Match JS `split(".")`, which keeps empty labels (Swift omits them by
         // default), so `a..b` and a trailing dot are rejected as intended.
         for label in host.split(separator: ".", omittingEmptySubsequences: false) {
-            if label.isEmpty || label.count > patternMaxLabelLength { return false }
+            if label.isEmpty || label.utf16.count > patternMaxLabelLength { return false }
             if label.hasPrefix("-") || label.hasSuffix("-") { return false }
-            if !label.allSatisfy({ patternLabelChars.contains($0) }) { return false }
+            for scalar in label.unicodeScalars where !isAllowedLabelScalar(scalar) {
+                return false
+            }
         }
         return true
     }

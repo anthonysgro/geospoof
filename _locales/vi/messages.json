@@ -163,6 +163,10 @@
     "message": "Một đường dẫn và mọi thứ bên dưới nó",
     "description": "Explains the path pattern form (e.g. site.com/app/*) in the syntax reference."
   },
+  "filters_syntaxIdn": {
+    "message": "Tên miền quốc tế cũng hoạt động",
+    "description": "Explains that internationalized (non-ASCII) domain names are supported, in the syntax reference."
+  },
   "filters_syntaxNotes": {
     "message": "Chỉ * là ký tự đại diện — không hỗ trợ biểu thức chính quy.",
     "description": "The short capability note at the bottom of the syntax reference."

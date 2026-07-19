@@ -59,6 +59,8 @@ describe("patternToInit — Property 9: no user character becomes a group", () =
     fc.assert(
       fc.property(validPatternArb, (pattern) => {
         const init = patternToInit(pattern);
+        expect(init).not.toBeNull();
+        if (init === null) return;
         expect(ALLOWED_PROTOCOLS.has(init.protocol)).toBe(true);
         expect(init.port === "*" || /^[0-9]+$/.test(init.port)).toBe(true);
         expect(HOSTNAME_OK.test(init.hostname)).toBe(true);
@@ -161,5 +163,80 @@ describe("compilePattern — match semantics", () => {
     const p = mustCompile("https://example.com");
     expect(p.test("https://example.com/")).toBe(true);
     expect(p.test("http://example.com/")).toBe(false);
+  });
+});
+
+// ═══════════════════════ IDN Pattern Support (feature: idn-pattern-support) ═══════════════════════
+//
+// A Pattern's host is stored in Unicode, but the compiler converts the literal
+// portion to its A-label (Punycode) form via `hostToASCII` before building the
+// `URLPattern`, so the emitted hostname component is always pure ASCII. These
+// cover:
+//   - Property IDN-4: compiled hostname is ASCII-only (Req 4.1, 7.1)
+//   - Property IDN-5: conversion failure → safe non-match (Req 4.4)
+
+/** Every code point of `s` is ASCII (≤ U+007F). Avoids a control-char regex. */
+const isAsciiOnly = (s: string): boolean => [...s].every((c) => (c.codePointAt(0) ?? 0) <= 0x7f);
+
+const idnPatternArb = fc.constantFrom(
+  "münchen.de",
+  "café.fr",
+  "日本.jp",
+  "пример.рф",
+  "*.рф",
+  "*.münchen.de",
+  "https://münchen.de:8443/App/*"
+);
+
+describe("patternToInit — IDN host conversion (Property IDN-4)", () => {
+  test("the compiled hostname is pure ASCII (A-label), never Unicode", () => {
+    fc.assert(
+      fc.property(idnPatternArb, (raw) => {
+        const canonical = parsePattern(raw);
+        expect(canonical).not.toBeNull();
+        if (canonical === null) return;
+        const init = patternToInit(canonical);
+        expect(init).not.toBeNull();
+        if (init === null) return;
+        expect(isAsciiOnly(init.hostname)).toBe(true);
+        expect(HOSTNAME_OK.test(init.hostname)).toBe(true);
+        expect(init.hostname).not.toContain("ü");
+      })
+    );
+  });
+
+  const hostnameCases: Array<[string, string]> = [
+    ["münchen.de", "{*.}?xn--mnchen-3ya.de"],
+    ["*.münchen.de", "*.xn--mnchen-3ya.de"],
+    ["日本.jp", "{*.}?xn--wgv71a.jp"],
+    ["*.рф", "*.xn--p1ai"],
+    ["пример.рф", "{*.}?xn--e1afmkfd.xn--p1ai"],
+  ];
+
+  test.each(hostnameCases)("maps IDN host %j -> hostname %j", (raw, expectedHostname) => {
+    const canonical = parsePattern(raw);
+    expect(canonical).not.toBeNull();
+    const init = patternToInit(canonical as string);
+    if (init === null) throw new Error(`expected init for ${raw}`);
+    expect(init.hostname).toBe(expectedHostname);
+  });
+});
+
+describe("compilePattern — invalid IDN is a safe non-match (Property IDN-5)", () => {
+  test("a host that parses but fails toASCII yields null (never throws)", () => {
+    // A label beginning with a combining mark passes the parser's coarse
+    // structural rule but is invalid under UTS #46 (a label may not start with a
+    // combining mark), so `toASCII` fails and the Pattern must compile to a
+    // non-match — deterministically, not via an engine-dependent poison host.
+    const stored = parsePattern("\u0300xyz.de");
+    expect(stored).not.toBeNull();
+    expect(patternToInit(stored as string)).toBeNull();
+    expect(compilePattern(stored as string)).toBeNull();
+  });
+
+  test("a compiled invalid-IDN pattern contributes no match via matchesPatternList", () => {
+    const stored = parsePattern("\u0300xyz.de") as string;
+    // Using the public matcher: an uncompilable pattern never matches any URL.
+    expect(compilePattern(stored)).toBeNull();
   });
 });

@@ -163,6 +163,10 @@
     "message": "某个路径及其下的所有内容",
     "description": "Explains the path pattern form (e.g. site.com/app/*) in the syntax reference."
   },
+  "filters_syntaxIdn": {
+    "message": "也支持国际化域名",
+    "description": "Explains that internationalized (non-ASCII) domain names are supported, in the syntax reference."
+  },
   "filters_syntaxNotes": {
     "message": "只有 * 是通配符——不支持正则表达式。",
     "description": "The short capability note at the bottom of the syntax reference."

@@ -70,6 +70,17 @@ Local development hosts work as first-class patterns:
 
 (Single-label hosts other than `localhost`, e.g. `intranet`, are **not** accepted — a bare label with no dot is rejected to avoid a stray word matching an entire TLD.)
 
+### Internationalized domain names (IDN)
+
+Non-ASCII (internationalized) domains work like any other host:
+
+- `münchen.de` matches `münchen.de` and its subdomains.
+- `*.рф` matches any host under the `.рф` top-level domain.
+
+You type — and see — the domain in its normal Unicode form. GeoSpoof stores it that way and converts it to the DNS "Punycode" form (`xn--…`) internally when matching, so it lines up with how the browser reports the site's address. An already-encoded form like `xn--mnchen-3ya.de` is also accepted and kept as-is.
+
+> **Look-alike domains.** GeoSpoof does not warn about mixed-script or "look-alike" (homograph) domains; a pattern matches by its encoded form regardless of script. Add internationalized patterns only for sites you recognize.
+
 ## Ports
 
 Add `:port` to match a specific port. This is the main reason a plain domain filter used to fail for dev servers:

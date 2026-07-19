@@ -13,7 +13,12 @@
     "",
     "Consumed by:",
     "  - tests/unit/shared/pattern-vectors.test.ts (TypeScript, runs under `npm test`)",
-    "  - safari/GeoSpoofTests/PatternParserParityTests.swift (Swift, runs under Xcode)"
+    "  - safari/GeoSpoofTests/PatternParserParityTests.swift (Swift, runs under Xcode)",
+    "",
+    "Internationalized domain names (IDNs) are accepted and stored in their Unicode form",
+    "(NFC-normalized + lowercased), NOT Punycode — both parsers canonicalize with native",
+    "string ops only; the extension converts to A-labels at match time. The over-63-unit",
+    "label rule is asserted programmatically in the two test files (not encoded here)."
   ],
   "valid": [
     { "input": "example.com", "expected": "example.com" },
@@ -22,6 +27,7 @@
     { "input": "www.example.com", "expected": "www.example.com" },
     { "input": "sub.domain.example.com", "expected": "sub.domain.example.com" },
     { "input": "example.co.uk", "expected": "example.co.uk" },
+    { "input": "exàmple.com", "expected": "exàmple.com" },
     { "input": "HTTP://Example.com", "expected": "http://example.com" },
     {
       "input": "https://www.Example.com:8443/Path?q=1#h",
@@ -51,7 +57,16 @@
     { "input": "example.com/a/b-c_d.e~f%20", "expected": "example.com/a/b-c_d.e~f%20" },
     { "input": "127.0.0.1", "expected": "127.0.0.1" },
     { "input": "192.168.1.1", "expected": "192.168.1.1" },
-    { "input": "127.0.0.1:8080/api/*", "expected": "127.0.0.1:8080/api/*" }
+    { "input": "127.0.0.1:8080/api/*", "expected": "127.0.0.1:8080/api/*" },
+    { "input": "München.de", "expected": "münchen.de" },
+    { "input": "ÜBER.example.com", "expected": "über.example.com" },
+    { "input": "日本.jp", "expected": "日本.jp" },
+    { "input": "пример.рф", "expected": "пример.рф" },
+    { "input": "*.рф", "expected": "*.рф" },
+    { "input": "münchen.de:8443", "expected": "münchen.de:8443" },
+    { "input": "münchen.de/Path/*", "expected": "münchen.de/Path/*" },
+    { "input": "xn--wgv71a.jp", "expected": "xn--wgv71a.jp" },
+    { "input": "cafe\u0301.fr", "expected": "caf\u00e9.fr" }
   ],
   "invalid": [
     { "input": "", "expected": null },
@@ -61,7 +76,6 @@
     { "input": "foo_bar.com", "expected": null },
     { "input": "-example.com", "expected": null },
     { "input": "example-.com", "expected": null },
-    { "input": "exàmple.com", "expected": null },
     { "input": "example.com:", "expected": null },
     { "input": "example.com:12a", "expected": null },
     { "input": "example.com:99999", "expected": null },
@@ -74,6 +88,9 @@
     { "input": "*.*.com", "expected": null },
     { "input": "example.com/a{b}", "expected": null },
     { "input": "example.com/a:b", "expected": null },
-    { "input": "http:example.com", "expected": null }
+    { "input": "http:example.com", "expected": null },
+    { "input": "-münchen.de", "expected": null },
+    { "input": "mün_chen.de", "expected": null },
+    { "input": "a*b.münchen.de", "expected": null }
   ]
 }

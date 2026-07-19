@@ -163,6 +163,10 @@
     "message": "Um caminho e tudo abaixo dele",
     "description": "Explains the path pattern form (e.g. site.com/app/*) in the syntax reference."
   },
+  "filters_syntaxIdn": {
+    "message": "Nomes de domínio internacionais também funcionam",
+    "description": "Explains that internationalized (non-ASCII) domain names are supported, in the syntax reference."
+  },
   "filters_syntaxNotes": {
     "message": "Apenas * é um curinga — expressões regulares não são suportadas.",
     "description": "The short capability note at the bottom of the syntax reference."

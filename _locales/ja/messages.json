@@ -163,6 +163,10 @@
     "message": "パスとその配下すべて",
     "description": "Explains the path pattern form (e.g. site.com/app/*) in the syntax reference."
   },
+  "filters_syntaxIdn": {
+    "message": "国際化ドメイン名も使えます",
+    "description": "Explains that internationalized (non-ASCII) domain names are supported, in the syntax reference."
+  },
   "filters_syntaxNotes": {
     "message": "ワイルドカードは * のみで、正規表現には対応していません。",
     "description": "The short capability note at the bottom of the syntax reference."

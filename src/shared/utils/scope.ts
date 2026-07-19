@@ -1,5 +1,6 @@
 import type { ScopeMode } from "@/shared/types/settings";
 import { getURLPattern } from "./url-pattern-provider";
+import { hostToASCII } from "./idn";
 
 /** Maximum accepted raw input length before any trimming (Req 4.6). */
 const MAX_INPUT_LENGTH = 2048;
@@ -8,8 +9,33 @@ const MAX_HOSTNAME_LENGTH = 253;
 /** Maximum length of a single DNS label (Req 4.3/4.4). */
 const MAX_LABEL_LENGTH = 63;
 
-/** A DNS label may contain only lowercase letters, digits, and hyphens. */
-const LABEL_PATTERN = /^[a-z0-9-]+$/;
+/**
+ * True when `cp` is allowed in a host label: an ASCII letter/digit/hyphen, or
+ * any non-ASCII code point — a U-label character of an Internationalized Domain
+ * Name (IDN 1.1, 3.2). Every ASCII code point must be `[a-z0-9-]`, which keeps
+ * every URLPattern/regex metacharacter rejected (they are all ASCII and not in
+ * that set), while any code point above U+007F is admitted structurally. This is
+ * a coarse, IDNA-library-free rule shared byte-for-byte with the Swift parser
+ * (`isPatternLabelSequence` in SpoofModel.swift), whose check is
+ * `scalar.value > 0x7F`; authoritative IDNA validity is deferred to the
+ * compile-time `toASCII` conversion (see `idn.ts` / Pattern_Compiler). The host
+ * reaching this check is already NFC-normalized and lowercased, so only
+ * lowercase ASCII is accepted.
+ *
+ * Written as a code-point predicate rather than a regex so "any non-ASCII" can
+ * be expressed without a control-character range (which `no-control-regex`
+ * forbids) while still matching the Swift rule exactly.
+ */
+function isAllowedLabelChar(cp: number): boolean {
+  if (cp > 0x7f) {
+    return true;
+  }
+  return (
+    (cp >= 0x61 && cp <= 0x7a) || // a–z
+    (cp >= 0x30 && cp <= 0x39) || // 0–9
+    cp === 0x2d // hyphen-minus
+  );
+}
 
 // ───────────────────── Advanced Filtering: Pattern_Parser (Req 2, 3) ─────────────────────
 //
@@ -38,9 +64,13 @@ const PATH_ALLOWED_PATTERN = /^\/[A-Za-z0-9._~%/*-]*$/;
 const SCHEME_PREFIX_PATTERN = /^(https?|\*):\/\//i;
 
 /**
- * True when `host` is a sequence of one or more valid DNS labels (`[a-z0-9-]`,
- * 1–63 chars, no leading/trailing hyphen) within the total hostname length cap.
- * Used for both the bare-host and `*.`-prefixed forms.
+ * True when `host` is a sequence of one or more valid DNS labels within the
+ * total hostname length cap. A label is 1–63 code units long (measured in
+ * UTF-16 code units via `String#length`, matching the Swift parser's
+ * `utf16.count` so the two agree on IDN length), has no leading/trailing hyphen,
+ * and every code point satisfies `isAllowedLabelChar` (ASCII `[a-z0-9-]` or a
+ * non-ASCII U-label character). Used for both the bare-host and `*.`-prefixed
+ * forms.
  */
 function isValidLabelSequence(host: string): boolean {
   if (host.length === 0 || host.length > MAX_HOSTNAME_LENGTH) {
@@ -53,8 +83,11 @@ function isValidLabelSequence(host: string): boolean {
     if (label.startsWith("-") || label.endsWith("-")) {
       return false;
     }
-    if (!LABEL_PATTERN.test(label)) {
-      return false;
+    for (const ch of label) {
+      const cp = ch.codePointAt(0);
+      if (cp === undefined || !isAllowedLabelChar(cp)) {
+        return false;
+      }
     }
   }
   return true;
@@ -152,7 +185,15 @@ export function parsePattern(input: string): string | null {
   // Split the host from an optional port at the first `:`.
   const colonIndex = authority.indexOf(":");
   const hasPort = colonIndex !== -1;
-  const host = (hasPort ? authority.slice(0, colonIndex) : authority).toLowerCase();
+  // Req 3.1 / IDN 2.2: Unicode-normalize (NFC) then locale-independent lowercase
+  // the host. Doing NFC *before* lowercasing mirrors the Swift parser's
+  // `.precomposedStringWithCanonicalMapping.lowercased()` exactly, so both
+  // parsers canonicalize an IDN host to the identical Unicode form (stored, not
+  // Punycode). The scheme, port, and path are handled separately and are never
+  // NFC-normalized; the path also keeps its case.
+  const host = (hasPort ? authority.slice(0, colonIndex) : authority)
+    .normalize("NFC")
+    .toLowerCase();
   const port = hasPort ? authority.slice(colonIndex + 1) : "";
 
   // Req 2.1 / 3.3 / 3.4: validate the host.
@@ -238,29 +279,53 @@ function decomposePattern(pattern: string): {
 }
 
 /**
- * Pattern_Compiler mapping (Req 4.2–4.7). Convert a canonical Pattern into an
- * explicit `URLPattern` component init, applying GeoSpoof's host semantics. Pure
- * and dependency-free (it constructs no `URLPattern`), so it is directly
- * assertable: every emitted component contains only literal characters plus
- * GeoSpoof's own `{*.}?` / `http{s}?` / `*` tokens — never any group syntax
- * derived from user input (Req 5.3, 5.4, 15.1). The remaining host text is
- * `[a-z0-9.-]`-only and the path is `[A-Za-z0-9._~%/*-]`-only, both guaranteed
- * by `parsePattern`, so no user character can open a URLPattern group.
+ * Pattern_Compiler mapping (Req 4.2–4.7 + IDN 4.1/4.2/4.4). Convert a canonical
+ * Pattern into an explicit `URLPattern` component init, applying GeoSpoof's host
+ * semantics, or return `null` when the host cannot be represented (invalid IDN).
+ * It constructs no `URLPattern`, so it is directly assertable: every emitted
+ * component contains only literal characters plus GeoSpoof's own `{*.}?` /
+ * `http{s}?` / `*` tokens — never any group syntax derived from user input
+ * (Req 5.3, 5.4, 15.1).
+ *
+ * The literal (non-wildcard) portion of the host is converted to its A-label
+ * (Punycode) form via `hostToASCII` (see `idn.ts`) before it is placed in the
+ * `hostname` component. GeoSpoof stores a Pattern's host in Unicode form, but
+ * the compiled `URLPattern` hostname is therefore always pure ASCII — which
+ * keeps the no-group-injection invariant (a stored Unicode character can never
+ * reach the engine) and makes matching identical across the native and
+ * polyfilled engines (both receive an ASCII hostname). A conversion failure — an
+ * invalid IDN that passed the parser's coarse structural rule but is rejected by
+ * UTS #46 — returns `null` so `compilePattern` yields a non-matching Pattern
+ * (Req 4.4), never a poison value whose match behavior varies by engine.
  */
-export function patternToInit(pattern: string): CompiledPatternInit {
+export function patternToInit(pattern: string): CompiledPatternInit | null {
   const { scheme, host, port, path } = decomposePattern(pattern);
 
   // protocol (Req 4.7): unset ⇒ http + https only; explicit ⇒ that scheme; `*` ⇒ any.
   const protocol = scheme === "" ? "http{s}?" : scheme;
 
-  // hostname (Req 4.2/4.3/4.4): `*` ⇒ any host; `*.labels` ⇒ subdomains only; an
-  // IPv4 literal ⇒ exact; any other bare host ⇒ apex + subdomains via the
-  // optional `{*.}?` group (which URLPattern treats as "zero-or-one <label>.").
+  // hostname (Req 4.2/4.3/4.4 + IDN 4.1/4.2): `*` ⇒ any host; `*.labels` ⇒
+  // subdomains only; an IPv4 literal ⇒ exact; any other bare host ⇒ apex +
+  // subdomains via the optional `{*.}?` group (which URLPattern treats as
+  // "zero-or-one <label>."). The literal label portion is first converted to its
+  // A-label form; a failure ⇒ `null` (Req 4.4). `*` and IPv4 need no conversion.
   let hostname: string;
-  if (host === "*" || host.startsWith("*.") || isValidIpv4(host)) {
+  if (host === "*") {
+    hostname = "*";
+  } else if (host.startsWith("*.")) {
+    const ascii = hostToASCII(host.slice(2));
+    if (ascii === null) {
+      return null;
+    }
+    hostname = `*.${ascii}`;
+  } else if (isValidIpv4(host)) {
     hostname = host;
   } else {
-    hostname = `{*.}?${host}`;
+    const ascii = hostToASCII(host);
+    if (ascii === null) {
+      return null;
+    }
+    hostname = `{*.}?${ascii}`;
   }
 
   // port (Req 4.5): unset ⇒ any port.
@@ -274,16 +339,21 @@ export function patternToInit(pattern: string): CompiledPatternInit {
 
 /**
  * Pattern_Compiler (Req 5). Compile a canonical Pattern into a `URLPattern`, or
- * return `null` if construction throws (Req 5.6) so one malformed entry can
- * never break matching for the rest of the list. The `URLPattern` is always
- * built from the explicit component init (`patternToInit`), never from the raw
- * single-string constructor, so no user character can inject a group (Req 5.3,
- * 5.4).
+ * return `null` when the Pattern cannot be compiled — either because
+ * `patternToInit` could not represent the host (invalid IDN, IDN 4.4) or because
+ * construction throws (Req 5.6) — so one malformed entry can never break
+ * matching for the rest of the list. The `URLPattern` is always built from the
+ * explicit component init (`patternToInit`), never from the raw single-string
+ * constructor, so no user character can inject a group (Req 5.3, 5.4).
  */
 export function compilePattern(pattern: string): CompiledURLPattern | null {
+  const init = patternToInit(pattern);
+  if (init === null) {
+    return null;
+  }
   try {
     const URLPatternCtor = getURLPattern();
-    return new URLPatternCtor(patternToInit(pattern));
+    return new URLPatternCtor(init);
   } catch {
     return null;
   }

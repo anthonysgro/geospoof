@@ -163,6 +163,10 @@
     "message": "Ein Pfad und alles darunter",
     "description": "Explains the path pattern form (e.g. site.com/app/*) in the syntax reference."
   },
+  "filters_syntaxIdn": {
+    "message": "Internationale Domainnamen funktionieren auch",
+    "description": "Explains that internationalized (non-ASCII) domain names are supported, in the syntax reference."
+  },
   "filters_syntaxNotes": {
     "message": "Nur * ist ein Platzhalter – reguläre Ausdrücke werden nicht unterstützt.",
     "description": "The short capability note at the bottom of the syntax reference."

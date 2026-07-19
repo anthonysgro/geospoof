@@ -163,6 +163,10 @@
     "message": "Путь и всё, что под ним",
     "description": "Explains the path pattern form (e.g. site.com/app/*) in the syntax reference."
   },
+  "filters_syntaxIdn": {
+    "message": "Международные доменные имена тоже работают",
+    "description": "Explains that internationalized (non-ASCII) domain names are supported, in the syntax reference."
+  },
   "filters_syntaxNotes": {
     "message": "Подстановочный знак только * — регулярные выражения не поддерживаются.",
     "description": "The short capability note at the bottom of the syntax reference."

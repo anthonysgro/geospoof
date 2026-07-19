@@ -163,6 +163,10 @@
     "message": "Sebuah jalur dan semua yang ada di bawahnya",
     "description": "Explains the path pattern form (e.g. site.com/app/*) in the syntax reference."
   },
+  "filters_syntaxIdn": {
+    "message": "Nama domain internasional juga didukung",
+    "description": "Explains that internationalized (non-ASCII) domain names are supported, in the syntax reference."
+  },
   "filters_syntaxNotes": {
     "message": "Hanya * yang merupakan wildcard — ekspresi reguler tidak didukung.",
     "description": "The short capability note at the bottom of the syntax reference."

@@ -44,4 +44,14 @@ describe("parsePattern — over-length guard (Req 3.5 / 15.2)", () => {
     expect(tooLong.length).toBeGreaterThan(2048);
     expect(parsePattern(tooLong)).toBeNull();
   });
+
+  it("rejects a host label longer than 63 UTF-16 code units (ASCII and IDN)", () => {
+    // Also not encoded in the JSON fixture; mirrored in the Swift parity test.
+    // Length is measured in UTF-16 code units on both sides, so a 64-unit
+    // non-ASCII label is rejected just like a 64-char ASCII one.
+    expect(parsePattern("a".repeat(64) + ".com")).toBeNull();
+    expect(parsePattern("ü".repeat(64) + ".de")).toBeNull();
+    // The 63-unit boundary is accepted.
+    expect(parsePattern("ü".repeat(63) + ".de")).not.toBeNull();
+  });
 });

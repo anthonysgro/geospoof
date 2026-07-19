@@ -79,4 +79,13 @@ struct PatternParserParityTests {
         #expect(tooLong.utf16.count > 2048)
         #expect(SpoofController.normalizePatternInput(tooLong) == nil)
     }
+
+    @Test("Swift parser rejects a label longer than 63 UTF-16 code units (ASCII and IDN)")
+    func rejectsOverLengthLabel() {
+        // Mirror of the TS over-63-label assertion; not encoded in the JSON
+        // fixture. Length is measured in UTF-16 code units on both sides.
+        #expect(SpoofController.normalizePatternInput(String(repeating: "a", count: 64) + ".com") == nil)
+        #expect(SpoofController.normalizePatternInput(String(repeating: "ü", count: 64) + ".de") == nil)
+        #expect(SpoofController.normalizePatternInput(String(repeating: "ü", count: 63) + ".de") != nil)
+    }
 }

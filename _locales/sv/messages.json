@@ -163,6 +163,10 @@
     "message": "En sökväg och allt under den",
     "description": "Explains the path pattern form (e.g. site.com/app/*) in the syntax reference."
   },
+  "filters_syntaxIdn": {
+    "message": "Internationella domännamn fungerar också",
+    "description": "Explains that internationalized (non-ASCII) domain names are supported, in the syntax reference."
+  },
   "filters_syntaxNotes": {
     "message": "Endast * är ett jokertecken – reguljära uttryck stöds inte.",
     "description": "The short capability note at the bottom of the syntax reference."

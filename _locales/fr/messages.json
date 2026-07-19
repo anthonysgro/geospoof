@@ -163,6 +163,10 @@
     "message": "Un chemin et tout ce qu'il contient",
     "description": "Explains the path pattern form (e.g. site.com/app/*) in the syntax reference."
   },
+  "filters_syntaxIdn": {
+    "message": "Les noms de domaine internationaux fonctionnent aussi",
+    "description": "Explains that internationalized (non-ASCII) domain names are supported, in the syntax reference."
+  },
   "filters_syntaxNotes": {
     "message": "Seul * est un caractère générique ; les expressions régulières ne sont pas prises en charge.",
     "description": "The short capability note at the bottom of the syntax reference."

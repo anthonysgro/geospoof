@@ -163,6 +163,10 @@
     "message": "Una ruta y todo lo que hay debajo",
     "description": "Explains the path pattern form (e.g. site.com/app/*) in the syntax reference."
   },
+  "filters_syntaxIdn": {
+    "message": "Los nombres de dominio internacionales también funcionan",
+    "description": "Explains that internationalized (non-ASCII) domain names are supported, in the syntax reference."
+  },
   "filters_syntaxNotes": {
     "message": "Solo * es un comodín; no se admiten expresiones regulares.",
     "description": "The short capability note at the bottom of the syntax reference."

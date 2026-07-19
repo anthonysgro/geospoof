@@ -163,6 +163,10 @@
     "message": "Een pad en alles daaronder",
     "description": "Explains the path pattern form (e.g. site.com/app/*) in the syntax reference."
   },
+  "filters_syntaxIdn": {
+    "message": "Internationale domeinnamen werken ook",
+    "description": "Explains that internationalized (non-ASCII) domain names are supported, in the syntax reference."
+  },
   "filters_syntaxNotes": {
     "message": "Alleen * is een jokerteken — reguliere expressies worden niet ondersteund.",
     "description": "The short capability note at the bottom of the syntax reference."
