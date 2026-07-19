@@ -21,7 +21,7 @@
 GeoSpoof now comes in two parts:
 
 - **Browser extension** (free & open source) — stops websites from geolocating you by overriding the Geolocation API, timezone, `Intl`, WebRTC, and every other signal, so your browser reports a location you choose. Firefox, Chrome, and Safari.
-- **[GeoSpoof GPS](#geospoof-gps-device-level-location)** (Pro — companion app for Mac) — moves your iPhone or iPad's _real, system-level_ GPS to the location you pick, so location-aware apps across the whole device match it, not just the browser.
+- **[GeoSpoof GPS](#geospoof-gps-device-level-location)** — moves your iPhone or iPad's _real, system-level_ GPS to the location you pick, so location-aware apps across the whole device match it, not just the browser.
 
 ## Contents
 
