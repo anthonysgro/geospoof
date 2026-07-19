@@ -7,7 +7,7 @@ import type { AccuracySetting, Favorite, ScopeMode, Settings } from "@/shared/ty
 import { DEFAULT_ACCURACY_M, DEFAULT_SETTINGS } from "@/shared/types/settings";
 import { isSupportedLocale } from "@/shared/i18n/locales";
 import { createLogger } from "@/shared/utils/debug-logger";
-import { normalizeDomain } from "@/shared/utils/scope";
+import { parsePattern } from "@/shared/utils/scope";
 import { getLastSyncedIp } from "./vpn-sync";
 import { updateBootstrapRegistration } from "./bootstrap-register";
 
@@ -17,11 +17,15 @@ const logger = createLogger("BG");
 const VALID_SCOPE_MODES = new Set<ScopeMode>(["all", "allowlist", "denylist"]);
 
 /**
- * Sanitize a stored allowlist/denylist value into a clean string[] (Req 2.3–2.6,
- * 3.4, 3.7, 15.4). Drops non-array inputs, non-string entries, and entries the
- * Domain_Normalizer reports as invalid; replaces each retained entry with its
- * normalized form; removes duplicate normalized domains keeping the first
- * occurrence, producing a deterministically ordered list.
+ * Sanitize a stored allowlist/denylist value into a clean Pattern string[]
+ * (Advanced Filtering Req 13.4, 14.1; superseding the site-scoping domain
+ * sanitizer). Drops non-array inputs, non-string entries, and entries the
+ * Pattern_Parser reports as invalid; replaces each retained entry with its
+ * canonical Pattern form; removes duplicates by canonical form keeping the
+ * first occurrence, producing a deterministically ordered list. Because every
+ * previously stored (schema 1.1) hostname is a valid bare-host Pattern with
+ * identical matching meaning, this carries a 1.1 list forward losslessly
+ * (Req 13.3).
  */
 function sanitizeDomainList(value: unknown): string[] {
   if (!Array.isArray(value)) {
@@ -33,15 +37,15 @@ function sanitizeDomainList(value: unknown): string[] {
     if (typeof entry !== "string") {
       continue;
     }
-    const normalized = normalizeDomain(entry);
-    if (normalized === null) {
+    const canonical = parsePattern(entry);
+    if (canonical === null) {
       continue;
     }
-    if (seen.has(normalized)) {
+    if (seen.has(canonical)) {
       continue;
     }
-    seen.add(normalized);
-    out.push(normalized);
+    seen.add(canonical);
+    out.push(canonical);
   }
   return out;
 }
@@ -213,11 +217,18 @@ export function validateSettings(settings: Partial<Settings>): Settings {
     validated.version = settings.version;
   }
 
-  // Schema migration (Req 3.1, 3.2): stamp "1.1" when the stored version is
-  // "1.0" or absent, leaving other valid version strings untouched. All other
-  // copied-through fields (enabled, location, etc.) are preserved (Req 3.5).
-  if (validated.version === "1.0" || typeof settings.version !== "string") {
-    validated.version = "1.1";
+  // Schema migration (Advanced Filtering Req 13.1, 13.2): stamp "1.2" when the
+  // stored version is "1.0", "1.1", or absent, leaving newer version strings
+  // untouched. All copied-through fields (enabled, location, etc.) are
+  // preserved (Req 13.7), and the allowlist/denylist migrate losslessly because
+  // sanitizeDomainList re-parses each entry through the Pattern_Parser, which
+  // accepts every previously valid hostname as a bare-host Pattern (Req 13.3).
+  if (
+    validated.version === "1.0" ||
+    validated.version === "1.1" ||
+    typeof settings.version !== "string"
+  ) {
+    validated.version = "1.2";
   }
 
   // scopeMode (Req 2.1, 2.2, 1.6, 3.8): preserve a permitted value, otherwise
@@ -227,7 +238,8 @@ export function validateSettings(settings: Partial<Settings>): Settings {
       ? settings.scopeMode
       : "all";
 
-  // allowlist + denylist (Req 2.3–2.6, 1.7, 3.4, 3.7): sanitize each list.
+  // allowlist + denylist (Req 1.4, 13.4, 13.5): sanitize each list into
+  // canonical Patterns, dropping invalid/duplicate entries.
   validated.allowlist = sanitizeDomainList(settings.allowlist);
   validated.denylist = sanitizeDomainList(settings.denylist);
 

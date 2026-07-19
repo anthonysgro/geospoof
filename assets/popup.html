@@ -521,10 +521,10 @@
             <input
               type="text"
               id="scopeAddInput"
-              placeholder="example.com"
+              placeholder="example.com, *.ru, site.com/app/*"
               autocomplete="off"
               spellcheck="false"
-              maxlength="253"
+              maxlength="2048"
               data-i18n-placeholder="filters_addPlaceholder"
             />
             <button id="scopeAddButton" data-i18n="filters_addButton">Add</button>
@@ -557,6 +557,48 @@
           <div class="scope-inline-msg" id="scopeCurrentMsg" role="alert" style="display: none">
             This page cannot be added
           </div>
+
+          <!-- Supported-syntax reference (collapsible). Native <details> for
+               keyboard + screen-reader support; styled to match the Advanced
+               accordion. The <code> examples are literal (not localized); the
+               descriptions and notes carry data-i18n. -->
+          <details class="scope-syntax" id="scopeSyntax">
+            <summary class="scope-syntax-summary">
+              <span class="scope-syntax-chevron" aria-hidden="true">▶</span>
+              <span data-i18n="filters_syntaxTitle">What patterns can I use?</span>
+            </summary>
+            <div class="scope-syntax-body">
+              <dl class="scope-syntax-list">
+                <div class="scope-syntax-row">
+                  <dt><code>example.com</code></dt>
+                  <dd data-i18n="filters_syntaxDomain">The site and all its subdomains</dd>
+                </div>
+                <div class="scope-syntax-row">
+                  <dt><code>*.example.com</code></dt>
+                  <dd data-i18n="filters_syntaxSubdomains">
+                    Subdomains only, not example.com itself
+                  </dd>
+                </div>
+                <div class="scope-syntax-row">
+                  <dt><code>*.ru</code></dt>
+                  <dd data-i18n="filters_syntaxTld">Any site ending in .ru</dd>
+                </div>
+                <div class="scope-syntax-row">
+                  <dt><code>localhost:3000</code></dt>
+                  <dd data-i18n="filters_syntaxPort">A host on a specific port</dd>
+                </div>
+                <div class="scope-syntax-row">
+                  <dt><code>site.com/app/*</code></dt>
+                  <dd data-i18n="filters_syntaxPath">A path and everything under it</dd>
+                </div>
+              </dl>
+              <p class="scope-syntax-note" data-i18n="filters_syntaxNotes">
+                Only * is a wildcard — regular expressions aren't supported. Path patterns match the
+                URL path only (not query strings or #hash routes), and a path change takes effect
+                after the page reloads.
+              </p>
+            </div>
+          </details>
 
           <div
             class="scope-empty"

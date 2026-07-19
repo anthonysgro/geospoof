@@ -2056,6 +2056,96 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   margin-bottom: 8px;
 }
 
+/* Supported-syntax disclosure: a collapsible reference for the pattern
+   language. Mirrors the .advanced-toggle / .advanced-content accordion idiom
+   (surface card, rotating chevron) using a native <details> so it's keyboard-
+   and screen-reader-accessible with no extra JS. */
+.scope-syntax {
+  margin-bottom: 8px;
+}
+
+.scope-syntax-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--surface);
+  color: var(--text-muted);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  /* Remove the native disclosure triangle (Firefox); we render our own chevron. */
+  list-style: none;
+  transition: color 0.2s;
+}
+
+/* Remove the native disclosure triangle (WebKit/Blink). */
+.scope-syntax-summary::-webkit-details-marker {
+  display: none;
+}
+
+.scope-syntax-summary:hover {
+  color: var(--text);
+}
+
+.scope-syntax-chevron {
+  display: inline-block;
+  font-size: 10px;
+  transition: transform 0.2s;
+}
+
+.scope-syntax[open] .scope-syntax-chevron {
+  transform: rotate(90deg);
+}
+
+.scope-syntax-body {
+  background: var(--surface);
+  border-radius: 0 0 8px 8px;
+  padding: 4px 12px 12px;
+  margin-top: -4px;
+}
+
+.scope-syntax-list {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scope-syntax-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.scope-syntax-row dt {
+  margin: 0;
+}
+
+.scope-syntax-row dd {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.scope-syntax-row code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--badge-bg);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.scope-syntax-note {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--text-subtle);
+  line-height: 1.5;
+}
+
 .scope-empty {
   color: var(--text-subtle);
   font-size: 13px;

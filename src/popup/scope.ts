@@ -16,7 +16,7 @@
 
 import type { ScopeMode, Settings } from "@/shared/types/settings";
 import type { ScopeResponse, ScopeSitePayload, SetScopeModePayload } from "@/shared/types/messages";
-import { normalizeDomain } from "@/shared/utils/scope";
+import { parsePattern } from "@/shared/utils/scope";
 import { loadSettings, isRestrictedUrl } from "./settings";
 import { t } from "./i18n";
 
@@ -410,20 +410,22 @@ async function handleAddCurrent(listKey: "allowlist" | "denylist"): Promise<void
     return;
   }
 
-  // Derive the top-level hostname, then normalize it (Req 14.3 / 14.9).
+  // Derive the top-level hostname, then parse it as a bare-host Pattern
+  // (Req 14.3 / 14.9). Add-current scopes the current site's host; port/path
+  // are intentionally not included.
   let hostname = "";
   try {
     hostname = new URL(url as string).hostname;
   } catch {
     hostname = "";
   }
-  const normalized = normalizeDomain(hostname);
-  if (normalized === null) {
+  const canonical = parsePattern(hostname);
+  if (canonical === null) {
     showCurrentMsg(t("filters_currentPageInvalid") || "This site cannot be added");
     return;
   }
 
-  const payload: ScopeSitePayload = { list: listKey, domain: normalized };
+  const payload: ScopeSitePayload = { list: listKey, pattern: canonical };
 
   try {
     const result = (await browser.runtime.sendMessage({
@@ -436,7 +438,7 @@ async function handleAddCurrent(listKey: "allowlist" | "denylist"): Promise<void
       return;
     }
 
-    // Defensive: background reported INVALID_DOMAIN / STORAGE_ERROR.
+    // Defensive: background reported INVALID_PATTERN / STORAGE_ERROR.
     showCurrentMsg(t("filters_currentPageInvalid") || "This site cannot be added");
   } catch (error: unknown) {
     console.error("Failed to add current site:", error);
@@ -455,15 +457,15 @@ async function handleAdd(
 ): Promise<void> {
   hideAddError();
   const raw = input.value;
-  const normalized = normalizeDomain(raw);
+  const canonical = parsePattern(raw);
 
-  if (normalized === null) {
-    // Retain input, show inline message, send nothing (Req 14.4).
+  if (canonical === null) {
+    // Retain input, show inline message, send nothing (Req 12.3, 14.4).
     showAddError();
     return;
   }
 
-  const payload: ScopeSitePayload = { list: listKey, domain: normalized };
+  const payload: ScopeSitePayload = { list: listKey, pattern: canonical };
 
   try {
     const result = (await browser.runtime.sendMessage({
@@ -477,7 +479,7 @@ async function handleAdd(
       return;
     }
 
-    // Defensive: background also reports INVALID_DOMAIN.
+    // Defensive: background also reports INVALID_PATTERN.
     showAddError();
   } catch (error: unknown) {
     console.error("Failed to add scope site:", error);
@@ -505,7 +507,7 @@ async function handleRemove(
   }
   updateListCountFromDom();
 
-  const payload: ScopeSitePayload = { list: listKey, domain };
+  const payload: ScopeSitePayload = { list: listKey, pattern: domain };
 
   try {
     const result = (await browser.runtime.sendMessage({

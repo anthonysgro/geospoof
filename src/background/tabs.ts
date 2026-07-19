@@ -13,17 +13,86 @@ import { updateWorkerFilterSettings } from "./worker-request-filter";
 const logger = createLogger("BG");
 
 /**
- * Broadcast settings to all tabs via content scripts.
+ * Build and deliver the per-tab `UPDATE_SETTINGS` payload for a single tab.
  *
  * The background is the sole gatekeeper for the per-tab spoofing decision: the
- * `enabled` field delivered to a tab is that tab's `Effective_Enabled` value,
- * computed from its top-level URL via the shared `computeEffectiveEnabled`
- * source of truth (Req 8.1, 8.2). The non-scope fields (location, timezone,
- * debug logging, verbosity, WebRTC protection) are identical across tabs and
- * equal to the persisted Settings (Req 8.3). The allowlist/denylist arrays are
- * never included in any page-bound payload — the payload type structurally has
- * no list keys, so the lists cannot leak (privacy invariant). A single value
- * per tab is sent; `tabs.sendMessage` fans it out to every frame (Req 7.2).
+ * `enabled` field is that tab's `Effective_Enabled` value, computed from its
+ * top-level URL via the shared `computeEffectiveEnabled` source of truth (Req
+ * 8.1, 8.2). The non-scope fields are equal to the persisted Settings (Req
+ * 8.3). The allowlist/denylist arrays are never included — `UpdateSettingsPayload`
+ * has no list keys, so the lists cannot leak (privacy invariant). One value per
+ * tab is sent; `tabs.sendMessage` fans it out to every frame (Req 7.2).
+ *
+ * Shared by `broadcastSettingsToTabs` (settings/list/mode changes) and the
+ * navigation re-evaluation path in `index.ts` (full and same-document/SPA
+ * navigations), so both build an identical payload (Req 9.1, 9.2). Returns
+ * `true` when the message was delivered, `false` on a send failure (e.g. no
+ * content script in the tab yet) or a missing tab id.
+ */
+export async function sendSettingsToTab(
+  tab: { id?: number; url?: string },
+  settings: Settings
+): Promise<boolean> {
+  if (tab.id == null) {
+    return false;
+  }
+
+  // Resolve Effective_Enabled for this tab against its top-level URL (Req 8.1,
+  // 8.2). Restricted or undeterminable URLs resolve to false (Req 8.6).
+  const enabled = computeEffectiveEnabled({
+    masterEnabled: settings.enabled,
+    scopeMode: settings.scopeMode,
+    allowlist: settings.allowlist,
+    denylist: settings.denylist,
+    proFeaturesBlocked: settings.proFeaturesBlocked,
+    topLevelUrl: tab.url,
+    isRestricted: isRestrictedUrl,
+  });
+
+  // When browser-level (chrome.debugger) spoofing is active on Chromium, CDP
+  // owns the TIMEZONE (it covers every frame/worker before first script).
+  // Withhold the timezone from the injected path so its Date/Intl overrides
+  // no-op (they gate on having timezone data) — but keep `enabled` and
+  // `location` so the injected GEOLOCATION override still runs (CDP can't make
+  // geolocation reliably prompt-free). WebRTC is independent. Compiled out on
+  // Firefox/Safari.
+  const debuggerActive = __CHROMIUM__ && settings.debuggerModeEnabled;
+
+  const payload: UpdateSettingsPayload = {
+    enabled,
+    location: settings.location,
+    timezone: debuggerActive ? null : settings.timezone,
+    debugLogging: settings.debugLogging,
+    verbosityLevel: settings.verbosityLevel,
+    webrtcProtection: settings.webrtcProtection,
+    preserveGeolocationPrompt: computeEffectivePreserveGeoPrompt(
+      settings.preserveGeolocationPrompt,
+      settings.proFeaturesBlocked
+    ),
+    // Custom accuracy is Pro-gated on iOS Safari: force Realistic ("auto") for a
+    // free user so the page can't receive a pinned accuracy. Fail-open +
+    // Safari-only (no effect on macOS / Chrome / Firefox).
+    accuracySetting: computeEffectiveAccuracySetting(
+      settings.accuracySetting,
+      settings.proFeaturesBlocked
+    ),
+    accuracySeed: settings.accuracySeed,
+  };
+
+  try {
+    await browser.tabs.sendMessage(tab.id, { type: "UPDATE_SETTINGS", payload });
+    return true;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.warn(`Failed to send to tab ${tab.id} (${tab.url}):`, message);
+    console.debug(`Could not send message to tab ${tab.id} (${tab.url}):`, message);
+    return false;
+  }
+}
+
+/**
+ * Broadcast settings to all open tabs via content scripts, computing each tab's
+ * per-tab decision through {@link sendSettingsToTab}.
  */
 export async function broadcastSettingsToTabs(settings: Settings): Promise<void> {
   // Refresh the webRequest listener's cached settings snapshot. The
@@ -33,83 +102,13 @@ export async function broadcastSettingsToTabs(settings: Settings): Promise<void>
   // every mutation flows through broadcastSettingsToTabs.
   updateWorkerFilterSettings(settings);
 
-  const {
-    location,
-    timezone,
-    debugLogging,
-    verbosityLevel,
-    webrtcProtection,
-    preserveGeolocationPrompt,
-    accuracySetting,
-    accuracySeed,
-  } = settings;
   const tabs = await browser.tabs.query({});
-
   logger.info("Broadcasting settings to tabs:", { tabCount: tabs.length });
 
-  let failCount = 0;
-  const promises: Promise<void>[] = [];
-  for (const tab of tabs) {
-    // Resolve Effective_Enabled separately for each open tab against that
-    // tab's top-level URL (Req 8.1, 8.2). Restricted or undeterminable URLs
-    // resolve to false inside computeEffectiveEnabled (Req 8.6).
-    const enabled = computeEffectiveEnabled({
-      masterEnabled: settings.enabled,
-      scopeMode: settings.scopeMode,
-      allowlist: settings.allowlist,
-      denylist: settings.denylist,
-      proFeaturesBlocked: settings.proFeaturesBlocked,
-      topLevelUrl: tab.url,
-      isRestricted: isRestrictedUrl,
-    });
-
-    // When browser-level (chrome.debugger) spoofing is active on Chromium, CDP
-    // owns the TIMEZONE (it covers every frame/worker before first script).
-    // Withhold the timezone from the injected path so its Date/Intl overrides
-    // no-op (they gate on having timezone data) — but keep `enabled` and
-    // `location` so the injected GEOLOCATION override still runs (CDP can't make
-    // geolocation reliably prompt-free). WebRTC is independent. Compiled out on
-    // Firefox/Safari.
-    const debuggerActive = __CHROMIUM__ && settings.debuggerModeEnabled;
-
-    const payload: UpdateSettingsPayload = {
-      enabled,
-      location,
-      timezone: debuggerActive ? null : timezone,
-      debugLogging,
-      verbosityLevel,
-      webrtcProtection,
-      preserveGeolocationPrompt: computeEffectivePreserveGeoPrompt(
-        preserveGeolocationPrompt,
-        settings.proFeaturesBlocked
-      ),
-      // Custom accuracy is Pro-gated on iOS Safari: force Realistic ("auto")
-      // for a free user so the page can't receive a pinned accuracy. Fail-open
-      // + Safari-only (no effect on macOS / Chrome / Firefox).
-      accuracySetting: computeEffectiveAccuracySetting(
-        accuracySetting,
-        settings.proFeaturesBlocked
-      ),
-      accuracySeed,
-    };
-
-    const promise = browser.tabs
-      .sendMessage(tab.id!, {
-        type: "UPDATE_SETTINGS",
-        payload,
-      })
-      .catch((error: Error) => {
-        failCount++;
-        logger.warn(`Failed to send to tab ${tab.id} (${tab.url}):`, error.message);
-        console.debug(`Could not send message to tab ${tab.id} (${tab.url}):`, error.message);
-      });
-
-    promises.push(promise as Promise<void>);
-  }
-
-  await Promise.all(promises);
+  const results = await Promise.all(tabs.map((tab) => sendSettingsToTab(tab, settings)));
+  const failCount = results.filter((delivered) => !delivered).length;
   if (failCount > 0) {
-    logger.debug("Broadcast complete:", { sent: tabs.length - failCount, failed: failCount });
+    logger.debug("Broadcast complete:", { sent: results.length - failCount, failed: failCount });
   }
 }
 

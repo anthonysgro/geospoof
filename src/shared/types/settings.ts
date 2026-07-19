@@ -190,9 +190,14 @@ export interface Settings {
   favorites: Favorite[];
   /** Which sites are spoofed when `enabled` is true */
   scopeMode: ScopeMode;
-  /** Normalized domain strings spoofed in allowlist mode */
+  /**
+   * Canonical glob-style URL Patterns spoofed in allowlist mode (schema 1.2+).
+   * Each entry is a `[scheme://]host[:port][/path]` pattern produced by
+   * `parsePattern`; a bare host is a superset of the pre-1.2 normalized
+   * hostname (apex + subdomains), so 1.1 lists migrate losslessly.
+   */
   allowlist: string[];
-  /** Normalized domain strings excluded in denylist mode */
+  /** Canonical glob-style URL Patterns excluded in denylist mode (schema 1.2+); see `allowlist`. */
   denylist: string[];
   /** How the spoofed GeolocationCoordinates.accuracy value is produced */
   accuracySetting: AccuracySetting;
@@ -211,7 +216,7 @@ export const DEFAULT_SETTINGS: Settings = {
   webrtcProtection: false,
   preserveGeolocationPrompt: false,
   onboardingCompleted: false,
-  version: "1.1",
+  version: "1.2",
   // Epoch 0 (not Date.now()): a never-saved settings object hasn't been
   // "updated" yet. On Safari first run the app→extension adoption gate in
   // app-bridge.ts compares the app's pending-write timestamp against this; a

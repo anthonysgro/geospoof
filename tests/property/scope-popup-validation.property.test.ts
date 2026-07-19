@@ -2,7 +2,7 @@
  * Property + unit tests for the popup Filters tab (site-scoping UI).
  *
  * Mirrors the structure of popup-validation.property.test.ts. Covers:
- *   - inline normalize validation on manual add (Req 14.2, 14.4)
+ *   - inline parse validation on manual add (Req 12.3, 14.2, 14.4)
  *   - the empty-list indicator (Req 14.8)
  *   - optimistic update + revert-on-failure for mode change and remove
  *     (Req 13.4, 13.5, 14.6, 9.5)
@@ -15,7 +15,7 @@ import path from "path";
 import fc from "fast-check";
 import type { Settings } from "@/shared/types/settings";
 import { renderScope, renderScopeLoadError } from "@/popup/scope";
-import { normalizeDomain } from "@/shared/utils/scope";
+import { parsePattern } from "@/shared/utils/scope";
 
 /** Build a minimal full Settings object for the popup to render. */
 function makeSettings(overrides: Partial<Settings> = {}): Settings {
@@ -182,8 +182,8 @@ describe("Popup Filters tab — site list manager (Req 14)", () => {
 
     fc.assert(
       fc.property(invalidInputs, (raw) => {
-        // Precondition: the shared normalizer agrees this is invalid.
-        fc.pre(normalizeDomain(raw) === null);
+        // Precondition: the shared parser agrees this is invalid.
+        fc.pre(parsePattern(raw) === null);
 
         loadPopupDom();
         renderScope(makeSettings({ scopeMode: "allowlist", allowlist: [] }));
@@ -205,7 +205,7 @@ describe("Popup Filters tab — site list manager (Req 14)", () => {
     );
   });
 
-  test("valid manual entry sends ADD_SCOPE_SITE with the normalized domain (Req 14.2)", async () => {
+  test("valid manual entry sends ADD_SCOPE_SITE with the canonical pattern (Req 14.2)", async () => {
     renderScope(makeSettings({ scopeMode: "allowlist", allowlist: [] }));
 
     vi.mocked(browser.runtime.sendMessage).mockImplementation((msg: unknown) => {
@@ -213,13 +213,14 @@ describe("Popup Filters tab — site list manager (Req 14)", () => {
       if (m.type === "ADD_SCOPE_SITE") return Promise.resolve({ success: true });
       if (m.type === "GET_SETTINGS")
         return Promise.resolve(
-          makeSettings({ scopeMode: "allowlist", allowlist: ["example.com"] })
+          makeSettings({ scopeMode: "allowlist", allowlist: ["https://www.example.com/path"] })
         );
       return Promise.resolve(undefined);
     });
 
     const input = document.getElementById("scopeAddInput") as HTMLInputElement;
     const button = document.getElementById("scopeAddButton") as HTMLButtonElement;
+    // Scheme/host lowercased, path preserved, `www.` NOT stripped.
     input.value = "https://www.Example.com/path";
     button.click();
     await flush();
@@ -227,7 +228,34 @@ describe("Popup Filters tab — site list manager (Req 14)", () => {
     expect(browser.runtime.sendMessage).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "ADD_SCOPE_SITE",
-        payload: { list: "allowlist", domain: "example.com" },
+        payload: { list: "allowlist", pattern: "https://www.example.com/path" },
+      })
+    );
+  });
+
+  test("a wildcard/port/path pattern is accepted and sent verbatim", async () => {
+    renderScope(makeSettings({ scopeMode: "denylist", denylist: [] }));
+
+    vi.mocked(browser.runtime.sendMessage).mockImplementation((msg: unknown) => {
+      const m = msg as { type: string };
+      if (m.type === "ADD_SCOPE_SITE") return Promise.resolve({ success: true });
+      if (m.type === "GET_SETTINGS")
+        return Promise.resolve(makeSettings({ scopeMode: "denylist", denylist: ["*.ru"] }));
+      return Promise.resolve(undefined);
+    });
+
+    const input = document.getElementById("scopeAddInput") as HTMLInputElement;
+    const button = document.getElementById("scopeAddButton") as HTMLButtonElement;
+    input.value = "*.ru";
+    button.click();
+    await flush();
+
+    // A wildcard TLD is no longer rejected by the popup (was under normalizeDomain).
+    expect(document.getElementById("scopeAddError")!.style.display).not.toBe("block");
+    expect(browser.runtime.sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "ADD_SCOPE_SITE",
+        payload: { list: "denylist", pattern: "*.ru" },
       })
     );
   });
@@ -250,7 +278,7 @@ describe("Popup Filters tab — site list manager (Req 14)", () => {
     expect(browser.runtime.sendMessage).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "REMOVE_SCOPE_SITE",
-        payload: { list: "allowlist", domain: "example.com" },
+        payload: { list: "allowlist", pattern: "example.com" },
       })
     );
     // After the success-driven reload the list is empty.
@@ -307,10 +335,11 @@ describe("Popup Filters tab — add current site (Req 14.3, 14.7, 14.9)", () => 
   test("non-restricted URL with an un-normalizable hostname shows a message and sends nothing (Req 14.9)", async () => {
     renderScope(makeSettings({ scopeMode: "allowlist", allowlist: [] }));
 
-    // localhost is not restricted, but has no dot → normalizeDomain returns null.
-    expect(normalizeDomain("localhost")).toBeNull();
+    // A single-label host other than localhost has no dot → parsePattern is null.
+    // (localhost itself is now a valid pattern, so it is intentionally not used here.)
+    expect(parsePattern("intranet")).toBeNull();
     vi.mocked(browser.tabs.query).mockResolvedValue([
-      { url: "http://localhost:3000/app", id: 2 },
+      { url: "http://intranet/", id: 2 },
     ] as unknown as never);
 
     const currentBtn = document.getElementById("scopeAddCurrentButton") as HTMLButtonElement;
@@ -326,7 +355,7 @@ describe("Popup Filters tab — add current site (Req 14.3, 14.7, 14.9)", () => 
     expect(sentAdd).toBe(false);
   });
 
-  test("valid current URL sends ADD_SCOPE_SITE with the normalized hostname (Req 14.3)", async () => {
+  test("valid current URL sends ADD_SCOPE_SITE with the host pattern (Req 14.3)", async () => {
     renderScope(makeSettings({ scopeMode: "denylist", denylist: [] }));
 
     vi.mocked(browser.tabs.query).mockResolvedValue([
@@ -337,7 +366,9 @@ describe("Popup Filters tab — add current site (Req 14.3, 14.7, 14.9)", () => 
       const m = msg as { type: string };
       if (m.type === "ADD_SCOPE_SITE") return Promise.resolve({ success: true });
       if (m.type === "GET_SETTINGS")
-        return Promise.resolve(makeSettings({ scopeMode: "denylist", denylist: ["example.com"] }));
+        return Promise.resolve(
+          makeSettings({ scopeMode: "denylist", denylist: ["www.example.com"] })
+        );
       return Promise.resolve(undefined);
     });
 
@@ -345,10 +376,12 @@ describe("Popup Filters tab — add current site (Req 14.3, 14.7, 14.9)", () => 
     currentBtn.click();
     await flush();
 
+    // Add-current uses the tab's host as a bare-host pattern (port/path excluded);
+    // `www.` is not stripped.
     expect(browser.runtime.sendMessage).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "ADD_SCOPE_SITE",
-        payload: { list: "denylist", domain: "example.com" },
+        payload: { list: "denylist", pattern: "www.example.com" },
       })
     );
 

@@ -35,7 +35,7 @@ import { setDebugEnabled, setVerbosityLevel, createLogger } from "@/shared/utils
 import {
   computeEffectiveEnabled,
   computeEffectivePreserveGeoPrompt,
-  normalizeDomain,
+  parsePattern,
 } from "@/shared/utils/scope";
 import { loadSettings, updateSettings, validateAccuracySetting } from "./settings";
 
@@ -624,29 +624,30 @@ export async function handleSetScopeMode(payload: SetScopeModePayload): Promise<
 }
 
 /**
- * ADD_SCOPE_SITE handler (Req 14.5, 15.1–15.6). Normalize the entered domain,
- * append it to the target list (idempotent against existing normalized
- * entries), persist, then re-broadcast and re-badge. Returns INVALID_DOMAIN for
- * unparseable input and STORAGE_ERROR on persistence failure.
+ * ADD_SCOPE_SITE handler (Req 14.1–14.5). Parse the entered pattern to its
+ * canonical form, append it to the target list (idempotent against existing
+ * canonical entries), persist, then re-broadcast and re-badge. Returns
+ * INVALID_PATTERN for input the Pattern_Parser rejects and STORAGE_ERROR on
+ * persistence failure.
  */
 export async function handleAddScopeSite(payload: ScopeSitePayload): Promise<ScopeResponse> {
-  const normalized = normalizeDomain(payload.domain);
-  if (normalized === null) {
-    return { error: "INVALID_DOMAIN" };
+  const canonical = parsePattern(payload.pattern);
+  if (canonical === null) {
+    return { error: "INVALID_PATTERN" };
   }
 
   const settings = await loadSettings();
   const list = settings[payload.list];
 
   // Idempotent: a duplicate add reports success without re-persisting (Req
-  // 14.5, 15.2).
-  if (list.includes(normalized)) {
+  // 14.2).
+  if (list.includes(canonical)) {
     return { success: true };
   }
 
   let updated;
   try {
-    updated = await updateSettings({ [payload.list]: [...list, normalized] });
+    updated = await updateSettings({ [payload.list]: [...list, canonical] });
   } catch {
     return { error: "STORAGE_ERROR" };
   }
@@ -658,16 +659,16 @@ export async function handleAddScopeSite(payload: ScopeSitePayload): Promise<Sco
 }
 
 /**
- * REMOVE_SCOPE_SITE handler (Req 9.2). Remove the matching normalized domain
+ * REMOVE_SCOPE_SITE handler (Req 9.2). Remove the matching canonical pattern
  * from the target list, persist, then re-broadcast and re-badge. Falls back to
- * the raw domain when normalization fails so legacy/odd entries can still be
- * removed. Returns STORAGE_ERROR on persistence failure.
+ * the raw pattern when parsing fails so legacy/odd entries can still be removed.
+ * Returns STORAGE_ERROR on persistence failure.
  */
 export async function handleRemoveScopeSite(payload: ScopeSitePayload): Promise<ScopeResponse> {
-  const normalized = normalizeDomain(payload.domain) ?? payload.domain;
+  const canonical = parsePattern(payload.pattern) ?? payload.pattern;
 
   const settings = await loadSettings();
-  const filtered = settings[payload.list].filter((d) => d !== normalized);
+  const filtered = settings[payload.list].filter((entry) => entry !== canonical);
 
   let updated;
   try {

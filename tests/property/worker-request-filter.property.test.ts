@@ -398,3 +398,64 @@ describe("Property 4 — Scope gating: out-of-scope tabs are never patched", () 
     );
   });
 });
+
+// ── Advanced Filtering — path & wildcard scope gating (Req 10) ────────
+//
+// The worker filter consults the same `computeEffectiveEnabled` the background
+// uses, so it inherited path- and wildcard-pattern awareness with no code
+// change. These cases confirm the integration end-to-end: a same-origin worker
+// is patched only when the initiating page's FULL URL matches the active
+// pattern list (not just its hostname).
+//
+// **Validates: Requirements 10.1, 10.2, 10.3, 10.5**
+
+describe("Advanced Filtering — worker-filter path/wildcard scope", () => {
+  beforeEach(() => {
+    tabPageUrlCache.clear();
+    updateWorkerFilterSettings(makeSettings());
+  });
+
+  /** Classify a same-origin worker request initiated by `pageUrl`. */
+  function classify(pageUrl: string, workerUrl: string): string {
+    tabPageUrlCache.set(77, pageUrl);
+    const result = _classifyRequestForTest({
+      requestId: "adv-scope",
+      url: workerUrl,
+      type: "script",
+      method: "GET",
+      tabId: 77,
+      frameId: 0,
+      requestHeaders: [{ name: "Sec-Fetch-Dest", value: "worker" }],
+    });
+    tabPageUrlCache.clear();
+    return result;
+  }
+
+  test("path pattern: same-origin worker on an in-scope route → patch", () => {
+    updateWorkerFilterSettings(
+      makeSettings({ scopeMode: "allowlist", allowlist: ["example.com/app/*"] })
+    );
+    expect(classify("https://example.com/app/dashboard", "https://example.com/w.js")).toBe("patch");
+  });
+
+  test("path pattern: same-origin worker on an out-of-scope route → pass", () => {
+    updateWorkerFilterSettings(
+      makeSettings({ scopeMode: "allowlist", allowlist: ["example.com/app/*"] })
+    );
+    expect(classify("https://example.com/other", "https://example.com/w.js")).toBe("pass");
+  });
+
+  test("wildcard TLD: a page under the suffix patches; outside the suffix passes", () => {
+    updateWorkerFilterSettings(makeSettings({ scopeMode: "allowlist", allowlist: ["*.ru"] }));
+    expect(classify("https://shop.ru/", "https://shop.ru/w.js")).toBe("patch");
+    expect(classify("https://shop.com/", "https://shop.com/w.js")).toBe("pass");
+  });
+
+  test("denylist path: a worker on a denied route passes; elsewhere it patches", () => {
+    updateWorkerFilterSettings(
+      makeSettings({ scopeMode: "denylist", denylist: ["example.com/tracking/*"] })
+    );
+    expect(classify("https://example.com/tracking/pixel", "https://example.com/w.js")).toBe("pass");
+    expect(classify("https://example.com/home", "https://example.com/w.js")).toBe("patch");
+  });
+});

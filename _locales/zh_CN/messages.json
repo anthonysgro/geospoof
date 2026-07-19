@@ -92,7 +92,7 @@
     "description": "Description shown under the selector when 'Denylist' mode is active."
   },
   "filters_addPlaceholder": {
-    "message": "example.com",
+    "message": "example.com, *.ru, site.com/app/*",
     "description": "Placeholder text in the add-site input."
   },
   "filters_addButton": {
@@ -138,6 +138,34 @@
   "filters_blockedSites": {
     "message": "已屏蔽的网站",
     "description": "Header above the list of denylisted sites."
+  },
+  "filters_syntaxTitle": {
+    "message": "我可以使用哪些模式？",
+    "description": "Summary label for the collapsible supported-pattern-syntax reference in the Filters tab."
+  },
+  "filters_syntaxDomain": {
+    "message": "该网站及其所有子域名",
+    "description": "Explains the bare-domain pattern form (e.g. example.com) in the syntax reference."
+  },
+  "filters_syntaxSubdomains": {
+    "message": "仅子域名，不包括 example.com 本身",
+    "description": "Explains the wildcard-subdomain pattern form (e.g. *.example.com), which excludes the apex, in the syntax reference."
+  },
+  "filters_syntaxTld": {
+    "message": "任何以 .ru 结尾的网站",
+    "description": "Explains the wildcard-TLD pattern form (e.g. *.ru) in the syntax reference."
+  },
+  "filters_syntaxPort": {
+    "message": "特定端口上的主机",
+    "description": "Explains the host:port pattern form (e.g. localhost:3000) in the syntax reference."
+  },
+  "filters_syntaxPath": {
+    "message": "某个路径及其下的所有内容",
+    "description": "Explains the path pattern form (e.g. site.com/app/*) in the syntax reference."
+  },
+  "filters_syntaxNotes": {
+    "message": "只有 * 是通配符——不支持正则表达式。路径模式仅匹配 URL 路径（不匹配查询字符串或 #hash 路由），并且路径更改在页面重新加载后生效。",
+    "description": "The unsupported-cases and limitations note at the bottom of the syntax reference."
   },
   "toggle_locationProtection": {
     "message": "位置保护",

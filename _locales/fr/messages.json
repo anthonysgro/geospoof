@@ -92,7 +92,7 @@
     "description": "Description shown under the selector when 'Denylist' mode is active."
   },
   "filters_addPlaceholder": {
-    "message": "example.com",
+    "message": "example.com, *.ru, site.com/app/*",
     "description": "Placeholder text in the add-site input."
   },
   "filters_addButton": {
@@ -138,6 +138,34 @@
   "filters_blockedSites": {
     "message": "Sites bloqués",
     "description": "Header above the list of denylisted sites."
+  },
+  "filters_syntaxTitle": {
+    "message": "Quels motifs puis-je utiliser ?",
+    "description": "Summary label for the collapsible supported-pattern-syntax reference in the Filters tab."
+  },
+  "filters_syntaxDomain": {
+    "message": "Le site et tous ses sous-domaines",
+    "description": "Explains the bare-domain pattern form (e.g. example.com) in the syntax reference."
+  },
+  "filters_syntaxSubdomains": {
+    "message": "Sous-domaines uniquement, pas example.com lui-même",
+    "description": "Explains the wildcard-subdomain pattern form (e.g. *.example.com), which excludes the apex, in the syntax reference."
+  },
+  "filters_syntaxTld": {
+    "message": "Tout site se terminant par .ru",
+    "description": "Explains the wildcard-TLD pattern form (e.g. *.ru) in the syntax reference."
+  },
+  "filters_syntaxPort": {
+    "message": "Un hôte sur un port spécifique",
+    "description": "Explains the host:port pattern form (e.g. localhost:3000) in the syntax reference."
+  },
+  "filters_syntaxPath": {
+    "message": "Un chemin et tout ce qu'il contient",
+    "description": "Explains the path pattern form (e.g. site.com/app/*) in the syntax reference."
+  },
+  "filters_syntaxNotes": {
+    "message": "Seul * est un caractère générique ; les expressions régulières ne sont pas prises en charge. Les motifs de chemin ne correspondent qu'au chemin de l'URL (pas aux chaînes de requête ni aux routes #hash), et une modification du chemin prend effet après le rechargement de la page.",
+    "description": "The unsupported-cases and limitations note at the bottom of the syntax reference."
   },
   "toggle_locationProtection": {
     "message": "Protection de localisation",

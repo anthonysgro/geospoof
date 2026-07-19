@@ -141,8 +141,14 @@ async function attachAndApplyTab(tabId: number, overrides: Overrides): Promise<v
   await applyOverridesToTab(tabId, overrides);
 }
 
-/** Read settings fresh and reconcile a single tab: attach+apply if in scope, else detach. */
-async function ensureTabSpoofed(tabId: number, url: string | undefined): Promise<void> {
+/**
+ * Read settings fresh and reconcile a single tab: attach+apply if in scope,
+ * else detach. Exported so the navigation handler can reconcile a tab on a
+ * same-document (History API) navigation — which fires no network request and
+ * therefore no `onBeforeNavigate`, so a CDP-spoofed tab would otherwise go
+ * stale when an in-page route crosses a scope boundary (Req 11).
+ */
+export async function ensureTabSpoofed(tabId: number, url: string | undefined): Promise<void> {
   const settings = await loadSettings();
   if (!shouldSpoof(settings) || !tabInScope(settings, url)) {
     // Out of scope (or spoofing off) — make sure we're not holding a stale

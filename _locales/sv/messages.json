@@ -92,7 +92,7 @@
     "description": "Description shown under the selector when 'Denylist' mode is active."
   },
   "filters_addPlaceholder": {
-    "message": "example.com",
+    "message": "example.com, *.ru, site.com/app/*",
     "description": "Placeholder text in the add-site input."
   },
   "filters_addButton": {
@@ -138,6 +138,34 @@
   "filters_blockedSites": {
     "message": "Blockerade webbplatser",
     "description": "Header above the list of denylisted sites."
+  },
+  "filters_syntaxTitle": {
+    "message": "Vilka mönster kan jag använda?",
+    "description": "Summary label for the collapsible supported-pattern-syntax reference in the Filters tab."
+  },
+  "filters_syntaxDomain": {
+    "message": "Webbplatsen och alla dess underdomäner",
+    "description": "Explains the bare-domain pattern form (e.g. example.com) in the syntax reference."
+  },
+  "filters_syntaxSubdomains": {
+    "message": "Endast underdomäner, inte example.com självt",
+    "description": "Explains the wildcard-subdomain pattern form (e.g. *.example.com), which excludes the apex, in the syntax reference."
+  },
+  "filters_syntaxTld": {
+    "message": "Alla webbplatser som slutar på .ru",
+    "description": "Explains the wildcard-TLD pattern form (e.g. *.ru) in the syntax reference."
+  },
+  "filters_syntaxPort": {
+    "message": "En värd på en specifik port",
+    "description": "Explains the host:port pattern form (e.g. localhost:3000) in the syntax reference."
+  },
+  "filters_syntaxPath": {
+    "message": "En sökväg och allt under den",
+    "description": "Explains the path pattern form (e.g. site.com/app/*) in the syntax reference."
+  },
+  "filters_syntaxNotes": {
+    "message": "Endast * är ett jokertecken – reguljära uttryck stöds inte. Sökvägsmönster matchar bara URL-sökvägen (inte frågesträngar eller #hash-rutter), och en ändring av sökvägen träder i kraft efter att sidan har laddats om.",
+    "description": "The unsupported-cases and limitations note at the bottom of the syntax reference."
   },
   "toggle_locationProtection": {
     "message": "Platsskydd",

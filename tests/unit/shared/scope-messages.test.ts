@@ -18,12 +18,12 @@ describe("site-scoping message types", () => {
   });
 
   it("ScopeSitePayload constrains list to allowlist/denylist", () => {
-    const allow: ScopeSitePayload = { list: "allowlist", domain: "example.com" };
-    const deny: ScopeSitePayload = { list: "denylist", domain: "example.org" };
+    const allow: ScopeSitePayload = { list: "allowlist", pattern: "example.com" };
+    const deny: ScopeSitePayload = { list: "denylist", pattern: "example.org" };
     expect(allow.list).toBe("allowlist");
     expect(deny.list).toBe("denylist");
     expectTypeOf<ScopeSitePayload["list"]>().toEqualTypeOf<"allowlist" | "denylist">();
-    expectTypeOf<ScopeSitePayload["domain"]>().toEqualTypeOf<string>();
+    expectTypeOf<ScopeSitePayload["pattern"]>().toEqualTypeOf<string>();
   });
 
   it("ScopeSuccessResponse has success: true", () => {
@@ -33,11 +33,13 @@ describe("site-scoping message types", () => {
   });
 
   it("ScopeErrorResponse constrains error codes", () => {
-    const invalid: ScopeErrorResponse = { error: "INVALID_DOMAIN" };
+    const invalid: ScopeErrorResponse = { error: "INVALID_PATTERN" };
     const storage: ScopeErrorResponse = { error: "STORAGE_ERROR" };
-    expect(invalid.error).toBe("INVALID_DOMAIN");
+    expect(invalid.error).toBe("INVALID_PATTERN");
     expect(storage.error).toBe("STORAGE_ERROR");
-    expectTypeOf<ScopeErrorResponse["error"]>().toEqualTypeOf<"INVALID_DOMAIN" | "STORAGE_ERROR">();
+    expectTypeOf<ScopeErrorResponse["error"]>().toEqualTypeOf<
+      "INVALID_PATTERN" | "STORAGE_ERROR"
+    >();
   });
 
   it("ScopeResponse is the union of success and error responses", () => {

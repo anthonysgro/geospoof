@@ -506,14 +506,14 @@ describe("Property 20: Settings Initialization Responsiveness", () => {
  *
  * For any array of arbitrary entries (strings, non-strings, URLs, mixed case),
  * validateSettings must produce an allowlist/denylist where:
- *   - every entry is the normalized output of normalizeDomain (idempotent),
- *   - no duplicate normalized domains exist,
- *   - entries appear in first-occurrence order of their normalized form,
+ *   - every entry is the canonical output of parsePattern (idempotent),
+ *   - no duplicate canonical patterns exist,
+ *   - entries appear in first-occurrence order of their canonical form,
  *   - all retained entries derive from a valid input entry.
  */
 test("Property: list sanitization normalizes, dedupes keep-first, and is deterministic", async () => {
   const { validateSettings } = await importBackground();
-  const { normalizeDomain } = await import("@/shared/utils/scope");
+  const { parsePattern } = await import("@/shared/utils/scope");
 
   // A generator that yields a mix of valid-ish domain strings, URL-ish strings,
   // invalid strings, and non-string junk so the sanitizer is exercised broadly.
@@ -546,19 +546,19 @@ test("Property: list sanitization normalizes, dedupes keep-first, and is determi
       const seen = new Set<string>();
       for (const entry of rawList) {
         if (typeof entry !== "string") continue;
-        const normalized = normalizeDomain(entry);
-        if (normalized === null) continue;
-        if (seen.has(normalized)) continue;
-        seen.add(normalized);
-        expected.push(normalized);
+        const canonical = parsePattern(entry);
+        if (canonical === null) continue;
+        if (seen.has(canonical)) continue;
+        seen.add(canonical);
+        expected.push(canonical);
       }
 
-      // Deterministic, normalized, deduped, first-occurrence order.
+      // Deterministic, canonical, deduped, first-occurrence order.
       expect(list).toEqual(expected);
 
-      // Each retained entry is idempotent under normalizeDomain.
+      // Each retained entry is idempotent under parsePattern.
       for (const entry of list) {
-        expect(normalizeDomain(entry)).toBe(entry);
+        expect(parsePattern(entry)).toBe(entry);
       }
 
       // No duplicates remain.

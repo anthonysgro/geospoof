@@ -92,7 +92,7 @@
     "description": "Description shown under the selector when 'Denylist' mode is active."
   },
   "filters_addPlaceholder": {
-    "message": "example.com",
+    "message": "example.com, *.ru, site.com/app/*",
     "description": "Placeholder text in the add-site input."
   },
   "filters_addButton": {
@@ -138,6 +138,34 @@
   "filters_blockedSites": {
     "message": "ブロックサイト",
     "description": "Header above the list of denylisted sites."
+  },
+  "filters_syntaxTitle": {
+    "message": "使用できるパターンは？",
+    "description": "Summary label for the collapsible supported-pattern-syntax reference in the Filters tab."
+  },
+  "filters_syntaxDomain": {
+    "message": "サイトとそのすべてのサブドメイン",
+    "description": "Explains the bare-domain pattern form (e.g. example.com) in the syntax reference."
+  },
+  "filters_syntaxSubdomains": {
+    "message": "サブドメインのみ（example.com 自体は含まない）",
+    "description": "Explains the wildcard-subdomain pattern form (e.g. *.example.com), which excludes the apex, in the syntax reference."
+  },
+  "filters_syntaxTld": {
+    "message": ".ru で終わるすべてのサイト",
+    "description": "Explains the wildcard-TLD pattern form (e.g. *.ru) in the syntax reference."
+  },
+  "filters_syntaxPort": {
+    "message": "特定のポート上のホスト",
+    "description": "Explains the host:port pattern form (e.g. localhost:3000) in the syntax reference."
+  },
+  "filters_syntaxPath": {
+    "message": "パスとその配下すべて",
+    "description": "Explains the path pattern form (e.g. site.com/app/*) in the syntax reference."
+  },
+  "filters_syntaxNotes": {
+    "message": "ワイルドカードは * のみで、正規表現には対応していません。パスパターンは URL のパスのみに一致し（クエリ文字列や #hash ルートは対象外）、パスの変更はページの再読み込み後に反映されます。",
+    "description": "The unsupported-cases and limitations note at the bottom of the syntax reference."
   },
   "toggle_locationProtection": {
     "message": "位置情報保護",

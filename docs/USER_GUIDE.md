@@ -36,6 +36,10 @@ Prevents websites from detecting your real IP address through WebRTC, even when 
 
 Automatically adjusts your browser's timezone to match your spoofed location for consistency.
 
+### Site Filters
+
+Control which sites GeoSpoof spoofs on. In the **Filters** tab, choose **All** (every site), **Allowlist** (only listed sites), or **Denylist** (every site except listed ones), then add patterns like `example.com`, `*.ru`, `localhost:3000`, or `site.com/app/*`. See the full pattern language — wildcards, ports, paths, and the rules to watch for — in the [Site Filters reference](SITE_FILTERS.md).
+
 ## How to Use
 
 ### Setting a Location

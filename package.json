@@ -76,6 +76,7 @@
   },
   "dependencies": {
     "browser-geo-tz": "0.2.3",
+    "urlpattern-polyfill": "10.1.0",
     "webextension-polyfill": "^0.12.0"
   }
 }

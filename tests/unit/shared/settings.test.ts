@@ -20,7 +20,7 @@ describe("DEFAULT_SETTINGS scope defaults", () => {
     expect(DEFAULT_SETTINGS.allowlist).not.toBe(DEFAULT_SETTINGS.denylist);
   });
 
-  it('bumps schema version to "1.1"', () => {
-    expect(DEFAULT_SETTINGS.version).toBe("1.1");
+  it('bumps schema version to "1.2"', () => {
+    expect(DEFAULT_SETTINGS.version).toBe("1.2");
   });
 });

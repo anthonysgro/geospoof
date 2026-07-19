@@ -258,4 +258,62 @@ describe("Tab-lifecycle per-tab scope resolution (task 5.3)", () => {
       expect(payload.enabled).toBe(expectedEnabled(s, url, isRestrictedUrl));
     });
   });
+
+  describe("onUpdated same-document (SPA) navigation re-evaluation (task 10)", () => {
+    test("a History-API URL change pushes the recomputed per-tab enabled and re-badges", async () => {
+      // Path-scoped allowlist: only /app/* is in scope.
+      const s = makeSettings({ scopeMode: "allowlist", allowlist: ["example.com/app/*"] });
+      const { onUpdated } = await captureHandlers(s);
+      const { isRestrictedUrl } = await import("@/background");
+      const byTab = captureUpdateMessages();
+      const setBadgeText = vi.fn().mockResolvedValue(undefined);
+      browser.action.setBadgeText = setBadgeText;
+      browser.action.setBadgeBackgroundColor = vi.fn().mockResolvedValue(undefined);
+
+      const tabId = 41;
+
+      // In-scope route via a same-document navigation: changeInfo.url is set but
+      // there is no "loading" status (the content script is not reloaded).
+      const inScope = "https://example.com/app/dashboard";
+      onUpdated(tabId, { url: inScope }, { id: tabId, url: inScope } as browser.tabs.Tab);
+      await flushMicrotasks();
+
+      let payload = byTab.get(tabId)!.payload as unknown as Record<string, unknown>;
+      expect(payload.enabled).toBe(true);
+      expect(payload.enabled).toBe(expectedEnabled(s, inScope, isRestrictedUrl));
+      // Privacy invariant holds on the pushed payload too.
+      expect(payload).not.toHaveProperty("allowlist");
+      expect(payload).not.toHaveProperty("denylist");
+      expect(setBadgeText).toHaveBeenCalled();
+
+      // Navigate within the same document to an out-of-scope route: the pushed
+      // decision flips to disabled without a reload.
+      const outScope = "https://example.com/settings";
+      onUpdated(tabId, { url: outScope }, { id: tabId, url: outScope } as browser.tabs.Tab);
+      await flushMicrotasks();
+
+      payload = byTab.get(tabId)!.payload as unknown as Record<string, unknown>;
+      expect(payload.enabled).toBe(false);
+      expect(payload.enabled).toBe(expectedEnabled(s, outScope, isRestrictedUrl));
+    });
+
+    test("a full navigation (status 'loading') is not handled by the SPA push branch", async () => {
+      // The SPA branch is gated on changeInfo.url WITHOUT a loading status; a
+      // full navigation must not push UPDATE_SETTINGS here (the reloading content
+      // script re-requests settings, and the injection-confirmation alarm path
+      // delivers the value). So no UPDATE_SETTINGS is sent for the loading event.
+      const s = makeSettings({ scopeMode: "all" });
+      const { onUpdated } = await captureHandlers(s);
+      const byTab = captureUpdateMessages();
+      browser.action.setBadgeText = vi.fn().mockResolvedValue(undefined);
+      browser.action.setBadgeBackgroundColor = vi.fn().mockResolvedValue(undefined);
+
+      const tabId = 42;
+      const url = "https://example.com/page";
+      onUpdated(tabId, { status: "loading", url }, { id: tabId, url } as browser.tabs.Tab);
+      await flushMicrotasks();
+
+      expect(byTab.has(tabId)).toBe(false);
+    });
+  });
 });

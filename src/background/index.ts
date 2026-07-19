@@ -14,7 +14,12 @@ import { setDebugEnabled, setVerbosityLevel, createLogger } from "@/shared/utils
 import { now } from "@/shared/utils/safe-time";
 import { setWebRTCProtection } from "./webrtc";
 import { updateBadge, setBadgeForTab, badgeStateFor } from "./badge";
-import { broadcastSettingsToTabs, isRestrictedUrl, checkTabInjection } from "./tabs";
+import {
+  broadcastSettingsToTabs,
+  sendSettingsToTab,
+  isRestrictedUrl,
+  checkTabInjection,
+} from "./tabs";
 import { computeEffectiveEnabled, computeEffectivePreserveGeoPrompt } from "@/shared/utils/scope";
 import { computeEffectiveAccuracySetting } from "@/shared/accuracy/resolver";
 import { handleMessage, handleSetLocation } from "./messages";
@@ -24,7 +29,7 @@ import { installActivityWatcher } from "./activity-watcher";
 import { adoptPendingSettingsFromApp } from "./app-bridge";
 import { installBgLogRelay } from "./log-relay";
 import { updateBootstrapRegistration } from "./bootstrap-register";
-import { installDebuggerWatchers, syncDebuggerSpoofing } from "./debugger-spoof";
+import { installDebuggerWatchers, syncDebuggerSpoofing, ensureTabSpoofed } from "./debugger-spoof";
 import {
   installWorkerRequestFilter,
   updateWorkerFilterSettings,
@@ -196,24 +201,24 @@ async function initialize(): Promise<void> {
 
   const settings = await loadSettings();
 
-  // One-time migration persistence (Req 3.6, 3.9). loadSettings() returns the
-  // validated/upgraded in-memory Settings but does not itself write. To satisfy
-  // Req 3.6 we detect whether the stored object was on an older/absent schema
-  // by reading the raw stored `version` (the value before validation): a
-  // present settings object whose version is not "1.1" was migrated to "1.1"
-  // by validateSettings(). When that is the case we persist the upgraded object
-  // exactly once. A fresh install with no stored settings object is skipped, so
-  // we never needlessly write on first run. If persistence fails we keep the
-  // in-memory upgraded Settings for the session and surface the error rather
-  // than crashing init (Req 3.9); the next successful save persists the
-  // migration.
+  // One-time migration persistence (Req 13.2, 13.6, and the site-scoping
+  // Req 3.9 failure semantics). loadSettings() returns the validated/upgraded
+  // in-memory Settings but does not itself write. To satisfy Req 13.6 we detect
+  // whether the stored object was on an older/absent schema by reading the raw
+  // stored `version` (the value before validation): a present settings object
+  // whose version is not "1.2" was migrated to "1.2" by validateSettings(). When
+  // that is the case we persist the upgraded object exactly once. A fresh
+  // install with no stored settings object is skipped, so we never needlessly
+  // write on first run. If persistence fails we keep the in-memory upgraded
+  // Settings for the session and surface the error rather than crashing init;
+  // the next successful save persists the migration.
   try {
     const stored = await browser.storage.local.get("settings");
     const rawSettings: unknown = stored.settings;
     const migrationOccurred =
       rawSettings != null &&
       typeof rawSettings === "object" &&
-      (rawSettings as { version?: unknown }).version !== "1.1";
+      (rawSettings as { version?: unknown }).version !== "1.2";
     if (migrationOccurred) {
       try {
         await saveSettings(settings);
@@ -622,6 +627,44 @@ if (browser.tabs && browser.tabs.onCreated) {
 if (browser.tabs && browser.tabs.onUpdated) {
   browser.tabs.onUpdated.addListener(
     (tabId: number, changeInfo: Tabs.OnUpdatedChangeInfoType, tab: Tabs.Tab) => {
+      // Same-document (History API pushState/replaceState) navigation: the
+      // address-bar URL changes without a "loading" status, so the content
+      // script is NOT reloaded and will not re-request settings. Push the
+      // recomputed per-tab decision so path-scoped filtering turns on/off as the
+      // user moves between in-scope and out-of-scope routes, and re-badge (Req
+      // 8.1, 8.2, 9.3). Full navigations (status "loading") are handled below;
+      // the fresh content script re-requests settings on load. No new
+      // permission is used — this rides tabs.onUpdated (Req 8.6).
+      if (changeInfo.url && changeInfo.status !== "loading") {
+        void (async () => {
+          const settings = await loadSettings();
+          await sendSettingsToTab(tab, settings);
+
+          const effectiveEnabled = computeEffectiveEnabled({
+            masterEnabled: settings.enabled,
+            scopeMode: settings.scopeMode,
+            allowlist: settings.allowlist,
+            denylist: settings.denylist,
+            proFeaturesBlocked: settings.proFeaturesBlocked,
+            topLevelUrl: tab.url,
+            isRestricted: isRestrictedUrl,
+          });
+          setBadgeForTab(tabId, badgeStateFor(settings.enabled, effectiveEnabled));
+
+          // Chromium debugger mode (CDP): a same-document navigation fires no
+          // network request, so onBeforeNavigate never runs and the tab's
+          // browser-level timezone override would go stale across a scope
+          // boundary. Reconcile just this tab against the new URL — attach+apply
+          // if now in scope, detach (clearing the override) if not — so path
+          // scoping is consistent whether or not debugger mode is on (Req 11).
+          // Compiled out on Firefox/Safari.
+          if (__CHROMIUM__ && settings.debuggerModeEnabled) {
+            await ensureTabSpoofed(tabId, tab.url);
+          }
+        })();
+        return;
+      }
+
       if (changeInfo.status === "loading") {
         void (async () => {
           const settings = await loadSettings();

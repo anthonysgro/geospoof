@@ -92,7 +92,7 @@
     "description": "Description shown under the selector when 'Denylist' mode is active."
   },
   "filters_addPlaceholder": {
-    "message": "example.com",
+    "message": "example.com, *.ru, site.com/app/*",
     "description": "Placeholder text in the add-site input."
   },
   "filters_addButton": {
@@ -138,6 +138,34 @@
   "filters_blockedSites": {
     "message": "Заблокированные сайты",
     "description": "Header above the list of denylisted sites."
+  },
+  "filters_syntaxTitle": {
+    "message": "Какие шаблоны можно использовать?",
+    "description": "Summary label for the collapsible supported-pattern-syntax reference in the Filters tab."
+  },
+  "filters_syntaxDomain": {
+    "message": "Сайт и все его поддомены",
+    "description": "Explains the bare-domain pattern form (e.g. example.com) in the syntax reference."
+  },
+  "filters_syntaxSubdomains": {
+    "message": "Только поддомены, но не сам example.com",
+    "description": "Explains the wildcard-subdomain pattern form (e.g. *.example.com), which excludes the apex, in the syntax reference."
+  },
+  "filters_syntaxTld": {
+    "message": "Любой сайт, оканчивающийся на .ru",
+    "description": "Explains the wildcard-TLD pattern form (e.g. *.ru) in the syntax reference."
+  },
+  "filters_syntaxPort": {
+    "message": "Узел на определённом порту",
+    "description": "Explains the host:port pattern form (e.g. localhost:3000) in the syntax reference."
+  },
+  "filters_syntaxPath": {
+    "message": "Путь и всё, что под ним",
+    "description": "Explains the path pattern form (e.g. site.com/app/*) in the syntax reference."
+  },
+  "filters_syntaxNotes": {
+    "message": "Подстановочный знак только * — регулярные выражения не поддерживаются. Шаблоны пути сопоставляются только с путём URL (без строк запроса и #hash-маршрутов), а изменение пути вступает в силу после перезагрузки страницы.",
+    "description": "The unsupported-cases and limitations note at the bottom of the syntax reference."
   },
   "toggle_locationProtection": {
     "message": "Защита геолокации",

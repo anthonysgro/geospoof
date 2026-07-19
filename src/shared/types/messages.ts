@@ -252,7 +252,8 @@ export interface SetScopeModePayload {
 
 export interface ScopeSitePayload {
   list: "allowlist" | "denylist";
-  domain: string;
+  /** Canonical glob-style URL pattern (see `parsePattern`); background re-validates. */
+  pattern: string;
 }
 
 // --- Accuracy payload types ---
@@ -268,7 +269,7 @@ export interface ScopeSuccessResponse {
 }
 
 export interface ScopeErrorResponse {
-  error: "INVALID_DOMAIN" | "STORAGE_ERROR";
+  error: "INVALID_PATTERN" | "STORAGE_ERROR";
 }
 
 export type ScopeResponse = ScopeSuccessResponse | ScopeErrorResponse;

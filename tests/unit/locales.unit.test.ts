@@ -130,3 +130,28 @@ describe("Locale parity", () => {
     });
   });
 });
+
+/**
+ * Advanced Filtering (task 16): the syntax-reference panel strings are
+ * user-facing in every language, so unlike the soft "missing keys" warning
+ * above we hard-assert their presence with a non-empty message in every locale.
+ */
+describe("Advanced Filtering syntax keys are present in every locale", () => {
+  const REQUIRED_KEYS = [
+    "filters_syntaxTitle",
+    "filters_syntaxDomain",
+    "filters_syntaxSubdomains",
+    "filters_syntaxTld",
+    "filters_syntaxPort",
+    "filters_syntaxPath",
+    "filters_syntaxNotes",
+  ];
+
+  describe.each(listLocales())("%s", (locale) => {
+    const file = loadLocale(locale);
+    test.each(REQUIRED_KEYS)("has a non-empty %s", (key) => {
+      expect(typeof file[key]?.message).toBe("string");
+      expect(file[key].message.trim().length).toBeGreaterThan(0);
+    });
+  });
+});

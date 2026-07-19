@@ -5,7 +5,7 @@
  *
  * loadSettings() returns the validated/upgraded in-memory Settings but does not
  * itself write. initialize() detects a migration (stored schema version other
- * than "1.1") and persists the upgraded object exactly once. If persistence
+ * than "1.2") and persists the upgraded object exactly once. If persistence
  * fails, the in-memory upgraded Settings are retained for the session and the
  * error is surfaced without crashing init.
  */
@@ -29,8 +29,8 @@ describe("initialize() one-time migration persistence", () => {
    * Startup persists the upgraded object when the stored schema is older.
    * Validates: Requirement 3.6
    */
-  test("persists the upgraded Settings object on startup when stored schema is pre-1.1", async () => {
-    // Stored object on the pre-1.1 schema: version "1.0" and no scope fields.
+  test("persists the upgraded Settings object on startup when stored schema is pre-1.2", async () => {
+    // Stored object on an older schema: version "1.0" and no scope fields.
     storageData.settings = {
       enabled: true,
       location: null,
@@ -61,12 +61,12 @@ describe("initialize() one-time migration persistence", () => {
     const savedSettings = setSpy.mock.calls
       .map((c) => (c[0] as { settings?: { version?: string } }).settings)
       .find((s) => s != null);
-    expect(savedSettings?.version).toBe("1.1");
+    expect(savedSettings?.version).toBe("1.2");
 
-    // Storage now holds the upgraded "1.1" object with scope defaults, and all
+    // Storage now holds the upgraded "1.2" object with scope defaults, and all
     // pre-existing fields are preserved.
     const persisted = await loadSettings();
-    expect(persisted.version).toBe("1.1");
+    expect(persisted.version).toBe("1.2");
     expect(persisted.scopeMode).toBe("all");
     expect(persisted.allowlist).toEqual([]);
     expect(persisted.denylist).toEqual([]);
@@ -123,10 +123,10 @@ describe("initialize() one-time migration persistence", () => {
     expect(errorSpy).toHaveBeenCalled();
 
     // The in-memory upgraded Settings are retained for the session: loadSettings
-    // still re-derives the migrated "1.1" shape (the failed write never landed,
+    // still re-derives the migrated "1.2" shape (the failed write never landed,
     // so validation re-applies on read).
     const inMemory = await loadSettings();
-    expect(inMemory.version).toBe("1.1");
+    expect(inMemory.version).toBe("1.2");
     expect(inMemory.scopeMode).toBe("all");
     expect(inMemory.allowlist).toEqual([]);
     expect(inMemory.denylist).toEqual([]);

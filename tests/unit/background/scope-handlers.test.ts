@@ -7,10 +7,10 @@
  *
  *   - SET_SCOPE_MODE persists the new mode then re-broadcasts + re-badges
  *     (Req 9.1); STORAGE_ERROR leaves the delivered state unchanged (Req 9.5).
- *   - ADD_SCOPE_SITE normalizes the entered domain (INVALID_DOMAIN on null,
- *     Req 15.5), is idempotent against existing normalized entries (Req 14.5,
- *     15.2), and returns STORAGE_ERROR on persistence failure (Req 15.6).
- *   - REMOVE_SCOPE_SITE removes the matching normalized domain (Req 9.2).
+ *   - ADD_SCOPE_SITE parses the entered pattern (INVALID_PATTERN on reject,
+ *     Req 14.4), is idempotent against existing canonical entries (Req 14.2),
+ *     and returns STORAGE_ERROR on persistence failure (Req 14.5).
+ *   - REMOVE_SCOPE_SITE removes the matching canonical pattern (Req 9.2).
  *
  * Validates: Requirements 9.1, 9.2, 9.5, 14.5, 15.1, 15.2, 15.3, 15.4, 15.5, 15.6
  */
@@ -28,7 +28,7 @@ function makeSettings(overrides?: Partial<Settings>): Settings {
     webrtcProtection: false,
     preserveGeolocationPrompt: false,
     onboardingCompleted: true,
-    version: "1.1",
+    version: "1.2",
     lastUpdated: Date.now(),
     vpnSyncEnabled: false,
     debuggerModeEnabled: false,
@@ -131,17 +131,19 @@ describe("handleSetScopeMode (task 7)", () => {
 });
 
 describe("handleAddScopeSite (task 7)", () => {
-  test("normalizes and appends a new domain, then re-broadcasts and re-badges", async () => {
+  test("canonicalizes and appends a new pattern, then re-broadcasts and re-badges", async () => {
     const s = makeSettings({ scopeMode: "allowlist", allowlist: [] });
     const { handleAddScopeSite, broadcasts, setBadgeText, setSpy } = await importBackgroundWith(s);
 
+    // Scheme + host lowercased, query/fragment dropped, path case preserved,
+    // port kept, `www.` NOT stripped.
     const response = await handleAddScopeSite({
       list: "allowlist",
-      domain: "https://www.Example.com:8443/path?q=1#h",
+      pattern: "HTTPS://WWW.Example.com:8443/Path?q=1#h",
     });
 
     expect(response).toEqual({ success: true });
-    expect(lastPersistedSettings(setSpy).allowlist).toEqual(["example.com"]);
+    expect(lastPersistedSettings(setSpy).allowlist).toEqual(["https://www.example.com:8443/Path"]);
     expect(broadcasts.length).toBeGreaterThanOrEqual(1);
     expect(setBadgeText).toHaveBeenCalled();
   });
@@ -150,31 +152,31 @@ describe("handleAddScopeSite (task 7)", () => {
     const s = makeSettings({ scopeMode: "denylist", denylist: ["blocked.com"] });
     const { handleAddScopeSite, setSpy } = await importBackgroundWith(s);
 
-    const response = await handleAddScopeSite({ list: "denylist", domain: "evil.example" });
+    const response = await handleAddScopeSite({ list: "denylist", pattern: "*.ru" });
 
     expect(response).toEqual({ success: true });
-    expect(lastPersistedSettings(setSpy).denylist).toEqual(["blocked.com", "evil.example"]);
+    expect(lastPersistedSettings(setSpy).denylist).toEqual(["blocked.com", "*.ru"]);
   });
 
-  test("rejects an invalid domain with INVALID_DOMAIN and does not persist", async () => {
+  test("rejects an invalid pattern with INVALID_PATTERN and does not persist", async () => {
     const s = makeSettings({ scopeMode: "allowlist", allowlist: [] });
     const { handleAddScopeSite, broadcasts, setSpy } = await importBackgroundWith(s);
 
-    const response = await handleAddScopeSite({ list: "allowlist", domain: "no-dot-host" });
+    const response = await handleAddScopeSite({ list: "allowlist", pattern: "no-dot-host" });
 
-    expect(response).toEqual({ error: "INVALID_DOMAIN" });
+    expect(response).toEqual({ error: "INVALID_PATTERN" });
     expect(setSpy).not.toHaveBeenCalled();
     expect(broadcasts.length).toBe(0);
   });
 
-  test("is idempotent: a duplicate normalized entry reports success without re-persisting", async () => {
+  test("is idempotent: a duplicate canonical entry reports success without re-persisting", async () => {
     const s = makeSettings({ scopeMode: "allowlist", allowlist: ["example.com"] });
     const { handleAddScopeSite, broadcasts, setSpy } = await importBackgroundWith(s);
 
-    // "https://www.example.com/" normalizes to the existing "example.com".
+    // "EXAMPLE.COM" canonicalizes to the existing "example.com".
     const response = await handleAddScopeSite({
       list: "allowlist",
-      domain: "https://www.example.com/",
+      pattern: "EXAMPLE.COM",
     });
 
     expect(response).toEqual({ success: true });
@@ -188,7 +190,7 @@ describe("handleAddScopeSite (task 7)", () => {
       Promise.reject(new Error("Storage failure"))
     );
 
-    const response = await handleAddScopeSite({ list: "allowlist", domain: "new.example" });
+    const response = await handleAddScopeSite({ list: "allowlist", pattern: "new.example" });
 
     expect(response).toEqual({ error: "STORAGE_ERROR" });
     expect(broadcasts.length).toBe(0);
@@ -197,7 +199,7 @@ describe("handleAddScopeSite (task 7)", () => {
 });
 
 describe("handleRemoveScopeSite (task 7)", () => {
-  test("removes the matching normalized domain, then re-broadcasts and re-badges", async () => {
+  test("removes the matching canonical pattern, then re-broadcasts and re-badges", async () => {
     const s = makeSettings({
       scopeMode: "allowlist",
       allowlist: ["example.com", "keep.com"],
@@ -205,10 +207,10 @@ describe("handleRemoveScopeSite (task 7)", () => {
     const { handleRemoveScopeSite, broadcasts, setBadgeText, setSpy } =
       await importBackgroundWith(s);
 
-    // Raw input normalizes to "example.com" before matching.
+    // Raw input canonicalizes to "example.com" before matching.
     const response = await handleRemoveScopeSite({
       list: "allowlist",
-      domain: "https://www.example.com/page",
+      pattern: "EXAMPLE.COM",
     });
 
     expect(response).toEqual({ success: true });
@@ -217,11 +219,11 @@ describe("handleRemoveScopeSite (task 7)", () => {
     expect(setBadgeText).toHaveBeenCalled();
   });
 
-  test("is a no-op (still success) when the domain is absent", async () => {
+  test("is a no-op (still success) when the pattern is absent", async () => {
     const s = makeSettings({ scopeMode: "denylist", denylist: ["blocked.com"] });
     const { handleRemoveScopeSite, setSpy } = await importBackgroundWith(s);
 
-    const response = await handleRemoveScopeSite({ list: "denylist", domain: "absent.com" });
+    const response = await handleRemoveScopeSite({ list: "denylist", pattern: "absent.com" });
 
     expect(response).toEqual({ success: true });
     expect(lastPersistedSettings(setSpy).denylist).toEqual(["blocked.com"]);
@@ -233,7 +235,7 @@ describe("handleRemoveScopeSite (task 7)", () => {
       Promise.reject(new Error("Storage failure"))
     );
 
-    const response = await handleRemoveScopeSite({ list: "allowlist", domain: "example.com" });
+    const response = await handleRemoveScopeSite({ list: "allowlist", pattern: "example.com" });
 
     expect(response).toEqual({ error: "STORAGE_ERROR" });
     expect(broadcasts.length).toBe(0);

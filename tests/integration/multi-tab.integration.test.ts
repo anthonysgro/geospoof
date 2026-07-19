@@ -299,12 +299,13 @@ describe("Multi-Tab Integration Tests", () => {
       });
 
       // Assert: Tab received settings after reload. loadSettings() migrates the
-      // stored "1.0" object to schema "1.1" (Req 3.2), so the delivered payload
-      // matches the stored settings with the bumped version.
+      // stored "1.0" object to schema "1.2" (Advanced Filtering Req 13.2), so
+      // the delivered payload matches the stored settings with the bumped
+      // version.
       expect(messagesSent).toHaveLength(1);
       expect(messagesSent[0].tabId).toBe(tabId);
       expect(messagesSent[0].message.type).toBe("UPDATE_SETTINGS");
-      expect(messagesSent[0].message.payload).toEqual({ ...settings, version: "1.1" });
+      expect(messagesSent[0].message.payload).toEqual({ ...settings, version: "1.2" });
     });
 
     test("should handle multiple tab reloads consistently", async () => {

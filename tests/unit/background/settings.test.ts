@@ -129,9 +129,7 @@ describe("Settings Edge Cases", () => {
     expect(settings.location!.longitude).toBe(-122.4194);
     expect(settings.locationName).not.toBeNull();
     expect(settings.locationName!.city).toBe("San Francisco");
-    // A stored "1.0" version is migrated to "1.1" (Req 3.2) while other valid
-    // fields are preserved.
-    expect(settings.version).toBe("1.1");
+    expect(settings.version).toBe("1.2");
 
     // Invalid fields should be reset to defaults
     expect(settings.timezone).toBeNull();
@@ -291,50 +289,55 @@ describe("Scope Settings Validation", () => {
   });
 
   /**
-   * Invalid domain entries (per Domain_Normalizer) are dropped.
-   * Validates: Requirements 2.3
+   * Invalid entries (per the Pattern_Parser) are dropped. Note that under
+   * Advanced Filtering `localhost` and `*.example.com` are now VALID patterns,
+   * so the invalid cases here are a bad label, a group metacharacter, and a
+   * bare single-label host.
+   * Validates: Requirements 13.4
    */
-  test("should drop entries the normalizer reports as invalid", async () => {
+  test("should drop entries the Pattern_Parser reports as invalid", async () => {
     const { validateSettings } = await importBackground();
 
     const validated = validateSettings({
-      // "localhost" has no dot, "bad_domain.com" has an illegal underscore,
-      // "*.example.com" contains a wildcard metacharacter — all invalid.
-      allowlist: ["localhost", "bad_domain.com", "*.example.com", "valid.com"],
+      // "bad_domain.com" has an illegal underscore, "exa(mple).com" has a group
+      // metacharacter, "no-dot" is a single-label bare host (not localhost).
+      allowlist: ["bad_domain.com", "exa(mple).com", "no-dot", "valid.com"],
     });
 
     expect(validated.allowlist).toEqual(["valid.com"]);
   });
 
   /**
-   * Retained entries are replaced with their normalized form.
-   * Validates: Requirements 2.3
+   * Retained entries are replaced with their canonical Pattern form.
+   * Validates: Requirements 13.4, 14.1
    */
-  test("should normalize retained entries", async () => {
+  test("should canonicalize retained entries", async () => {
     const { validateSettings } = await importBackground();
 
     const validated = validateSettings({
       allowlist: ["HTTPS://WWW.Example.COM/some/path?q=1#frag", "  Test.ORG:8443  "],
     });
 
-    expect(validated.allowlist).toEqual(["example.com", "test.org"]);
+    // Scheme/host lowercased, query + fragment dropped, path case preserved,
+    // port kept; `www.` is NOT stripped (a bare host already covers www).
+    expect(validated.allowlist).toEqual(["https://www.example.com/some/path", "test.org:8443"]);
   });
 
   /**
-   * Duplicate normalized entries are removed keeping the first occurrence,
+   * Duplicate canonical entries are removed keeping the first occurrence,
    * producing a deterministically ordered list.
-   * Validates: Requirements 2.5, 15.4
+   * Validates: Requirements 13.4, 14.1, 14.2
    */
-  test("should dedupe normalized entries keeping first occurrence", async () => {
+  test("should dedupe canonical entries keeping first occurrence", async () => {
     const { validateSettings } = await importBackground();
 
     const validated = validateSettings({
       allowlist: [
         "example.com",
-        "www.example.com", // normalizes to example.com (dup)
-        "EXAMPLE.com", // normalizes to example.com (dup)
+        "EXAMPLE.com", // canonicalizes to example.com (dup)
+        "Example.Com", // canonicalizes to example.com (dup)
         "test.org",
-        "https://test.org/path", // normalizes to test.org (dup)
+        "TEST.ORG", // canonicalizes to test.org (dup)
         "alpha.com",
       ],
     });
@@ -343,13 +346,13 @@ describe("Scope Settings Validation", () => {
   });
 });
 
-describe("Scope Settings Migration (1.0 -> 1.1)", () => {
+describe("Scope Settings Migration (1.0/1.1 -> 1.2)", () => {
   /**
-   * A stored "1.0" object migrates to "1.1" while preserving `enabled`
+   * A stored "1.0" object migrates to "1.2" while preserving `enabled`
    * and all other existing field values.
-   * Validates: Requirements 3.2, 3.5
+   * Validates: Requirements 13.2, 13.7
    */
-  test("should migrate version '1.0' to '1.1' preserving enabled and other fields", async () => {
+  test("should migrate version '1.0' to '1.2' preserving enabled and other fields", async () => {
     const { validateSettings } = await importBackground();
 
     const validated = validateSettings({
@@ -359,7 +362,7 @@ describe("Scope Settings Migration (1.0 -> 1.1)", () => {
       location: { latitude: 37.7749, longitude: -122.4194, accuracy: 10 },
     });
 
-    expect(validated.version).toBe("1.1");
+    expect(validated.version).toBe("1.2");
     expect(validated.enabled).toBe(true);
     expect(validated.webrtcProtection).toBe(true);
     expect(validated.location).toEqual({
@@ -374,15 +377,15 @@ describe("Scope Settings Migration (1.0 -> 1.1)", () => {
   });
 
   /**
-   * An object with an absent version field migrates to "1.1".
-   * Validates: Requirements 3.2
+   * An object with an absent version field migrates to "1.2".
+   * Validates: Requirements 13.2
    */
-  test("should stamp version '1.1' when version is absent", async () => {
+  test("should stamp version '1.2' when version is absent", async () => {
     const { validateSettings } = await importBackground();
 
     const validated = validateSettings({ enabled: false });
 
-    expect(validated.version).toBe("1.1");
+    expect(validated.version).toBe("1.2");
   });
 
   /**
@@ -449,8 +452,56 @@ describe("Scope Settings Migration (1.0 -> 1.1)", () => {
       denylist: ["blocked.com"],
     });
 
-    expect(validated.version).toBe("1.1");
+    expect(validated.version).toBe("1.2");
     expect(validated.scopeMode).toBe("denylist");
     expect(validated.denylist).toEqual(["blocked.com"]);
+  });
+});
+
+describe("Advanced Filtering migration (1.1 -> 1.2)", () => {
+  /**
+   * A stored "1.1" object migrates to "1.2" with its hostname lists carried
+   * forward losslessly — every schema-1.1 hostname is a valid bare-host Pattern
+   * with identical (apex + subdomain) matching meaning.
+   * Validates: Requirements 13.2, 13.3, 13.7
+   */
+  test("should migrate '1.1' to '1.2' preserving hostname lists losslessly", async () => {
+    const { validateSettings } = await importBackground();
+
+    const validated = validateSettings({
+      enabled: true,
+      version: "1.1",
+      scopeMode: "allowlist",
+      allowlist: ["example.com", "sub.example.org"],
+      denylist: ["blocked.net"],
+    });
+
+    expect(validated.version).toBe("1.2");
+    expect(validated.enabled).toBe(true);
+    expect(validated.scopeMode).toBe("allowlist");
+    expect(validated.allowlist).toEqual(["example.com", "sub.example.org"]);
+    expect(validated.denylist).toEqual(["blocked.net"]);
+  });
+
+  /**
+   * Advanced glob patterns (wildcard TLD, `*.` subdomain, port, and path) are
+   * retained through sanitization as their canonical forms.
+   * Validates: Requirements 13.4, 14.1
+   */
+  test("should retain wildcard, port, and path patterns as canonical forms", async () => {
+    const { validateSettings } = await importBackground();
+
+    const validated = validateSettings({
+      version: "1.2",
+      scopeMode: "denylist",
+      denylist: ["*.ru", "*.example.com", "localhost:3000", "example.com/tracking/*"],
+    });
+
+    expect(validated.denylist).toEqual([
+      "*.ru",
+      "*.example.com",
+      "localhost:3000",
+      "example.com/tracking/*",
+    ]);
   });
 });
