@@ -726,7 +726,9 @@ final class SpoofController: ObservableObject {
         return Date().timeIntervalSince(extensionLastSeen) < 7 * 24 * 60 * 60
     }
 
-    let favoritesCapacity = 10
+    /// Mirrors the extension's `MAX_FAVORITES` (src/shared/types/settings.ts) —
+    /// keep the two in sync.
+    let favoritesCapacity = 50
 
     private let suite = AppGroup.suite
 

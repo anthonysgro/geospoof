@@ -15,6 +15,7 @@ import {
   DEFAULT_SETTINGS,
   MIN_PRECISION_RADIUS_M,
   MAX_PRECISION_RADIUS_M,
+  MAX_FAVORITES,
 } from "@/shared/types/settings";
 import { isSupportedLocale } from "@/shared/i18n/locales";
 import { createLogger } from "@/shared/utils/debug-logger";
@@ -386,7 +387,7 @@ export function validateSettings(settings: Partial<Settings>): Settings {
       }
     }
     // Enforce capacity cap on load (defensive against manual storage edits)
-    validated.favorites = validatedFavorites.slice(0, 10);
+    validated.favorites = validatedFavorites.slice(0, MAX_FAVORITES);
   } else {
     // Missing field (first run / migration) — treat as empty
     validated.favorites = [];

@@ -55,6 +55,16 @@ export interface Favorite {
 }
 
 /**
+ * Maximum number of saved favorites.
+ *
+ * Enforced in two places: the SAVE_FAVORITE handler (rejects with AT_CAPACITY)
+ * and the load-time validator (defensive slice against hand-edited storage).
+ * The Swift app mirrors this value as `favoritesCapacity` in SpoofModel.swift —
+ * keep the two in sync.
+ */
+export const MAX_FAVORITES = 50;
+
+/**
  * Site-scoping mode. "all" preserves the pre-1.1 global behavior.
  */
 export type ScopeMode = "all" | "allowlist" | "denylist";

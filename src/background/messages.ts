@@ -30,6 +30,7 @@ import type {
   SetPrecisionPayload,
 } from "@/shared/types/messages";
 import type { LocationName } from "@/shared/types/settings";
+import { MAX_FAVORITES } from "@/shared/types/settings";
 import { resolveAccuracy, computeEffectiveAccuracySetting } from "@/shared/accuracy/resolver";
 import { detectDeviceClass } from "@/shared/accuracy/device-class";
 import { applyPrecisionOffset, computeEffectiveLocationPrecision } from "@/shared/precision/offset";
@@ -548,7 +549,7 @@ export async function handleSaveFavorite(payload: SaveFavoritePayload): Promise<
   const settings = await loadSettings();
 
   // Capacity check (Req 2.6, 8.5)
-  if (settings.favorites.length >= 10) {
+  if (settings.favorites.length >= MAX_FAVORITES) {
     return { error: "AT_CAPACITY" };
   }
 

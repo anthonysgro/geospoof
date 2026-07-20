@@ -690,7 +690,7 @@ Persisted in `browser.storage.local` under the key `"settings"`.
   debugLogging: boolean,            // verbose logging toggle
   verbosityLevel: string,           // debug logger threshold (e.g. "INFO")
   theme: "system" | "light" | "dark",
-  favorites: Favorite[],            // up to 10 saved locations
+  favorites: Favorite[],            // up to 50 saved locations
   version: string,
   lastUpdated: number               // epoch ms; default 0 (never-saved sentinel — see app-bridge.ts)
 }
