@@ -1,0 +1,87 @@
+name: Bug Report
+title: "[BUG] - [Short description of the bug]"
+description: Report a reproducible bug.
+type: "Bug"
+body:
+  - type: textarea
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: To reproduce
+      description: Steps to reproduce the behavior.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Expected behavior
+      description: A clear and concise description of what you expected to happen.
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Affected feature
+      description: Which protection feature is this bug related to?
+      multiple: true
+      options:
+        - Geolocation spoofing
+        - Timezone / Date / Intl / Temporal spoofing
+        - WebRTC protection
+        - Sync with VPN
+        - Anti-fingerprinting
+        - City search
+        - Extension UI / popup
+        - Other / not sure
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Browser
+      options:
+        - Chrome
+        - Firefox
+        - Safari
+        - Brave
+        - Edge
+        - Opera
+        - Other Chromium-based
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Browser version
+      placeholder: e.g. Chrome 126.0.6478.126
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: GeoSpoof version
+      description: Found on the extension's popup or in about:addons / chrome://extensions
+      placeholder: e.g. 1.21.9
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Install source
+      options:
+        - Chrome Web Store
+        - Firefox Add-ons (AMO)
+        - App Store (Safari/macOS)
+        - GitHub Releases (macOS DMG)
+        - GitHub Releases (Firefox self-hosted XPI)
+        - Built from source
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Operating system
+      placeholder: e.g. macOS 15.4, Windows 11, iOS 18.1
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Additional context
+      description: Add any other context about the problem here, including console logs or screenshots if relevant.
