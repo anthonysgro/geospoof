@@ -13,8 +13,8 @@ jobs:
       pages: write
       id-token: write
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
           cache: "npm"
@@ -97,7 +97,7 @@ jobs:
 
       # ── Single GitHub Release with all artifacts ──
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: v${{ env.BASE_VERSION }}
           files: release-assets/*
@@ -139,12 +139,12 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
           cache: "npm"
-      - uses: ruby/setup-ruby@v1
+      - uses: ruby/setup-ruby@v1.317.0
         with:
           ruby-version: "3.3"
           bundler-cache: true
@@ -236,7 +236,7 @@ jobs:
         run: mv "safari/build/GeoSpoof.dmg" "safari/build/geospoof-macos-v${BASE_VERSION}.dmg"
 
       - name: Attach DMG to release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: safari/build/geospoof-macos-v${{ env.BASE_VERSION }}.dmg
 
