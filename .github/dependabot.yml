@@ -1,0 +1,37 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: daily
+      timezone: Etc/UTC
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    allow:
+      - dependency-type: all
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: daily
+      timezone: Etc/UTC
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"
+    allow:
+      - dependency-type: all
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: swift
+    directory: "/safari"
+    schedule:
+      interval: daily
+      timezone: Etc/UTC
+    cooldown:
+      default-days: 7
