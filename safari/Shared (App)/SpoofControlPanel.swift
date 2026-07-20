@@ -1141,18 +1141,6 @@ extension View {
             self
         }
     }
-
-    /// Dismiss the software keyboard when the user drags the scroll view. The
-    /// `scrollDismissesKeyboard` modifier is iOS 16+/macOS 13+; older systems
-    /// keep the default behavior.
-    @ViewBuilder
-    fileprivate func dismissesKeyboardOnScroll() -> some View {
-        if #available(iOS 16.0, macOS 13.0, *) {
-            scrollDismissesKeyboard(.interactively)
-        } else {
-            self
-        }
-    }
 }
 
 struct SetLocationView: View {
@@ -1164,6 +1152,9 @@ struct SetLocationView: View {
     @State private var latText = ""
     @State private var lonText = ""
     @State private var coordError: String?
+
+    private enum CoordinateField { case latitude, longitude }
+    @FocusState private var focusedField: CoordinateField?
 
     private var results: [PlaceResult] {
         searchText.isEmpty ? store.popular(7) : store.search(searchText)
@@ -1215,7 +1206,11 @@ struct SetLocationView: View {
 
             Section {
                 coordField("Latitude (−90 to 90)", text: $latText)
+                    .focused($focusedField, equals: .latitude)
+                    .submitLabel(.next)
                 coordField("Longitude (−180 to 180)", text: $lonText)
+                    .focused($focusedField, equals: .longitude)
+                    .submitLabel(.done)
                 Button {
                     pasteCoordinates()
                 } label: {
@@ -1248,23 +1243,19 @@ struct SetLocationView: View {
         .navigationTitle("Set Location")
         .tint(.brand)
         .onAppear { store.preload() }
-        // Drag on the list dismisses the keyboard (iOS 16+); older systems keep
-        // the default behavior.
-        .dismissesKeyboardOnScroll()
-        #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
-        // The numeric keyboard has no reliable dismiss key, so give an explicit
-        // "Done" above it that resigns whatever field is focused (coordinate or
-        // search). This is the HIG-standard way to dismiss a numeric-entry keyboard.
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") {
-                    UIApplication.shared.sendAction(
-                        #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                }
+        // The keyboard is driven from its own Return key: Latitude ("next") →
+        // Longitude ("Done") → dismiss. The List's built-in keyboard avoidance
+        // lifts the focused field above the keyboard on its own, so we add NO
+        // custom scroll/tap handling here — doing so fights the system and is
+        // what was pushing the keyboard over the inputs.
+        .onSubmit {
+            switch focusedField {
+            case .latitude: focusedField = .longitude
+            case .longitude, .none: focusedField = nil
             }
         }
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
         #endif
     }
 
