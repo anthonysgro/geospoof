@@ -79,6 +79,36 @@ export const ACCURACY_GRID_DP = 1;
 export const DEFAULT_ACCURACY_SETTING: AccuracySetting = { mode: "auto" };
 
 /**
+ * How the reported latitude/longitude is derived from the user's chosen
+ * location (the Anchor, `Settings.location`).
+ *
+ * DISTINCT from {@link AccuracySetting}: accuracy sets the reported
+ * `GeolocationCoordinates.accuracy` *number* while the point stays exact; this
+ * moves the *point itself*. The two are independent — different stored fields,
+ * different seeds, different modules.
+ *
+ *   - `exact`       → report the Anchor coordinates verbatim (default; the
+ *                     pre-feature behavior).
+ *   - `approximate` → report a deterministic random point within `radiusMeters`
+ *                     of the Anchor (a phone-style "approximate location").
+ */
+export type LocationPrecision = { mode: "exact" } | { mode: "approximate"; radiusMeters: number };
+
+/** Default: report the exact chosen point (pre-feature behavior). */
+export const DEFAULT_LOCATION_PRECISION: LocationPrecision = { mode: "exact" };
+
+/**
+ * Inclusive bounds (in meters) an `approximate` radius is clamped to.
+ *
+ * The surfaced presets stay at or below ~10km so the offset point remains in
+ * the Anchor's timezone under normal conditions (keeping every signal
+ * coherent). `MAX_PRECISION_RADIUS_M` is a wider defensive clamp guarding
+ * against hand-edited storage, not a value the UI offers.
+ */
+export const MIN_PRECISION_RADIUS_M = 50;
+export const MAX_PRECISION_RADIUS_M = 50000; // 50km defensive clamp
+
+/**
  * Complete extension settings persisted in browser.storage.local.
  */
 export interface Settings {
@@ -203,6 +233,20 @@ export interface Settings {
   accuracySetting: AccuracySetting;
   /** Per-install, persisted; stable derivation source for auto accuracy */
   accuracySeed: number;
+  /**
+   * How the reported coordinates are derived from `location` (the Anchor):
+   * report it exactly, or a deterministic random point within a radius. The
+   * Anchor stored in `location` is never mutated — the offset is applied only
+   * to the coordinates delivered to pages. Independent of the accuracy setting.
+   */
+  locationPrecision: LocationPrecision;
+  /**
+   * Per-install, persisted; stable derivation source for the approximate-
+   * location offset. Dedicated to precision and fully independent of
+   * `accuracySeed` (separate field, separate validation/generation). `0` means
+   * unseeded — the first save assigns a real value.
+   */
+  precisionSeed: number;
 }
 
 /**
@@ -238,4 +282,6 @@ export const DEFAULT_SETTINGS: Settings = {
   denylist: [],
   accuracySetting: { mode: "auto" },
   accuracySeed: 0,
+  locationPrecision: { mode: "exact" },
+  precisionSeed: 0,
 };

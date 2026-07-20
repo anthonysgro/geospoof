@@ -1691,6 +1691,7 @@ struct SiteFiltersView: View {
                             }
                         }
                         PreservePromptRows(controller: controller)
+                        PrecisionSettingsRows(controller: controller)
                     } header: {
                         Text("Location")
                     }
@@ -2216,6 +2217,125 @@ struct AccuracySettingsRows: View {
         if case .fixed(let meters) = controller.accuracySetting {
             customText = String(meters)
         }
+    }
+}
+
+// MARK: - Location precision settings
+
+/// UI-only preset model for the precision picker. Maps onto
+/// `SpoofLocationPrecision`: Exact → `.exact`; the approximate presets →
+/// `.approximate(radiusMeters:)`. Distinct from accuracy — precision moves the
+/// reported point within a radius; accuracy sets the reported uncertainty value.
+private enum LocationPrecisionPreset: String, CaseIterable, Identifiable {
+    case exact, street, neighborhood, city
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .exact: return "Exact"
+        case .street: return "Street (~0.5 km)"
+        case .neighborhood: return "Neighborhood (~2 km)"
+        case .city: return "City (~10 km)"
+        }
+    }
+    /// Radius in meters for the approximate presets; nil for Exact. Mirrors the
+    /// extension's popup presets.
+    var radiusMeters: Int? {
+        switch self {
+        case .exact: return nil
+        case .street: return 500
+        case .neighborhood: return 2000
+        case .city: return 10000
+        }
+    }
+}
+
+/// Location-precision control (a single menu Picker) intended to be embedded in
+/// a Form Section. Reads/writes `controller.locationPrecision`, mirroring the
+/// web extension's preset mapping. Approximate location is a Pro feature on the
+/// Apple apps (parity with custom accuracy): a free user picking an approximate
+/// option is bounced to the paywall and the setting stays Exact — the extension
+/// also forces Exact for these users, so this is the app UI half of that gate.
+struct PrecisionSettingsRows: View {
+    @ObservedObject var controller: SpoofController
+    @ObservedObject private var pro = ProStore.shared
+    @State private var showPaywall = false
+
+    private var precisionLocked: Bool { !pro.isPro }
+
+    /// Derive the active preset from the committed setting; an approximate
+    /// radius snaps to the nearest preset (so a bridged/hand-set value still
+    /// selects a sensible option).
+    private static func preset(for setting: SpoofLocationPrecision) -> LocationPrecisionPreset {
+        switch setting {
+        case .exact:
+            return .exact
+        case .approximate(let radius):
+            let presets: [LocationPrecisionPreset] = [.street, .neighborhood, .city]
+            return presets.min(by: {
+                abs(($0.radiusMeters ?? 0) - radius) < abs(($1.radiusMeters ?? 0) - radius)
+            }) ?? .street
+        }
+    }
+
+    private var currentPreset: LocationPrecisionPreset {
+        Self.preset(for: controller.locationPrecision)
+    }
+
+    private var presetSelection: Binding<LocationPrecisionPreset> {
+        Binding(
+            get: { currentPreset },
+            set: { applyPreset($0) }
+        )
+    }
+
+    var body: some View {
+        Picker(selection: presetSelection) {
+            ForEach(LocationPrecisionPreset.allCases) { preset in
+                Text(preset.label).tag(preset)
+            }
+        } label: {
+            Label("Location Precision", systemImage: "mappin.and.ellipse")
+        }
+        .pickerStyle(.menu)
+        .sheet(isPresented: $showPaywall) {
+            ProPaywallView()
+        }
+
+        if precisionLocked {
+            Text("Approximate location is a GeoSpoof Pro feature. Upgrade to report a random nearby point; free spoofing uses your exact chosen location.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        } else {
+            Text("Approximate reports a random point near your location instead of the exact spot.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    /// Map the chosen preset onto a concrete setting and push it through the
+    /// controller. Approximate is Pro-gated: a free user is bounced to the
+    /// paywall and the setting stays put (the extension also forces Exact).
+    private func applyPreset(_ preset: LocationPrecisionPreset) {
+        if precisionLocked && preset != .exact {
+            showPaywall = true
+            return
+        }
+        if let radius = preset.radiusMeters {
+            controller.setLocationPrecision(.approximate(radiusMeters: radius))
+        } else {
+            controller.setLocationPrecision(.exact)
+        }
+    }
+}
+
+/// Detail-panel readout for the reported location precision: "Exact" or the
+/// approximate radius (e.g. "±2 km"). Mirrors `accuracyDetailValue`.
+func precisionDetailValue(for setting: SpoofLocationPrecision) -> String {
+    switch setting {
+    case .exact:
+        return "Exact"
+    case .approximate(let radius):
+        return radius >= 1000 ? "±\(radius / 1000) km" : "±\(radius) m"
     }
 }
 

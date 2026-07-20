@@ -52,6 +52,8 @@ function makeSettings(partial: Partial<Settings>): Settings {
     denylist: [],
     accuracySetting: { mode: "auto" },
     accuracySeed: 0,
+    locationPrecision: { mode: "exact" },
+    precisionSeed: 0,
     ...partial,
   };
 }

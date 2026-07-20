@@ -3,8 +3,19 @@
  * Load, save, validate, and update extension settings in browser.storage.local.
  */
 
-import type { AccuracySetting, Favorite, ScopeMode, Settings } from "@/shared/types/settings";
-import { DEFAULT_ACCURACY_M, DEFAULT_SETTINGS } from "@/shared/types/settings";
+import type {
+  AccuracySetting,
+  Favorite,
+  LocationPrecision,
+  ScopeMode,
+  Settings,
+} from "@/shared/types/settings";
+import {
+  DEFAULT_ACCURACY_M,
+  DEFAULT_SETTINGS,
+  MIN_PRECISION_RADIUS_M,
+  MAX_PRECISION_RADIUS_M,
+} from "@/shared/types/settings";
 import { isSupportedLocale } from "@/shared/i18n/locales";
 import { createLogger } from "@/shared/utils/debug-logger";
 import { parsePattern } from "@/shared/utils/scope";
@@ -59,6 +70,11 @@ function clampAccuracyMeters(value: number): number {
   return Math.min(ACCURACY_MAX_M, Math.max(ACCURACY_MIN_M, Math.round(value)));
 }
 
+/** Clamp a precision radius into [MIN_PRECISION_RADIUS_M, MAX_PRECISION_RADIUS_M]. */
+function clampPrecisionRadius(value: number): number {
+  return Math.min(MAX_PRECISION_RADIUS_M, Math.max(MIN_PRECISION_RADIUS_M, value));
+}
+
 /**
  * Repair an arbitrary stored `accuracySetting` value into one of the three
  * valid AccuracySetting shapes with in-range numbers (Req 7.1–7.4):
@@ -108,6 +124,41 @@ export function validateAccuracySetting(value: unknown): AccuracySetting {
   }
 }
 
+/**
+ * Repair an arbitrary stored `locationPrecision` value into one of the two
+ * valid LocationPrecision shapes (Req 7.1–7.5):
+ *   - absent / non-object / unknown mode        → { mode: "exact" }
+ *   - approximate with non-finite radiusMeters   → { mode: "exact" }
+ *   - approximate otherwise                       → radiusMeters clamped into
+ *                                                   [MIN_PRECISION_RADIUS_M,
+ *                                                    MAX_PRECISION_RADIUS_M]
+ *
+ * Independent of the accuracy validation above: precision has its own field,
+ * its own seed, and its own repair path.
+ */
+export function validateLocationPrecision(value: unknown): LocationPrecision {
+  if (!value || typeof value !== "object") {
+    return { mode: "exact" };
+  }
+
+  const setting = value as { mode?: unknown; radiusMeters?: unknown };
+
+  switch (setting.mode) {
+    case "exact":
+      return { mode: "exact" };
+
+    case "approximate": {
+      if (typeof setting.radiusMeters !== "number" || !Number.isFinite(setting.radiusMeters)) {
+        return { mode: "exact" };
+      }
+      return { mode: "approximate", radiusMeters: clampPrecisionRadius(setting.radiusMeters) };
+    }
+
+    default:
+      return { mode: "exact" };
+  }
+}
+
 /** A stored seed is usable only when it is a finite, non-zero number (Req 5.5). */
 function isValidAccuracySeed(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value !== 0;
@@ -115,6 +166,19 @@ function isValidAccuracySeed(value: unknown): value is number {
 
 /** Generate a fresh per-install accuracy seed in [0, 2^31). */
 function generateAccuracySeed(): number {
+  return Math.floor(Math.random() * 2 ** 31);
+}
+
+/**
+ * A stored precision seed is usable only when it is a finite, non-zero number.
+ * Separate from the accuracy seed check so the two features stay independent.
+ */
+function isValidPrecisionSeed(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value !== 0;
+}
+
+/** Generate a fresh per-install precision seed in [0, 2^31). */
+function generatePrecisionSeed(): number {
   return Math.floor(Math.random() * 2 ** 31);
 }
 
@@ -339,6 +403,16 @@ export function validateSettings(settings: Partial<Settings>): Settings {
     ? settings.accuracySeed
     : generateAccuracySeed();
 
+  // locationPrecision (Req 7.1–7.5): repair an absent/unknown/malformed value
+  // into a valid shape; approximate radii are clamped into bounds.
+  validated.locationPrecision = validateLocationPrecision(settings.locationPrecision);
+
+  // precisionSeed (Req 1.4): keep a valid stored seed; otherwise assign a fresh
+  // per-install seed, independently of accuracySeed. Persisted on the next save.
+  validated.precisionSeed = isValidPrecisionSeed(settings.precisionSeed)
+    ? settings.precisionSeed
+    : generatePrecisionSeed();
+
   return validated;
 }
 
@@ -438,6 +512,10 @@ async function pushRegionToNativeHost(settings: Settings): Promise<void> {
       // allow/deny). The app decodes + adopts it; accuracySeed stays
       // extension-owned and is intentionally NOT bridged.
       accuracySetting: JSON.stringify(settings.accuracySetting),
+      // Location-precision setting rides as a JSON string like accuracySetting;
+      // the app decodes + adopts it. precisionSeed stays extension-owned and is
+      // intentionally NOT bridged. The bridged region/location stays the anchor.
+      locationPrecision: JSON.stringify(settings.locationPrecision),
     });
   } catch (error) {
     // Swallow — native messaging may not be available in all contexts

@@ -1506,6 +1506,34 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   color: var(--disclaimer-text);
 }
 
+/* Precision selector. Its option text ("Neighborhood (~2 km)", and longer in
+   other locales) is too wide to sit beside the label on one line, so — unlike
+   the short Theme/Accuracy selectors — this control STACKS: the label on its
+   own line above a full-width dropdown. That makes the layout independent of
+   option/label length in every locale (no smushing, no reliance on short
+   translations). */
+.precision-selector {
+  margin-top: 12px;
+}
+
+.precision-selector .select-label {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.precision-selector .select-label select {
+  width: 100%;
+}
+
+/* Always-visible descriptive note under the precision dropdown. */
+.precision-hint {
+  margin-top: 6px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--disclaimer-text);
+}
+
 .select-label {
   display: flex;
   justify-content: space-between;

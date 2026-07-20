@@ -847,6 +847,35 @@
               </div>
             </div>
             <hr class="section-divider" />
+            <div class="precision-selector">
+              <label class="select-label" for="precisionSelect">
+                <span data-i18n="advanced_precision">Location Precision</span>
+                <select id="precisionSelect">
+                  <option value="exact" data-i18n="advanced_precision_exact">Exact</option>
+                  <option value="street" data-i18n="advanced_precision_street">
+                    Street (~0.5 km)
+                  </option>
+                  <option value="neighborhood" data-i18n="advanced_precision_neighborhood">
+                    Neighborhood (~2 km)
+                  </option>
+                  <option value="city" data-i18n="advanced_precision_city">City (~10 km)</option>
+                </select>
+              </label>
+              <!-- Pro lock note (shown for non-Pro iOS users; control disabled) -->
+              <div
+                class="pro-lock-note"
+                id="precisionProNote"
+                style="display: none"
+                data-i18n="advanced_precision_proNote"
+              >
+                🔒 Approximate location is a GeoSpoof Pro feature. Upgrade in the GeoSpoof app to
+                blur your exact location.
+              </div>
+              <div class="precision-hint" id="precisionHint" data-i18n="advanced_precision_hint">
+                Approximate reports a random point near your location instead of the exact spot.
+              </div>
+            </div>
+            <hr class="section-divider" />
             <div class="theme-selector">
               <label class="select-label" for="themeSelect">
                 <span data-i18n="advanced_theme">Theme</span>

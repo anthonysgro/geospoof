@@ -27,17 +27,24 @@ import type {
   ScopeSitePayload,
   ScopeResponse,
   SetAccuracyPayload,
+  SetPrecisionPayload,
 } from "@/shared/types/messages";
 import type { LocationName } from "@/shared/types/settings";
 import { resolveAccuracy, computeEffectiveAccuracySetting } from "@/shared/accuracy/resolver";
 import { detectDeviceClass } from "@/shared/accuracy/device-class";
+import { applyPrecisionOffset, computeEffectiveLocationPrecision } from "@/shared/precision/offset";
 import { setDebugEnabled, setVerbosityLevel, createLogger } from "@/shared/utils/debug-logger";
 import {
   computeEffectiveEnabled,
   computeEffectivePreserveGeoPrompt,
   parsePattern,
 } from "@/shared/utils/scope";
-import { loadSettings, updateSettings, validateAccuracySetting } from "./settings";
+import {
+  loadSettings,
+  updateSettings,
+  validateAccuracySetting,
+  validateLocationPrecision,
+} from "./settings";
 
 const logger = createLogger("BG");
 
@@ -148,7 +155,18 @@ export async function handleMessage(
 
         const scoped: UpdateSettingsPayload = {
           enabled: effectiveEnabled,
-          location: settings.location,
+          // Apply the approximate-location offset (no-op in `exact` mode, and
+          // Pro-gated back to exact for a non-Pro iOS user). Uses the same
+          // shared resolver as the broadcast path, so a freshly injected content
+          // script and a live one see the identical point.
+          location: applyPrecisionOffset(
+            settings.location,
+            computeEffectiveLocationPrecision(
+              settings.locationPrecision,
+              settings.proFeaturesBlocked
+            ),
+            settings.precisionSeed
+          ),
           timezone: debuggerActive ? null : settings.timezone,
           debugLogging: settings.debugLogging,
           verbosityLevel: settings.verbosityLevel,
@@ -351,6 +369,9 @@ export async function handleMessage(
 
       case "SET_ACCURACY":
         return await handleSetAccuracy(message.payload as SetAccuracyPayload);
+
+      case "SET_PRECISION":
+        return await handleSetPrecision(message.payload as SetPrecisionPayload);
 
       default:
         logger.warn("Unknown message type:", message.type);
@@ -706,5 +727,29 @@ export async function handleSetAccuracy(
   // Re-apply the CDP geolocation override so its accuracy matches the new
   // setting while debugger mode is active (no-op otherwise).
   await syncDebuggerSpoofing(settings);
+  return { success: true };
+}
+
+/**
+ * SET_PRECISION handler. Validate the incoming LocationPrecision via the same
+ * repair path used at load-time, persist it, then broadcast so live tabs pick
+ * up the new Reported_Location without a reload. No `syncDebuggerSpoofing` is
+ * needed: geolocation is never driven through the CDP path, so the injected
+ * (offset-aware) delivery already covers every engine.
+ */
+export async function handleSetPrecision(
+  payload: SetPrecisionPayload
+): Promise<{ success: true } | { error: string }> {
+  // Repair malformed/out-of-range input through the shared validation path.
+  const locationPrecision = validateLocationPrecision(payload?.precision);
+
+  let settings;
+  try {
+    settings = await updateSettings({ locationPrecision });
+  } catch {
+    return { error: "STORAGE_ERROR" };
+  }
+
+  await broadcastSettingsToTabs(settings);
   return { success: true };
 }

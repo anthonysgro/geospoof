@@ -72,6 +72,11 @@ const settingsArb: fc.Arbitrary<Settings> = fc.record({
       .map(([min, max]) => ({ mode: "range" as const, min, max }))
   ),
   accuracySeed: fc.integer({ min: 0, max: 2 ** 31 }),
+  // Fixed to `exact` so the scoping assertions below can check that
+  // `payload.location` passes through unchanged. The approximate-mode offset is
+  // covered by precision-offset.property.test.ts and precision-payload.test.ts.
+  locationPrecision: fc.constant({ mode: "exact" as const }),
+  precisionSeed: fc.integer({ min: 0, max: 2 ** 31 }),
 });
 
 /** The keys that MUST NOT appear in the broadcast payload. */

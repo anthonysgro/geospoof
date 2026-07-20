@@ -60,6 +60,7 @@ enum AppGroup {
     static let regionAllowlist   = "region_allowlist"
     static let regionDenylist    = "region_denylist"
     static let regionAccuracySetting = "region_accuracySetting"
+    static let regionLocationPrecision = "region_locationPrecision"
 
     // App -> Extension (a full desired-state snapshot the extension adopts on
     // next launch / tab activity, last-writer-wins by `pending_updatedAt`).
@@ -81,6 +82,7 @@ enum AppGroup {
     static let pendingAllowlist   = "pending_allowlist"
     static let pendingDenylist    = "pending_denylist"
     static let pendingAccuracySetting = "pending_accuracySetting"
+    static let pendingLocationPrecision = "pending_locationPrecision"
 
     // App -> Extension: automatic-background-sync gate. `pending_autoSyncBlocked`
     // is the computed value the extension reads (true = don't auto-sync). It's
@@ -292,6 +294,69 @@ enum SpoofAccuracySetting: Equatable {
             let clampedLo = Self.clamp(lo)
             let clampedHi = Self.clamp(hi)
             return "{\"mode\":\"range\",\"min\":\(clampedLo),\"max\":\(clampedHi)}"
+        }
+    }
+}
+
+/// How the reported latitude/longitude is derived from the chosen location.
+/// Mirrors the `LocationPrecision` union in src/shared/types/settings.ts:
+///   `{"mode":"exact"}` | `{"mode":"approximate","radiusMeters":N}`
+/// Bridged through the App Group as a JSON string (passthrough both ways);
+/// `precisionSeed` is per-install and stays owned by the extension, so it is
+/// intentionally NOT modeled here. Set from the native `PrecisionSettingsRows`
+/// picker (and the browser popup), and round-trips through the bridge with
+/// last-writer-wins like `accuracySetting`. Distinct from `SpoofAccuracySetting`
+/// — precision moves the point, accuracy sets the reported uncertainty number.
+enum SpoofLocationPrecision: Equatable {
+    case exact
+    case approximate(radiusMeters: Int)
+
+    /// Inclusive bounds a radius is clamped to (mirrors the extension's
+    /// MIN_PRECISION_RADIUS_M / MAX_PRECISION_RADIUS_M).
+    private static let minRadius = 50
+    private static let maxRadius = 50000
+
+    private static func clamp(_ value: Int) -> Int {
+        Swift.min(maxRadius, Swift.max(minRadius, value))
+    }
+
+    private static func clamp(_ value: Double) -> Int {
+        clamp(Int(value.rounded()))
+    }
+
+    /// Decode from the JSON string stored in the App Group. Returns `.exact` on
+    /// any malformed/unknown input (mirrors the extension's
+    /// `validateLocationPrecision`): a non-finite radius falls back to `.exact`;
+    /// a finite radius is clamped into [50, 50000].
+    static func fromJSON(_ json: String?) -> SpoofLocationPrecision {
+        guard let json,
+              let data = json.data(using: .utf8),
+              let obj = try? JSONSerialization.jsonObject(with: data),
+              let dict = obj as? [String: Any],
+              let mode = dict["mode"] as? String else {
+            return .exact
+        }
+
+        switch mode {
+        case "exact":
+            return .exact
+        case "approximate":
+            guard let radius = (dict["radiusMeters"] as? NSNumber)?.doubleValue,
+                  radius.isFinite else { return .exact }
+            return .approximate(radiusMeters: clamp(radius))
+        default:
+            return .exact
+        }
+    }
+
+    /// Encode to the compact JSON the extension expects. The radius is rounded +
+    /// clamped into [50, 50000] for safety.
+    func toJSON() -> String {
+        switch self {
+        case .exact:
+            return "{\"mode\":\"exact\"}"
+        case .approximate(let radius):
+            return "{\"mode\":\"approximate\",\"radiusMeters\":\(Self.clamp(radius))}"
         }
     }
 }
@@ -624,6 +689,13 @@ final class SpoofController: ObservableObject {
     /// echo). No didSet, so adoption never bounces back as a pending write.
     /// `accuracySeed` is per-install / extension-owned and is not modeled here.
     @Published var accuracySetting: SpoofAccuracySetting = .auto
+    /// Location-precision setting. Set via `setLocationPrecision` (which writes
+    /// the pending bridge record) from the native `PrecisionSettingsRows` picker,
+    /// and adopted from the extension's region snapshot / pending in
+    /// refreshFromExtension / restoreLocalPending — exactly like `accuracySetting`.
+    /// No didSet, so adoption never echoes back as a pending write.
+    /// `precisionSeed` is extension-owned and not modeled here.
+    @Published var locationPrecision: SpoofLocationPrecision = .exact
     @Published var favorites: [SpoofFavorite] = [] {
         didSet {
             saveFavorites()
@@ -1084,6 +1156,17 @@ final class SpoofController: ObservableObject {
     func setWebRTCProtection(_ value: Bool) {
         Log.location.info("WebRTC protection \(value ? "enabled" : "disabled")")
         webrtcProtection = value
+        writePending()
+    }
+
+    /// Change the location-precision setting. Mirrors `setAccuracySetting`:
+    /// writes the pending bridge record so the extension adopts it. Adoption
+    /// paths (`refreshFromExtension` / `restoreLocalPending`) set
+    /// `locationPrecision` directly and never call this, so they don't echo back.
+    func setLocationPrecision(_ setting: SpoofLocationPrecision) {
+        guard setting != locationPrecision else { return }
+        Log.location.info("Location precision → \(setting.toJSON())")
+        locationPrecision = setting
         writePending()
     }
 
@@ -1661,6 +1744,10 @@ final class SpoofController: ObservableObject {
         // handler). accuracySeed is extension-owned and is not written here.
         dict[AppGroup.pendingAccuracySetting] = accuracySetting.toJSON()
 
+        // Location-precision setting as a JSON string (passthrough via the native
+        // handler). precisionSeed is extension-owned and is not written here.
+        dict[AppGroup.pendingLocationPrecision] = locationPrecision.toJSON()
+
         // Location + its derived display fields. The three cases collapse to:
         //   • location present → publish coords + display fields, not cleared.
         //   • no location, VPN-sync ON → mid-sync (e.g. detecting exit IP); keep
@@ -1835,6 +1922,9 @@ final class SpoofController: ObservableObject {
         if let raw = dict[AppGroup.pendingAccuracySetting] as? String {
             accuracySetting = SpoofAccuracySetting.fromJSON(raw)
         }
+        if let raw = dict[AppGroup.pendingLocationPrecision] as? String {
+            locationPrecision = SpoofLocationPrecision.fromJSON(raw)
+        }
 
         if let lat = dict[AppGroup.pendingLatitude] as? Double,
            let lon = dict[AppGroup.pendingLongitude] as? Double {
@@ -1946,6 +2036,12 @@ final class SpoofController: ObservableObject {
         // pending write. accuracySeed is extension-owned and never read here.
         if let raw = dict[AppGroup.regionAccuracySetting] as? String {
             accuracySetting = SpoofAccuracySetting.fromJSON(raw)
+        }
+
+        // Adopt the extension's location-precision setting (JSON string), same
+        // no-didSet / no-echo rationale as the accuracy setting above.
+        if let raw = dict[AppGroup.regionLocationPrecision] as? String {
+            locationPrecision = SpoofLocationPrecision.fromJSON(raw)
         }
     }
 

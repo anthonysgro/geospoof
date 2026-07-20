@@ -15,6 +15,7 @@ import { renderScope, renderScopeLoadError } from "./scope";
 import { reflectEarlyProtectionState } from "./early-protection";
 import { reflectDebuggerModeState } from "./debugger-mode";
 import { restoreAccuracyControl } from "./accuracy";
+import { restorePrecisionControl } from "./precision";
 
 /**
  * Apply a theme class to the document body.
@@ -162,6 +163,11 @@ export async function loadSettings(preloaded?: Settings): Promise<void> {
         })
       : DEFAULT_ACCURACY_M;
     restoreAccuracyControl(settings.accuracySetting, resolvedAccuracy, proLocked);
+
+    // Restore the location-precision dropdown from the stored setting.
+    // Approximate location is Pro-gated on iOS Safari (parity with custom
+    // accuracy); a non-Pro user sees it disabled and forced to Exact.
+    restorePrecisionControl(settings.locationPrecision, proLocked);
 
     // Firefox-only: reveal the "Instant timezone protection" toggle and sync it
     // to whether the optional userScripts permission is currently granted.

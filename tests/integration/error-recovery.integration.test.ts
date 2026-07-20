@@ -467,6 +467,8 @@ describe("Error Recovery Integration Tests", () => {
         denylist: [],
         accuracySetting: { mode: "auto" as const },
         accuracySeed: 0,
+        locationPrecision: { mode: "exact" as const },
+        precisionSeed: 0,
       };
 
       // Act: Broadcast settings (should not throw)

@@ -52,6 +52,10 @@ enum RegionKey {
     // Spoofed-accuracy setting (passthrough both ways) as a JSON string.
     static let accuracySetting  = "region_accuracySetting"   // Extension -> App (JSON string, for display + adoption)
     static let pAccuracySetting = "pending_accuracySetting"  // App -> Extension (JSON string)
+    // Location-precision setting (passthrough both ways) as a JSON string. The
+    // control lives only in the browser popup; the app persists + relays it.
+    static let locationPrecision  = "region_locationPrecision"   // Extension -> App (JSON string)
+    static let pLocationPrecision = "pending_locationPrecision"  // App -> Extension (JSON string)
 
     // App -> Extension: a full desired-state snapshot the extension adopts on
     // next launch / tab activity (last-writer-wins by pending_updatedAt).
@@ -223,6 +227,12 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                 dict[RegionKey.accuracySetting] = accuracyJSON
             }
 
+            // Location-precision setting arrives as a JSON string; store verbatim
+            // for the app to persist + relay (precisionSeed is not bridged).
+            if let precisionJSON = input["locationPrecision"] as? String {
+                dict[RegionKey.locationPrecision] = precisionJSON
+            }
+
             dict[RegionKey.updatedAt] = Date().timeIntervalSince1970
         }
 
@@ -285,6 +295,9 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         }
         if let accuracyJSON = dict[RegionKey.pAccuracySetting] as? String {
             pending["accuracySetting"] = accuracyJSON
+        }
+        if let precisionJSON = dict[RegionKey.pLocationPrecision] as? String {
+            pending["locationPrecision"] = precisionJSON
         }
         return ["pending": pending]
     }

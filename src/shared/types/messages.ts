@@ -1,4 +1,11 @@
-import type { AccuracySetting, Location, Timezone, Settings, ScopeMode } from "./settings";
+import type {
+  AccuracySetting,
+  Location,
+  LocationPrecision,
+  Timezone,
+  Settings,
+  ScopeMode,
+} from "./settings";
 
 /**
  * All supported message types for inter-component communication.
@@ -29,7 +36,8 @@ export type MessageType =
   | "SET_SCOPE_MODE"
   | "ADD_SCOPE_SITE"
   | "REMOVE_SCOPE_SITE"
-  | "SET_ACCURACY";
+  | "SET_ACCURACY"
+  | "SET_PRECISION";
 
 /**
  * Generic message structure for runtime messaging.
@@ -260,6 +268,12 @@ export interface ScopeSitePayload {
 
 export interface SetAccuracyPayload {
   accuracySetting: AccuracySetting;
+}
+
+// --- Location precision payload types ---
+
+export interface SetPrecisionPayload {
+  precision: LocationPrecision;
 }
 
 // --- Site-scoping response types ---

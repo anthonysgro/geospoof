@@ -46,6 +46,8 @@ function makeSettings(overrides?: Partial<Settings>): Settings {
     denylist: ["blocked.com"],
     accuracySetting: { mode: "auto" },
     accuracySeed: 0,
+    locationPrecision: { mode: "exact" },
+    precisionSeed: 0,
     ...overrides,
   };
 }

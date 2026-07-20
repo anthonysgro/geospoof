@@ -8,6 +8,7 @@ import type { UpdateSettingsPayload, InjectionStatus } from "@/shared/types/mess
 import { createLogger } from "@/shared/utils/debug-logger";
 import { computeEffectiveEnabled, computeEffectivePreserveGeoPrompt } from "@/shared/utils/scope";
 import { computeEffectiveAccuracySetting } from "@/shared/accuracy/resolver";
+import { applyPrecisionOffset, computeEffectiveLocationPrecision } from "@/shared/precision/offset";
 import { updateWorkerFilterSettings } from "./worker-request-filter";
 
 const logger = createLogger("BG");
@@ -60,7 +61,15 @@ export async function sendSettingsToTab(
 
   const payload: UpdateSettingsPayload = {
     enabled,
-    location: settings.location,
+    // Approximate-location precision, when enabled, offsets the reported point
+    // within its radius; `exact` (the default) returns the anchor unchanged.
+    // The anchor in storage is never mutated. On iOS Safari a non-Pro user is
+    // gated back to exact (fail-open elsewhere).
+    location: applyPrecisionOffset(
+      settings.location,
+      computeEffectiveLocationPrecision(settings.locationPrecision, settings.proFeaturesBlocked),
+      settings.precisionSeed
+    ),
     timezone: debuggerActive ? null : settings.timezone,
     debugLogging: settings.debugLogging,
     verbosityLevel: settings.verbosityLevel,

@@ -35,6 +35,7 @@
  */
 
 import type { Settings } from "@/shared/types/settings";
+import { applyPrecisionOffset } from "@/shared/precision/offset";
 import { createLogger } from "@/shared/utils/debug-logger";
 
 /* eslint-disable no-var */
@@ -132,7 +133,14 @@ export async function updateBootstrapRegistration(settings: Settings): Promise<v
     const payload = {
       enabled: true,
       timezone: settings.timezone,
-      location: settings.location,
+      // Offset the location for approximate-precision mode so the exact anchor
+      // is never inlined into the MAIN-world global (and any early geolocation
+      // read at cold start sees the same point the async path delivers).
+      location: applyPrecisionOffset(
+        settings.location,
+        settings.locationPrecision,
+        settings.precisionSeed
+      ),
       webrtcProtection: settings.webrtcProtection,
     };
 

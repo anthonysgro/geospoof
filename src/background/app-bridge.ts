@@ -13,7 +13,12 @@
 import { createLogger } from "@/shared/utils/debug-logger";
 import type { Favorite, ScopeMode, Settings } from "@/shared/types/settings";
 import { parsePattern } from "@/shared/utils/scope";
-import { loadSettings, updateSettings, validateAccuracySetting } from "./settings";
+import {
+  loadSettings,
+  updateSettings,
+  validateAccuracySetting,
+  validateLocationPrecision,
+} from "./settings";
 import {
   handleSetLocation,
   handleSetProtectionStatus,
@@ -68,6 +73,7 @@ interface PendingSettings {
   allowlist?: string; // JSON-encoded string[] from the app
   denylist?: string; // JSON-encoded string[] from the app
   accuracySetting?: string; // JSON-encoded AccuracySetting from the app (accuracySeed stays extension-owned)
+  locationPrecision?: string; // JSON-encoded LocationPrecision from the app (precisionSeed stays extension-owned)
 }
 
 interface PendingResponse {
@@ -334,6 +340,30 @@ export async function adoptPendingSettingsFromApp(): Promise<void> {
         }
       } catch (error) {
         logger.debug("adoptPendingSettingsFromApp: accuracySetting parse failed:", error);
+      }
+    }
+
+    // 7. Location precision — adopt the app's value when present and changed.
+    // Rides as a JSON string like accuracySetting; validated through the same
+    // repair function the SET_PRECISION handler uses so the extension stays the
+    // source of truth for shape/range hygiene. precisionSeed is NOT bridged
+    // (per-install, extension-owned). The control itself lives only in the
+    // browser popup, but the value round-trips so it survives the app's
+    // last-writer-wins snapshots.
+    if (typeof pending.locationPrecision === "string") {
+      try {
+        const parsedPrecision: unknown = JSON.parse(pending.locationPrecision);
+        const validatedPrecision = validateLocationPrecision(parsedPrecision);
+        const latestForPrecision = await loadSettings();
+        if (
+          JSON.stringify(validatedPrecision) !==
+          JSON.stringify(latestForPrecision.locationPrecision)
+        ) {
+          const updated = await updateSettings({ locationPrecision: validatedPrecision });
+          await broadcastSettingsToTabs(updated);
+        }
+      } catch (error) {
+        logger.debug("adoptPendingSettingsFromApp: locationPrecision parse failed:", error);
       }
     }
 

@@ -114,6 +114,8 @@ describe("Multi-Tab Integration Tests", () => {
         denylist: [],
         accuracySetting: { mode: "auto" as const },
         accuracySeed: 0,
+        locationPrecision: { mode: "exact" as const },
+        precisionSeed: 0,
       };
 
       // Act: Should not throw even if some tabs fail
@@ -279,6 +281,10 @@ describe("Multi-Tab Integration Tests", () => {
         // A valid (finite, non-zero) per-install seed: validateSettings keeps
         // it as-is, so the reloaded payload round-trips unchanged (Req 5.5).
         accuracySeed: 123456789,
+        locationPrecision: { mode: "exact" as const },
+        // Valid (finite, non-zero) precision seed so validateSettings preserves
+        // it and the reloaded payload round-trips unchanged (mirrors accuracySeed).
+        precisionSeed: 123456789,
       };
 
       storageGet.mockResolvedValue({ settings });
@@ -344,6 +350,9 @@ describe("Multi-Tab Integration Tests", () => {
         // (Req 5.2/5.5). Without a stored seed, validateSettings would assign a
         // fresh random one on each load.
         accuracySeed: 987654321,
+        // Valid (finite, non-zero) precision seed so every loadSettings() keeps
+        // the same value and the reloaded payloads stay identical.
+        precisionSeed: 987654321,
       };
 
       storageGet.mockResolvedValue({ settings });
@@ -413,6 +422,8 @@ describe("Multi-Tab Integration Tests", () => {
         denylist: [],
         accuracySetting: { mode: "auto" as const },
         accuracySeed: 0,
+        locationPrecision: { mode: "exact" as const },
+        precisionSeed: 0,
       };
 
       storageGet.mockResolvedValue({ settings });

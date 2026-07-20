@@ -623,6 +623,34 @@
     "message": "Edit",
     "description": "Button that reopens the custom accuracy editor from the compact display showing the committed value."
   },
+  "advanced_precision": {
+    "message": "Location Precision",
+    "description": "Label for the precision selector that controls whether the reported location is the exact point or an approximate point within a radius."
+  },
+  "advanced_precision_exact": {
+    "message": "Exact",
+    "description": "Precision option that reports the exact chosen coordinates (default)."
+  },
+  "advanced_precision_street": {
+    "message": "Street (~0.5 km)",
+    "description": "Precision option that reports an approximate point within about half a kilometer of the chosen location."
+  },
+  "advanced_precision_neighborhood": {
+    "message": "Neighborhood (~2 km)",
+    "description": "Precision option that reports an approximate point within about two kilometers of the chosen location."
+  },
+  "advanced_precision_city": {
+    "message": "City (~10 km)",
+    "description": "Precision option that reports an approximate point within about ten kilometers of the chosen location."
+  },
+  "advanced_precision_hint": {
+    "message": "Approximate reports a random point near your location instead of the exact spot.",
+    "description": "Explanatory note under the precision dropdown describing what the approximate options do."
+  },
+  "advanced_precision_proNote": {
+    "message": "🔒 Approximate location is a GeoSpoof Pro feature. Upgrade in the GeoSpoof app to blur your exact location.",
+    "description": "Shown for non-Pro iOS users when the precision control is disabled, explaining that approximate location is a Pro feature."
+  },
   "advanced_coffee": {
     "message": "☕ Buy me a coffee",
     "description": "Footer link inviting the user to buy the maintainer a coffee."
