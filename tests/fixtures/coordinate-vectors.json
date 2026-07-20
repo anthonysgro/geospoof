@@ -1,0 +1,56 @@
+{
+  "_comment": "Cross-language parity contract for the coordinate/geohash paste parser. Consumed by BOTH the TypeScript parser test (tests/unit/shared/coordinate-vectors.test.ts, parseCoordinates in src/shared/utils/coordinates.ts) and the native Swift parser test (safari/GeoSpoofTests/CoordinateParserParityTests.swift, CoordinateParser.parse in safari/Shared (App)/Coordinates.swift). Both parsers MUST produce identical results for every vector so the app and extension read pasted coordinates the same way. 'valid' entries carry the expected signed decimal degrees; 'invalid' entries must parse to null. Latitude/longitude are compared with a small epsilon (1e-9) to absorb float formatting, not arithmetic, differences (the parse math is identical IEEE-754 on both sides). Geohash-decoded values are the exact cell centers emitted by the reference parser.",
+  "valid": [
+    { "input": "35.22721, -80.84308", "latitude": 35.22721, "longitude": -80.84308 },
+    { "input": "40.7128 -74.006", "latitude": 40.7128, "longitude": -74.006 },
+    { "input": "  48.8584,2.2945  ", "latitude": 48.8584, "longitude": 2.2945 },
+    { "input": "+51.5074, +0.1278", "latitude": 51.5074, "longitude": 0.1278 },
+    { "input": "35.22721/-80.84308", "latitude": 35.22721, "longitude": -80.84308 },
+    { "input": "35.22721 | -80.84308", "latitude": 35.22721, "longitude": -80.84308 },
+    { "input": "35.22721;-80.84308", "latitude": 35.22721, "longitude": -80.84308 },
+    { "input": "(35.22721, -80.84308)", "latitude": 35.22721, "longitude": -80.84308 },
+    { "input": "35.22721°, -80.84308°", "latitude": 35.22721, "longitude": -80.84308 },
+    { "input": "35.22721, \u221280.84308", "latitude": 35.22721, "longitude": -80.84308 },
+    { "input": "35.22721 N, 80.84308 W", "latitude": 35.22721, "longitude": -80.84308 },
+    { "input": "80.84308 W, 35.22721 N", "latitude": 35.22721, "longitude": -80.84308 },
+    { "input": "N40.7128 W74.006", "latitude": 40.7128, "longitude": -74.006 },
+    {
+      "input": "40°42'46\"N 74°00'21\"W",
+      "latitude": 40.71277777777778,
+      "longitude": -74.00583333333333
+    },
+    {
+      "input": "Latitude39.66894050786413 DegreesLongitude-74.16007768364175 Degrees",
+      "latitude": 39.66894050786413,
+      "longitude": -74.16007768364175
+    },
+    { "input": "Latitude 39.6689 Longitude -74.1601", "latitude": 39.6689, "longitude": -74.1601 },
+    { "input": "lat: 39.6689, long: -74.1601", "latitude": 39.6689, "longitude": -74.1601 },
+    { "input": "Lng -74.16, Lat 39.66", "latitude": 39.66, "longitude": -74.16 },
+    {
+      "input": "u4pruydqqvj",
+      "latitude": 57.64911063015461,
+      "longitude": 10.407439693808556
+    },
+    { "input": "U4PRUYDQQVJ", "latitude": 57.64911063015461, "longitude": 10.407439693808556 },
+    { "input": "ezs42", "latitude": 42.60498046875, "longitude": -5.60302734375 },
+    { "input": "9q8yy", "latitude": 37.77099609375, "longitude": -122.40966796875 },
+    { "input": "gcpvj0", "latitude": 51.50665283203125, "longitude": -0.1263427734375 }
+  ],
+  "invalid": [
+    { "input": "", "expected": null },
+    { "input": "   ", "expected": null },
+    { "input": "42", "expected": null },
+    { "input": "40.7128", "expected": null },
+    { "input": "120, 45", "expected": null },
+    { "input": "45, 200", "expected": null },
+    { "input": "hello world", "expected": null },
+    { "input": "not a coordinate", "expected": null },
+    { "input": "geo:35.22721,-80.84308", "expected": null },
+    { "input": "35.22721,-80.84308,100", "expected": null },
+    { "input": "35.22721,,-80.84308", "expected": null },
+    { "input": "meet at building 5, room 39", "expected": null },
+    { "input": "Latitude 200 Longitude 40", "expected": null },
+    { "input": "ailuo", "expected": null }
+  ]
+}

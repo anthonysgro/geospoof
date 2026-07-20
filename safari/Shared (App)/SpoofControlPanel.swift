@@ -15,6 +15,9 @@ import Combine
 #if canImport(UIKit)
 import UIKit
 #endif
+#if canImport(AppKit)
+import AppKit
+#endif
 
 struct SpoofControlPanel: View {
     @ObservedObject var controller: SpoofController
@@ -1126,6 +1129,20 @@ private struct FullScreenMap3D: View {
 
 // MARK: - Set Location (pushed, searchable)
 
+extension View {
+    /// Pin a list row's separator to the content leading edge so it spans the
+    /// full row width. The `listRowSeparatorLeading` alignment is iOS 16+ /
+    /// macOS 13+; on iOS 15 the row keeps SwiftUI's default separator inset.
+    @ViewBuilder
+    fileprivate func fullWidthRowSeparator() -> some View {
+        if #available(iOS 16.0, macOS 13.0, *) {
+            alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+        } else {
+            self
+        }
+    }
+}
+
 struct SetLocationView: View {
     @ObservedObject var controller: SpoofController
     @ObservedObject private var store = CityStore.shared
@@ -1184,18 +1201,35 @@ struct SetLocationView: View {
                 Text(searchText.isEmpty ? "Popular Cities" : "Results")
             }
 
-            Section("Enter Coordinates") {
+            Section {
                 coordField("Latitude (−90 to 90)", text: $latText)
                 coordField("Longitude (−180 to 180)", text: $lonText)
-                if let coordError {
-                    Text(coordError).font(.caption).foregroundStyle(.red)
+                Button {
+                    pasteCoordinates()
+                } label: {
+                    HStack { Spacer(); Text("Paste Coordinates"); Spacer() }
                 }
+                // Center-via-Spacer rows make SwiftUI anchor the row separator to
+                // the (centered) text, leaving a short divider. Pin it to the
+                // content leading edge so it spans the row like the field rows.
+                .fullWidthRowSeparator()
                 Button {
                     applyManualCoordinates()
                 } label: {
                     HStack { Spacer(); Text("Set Location"); Spacer() }
                 }
                 .disabled(latText.isEmpty || lonText.isEmpty)
+            } header: {
+                Text("Enter Coordinates")
+            } footer: {
+                // Section footer is the HIG-idiomatic place for helper text; it
+                // doubles as the inline validation message when a paste or a
+                // manual value can't be read.
+                if let coordError {
+                    Text(coordError).foregroundStyle(.red)
+                } else {
+                    Text("Tip: paste a coordinate pair or a geohash")
+                }
             }
         }
         .searchable(text: $searchText, prompt: "Search for a city")
@@ -1220,6 +1254,46 @@ struct SetLocationView: View {
         #else
         return field
         #endif
+    }
+
+    /// Read the clipboard's plain text and, if it's a COMPLETE coordinate (pair /
+    /// DMS / geohash / labelled), reflect it in both fields for review; the user
+    /// confirms with "Set Location". Behavior-identical to the extension's
+    /// `parseCoordinates` via the shared parity fixture. A string we can't read is
+    /// flagged in the section footer. Single values are pasted straight into a
+    /// field by the system, landing in just that field.
+    private func pasteCoordinates() {
+        let raw = (readClipboardString() ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !raw.isEmpty else { return }  // nothing on the clipboard — no-op
+        guard let parsed = CoordinateParser.parse(raw) else {
+            coordError = "Couldn't read coordinates — try a coordinate pair or a geohash"
+            Haptics.notify(.error)
+            return
+        }
+        latText = Self.coordString(parsed.latitude)
+        lonText = Self.coordString(parsed.longitude)
+        coordError = nil
+        Haptics.impact(.light)
+    }
+
+    /// The pasteboard's plain-text string, across platforms. On iOS an explicit
+    /// paste may surface the system "Allow Paste" confirmation (expected for a
+    /// deliberate paste action); on macOS it reads directly.
+    private func readClipboardString() -> String? {
+        #if canImport(UIKit)
+        return UIPasteboard.general.string
+        #elseif canImport(AppKit)
+        return NSPasteboard.general.string(forType: .string)
+        #else
+        return nil
+        #endif
+    }
+
+    /// Format a coordinate for a text field: round to 6 decimals (~0.11 m) and
+    /// drop trailing zeros.
+    private static func coordString(_ value: Double) -> String {
+        let rounded = (value * 1_000_000).rounded() / 1_000_000
+        return String(rounded)
     }
 
     private func applyManualCoordinates() {

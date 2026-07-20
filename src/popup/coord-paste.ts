@@ -11,12 +11,15 @@
  * "paste button" that reads the clipboard — the field itself accepts the paste,
  * and a subtext hint in the popup advertises the capability.
  *
- * Outcomes of a paste:
- *   - Parses cleanly  → fill both inputs and apply (via `onCoordinates`).
- *   - Fails but clearly WAS a coordinate attempt (two or more numbers) → block
- *     the raw paste and show an inline "couldn't read that" message in the hint.
- *   - Anything else (e.g. a single number dropped into one field, or non-numeric
- *     text) → left entirely alone so the field behaves normally.
+ * A paste is classified into one of three outcomes (see `classifyCoordinatePaste`):
+ *   - "fill"        — a COMPLETE coordinate (pair / DMS / geohash / labelled).
+ *                     Fill both inputs and apply, whichever field was focused.
+ *   - "passthrough" — a single value (a lone number) or non-coordinate text.
+ *                     Do nothing; the field's native paste handles it, so a lone
+ *                     latitude or longitude lands in just the focused input and
+ *                     the other field is left untouched.
+ *   - "error"       — an unambiguous but unreadable pair (a comma with digits, or
+ *                     two hemisphere markers). Block the raw paste, flag it.
  */
 
 import { parseCoordinates } from "@/shared/utils/coordinates";
@@ -28,14 +31,48 @@ function normalize(value: number): number {
 }
 
 /**
- * Heuristic for "the user was trying to paste a coordinate." Two or more numeric
- * runs means it wasn't a single stray value, so a parse failure is worth
- * flagging; a single number (or none) is left silent to avoid nagging a
- * legitimate single-field paste.
+ * True only when a paste UNAMBIGUOUSLY attempted to be a two-value pair yet
+ * didn't parse — i.e. it carries the canonical comma separator alongside digits,
+ * or two N/S/E/W hemisphere markers. A lone value (one number, or a single
+ * hemisphere-tagged value) is deliberately NOT flagged: it must fall through to
+ * the field's normal paste so a single latitude or longitude can be pasted into
+ * just the focused input.
  */
-function looksLikeCoordinateAttempt(text: string): boolean {
-  const numbers = text.match(/-?\d+(?:\.\d+)?/g);
-  return (numbers?.length ?? 0) >= 2;
+function looksLikeFailedPair(text: string): boolean {
+  // Two hemisphere markers that actually sit next to a number describe both
+  // axes. Require digit-adjacency so stray N/S/E/W letters inside ordinary words
+  // ("hello world" has an "e" and a "w") don't get mistaken for markers.
+  const taggedValues = text.match(/(?:\d\s*[NSEW])|(?:[NSEW]\s*\d)/gi)?.length ?? 0;
+  if (taggedValues >= 2) return true;
+  // A comma is the canonical lat/lon separator; with digits present it was
+  // almost certainly a pair attempt. A lone value (one number, no comma) is
+  // intentionally NOT flagged — it falls through to the focused field.
+  return text.includes(",") && /\d/.test(text);
+}
+
+/** What a given pasted string should do to the coordinate inputs. */
+export type CoordinatePasteAction =
+  | { kind: "fill"; latitude: number; longitude: number }
+  | { kind: "error" }
+  | { kind: "passthrough" };
+
+/**
+ * Decide how a pasted string should be handled — pure and DOM-free so the policy
+ * can be unit-tested directly. A complete coordinate fills both fields; an
+ * obvious-but-broken pair is an error; everything else (single values,
+ * non-coordinate text) passes through to the field's native paste.
+ */
+export function classifyCoordinatePaste(text: string): CoordinatePasteAction {
+  const parsed = parseCoordinates(text);
+  if (parsed) {
+    return {
+      kind: "fill",
+      latitude: normalize(parsed.latitude),
+      longitude: normalize(parsed.longitude),
+    };
+  }
+  if (looksLikeFailedPair(text)) return { kind: "error" };
+  return { kind: "passthrough" };
 }
 
 /**
@@ -73,30 +110,28 @@ export function wireCoordinatePaste(
     const pasted = event.clipboardData?.getData("text") ?? "";
     if (pasted.trim().length === 0) return;
 
-    const parsed = parseCoordinates(pasted);
+    const action = classifyCoordinatePaste(pasted);
 
-    if (parsed) {
-      event.preventDefault();
-      restoreHint();
+    switch (action.kind) {
+      case "fill":
+        // A complete coordinate: reflect it in both fields (visible confirmation
+        // of what a geohash/DMS resolved to) and apply.
+        event.preventDefault();
+        restoreHint();
+        latInput.value = String(action.latitude);
+        lonInput.value = String(action.longitude);
+        onCoordinates(action.latitude, action.longitude);
+        break;
 
-      const latitude = normalize(parsed.latitude);
-      const longitude = normalize(parsed.longitude);
+      case "error":
+        event.preventDefault();
+        showPasteError();
+        break;
 
-      // Reflect the parsed values in both fields, then apply. Filling both is
-      // the visible confirmation of what a single paste resolved to (a geohash,
-      // say, becomes a readable lat/lon).
-      latInput.value = String(latitude);
-      lonInput.value = String(longitude);
-
-      onCoordinates(latitude, longitude);
-      return;
-    }
-
-    // Parse failed. Only surface an error when the paste looked like a
-    // coordinate attempt; otherwise let the field handle the paste normally.
-    if (looksLikeCoordinateAttempt(pasted)) {
-      event.preventDefault();
-      showPasteError();
+      case "passthrough":
+        // Single value or non-coordinate text — let the focused field paste it
+        // normally, leaving the other field untouched.
+        break;
     }
   });
 }

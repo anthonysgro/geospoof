@@ -47,7 +47,12 @@ function isValidLongitude(value: number): boolean {
  */
 export function parseCoordinates(input: unknown): ParsedCoordinates | null {
   if (typeof input !== "string") return null;
-  const text = input.trim();
+  // Normalize the Unicode MINUS SIGN (U+2212) to an ASCII hyphen-minus so a
+  // value copied from formatted text — or from GeoSpoof's own "−90 to 90"
+  // labels — parses as negative. Only U+2212 is normalized; en/em dashes are
+  // deliberately left alone (ambiguous as minus). The native Swift port applies
+  // the same single substitution so both parsers stay in lockstep.
+  const text = input.replace(/\u2212/g, "-").trim();
   if (text.length === 0) return null;
 
   // Explicitly labelled values ("Latitude … Longitude …", "lat: … long: …")
