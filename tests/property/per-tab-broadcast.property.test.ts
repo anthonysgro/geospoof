@@ -114,7 +114,9 @@ const accuracySeedArb = fc.integer({ min: 0, max: 2 ** 31 });
 const locationArb = fc.option(
   fc.record({
     latitude: fc.double({ min: -90, max: 90, noNaN: true }),
-    longitude: fc.double({ min: -180, max: 180, noNaN: true }),
+    // [-180, 180): +180 canonicalizes to -180 in the delivered payload
+    // (wrapLongitude), so keep generated anchors in the canonical domain.
+    longitude: fc.double({ min: -180, max: 180, maxExcluded: true, noNaN: true }),
     accuracy: fc.integer({ min: 1, max: 1000 }),
   }),
   { nil: null }
