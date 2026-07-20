@@ -1141,6 +1141,18 @@ extension View {
             self
         }
     }
+
+    /// Dismiss the software keyboard when the user drags the scroll view. The
+    /// `scrollDismissesKeyboard` modifier is iOS 16+/macOS 13+; older systems
+    /// keep the default behavior.
+    @ViewBuilder
+    fileprivate func dismissesKeyboardOnScroll() -> some View {
+        if #available(iOS 16.0, macOS 13.0, *) {
+            scrollDismissesKeyboard(.interactively)
+        } else {
+            self
+        }
+    }
 }
 
 struct SetLocationView: View {
@@ -1236,8 +1248,23 @@ struct SetLocationView: View {
         .navigationTitle("Set Location")
         .tint(.brand)
         .onAppear { store.preload() }
+        // Drag on the list dismisses the keyboard (iOS 16+); older systems keep
+        // the default behavior.
+        .dismissesKeyboardOnScroll()
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        // The numeric keyboard has no reliable dismiss key, so give an explicit
+        // "Done" above it that resigns whatever field is focused (coordinate or
+        // search). This is the HIG-standard way to dismiss a numeric-entry keyboard.
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    UIApplication.shared.sendAction(
+                        #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+            }
+        }
         #endif
     }
 
