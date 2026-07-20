@@ -24,12 +24,12 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
           cache: "npm"
-      - uses: ruby/setup-ruby@v1
+      - uses: ruby/setup-ruby@v1.317.0
         with:
           ruby-version: "3.3"
           bundler-cache: true
@@ -104,7 +104,7 @@ jobs:
         run: mv "safari/build/GeoSpoof.dmg" "safari/build/geospoof-macos-v${BASE_VERSION}.dmg"
 
       - name: Attach DMG to existing release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ inputs.version }}
           # Publish the release if it's currently a draft (deleting the git tag

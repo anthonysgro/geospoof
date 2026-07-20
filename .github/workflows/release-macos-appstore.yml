@@ -35,12 +35,12 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
           cache: "npm"
-      - uses: ruby/setup-ruby@v1
+      - uses: ruby/setup-ruby@v1.317.0
         with:
           ruby-version: "3.3"
           bundler-cache: true
