@@ -458,8 +458,10 @@ describe("Scoped resolvedOptions & Offset Properties", () => {
             return parseInt(part?.value ?? "0", 10);
           }
 
-          // getHours
-          const expectedHours = getExpected({ hour: "numeric", hour12: false }, "hour");
+          // getHours: en-US with hour12:false uses the h24 cycle, which renders
+          // local midnight as "24"; Date.prototype.getHours() is h23 (0-23), so
+          // normalize 24 -> 0 to compare like-for-like.
+          const expectedHours = getExpected({ hour: "numeric", hour12: false }, "hour") % 24;
           expect(contentScript.Date.prototype.getHours.call(testDate)).toBe(expectedHours);
 
           // getMinutes
