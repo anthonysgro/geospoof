@@ -57,9 +57,13 @@ describe("Property 23: Multi-Tab Consistency", () => {
         fc.integer({ min: 1, max: 20 }),
         // Generate random location
         fc.record({
-          latitude: fc.double({ min: -90, max: 90 }),
-          longitude: fc.double({ min: -180, max: 180 }),
-          accuracy: fc.double({ min: 1, max: 100 }),
+          latitude: fc.double({ min: -90, max: 90, noNaN: true }),
+          // Domain is [-180, 180): +180 is the antimeridian, which the resolver
+          // canonicalizes to -180 (wrapLongitude). Exclude the upper bound so
+          // generated anchors are already in the delivered coordinate space.
+          // noNaN: NaN would be clamped to 0 by the resolver and break equality.
+          longitude: fc.double({ min: -180, max: 180, maxExcluded: true, noNaN: true }),
+          accuracy: fc.double({ min: 1, max: 100, noNaN: true }),
         }),
         // Generate random enabled state
         fc.boolean(),
@@ -146,9 +150,11 @@ describe("Property 23: Multi-Tab Consistency", () => {
         fc.integer({ min: 2, max: 10 }),
         fc.array(
           fc.record({
-            latitude: fc.double({ min: -90, max: 90 }),
-            longitude: fc.double({ min: -180, max: 180 }),
-            accuracy: fc.double({ min: 1, max: 100 }),
+            latitude: fc.double({ min: -90, max: 90, noNaN: true }),
+            // See note above: canonical [-180, 180) domain; noNaN so the resolver
+            // doesn't clamp NaN to 0 and break the cross-tab equality check.
+            longitude: fc.double({ min: -180, max: 180, maxExcluded: true, noNaN: true }),
+            accuracy: fc.double({ min: 1, max: 100, noNaN: true }),
           }),
           { minLength: 2, maxLength: 5 }
         ),

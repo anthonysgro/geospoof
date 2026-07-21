@@ -60,7 +60,15 @@ const arbAccuracySetting: fc.Arbitrary<AccuracySetting> = fc.oneof(
 /** fast-check arbitrary for a valid Location object, carrying accuracy resolution inputs. */
 const arbLocation = fc.record({
   latitude: fc.double({ min: -90, max: 90, noNaN: true, noDefaultInfinity: true }),
-  longitude: fc.double({ min: -180, max: 180, noNaN: true, noDefaultInfinity: true }),
+  // [-180, 180): +180 is the antimeridian, canonicalized to -180 downstream, so
+  // keep generated anchors in the canonical domain the round-trip compares against.
+  longitude: fc.double({
+    min: -180,
+    max: 180,
+    maxExcluded: true,
+    noNaN: true,
+    noDefaultInfinity: true,
+  }),
   accuracy: fc.double({ min: 0.1, max: 10000, noNaN: true, noDefaultInfinity: true }),
   accuracySetting: arbAccuracySetting,
   accuracySeed: fc.integer({ min: 0, max: 2 ** 31 }),

@@ -27,6 +27,12 @@ updates:
       - dependency-type: all
     cooldown:
       default-days: 7
+    ignore:
+      # Hold TypeScript on its current major until typescript-eslint supports
+      # TypeScript 7 (its peer range currently caps at <6.1.0). Remove this
+      # once the linter toolchain ships TS 7 support, then upgrade deliberately.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: swift
     directory: "/safari"

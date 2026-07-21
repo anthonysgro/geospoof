@@ -29,6 +29,21 @@ export default [
   // TypeScript recommended rules (type-aware)
   ...tseslint.configs.recommendedTypeChecked,
 
+  // Pin the TSConfig root for every file. `recommendedTypeChecked` applies the
+  // TS parser to all files; without an explicit tsconfigRootDir, newer
+  // typescript-eslint tries to infer it and errors when several candidates
+  // exist ("multiple candidate TSConfigRootDirs" — the repo root vs. cdk/).
+  // That surfaces on the CI checkout path (…/geospoof/geospoof) even though a
+  // local clone resolves to a single candidate. Harmless for the files that
+  // opt out of type-aware parsing below.
+  {
+    languageOptions: {
+      parserOptions: {
+        tsconfigRootDir: __dirname,
+      },
+    },
+  },
+
   // TypeScript files configuration
   {
     files: ["src/**/*.ts", "tests/**/*.ts", "scripts/**/*.ts"],
