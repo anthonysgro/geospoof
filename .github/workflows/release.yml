@@ -5,6 +5,11 @@ on:
     tags:
       - "v*"
 
+# NOTE: The macOS DMG is intentionally NOT built here. It is unsupported and its
+# build was red-X'ing tag releases, so it is decoupled from the release pipeline.
+# Rebuild/attach a DMG on demand via the manual "Release macOS DMG (manual)"
+# workflow (.github/workflows/release-macos-dmg.yml).
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -132,114 +137,3 @@ jobs:
           # source tree that broke branch builds (e.g. Vercel previews). A clean
           # minimal publish keeps gh-pages to just what GitHub Pages serves.
           keep_files: false
-
-  release-macos:
-    needs: release
-    runs-on: macos-26
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 20
-          cache: "npm"
-      - uses: ruby/setup-ruby@v1.317.0
-        with:
-          ruby-version: "3.3"
-          bundler-cache: true
-          working-directory: safari
-
-      - run: npm ci
-      - run: cp .env.example .env
-
-      - name: Extract version
-        run: |
-          TAG="${GITHUB_REF_NAME}"
-          BASE_VERSION="${TAG#v}"
-          echo "BASE_VERSION=${BASE_VERSION}" >> "$GITHUB_ENV"
-
-      # The app target uses macOS 26 SDK APIs (SwiftUI Liquid Glass:
-      # glassEffect / .glass / .glassProminent) and Swift 6.2 syntax
-      # (nonisolated on type declarations), so it requires Xcode 26+. Select the
-      # newest Xcode on the runner rather than hardcoding a path (a hardcoded
-      # Xcode_16.app previously pinned CI to an SDK too old to compile this).
-      - name: Select newest Xcode
-        run: |
-          LATEST=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
-          echo "Selecting $LATEST"
-          sudo xcode-select -s "$LATEST"
-          xcodebuild -version
-
-      # ── Import Developer ID Application cert into a temporary keychain ──
-      - name: Import Developer ID certificate
-        env:
-          CERT_P12_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_P12 }}
-          CERT_PASSWORD: ${{ secrets.MACOS_DEVELOPER_ID_P12_PASSWORD }}
-          KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
-        run: |
-          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
-          echo "$CERT_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/cert.p12"
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security import "$RUNNER_TEMP/cert.p12" -P "$CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
-          rm "$RUNNER_TEMP/cert.p12"
-
-      # ── Place App Store Connect API key where fastlane's Appfile expects it ──
-      - name: Place App Store Connect API key
-        env:
-          ASC_API_KEY_BASE64: ${{ secrets.ASC_API_KEY_P8 }}
-        run: |
-          mkdir -p "$HOME/.appstoreconnect/private_keys"
-          echo "$ASC_API_KEY_BASE64" | base64 --decode > "$HOME/.appstoreconnect/private_keys/AuthKey_BXMZW4LMSP.p8"
-          chmod 600 "$HOME/.appstoreconnect/private_keys/AuthKey_BXMZW4LMSP.p8"
-
-      # ── Install Developer ID provisioning profiles ──
-      # Both macOS targets use App Groups, which requires an explicit provisioning
-      # profile even when signing manually with a Developer ID cert.
-      # Profiles must be Developer ID Application type with App Groups enabled.
-      - name: Install Developer ID provisioning profiles
-        env:
-          PROFILE_APP_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_PROFILE_APP }}
-          PROFILE_EXT_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_PROFILE_EXT }}
-        run: |
-          PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
-          mkdir -p "$PROFILES_DIR"
-          echo "$PROFILE_APP_BASE64" | base64 --decode > "$PROFILES_DIR/geospoof_macos_app.provisionprofile"
-          echo "$PROFILE_EXT_BASE64" | base64 --decode > "$PROFILES_DIR/geospoof_macos_ext.provisionprofile"
-
-      - name: Build, notarize, and package DMG
-        working-directory: safari
-        run: bundle exec fastlane mac developer_id
-
-      # gym/xcbeautify hides the real compiler/build error behind generic
-      # boilerplate. On failure, surface the actual error lines from the raw
-      # xcodebuild log so we can diagnose without re-running.
-      - name: Dump xcodebuild error log on failure
-        if: failure()
-        run: |
-          LOG="$HOME/Library/Logs/gym/GeoSpoof-GeoSpoof-macOS.log"
-          if [ -f "$LOG" ]; then
-            echo "===== matching error/warning lines ====="
-            grep -nE "error:|note: Run script|The following build commands failed|ARCHIVE FAILED|Command .* failed|fatal error" "$LOG" || true
-            echo "===== last 200 lines of gym log ====="
-            tail -n 200 "$LOG"
-          else
-            echo "No gym log found at $LOG"
-            ls -la "$HOME/Library/Logs/gym" || true
-          fi
-
-      - name: Rename DMG to release naming convention
-        run: mv "safari/build/GeoSpoof.dmg" "safari/build/geospoof-macos-v${BASE_VERSION}.dmg"
-
-      - name: Attach DMG to release
-        uses: softprops/action-gh-release@v3
-        with:
-          files: safari/build/geospoof-macos-v${{ env.BASE_VERSION }}.dmg
-
-      - name: Clean up keychain
-        if: always()
-        run: security delete-keychain "$RUNNER_TEMP/build.keychain-db" || true
