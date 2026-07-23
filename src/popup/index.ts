@@ -12,6 +12,7 @@ import { handleVpnSync } from "./vpn-sync";
 import { wireEarlyProtectionToggle } from "./early-protection";
 import { wireDebuggerModeToggle } from "./debugger-mode";
 import { applyI18n, t, initI18n, resetI18nOverride, browserUiLanguage } from "./i18n";
+import { localizeWebsiteLinks } from "./website-links";
 import { initAccuracyControl } from "./accuracy";
 import { initPrecisionControl } from "./precision";
 import { wireCoordinatePaste } from "./coord-paste";
@@ -466,6 +467,9 @@ document.getElementById("languageSelect")?.addEventListener("change", (e: Event)
       resetI18nOverride();
     }
     applyI18n();
+    // Keep the outbound geospoof.com links (Verify, Need help?) pointed at the
+    // just-picked language's page — the effective locale mirrors the text.
+    localizeWebsiteLinks(resolveUiLocale(value, browserUiLanguage()));
     await loadSettings();
   })();
 });
@@ -609,6 +613,12 @@ document.addEventListener("DOMContentLoaded", () => {
   // language override, initPopupSettings() re-applies it below.
   applyI18n();
 
+  // Localize the outbound geospoof.com links (Verify, Need help?) to match this
+  // first, browser-UI-locale pass. With no stored override this is the final
+  // locale; initPopupSettings() re-runs it below when an override is set
+  // (idempotent — it recomputes from the stashed English href).
+  localizeWebsiteLinks(resolveUiLocale(undefined, browserUiLanguage()));
+
   // Fill the Advanced-section language picker from the shared locale list.
   populateLanguageOptions();
 
@@ -708,6 +718,9 @@ async function initPopupSettings(): Promise<void> {
   if (settings.uiLanguage) {
     await initI18n(resolveUiLocale(settings.uiLanguage, browserUiLanguage()));
     applyI18n();
+    // Re-point the outbound links at the overridden language (the initial
+    // DOMContentLoaded pass used the browser UI locale). Idempotent.
+    localizeWebsiteLinks(resolveUiLocale(settings.uiLanguage, browserUiLanguage()));
   }
 
   await loadSettings(settings);
