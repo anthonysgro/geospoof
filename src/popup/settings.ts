@@ -16,6 +16,7 @@ import { reflectEarlyProtectionState } from "./early-protection";
 import { reflectDebuggerModeState } from "./debugger-mode";
 import { restoreAccuracyControl } from "./accuracy";
 import { restorePrecisionControl } from "./precision";
+import { restoreLocaleControl } from "./locale";
 
 /**
  * Apply a theme class to the document body.
@@ -168,6 +169,11 @@ export async function loadSettings(preloaded?: Settings): Promise<void> {
     // Approximate location is Pro-gated on iOS Safari (parity with custom
     // accuracy); a non-Pro user sees it disabled and forced to Exact.
     restorePrecisionControl(settings.locationPrecision, proLocked);
+
+    // Restore the Reported Language control. Pro-gated on Safari like the two
+    // above; a non-entitled user sees it disabled and forced to Off, which is
+    // what the background independently enforces.
+    restoreLocaleControl(settings.localeSpoofing, proLocked);
 
     // Firefox-only: reveal the "Instant timezone protection" toggle and sync it
     // to whether the optional userScripts permission is currently granted.

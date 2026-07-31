@@ -1,11 +1,13 @@
 import type {
   AccuracySetting,
   Location,
+  LocaleSpoofing,
   LocationPrecision,
   Timezone,
   Settings,
   ScopeMode,
 } from "./settings";
+import type { SpoofedLocalePayload } from "@/shared/locale/resolver";
 
 /**
  * All supported message types for inter-component communication.
@@ -37,7 +39,8 @@ export type MessageType =
   | "ADD_SCOPE_SITE"
   | "REMOVE_SCOPE_SITE"
   | "SET_ACCURACY"
-  | "SET_PRECISION";
+  | "SET_PRECISION"
+  | "SET_LOCALE_SPOOFING";
 
 /**
  * Generic message structure for runtime messaging.
@@ -185,6 +188,21 @@ export interface UpdateSettingsPayload {
    * the same device class (both consume the real seed).
    */
   accuracySeed: number;
+  /**
+   * The ALREADY-RESOLVED Reported Language, or `null` to leave the real locale
+   * untouched.
+   *
+   * The background resolves this (Pro gate → mode → mapping tables → engine
+   * capability check) and ships only the outcome, so the page world never
+   * receives the user's mode, the zone/country mapping data, or the
+   * `Accept-Language` string. `null` covers every "don't spoof" case: the
+   * feature being off, no spoofed timezone in `match` mode, an unmapped zone, or
+   * a tag this engine has no data for.
+   *
+   * Delivered regardless of `enabled` — like `timezone` — because the injected
+   * overrides gate on `enabled` themselves.
+   */
+  locale: SpoofedLocalePayload | null;
 }
 
 /**
@@ -274,6 +292,12 @@ export interface SetAccuracyPayload {
 
 export interface SetPrecisionPayload {
   precision: LocationPrecision;
+}
+
+// --- Reported-Language payload types ---
+
+export interface SetLocaleSpoofingPayload {
+  localeSpoofing: LocaleSpoofing;
 }
 
 // --- Site-scoping response types ---

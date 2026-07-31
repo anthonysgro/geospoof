@@ -36,6 +36,7 @@
 
 import type { Settings } from "@/shared/types/settings";
 import { applyPrecisionOffset } from "@/shared/precision/offset";
+import { resolvePageLocale } from "@/shared/locale/resolver";
 import { createLogger } from "@/shared/utils/debug-logger";
 
 /* eslint-disable no-var */
@@ -142,6 +143,16 @@ export async function updateBootstrapRegistration(settings: Settings): Promise<v
         settings.precisionSeed
       ),
       webrtcProtection: settings.webrtcProtection,
+      // Inline the resolved locale so a page's very first synchronous
+      // `navigator.language` / `Intl` read is already spoofed instead of racing
+      // the async settings path. Resolution is deterministic, so this value is
+      // identical to the one the async path delivers moments later — no
+      // cold-start flip.
+      locale: resolvePageLocale(
+        settings.localeSpoofing,
+        settings.timezone?.identifier ?? null,
+        settings.proFeaturesBlocked
+      ),
     };
 
     // Re-register from scratch so the inlined payload always reflects the

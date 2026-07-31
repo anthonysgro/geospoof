@@ -45,6 +45,7 @@ function makeSettings(partial: Partial<Settings>): Settings {
     accuracySeed: 0,
     locationPrecision: { mode: "exact" },
     precisionSeed: 0,
+    localeSpoofing: { mode: "off" as const },
     ...partial,
   };
 }
@@ -129,6 +130,10 @@ describe("Property 23: Multi-Tab Consistency", () => {
             // injected Resolver uses the user's chosen setting/seed.
             accuracySetting: settings.accuracySetting,
             accuracySeed: settings.accuracySeed,
+            // Resolved Reported Language. The fixture leaves localeSpoofing at
+            // its `off` default, so this resolves to null — the point of
+            // asserting it explicitly is that every tab gets the SAME value.
+            locale: null,
           });
           expect(firstMessage.payload!.enabled).toBe(enabled);
           expect(firstMessage.payload!.location).toEqual(location);

@@ -21,6 +21,23 @@ export interface SpoofedLocation {
   accuracySeed?: number;
 }
 
+/**
+ * The Reported Language, already fully resolved by the background.
+ *
+ * The page world never sees the user's mode, the zone/country mapping tables, or
+ * the `Accept-Language` string — only the tag to report and the list to hand back
+ * from `navigator.languages`. Presence of this object is itself the signal that
+ * locale spoofing is active; the background sends `null` for every "don't spoof"
+ * case (feature off, no timezone in match mode, unmapped zone, or a tag this
+ * engine has no data for).
+ */
+export interface LocaleData {
+  /** Canonical BCP47 tag — the value `navigator.language` reports. */
+  tag: string;
+  /** The value `navigator.languages` reports; `languages[0] === tag`. */
+  languages: string[];
+}
+
 export interface TimezoneData {
   /** IANA timezone identifier */
   identifier: string;
@@ -54,6 +71,12 @@ export interface SettingsEventDetail {
    * forcing `"granted"`. Off by default (seamless prompt-free spoofing).
    */
   preserveGeolocationPrompt: boolean;
+  /**
+   * The resolved Reported Language, or `null`/absent to leave the real locale
+   * alone. Consumed by `locale-overrides.ts` and by the locale injection in the
+   * `Intl.DateTimeFormat` and `Date.prototype.toLocale*` overrides.
+   */
+  locale?: LocaleData | null;
 }
 
 export interface SpoofedGeolocationPosition {

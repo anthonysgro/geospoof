@@ -27,6 +27,7 @@ GeoSpoof now comes in two parts:
 
 - [Getting started](#getting-started) — [Install](#install) · [Usage](#usage)
 - [Why GeoSpoof?](#why-geospoof) — [What it does NOT do](#what-this-does-not-do)
+- [Reported Language](#reported-language-opt-in) — opt-in language & locale alignment
 - [GeoSpoof GPS](#geospoof-gps-device-level-location) — device-level location on iPhone & iPad
 - [Overridden APIs](#overridden-apis)
 - [External Services](#external-services)
@@ -95,6 +96,7 @@ GeoSpoof overrides every one of those channels so your browser reports a consist
 - **VPN Region Sync** — detects your VPN exit IP and sets your location to match. One click, and it re-syncs automatically as you switch exit servers.
 - **Manual control** — search for a city or enter coordinates directly.
 - **Full signal alignment** — geolocation, timezone, Date APIs, Intl, Temporal, and WebRTC all report the same place.
+- **Reported Language (opt-in)** — optionally report a language to match, so `navigator.language`, every `Intl` format, and the `Accept-Language` header agree instead of announcing where you actually come from.
 - **Anti-fingerprinting** — overrides are disguised to pass native code checks used by real-world fingerprinting scripts.
 - **Cross-browser** — Firefox, Chrome, Brave, Edge, and Safari. Single codebase, MV3.
 
@@ -105,10 +107,39 @@ GeoSpoof overrides every one of those channels so your browser reports a consist
 GeoSpoof is designed to work alongside a VPN, not replace one.
 
 - Does NOT spoof your IP address (use a VPN for that)
-- Does NOT change browser language or locale
+- Does NOT change your browser's language by default — that's opt-in (see [Reported Language](#reported-language-opt-in)), and it does NOT change GeoSpoof's own interface language
 - Does NOT bypass server-side detection (IP, payment info, account history)
 - Does NOT track your browsing activity, collect telemetry, or store data on external servers. Some features (city search, VPN sync) call third-party APIs to function. See the [Privacy Policy](PRIVACY_POLICY.md) for exactly what's sent and to whom.
 - Does NOT provide forensic-level anti-fingerprinting. Engine-level API tampering is also detectable by dedicated tools. For extreme threat models, use [Tor Browser](https://www.torproject.org/) or [Mullvad Browser](https://mullvad.net/browser) instead.
+
+## Reported Language (opt-in)
+
+Your VPN and your spoofed location can say Paris while your browser still says `navigator.language === "en-US"` and sends `Accept-Language: en-US` with every request. **Reported Language** closes that gap.
+
+Turn it on in **Details → Advanced → Reported Language** and pick either:
+
+- **Match my location** — use the dominant language of the place you're already spoofing, resolved offline from your spoofed timezone.
+- **Choose language…** — name any language tag your browser supports, like `fr-FR`, `ja`, or `pt-BR`. The field suggests common ones as you type but accepts any valid tag.
+
+It's **off by default**, because it visibly changes browsing: many sites will switch language outright.
+
+When it's on, these move together:
+
+- `navigator.language` and `navigator.languages`, in the page and inside Workers
+- The default locale of every `Intl` constructor, plus each `resolvedOptions()`
+- `toLocaleString` on `Date`/`Number`/`BigInt`/`Array`, `localeCompare`, and locale-sensitive case mapping
+- The `Accept-Language` request header
+
+They move together on purpose. A browser claiming `fr-FR` in script while sending `Accept-Language: en-US` is obviously tampered with — a _stronger_ fingerprint than not spoofing at all — so both surfaces are derived from one resolver and can't disagree. Formats aren't faked either: the chosen locale is handed to the browser's own `Intl` engine, so separators, month names, collation order, and hour cycle are genuinely correct for the language you report.
+
+**Limits, stated plainly:**
+
+- Locale entropy outside an extension's reach is **not** covered: installed fonts, text-rendering metrics, and `speechSynthesis` voice lists still reflect your real system.
+- What's advertised is shaped per engine to match what that browser natively sends — Firefox and Chromium expose the tag plus a bare-language fallback with different quality values, and Safari exposes a single language — so the output doesn't look like a different browser's.
+- The `Accept-Language` header is rewritten on Firefox and Chromium. On Safari it depends on the engine honoring `declarativeNetRequest` header modification, which has historically been unreliable; where it doesn't, coverage degrades to the JavaScript surfaces only.
+- If you pick a language your browser has no data for, GeoSpoof reports your real one rather than half-applying the change — the control tells you when that happens.
+
+This is separate from the **Language** setting further down the same panel, which only changes GeoSpoof's own interface language and is never sent to websites.
 
 ## GeoSpoof GPS (device-level location)
 
@@ -136,6 +167,7 @@ When protection is enabled, GeoSpoof overrides browser APIs synchronously at `do
 - **XSLT / EXSLT** — `XSLTProcessor.prototype.transformToFragment/transformToDocument` rewrite EXSLT `date:date-time()` output (Firefox, where available)
 - **Workers** — `Worker`, `SharedWorker`, and `navigator.serviceWorker.register` wrapped to propagate the spoofed timezone into worker scopes (URL-based worker coverage is the Firefox `webRequest.filterResponseData` path; inline/blob workers are covered on every engine)
 - **WebRTC** — via browser privacy API, no script injection needed
+- **Locale** (opt-in, see [Reported Language](#reported-language-opt-in)) — `navigator.language`, `navigator.languages`, the default locale of every `Intl` constructor (`DateTimeFormat`, `NumberFormat`, `Collator`, `RelativeTimeFormat`, `ListFormat`, `PluralRules`, `DisplayNames`, `Segmenter`, `DurationFormat`) plus their `resolvedOptions()`, `toLocaleString` on `Date`/`Number`/`BigInt`/`Array`, `String.prototype.localeCompare`/`toLocaleUpperCase`/`toLocaleLowerCase`, and the `Accept-Language` request header
 - **Anti-fingerprinting** — `Function.prototype.toString` returns `[native code]` for all overrides; iframes patched on insertion
 - **Engine-level Spoofing** (Chrome/Chromium, opt-in) — an optional mode that drives the timezone override through the Chrome DevTools Protocol (`chrome.debugger` → `Emulation.setTimezoneOverride`) instead of page-world injection. It covers background/module/service workers and applies before a page's first script, closing the worker and cold-start timezone leaks the content-script path can't reach on Chromium MV3. Off by default; while on, Chrome shows a "started debugging this browser" notice. Geolocation stays on the injected path.
 

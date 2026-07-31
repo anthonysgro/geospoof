@@ -9,7 +9,9 @@ import { createLogger } from "@/shared/utils/debug-logger";
 import { computeEffectiveEnabled, computeEffectivePreserveGeoPrompt } from "@/shared/utils/scope";
 import { computeEffectiveAccuracySetting } from "@/shared/accuracy/resolver";
 import { applyPrecisionOffset, computeEffectiveLocationPrecision } from "@/shared/precision/offset";
+import { resolvePageLocale } from "@/shared/locale/resolver";
 import { updateWorkerFilterSettings } from "./worker-request-filter";
+import { updateAcceptLanguageSettings } from "./accept-language";
 
 const logger = createLogger("BG");
 
@@ -86,6 +88,16 @@ export async function sendSettingsToTab(
       settings.proFeaturesBlocked
     ),
     accuracySeed: settings.accuracySeed,
+    // Reported Language, resolved here so the page world receives only the
+    // outcome — never the mode or the zone/country mapping data. Pro-gated back
+    // to "off" for a non-entitled Safari user. `null` means "leave the real
+    // locale alone", which is also the default. Shares one entry point with the
+    // GET_SETTINGS branch so both builders always agree (Req 12.4).
+    locale: resolvePageLocale(
+      settings.localeSpoofing,
+      settings.timezone?.identifier ?? null,
+      settings.proFeaturesBlocked
+    ),
   };
 
   try {
@@ -110,6 +122,12 @@ export async function broadcastSettingsToTabs(settings: Settings): Promise<void>
   // keeping it fresh here covers every settings-change code path —
   // every mutation flows through broadcastSettingsToTabs.
   updateWorkerFilterSettings(settings);
+
+  // Keep the Accept-Language header in step with the page payload. Piggybacking
+  // on this function (rather than each settings handler remembering) is what
+  // guarantees the header and the JS-reported locale never drift apart, since
+  // every settings mutation already funnels through here.
+  updateAcceptLanguageSettings(settings);
 
   const tabs = await browser.tabs.query({});
   logger.info("Broadcasting settings to tabs:", { tabCount: tabs.length });

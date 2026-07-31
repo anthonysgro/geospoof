@@ -195,13 +195,23 @@ describe("Shared fields preservation", () => {
     const ff = firefoxManifest().permissions as string[];
     const cr = chromiumManifest().permissions as string[];
 
-    // Every Chromium permission must appear on Firefox, EXCEPT the Chromium-only
-    // `debugger` permission (it powers the browser-level CDP spoofing mode;
-    // Firefox has no chrome.debugger equivalent, so it's deliberately absent).
+    // Every Chromium permission must appear on Firefox, except the two that are
+    // deliberately Chromium-only:
+    //   - `debugger` powers the browser-level CDP spoofing mode; Firefox has no
+    //     chrome.debugger equivalent.
+    //   - `declarativeNetRequestWithHostAccess` powers the Reported Language
+    //     Accept-Language rewrite, which Chromium needs because MV3 removed
+    //     blocking webRequest. Firefox rewrites the header with blocking
+    //     `webRequest.onBeforeSendHeaders` instead — a permission it already
+    //     holds for the worker script filter — so requesting DNR there would be
+    //     an unused permission.
+    const CHROMIUM_ONLY = new Set(["debugger", "declarativeNetRequestWithHostAccess"]);
     for (const p of cr) {
-      if (p === "debugger") continue;
+      if (CHROMIUM_ONLY.has(p)) continue;
       expect(ff).toContain(p);
     }
+    expect(cr).toContain("declarativeNetRequestWithHostAccess");
+    expect(ff).not.toContain("declarativeNetRequestWithHostAccess");
 
     // `debugger` is Chromium-only. It maps to the "Access your data on all
     // websites" warning already triggered by `<all_urls>`, so it adds no new

@@ -58,6 +58,7 @@ import {
 } from "./geolocation";
 import { installLastModifiedOverride } from "./document-overrides";
 import { installXsltOverridesOn } from "./xslt-overrides";
+import { installLocaleOverridesOn } from "./locale-overrides";
 import { seedFromBootstrap } from "./bootstrap";
 import { buildRTCPeerConnectionWrapper, installRTCGetStatsOverride } from "./webrtc";
 import { installDateGetterOverridesOn, type DateGetterOriginals } from "./date-getters";
@@ -385,6 +386,32 @@ export function patchIframeWindow(iframeWindow: Window): void {
       err instanceof Error ? err.message : String(err)
     );
     // Cross-origin or missing Intl — silently ignore
+  }
+
+  // ── 4b. Locale overrides ─────────────────────────────────────────────
+  // Each iframe realm has its own `navigator`, `Intl` constructors, and
+  // primitive prototypes. Without patching, reading
+  // `iframe.contentWindow.navigator.language` — or constructing
+  // `new iframe.contentWindow.Intl.NumberFormat()` — reports the REAL
+  // locale, trivially bypassing the top-level override. Same shared
+  // installer the top-level realm uses, so the logic cannot drift; it
+  // captures this realm's own natives for its fallback paths.
+  //
+  // Labeled block so a cross-origin/missing realm skips only this
+  // section, not the downstream Date / Temporal / cascade installs.
+  localeSection: try {
+    const localeWin = iframeWindow as unknown as (Window & typeof globalThis) | undefined;
+    if (!localeWin) break localeSection;
+
+    installLocaleOverridesOn(localeWin);
+
+    logger.debug("[patchIframeWindow] section 4b (locale) complete");
+  } catch (err) {
+    logger.debug(
+      "[patchIframeWindow] section 4b (locale) threw:",
+      err instanceof Error ? err.message : String(err)
+    );
+    // Cross-origin or missing globals — silently ignore
   }
 
   // ── 5. Date constructor override ─────────────────────────────────────

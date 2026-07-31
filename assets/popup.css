@@ -1534,6 +1534,80 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   color: var(--disclaimer-text);
 }
 
+/* Reported Language selector. Stacks for the same reason as .precision-selector:
+   the option text ("Match my location", "Choose language…", and longer in other
+   locales) is too wide to sit beside the label at 350px, so the label goes on
+   its own line above a full-width dropdown. Keeps the layout independent of
+   translation length. */
+.locale-selector {
+  margin-top: 12px;
+}
+
+.locale-selector .select-label {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.locale-selector .select-label select {
+  width: 100%;
+}
+
+/* Editing row: free-text tag input grows, Set button stays fixed. Mirrors
+   .accuracy-custom-edit. */
+.locale-custom-edit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* Display row: committed tag + compact Edit button. Mirrors
+   .accuracy-custom-display. */
+.locale-custom-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+#localeCustomInput {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--border-input);
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface-alt);
+}
+
+#localeCustomInput:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+
+#localeCustomInput.invalid {
+  border-color: var(--danger, #d9534f);
+}
+
+#localeCustomValue {
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Consequence warning, shown only while a language is actually being reported.
+   Uses the shared disclaimer colour so it reads as a caution rather than an
+   error (nothing is broken — the user just needs to know sites will change). */
+.locale-warning {
+  margin-top: 6px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--disclaimer-text);
+}
+
 .select-label {
   display: flex;
   justify-content: space-between;

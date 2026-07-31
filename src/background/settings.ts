@@ -18,10 +18,20 @@ import {
   MAX_FAVORITES,
 } from "@/shared/types/settings";
 import { isSupportedLocale } from "@/shared/i18n/locales";
+import { validateLocaleSpoofing } from "@/shared/locale/resolver";
 import { createLogger } from "@/shared/utils/debug-logger";
 import { parsePattern } from "@/shared/utils/scope";
 import { getLastSyncedIp } from "./vpn-sync";
 import { updateBootstrapRegistration } from "./bootstrap-register";
+
+/**
+ * Re-exported so the settings module remains the one import site for settings
+ * validators, alongside `validateAccuracySetting` / `validateLocationPrecision`.
+ * The implementation lives in `shared/locale/resolver.ts` because the popup and
+ * the Safari app bridge validate through it too, and there must be exactly one
+ * repair path for a stored `localeSpoofing`.
+ */
+export { validateLocaleSpoofing };
 
 const logger = createLogger("BG");
 
@@ -414,6 +424,12 @@ export function validateSettings(settings: Partial<Settings>): Settings {
     ? settings.precisionSeed
     : generatePrecisionSeed();
 
+  // localeSpoofing (locale-spoofing Req 11.1–11.3): repair an absent/unknown/
+  // malformed value to `off`. A `custom` tag is canonicalized and checked
+  // against this engine's locale data; anything unusable collapses to `off` so
+  // the user's real locale is reported rather than a half-applied one.
+  validated.localeSpoofing = validateLocaleSpoofing(settings.localeSpoofing);
+
   return validated;
 }
 
@@ -517,6 +533,12 @@ async function pushRegionToNativeHost(settings: Settings): Promise<void> {
       // the app decodes + adopts it. precisionSeed stays extension-owned and is
       // intentionally NOT bridged. The bridged region/location stays the anchor.
       locationPrecision: JSON.stringify(settings.locationPrecision),
+      // Reported-Language setting rides as a JSON string like the two above, so
+      // the app can persist and relay it (last-writer-wins) even though the
+      // control itself lives only in the browser popup for now. Only the raw
+      // preference crosses the bridge — the *resolved* locale is derived in the
+      // background per payload, never bridged.
+      localeSpoofing: JSON.stringify(settings.localeSpoofing),
     });
   } catch (error) {
     // Swallow — native messaging may not be available in all contexts

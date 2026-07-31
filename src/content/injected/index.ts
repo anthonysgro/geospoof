@@ -137,6 +137,15 @@ installGeolocationOverrides();
 import { installPermissionsOverride } from "./permissions";
 installPermissionsOverride();
 
+// 6b. Locale overrides (navigator.language/languages, the Intl constructors
+//     other than DateTimeFormat, and the toLocale*/localeCompare family).
+//     Installed BEFORE the timezone overrides only for readability — the two are
+//     independent. Note that Intl.DateTimeFormat and Date.prototype.toLocale*
+//     get their locale injection inside their EXISTING timezone-aware wrappers
+//     (steps 7 and 8) rather than being wrapped a second time here.
+import { installLocaleOverrides } from "./locale-overrides";
+installLocaleOverrides();
+
 // 7. Timezone overrides (getTimezoneOffset and Intl.DateTimeFormat)
 import { installTimezoneOverrides } from "./timezone-overrides";
 installTimezoneOverrides();

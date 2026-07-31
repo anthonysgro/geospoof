@@ -190,6 +190,16 @@ export function generateManifest(target: BrowserTarget, version: string): Record
     if (!safariPermissions.includes("nativeMessaging")) {
       safariPermissions.push("nativeMessaging");
     }
+    // Safari shares the Chromium `declarativeNetRequest` path for the Reported
+    // Language `Accept-Language` rewrite (no blocking webRequest in MV3).
+    // Safari's `modifyHeaders` support has historically been unreliable, so this
+    // is best-effort: where the engine ignores the rule the feature degrades to
+    // JS-only locale coverage, which is disclosed in the popup and README rather
+    // than silently assumed to work. Requesting the permission costs nothing if
+    // unsupported.
+    if (!safariPermissions.includes("declarativeNetRequestWithHostAccess")) {
+      safariPermissions.push("declarativeNetRequestWithHostAccess");
+    }
     const safariHostPermissions = [
       ...(shared.host_permissions as string[]),
       // Public-IP (exit-IP) detection — hyperscale echo endpoints, tried in
@@ -230,6 +240,27 @@ export function generateManifest(target: BrowserTarget, version: string): Record
   // Chromium: service_worker background, injected.js as world: "MAIN" content script
   return {
     ...shared,
+    // `declarativeNetRequestWithHostAccess` powers the Reported Language
+    // feature's `Accept-Language` header rewrite. MV3 removed blocking
+    // `webRequest`, so DNR's `modifyHeaders` action is the only way to align the
+    // header with the spoofed locale on Chromium — and without that alignment the
+    // feature would ship a browser that claims `fr-FR` in script while sending
+    // `Accept-Language: en-US`, a stronger fingerprint than not spoofing at all.
+    //
+    // The `WithHostAccess` variant is chosen deliberately over plain
+    // `declarativeNetRequest`. Both grant identical capabilities and both need
+    // host permissions to modify headers (we already hold `<all_urls>`), but only
+    // the plain form carries an install-time permission warning. That distinction
+    // is not cosmetic: Chrome DISABLES an extension until the user manually
+    // re-accepts whenever an update adds a permission with a new warning, so
+    // shipping the plain form would have silently disabled GeoSpoof for every
+    // existing Chrome user. `WithHostAccess` adds no warning, so it adds no
+    // disable and no new install prompt — same "no new warning" reasoning already
+    // documented for `proxy` and `debugger` below.
+    //
+    // The rule is only installed while a locale is actually being reported, and
+    // is removed when the feature is off (which is the default).
+    //
     // `debugger` powers the optional browser-level (Chrome DevTools Protocol)
     // spoofing mode: when the user turns it on, GeoSpoof attaches via
     // `chrome.debugger` and drives `Emulation.setTimezoneOverride` /
@@ -243,7 +274,11 @@ export function generateManifest(target: BrowserTarget, version: string): Record
     // `<all_urls>` host permission (and `proxy`) — same reasoning documented for
     // `proxy` above. The "started debugging this browser" infobar only appears
     // when the user actually enables the mode (i.e. when we attach).
-    permissions: [...(shared.permissions as string[]), "debugger"],
+    permissions: [
+      ...(shared.permissions as string[]),
+      "debugger",
+      "declarativeNetRequestWithHostAccess",
+    ],
     // `webNavigation` is requested at runtime (from the popup toggle, a user
     // gesture) only when debugger mode is enabled — it lets us attach on
     // `onBeforeNavigate`, before a page's first script, for a race-free

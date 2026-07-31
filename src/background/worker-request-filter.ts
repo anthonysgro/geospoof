@@ -117,6 +117,7 @@
 
 import type { Settings } from "@/shared/types/settings";
 import { buildStandaloneWorkerPayload } from "@/shared/worker-payload";
+import { resolvePageLocale } from "@/shared/locale/resolver";
 import { loadSettings } from "./settings";
 import { isRestrictedUrl } from "./tabs";
 import { computeEffectiveEnabled } from "@/shared/utils/scope";
@@ -626,7 +627,19 @@ function onBeforeWorkerRequest(details: WebRequestDetails): void {
         // (rare, but possible mid-flight) is reflected in the next
         // completed worker script.
         const identifier = cachedSettings?.timezone?.identifier;
-        const payload = identifier ? buildStandaloneWorkerPayload(identifier) : "";
+        // Resolve the locale from the same snapshot, so a worker script gets the
+        // identical Reported Language the page realm does. Either axis alone is
+        // enough to warrant a payload — a user can spoof a locale with no
+        // location (hence no timezone), or a timezone with no locale.
+        const locale = cachedSettings
+          ? resolvePageLocale(
+              cachedSettings.localeSpoofing,
+              cachedSettings.timezone?.identifier ?? null,
+              cachedSettings.proFeaturesBlocked
+            )
+          : null;
+        const payload =
+          identifier || locale ? buildStandaloneWorkerPayload(identifier, locale) : "";
         if (payload) {
           if (cachedSettings?.debugLogging) {
             logger.info(`[worker-filter] patching worker script: ${state.url}`);

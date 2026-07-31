@@ -63,6 +63,9 @@ const settingsArb: fc.Arbitrary<Settings> = fc.record({
   accuracySeed: fc.constant(0),
   locationPrecision: fc.constant({ mode: "exact" as const }),
   precisionSeed: fc.constant(0),
+  // Pinned like `locationPrecision`; locale behavior has its own suite in
+  // locale-resolver.property.test.ts.
+  localeSpoofing: fc.constant({ mode: "off" as const }),
 });
 
 describe("Property 7: State restoration on re-awakening", () => {

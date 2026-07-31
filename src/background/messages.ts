@@ -28,12 +28,14 @@ import type {
   ScopeResponse,
   SetAccuracyPayload,
   SetPrecisionPayload,
+  SetLocaleSpoofingPayload,
 } from "@/shared/types/messages";
 import type { LocationName } from "@/shared/types/settings";
 import { MAX_FAVORITES } from "@/shared/types/settings";
 import { resolveAccuracy, computeEffectiveAccuracySetting } from "@/shared/accuracy/resolver";
 import { detectDeviceClass } from "@/shared/accuracy/device-class";
 import { applyPrecisionOffset, computeEffectiveLocationPrecision } from "@/shared/precision/offset";
+import { resolvePageLocale } from "@/shared/locale/resolver";
 import { setDebugEnabled, setVerbosityLevel, createLogger } from "@/shared/utils/debug-logger";
 import {
   computeEffectiveEnabled,
@@ -45,6 +47,7 @@ import {
   updateSettings,
   validateAccuracySetting,
   validateLocationPrecision,
+  validateLocaleSpoofing,
 } from "./settings";
 
 const logger = createLogger("BG");
@@ -183,6 +186,13 @@ export async function handleMessage(
             settings.proFeaturesBlocked
           ),
           accuracySeed: settings.accuracySeed,
+          // Same shared resolver the broadcast path uses, so a freshly injected
+          // content script and a live one see the identical locale (Req 12.4).
+          locale: resolvePageLocale(
+            settings.localeSpoofing,
+            settings.timezone?.identifier ?? null,
+            settings.proFeaturesBlocked
+          ),
         };
         return scoped;
       }
@@ -373,6 +383,9 @@ export async function handleMessage(
 
       case "SET_PRECISION":
         return await handleSetPrecision(message.payload as SetPrecisionPayload);
+
+      case "SET_LOCALE_SPOOFING":
+        return await handleSetLocaleSpoofing(message.payload as SetLocaleSpoofingPayload);
 
       default:
         logger.warn("Unknown message type:", message.type);
@@ -747,6 +760,32 @@ export async function handleSetPrecision(
   let settings;
   try {
     settings = await updateSettings({ locationPrecision });
+  } catch {
+    return { error: "STORAGE_ERROR" };
+  }
+
+  await broadcastSettingsToTabs(settings);
+  return { success: true };
+}
+
+/**
+ * SET_LOCALE_SPOOFING handler (locale-spoofing Req 12.2, 12.3). Validate the
+ * incoming setting through the shared repair path, persist it, then broadcast so
+ * live tabs pick up the new Reported Language without a reload.
+ *
+ * A malformed or engine-unsupported value is repaired to `off` by the validator
+ * rather than rejected, so the caller can never end up believing a locale is
+ * applied when it isn't. No `syncDebuggerSpoofing`: locale is never driven
+ * through the CDP path, so the injected delivery covers every engine.
+ */
+export async function handleSetLocaleSpoofing(
+  payload: SetLocaleSpoofingPayload
+): Promise<{ success: true } | { error: string }> {
+  const localeSpoofing = validateLocaleSpoofing(payload?.localeSpoofing);
+
+  let settings;
+  try {
+    settings = await updateSettings({ localeSpoofing });
   } catch {
     return { error: "STORAGE_ERROR" };
   }

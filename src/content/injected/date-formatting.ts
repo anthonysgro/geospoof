@@ -26,6 +26,7 @@ import {
   originalToLocaleTimeString,
 } from "./state";
 import { installOverride } from "./function-masking";
+import { resolveEffectiveLocales } from "./locale-overrides";
 import { createLogger } from "@/shared/utils/debug-logger";
 import {
   resolvePartsForDate,
@@ -251,6 +252,12 @@ export function installDateFormattingOverridesOn(
         locales?: string | string[],
         options?: Intl.DateTimeFormatOptions
       ): string {
+        // Locale injection lives in this SAME wrapper (not a second one in
+        // locale-overrides.ts) so the locale and timezone axes are resolved
+        // together and cannot disagree. Note this must apply on the
+        // no-timezone path too: locale spoofing is independent of timezone
+        // spoofing, so a user with a locale but no spoofed zone still needs it.
+        const effectiveLocales = resolveEffectiveLocales(locales);
         try {
           if (spoofingEnabled && timezoneData) {
             const hasExplicitTimezone = options?.timeZone != null;
@@ -259,12 +266,12 @@ export function installDateFormattingOverridesOn(
                 ...options,
                 timeZone: timezoneData.identifier,
               };
-              return originals.toLocaleString.call(this, locales as string, opts);
+              return originals.toLocaleString.call(this, effectiveLocales as string, opts);
             }
-            return originals.toLocaleString.call(this, locales, options);
+            return originals.toLocaleString.call(this, effectiveLocales, options);
           }
           logger.debug("toLocaleString: fallback", "spoofing disabled");
-          return originals.toLocaleString.call(this, locales as string, options);
+          return originals.toLocaleString.call(this, effectiveLocales as string, options);
         } catch (error) {
           logger.error("Error in toLocaleString override:", error);
           logger.debug("toLocaleString: fallback", "error");
@@ -286,6 +293,12 @@ export function installDateFormattingOverridesOn(
         locales?: string | string[],
         options?: Intl.DateTimeFormatOptions
       ): string {
+        // Locale injection lives in this SAME wrapper (not a second one in
+        // locale-overrides.ts) so the locale and timezone axes are resolved
+        // together and cannot disagree. Note this must apply on the
+        // no-timezone path too: locale spoofing is independent of timezone
+        // spoofing, so a user with a locale but no spoofed zone still needs it.
+        const effectiveLocales = resolveEffectiveLocales(locales);
         try {
           if (spoofingEnabled && timezoneData) {
             const hasExplicitTimezone = options?.timeZone != null;
@@ -294,12 +307,12 @@ export function installDateFormattingOverridesOn(
                 ...options,
                 timeZone: timezoneData.identifier,
               };
-              return originals.toLocaleDateString.call(this, locales as string, opts);
+              return originals.toLocaleDateString.call(this, effectiveLocales as string, opts);
             }
-            return originals.toLocaleDateString.call(this, locales, options);
+            return originals.toLocaleDateString.call(this, effectiveLocales, options);
           }
           logger.debug("toLocaleDateString: fallback", "spoofing disabled");
-          return originals.toLocaleDateString.call(this, locales as string, options);
+          return originals.toLocaleDateString.call(this, effectiveLocales as string, options);
         } catch (error) {
           logger.error("Error in toLocaleDateString override:", error);
           logger.debug("toLocaleDateString: fallback", "error");
@@ -321,6 +334,12 @@ export function installDateFormattingOverridesOn(
         locales?: string | string[],
         options?: Intl.DateTimeFormatOptions
       ): string {
+        // Locale injection lives in this SAME wrapper (not a second one in
+        // locale-overrides.ts) so the locale and timezone axes are resolved
+        // together and cannot disagree. Note this must apply on the
+        // no-timezone path too: locale spoofing is independent of timezone
+        // spoofing, so a user with a locale but no spoofed zone still needs it.
+        const effectiveLocales = resolveEffectiveLocales(locales);
         try {
           if (spoofingEnabled && timezoneData) {
             const hasExplicitTimezone = options?.timeZone != null;
@@ -329,12 +348,12 @@ export function installDateFormattingOverridesOn(
                 ...options,
                 timeZone: timezoneData.identifier,
               };
-              return originals.toLocaleTimeString.call(this, locales as string, opts);
+              return originals.toLocaleTimeString.call(this, effectiveLocales as string, opts);
             }
-            return originals.toLocaleTimeString.call(this, locales, options);
+            return originals.toLocaleTimeString.call(this, effectiveLocales, options);
           }
           logger.debug("toLocaleTimeString: fallback", "spoofing disabled");
-          return originals.toLocaleTimeString.call(this, locales as string, options);
+          return originals.toLocaleTimeString.call(this, effectiveLocales as string, options);
         } catch (error) {
           logger.error("Error in toLocaleTimeString override:", error);
           logger.debug("toLocaleTimeString: fallback", "error");

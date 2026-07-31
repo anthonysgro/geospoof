@@ -8,6 +8,7 @@
 
 import type { Location, Timezone, AccuracySetting } from "@/shared/types/settings";
 import type { UpdateSettingsPayload } from "@/shared/types/messages";
+import type { SpoofedLocalePayload } from "@/shared/locale/resolver";
 import { createLogger, setDebugEnabled, setVerbosityLevel } from "@/shared/utils/debug-logger";
 import { now } from "@/shared/utils/safe-time";
 
@@ -46,6 +47,15 @@ let webrtcProtection = false;
  * permission state) rather than auto-granting spoofed coords. Defaults to false.
  */
 let preserveGeolocationPrompt = false;
+
+/**
+ * Mirrors the background-resolved Reported Language, or null when the real
+ * locale should be reported. Forwarded to the injected script so its
+ * `navigator` / `Intl` / `toLocale*` overrides know which tag to report. The
+ * background does all the resolving, so this is already Pro-gated and already
+ * checked against the engine's locale data.
+ */
+let spoofedLocale: SpoofedLocalePayload | null = null;
 
 // Event name for settings updates (configurable for stealth)
 const EVENT_NAME: string = process.env.EVENT_NAME || "__x_evt";
@@ -91,6 +101,8 @@ interface SettingsEventDetail {
   verbosityLevel: string;
   webrtcProtection: boolean;
   preserveGeolocationPrompt: boolean;
+  /** Resolved Reported Language, or null to leave the real locale alone. */
+  locale: SpoofedLocalePayload | null;
 }
 
 /**
@@ -131,6 +143,7 @@ function buildSettingsEventDetail(): SettingsEventDetail {
     verbosityLevel,
     webrtcProtection,
     preserveGeolocationPrompt,
+    locale: spoofedLocale,
   };
 }
 
@@ -220,6 +233,7 @@ browser.runtime.onMessage.addListener(
       verbosityLevel = message.payload.verbosityLevel ?? "INFO";
       webrtcProtection = message.payload.webrtcProtection ?? false;
       preserveGeolocationPrompt = message.payload.preserveGeolocationPrompt ?? false;
+      spoofedLocale = message.payload.locale ?? null;
       setDebugEnabled(debugLogging);
       setVerbosityLevel(verbosityLevel);
       logger.debug("Settings updated:", {
@@ -265,6 +279,7 @@ browser.runtime
       preserveGeolocationPrompt?: boolean;
       accuracySetting?: AccuracySetting;
       accuracySeed?: number;
+      locale?: SpoofedLocalePayload | null;
     }) => {
       const roundTrip = now() - CS_SEND_AT;
       logger.debug(
@@ -279,6 +294,7 @@ browser.runtime
       verbosityLevel = settings.verbosityLevel ?? "INFO";
       webrtcProtection = settings.webrtcProtection ?? false;
       preserveGeolocationPrompt = settings.preserveGeolocationPrompt ?? false;
+      spoofedLocale = settings.locale ?? null;
       setDebugEnabled(debugLogging);
       setVerbosityLevel(verbosityLevel);
       logger.debug("Initial settings loaded:", {

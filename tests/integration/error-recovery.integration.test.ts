@@ -469,6 +469,7 @@ describe("Error Recovery Integration Tests", () => {
         accuracySeed: 0,
         locationPrecision: { mode: "exact" as const },
         precisionSeed: 0,
+        localeSpoofing: { mode: "off" as const },
       };
 
       // Act: Broadcast settings (should not throw)

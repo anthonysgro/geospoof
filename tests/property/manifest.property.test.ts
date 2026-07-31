@@ -157,3 +157,45 @@ test("proxy permission present on Firefox and Chromium, absent on Safari", () =>
   // shared filter that strips both.
   expect(safari.permissions).not.toContain("privacy");
 });
+
+/**
+ * Accept-Language header rewriting (locale-spoofing Req 10.2, 10.3, 10.4).
+ *
+ * The variant of the declarativeNetRequest permission is a correctness issue,
+ * not a style choice. Both variants grant identical capabilities, but only the
+ * plain `declarativeNetRequest` form carries an install-time permission warning
+ * — and Chrome DISABLES an extension until the user manually re-accepts whenever
+ * an update adds a permission with a new warning. Shipping the plain form would
+ * therefore silently disable GeoSpoof for every existing Chrome user.
+ * `declarativeNetRequestWithHostAccess` leans on the `<all_urls>` host
+ * permission we already hold and adds no warning. This test exists so that
+ * distinction cannot be undone by accident.
+ */
+test("Chromium and Safari request declarativeNetRequestWithHostAccess, never the warning-carrying variant", () => {
+  const chromium = generateManifest("chromium", "0.0.1") as unknown as Manifest;
+  const safari = generateManifest("safari", "0.0.1") as unknown as Manifest;
+
+  for (const [name, manifest] of [
+    ["chromium", chromium],
+    ["safari", safari],
+  ] as const) {
+    expect(manifest.permissions, name).toContain("declarativeNetRequestWithHostAccess");
+    // The plain form would add an install warning and disable the extension for
+    // existing users on update.
+    expect(manifest.permissions, name).not.toContain("declarativeNetRequest");
+    // modifyHeaders requires host access, which must stay present.
+    expect(manifest.host_permissions, name).toContain("<all_urls>");
+  }
+});
+
+test("Firefox needs no declarativeNetRequest permission for the header rewrite", () => {
+  // Firefox uses blocking webRequest.onBeforeSendHeaders, and `webRequest` +
+  // `webRequestBlocking` are already required for the worker script filter — so
+  // the header rewrite adds no permission on Firefox at all.
+  const firefox = generateManifest("firefox", "0.0.1") as unknown as Manifest;
+
+  expect(firefox.permissions).toContain("webRequest");
+  expect(firefox.permissions).toContain("webRequestBlocking");
+  expect(firefox.permissions).not.toContain("declarativeNetRequest");
+  expect(firefox.permissions).not.toContain("declarativeNetRequestWithHostAccess");
+});

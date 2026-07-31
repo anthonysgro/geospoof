@@ -878,6 +878,94 @@
               </div>
             </div>
             <hr class="section-divider" />
+            <!-- Reported Language. Named to stay clearly distinct from the
+                 "Language" selector further down, which sets GeoSpoof's OWN UI
+                 language; this one sets what WEBSITES see. -->
+            <div class="locale-selector">
+              <label class="select-label" for="localeSelect">
+                <span data-i18n="advanced_locale">Reported Language</span>
+                <select id="localeSelect">
+                  <option value="off" data-i18n="advanced_locale_off">Off (use real)</option>
+                  <option value="match" data-i18n="advanced_locale_match">Match my location</option>
+                  <option value="custom" data-i18n="advanced_locale_custom">
+                    Choose language…
+                  </option>
+                </select>
+              </label>
+              <!-- Pro lock note (shown for non-Pro iOS users; control disabled) -->
+              <div
+                class="pro-lock-note"
+                id="localeProNote"
+                style="display: none"
+                data-i18n="advanced_locale_proNote"
+              >
+                🔒 Reported Language is a GeoSpoof Pro feature. Upgrade in the GeoSpoof app to
+                change the language websites see.
+              </div>
+              <!-- Editing row: free-text BCP47 entry with typeahead suggestions.
+                   A text input + datalist (rather than a 200-entry <select>) is
+                   what makes "any language" workable in a 350px popup: the list
+                   suggests common locales while any valid tag can still be
+                   typed. Options are appended at runtime from the shared
+                   suggestion list. -->
+              <div class="locale-custom-edit" id="localeCustomEdit" style="display: none">
+                <input
+                  type="text"
+                  id="localeCustomInput"
+                  list="localeSuggestions"
+                  autocomplete="off"
+                  spellcheck="false"
+                  placeholder="fr-FR"
+                  aria-label="Language tag"
+                  data-i18n-aria-label="advanced_locale_customTag"
+                />
+                <datalist id="localeSuggestions"></datalist>
+                <button
+                  type="button"
+                  id="localeCustomConfirm"
+                  class="accuracy-custom-confirm"
+                  data-i18n="advanced_locale_customSet"
+                >
+                  Set
+                </button>
+              </div>
+              <!-- Display row: the committed tag + a compact Edit affordance. -->
+              <div class="locale-custom-display" id="localeCustomDisplay" style="display: none">
+                <span id="localeCustomValue"></span>
+                <button
+                  type="button"
+                  id="localeCustomEditBtn"
+                  class="accuracy-custom-confirm accuracy-custom-edit-btn"
+                  data-i18n="advanced_locale_customEdit"
+                >
+                  Edit
+                </button>
+              </div>
+              <div
+                class="accuracy-custom-hint"
+                id="localeCustomHint"
+                role="alert"
+                style="display: none"
+                data-i18n="advanced_locale_customHint"
+              >
+                Enter a language tag your browser supports, like fr-FR or ja
+              </div>
+              <!-- Shown only while the feature is active: enabling this visibly
+                   changes sites, so the consequence is stated up front. -->
+              <div
+                class="locale-warning"
+                id="localeWarning"
+                style="display: none"
+                data-i18n="advanced_locale_warning"
+              >
+                ⚠️ Many sites will switch to this language, and it is sent with every request.
+              </div>
+              <div class="precision-hint" id="localeHint" data-i18n="advanced_locale_hint">
+                Sets the language websites see — navigator.language, date and number formats, and
+                the Accept-Language header.
+              </div>
+            </div>
+            <hr class="section-divider" />
             <div class="theme-selector">
               <label class="select-label" for="themeSelect">
                 <span data-i18n="advanced_theme">Theme</span>

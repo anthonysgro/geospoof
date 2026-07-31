@@ -3,7 +3,7 @@
  * All cross-module state is centralized here with controlled access via setters.
  */
 
-import type { SpoofedLocation, TimezoneData, AnyFunction } from "./types";
+import type { SpoofedLocation, TimezoneData, LocaleData, AnyFunction } from "./types";
 
 // ── Build-time declarations ──────────────────────────────────────────
 
@@ -218,6 +218,23 @@ export let webrtcProtectionEnabled = false;
  */
 export let preserveGeolocationPrompt = false;
 
+/**
+ * The Reported Language to report to the page, or `null` to report the real one.
+ *
+ * Set from the settings CustomEvent (and from the Firefox document_start
+ * bootstrap) and read by `locale-overrides.ts` plus the locale injection inside
+ * the `Intl.DateTimeFormat` and `Date.prototype.toLocale*` overrides.
+ *
+ * Orthogonal to `timezoneData`: a user can spoof a timezone without a locale or
+ * vice versa, and the two overrides must not interfere. Every consumer gates on
+ * `spoofingEnabled && localeData`, so an out-of-scope tab (which receives
+ * `enabled: false`) reports its real locale even though the value was delivered.
+ *
+ * Note there is no separate "enabled" flag for this: the background sends `null`
+ * for every don't-spoof case, so a non-null value always means "spoof this".
+ */
+export let localeData: LocaleData | null = null;
+
 // Setter functions for state mutation from other modules
 export function setSpoofingEnabled(v: boolean): void {
   spoofingEnabled = v;
@@ -245,4 +262,8 @@ export function setWebRTCProtectionEnabled(v: boolean): void {
 
 export function setPreserveGeolocationPrompt(v: boolean): void {
   preserveGeolocationPrompt = v;
+}
+
+export function setLocaleData(v: LocaleData | null): void {
+  localeData = v;
 }

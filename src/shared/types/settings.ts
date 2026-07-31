@@ -119,6 +119,35 @@ export const MIN_PRECISION_RADIUS_M = 50;
 export const MAX_PRECISION_RADIUS_M = 50000; // 50km defensive clamp
 
 /**
+ * How the browser's reported language/locale is derived — the "Reported
+ * Language" feature.
+ *
+ *   - `off`    → report the real browser locale (default; pre-feature behavior).
+ *   - `match`  → report the dominant locale of the spoofed location, derived
+ *                offline from `timezone.identifier`.
+ *   - `custom` → report an explicit BCP47 tag the user chose (e.g. `fr-FR`).
+ *
+ * DISTINCT from {@link Settings.uiLanguage}, which controls the language of
+ * GeoSpoof's own popup UI and is never touched by this feature. This one governs
+ * what *websites* see: `navigator.language`, `navigator.languages`, every `Intl`
+ * default locale, the `toLocale*` family, and the `Accept-Language` header.
+ *
+ * Default is `off` because locale spoofing is visibly disruptive — many sites
+ * switch language outright — so it must be opt-in.
+ *
+ * Unlike `accuracySetting` and `locationPrecision`, this needs no per-install
+ * seed: resolution is fully deterministic from the setting plus the spoofed
+ * timezone, with no randomization.
+ */
+export type LocaleSpoofing =
+  | { mode: "off" }
+  | { mode: "match" }
+  | { mode: "custom"; locale: string };
+
+/** Default: report the real browser locale (pre-feature behavior). */
+export const DEFAULT_LOCALE_SPOOFING: LocaleSpoofing = { mode: "off" };
+
+/**
  * Complete extension settings persisted in browser.storage.local.
  */
 export interface Settings {
@@ -257,6 +286,14 @@ export interface Settings {
    * unseeded — the first save assigns a real value.
    */
   precisionSeed: number;
+  /**
+   * How the language/locale reported to websites is derived: off, matched to the
+   * spoofed location, or an explicit BCP47 tag. Defaults to `off`.
+   *
+   * Independent of `uiLanguage` (the popup's own display language) — that one is
+   * about GeoSpoof's UI, this one is about what sites see.
+   */
+  localeSpoofing: LocaleSpoofing;
 }
 
 /**
@@ -294,4 +331,5 @@ export const DEFAULT_SETTINGS: Settings = {
   accuracySeed: 0,
   locationPrecision: { mode: "exact" },
   precisionSeed: 0,
+  localeSpoofing: { mode: "off" },
 };

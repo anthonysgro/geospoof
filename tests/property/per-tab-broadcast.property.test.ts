@@ -54,6 +54,7 @@ function makeSettings(partial: Partial<Settings>): Settings {
     accuracySeed: 0,
     locationPrecision: { mode: "exact" },
     precisionSeed: 0,
+    localeSpoofing: { mode: "off" as const },
     ...partial,
   };
 }

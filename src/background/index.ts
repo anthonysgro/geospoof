@@ -22,6 +22,9 @@ import {
 } from "./tabs";
 import { computeEffectiveEnabled, computeEffectivePreserveGeoPrompt } from "@/shared/utils/scope";
 import { computeEffectiveAccuracySetting } from "@/shared/accuracy/resolver";
+import { applyPrecisionOffset, computeEffectiveLocationPrecision } from "@/shared/precision/offset";
+import { resolvePageLocale } from "@/shared/locale/resolver";
+import { installAcceptLanguageRewriter, updateAcceptLanguageSettings } from "./accept-language";
 import { handleMessage, handleSetLocation } from "./messages";
 import { syncVpnLocation } from "./vpn-sync";
 import { installProxyWatcher } from "./proxy-watcher";
@@ -255,6 +258,11 @@ async function initialize(): Promise<void> {
   await installWorkerRequestFilter();
   logger.debug(`[init] worker-request-filter support: ${isWorkerFilterSupported() ? "yes" : "no"}`);
 
+  // Prime the Accept-Language snapshot and (on Chromium/Safari) install the DNR
+  // rule, so the header is aligned from the first request after a cold start
+  // rather than only after the next settings change.
+  updateAcceptLanguageSettings(settings);
+
   if (settings.webrtcProtection) {
     try {
       await setWebRTCProtection(true);
@@ -352,6 +360,12 @@ installDebuggerWatchers();
 // listeners register synchronously inside before any await.
 void installWorkerRequestFilter();
 
+// Same reasoning as the worker filter above: register the blocking
+// Accept-Language listener at top level so it survives an idle respawn of the
+// background script. Idempotent, and a no-op on non-Firefox engines (which use
+// the declarativeNetRequest path instead).
+installAcceptLanguageRewriter();
+
 export { initialize };
 
 // --- Alarm handler ---
@@ -424,7 +438,20 @@ async function onAlarm(alarm: Alarms.Alarm): Promise<void> {
       });
       const scopedPayload: UpdateSettingsPayload = {
         enabled,
-        location,
+        // Apply the approximate-location offset, exactly as `sendSettingsToTab`
+        // does. Delivering `location` raw here was a real leak: a user who
+        // enabled approximate location still got their EXACT anchor coordinates
+        // on this path, which is the one thing the feature exists to prevent.
+        // The resolver is deterministic, so this produces the identical point
+        // the broadcast path delivers (location-precision Req 5.2).
+        location: applyPrecisionOffset(
+          location,
+          computeEffectiveLocationPrecision(
+            settings.locationPrecision,
+            settings.proFeaturesBlocked
+          ),
+          settings.precisionSeed
+        ),
         timezone,
         debugLogging,
         verbosityLevel,
@@ -440,6 +467,13 @@ async function onAlarm(alarm: Alarms.Alarm): Promise<void> {
           settings.proFeaturesBlocked
         ),
         accuracySeed,
+        // Same shared resolver every other payload builder uses, so this
+        // late-injection path delivers the identical Reported Language.
+        locale: resolvePageLocale(
+          settings.localeSpoofing,
+          settings.timezone?.identifier ?? null,
+          settings.proFeaturesBlocked
+        ),
       };
 
       try {
@@ -590,7 +624,20 @@ if (browser.tabs && browser.tabs.onCreated) {
       });
       const scopedPayload: UpdateSettingsPayload = {
         enabled,
-        location,
+        // Apply the approximate-location offset, exactly as `sendSettingsToTab`
+        // does. Delivering `location` raw here was a real leak: a user who
+        // enabled approximate location still got their EXACT anchor coordinates
+        // on this path, which is the one thing the feature exists to prevent.
+        // The resolver is deterministic, so this produces the identical point
+        // the broadcast path delivers (location-precision Req 5.2).
+        location: applyPrecisionOffset(
+          location,
+          computeEffectiveLocationPrecision(
+            settings.locationPrecision,
+            settings.proFeaturesBlocked
+          ),
+          settings.precisionSeed
+        ),
         timezone,
         debugLogging,
         verbosityLevel,
@@ -606,6 +653,13 @@ if (browser.tabs && browser.tabs.onCreated) {
           settings.proFeaturesBlocked
         ),
         accuracySeed,
+        // Same shared resolver every other payload builder uses, so a brand-new
+        // tab receives the identical Reported Language.
+        locale: resolvePageLocale(
+          settings.localeSpoofing,
+          settings.timezone?.identifier ?? null,
+          settings.proFeaturesBlocked
+        ),
       };
 
       setTimeout(() => {

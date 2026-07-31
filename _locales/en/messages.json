@@ -662,5 +662,49 @@
   "advanced_language_system": {
     "message": "System (browser default)",
     "description": "Language selector option that follows the browser's UI language instead of a fixed choice."
+  },
+  "advanced_locale": {
+    "message": "Reported Language",
+    "description": "Label for the control that sets the language websites see (navigator.language, Intl formats, and the Accept-Language header). Deliberately distinct from 'Language', which sets GeoSpoof's own popup language."
+  },
+  "advanced_locale_off": {
+    "message": "Off (use real)",
+    "description": "Reported Language option that leaves the browser's real language untouched (the default)."
+  },
+  "advanced_locale_match": {
+    "message": "Match my location",
+    "description": "Reported Language option that derives the language automatically from the spoofed location."
+  },
+  "advanced_locale_custom": {
+    "message": "Choose language…",
+    "description": "Reported Language option that reveals a text input for picking a specific language tag."
+  },
+  "advanced_locale_customTag": {
+    "message": "Language tag",
+    "description": "Accessible label for the text input where a BCP47 language tag such as fr-FR is entered."
+  },
+  "advanced_locale_customSet": {
+    "message": "Set",
+    "description": "Button that commits the typed language tag. The value is applied only when this button is clicked or Enter is pressed."
+  },
+  "advanced_locale_customEdit": {
+    "message": "Edit",
+    "description": "Button that reopens the language editor from the compact display showing the committed tag."
+  },
+  "advanced_locale_customHint": {
+    "message": "Enter a language tag your browser supports, like fr-FR or ja",
+    "description": "Inline hint shown when the entered language tag is malformed or unsupported by the browser, so it was not applied."
+  },
+  "advanced_locale_warning": {
+    "message": "⚠️ Many sites will switch to this language, and it is sent with every request.",
+    "description": "Caution shown while a reported language is active, explaining that sites will visibly change language and that the choice is also sent as an HTTP header."
+  },
+  "advanced_locale_hint": {
+    "message": "Sets the language websites see — navigator.language, date and number formats, and the Accept-Language header.",
+    "description": "Explanatory note under the Reported Language control describing which signals it changes."
+  },
+  "advanced_locale_proNote": {
+    "message": "🔒 Reported Language is a GeoSpoof Pro feature. Upgrade in the GeoSpoof app to change the language websites see.",
+    "description": "Shown for non-Pro users when the Reported Language control is disabled, explaining that it is a Pro feature."
   }
 }

@@ -19,8 +19,10 @@ import {
   setDebugEnabled as setStateDebugEnabled,
   setWebRTCProtectionEnabled,
   setPreserveGeolocationPrompt,
+  setLocaleData,
 } from "./state";
 import { validateTimezoneData } from "./timezone-helpers";
+import { validateLocaleData } from "./locale-helpers";
 import {
   setDebugEnabled as setLoggerDebugEnabled,
   setVerbosityLevel as setLoggerVerbosityLevel,
@@ -97,6 +99,22 @@ export function installSettingsListener(): void {
         }
       } else {
         setTimezoneData(null);
+      }
+
+      // Reported Language. Validated before adoption for the same reason as
+      // timezone data: a malformed value must disable the locale override rather
+      // than half-apply it, since a locale the engine can't honor would make
+      // navigator.language contradict the actual formatting behavior.
+      if (event.detail.locale) {
+        if (validateLocaleData(event.detail.locale)) {
+          setLocaleData(event.detail.locale);
+          logger.debug("Locale data updated:", event.detail.locale);
+        } else {
+          logger.error("Invalid locale data received, locale spoofing disabled");
+          setLocaleData(null);
+        }
+      } else {
+        setLocaleData(null);
       }
 
       logger.info("Settings updated via event:", {

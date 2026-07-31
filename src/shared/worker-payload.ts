@@ -1,5 +1,5 @@
 /**
- * Shared Worker timezone-spoofing payload.
+ * Shared Worker timezone- and locale-spoofing payload.
  *
  * This module is consumed by both:
  *
@@ -23,6 +23,8 @@
  * non-strict-mode behaviours.
  */
 
+import type { SpoofedLocalePayload } from "@/shared/locale/resolver";
+
 /**
  * The core timezone spoofing payload. Overrides `Date`, `Intl.DateTimeFormat`,
  * and the Date prototype methods inside whatever scope it runs in. Does NOT
@@ -32,9 +34,18 @@
  * Uses a `__SPOOF_TZ_ID__` placeholder that must be replaced with a
  * JSON-stringified IANA identifier before the payload is handed to a Worker.
  */
-export const SPOOF_CORE = `
-var __tz_id = __SPOOF_TZ_ID__;
-
+/**
+ * The anti-fingerprint masking helpers shared by every worker payload section.
+ *
+ * Split out of {@link SPOOF_CORE} so a payload can carry LOCALE spoofing without
+ * timezone spoofing (and vice versa) while still defining `__register` /
+ * `__nativeMethod` exactly once. `SPOOF_CORE` still concatenates these first, so
+ * its behavior is unchanged for existing callers.
+ *
+ * Nothing in here depends on `__tz_id`, which is why hoisting it above the
+ * timezone body is safe.
+ */
+export const SPOOF_MASK_HELPERS = `
 // --- Function.prototype.toString masking ---
 // Without this, fingerprinters (notably CreepJS) detect our overrides
 // because SpoofedDTF.toString() returns the JS source instead of
@@ -135,6 +146,27 @@ function __nativeMethod(fn, name, length) {
   return wrapped;
 }
 
+// --- Cross-body locale hook ---
+// The timezone body and the locale body are emitted independently (either can
+// appear without the other), but Intl.DateTimeFormat needs BOTH axes injected
+// from its single wrapper. Declaring the hook here — in the section that is
+// always emitted first — means the timezone body can consult the spoofed tag
+// without caring whether the locale body was included or in what order.
+// Stays null unless the locale body sets it.
+var __spoofLocaleTag = null;
+function __localeOr(locales) {
+  return locales === undefined && __spoofLocaleTag ? __spoofLocaleTag : locales;
+}
+
+`;
+
+/**
+ * The timezone-spoofing body. Requires `__SPOOF_TZ_ID__` to be substituted and
+ * assumes the masking helpers are already in scope.
+ */
+const SPOOF_TZ_BODY = `
+var __tz_id = __SPOOF_TZ_ID__;
+
 // --- Intl.DateTimeFormat override ---
 var OrigDTF = Intl.DateTimeFormat;
 var origResolvedOptions = OrigDTF.prototype.resolvedOptions;
@@ -147,13 +179,18 @@ function SpoofedDTF() {
   // instance) fall back to the native constructor as the target.
   var nt = new.target || OrigDTF;
   var opts = args[1];
+  // Inject the spoofed locale in this same wrapper so resolvedOptions() reports
+  // a coherent {locale, timeZone} pair and everything ICU derives from the
+  // locale matches the tag we claim. No-op when locale spoofing is off, and an
+  // explicit caller locale always wins.
+  var loc = __localeOr(args[0]);
   if (opts && typeof opts === "object" && "timeZone" in opts) {
-    var instance = Reflect.construct(OrigDTF, [args[0], opts], nt);
+    var instance = Reflect.construct(OrigDTF, [loc, opts], nt);
     explicitTzInstances.add(instance);
     return instance;
   }
   var newOpts = Object.assign({}, opts || {}, { timeZone: __tz_id });
-  return Reflect.construct(OrigDTF, [args[0], newOpts], nt);
+  return Reflect.construct(OrigDTF, [loc, newOpts], nt);
 }
 SpoofedDTF.prototype = OrigDTF.prototype;
 SpoofedDTF.supportedLocalesOf = OrigDTF.supportedLocalesOf;
@@ -844,6 +881,195 @@ if (typeof Temporal !== "undefined" && Temporal && Temporal.Now) {
 `;
 
 /**
+ * The locale ("Reported Language") spoofing body for worker scopes.
+ *
+ * Workers get their own `WorkerNavigator`, their own `Intl` constructors, and
+ * their own primitive prototypes, so without this a page can read its real
+ * language from inside a Worker even though the main realm reports the spoofed
+ * one — and a main-realm/worker mismatch is precisely the kind of internal
+ * inconsistency this feature exists to avoid.
+ *
+ * Independent of the timezone body: either can be emitted without the other.
+ * Assumes the masking helpers are in scope and that `__SPOOF_LOCALE__` has been
+ * substituted with a `{ tag, languages }` object.
+ *
+ * Mirrors `content/injected/locale-overrides.ts`: inject the tag into the
+ * engine's native implementation and return the engine's own result, so every
+ * value ICU derives from the locale stays consistent with the reported tag.
+ * `Intl.DateTimeFormat` is handled by the timezone body, which injects the
+ * locale alongside the zone in one wrapper.
+ */
+export const SPOOF_LOCALE_CORE = `
+var __locale = __SPOOF_LOCALE__;
+
+if (__locale && __locale.tag) {
+  // Publish the tag on the shared hook declared in the masking helpers, so the
+  // timezone body's Intl.DateTimeFormat wrapper injects the locale too —
+  // regardless of which body was emitted first.
+  __spoofLocaleTag = __locale.tag;
+
+  // --- WorkerNavigator.language / .languages ---
+  try {
+    var __navProto = null;
+    if (typeof WorkerNavigator !== "undefined" && WorkerNavigator.prototype) {
+      __navProto = WorkerNavigator.prototype;
+    } else if (typeof navigator !== "undefined" && navigator) {
+      __navProto = Object.getPrototypeOf(navigator);
+    }
+    if (__navProto) {
+      var __installLangGetter = function(name, produce) {
+        var d = Object.getOwnPropertyDescriptor(__navProto, name);
+        if (!d || typeof d.get !== "function") return;
+        var nativeGet = d.get;
+        // Concise-method form so the getter has no own "prototype" and no
+        // [[Construct]] slot, matching a native accessor.
+        var g = {
+          get() {
+            try {
+              return produce();
+            } catch (e) {
+              return Reflect.apply(nativeGet, this, []);
+            }
+          }
+        }.get;
+        __register(g, "get " + name);
+        Object.defineProperty(__navProto, name, {
+          get: g,
+          set: d.set,
+          configurable: d.configurable,
+          enumerable: d.enumerable
+        });
+      };
+      __installLangGetter("language", function() { return __locale.tag; });
+      __installLangGetter("languages", function() {
+        // Fresh frozen copy per read so a page can't mutate our state or notice
+        // the same array object being handed out twice.
+        return Object.freeze(__locale.languages.slice());
+      });
+    }
+  } catch (e) {
+    // No WorkerNavigator prototype reachable — leave the natives in place.
+  }
+
+  // --- Default locale for the Intl constructors ---
+  // DateTimeFormat is deliberately absent: the timezone body's SpoofedDTF
+  // injects the locale together with the zone.
+  try {
+    var __intlLocaleCtors = [
+      "NumberFormat",
+      "Collator",
+      "RelativeTimeFormat",
+      "ListFormat",
+      "PluralRules",
+      "DisplayNames",
+      "Segmenter",
+      "DurationFormat"
+    ];
+    for (var __li = 0; __li < __intlLocaleCtors.length; __li++) {
+      (function(name) {
+        try {
+          var Native = Intl[name];
+          if (typeof Native !== "function") return; // not on this engine
+          var nativeProto = Native.prototype;
+          function SpoofedIntlCtor() {
+            var args = Array.prototype.slice.call(arguments);
+            var nt = new.target || Native;
+            // Inject only when the caller passed no explicit locales; an
+            // explicit request must be honored verbatim.
+            var injected = args.slice();
+            if (injected.length === 0) injected.push(undefined);
+            if (injected[0] === undefined) injected[0] = __locale.tag;
+            try {
+              return Reflect.construct(Native, injected, nt);
+            } catch (inner) {
+              // Never let the injected tag break a construction the page would
+              // otherwise have completed: retry with the caller's own arguments
+              // so the native error (or success) is reproduced exactly.
+              return Reflect.construct(Native, args, nt);
+            }
+          }
+          __register(SpoofedIntlCtor, name);
+          try {
+            Object.defineProperty(SpoofedIntlCtor, "length", {
+              value: Native.length,
+              configurable: true,
+              enumerable: false,
+              writable: false
+            });
+          } catch (e) {
+            // best effort
+          }
+          // Keep prototype identity so instanceof and brand checks still pass.
+          SpoofedIntlCtor.prototype = nativeProto;
+          if (typeof Native.supportedLocalesOf === "function") {
+            SpoofedIntlCtor.supportedLocalesOf = Native.supportedLocalesOf;
+          }
+          Intl[name] = SpoofedIntlCtor;
+        } catch (e) {
+          // Leave this constructor native; the others still install.
+        }
+      })(__intlLocaleCtors[__li]);
+    }
+  } catch (e) {
+    // Intl unavailable — nothing to do.
+  }
+
+  // --- toLocale* / localeCompare on the primitive prototypes ---
+  try {
+    var __patchWorkerLocaleMethod = function(ctor, name, localesIndex) {
+      try {
+        if (!ctor || !ctor.prototype) return;
+        var d = Object.getOwnPropertyDescriptor(ctor.prototype, name);
+        if (!d || typeof d.value !== "function") return;
+        var native = d.value;
+        var wrapped = __nativeMethod(function() {
+          var args = Array.prototype.slice.call(arguments);
+          while (args.length <= localesIndex) args.push(undefined);
+          if (args[localesIndex] === undefined) args[localesIndex] = __locale.tag;
+          try {
+            return Reflect.apply(native, this, args);
+          } catch (inner) {
+            return Reflect.apply(native, this, Array.prototype.slice.call(arguments));
+          }
+        }, name, native.length);
+        Object.defineProperty(ctor.prototype, name, {
+          value: wrapped,
+          writable: d.writable,
+          configurable: d.configurable,
+          enumerable: d.enumerable
+        });
+      } catch (e) {
+        // Leave this method native.
+      }
+    };
+    // \`locales\` is argument 0 everywhere except localeCompare, which takes the
+    // string to compare against first.
+    if (typeof Number !== "undefined") __patchWorkerLocaleMethod(Number, "toLocaleString", 0);
+    if (typeof BigInt !== "undefined") __patchWorkerLocaleMethod(BigInt, "toLocaleString", 0);
+    if (typeof Array !== "undefined") __patchWorkerLocaleMethod(Array, "toLocaleString", 0);
+    if (typeof String !== "undefined") {
+      __patchWorkerLocaleMethod(String, "localeCompare", 1);
+      // Locale-sensitive case mapping genuinely differs by locale (Turkish
+      // dotless i), so leaving these native would contradict the reported tag.
+      __patchWorkerLocaleMethod(String, "toLocaleUpperCase", 0);
+      __patchWorkerLocaleMethod(String, "toLocaleLowerCase", 0);
+    }
+  } catch (e) {
+    // Leave the primitives native.
+  }
+}
+`;
+
+/**
+ * The core timezone spoofing payload (masking helpers + timezone body).
+ *
+ * Preserved as a single export with its original contents so existing
+ * consumers -- the Firefox worker request filter and the injected worker
+ * patcher -- keep working unchanged.
+ */
+export const SPOOF_CORE = `${SPOOF_MASK_HELPERS}\n${SPOOF_TZ_BODY}`;
+
+/**
  * Build a minimal standalone payload suitable for prepending to a worker
  * script response. Wraps the spoofing core in an IIFE so it doesn't leak
  * its `var` declarations into the worker's global scope.
@@ -851,12 +1077,48 @@ if (typeof Temporal !== "undefined" && Temporal && Temporal.Now) {
  * Returns an empty string when `identifier` is falsy — callers should
  * treat that as "don't modify the response."
  */
-export function buildStandaloneWorkerPayload(identifier: string | null | undefined): string {
-  if (!identifier) return "";
-  // Callback form so any `$`-backreference patterns in the identifier
-  // (unlikely for real IANA IDs but possible for user input) are
-  // passed through literally.
-  const idJson = JSON.stringify(identifier);
-  const core = SPOOF_CORE.replace("__SPOOF_TZ_ID__", () => idJson);
+export function buildStandaloneWorkerPayload(
+  identifier: string | null | undefined,
+  locale?: SpoofedLocalePayload | null
+): string {
+  const core = buildWorkerSpoofCore(identifier, locale);
+  if (!core) return "";
   return `(function(){\n"use strict";\n${core}\n})();\n`;
+}
+
+/**
+ * Assemble the spoofing core for a worker scope: masking helpers, plus whichever
+ * of the timezone and locale bodies apply, with their placeholders substituted.
+ *
+ * Returns an empty string when neither axis is active — callers treat that as
+ * "don't modify the worker."
+ *
+ * Both worker paths (the injected constructor wrapper and the Firefox response
+ * filter) go through here so a worker caught by either sees an identical core.
+ * Either axis alone is sufficient: a user can spoof a locale with no location
+ * (hence no timezone), or a timezone with no locale.
+ */
+export function buildWorkerSpoofCore(
+  identifier: string | null | undefined,
+  locale?: SpoofedLocalePayload | null
+): string {
+  if (!identifier && !locale) return "";
+
+  // Masking helpers first — both bodies depend on them, and the helpers declare
+  // the `__localeOr` hook the timezone body's DateTimeFormat wrapper consults.
+  const parts: string[] = [SPOOF_MASK_HELPERS];
+
+  // Callback form throughout so any `$`-backreference patterns in the
+  // substituted JSON (unlikely for real IANA IDs / BCP47 tags but possible for
+  // user input) are passed through literally.
+  if (identifier) {
+    const idJson = JSON.stringify(identifier);
+    parts.push(SPOOF_TZ_BODY.replace("__SPOOF_TZ_ID__", () => idJson));
+  }
+  if (locale) {
+    const localeJson = JSON.stringify(locale);
+    parts.push(SPOOF_LOCALE_CORE.replace("__SPOOF_LOCALE__", () => localeJson));
+  }
+
+  return parts.join("\n");
 }

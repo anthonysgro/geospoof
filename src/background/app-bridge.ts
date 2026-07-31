@@ -18,6 +18,7 @@ import {
   updateSettings,
   validateAccuracySetting,
   validateLocationPrecision,
+  validateLocaleSpoofing,
 } from "./settings";
 import {
   handleSetLocation,
@@ -74,6 +75,13 @@ interface PendingSettings {
   denylist?: string; // JSON-encoded string[] from the app
   accuracySetting?: string; // JSON-encoded AccuracySetting from the app (accuracySeed stays extension-owned)
   locationPrecision?: string; // JSON-encoded LocationPrecision from the app (precisionSeed stays extension-owned)
+  /**
+   * JSON-encoded LocaleSpoofing (Reported Language) from the app. Only the raw
+   * PREFERENCE crosses the bridge — the resolved locale is derived per payload in
+   * the background and is never bridged, so the app can't put the page world and
+   * the Accept-Language header out of step with each other.
+   */
+  localeSpoofing?: string;
 }
 
 interface PendingResponse {
@@ -364,6 +372,32 @@ export async function adoptPendingSettingsFromApp(): Promise<void> {
         }
       } catch (error) {
         logger.debug("adoptPendingSettingsFromApp: locationPrecision parse failed:", error);
+      }
+    }
+
+    // 8. Reported Language — adopt the app's value when present and changed.
+    // Rides as a JSON string like accuracySetting / locationPrecision, and is
+    // validated through the same repair path the SET_LOCALE_SPOOFING handler
+    // uses, so the extension stays the source of truth for shape hygiene AND for
+    // whether this engine can actually honor a custom tag (the validator repairs
+    // an unsupported tag to `off` rather than letting the app enable a locale
+    // that would silently fall back). Like precision, the control lives only in
+    // the browser popup, but the value round-trips so it survives the app's
+    // last-writer-wins snapshots.
+    if (typeof pending.localeSpoofing === "string") {
+      try {
+        const parsedLocale: unknown = JSON.parse(pending.localeSpoofing);
+        const validatedLocale = validateLocaleSpoofing(parsedLocale);
+        const latestForLocale = await loadSettings();
+        if (JSON.stringify(validatedLocale) !== JSON.stringify(latestForLocale.localeSpoofing)) {
+          const updated = await updateSettings({ localeSpoofing: validatedLocale });
+          // Re-broadcast so live tabs pick up the new locale, and so the
+          // Accept-Language rule is refreshed in the same step (both ride
+          // broadcastSettingsToTabs).
+          await broadcastSettingsToTabs(updated);
+        }
+      } catch (error) {
+        logger.debug("adoptPendingSettingsFromApp: localeSpoofing parse failed:", error);
       }
     }
 

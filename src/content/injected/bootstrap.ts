@@ -31,8 +31,10 @@ import {
   setSpoofedLocation,
   setTimezoneData,
   setWebRTCProtectionEnabled,
+  setLocaleData,
 } from "./state";
 import { validateTimezoneData } from "./timezone-helpers";
+import { validateLocaleData } from "./locale-helpers";
 
 /* eslint-disable no-var */
 declare var process: { env: Record<string, string | undefined> };
@@ -89,12 +91,21 @@ export function seedFromBootstrap(): void {
       timezone?: unknown;
       location?: unknown;
       webrtcProtection?: unknown;
+      locale?: unknown;
     };
     if (typeof d.webrtcProtection === "boolean") {
       setWebRTCProtectionEnabled(d.webrtcProtection);
     }
     if (d.timezone && validateTimezoneData(d.timezone)) {
       setTimezoneData(d.timezone);
+    }
+    // Reported Language. Seeding this here is what makes the locale surfaces
+    // instant rather than lagging the timezone ones by a settings round-trip —
+    // otherwise a page reading `navigator.language` in its first `<script>` would
+    // see a spoofed timezone sitting next to the user's REAL language, which is
+    // both a leak and an obvious inconsistency.
+    if (d.locale && validateLocaleData(d.locale)) {
+      setLocaleData(d.locale);
     }
     if (d.location && typeof d.location === "object") {
       setSpoofedLocation(d.location as SpoofedLocation);

@@ -79,6 +79,11 @@ const settingsArb: fc.Arbitrary<Settings> = fc.record({
   // covered by precision-offset.property.test.ts and precision-payload.test.ts.
   locationPrecision: fc.constant({ mode: "exact" as const }),
   precisionSeed: fc.integer({ min: 0, max: 2 ** 31 }),
+  // Pinned to `off` for the same reason as `locationPrecision` above: this suite
+  // asserts the broadcast payload passes non-scope fields through unchanged, and
+  // an active locale would add a derived field unrelated to those assertions.
+  // Locale resolution/validation is covered by locale-resolver.property.test.ts.
+  localeSpoofing: fc.constant({ mode: "off" as const }),
 });
 
 /** The keys that MUST NOT appear in the broadcast payload. */
@@ -112,6 +117,11 @@ const REQUIRED_KEYS: (keyof UpdateSettingsPayload)[] = [
   // falling back to auto/0.
   "accuracySetting",
   "accuracySeed",
+  // The ALREADY-RESOLVED Reported Language ({ tag, languages }) or null. Only
+  // the outcome crosses into the page: never the user's mode, never the
+  // zone/country mapping data, and never the Accept-Language string (which is
+  // the background's business alone).
+  "locale",
 ];
 
 /**
@@ -160,8 +170,10 @@ test("Property 4: Broadcast Payload Contains Only Scoped Fields", async () => {
         expect(payload).not.toHaveProperty(key);
       }
 
-      // Payload must have exactly 9 scoped keys.
-      expect(Object.keys(payload)).toHaveLength(9);
+      // Payload must have exactly the scoped keys listed in REQUIRED_KEYS and
+      // nothing else. Derived from the list rather than hardcoded so adding a
+      // field means updating one place, not two.
+      expect(Object.keys(payload)).toHaveLength(REQUIRED_KEYS.length);
 
       // `enabled` is now resolved per tab via the shared source of truth
       // (background-authoritative per-tab scoping), not the raw master flag.

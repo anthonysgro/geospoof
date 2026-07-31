@@ -63,7 +63,7 @@
  * timezone (inherent to worker process isolation — we can't reach them).
  */
 
-import { timezoneData, spoofingEnabled, ANNOUNCE_EVENT_NAME } from "./state";
+import { timezoneData, localeData, spoofingEnabled, ANNOUNCE_EVENT_NAME } from "./state";
 import {
   registerOverride,
   disguiseAsNative,
@@ -71,7 +71,7 @@ import {
   stripExtensionFramesFromStack,
 } from "./function-masking";
 import { seedFromBootstrap } from "./bootstrap";
-import { SPOOF_CORE } from "@/shared/worker-payload";
+import { buildWorkerSpoofCore } from "@/shared/worker-payload";
 import { createLogger } from "@/shared/utils/debug-logger";
 
 const logger = createLogger("INJ");
@@ -474,17 +474,20 @@ function lookupNestedBlob(url) {
  * is available — the caller then falls back to an unpatched worker.
  */
 function generateInlineWorkerPayload(originalScriptUrl: string): string {
-  if (!spoofingEnabled || !timezoneData) {
+  // Either spoofed axis alone justifies patching the worker: a locale with no
+  // spoofed location (hence no timezone) still has to reach worker scope, or the
+  // worker would report the real language while the page realm reports the
+  // spoofed one — an internal mismatch a page can read directly.
+  if (!spoofingEnabled || (!timezoneData && !localeData)) {
     return "";
   }
 
-  // Use the callback form of .replace() so backreference patterns
-  // ($&, $$, $', $1-$9, etc.) in the replacement string are passed
-  // through literally. SPOOF_CORE and WORKER_WRAPPER are large code
-  // blobs that could easily contain those sequences, and
-  // JSON.stringify of a user-supplied timezone identifier could too.
-  const identifierJson = JSON.stringify(timezoneData.identifier);
-  const core = SPOOF_CORE.replace("__SPOOF_TZ_ID__", () => identifierJson);
+  // `buildWorkerSpoofCore` handles placeholder substitution with the callback
+  // form of .replace(), so backreference patterns ($&, $$, $', $1-$9) inside
+  // these large code blobs — or inside a user-supplied timezone id / locale tag
+  // — are passed through literally. WORKER_WRAPPER needs the same treatment
+  // below for the same reason.
+  const core = buildWorkerSpoofCore(timezoneData?.identifier ?? null, localeData);
   const originalUrlJson = JSON.stringify(originalScriptUrl);
   const coreJson = JSON.stringify(core);
   const wrapperJson = JSON.stringify(WORKER_WRAPPER);

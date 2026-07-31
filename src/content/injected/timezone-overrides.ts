@@ -33,6 +33,7 @@ import {
   stripExtensionFramesFromStack,
 } from "./function-masking";
 import { deriveOffsetFromParts, getIntlBasedOffset } from "./timezone-helpers";
+import { resolveEffectiveLocales } from "./locale-overrides";
 import { seedFromBootstrap } from "./bootstrap";
 import { createLogger } from "@/shared/utils/debug-logger";
 
@@ -172,7 +173,26 @@ export function installDateTimeFormatOverridesOn(
       const newTarget = (new.target ?? NativeDateTimeFormat) as unknown as new (
         ...a: unknown[]
       ) => object;
+      // Locale injection rides in this SAME wrapper rather than in a second one
+      // layered by locale-overrides.ts. DateTimeFormat is the one surface where
+      // both spoofed axes meet, and resolving them together is what guarantees
+      // `resolvedOptions()` reports a coherent {locale, timeZone} pair — and that
+      // everything ICU derives from the locale (hourCycle, calendar,
+      // numberingSystem, month names) matches the tag we claim. Explicit caller
+      // locales always win, exactly like an explicit timeZone.
+      const effectiveLocales = resolveEffectiveLocales(locales);
       const build = (opts: Intl.DateTimeFormatOptions | undefined): Intl.DateTimeFormat =>
+        Reflect.construct(
+          NativeDateTimeFormat as unknown as new (...a: unknown[]) => object,
+          [effectiveLocales, opts],
+          newTarget
+        ) as Intl.DateTimeFormat;
+      // Error-path twin of `build` that uses the caller's ORIGINAL locales. If a
+      // construction fails we must reproduce exactly what the page would have
+      // got with no extension present, and that means backing out the injected
+      // locale as well as the injected timeZone — otherwise a bad injected tag
+      // would make the recovery attempt fail too.
+      const buildUnspoofed = (opts: Intl.DateTimeFormatOptions | undefined): Intl.DateTimeFormat =>
         Reflect.construct(
           NativeDateTimeFormat as unknown as new (...a: unknown[]) => object,
           [locales, opts],
@@ -210,13 +230,14 @@ export function installDateTimeFormatOverridesOn(
         return instance;
       } catch (error) {
         logger.error("Error in DateTimeFormat constructor override:", error);
-        // Fall back to the caller's original options. If those are themselves
-        // invalid (e.g. a bad `timeZone`/locale from the page), the native
-        // constructor throws a RangeError — correct behaviour, but the error's
-        // stack would carry our injected frame. Scrub it so the genuine native
-        // error can't be used to read the extension id, then rethrow.
+        // Fall back to the caller's original arguments — both options AND
+        // locales, so nothing we injected can affect the recovery. If those are
+        // themselves invalid (e.g. a bad `timeZone`/locale from the page), the
+        // native constructor throws a RangeError — correct behaviour, but the
+        // error's stack would carry our injected frame. Scrub it so the genuine
+        // native error can't be used to read the extension id, then rethrow.
         try {
-          return build(options);
+          return buildUnspoofed(options);
         } catch (err) {
           stripExtensionFramesFromStack(err);
           throw err;
