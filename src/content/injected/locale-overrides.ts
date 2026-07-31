@@ -42,6 +42,7 @@
 
 import { spoofingEnabled, localeData } from "./state";
 import {
+  installConstructorOverride,
   installOverride,
   installScrubbedAccessor,
   stripExtensionFramesFromStack,
@@ -176,7 +177,11 @@ function patchIntlConstructor(intl: typeof Intl, name: (typeof INTL_CONSTRUCTORS
     // Preserve the native statics and prototype identity so brand checks,
     // `instanceof`, and `supportedLocalesOf` all keep working.
     const nativeProto = (Native as unknown as { prototype: object }).prototype;
-    installOverride(intl, name, Override as unknown as never, Native.length);
+    // MUST be installConstructorOverride, not installOverride: the latter routes
+    // function expressions through stripConstruct, which removes [[Construct]] and
+    // makes `new Intl.PluralRules()` throw while still looking native to every
+    // other probe. That regression shipped in 2.1.0 (GitHub #67, #68).
+    installConstructorOverride(intl, name, Override as unknown as never, Native.length);
     Object.defineProperty(container[name] as object, "prototype", {
       value: nativeProto,
       writable: false,

@@ -175,6 +175,14 @@ export function stripConstruct(fn: AnyFunction): AnyFunction {
  * `prototype`), it is automatically wrapped in a method-shorthand so
  * that fingerprinting checks for `prototype`, `[[Construct]]`, class
  * extends, descriptor enumeration, etc. all pass.
+ *
+ * **Methods and accessors only.** That automatic wrap removes `[[Construct]]`,
+ * so passing a constructor here yields a function that still reports
+ * `typeof "function"` and a `[native code]` `toString()` but throws
+ * "is not a constructor" on `new` — a break no surface probe reveals (it shipped
+ * in 2.1.0 as GitHub #67/#68). Constructors go to
+ * {@link installConstructorOverride}; accessors to
+ * {@link installScrubbedAccessor}.
  */
 export function installOverride(
   target: object,
@@ -225,6 +233,64 @@ export function installOverride(
       writable: true,
     });
   }
+}
+
+/**
+ * Install an override for a native **constructor** — the constructor twin of
+ * {@link installOverride}.
+ *
+ * Exists because {@link installOverride} deliberately destroys constructibility:
+ * it routes any function expression through {@link stripConstruct}, which returns
+ * a method-shorthand function with no `[[Construct]]` slot. That is exactly
+ * correct for the prototype *methods* it was written for, and exactly wrong for a
+ * constructor — the result still reports `typeof "function"` and a `[native code]`
+ * `toString()`, but `new X()` throws "is not a constructor".
+ *
+ * That combination shipped in 2.1.0 and broke real sites (GitHub #67, #68): every
+ * surface probe looked native, so only an actual `new` call revealed it. Passing
+ * a constructor to `installOverride` is a silent, high-impact mistake, so
+ * constructors get their own clearly-named entry point rather than an easily
+ * forgotten option flag on the shared one.
+ *
+ * Note that re-pinning `.prototype` afterwards does NOT undo the damage: a
+ * function's visible `prototype` property and its internal `[[Construct]]` slot
+ * are independent, and the latter can't be restored with `defineProperty`.
+ *
+ * What this does keep from `installOverride`: registration for `toString`
+ * masking, the native `name`/`length` disguise, and the target's original
+ * property-descriptor flags. `disguiseAsNative` is safe to use here — it only
+ * deletes `prototype` when that property is configurable, which it never is on a
+ * function expression.
+ *
+ * Callers remain responsible for constructor-specific fidelity that varies per
+ * API: re-pinning `prototype` to the native one (so `instanceof` and brand checks
+ * hold) and copying statics such as `supportedLocalesOf`.
+ */
+export function installConstructorOverride(
+  target: object,
+  prop: string,
+  overrideCtor: AnyFunction,
+  nativeLength?: number
+): void {
+  let expectedLength = nativeLength ?? 0;
+  if (nativeLength === undefined) {
+    const originalDescriptor = Object.getOwnPropertyDescriptor(target, prop);
+    if (originalDescriptor && typeof originalDescriptor.value === "function") {
+      expectedLength = (originalDescriptor.value as AnyFunction).length;
+    }
+  }
+
+  // No stripConstruct: [[Construct]] is the whole point.
+  registerOverride(overrideCtor, prop);
+  disguiseAsNative(overrideCtor, prop, expectedLength);
+
+  const originalDescriptor = Object.getOwnPropertyDescriptor(target, prop);
+  Object.defineProperty(target, prop, {
+    value: overrideCtor,
+    configurable: originalDescriptor?.configurable ?? true,
+    enumerable: originalDescriptor?.enumerable ?? false,
+    writable: originalDescriptor?.writable ?? true,
+  });
 }
 
 /**
