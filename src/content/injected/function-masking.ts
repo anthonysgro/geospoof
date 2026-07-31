@@ -123,6 +123,34 @@ export function disguiseAsNative(
  *
  * The wrapper preserves `this` binding from the caller.
  */
+/**
+ * Whether `fn` has an internal `[[Construct]]` method — i.e. whether `new fn()`
+ * is legal — determined WITHOUT running it.
+ *
+ * A Proxy is given a `[[Construct]]` slot only when its target has one, and a
+ * `construct` trap intercepts the call before the target's body ever executes. So
+ * wrapping and constructing the proxy is a pure query: no side effects, no real
+ * instance allocated, safe to run against arbitrary natives at document_start.
+ *
+ * The obvious alternatives don't work. `"prototype" in fn` is false for arrow
+ * functions but true for plenty of non-constructors, `typeof` can't see the
+ * distinction at all, and `fn.toString()` is unreliable on natives (and on
+ * anything we've already masked). The internal slot is not otherwise reflectable,
+ * so the Proxy probe is the only accurate check.
+ */
+export function isConstructible(fn: unknown): boolean {
+  if (typeof fn !== "function") return false;
+  try {
+    Reflect.construct(
+      new Proxy(fn as AnyFunction, { construct: () => ({}) }) as unknown as new () => object,
+      []
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function stripConstruct(fn: AnyFunction): AnyFunction {
   // eslint-disable-next-line @typescript-eslint/unbound-method -- intentional: method shorthand destructuring for anti-fingerprint (no prototype/[[Construct]])
   return {
@@ -176,13 +204,13 @@ export function stripConstruct(fn: AnyFunction): AnyFunction {
  * that fingerprinting checks for `prototype`, `[[Construct]]`, class
  * extends, descriptor enumeration, etc. all pass.
  *
- * **Methods and accessors only.** That automatic wrap removes `[[Construct]]`,
- * so passing a constructor here yields a function that still reports
- * `typeof "function"` and a `[native code]` `toString()` but throws
- * "is not a constructor" on `new` — a break no surface probe reveals (it shipped
- * in 2.1.0 as GitHub #67/#68). Constructors go to
- * {@link installConstructorOverride}; accessors to
- * {@link installScrubbedAccessor}.
+ * That wrap is skipped when the value being replaced is itself constructible, so
+ * a constructor passed here keeps its `[[Construct]]` rather than being quietly
+ * broken. Prefer {@link installConstructorOverride} for constructors anyway —
+ * it says so at the call site and handles the statics — and
+ * {@link installScrubbedAccessor} for accessors. But the shape is derived from
+ * the native, not from which helper you picked, so choosing wrong is no longer
+ * fatal. See {@link isConstructible} and GitHub #67/#68/#69.
  */
 export function installOverride(
   target: object,
@@ -190,10 +218,11 @@ export function installOverride(
   overrideFn: AnyFunction,
   nativeLength?: number
 ): void {
+  const originalDescriptor = Object.getOwnPropertyDescriptor(target, prop);
+
   // Determine the expected length from the original function if not specified
   let expectedLength = nativeLength ?? 0;
   if (nativeLength === undefined) {
-    const originalDescriptor = Object.getOwnPropertyDescriptor(target, prop);
     if (originalDescriptor && typeof originalDescriptor.value === "function") {
       expectedLength = (originalDescriptor.value as AnyFunction).length;
     } else if (originalDescriptor && typeof originalDescriptor.get === "function") {
@@ -205,8 +234,18 @@ export function installOverride(
   // expression), wrap it in a Proxy-over-arrow to strip [[Construct]] and
   // the prototype property. This makes it indistinguishable from a native
   // method under fingerprinting checks (f, i, j, k, l, m, n tests).
+  //
+  // Skipped when the value being REPLACED is itself constructible. The native is
+  // the ground truth for the shape the replacement must have, and it is sitting
+  // right there in `target[prop]` — so derive the method-vs-constructor decision
+  // instead of trusting the caller to remember it. Getting it wrong in this
+  // direction is not a fingerprinting tell, it breaks the page outright:
+  // `new Intl.PluralRules()` throws while every surface probe still looks native.
+  // That is what shipped in 2.1.0 (GitHub #67/#68/#69). Constructors should still
+  // use `installConstructorOverride` so the call site reads clearly; this check is
+  // what makes forgetting to non-fatal.
   let finalFn = overrideFn;
-  if ("prototype" in overrideFn) {
+  if ("prototype" in overrideFn && !isConstructible(originalDescriptor?.value)) {
     const protoDesc = Object.getOwnPropertyDescriptor(overrideFn, "prototype");
     if (protoDesc && !protoDesc.configurable) {
       finalFn = stripConstruct(overrideFn);
@@ -217,7 +256,6 @@ export function installOverride(
   registerOverride(finalFn, prop);
   disguiseAsNative(finalFn, prop, expectedLength);
 
-  const originalDescriptor = Object.getOwnPropertyDescriptor(target, prop);
   if (originalDescriptor) {
     Object.defineProperty(target, prop, {
       value: finalFn,
@@ -239,18 +277,19 @@ export function installOverride(
  * Install an override for a native **constructor** — the constructor twin of
  * {@link installOverride}.
  *
- * Exists because {@link installOverride} deliberately destroys constructibility:
- * it routes any function expression through {@link stripConstruct}, which returns
- * a method-shorthand function with no `[[Construct]]` slot. That is exactly
- * correct for the prototype *methods* it was written for, and exactly wrong for a
- * constructor — the result still reports `typeof "function"` and a `[native code]`
- * `toString()`, but `new X()` throws "is not a constructor".
+ * Preserves `[[Construct]]` unconditionally, where {@link installOverride}
+ * decides by inspecting the value being replaced. Two reasons to prefer this at a
+ * constructor call site: it states the intent where a reader will see it, and it
+ * does not depend on the native already being installed at `target[prop]` for the
+ * inference to have anything to go on.
  *
- * That combination shipped in 2.1.0 and broke real sites (GitHub #67, #68): every
- * surface probe looked native, so only an actual `new` call revealed it. Passing
- * a constructor to `installOverride` is a silent, high-impact mistake, so
- * constructors get their own clearly-named entry point rather than an easily
- * forgotten option flag on the shared one.
+ * Background on why the distinction matters: {@link stripConstruct} returns a
+ * method-shorthand function with no `[[Construct]]` slot, which is exactly right
+ * for the prototype *methods* it was written for and exactly wrong for a
+ * constructor — the result still reports `typeof "function"` and a `[native code]`
+ * `toString()`, but `new X()` throws "is not a constructor". That combination
+ * shipped in 2.1.0 and broke real sites (GitHub #67/#68/#69); every surface probe
+ * looked native, so only an actual `new` call revealed it.
  *
  * Note that re-pinning `.prototype` afterwards does NOT undo the damage: a
  * function's visible `prototype` property and its internal `[[Construct]]` slot

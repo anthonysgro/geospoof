@@ -21,6 +21,8 @@ type MaskingModule = typeof import("@/content/injected/function-masking");
 let installOverride: MaskingModule["installOverride"];
 let installConstructorOverride: MaskingModule["installConstructorOverride"];
 let initFunctionMasking: MaskingModule["initFunctionMasking"];
+/** The production probe. Its own correctness is pinned in construct-autodetect.test.ts. */
+let isConstructible: MaskingModule["isConstructible"];
 
 beforeAll(async () => {
   // function-masking transitively imports state.ts, which captures
@@ -37,7 +39,7 @@ beforeAll(async () => {
     });
   }
 
-  ({ installOverride, installConstructorOverride, initFunctionMasking } =
+  ({ installOverride, installConstructorOverride, initFunctionMasking, isConstructible } =
     await import("@/content/injected/function-masking"));
 });
 
@@ -48,20 +50,27 @@ function makeCtor(): (...args: unknown[]) => void {
   };
 }
 
-function isConstructible(fn: unknown): boolean {
-  try {
-    Reflect.construct(fn as new () => unknown, []);
-    return true;
-  } catch (error) {
-    // A constructible function whose body throws is still constructible; only
-    // the engine's "not a constructor" TypeError means the slot is missing.
-    return !(error instanceof TypeError && /not a constructor/i.test(String(error)));
-  }
+/**
+ * A stand-in for a native prototype method.
+ *
+ * Must be method-shorthand, not a `function` expression. `installOverride` now
+ * infers whether to strip `[[Construct]]` from the value it is replacing, so a
+ * constructible stand-in would make it preserve construct — correctly — and the
+ * method-path assertions would be testing the constructor path by accident.
+ */
+function makeMethod(): () => void {
+  return {
+    // `this: void` is a type-only annotation; the emitted function is still
+    // method-shorthand, so it still has no `[[Construct]]`.
+    method(this: void): void {
+      /* no-op */
+    },
+  }.method;
 }
 
-describe("installOverride strips [[Construct]] (methods and accessors only)", () => {
+describe("installOverride strips [[Construct]] when replacing a method", () => {
   test("a function-expression override loses constructibility", () => {
-    const target: Record<string, unknown> = { method: function original(): void {} };
+    const target: Record<string, unknown> = { method: makeMethod() };
     installOverride(target, "method", makeCtor(), 0);
 
     expect(typeof target.method).toBe("function");
@@ -70,7 +79,7 @@ describe("installOverride strips [[Construct]] (methods and accessors only)", ()
   });
 
   test("and loses its `prototype` property, matching a native method", () => {
-    const target: Record<string, unknown> = { method: function original(): void {} };
+    const target: Record<string, unknown> = { method: makeMethod() };
     installOverride(target, "method", makeCtor(), 0);
 
     expect("prototype" in (target.method as object)).toBe(false);
@@ -182,18 +191,27 @@ describe("installConstructorOverride preserves [[Construct]]", () => {
   });
 });
 
-describe("no override helper leaves a constructor un-constructible by accident", () => {
-  // The failure mode is asymmetric: a method that is wrongly constructible is a
-  // fingerprinting tell, but a constructor that is wrongly NOT constructible
-  // breaks the page outright. Assert the asymmetry directly.
-  test("the two helpers disagree about [[Construct]] for the same input", () => {
-    const viaMethod: Record<string, unknown> = { x: function original(): void {} };
-    const viaCtor: Record<string, unknown> = { x: function original(): void {} };
+describe("the two helpers differ in how they decide", () => {
+  // `installOverride` infers from the value being replaced; this one is
+  // unconditional. The difference is observable when there is nothing useful to
+  // infer from, which is the case this pins.
+  test("installConstructorOverride preserves construct even over a method native", () => {
+    const viaMethod: Record<string, unknown> = { x: makeMethod() };
+    const viaCtor: Record<string, unknown> = { x: makeMethod() };
 
     installOverride(viaMethod, "x", makeCtor(), 0);
     installConstructorOverride(viaCtor, "x", makeCtor(), 0);
 
     expect(isConstructible(viaMethod.x)).toBe(false);
     expect(isConstructible(viaCtor.x)).toBe(true);
+  });
+
+  test("installConstructorOverride works on a target with no existing native", () => {
+    // The inference has nothing to read here, so the explicit helper is the only
+    // way to get a constructible override onto a fresh property.
+    const target: Record<string, unknown> = {};
+    installConstructorOverride(target, "Fresh", makeCtor(), 0);
+
+    expect(isConstructible(target.Fresh)).toBe(true);
   });
 });
