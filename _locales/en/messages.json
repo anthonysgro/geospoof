@@ -59,6 +59,18 @@
     "message": "Filters",
     "description": "Tab label for the site-scoping filters view."
   },
+  "tab_settings": {
+    "message": "Settings",
+    "description": "Hover tooltip for the settings gear button in the popup header. It opens the settings view, which holds the controls that were previously behind the 'Advanced' accordion in the Details tab. Keep short — it is a tooltip on a small icon button."
+  },
+  "tab_settings_ariaLabel": {
+    "message": "Open settings",
+    "description": "Screen-reader label for the settings gear button in the popup header. Phrased as an action ('Open settings') because the button has no visible text label, unlike the tooltip which is just the destination name."
+  },
+  "details_section_locale": {
+    "message": "Language & Locale",
+    "description": "Heading for the group of language/locale APIs listed under 'Key Overrides' in the Details tab. Shown only when a Reported Language is active."
+  },
   "filters_heading": {
     "message": "Site Filters",
     "description": "Heading for the site-scoping filters panel."

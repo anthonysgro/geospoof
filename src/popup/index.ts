@@ -336,26 +336,35 @@ async function deactivateVpnSyncMode(): Promise<void> {
   await loadSettings();
 }
 
-// Tab switching: main / filters / details view
-function showPopupView(view: "main" | "filters" | "details"): void {
+// Tab switching: main / filters / details / settings view
+function showPopupView(view: "main" | "filters" | "details" | "settings"): void {
   const tabs: Record<typeof view, string> = {
     main: "mainTab",
     filters: "filtersTab",
     details: "detailsTab",
+    settings: "settingsTab",
   };
   const views: Record<typeof view, string> = {
     main: "mainView",
     filters: "filtersView",
     details: "detailsView",
+    settings: "settingsView",
   };
 
-  for (const key of ["main", "filters", "details"] as const) {
+  for (const key of ["main", "filters", "details", "settings"] as const) {
     const tabEl = document.getElementById(tabs[key]);
     const viewEl = document.getElementById(views[key]);
     const isActive = key === view;
     if (tabEl) tabEl.classList.toggle("active", isActive);
     if (viewEl) viewEl.style.display = isActive ? "block" : "none";
   }
+
+  // The Settings trigger is a gear in the header, not a tab, so it can't rely on
+  // the tab bar's underline to show it's selected — while Settings is open no tab
+  // is active at all. `aria-pressed` drives its selected styling AND tells screen
+  // readers the current state, so keeping it in sync here is what makes the
+  // out-of-bar placement work.
+  document.getElementById("settingsTab")?.setAttribute("aria-pressed", String(view === "settings"));
 }
 
 document.getElementById("mainTab")?.addEventListener("click", () => {
@@ -370,16 +379,15 @@ document.getElementById("detailsTab")?.addEventListener("click", () => {
   showPopupView("details");
 });
 
-// Advanced section expand/collapse
-document.getElementById("advancedToggle")?.addEventListener("click", () => {
-  const toggle = document.getElementById("advancedToggle");
-  const content = document.getElementById("advancedContent");
-  if (!toggle || !content) return;
-
-  const expanded = toggle.getAttribute("aria-expanded") === "true";
-  toggle.setAttribute("aria-expanded", String(!expanded));
-  content.style.display = expanded ? "none" : "block";
+document.getElementById("settingsTab")?.addEventListener("click", () => {
+  showPopupView("settings");
 });
+
+// NOTE: the old "Advanced" accordion inside the Details tab is gone. Those
+// controls now live in their own Settings tab, so collapsing them behind a
+// disclosure toggle would just add a click to reach what the tab is for. The
+// `#advancedContent` id is retained as the section wrapper so existing styling
+// and any external references keep working.
 
 // Debug logging toggle
 document.getElementById("debugLoggingToggle")?.addEventListener("change", (e: Event) => {

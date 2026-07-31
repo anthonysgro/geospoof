@@ -150,7 +150,8 @@ interface ApiGroup {
 export function buildApiGroups(
   hasLocation: boolean,
   hasTimezone: boolean,
-  hasWebRTC: boolean
+  hasWebRTC: boolean,
+  hasLocale = false
 ): ApiGroup[] {
   const groups: ApiGroup[] = [];
 
@@ -228,6 +229,35 @@ export function buildApiGroups(
     });
   }
 
+  if (hasLocale) {
+    groups.push({
+      id: "locale",
+      title: t("details_section_locale") || "Language & Locale",
+      apis: [
+        "navigator.language",
+        "navigator.languages",
+        "WorkerNavigator.language / languages (worker scopes)",
+        "Accept-Language (request header)",
+        "Intl.DateTimeFormat() (locale + timezone)",
+        "Intl.NumberFormat()",
+        "Intl.Collator()",
+        "Intl.RelativeTimeFormat()",
+        "Intl.ListFormat()",
+        "Intl.PluralRules()",
+        "Intl.DisplayNames()",
+        "Intl.Segmenter()",
+        "Intl.DurationFormat()",
+        "Intl.*.prototype.resolvedOptions()",
+        "Number.prototype.toLocaleString()",
+        "BigInt.prototype.toLocaleString()",
+        "Array.prototype.toLocaleString()",
+        "Date.prototype.toLocaleString() / toLocaleDateString() / toLocaleTimeString()",
+        "String.prototype.localeCompare()",
+        "String.prototype.toLocaleUpperCase() / toLocaleLowerCase()",
+      ],
+    });
+  }
+
   if (hasWebRTC) {
     groups.push({
       id: "webrtc",
@@ -269,7 +299,8 @@ export function renderAPIsDetails(
   enabled: boolean,
   hasLocation: boolean,
   hasTimezone: boolean,
-  hasWebRTC: boolean
+  hasWebRTC: boolean,
+  hasLocale = false
 ): void {
   clearChildren(container);
 
@@ -279,7 +310,7 @@ export function renderAPIsDetails(
     return;
   }
 
-  const groups = buildApiGroups(hasLocation, hasTimezone, hasWebRTC);
+  const groups = buildApiGroups(hasLocation, hasTimezone, hasWebRTC, hasLocale);
   if (groups.length === 0) {
     container.classList.remove("api-groups");
     container.textContent = t("details_none") || "None";
@@ -380,12 +411,20 @@ export function updateDetailsView(settings: Settings): void {
     renderWebRTCDetails(detailWebRTC, settings.webrtcProtection);
   }
   if (detailAPIs) {
+    // The locale group appears only when a Reported Language is actually being
+    // applied — `off` (the default) overrides nothing, so listing it would
+    // misrepresent what's active. `match` additionally needs a timezone to
+    // derive from, mirroring the resolver's own fail-closed rule.
+    const hasLocale =
+      settings.localeSpoofing?.mode === "custom" ||
+      (settings.localeSpoofing?.mode === "match" && !!settings.timezone);
     renderAPIsDetails(
       detailAPIs,
       settings.enabled,
       !!settings.location,
       !!settings.timezone,
-      settings.webrtcProtection
+      settings.webrtcProtection,
+      hasLocale
     );
   }
 }

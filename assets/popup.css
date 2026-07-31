@@ -234,6 +234,64 @@ input {
   color: var(--text-strong);
 }
 
+/* Right-hand header group: status badge + settings gear, kept adjacent so the
+   header's space-between still pushes the pair to the trailing edge. */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Settings gear. Sized as a real navigation target rather than reusing
+   .info-icon's zero padding — that's fine for an inline ⓘ beside a label, but
+   this is a primary destination and needs a proper hit area. */
+.header-gear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    background 0.2s;
+}
+
+.header-gear svg {
+  display: block;
+  width: 17px;
+  height: 17px;
+}
+
+.header-gear:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.header-gear:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* Selected state. This is load-bearing, not decoration: while the Settings view
+   is open NO tab in the bar below is active, so without a clear indicator here
+   the popup reads as "nothing selected" rather than "you are in Settings". */
+.header-gear[aria-pressed="true"] {
+  color: var(--text-on-brand);
+  background: var(--brand);
+}
+
+.header-gear[aria-pressed="true"]:hover {
+  color: var(--text-on-brand);
+  background: var(--brand-hover);
+}
+
 .status-badge {
   padding: 4px 12px;
   border-radius: 12px;
@@ -259,8 +317,15 @@ input {
   border-bottom: 2px solid var(--border);
 }
 
+/* Three tabs share the 350px popup, so the original comfortable padding and
+   font-size stand. Settings deliberately isn't a tab — it's a gear in the header
+   (see .header-gear) — which is what keeps this row at three roomy labels.
+   `min-width: 0` + nowrap + ellipsis are kept as translation insurance: a long
+   locale (German "Einstellungen"-length words) truncates rather than wrapping the
+   row or pushing it wider than the popup. */
 .nav-tab {
   flex: 1;
+  min-width: 0;
   padding: 10px 16px;
   background: none;
   border: none;
@@ -271,6 +336,9 @@ input {
   color: var(--text-muted);
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .nav-tab:hover {
@@ -1270,65 +1338,37 @@ input[type="checkbox"]:checked + .toggle-slider:before {
    Advanced section
    ────────────────────────────────────────────────────────────────────── */
 
-.advanced-section {
-  margin-top: 12px;
-}
-
-.advanced-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: 10px 12px;
-  background: var(--surface);
-  color: var(--text-muted);
-  border: none;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: color 0.2s;
-}
-
-.advanced-toggle:hover {
-  color: var(--text);
-}
-
-.advanced-chevron {
-  display: inline-block;
-  font-size: 10px;
-  transition: transform 0.2s;
-}
-
-.advanced-toggle[aria-expanded="true"] .advanced-chevron {
-  transform: rotate(90deg);
-}
-
-.advanced-content {
+/* Settings tab content.
+   These controls previously lived behind an "Advanced" disclosure inside the
+   Details tab, which had grown too long to scan. They now own a top-level tab,
+   so the accordion styling that used to wrap them (a toggle button with a
+   rotating chevron, and a container with bottom-only corners tucked under it via
+   a negative margin) is gone: this is a standalone card with all four corners
+   rounded and no overlap to compensate for. */
+.settings-content {
   background: var(--surface);
   color: var(--text);
   padding: 12px;
-  border-radius: 0 0 8px 8px;
-  margin-top: -4px;
+  border-radius: 8px;
 }
 
-/* Standardize each advanced setting row (toggles + selectors) into a uniform,
+/* Standardize each settings row (toggles + selectors) into a uniform,
    evenly-spaced list. The rows share a 12px gap but no longer carry dividers —
    the grouping reads cleanly without lines between each control. */
-.advanced-content > .toggle-label {
+.settings-content > .toggle-label {
   margin-top: 12px;
   font-size: 14px;
 }
 
 /* No spacing above the first row. The always-visible "Preserve location
    prompts" toggle is the first child, so this applies to it. */
-.advanced-content > .toggle-label:first-child {
+.settings-content > .toggle-label:first-child {
   margin-top: 0;
 }
 
-/* Divider separating the spoofing controls (timezone, accuracy) from the app
-   preferences (theme, debug). Even 12px rhythm to match the surrounding rows. */
-.advanced-content > .section-divider {
+/* Divider separating the spoofing controls (accuracy, precision, language) from
+   the app preferences (theme, debug). Even 12px rhythm to match the rows. */
+.settings-content > .section-divider {
   margin: 12px 0;
 }
 
