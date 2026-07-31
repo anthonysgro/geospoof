@@ -35,9 +35,8 @@ describe("Settings view + header gear trigger", () => {
     for (const id of ["mainView", "filtersView", "detailsView", "settingsView"]) {
       expect(indexTs, id).toContain(id);
     }
-    // The switcher iterates a literal tuple; a view missing from it would render
-    // but never hide the others.
-    expect(indexTs).toMatch(/\["main", "filters", "details", "settings"\] as const/);
+    // Iteration is over POPUP_VIEWS (asserted as the single source of truth in
+    // its own test below), so there's no separate tuple to keep in step.
   });
 
   test("the gear has a click handler", () => {
@@ -70,23 +69,80 @@ describe("Settings view + header gear trigger", () => {
     expect(group).toContain('id="settingsTab"');
   });
 
-  test("the gear carries its own selected state, since no tab can", () => {
-    // While Settings is open every tab is inactive, so aria-pressed is what
-    // signals "you are here" - visually and to screen readers.
-    expect(html).toMatch(/id="settingsTab"[\s\S]{0,200}aria-pressed="false"/);
-    expect(indexTs).toMatch(/settingsTab[\s\S]{0,200}aria-pressed/);
-    expect(css).toContain('.header-gear[aria-pressed="true"]');
+  test("all four triggers share one state mechanism: aria-current", () => {
+    // While Settings is open no tab is current, so the gear must carry its own
+    // indicator. aria-current (not aria-pressed) because this is one-of-N view
+    // selection, not a binary toggle — and one attribute drives both the visual
+    // state and what assistive tech announces, so they can't drift apart.
+    expect(html).toMatch(/id="mainTab"[\s\S]{0,80}aria-current="true"/);
+    expect(indexTs).toContain('setAttribute("aria-current", "true")');
+    expect(indexTs).toContain('removeAttribute("aria-current")');
+    expect(css).toContain(".nav-tab[aria-current]");
+    expect(css).toContain(".header-gear[aria-current]");
+    // aria-pressed would be the wrong semantic here; make sure no element
+    // actually carries it. Matched as an attribute rather than a bare word, since
+    // the word legitimately appears in comments explaining the choice.
+    expect(html).not.toMatch(/aria-pressed\s*=/);
+    expect(indexTs).not.toMatch(/"aria-pressed"/);
+  });
+
+  test("no separate .active class shadowing the aria state", () => {
+    // Two mechanisms for one piece of state is how they get out of sync.
+    expect(css).not.toContain(".nav-tab.active");
+    expect(indexTs).not.toMatch(/classList\.toggle\("active"/);
+  });
+
+  test("the view list is a single source of truth", () => {
+    // It used to live in three parallel lists (trigger map, panel map, iteration
+    // tuple); missing one failed silently — the view rendered but never hid its
+    // siblings.
+    expect(indexTs).toContain("const POPUP_VIEWS");
+    expect(indexTs).toContain("Object.entries(POPUP_VIEWS)");
+    for (const v of ["main", "filters", "details", "settings"]) {
+      expect(indexTs, v).toContain(`${v}: { trigger:`);
+    }
+  });
+
+  test("keyboard focus is visible on every trigger", () => {
+    expect(css).toContain(".nav-tab:focus-visible");
+    expect(css).toContain(".header-gear:focus-visible");
+  });
+
+  test("the gear's current-state fill meets non-text contrast (WCAG 1.4.11)", () => {
+    // white on --brand is 2.78:1 (fails the 3:1 minimum); white on --brand-hover
+    // is 3.29:1 (passes). Pin the passing token so a well-meaning "use the brand
+    // colour" tidy-up can't silently reintroduce the failure.
+    const i = css.indexOf(".header-gear[aria-current] {");
+    const rule = css.slice(i, css.indexOf("}", i));
+    expect(rule).toContain("var(--brand-hover)");
+    expect(rule).not.toMatch(/background:\s*var\(--brand\)/);
+  });
+
+  test("motion respects prefers-reduced-motion (WCAG 2.3.3)", () => {
+    expect(css).toContain("@media (prefers-reduced-motion: reduce)");
+  });
+
+  test("transitions are enumerated, not `all`", () => {
+    // `transition: all` animates every property added later, including layout
+    // ones — a perf trap and a source of surprising motion.
+    const i = css.indexOf(".nav-tab {");
+    const rule = css.slice(i, css.indexOf("}", i));
+    expect(rule).not.toContain("transition: all");
   });
 
   test("the gear is accessible without a visible label", () => {
-    const at = html.indexOf('id="settingsTab"');
-    const gear = html.slice(at, html.indexOf("</button>", at));
+    const idAt = html.indexOf('id="settingsTab"');
+    // Slice from the opening <button so attributes declared before the id
+    // (type, class) are included.
+    const gear = html.slice(html.lastIndexOf("<button", idAt), html.indexOf("</button>", idAt));
     // Tooltip for sighted users, action-phrased label for screen readers, both
     // localized; decorative glyph hidden from the a11y tree.
     expect(gear).toContain('data-i18n-title="tab_settings"');
     expect(gear).toContain('data-i18n-aria-label="tab_settings_ariaLabel"');
     expect(gear).toContain('aria-hidden="true"');
     expect(gear).toContain('focusable="false"');
+    // A native <button> keeps it keyboard-operable and in the tab order for free.
+    expect(gear).toContain('type="button"');
   });
 
   test("the Advanced accordion is fully removed, not orphaned", () => {

@@ -94,14 +94,16 @@
                the current spoofing state, while this is app configuration. The
                trailing edge of a header is the conventional home for it, and it
                keeps the tab bar at three comfortable labels.
-               `aria-pressed` (kept in sync by showPopupView) is what tells the
+               `aria-current` (kept in sync by showPopupView) is what tells the
                user they're in Settings — the tab bar's underline can't, since no
-               tab is active while this view is open. -->
+               tab is current while this view is open. `aria-current` rather than
+               `aria-pressed`: this is one-of-N view selection, not a binary
+               toggle that stays depressed, and it lets all four triggers share a
+               single state mechanism. -->
           <button
             type="button"
             class="header-gear"
             id="settingsTab"
-            aria-pressed="false"
             title="Settings"
             data-i18n-title="tab_settings"
             aria-label="Open settings"
@@ -130,7 +132,7 @@
 
       <!-- Tab Navigation -->
       <div class="tab-navigation">
-        <button class="nav-tab active" id="mainTab" data-i18n="tab_main">Main</button>
+        <button class="nav-tab" id="mainTab" aria-current="true" data-i18n="tab_main">Main</button>
         <button class="nav-tab" id="filtersTab" data-i18n="tab_filters">Filters</button>
         <button class="nav-tab" id="detailsTab" data-i18n="tab_details">Details</button>
       </div>

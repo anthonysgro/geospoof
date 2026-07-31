@@ -279,15 +279,24 @@ input {
   outline-offset: 2px;
 }
 
-/* Selected state. This is load-bearing, not decoration: while the Settings view
-   is open NO tab in the bar below is active, so without a clear indicator here
-   the popup reads as "nothing selected" rather than "you are in Settings". */
-.header-gear[aria-pressed="true"] {
+/* Current-view state. Load-bearing, not decoration: while the Settings view is
+   open NO tab in the bar below is current, so without a clear indicator here the
+   popup reads as "nothing selected" rather than "you are in Settings".
+   Same `aria-current` mechanism as .nav-tab, so all four triggers share one
+   source of state.
+
+   Uses --brand-hover (#45a049) rather than --brand (#4caf50) for the fill: white
+   on --brand measures 2.78:1, below the 3:1 WCAG 1.4.11 minimum for non-text
+   contrast, while --brand-hover reaches 3.29:1 and passes. Visually it's the same
+   green one shade down, and it's an existing token, so this costs nothing. */
+.header-gear[aria-current] {
   color: var(--text-on-brand);
-  background: var(--brand);
+  background: var(--brand-hover);
 }
 
-.header-gear[aria-pressed="true"]:hover {
+/* Already current, so hover doesn't need to signal anything further — holding the
+   colour avoids a pointless flicker and keeps the contrast ratio above. */
+.header-gear[aria-current]:hover {
   color: var(--text-on-brand);
   background: var(--brand-hover);
 }
@@ -335,10 +344,25 @@ input {
   font-weight: 500;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.2s;
+  /* Enumerated rather than `all`: `all` animates every future property added to
+     this rule, including layout ones, which is both a perf trap and a source of
+     surprising motion. */
+  transition:
+    color 0.2s,
+    background 0.2s,
+    border-bottom-color 0.2s;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Keyboard focus indicator. Without this, keyboard users get only the UA default
+   ring, which is easy to lose against the surface colours in dark theme. Scoped
+   to :focus-visible so it doesn't fire on mouse clicks. */
+.nav-tab:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
+  border-radius: 4px;
 }
 
 .nav-tab:hover {
@@ -351,7 +375,10 @@ input {
   border-bottom-color: var(--text-subtle);
 }
 
-.nav-tab.active {
+/* Current-view state. Driven by `aria-current` rather than a separate `.active`
+   class so one attribute carries both the visual state and the accessible state —
+   they can't drift out of sync, and there's nothing extra for JS to remember. */
+.nav-tab[aria-current] {
   color: var(--brand);
   border-bottom-color: var(--brand);
 }
@@ -2409,4 +2436,25 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 .scope-site-remove:focus-visible {
   outline: 2px solid var(--brand);
   outline-offset: 2px;
+}
+
+/* ── Reduced motion ────────────────────────────────────────────────────────
+   Honour the OS "reduce motion" setting. The popup's motion is all short
+   transitions and a tab-content fade, none of which carry meaning — so for users
+   who ask for less movement (vestibular disorders, migraine triggers, or simple
+   preference) it can all be dropped with no loss of information. WCAG 2.3.3.
+
+   Deliberately near-zero rather than `none`: keeping a 0.01ms duration means any
+   `transitionend` / `animationend` listener still fires, so nothing that waits on
+   a completion event can hang. Applied globally rather than per-component so new
+   components inherit the behaviour instead of each needing to remember it. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

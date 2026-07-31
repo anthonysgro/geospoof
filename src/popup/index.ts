@@ -336,35 +336,54 @@ async function deactivateVpnSyncMode(): Promise<void> {
   await loadSettings();
 }
 
-// Tab switching: main / filters / details / settings view
-function showPopupView(view: "main" | "filters" | "details" | "settings"): void {
-  const tabs: Record<typeof view, string> = {
-    main: "mainTab",
-    filters: "filtersTab",
-    details: "detailsTab",
-    settings: "settingsTab",
-  };
-  const views: Record<typeof view, string> = {
-    main: "mainView",
-    filters: "filtersView",
-    details: "detailsView",
-    settings: "settingsView",
-  };
+/**
+ * The popup's switchable views, mapped to the element that selects each one and
+ * the panel it reveals.
+ *
+ * Single source of truth on purpose: this previously lived in three parallel
+ * lists (a trigger map, a panel map, and a literal tuple to iterate), so adding a
+ * view meant editing all three and forgetting one failed silently — the view
+ * would render but never hide its siblings.
+ *
+ * `settings` is triggered by a gear in the header rather than a tab in the bar;
+ * only the trigger element differs, so it participates here like any other view.
+ */
+const POPUP_VIEWS = {
+  main: { trigger: "mainTab", panel: "mainView" },
+  filters: { trigger: "filtersTab", panel: "filtersView" },
+  details: { trigger: "detailsTab", panel: "detailsView" },
+  settings: { trigger: "settingsTab", panel: "settingsView" },
+} as const;
 
-  for (const key of ["main", "filters", "details", "settings"] as const) {
-    const tabEl = document.getElementById(tabs[key]);
-    const viewEl = document.getElementById(views[key]);
-    const isActive = key === view;
-    if (tabEl) tabEl.classList.toggle("active", isActive);
-    if (viewEl) viewEl.style.display = isActive ? "block" : "none";
+type PopupView = keyof typeof POPUP_VIEWS;
+
+/**
+ * Show one view and hide the rest, keeping each trigger's `aria-current` in sync.
+ *
+ * `aria-current` is the state mechanism for all four triggers, and it drives both
+ * the visual styling and what assistive tech announces — there is no separate
+ * `.active` class to keep in step. It's the right attribute here rather than
+ * `aria-pressed`: these are one-of-N view selections, not independent toggles
+ * that stay depressed. It also matters most for the Settings gear, which sits
+ * outside the tab bar and so has no underline to inherit; without it, opening
+ * Settings would leave every tab unstyled and read as "nothing selected".
+ */
+function showPopupView(view: PopupView): void {
+  for (const [key, { trigger, panel }] of Object.entries(POPUP_VIEWS)) {
+    const isCurrent = key === view;
+
+    const triggerEl = document.getElementById(trigger);
+    if (triggerEl) {
+      // Set-or-remove rather than writing "false": an absent attribute keeps the
+      // CSS selectors simple (`[aria-current]` means current) and matches how
+      // assistive tech expects a non-current item to look.
+      if (isCurrent) triggerEl.setAttribute("aria-current", "true");
+      else triggerEl.removeAttribute("aria-current");
+    }
+
+    const panelEl = document.getElementById(panel);
+    if (panelEl) panelEl.style.display = isCurrent ? "block" : "none";
   }
-
-  // The Settings trigger is a gear in the header, not a tab, so it can't rely on
-  // the tab bar's underline to show it's selected — while Settings is open no tab
-  // is active at all. `aria-pressed` drives its selected styling AND tells screen
-  // readers the current state, so keeping it in sync here is what makes the
-  // out-of-bar placement work.
-  document.getElementById("settingsTab")?.setAttribute("aria-pressed", String(view === "settings"));
 }
 
 document.getElementById("mainTab")?.addEventListener("click", () => {
