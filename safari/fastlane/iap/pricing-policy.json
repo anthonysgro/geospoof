@@ -1,0 +1,228 @@
+{
+  "$comment": [
+    "Purchasing-power-adjusted price policy for GeoSpoof IAPs and subscriptions.",
+    "",
+    "WHY THIS FILE EXISTS: base_storefront is United States and every other",
+    "territory currently uses Apple's automated equalized price. That is",
+    "arithmetically correct but ignores purchasing power entirely — $2.99/month",
+    "is a very different ask in Jakarta than in Stockholm.",
+    "",
+    "READ BEFORE APPLYING — two consequences that are easy to miss:",
+    "",
+    "1. Manually pricing a territory OPTS IT OUT of Apple's automatic FX and tax",
+    "   equalization, permanently, until someone edits it again. Apple: 'Prices",
+    "   also won't change on the storefronts where you manually manage prices",
+    "   instead of using the automated equalized prices.'",
+    "   https://developer.apple.com/news/?id=wim4cztw",
+    "   This trades Apple maintaining your prices for you against controlling",
+    "   them yourself. Currency moves become your problem. Accepted deliberately.",
+    "",
+    "2. Subscription price INCREASES in Austria, Germany and Poland require every",
+    "   affected subscriber to actively consent (since 2025-08-04); non-consenting",
+    "   subscribers are chased weekly and churn at cycle end. Elsewhere",
+    "   size/velocity criteria still apply. Decreases never require consent.",
+    "   Hence allow_increases: false — the planner refuses to emit an increase.",
+    "",
+    "ON THE TIER LISTS BELOW: these are World Bank income groups applied by hand",
+    "and are the least trustworthy part of this file. Classifications shift, and",
+    "several countries here sit near a boundary (see needs_review). Do not treat",
+    "them as authoritative. The planner reconciles against Apple's live territory",
+    "list from /v1/territories and reports anything unclassified rather than",
+    "guessing, so gaps surface as output instead of as silent mispricing.",
+    "",
+    "The multipliers are a BUSINESS DECISION. 1.0/0.6/0.4/0.3 is a conventional",
+    "indie starting point, not a recommendation."
+  ],
+
+  "base_storefront": "USA",
+  "unclassified_behavior": "keep_apple_automatic",
+
+  "allow_increases_one_time": true,
+  "allow_increases_subscription": false,
+  "$allow_increases_comment": [
+    "Split by product type, because the risk is not symmetric.",
+    "",
+    "One-time purchases (pro.lifetime, the three tips) have no existing subscribers",
+    "to consent, so raising them in high-purchasing-power markets is safe and is",
+    "where the observed upside actually lives.",
+    "",
+    "Subscriptions are the opposite. Increases in Austria, Germany and Poland",
+    "require every affected subscriber to actively consent (since 2025-08-04) or",
+    "they churn at cycle end; elsewhere Apple's size/velocity criteria may still",
+    "demand consent. So monthly/annual are decrease-only until you decide the",
+    "churn risk is worth it. Adapty's index shows real-world spread of +62% to",
+    "-63% versus US, so leaving subscription upside on the table is a real cost —",
+    "it is just not one to take by accident.",
+    "https://go.adapty.io/pricing-index"
+  ],
+
+  "rounding": "nearest",
+  "$rounding_comment": [
+    "'nearest' picks the closest available price point in either direction.",
+    "'down' never exceeds the target.",
+    "This is not cosmetic. A lower-middle monthly target of $1.20 against points",
+    "[0.99, 1.49] snaps down to 0.99 either way, but a low-income lifetime target",
+    "of $7.50 against [6.99, 7.99] snaps UP to 7.99 under 'nearest', because 0.49",
+    "is nearer than 0.51 — giving back part of the discount. 'down' would pick",
+    "6.99. Choose deliberately: 'nearest' is balanced, 'down' guarantees the",
+    "discount is never partially undone but costs proceeds on every rounding."
+  ],
+
+  "tie_break": "cheaper",
+  "$tie_break_comment": [
+    "When two available price points are equally far from the target AND share an",
+    "equally attractive ending, this decides which wins. Ties are common: target",
+    "8.99 against points [7.99, 9.99] is exactly equidistant and both end in .99.",
+    "'cheaper' errs toward the discount this whole exercise is meant to deliver;",
+    "'dearer' protects proceeds. Stated explicitly because otherwise the outcome",
+    "is whatever the sort happens to reach first, which is nobody's decision."
+  ],
+
+  "reference_us_prices": {
+    "$comment": [
+      "DOCUMENTATION ONLY — the planner does not scale from these. Recorded so a",
+      "reader knows what the US base is without opening App Store Connect.",
+      "",
+      "The planner's baseline is the product's CURRENT price in each territory,",
+      "which is Apple's automated equalized price: already in the right currency",
+      "with FX and tax applied. Scaling a USD figure would be wrong, because price",
+      "points are denominated locally — a USD target of 1.79 is below every",
+      "Brazilian price point, so a nearest-match would pin Brazil to Apple's",
+      "cheapest BRL point. Using the local price as the baseline needs no exchange",
+      "rates at all, since Apple's ladder already encodes them."
+    ],
+    "com.moonloaf.geospoof.pro.monthly": 2.99,
+    "com.moonloaf.geospoof.pro.annual": 14.99,
+    "com.moonloaf.geospoof.pro.lifetime": 24.99,
+    "com.moonloaf.geospoof.tip.small": 1.99,
+    "com.moonloaf.geospoof.tip.medium": 4.99,
+    "com.moonloaf.geospoof.tip.large": 9.99
+  },
+
+  "tier_multipliers": {
+    "$comment": [
+      "Applied to the territory's CURRENT local price, then snapped to the nearest",
+      "available Apple price point in that same currency.",
+      "",
+      "Expect the realised discount to differ from the multiplier, sometimes a lot.",
+      "Ladders are coarse at low prices: a Japanese target of ¥240 sits between the",
+      "¥200 and ¥300 points and snaps to ¥200, which is -50% rather than the -40%",
+      "asked for. Korea and India behave similarly. The plan CSV reports delta_pct",
+      "per row so the realised figure is visible before anything is applied."
+    ],
+    "high_income": 1.0,
+    "upper_middle_income": 0.5,
+    "lower_middle_income": 0.35,
+    "low_income": 0.3
+  },
+
+  "coefficient_overrides": {
+    "$comment": [
+      "Per-country coefficients, which is what apps operating at scale actually use",
+      "— Steam, Spotify and Netflix all price per country rather than by income",
+      "band. Income tiers are a decent default but demonstrably wrong in specific",
+      "markets, so override those rather than distorting a whole tier.",
+      "",
+      "Sourced from published practice and benchmarks, NOT measured from your own",
+      "data, and therefore starting points rather than answers:",
+      "  India 0.30, Brazil 0.45, Switzerland 1.10 per",
+      "  https://github.com/iosdevmax/ppp-pricing",
+      "  Emerging markets generally 30-60% of US per",
+      "  https://mwm.ai/glossary/price-localization",
+      "  Annual-plan spread reaches 4.4x between Germany and Turkey per Adapty,",
+      "  which implies Turkey nearer 0.25 than the 0.5 its income tier would give.",
+      "  https://adapty.io/blog/health-fitness-app-subscription-benchmarks/",
+      "",
+      "Values above 1.0 only take effect where the product type permits increases",
+      "(see allow_increases_*). Nordics and Switzerland sustain above-US pricing;",
+      "that upside is capturable today on lifetime and tips, not on subscriptions."
+    ],
+    "IND": 0.3,
+    "BRA": 0.45,
+    "TUR": 0.25,
+    "ARG": 0.3,
+    "IDN": 0.3,
+    "VNM": 0.3,
+    "PHL": 0.35,
+    "EGY": 0.25,
+    "NGA": 0.25,
+    "PAK": 0.25,
+    "UKR": 0.3,
+    "CHE": 1.1,
+    "NOR": 1.05,
+    "DNK": 1.05,
+    "ISL": 1.05
+  },
+
+  "tiers": {
+    "high_income": [
+      "USA", "CAN", "GBR", "IRL", "FRA", "DEU", "NLD", "BEL", "LUX", "AUT",
+      "CHE", "DNK", "SWE", "NOR", "FIN", "ISL", "ESP", "PRT", "ITA", "GRC",
+      "MLT", "CYP", "SVN", "EST", "LVA", "LTU", "CZE", "SVK", "POL", "HRV",
+      "HUN", "JPN", "KOR", "SGP", "HKG", "TWN", "AUS", "NZL", "ISR", "ARE",
+      "SAU", "QAT", "KWT", "BHR", "OMN", "CHL", "URY"
+    ],
+    "upper_middle_income": [
+      "BRA", "MEX", "CHN", "RUS", "TUR", "ZAF", "MYS", "THA", "ARG", "COL",
+      "PER", "ECU", "DOM", "GTM", "PRY", "CRI", "PAN", "JAM", "TTO", "BRB",
+      "BHS", "SUR", "BLZ", "SRB", "MKD", "ALB", "BIH", "MNE", "BGR", "ROU",
+      "GEO", "ARM", "AZE", "KAZ", "BLR", "MUS", "BWA", "NAM", "FJI", "TON"
+    ],
+    "lower_middle_income": [
+      "IND", "IDN", "PHL", "VNM", "PAK", "BGD", "LKA", "NPL", "KHM", "LAO",
+      "MMR", "MNG", "UZB", "KGZ", "TJK", "EGY", "MAR", "TUN", "DZA", "JOR",
+      "LBN", "IRQ", "UKR", "MDA", "NGA", "KEN", "GHA", "CIV", "SEN", "CMR",
+      "ZMB", "ZWE", "AGO", "BOL", "HND", "SLV", "NIC", "PNG"
+    ],
+    "low_income": [
+      "ETH", "RWA", "MOZ", "MDG", "MWI", "NER", "MLI", "BFA", "TCD", "COD",
+      "SLE", "LBR", "UGA", "TZA", "YEM", "AFG"
+    ]
+  },
+
+  "needs_review": {
+    "$comment": "Territories I am least confident about, either because they recently changed World Bank group or because they sit close to a boundary. Verify these before the first apply; a wrong tier here is a real mispricing, not a rounding error.",
+    "territories": [
+      "ROU", "BGR", "CRI", "PAN", "MUS", "MYS", "TUR", "ARG", "RUS", "CHN",
+      "KAZ", "BLR", "TTO", "BRB", "BHS", "GEO", "ARM", "UKR", "MDA"
+    ]
+  },
+
+  "territory_overrides": {
+    "$comment": "Explicit per-territory target prices in that territory's own currency, bypassing the tier multiplier. Use where you know the psychologically right number. Still snapped to the nearest available Apple price point.",
+    "IND": { "com.moonloaf.geospoof.pro.monthly": 99, "com.moonloaf.geospoof.pro.annual": 499 },
+    "JPN": { "com.moonloaf.geospoof.pro.monthly": 400, "com.moonloaf.geospoof.pro.annual": 2000 }
+  },
+
+  "attractive_endings": {
+    "$comment": [
+      "Preference order when several points sit equally close to the target. Apple's",
+      "ladder already skews to local conventions, so this mostly breaks ties.",
+      "",
+      "Lookup order is territory, then CURRENCY, then default — currency is the",
+      "right granularity for most of this, since every euro-zone storefront shares",
+      "the .99 convention and every yen price is a whole number. Territory keys are",
+      "for genuine one-offs."
+    ],
+    "default": [0.99, 0.49, 0.0],
+
+    "EUR": [0.99, 0.49, 0.0],
+    "GBP": [0.99, 0.49, 0.0],
+    "USD": [0.99, 0.49, 0.0],
+    "BRL": [0.9, 0.5, 0.0],
+    "MXN": [0.0, 0.9],
+    "INR": [9.0, 0.0],
+    "JPY": [0.0],
+    "KRW": [0.0],
+    "VND": [0.0],
+    "IDR": [0.0],
+    "CLP": [0.0],
+    "COP": [0.0],
+    "HUF": [0.0],
+    "ISK": [0.0],
+    "TWD": [0.0],
+    "TRY": [0.99, 0.0],
+    "ZAR": [0.99, 0.0],
+    "RUB": [0.0, 0.99]
+  }
+}

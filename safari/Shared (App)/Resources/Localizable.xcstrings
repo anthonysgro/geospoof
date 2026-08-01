@@ -3418,7 +3418,7 @@
         "ru": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Годовой"
+            "value": "Ежегодно"
           }
         },
         "sv": {
@@ -3436,7 +3436,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "年付"
+            "value": "按年"
           }
         }
       }
@@ -3488,7 +3488,7 @@
         "ru": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Годовой тариф"
+            "value": "Ежегодно тариф"
           }
         },
         "sv": {
@@ -3506,7 +3506,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "年付方案"
+            "value": "按年方案"
           }
         }
       }
