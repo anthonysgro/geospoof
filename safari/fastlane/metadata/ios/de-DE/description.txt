@@ -1,4 +1,4 @@
-Websites lesen Ihren echten Standort über die Geolocation-API des Browsers, die Zeitzone, die Datumsformatierung und WebRTC aus. Wenn diese Signale nicht zur Region Ihres VPN passen, fallen Sie auf. GeoSpoof bringt sie alle auf einen einzigen, konsistenten Ort.
+Websites lesen deinen echten Standort über die Geolocation-API des Browsers, die Zeitzone, die Datumsformatierung und WebRTC aus. Wenn diese Signale nicht zur Region deines VPN passen, fällst du auf. GeoSpoof bringt sie alle auf einen einzigen, konsistenten Ort.
 
 FUNKTIONEN
 
@@ -17,28 +17,27 @@ FUNKTIONEN
 
 GERÄTE-GPS (PRO · EXPERIMENTELL)
 
-Mehr als nur der Browser: Bringen Sie den Systemstandort Ihres iPhones auf den Ort, den Sie wählen, damit auch standortbezogene Apps — nicht nur Safari — ihn sehen. Diese optionale Pro-Funktion benötigt die kostenlose Mac-Begleit-App GeoSpoof GPS: eine einmalige Einrichtung per Kabel, danach funktioniert es über Wi-Fi. Sie nutzt Apples übliche Entwickler-Werkzeuge für Standorte und verändert iOS nicht.
+Mehr als nur der Browser: Bring den Systemstandort deines iPhones auf den Ort, den du wählst, damit auch standortbezogene Apps — nicht nur Safari — ihn sehen. Diese optionale Pro-Funktion benötigt die kostenlose Mac-Begleit-App GeoSpoof GPS: eine einmalige Einrichtung per Kabel, danach funktioniert es über Wi-Fi. Sie nutzt Apples übliche Entwickler-Werkzeuge für Standorte und verändert iOS nicht.
 
 WAS GEOSPOOF NICHT TUT
 
-GeoSpoof ist kein VPN und ändert Ihre IP-Adresse nicht. Für vollständige Standort-Privatsphäre nutzen Sie es zusammen mit einem VPN. Es ändert nicht die Sprache oder das Gebietsschema Ihres Browsers, umgeht keine serverseitige Erkennung (IP, Zahlungsmethoden, Kontoverlauf) und erfasst keine Daten über Sie oder Ihr Surfverhalten.
+GeoSpoof ist kein VPN und ändert deine IP-Adresse nicht. Für vollständige Standort-Privatsphäre nutze es zusammen mit einem VPN. Es ändert nicht die Sprache oder das Gebietsschema deines Browsers, umgeht keine serverseitige Erkennung (IP, Zahlungsmethoden, Kontoverlauf) und erfasst keine Daten über dich oder dein Surfverhalten.
 
 HINWEIS
 
-GeoSpoof ist ein Privatsphäre- und Entwickler-Werkzeug, mit dem Sie steuern, welchen Standort Sie von Ihrem eigenen Gerät aus teilen. Das Fälschen von Standorten kann gegen die Nutzungsbedingungen bestimmter Websites und Apps verstoßen, insbesondere bei Streaming-, Finanz- und E-Commerce-Diensten. Sie sind dafür verantwortlich, dass Ihre Nutzung den geltenden Bedingungen und Gesetzen entspricht.
+GeoSpoof ist ein Privatsphäre- und Entwickler-Werkzeug, mit dem du steuerst, welchen Standort du von deinem eigenen Gerät aus teilst. Das Fälschen von Standorten kann gegen die Nutzungsbedingungen bestimmter Websites und Apps verstoßen, insbesondere bei Streaming-, Finanz- und E-Commerce-Diensten. Du bist dafür verantwortlich, dass deine Nutzung den geltenden Bedingungen und Gesetzen entspricht.
 
 ABONNEMENTS
 
 GeoSpoof ist kostenlos nutzbar. GeoSpoof Pro schaltet Automatische Hintergrundsynchronisierung, Geräte-GPS, Regeln pro Website, Widgets, benutzerdefinierte Genauigkeit und die Auswahl auf der Karte frei und wird als automatisch verlängerbares Abonnement angeboten:
 
 • GeoSpoof Pro Monatlich — monatliche Abrechnung.
-
 • GeoSpoof Pro Jährlich — jährliche Abrechnung (bestes Angebot).
 
 Ein einmaliger Kauf von GeoSpoof Pro Lebenslang, der dieselben Funktionen dauerhaft freischaltet und sich nicht verlängert, ist ebenfalls verfügbar. Die Preise werden in der App angezeigt und variieren je nach Region.
 
-Die Zahlung wird bei Kaufbestätigung Ihrem Apple-Account belastet. Ein Abonnement verlängert sich automatisch, sofern es nicht mindestens 24 Stunden vor Ende des aktuellen Zeitraums gekündigt wird. Die Verlängerung wird Ihrem Account innerhalb von 24 Stunden vor Ende des aktuellen Zeitraums belastet. Sie können Abonnements nach dem Kauf in den Einstellungen Ihres Apple-Accounts verwalten oder kündigen.
+Die Zahlung wird bei Kaufbestätigung deinem Apple-Account belastet. Ein Abonnement verlängert sich automatisch, sofern es nicht mindestens 24 Stunden vor Ende des aktuellen Zeitraums gekündigt wird. Die Verlängerung wird deinem Account innerhalb von 24 Stunden vor Ende des aktuellen Zeitraums belastet. Du kannst Abonnements nach dem Kauf in den Einstellungen deines Apple-Accounts verwalten oder kündigen.
 
 Nutzungsbedingungen (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
 
-Datenschutzrichtlinie: https://www.geospoof.com/privacy
+Datenschutzerklärung: https://www.geospoof.com/privacy

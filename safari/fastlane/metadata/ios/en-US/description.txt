@@ -32,7 +32,6 @@ SUBSCRIPTIONS
 GeoSpoof is free to use. GeoSpoof Pro unlocks Auto Background Sync, Device GPS, per-site rules, widgets, custom accuracy, and the on-map picker, offered as an auto-renewable subscription:
 
 • GeoSpoof Pro Monthly — billed monthly.
-
 • GeoSpoof Pro Annual — billed yearly (best value).
 
 A one-time GeoSpoof Pro Lifetime purchase, which unlocks the same features permanently and does not renew, is also available. Prices are shown in the app and vary by region.

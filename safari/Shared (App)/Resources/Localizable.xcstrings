@@ -146,19 +146,19 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": " Wählen Sie Zulassungsliste oder Sperrliste, um die Fälschung auf bestimmte Websites zu beschränken."
+            "value": " Wähle Zulassungsliste oder Sperrliste, um die Fälschung auf bestimmte Websites zu beschränken."
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": " Elige Lista de permitidos o Lista de bloqueados para limitar la suplantación a sitios concretos."
+            "value": " Elige Lista de permitidos o Lista de bloqueados para limitar la falsificación a sitios concretos."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": " Choisissez Liste d’autorisation ou Liste de blocage pour limiter l’usurpation à certains sites."
+            "value": " Choisissez Liste d’autorisation ou Liste de blocage pour limiter la simulation à certains sites."
           }
         },
         "id": {
@@ -206,7 +206,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": " 选择「允许列表」或「拒绝列表」，即可将伪装限定于特定网站。"
+            "value": " 选择「允许列表」或「拒绝列表」，即可将伪造限定于特定网站。"
           }
         }
       }
@@ -216,7 +216,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "%@ einmalig. Für immer Ihnen — kein Abo."
+            "value": "%@ einmalig. Für immer dein — kein Abo."
           }
         },
         "es": {
@@ -706,7 +706,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "%lld JavaScript-APIs werden in %lld Gruppen abgefangen, solange der Schutz aktiv ist. Öffnen Sie eine Gruppe für die vollständige Liste."
+            "value": "%lld JavaScript-APIs werden in %lld Gruppen abgefangen, solange der Schutz aktiv ist. Öffne eine Gruppe für die vollständige Liste."
           }
         },
         "en": {
@@ -1416,7 +1416,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Ein Einmalkauf, der über Ihren Apple Account abgerechnet wird. Kein Abo — es verlängert sich nicht."
+            "value": "Ein Einmalkauf, der über deinen Apple Account abgerechnet wird. Kein Abo — es verlängert sich nicht."
           }
         },
         "es": {
@@ -1556,7 +1556,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Auf Ihrem Apple Account ist noch ein Abo aktiv. Kündigen Sie es, damit Ihnen nichts mehr berechnet wird — Ihr lebenslanger Zugang bleibt für immer bestehen."
+            "value": "Auf deinem Apple Account ist noch ein Abo aktiv. Kündige es, damit dir nichts mehr berechnet wird — dein lebenslanger Zugang bleibt für immer bestehen."
           }
         },
         "es": {
@@ -1574,7 +1574,7 @@
         "id": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Masih ada langganan yang aktif di Apple Account Anda. Batalkan agar Anda tidak ditagih lagi — akses Selamanya Anda tetap berlaku permanen."
+            "value": "Masih ada langganan yang aktif di Apple Account Anda. Batalkan agar Anda tidak ditagih lagi — akses Seumur hidup Anda tetap berlaku permanen."
           }
         },
         "ja": {
@@ -1616,7 +1616,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "你的 Apple Account 上仍有一项订阅处于有效状态。请取消该订阅以免再次扣款，你的永久版权限将一直保留。"
+            "value": "你的 Apple Account 上仍有一项订阅处于有效状态。请取消该订阅以免再次扣款，你的永久权限将一直保留。"
           }
         }
       }
@@ -2886,19 +2886,19 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Zulassungsliste und Sperrliste sind eine Funktion von GeoSpoof Pro. Führen Sie ein Upgrade durch, um die Fälschung auf bestimmte Websites zu beschränken."
+            "value": "Zulassungsliste und Sperrliste sind eine Funktion von GeoSpoof Pro. Führe ein Upgrade durch, um die Fälschung auf bestimmte Websites zu beschränken."
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Lista de permitidos y Lista de bloqueados son una función de GeoSpoof Pro. Mejora tu plan para limitar la suplantación a sitios concretos."
+            "value": "Lista de permitidos y Lista de bloqueados son una función de GeoSpoof Pro. Mejora tu plan para limitar la falsificación a sitios concretos."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "La liste d’autorisation et la liste de blocage sont une fonctionnalité GeoSpoof Pro. Passez à Pro pour limiter l’usurpation à certains sites."
+            "value": "La liste d’autorisation et la liste de blocage sont une fonctionnalité GeoSpoof Pro. Passez à Pro pour limiter la simulation à certains sites."
           }
         },
         "id": {
@@ -2946,7 +2946,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "「允许列表」和「拒绝列表」是 GeoSpoof Pro 功能。升级后可将伪装限定于特定网站。"
+            "value": "「允许列表」和「拒绝列表」是 GeoSpoof Pro 功能。升级后可将伪造限定于特定网站。"
           }
         }
       }
@@ -2956,19 +2956,19 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Die Zulassungsliste ist leer, daher ist die Fälschung derzeit auf allen Websites inaktiv. Fügen Sie eine Website hinzu, um dort mit der Fälschung zu beginnen."
+            "value": "Die Zulassungsliste ist leer, daher ist die Fälschung derzeit auf allen Websites inaktiv. Füge eine Website hinzu, um dort mit der Fälschung zu beginnen."
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "La lista de permitidos está vacía, así que la suplantación está inactiva en todos los sitios. Añade un sitio para empezar a suplantar ahí."
+            "value": "La lista de permitidos está vacía, así que la falsificación está inactiva en todos los sitios. Añade un sitio para empezar a falsificar ahí."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "La liste d’autorisation est vide : l’usurpation est donc inactive sur tous les sites. Ajoutez un site pour commencer à y usurper votre position."
+            "value": "La liste d’autorisation est vide : la simulation est donc inactive sur tous les sites. Ajoutez un site pour commencer à y simuler votre position."
           }
         },
         "id": {
@@ -3016,7 +3016,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "允许列表为空，因此目前所有网站都不会进行伪装。添加一个网站即可在该网站上启用伪装。"
+            "value": "允许列表为空，因此目前所有网站都不会进行伪造。添加一个网站即可在该网站上启用伪造。"
           }
         }
       }
@@ -3032,13 +3032,13 @@
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "La lista de permitidos está vacía, así que la suplantación está inactiva en todos los sitios."
+            "value": "La lista de permitidos está vacía, así que la falsificación está inactiva en todos los sitios."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "La liste d’autorisation est vide : l’usurpation est donc inactive sur tous les sites."
+            "value": "La liste d’autorisation est vide : la simulation est donc inactive sur tous les sites."
           }
         },
         "id": {
@@ -3086,7 +3086,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "允许列表为空，因此所有网站都不会进行伪装。"
+            "value": "允许列表为空，因此所有网站都不会进行伪造。"
           }
         }
       }
@@ -3796,19 +3796,19 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Der ungefähre Standort ist eine Funktion von GeoSpoof Pro. Führen Sie ein Upgrade durch, um einen zufälligen Punkt in der Nähe zu melden; die kostenlose Fälschung verwendet genau den von Ihnen gewählten Standort."
+            "value": "Der ungefähre Standort ist eine Funktion von GeoSpoof Pro. Führe ein Upgrade durch, um einen zufälligen Punkt in der Nähe zu melden; die kostenlose Fälschung verwendet genau den von dir gewählten Standort."
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "La ubicación aproximada es una función de GeoSpoof Pro. Mejora tu plan para informar de un punto aleatorio cercano; la suplantación gratuita usa exactamente la ubicación que elijas."
+            "value": "La ubicación aproximada es una función de GeoSpoof Pro. Mejora tu plan para informar de un punto aleatorio cercano; la falsificación gratuita usa exactamente la ubicación que elijas."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "La localisation approximative est une fonctionnalité GeoSpoof Pro. Passez à Pro pour indiquer un point aléatoire à proximité ; l’usurpation gratuite utilise exactement la position que vous choisissez."
+            "value": "La localisation approximative est une fonctionnalité GeoSpoof Pro. Passez à Pro pour indiquer un point aléatoire à proximité ; la simulation gratuite utilise exactement la position que vous choisissez."
           }
         },
         "id": {
@@ -3856,7 +3856,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "模糊位置是 GeoSpoof Pro 功能。升级后可报告附近的随机地点；免费伪装使用你所选的精确位置。"
+            "value": "模糊位置是 GeoSpoof Pro 功能。升级后可报告附近的随机地点；免费伪造使用你所选的精确位置。"
           }
         }
       }
@@ -3866,7 +3866,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "„Ungefähr“ meldet einen zufälligen Punkt in der Nähe Ihres Standorts anstelle der genauen Stelle."
+            "value": "„Ungefähr“ meldet einen zufälligen Punkt in der Nähe deines Standorts anstelle der genauen Stelle."
           }
         },
         "es": {
@@ -4356,7 +4356,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Abrechnung über Ihren Apple Account. Verlängert sich automatisch, sofern nicht mindestens 24 Stunden vor Ende des Zeitraums gekündigt wird — Verwaltung in den Einstellungen. Nicht genutzte Zeit einer kostenlosen Testphase verfällt beim Kauf."
+            "value": "Abrechnung über deinen Apple Account. Verlängert sich automatisch, sofern nicht mindestens 24 Stunden vor Ende des Zeitraums gekündigt wird — Verwaltung in den Einstellungen. Nicht genutzte Zeit einer kostenlosen Testphase verfällt beim Kauf."
           }
         },
         "es": {
@@ -4496,19 +4496,19 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Beides sind die Standardwarnungen von Safari. GeoSpoof nutzt diesen Zugriff ausschließlich, um Standort und Zeitzone zu fälschen — Ihr Surfverhalten wird niemals gelesen, gespeichert oder gesendet."
+            "value": "Beides sind die Standardwarnungen von Safari. GeoSpoof nutzt diesen Zugriff ausschließlich, um Standort und Zeitzone zu fälschen — dein Surfverhalten wird niemals gelesen, gespeichert oder gesendet."
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Ambas son advertencias estándar de Safari. GeoSpoof solo usa este acceso para suplantar la ubicación y la zona horaria: nunca lee, guarda ni envía tu navegación."
+            "value": "Ambas son advertencias estándar de Safari. GeoSpoof solo usa este acceso para falsificar la ubicación y la zona horaria: nunca lee, guarda ni envía tu navegación."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Ce sont les avertissements standard de Safari. GeoSpoof n’utilise cet accès que pour usurper la localisation et le fuseau horaire : votre navigation n’est jamais lue, stockée ni envoyée."
+            "value": "Ce sont les avertissements standard de Safari. GeoSpoof n’utilise cet accès que pour simuler la localisation et le fuseau horaire : votre navigation n’est jamais lue, stockée ni envoyée."
           }
         },
         "id": {
@@ -4556,7 +4556,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "这两项都是 Safari 的标准提示。GeoSpoof 仅使用该权限来伪装位置和时区，绝不会读取、存储或发送你的浏览内容。"
+            "value": "这两项都是 Safari 的标准提示。GeoSpoof 仅使用该权限来伪造位置和时区，绝不会读取、存储或发送你的浏览内容。"
           }
         }
       }
@@ -5126,7 +5126,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Wählen Sie im Tab „Home“ einen Standort, um die Synchronisierung zu starten."
+            "value": "Wähle im Tab „Start“ einen Standort, um die Synchronisierung zu starten."
           }
         },
         "es": {
@@ -5686,7 +5686,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Führen Sie diesen Schritt auf Ihrem iPhone oder in der GeoSpoof GPS-App auf Ihrem Mac aus."
+            "value": "Führe diesen Schritt auf deinem iPhone oder in der GeoSpoof GPS-App auf deinem Mac aus."
           }
         },
         "es": {
@@ -5896,7 +5896,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Verbindung zu Ihrem iPhone wird hergestellt…"
+            "value": "Verbindung zu deinem iPhone wird hergestellt…"
           }
         },
         "es": {
@@ -6246,7 +6246,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Ihr VPN-Standort konnte nicht erkannt werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut."
+            "value": "Dein VPN-Standort konnte nicht erkannt werden. Prüfe deine Verbindung und versuche es erneut."
           }
         },
         "es": {
@@ -6316,7 +6316,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Der App Store war nicht erreichbar. Ihr Pro-Zugang ist davon nicht betroffen; versuchen Sie es später erneut."
+            "value": "Der App Store war nicht erreichbar. Dein Pro-Zugang ist davon nicht betroffen; versuche es später erneut."
           }
         },
         "es": {
@@ -6526,7 +6526,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Die Trinkgeld-Optionen konnten nicht geladen werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut."
+            "value": "Die Trinkgeld-Optionen konnten nicht geladen werden. Prüfe deine Verbindung und versuche es erneut."
           }
         },
         "es": {
@@ -6736,19 +6736,19 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Die benutzerdefinierte Genauigkeit ist eine Funktion von GeoSpoof Pro. Führen Sie ein Upgrade durch, um eine feste Genauigkeit festzulegen; die kostenlose Fälschung verwendet einen realistischen, geräteüblichen Wert."
+            "value": "Die benutzerdefinierte Genauigkeit ist eine Funktion von GeoSpoof Pro. Führe ein Upgrade durch, um eine feste Genauigkeit festzulegen; die kostenlose Fälschung verwendet einen realistischen, geräteüblichen Wert."
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "La precisión personalizada es una función de GeoSpoof Pro. Mejora tu plan para fijar una precisión concreta; la suplantación gratuita usa un valor realista y propio del dispositivo."
+            "value": "La precisión personalizada es una función de GeoSpoof Pro. Mejora tu plan para fijar una precisión concreta; la falsificación gratuita usa un valor realista y propio del dispositivo."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "La précision personnalisée est une fonctionnalité GeoSpoof Pro. Passez à Pro pour fixer une précision ; l’usurpation gratuite utilise une valeur réaliste, adaptée à l’appareil."
+            "value": "La précision personnalisée est une fonctionnalité GeoSpoof Pro. Passez à Pro pour fixer une précision ; la simulation gratuite utilise une valeur réaliste, adaptée à l’appareil."
           }
         },
         "id": {
@@ -6796,7 +6796,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "自定义精度是 GeoSpoof Pro 功能。升级后可设定固定精度；免费伪装会使用符合设备实际情况的真实数值。"
+            "value": "自定义精度是 GeoSpoof Pro 功能。升级后可设定固定精度；免费伪造会使用符合设备实际情况的真实数值。"
           }
         }
       }
@@ -7518,7 +7518,7 @@
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Déduire la langue de la position usurpée."
+            "value": "Déduire la langue de la position simulée."
           }
         },
         "id": {
@@ -7646,7 +7646,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Ihre aktuelle VPN-Ausgangs-IP erkennen und den vorgetäuschten Standort passend aktualisieren."
+            "value": "Deine aktuelle VPN-Ausgangs-IP erkennen und den vorgetäuschten Standort passend aktualisieren."
           }
         },
         "es": {
@@ -7658,7 +7658,7 @@
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Détecter l’IP de sortie actuelle de votre VPN et mettre à jour la position usurpée en conséquence."
+            "value": "Détecter l’IP de sortie actuelle de votre VPN et mettre à jour la position simulée en conséquence."
           }
         },
         "id": {
@@ -7926,7 +7926,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Das Geräte-GPS ist neu — sagen Sie uns, was funktioniert und was nicht."
+            "value": "Das Geräte-GPS ist neu — sag uns, was funktioniert und was nicht."
           }
         },
         "es": {
@@ -8416,7 +8416,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Geben Sie einen Wert zwischen 1 und 10.000 Metern ein."
+            "value": "Gib einen Wert zwischen 1 und 10.000 Metern ein."
           }
         },
         "es": {
@@ -9396,7 +9396,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Folgt Ihrem VPN automatisch."
+            "value": "Folgt deinem VPN automatisch."
           }
         },
         "es": {
@@ -9752,13 +9752,13 @@
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Suplantación de GPS"
+            "value": "Falsificación de GPS"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Usurpation du GPS"
+            "value": "Simulation du GPS"
           }
         },
         "id": {
@@ -9806,7 +9806,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "GPS 伪装"
+            "value": "GPS 伪造"
           }
         }
       }
@@ -9822,13 +9822,13 @@
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Suplantación de GPS activa"
+            "value": "Falsificación de GPS activa"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Usurpation du GPS active"
+            "value": "Simulation du GPS active"
           }
         },
         "id": {
@@ -9876,7 +9876,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "GPS 伪装已启用"
+            "value": "GPS 伪造已启用"
           }
         }
       }
@@ -10236,19 +10236,19 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "GeoSpoof läuft innerhalb von Safari. Schalten Sie es für die angezeigte Seite ein, um mit der Fälschung zu beginnen."
+            "value": "GeoSpoof läuft innerhalb von Safari. Schalte es für die angezeigte Seite ein, um mit der Fälschung zu beginnen."
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "GeoSpoof funciona dentro de Safari. Actívalo en la página que estás viendo para empezar a suplantar."
+            "value": "GeoSpoof funciona dentro de Safari. Actívalo en la página que estás viendo para empezar a falsificar."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "GeoSpoof fonctionne au sein de Safari. Activez-le pour la page affichée afin de commencer l’usurpation."
+            "value": "GeoSpoof fonctionne au sein de Safari. Activez-le pour la page affichée afin de commencer la simulation."
           }
         },
         "id": {
@@ -10296,7 +10296,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "GeoSpoof 在 Safari 内运行。为当前浏览的页面开启后即可开始伪装。"
+            "value": "GeoSpoof 在 Safari 内运行。为当前浏览的页面开启后即可开始伪造。"
           }
         }
       }
@@ -10376,7 +10376,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Die Erweiterung von GeoSpoof ist derzeit aus. Sie können sie in den Safari-Einstellungen unter „Erweiterungen“ einschalten."
+            "value": "Die Erweiterung von GeoSpoof ist derzeit aus. Du kannst sie in den Safari-Einstellungen unter „Erweiterungen“ einschalten."
           }
         },
         "es": {
@@ -10446,7 +10446,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Die Erweiterung von GeoSpoof ist derzeit aus. Sie können sie im Bereich „Erweiterungen“ der Safari-Einstellungen einschalten."
+            "value": "Die Erweiterung von GeoSpoof ist derzeit aus. Du kannst sie im Bereich „Erweiterungen“ der Safari-Einstellungen einschalten."
           }
         },
         "es": {
@@ -10516,7 +10516,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Die Erweiterung von GeoSpoof ist derzeit ein. Sie können sie in den Safari-Einstellungen unter „Erweiterungen“ ausschalten."
+            "value": "Die Erweiterung von GeoSpoof ist derzeit ein. Du kannst sie in den Safari-Einstellungen unter „Erweiterungen“ ausschalten."
           }
         },
         "es": {
@@ -10586,7 +10586,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Die Erweiterung von GeoSpoof ist derzeit ein. Sie können sie im Bereich „Erweiterungen“ der Safari-Einstellungen ausschalten."
+            "value": "Die Erweiterung von GeoSpoof ist derzeit ein. Du kannst sie im Bereich „Erweiterungen“ der Safari-Einstellungen ausschalten."
           }
         },
         "es": {
@@ -11146,7 +11146,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Home"
+            "value": "Start"
           }
         },
         "es": {
@@ -11356,7 +11356,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Wählen Sie in Safari „Einstellungen“ > „Erweiterungen“ und schalten Sie GeoSpoof ein."
+            "value": "Wähle in Safari „Einstellungen“ > „Erweiterungen“ und schalte GeoSpoof ein."
           }
         },
         "es": {
@@ -11426,7 +11426,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Tippen Sie in Safari in der Adressleiste auf die Seitenmenü-Taste, wählen Sie „Erweiterungen verwalten“ und schalten Sie GeoSpoof ein."
+            "value": "Tippe in Safari in der Adressleiste auf die Seitenmenü-Taste, wähle „Erweiterungen verwalten“ und schalte GeoSpoof ein."
           }
         },
         "es": {
@@ -11776,7 +11776,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Installieren Sie GeoSpoof GPS auf Ihrem Mac und öffnen Sie es — es führt Sie durch die einmalige Einrichtung. Ihr gewählter Standort wird danach automatisch über Wi-Fi auf dieses iPhone übertragen."
+            "value": "Installiere GeoSpoof GPS auf deinem Mac und öffne es — es führt dich durch die einmalige Einrichtung. Dein gewählter Standort wird danach automatisch über Wi-Fi auf dieses iPhone übertragen."
           }
         },
         "es": {
@@ -12564,7 +12564,7 @@
         "id": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Selamanya"
+            "value": "Seumur hidup"
           }
         },
         "ja": {
@@ -12588,7 +12588,7 @@
         "ru": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Бессрочно"
+            "value": "Навсегда"
           }
         },
         "sv": {
@@ -12606,7 +12606,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "永久版"
+            "value": "永久"
           }
         }
       }
@@ -12616,7 +12616,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "„Lebenslang“ ist ein Einmalkauf, der mit Ihrem Apple Account verknüpft ist — er wird bei einer Neuinstallation oder auf einem neuen Gerät automatisch wiederhergestellt. Es gibt kein Abo zu verwalten."
+            "value": "„Lebenslang“ ist ein Einmalkauf, der mit deinem Apple Account verknüpft ist — er wird bei einer Neuinstallation oder auf einem neuen Gerät automatisch wiederhergestellt. Es gibt kein Abo zu verwalten."
           }
         },
         "es": {
@@ -12634,7 +12634,7 @@
         "id": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "“Selamanya” adalah pembelian sekali bayar yang terhubung ke Apple Account Anda — akan dipulihkan otomatis saat Anda memasang ulang atau menyiapkan perangkat baru. Tidak ada langganan yang perlu dikelola."
+            "value": "“Seumur hidup” adalah pembelian sekali bayar yang terhubung ke Apple Account Anda — akan dipulihkan otomatis saat Anda memasang ulang atau menyiapkan perangkat baru. Tidak ada langganan yang perlu dikelola."
           }
         },
         "ja": {
@@ -12658,7 +12658,7 @@
         "ru": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "«Бессрочно» — разовая покупка, привязанная к вашему Apple Account: она восстанавливается автоматически при переустановке или настройке нового устройства. Подпиской управлять не нужно."
+            "value": "«Навсегда» — разовая покупка, привязанная к вашему Apple Account: она восстанавливается автоматически при переустановке или настройке нового устройства. Подпиской управлять не нужно."
           }
         },
         "sv": {
@@ -12676,7 +12676,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "「永久版」是与你的 Apple Account 绑定的一次性购买，重新安装或设置新设备时会自动恢复。无需管理任何订阅。"
+            "value": "「永久」是与你的 Apple Account 绑定的一次性购买，重新安装或设置新设备时会自动恢复。无需管理任何订阅。"
           }
         }
       }
@@ -12686,7 +12686,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Lebenslang — für immer Ihnen"
+            "value": "Lebenslang — für immer dein"
           }
         },
         "es": {
@@ -12704,7 +12704,7 @@
         "id": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Selamanya — milik Anda permanen"
+            "value": "Seumur hidup — milik Anda permanen"
           }
         },
         "ja": {
@@ -12728,7 +12728,7 @@
         "ru": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Бессрочно — навсегда ваше"
+            "value": "Навсегда — навсегда ваше"
           }
         },
         "sv": {
@@ -12746,7 +12746,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "永久版 — 永久归你所有"
+            "value": "永久 — 永久归你所有"
           }
         }
       }
@@ -12826,7 +12826,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Liste voll — entfernen Sie zuerst einen Favoriten."
+            "value": "Liste voll — entferne zuerst einen Favoriten."
           }
         },
         "es": {
@@ -13526,7 +13526,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Die Verbindung zu Ihrem Mac wurde unterbrochen. Ihr echtes GPS ist möglicherweise wieder aktiv."
+            "value": "Die Verbindung zu deinem Mac wurde unterbrochen. Dein echtes GPS ist möglicherweise wieder aktiv."
           }
         },
         "es": {
@@ -13596,7 +13596,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Stellen Sie sicher, dass die GeoSpoof GPS-App läuft und Ihr Mac aktiv und online ist."
+            "value": "Stelle sicher, dass die GeoSpoof GPS-App läuft und dein Mac aktiv und online ist."
           }
         },
         "es": {
@@ -13736,7 +13736,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Verwalten oder kündigen Sie Ihr Abo jederzeit. Nach einer Kündigung bleibt Pro bis zum Ende des aktuellen Zeitraums aktiv."
+            "value": "Verwalte oder kündige dein Abo jederzeit. Nach einer Kündigung bleibt Pro bis zum Ende des aktuellen Zeitraums aktiv."
           }
         },
         "es": {
@@ -13876,7 +13876,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Verbergen Sie Standort und Zeitzone, die Sie online preisgeben, mit einem Tippen — und halten Sie Ihren echten Aufenthaltsort privat."
+            "value": "Verbirg Standort und Zeitzone, die du online preisgibst, mit einem Tippen — und halte deinen echten Aufenthaltsort privat."
           }
         },
         "es": {
@@ -14016,7 +14016,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Echtes GPS Ihres iPhone anpassen"
+            "value": "Echtes GPS deines iPhone anpassen"
           }
         },
         "es": {
@@ -14086,7 +14086,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Ihren vorgetäuschten Standort an Ihre aktuelle VPN-Ausgangs-IP anpassen."
+            "value": "Deinen vorgetäuschten Standort an deine aktuelle VPN-Ausgangs-IP anpassen."
           }
         },
         "es": {
@@ -14098,7 +14098,7 @@
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Aligner votre position usurpée sur l’IP de sortie actuelle de votre VPN."
+            "value": "Aligner votre position simulée sur l’IP de sortie actuelle de votre VPN."
           }
         },
         "id": {
@@ -14156,7 +14156,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "An Ihr VPN angepasst"
+            "value": "An dein VPN angepasst"
           }
         },
         "es": {
@@ -14226,7 +14226,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Passt Ihren vorgetäuschten Standort an Ihre aktuelle öffentliche IP an. Die automatische Hintergrundsynchronisierung hält ihn bei VPN-Wechseln angepasst — auch im Hintergrund."
+            "value": "Passt deinen vorgetäuschten Standort an deine aktuelle öffentliche IP an. Die automatische Hintergrundsynchronisierung hält ihn bei VPN-Wechseln angepasst — auch im Hintergrund."
           }
         },
         "es": {
@@ -14238,7 +14238,7 @@
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Aligne votre position usurpée sur votre IP publique actuelle. La synchronisation auto en arrière-plan la maintient alignée lorsque votre VPN change, même en arrière-plan."
+            "value": "Aligne votre position simulée sur votre IP publique actuelle. La synchronisation auto en arrière-plan la maintient alignée lorsque votre VPN change, même en arrière-plan."
           }
         },
         "id": {
@@ -14296,7 +14296,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Passt Ihren vorgetäuschten Standort an Ihre aktuelle öffentliche IP an. Die automatische Hintergrundsynchronisierung hält ihn bei VPN-Wechseln angepasst — auch wenn die App geschlossen ist."
+            "value": "Passt deinen vorgetäuschten Standort an deine aktuelle öffentliche IP an. Die automatische Hintergrundsynchronisierung hält ihn bei VPN-Wechseln angepasst — auch wenn die App geschlossen ist."
           }
         },
         "es": {
@@ -14308,7 +14308,7 @@
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Aligne votre position usurpée sur votre IP publique actuelle. La synchronisation auto en arrière-plan la maintient alignée lorsque votre VPN change, même app fermée."
+            "value": "Aligne votre position simulée sur votre IP publique actuelle. La synchronisation auto en arrière-plan la maintient alignée lorsque votre VPN change, même app fermée."
           }
         },
         "id": {
@@ -14478,7 +14478,7 @@
         "ru": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Месячный"
+            "value": "Ежемесячно"
           }
         },
         "sv": {
@@ -14496,7 +14496,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "月付"
+            "value": "按月"
           }
         }
       }
@@ -14548,7 +14548,7 @@
         "ru": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Месячный тариф"
+            "value": "Ежемесячно тариф"
           }
         },
         "sv": {
@@ -14566,7 +14566,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "月付方案"
+            "value": "按月方案"
           }
         }
       }
@@ -14576,7 +14576,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Mehr als ein Mac kann dieses iPhone steuern. Wählen Sie, welcher Ihr GPS steuert — die anderen warten."
+            "value": "Mehr als ein Mac kann dieses iPhone steuern. Wähle, welcher dein GPS steuert — die anderen warten."
           }
         },
         "es": {
@@ -14646,7 +14646,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Bewegen Sie die Karte, um Ihre Stecknadel zu setzen"
+            "value": "Bewege die Karte, um deine Stecknadel zu setzen"
           }
         },
         "es": {
@@ -14926,7 +14926,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Das echte GPS Ihres Geräts verschieben."
+            "value": "Das echte GPS deines Geräts verschieben."
           }
         },
         "es": {
@@ -14996,7 +14996,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Verschieben Sie das echte System-GPS Ihres iPhone an den von Ihnen gewählten Standort, gesteuert über die GeoSpoof GPS-App auf Ihrem Mac."
+            "value": "Verschiebe das echte System-GPS deines iPhone an den von dir gewählten Standort, gesteuert über die GeoSpoof GPS-App auf deinem Mac."
           }
         },
         "es": {
@@ -15066,7 +15066,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Verschieben Sie das echte System-GPS Ihres iPhone — nicht nur den Browser — an Ihren gewählten Standort, gesteuert von Ihrem Mac."
+            "value": "Verschiebe das echte System-GPS deines iPhone — nicht nur den Browser — an deinen gewählten Standort, gesteuert von deinem Mac."
           }
         },
         "es": {
@@ -15136,7 +15136,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Verschiebt die Koordinaten, die Websites erhalten, auf einen zufälligen Punkt innerhalb der gewählten Entfernung von Ihrem Standort. Ihr gewählter Standort bleibt der Ankerpunkt; der gemeldete Genauigkeitswert ändert sich dadurch nicht."
+            "value": "Verschiebt die Koordinaten, die Websites erhalten, auf einen zufälligen Punkt innerhalb der gewählten Entfernung von deinem Standort. Dein gewählter Standort bleibt der Ankerpunkt; der gemeldete Genauigkeitswert ändert sich dadurch nicht."
           }
         },
         "es": {
@@ -15416,7 +15416,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Liest, speichert oder übermittelt Ihr Surfverhalten niemals."
+            "value": "Liest, speichert oder übermittelt dein Surfverhalten niemals."
           }
         },
         "es": {
@@ -16746,7 +16746,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Nur dieser Mac steuert das GPS Ihres iPhone. Die anderen warten."
+            "value": "Nur dieser Mac steuert das GPS deines iPhone. Die anderen warten."
           }
         },
         "es": {
@@ -16956,7 +16956,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Öffnen Sie Safari und wählen Sie „Einstellungen“ → „Erweiterungen“, um GeoSpoof zu verwalten."
+            "value": "Öffne Safari und wähle „Einstellungen“ → „Erweiterungen“, um GeoSpoof zu verwalten."
           }
         },
         "es": {
@@ -17376,7 +17376,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Wird in Ihrem Browser geöffnet"
+            "value": "Wird in deinem Browser geöffnet"
           }
         },
         "es": {
@@ -17656,7 +17656,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Zahlen Sie einmal für GeoSpoof Pro für immer — keine Verlängerungen mehr. „Lebenslang“ wird sofort freigeschaltet; kündigen Sie danach unten Ihr Abo, damit Ihnen nichts mehr berechnet wird."
+            "value": "Zahle einmal für GeoSpoof Pro für immer — keine Verlängerungen mehr. „Lebenslang“ wird sofort freigeschaltet; kündige danach unten dein Abo, damit dir nichts mehr berechnet wird."
           }
         },
         "es": {
@@ -17674,7 +17674,7 @@
         "id": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Bayar sekali untuk GeoSpoof Pro selamanya — tidak ada perpanjangan lagi. Akses Selamanya langsung terbuka; setelah itu batalkan langganan Anda di bawah agar tidak ditagih lagi."
+            "value": "Bayar sekali untuk GeoSpoof Pro selamanya — tidak ada perpanjangan lagi. Akses Seumur hidup langsung terbuka; setelah itu batalkan langganan Anda di bawah agar tidak ditagih lagi."
           }
         },
         "ja": {
@@ -17716,7 +17716,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "一次付费，永久使用 GeoSpoof Pro，无需再续期。「永久版」将立即解锁；随后请在下方取消订阅，以免再次扣款。"
+            "value": "一次付费，永久使用 GeoSpoof Pro，无需再续期。「永久」将立即解锁；随后请在下方取消订阅，以免再次扣款。"
           }
         }
       }
@@ -17796,7 +17796,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Wählen Sie einen Standort, und GeoSpoof hält den echten verborgen. Sie können ihn jederzeit ändern."
+            "value": "Wähle einen Standort, und GeoSpoof hält den echten verborgen. Du kannst ihn jederzeit ändern."
           }
         },
         "es": {
@@ -17866,7 +17866,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Wählen Sie eine Stelle auf der Karte"
+            "value": "Wähle eine Stelle auf der Karte"
           }
         },
         "es": {
@@ -18146,19 +18146,19 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Das Beibehalten der ursprünglichen Standortabfrage einer Website ist eine Funktion von GeoSpoof Pro. Die kostenlose Fälschung beantwortet Berechtigungsabfragen automatisch mit Ihrem vorgetäuschten Standort."
+            "value": "Das Beibehalten der ursprünglichen Standortabfrage einer Website ist eine Funktion von GeoSpoof Pro. Die kostenlose Fälschung beantwortet Berechtigungsabfragen automatisch mit deinem vorgetäuschten Standort."
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Conservar la solicitud de ubicación propia de un sitio es una función de GeoSpoof Pro. La suplantación gratuita responde automáticamente a las solicitudes de permiso con tu ubicación falsificada."
+            "value": "Conservar la solicitud de ubicación propia de un sitio es una función de GeoSpoof Pro. La falsificación gratuita responde automáticamente a las solicitudes de permiso con la ubicación que elijas."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Conserver la demande de localisation native d’un site est une fonctionnalité GeoSpoof Pro. L’usurpation gratuite répond automatiquement aux demandes d’autorisation avec votre position usurpée."
+            "value": "Conserver la demande de localisation native d’un site est une fonctionnalité GeoSpoof Pro. La simulation gratuite répond automatiquement aux demandes d’autorisation avec votre position simulée."
           }
         },
         "id": {
@@ -18206,7 +18206,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "保留网站自带的位置权限提示是 GeoSpoof Pro 功能。免费伪装会用伪造的位置自动响应权限提示。"
+            "value": "保留网站自带的位置权限提示是 GeoSpoof Pro 功能。免费版会自动用你设定的位置响应权限提示。"
           }
         }
       }
@@ -18216,7 +18216,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Datenschutzrichtlinie"
+            "value": "Datenschutzerklärung"
           }
         },
         "es": {
@@ -18776,7 +18776,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "RTCPeerConnection wird umschlossen, um das Sammeln von ICE-Kandidaten zu unterdrücken. So kann WebRTC Ihre echte IP-Adresse nicht preisgeben."
+            "value": "RTCPeerConnection wird umschlossen, um das Sammeln von ICE-Kandidaten zu unterdrücken. So kann WebRTC deine echte IP-Adresse nicht preisgeben."
           }
         },
         "es": {
@@ -19126,7 +19126,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Datenschutzrichtlinie lesen"
+            "value": "Datenschutzerklärung lesen"
           }
         },
         "es": {
@@ -19686,7 +19686,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Eine von Ihnen gewählte Sprache melden."
+            "value": "Eine von dir gewählte Sprache melden."
           }
         },
         "es": {
@@ -19826,7 +19826,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Ihren gewählten Standort genau melden."
+            "value": "Deinen gewählten Standort genau melden."
           }
         },
         "es": {
@@ -19966,7 +19966,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Die gemeldete Sprache ist eine Funktion von GeoSpoof Pro. Führen Sie ein Upgrade durch, damit Websites eine Sprache sehen, die zu Ihrem vorgetäuschten Standort passt."
+            "value": "Die gemeldete Sprache ist eine Funktion von GeoSpoof Pro. Führe ein Upgrade durch, damit Websites eine Sprache sehen, die zu deinem vorgetäuschten Standort passt."
           }
         },
         "es": {
@@ -19978,7 +19978,7 @@
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "La langue indiquée est une fonctionnalité GeoSpoof Pro. Passez à Pro pour que les sites voient une langue correspondant à votre position usurpée."
+            "value": "La langue indiquée est une fonctionnalité GeoSpoof Pro. Passez à Pro pour que les sites voient une langue correspondant à votre position simulée."
           }
         },
         "id": {
@@ -20386,7 +20386,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Die Berechtigungswarnung von Safari klingt weitreichend, doch GeoSpoof nutzt diesen Zugriff sehr eng begrenzt — und Sie müssen sich nicht auf unser Wort verlassen."
+            "value": "Die Berechtigungswarnung von Safari klingt weitreichend, doch GeoSpoof nutzt diesen Zugriff sehr eng begrenzt — und du musst dich nicht auf unser Wort verlassen."
           }
         },
         "es": {
@@ -21156,7 +21156,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Auf Ihr VPN oder einen selbst gewählten Standort setzen"
+            "value": "Auf dein VPN oder einen selbst gewählten Standort setzen"
           }
         },
         "es": {
@@ -21366,7 +21366,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Zeigt Ihren aktuellen vorgetäuschten Standort und ermöglicht die erneute Synchronisierung mit Ihrem VPN."
+            "value": "Zeigt deinen aktuellen vorgetäuschten Standort und ermöglicht die erneute Synchronisierung mit deinem VPN."
           }
         },
         "es": {
@@ -21378,7 +21378,7 @@
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Affiche votre position usurpée actuelle et permet de resynchroniser avec votre VPN."
+            "value": "Affiche votre position simulée actuelle et permet de resynchroniser avec votre VPN."
           }
         },
         "id": {
@@ -21646,7 +21646,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Websites zeigen ihre eigene Standortabfrage. Ihr vorgetäuschter Standort wird erst verwendet, nachdem Sie zugestimmt haben."
+            "value": "Websites zeigen ihre eigene Standortabfrage. Dein vorgetäuschter Standort wird erst verwendet, nachdem du zugestimmt hast."
           }
         },
         "es": {
@@ -21658,7 +21658,7 @@
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Les sites afficheront leur propre demande d’autorisation de localisation. Votre position usurpée n’est utilisée qu’après votre accord."
+            "value": "Les sites afficheront leur propre demande d’autorisation de localisation. Votre position simulée n’est utilisée qu’après votre accord."
           }
         },
         "id": {
@@ -21716,7 +21716,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Etwas ist schiefgelaufen — Ihnen wurde nichts berechnet."
+            "value": "Etwas ist schiefgelaufen — dir wurde nichts berechnet."
           }
         },
         "es": {
@@ -21856,19 +21856,19 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Nur die von Ihnen gewählten Websites fälschen."
+            "value": "Nur die von dir gewählten Websites fälschen."
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Suplanta solo los sitios que elijas."
+            "value": "Falsifica solo los sitios que elijas."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "N’usurpez que les sites de votre choix."
+            "value": "Ne simulez la position que sur les sites de votre choix."
           }
         },
         "id": {
@@ -21916,7 +21916,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "只伪装你指定的网站。"
+            "value": "只伪造你指定的网站。"
           }
         }
       }
@@ -21938,7 +21938,7 @@
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Localisation usurpée"
+            "value": "Localisation simulée"
           }
         },
         "id": {
@@ -22008,7 +22008,7 @@
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Fuseau horaire usurpé"
+            "value": "Fuseau horaire simulé"
           }
         },
         "id": {
@@ -22072,13 +22072,13 @@
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "La suplantación se aplica solo a los sitios listados."
+            "value": "La falsificación se aplica solo a los sitios listados."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "L'usurpation s'applique uniquement aux sites listés."
+            "value": "La simulation s'applique uniquement aux sites listés."
           }
         },
         "id": {
@@ -22126,7 +22126,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "伪装仅适用于列出的网站。"
+            "value": "伪造仅适用于列出的网站。"
           }
         }
       }
@@ -22136,19 +22136,19 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Die Fälschung gilt nur für die Websites, die Sie hier hinzufügen."
+            "value": "Die Fälschung gilt nur für die Websites, die du hier hinzufügst."
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "La suplantación se aplica solo a los sitios que añadas aquí."
+            "value": "La falsificación se aplica solo a los sitios que añadas aquí."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "L’usurpation s’applique uniquement aux sites ajoutés ici."
+            "value": "La simulation s’applique uniquement aux sites ajoutés ici."
           }
         },
         "id": {
@@ -22196,7 +22196,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "伪装仅适用于你在此处添加的网站。"
+            "value": "伪造仅适用于你在此处添加的网站。"
           }
         }
       }
@@ -22212,13 +22212,13 @@
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "La suplantación se aplica a todos los sitios excepto los listados."
+            "value": "La falsificación se aplica a todos los sitios excepto los listados."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "L'usurpation s'applique à tous les sites sauf ceux listés."
+            "value": "La simulation s'applique à tous les sites sauf ceux listés."
           }
         },
         "id": {
@@ -22266,7 +22266,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "伪装适用于除列出网站之外的所有网站。"
+            "value": "伪造适用于除列出网站之外的所有网站。"
           }
         }
       }
@@ -22282,13 +22282,13 @@
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "La suplantación se aplica a todos los sitios."
+            "value": "La falsificación se aplica a todos los sitios."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "L'usurpation s'applique à tous les sites."
+            "value": "La simulation s'applique à tous les sites."
           }
         },
         "id": {
@@ -22336,7 +22336,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "伪装适用于所有网站。"
+            "value": "伪造适用于所有网站。"
           }
         }
       }
@@ -22346,19 +22346,19 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Auf den Websites, die Sie hier hinzufügen, wird die Fälschung übersprungen."
+            "value": "Auf den Websites, die du hier hinzufügst, wird die Fälschung übersprungen."
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "La suplantación se omite en los sitios que añadas aquí."
+            "value": "La falsificación se omite en los sitios que añadas aquí."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "L’usurpation est ignorée sur les sites ajoutés ici."
+            "value": "La simulation est ignorée sur les sites ajoutés ici."
           }
         },
         "id": {
@@ -22406,7 +22406,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "在你此处添加的网站上不会进行伪装。"
+            "value": "在你此处添加的网站上不会进行伪造。"
           }
         }
       }
@@ -22416,19 +22416,19 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Die Fälschung läuft auf Ihrem Gerät — wir betreiben kein Backend, das Daten sammelt."
+            "value": "Die Fälschung läuft auf deinem Gerät — wir betreiben kein Backend, das Daten sammelt."
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "La suplantación se ejecuta en tu dispositivo: no gestionamos ningún servidor que recopile datos."
+            "value": "La falsificación se ejecuta en tu dispositivo: no gestionamos ningún servidor que recopile datos."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "L’usurpation s’exécute sur votre appareil : nous n’exploitons aucun serveur collectant des données."
+            "value": "La simulation s’exécute sur votre appareil : nous n’exploitons aucun serveur collectant des données."
           }
         },
         "id": {
@@ -22476,7 +22476,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "伪装在你的设备上完成，我们没有任何收集数据的后端服务。"
+            "value": "伪造在你的设备上完成，我们没有任何收集数据的后端服务。"
           }
         }
       }
@@ -22486,7 +22486,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Markieren Sie einen Standort in der App mit einem Stern, um hier schnell dorthin zu wechseln."
+            "value": "Markiere einen Standort in der App mit einem Stern, um hier schnell dorthin zu wechseln."
           }
         },
         "es": {
@@ -23338,7 +23338,7 @@
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Basculer la position usurpée vers un favori enregistré."
+            "value": "Basculer la position simulée vers un favori enregistré."
           }
         },
         "id": {
@@ -23554,7 +23554,7 @@
         "id": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Beralih ke “Selamanya”"
+            "value": "Beralih ke “Seumur hidup”"
           }
         },
         "ja": {
@@ -23578,7 +23578,7 @@
         "ru": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Перейти на «Бессрочно»"
+            "value": "Перейти на «Навсегда»"
           }
         },
         "sv": {
@@ -23596,7 +23596,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "切换到「永久版」"
+            "value": "切换到「永久」"
           }
         }
       }
@@ -24446,7 +24446,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Vielen Dank für Ihre Unterstützung von GeoSpoof!"
+            "value": "Vielen Dank für deine Unterstützung von GeoSpoof!"
           }
         },
         "es": {
@@ -24516,7 +24516,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Danke, dass Sie GeoSpoof von Anfang an nutzen. Als Dankeschön erhalten Sie **GeoSpoof Pro lebenslang kostenlos** — automatische VPN-Synchronisierung, Widgets, Regeln pro Website und alle Pro-Funktionen, auf uns."
+            "value": "Danke, dass du GeoSpoof von Anfang an nutzt. Als Dankeschön erhältst du **GeoSpoof Pro lebenslang kostenlos** — automatische VPN-Synchronisierung, Widgets, Regeln pro Website und alle Pro-Funktionen, auf uns."
           }
         },
         "es": {
@@ -24656,7 +24656,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Der Genauigkeitswert, den Websites zusammen mit Ihren Koordinaten erhalten — wie sicher das Gerät zu sein behauptet. Ihr Standort wird dadurch nie verschoben; das macht die Standortpräzision."
+            "value": "Der Genauigkeitswert, den Websites zusammen mit deinen Koordinaten erhalten — wie sicher das Gerät zu sein behauptet. Dein Standort wird dadurch nie verschoben; das macht die Standortpräzision."
           }
         },
         "es": {
@@ -24726,7 +24726,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Beim ersten Surfen fragt Safari nach der Zugriffserlaubnis. Erst durch Ihre Zustimmung kann GeoSpoof arbeiten — das werden Sie sehen."
+            "value": "Beim ersten Surfen fragt Safari nach der Zugriffserlaubnis. Erst durch deine Zustimmung kann GeoSpoof arbeiten — das wirst du sehen."
           }
         },
         "es": {
@@ -24796,7 +24796,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Die Abfragen, die Sie sehen werden"
+            "value": "Die Abfragen, die du sehen wirst"
           }
         },
         "es": {
@@ -25286,7 +25286,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Schalten Sie GeoSpoof in den Erweiterungseinstellungen von Safari ein."
+            "value": "Schalte GeoSpoof in den Erweiterungseinstellungen von Safari ein."
           }
         },
         "es": {
@@ -25426,7 +25426,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Schalten Sie die automatische VPN-Synchronisierung und alle Profi-Funktionen frei."
+            "value": "Schalte die automatische VPN-Synchronisierung und alle Profi-Funktionen frei."
           }
         },
         "es": {
@@ -25916,7 +25916,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Ihren Schutz überprüfen"
+            "value": "Deinen Schutz überprüfen"
           }
         },
         "es": {
@@ -26196,7 +26196,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Warten auf Ihren Mac…"
+            "value": "Warten auf deinen Mac…"
           }
         },
         "es": {
@@ -26272,13 +26272,13 @@
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "¿Quieres más que Safari? GeoSpoof Pro puede fijar el GPS real de un iPhone conectado para privacidad y pruebas de apps, directamente desde este Mac y sin jailbreak. Es opcional; la suplantación en el navegador es gratis."
+            "value": "¿Quieres más que Safari? GeoSpoof Pro puede fijar el GPS real de un iPhone conectado para privacidad y pruebas de apps, directamente desde este Mac y sin jailbreak. Es opcional; la falsificación en el navegador es gratis."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Vous voulez aller au-delà de Safari ? GeoSpoof Pro peut définir le GPS réel d’un iPhone connecté pour la confidentialité et les tests d’apps, directement depuis ce Mac et sans jailbreak. C’est facultatif ; l’usurpation dans le navigateur est gratuite."
+            "value": "Vous voulez aller au-delà de Safari ? GeoSpoof Pro peut définir le GPS réel d’un iPhone connecté pour la confidentialité et les tests d’apps, directement depuis ce Mac et sans jailbreak. C’est facultatif ; la simulation dans le navigateur est gratuite."
           }
         },
         "id": {
@@ -26326,7 +26326,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "不只想要 Safari？GeoSpoof Pro 可直接从这台 Mac 设置已连接 iPhone 的真实 GPS，用于隐私保护和应用测试，无需越狱。这是可选功能；浏览器伪装始终免费。"
+            "value": "不只想要 Safari？GeoSpoof Pro 可直接从这台 Mac 设置已连接 iPhone 的真实 GPS，用于隐私保护和应用测试，无需越狱。这是可选功能；浏览器伪造始终免费。"
           }
         }
       }
@@ -26336,19 +26336,19 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Mehr als Safari gewünscht? GeoSpoof Pro kann das echte GPS Ihres iPhone für Privatsphäre und App-Tests setzen, gesteuert über eine begleitende Mac-App — ohne Jailbreak. Das ist optional; die Browser-Fälschung ist kostenlos."
+            "value": "Mehr als Safari gewünscht? GeoSpoof Pro kann das echte GPS deines iPhone für Privatsphäre und App-Tests setzen, gesteuert über eine begleitende Mac-App — ohne Jailbreak. Das ist optional; die Browser-Fälschung ist kostenlos."
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "¿Quieres más que Safari? GeoSpoof Pro puede fijar el GPS real de tu iPhone para privacidad y pruebas de apps, controlado desde una app complementaria para Mac y sin jailbreak. Es opcional; la suplantación en el navegador es gratis."
+            "value": "¿Quieres más que Safari? GeoSpoof Pro puede fijar el GPS real de tu iPhone para privacidad y pruebas de apps, controlado desde una app complementaria para Mac y sin jailbreak. Es opcional; la falsificación en el navegador es gratis."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Vous voulez aller au-delà de Safari ? GeoSpoof Pro peut définir le GPS réel de votre iPhone pour la confidentialité et les tests d’apps, piloté depuis une app Mac compagnon et sans jailbreak. C’est facultatif ; l’usurpation dans le navigateur est gratuite."
+            "value": "Vous voulez aller au-delà de Safari ? GeoSpoof Pro peut définir le GPS réel de votre iPhone pour la confidentialité et les tests d’apps, piloté depuis une app Mac compagnon et sans jailbreak. C’est facultatif ; la simulation dans le navigateur est gratuite."
           }
         },
         "id": {
@@ -26396,7 +26396,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "不只想要 Safari？GeoSpoof Pro 可通过配套的 Mac 应用设置你 iPhone 的真实 GPS，用于隐私保护和应用测试，无需越狱。这是可选功能；浏览器伪装始终免费。"
+            "value": "不只想要 Safari？GeoSpoof Pro 可通过配套的 Mac 应用设置你 iPhone 的真实 GPS，用于隐私保护和应用测试，无需越狱。这是可选功能；浏览器伪造始终免费。"
           }
         }
       }
@@ -26616,7 +26616,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "WebRTC kann Ihre echte IP-Adresse selbst bei Verwendung eines VPN preisgeben."
+            "value": "WebRTC kann deine echte IP-Adresse selbst bei Verwendung eines VPN preisgeben."
           }
         },
         "es": {
@@ -26966,7 +26966,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Wenn aktiviert, wird das echte System-GPS Ihres iPhone auf Ihren gewählten Standort gesetzt. Das betrifft alle Apps, einschließlich „Wo ist?“."
+            "value": "Wenn aktiviert, wird das echte System-GPS deines iPhone auf deinen gewählten Standort gesetzt. Das betrifft alle Apps, einschließlich „Wo ist?“."
           }
         },
         "es": {
@@ -27036,7 +27036,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Warum Sie GeoSpoof vertrauen können"
+            "value": "Warum du GeoSpoof vertrauen kannst"
           }
         },
         "es": {
@@ -27176,19 +27176,19 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Widgets sind eine Pro-Funktion. Tippen Sie für ein Upgrade und behalten Sie Ihren Fälschungsstatus auf dem Home-Bildschirm."
+            "value": "Widgets sind eine Pro-Funktion. Tippe für ein Upgrade und behalte deinen Fälschungsstatus auf dem Home-Bildschirm."
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Los widgets son una función Pro. Toca para mejorar tu plan y tener el estado de la suplantación en la pantalla de inicio."
+            "value": "Los widgets son una función Pro. Toca para mejorar tu plan y tener el estado de la falsificación en la pantalla de inicio."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Les widgets sont une fonctionnalité Pro. Touchez pour passer à Pro et garder l’état de l’usurpation sur votre écran d’accueil."
+            "value": "Les widgets sont une fonctionnalité Pro. Touchez pour passer à Pro et garder l’état de la simulation sur votre écran d’accueil."
           }
         },
         "id": {
@@ -27236,7 +27236,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "小组件是 Pro 功能。轻点以升级，即可将伪装状态显示在主屏幕上。"
+            "value": "小组件是 Pro 功能。轻点以升级，即可将伪造状态显示在主屏幕上。"
           }
         }
       }
@@ -27316,7 +27316,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Funktioniert auf allen Ihren Geräten — iPhone, iPad und Mac, automatisch synchronisiert."
+            "value": "Funktioniert auf allen deinen Geräten — iPhone, iPad und Mac, automatisch synchronisiert."
           }
         },
         "es": {
@@ -27456,7 +27456,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Sie können die Erweiterung von GeoSpoof in den Safari-Einstellungen unter „Erweiterungen“ einschalten."
+            "value": "Du kannst die Erweiterung von GeoSpoof in den Safari-Einstellungen unter „Erweiterungen“ einschalten."
           }
         },
         "es": {
@@ -27526,7 +27526,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Sie können die Erweiterung von GeoSpoof im Bereich „Erweiterungen“ der Safari-Einstellungen einschalten."
+            "value": "Du kannst die Erweiterung von GeoSpoof im Bereich „Erweiterungen“ der Safari-Einstellungen einschalten."
           }
         },
         "es": {
@@ -27596,7 +27596,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Sie haben GeoSpoof Pro lebenslang kostenlos — danke, dass Sie von Anfang an dabei sind."
+            "value": "Du hast GeoSpoof Pro lebenslang kostenlos — danke, dass du von Anfang an dabei bist."
           }
         },
         "es": {
@@ -27666,7 +27666,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Sie besitzen GeoSpoof Pro — für immer Ihnen, auf allen Ihren Apple-Geräten. Kein Abo."
+            "value": "Du besitzt GeoSpoof Pro — für immer dein, auf allen deinen Apple-Geräten. Kein Abo."
           }
         },
         "es": {
@@ -27736,7 +27736,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Sie besitzen „Lebenslang“ — das Abo wird nicht mehr benötigt."
+            "value": "Du besitzt „Lebenslang“ — das Abo wird nicht mehr benötigt."
           }
         },
         "es": {
@@ -27754,7 +27754,7 @@
         "id": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Anda memiliki versi “Selamanya” — langganan tidak lagi diperlukan."
+            "value": "Anda memiliki versi “Seumur hidup” — langganan tidak lagi diperlukan."
           }
         },
         "ja": {
@@ -27796,7 +27796,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "你已拥有「永久版」，不再需要订阅。"
+            "value": "你已拥有「永久」，不再需要订阅。"
           }
         }
       }
@@ -27876,7 +27876,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Sie sind ein Gründungsunterstützer"
+            "value": "Du bist ein Gründungsunterstützer"
           }
         },
         "es": {
@@ -27946,7 +27946,7 @@
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Ihr Zugang als Gründungsunterstützer ist mit Ihrem Apple Account verknüpft und wird bei einer Neuinstallation automatisch wiederhergestellt."
+            "value": "Dein Zugang als Gründungsunterstützer ist mit deinem Apple Account verknüpft und wird bei einer Neuinstallation automatisch wiederhergestellt."
           }
         },
         "es": {

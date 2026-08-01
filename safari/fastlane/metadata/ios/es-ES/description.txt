@@ -32,7 +32,6 @@ SUSCRIPCIONES
 GeoSpoof es gratis. GeoSpoof Pro desbloquea Sincronización automática en segundo plano, GPS del dispositivo, reglas por sitio, widgets, exactitud personalizada y el selector sobre el mapa, y se ofrece como suscripción de renovación automática:
 
 • GeoSpoof Pro Mensual — facturación mensual.
-
 • GeoSpoof Pro Anual — facturación anual (mejor precio).
 
 También está disponible una compra única de GeoSpoof Pro De por vida, que desbloquea las mismas funciones de forma permanente y no se renueva. Los precios se muestran en la app y varían según la región.

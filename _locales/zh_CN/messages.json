@@ -59,6 +59,18 @@
     "message": "筛选",
     "description": "Tab label for the site-scoping filters view."
   },
+  "tab_settings": {
+    "message": "设置",
+    "description": "Hover tooltip for the settings gear button in the popup header. It opens the settings view, which holds the controls that were previously behind the 'Advanced' accordion in the Details tab. Keep short — it is a tooltip on a small icon button."
+  },
+  "tab_settings_ariaLabel": {
+    "message": "打开设置",
+    "description": "Screen-reader label for the settings gear button in the popup header. Phrased as an action ('Open settings') because the button has no visible text label, unlike the tooltip which is just the destination name."
+  },
+  "details_section_locale": {
+    "message": "语言与地区",
+    "description": "Heading for the group of language/locale APIs listed under 'Key Overrides' in the Details tab. Shown only when a Reported Language is active."
+  },
   "filters_heading": {
     "message": "网站筛选",
     "description": "Heading for the site-scoping filters panel."
@@ -80,15 +92,15 @@
     "description": "Scope mode option: spoof on every site except listed ones."
   },
   "filters_modeAllDesc": {
-    "message": "伪装适用于所有网站。",
+    "message": "伪造适用于所有网站。",
     "description": "Description shown under the selector when 'All' mode is active."
   },
   "filters_modeAllowlistDesc": {
-    "message": "伪装仅适用于列出的网站。",
+    "message": "伪造仅适用于列出的网站。",
     "description": "Description shown under the selector when 'Allowlist' mode is active."
   },
   "filters_modeDenylistDesc": {
-    "message": "伪装适用于除列出网站之外的所有网站。",
+    "message": "伪造适用于除列出网站之外的所有网站。",
     "description": "Description shown under the selector when 'Denylist' mode is active."
   },
   "filters_addPlaceholder": {
@@ -232,7 +244,7 @@
     "description": "Accessible label on the VPN sync info icon."
   },
   "vpnSync_tooltip": {
-    "message": "将您的伪装位置同步到当前公网 IP 的位置。当 VPN 更换服务器后会在几秒内自动更新——或使用「重新同步」立即更新。",
+    "message": "将您的伪造位置同步到当前公网 IP 的位置。当 VPN 更换服务器后会在几秒内自动更新——或使用「重新同步」立即更新。",
     "description": "Tooltip explaining that VPN sync auto-updates when the VPN changes servers, with a manual Re-sync option."
   },
   "vpnSync_syncNow": {
@@ -340,6 +352,26 @@
   "support_review": {
     "message": "喜欢 GeoSpoof 吗？",
     "description": "Footer link that opens a short modal asking the user to leave a store review."
+  },
+  "iosPromo_text": {
+    "message": "全新：GeoSpoof GPS，支持 iPhone 和 Mac",
+    "description": "Footer cross-link label announcing the GeoSpoof app is now available across Apple platforms, linking to the App Store."
+  },
+  "iosPromo_ariaLabel": {
+    "message": "全新 — GeoSpoof GPS：iPhone 和 Mac 上的设备级定位",
+    "description": "Accessible label for the footer cross-link to the GeoSpoof Apple app (the visible text sits next to an Apple logo glyph)."
+  },
+  "vpnPromo_text": {
+    "message": "搭配 Proton VPN 使用",
+    "description": "Footer cross-link inviting the user to pair GeoSpoof with Proton VPN (a disclosed affiliate recommendation); shown on non-Apple operating systems (Windows/Linux/Android/ChromeOS) in place of the Apple App Store link. Points at the on-site /vpn recommendation page."
+  },
+  "vpnPromo_ariaLabel": {
+    "message": "搭配 Proton VPN 使用（广告）",
+    "description": "Accessible label for the footer Proton VPN affiliate cross-link (the visible text sits next to a shield glyph)."
+  },
+  "vpnPromo_tag": {
+    "message": "广告",
+    "description": "Small inline marker disclosing that the adjacent Proton VPN link is an affiliate link."
   },
   "review_modal_title": {
     "message": "喜欢 GeoSpoof 吗？❤️",
@@ -512,15 +544,15 @@
     "description": "Tooltip explaining the Firefox-only Instant timezone protection toggle and the userScripts permission it requests."
   },
   "advanced_debuggerMode": {
-    "message": "引擎级伪装",
+    "message": "引擎级伪造",
     "description": "Label for the Chrome-only toggle that spoofs the timezone deeper in the browser (via the chrome.debugger API / Chrome DevTools Protocol) so it also covers background workers and applies before a page loads."
   },
   "debuggerMode_infoAriaLabel": {
-    "message": "关于引擎级伪装的更多信息",
+    "message": "关于引擎级伪造的更多信息",
     "description": "Accessible label on the Engine-level Spoofing info icon."
   },
   "debuggerMode_tooltip": {
-    "message": "仅限 Chrome。在浏览器更深的层级伪装您的时区，因此也会覆盖后台 worker，并在页面加载前生效。开启时，Chrome 会显示“GeoSpoof 已开始调试此浏览器”提示栏——这是正常现象。如需使用标准保护，请保持关闭。",
+    "message": "仅限 Chrome。在浏览器更深的层级伪造您的时区，因此也会覆盖后台 worker，并在页面加载前生效。开启时，Chrome 会显示“GeoSpoof 已开始调试此浏览器”提示栏——这是正常现象。如需使用标准保护，请保持关闭。",
     "description": "Tooltip explaining the Chrome-only Engine-level Spoofing toggle and the debugging notification bar it causes."
   },
   "debuggerBannerHelp_text": {
@@ -538,6 +570,14 @@
   "advanced_verbosityLevel": {
     "message": "详细级别",
     "description": "Label for the log-verbosity selector."
+  },
+  "advanced_verbosity_error": {
+    "message": "错误",
+    "description": "Verbosity level: only error-level logs."
+  },
+  "advanced_verbosity_warn": {
+    "message": "警告",
+    "description": "Verbosity level: error and warning logs."
   },
   "advanced_verbosity_info": {
     "message": "信息",
@@ -595,29 +635,37 @@
     "message": "编辑",
     "description": "Button that reopens the custom accuracy editor from the compact display showing the committed value."
   },
+  "advanced_precision": {
+    "message": "位置精细度",
+    "description": "Label for the precision selector that controls whether the reported location is the exact point or an approximate point within a radius."
+  },
+  "advanced_precision_exact": {
+    "message": "精确",
+    "description": "Precision option that reports the exact chosen coordinates (default)."
+  },
+  "advanced_precision_street": {
+    "message": "街道（约 0.5 公里）",
+    "description": "Precision option that reports an approximate point within about half a kilometer of the chosen location."
+  },
+  "advanced_precision_neighborhood": {
+    "message": "街区（约 2 公里）",
+    "description": "Precision option that reports an approximate point within about two kilometers of the chosen location."
+  },
+  "advanced_precision_city": {
+    "message": "城市（约 10 公里）",
+    "description": "Precision option that reports an approximate point within about ten kilometers of the chosen location."
+  },
+  "advanced_precision_hint": {
+    "message": "「模糊」会报告你位置附近的一个随机地点，而不是精确地点。",
+    "description": "Explanatory note under the precision dropdown describing what the approximate options do."
+  },
+  "advanced_precision_proNote": {
+    "message": "🔒 模糊位置是 GeoSpoof Pro 功能。请在 GeoSpoof 应用中升级，以模糊你的精确位置。",
+    "description": "Shown for non-Pro iOS users when the precision control is disabled, explaining that approximate location is a Pro feature."
+  },
   "advanced_coffee": {
     "message": "☕ 请我喝咖啡",
     "description": "Footer link inviting the user to buy the maintainer a coffee."
-  },
-  "iosPromo_text": {
-    "message": "全新：GeoSpoof GPS，支持 iPhone 和 Mac",
-    "description": "Footer cross-link label announcing the GeoSpoof app is now available across Apple platforms, linking to the App Store."
-  },
-  "iosPromo_ariaLabel": {
-    "message": "全新 — GeoSpoof GPS：iPhone 和 Mac 上的设备级定位",
-    "description": "Accessible label for the footer cross-link to the GeoSpoof Apple app (the visible text sits next to an Apple logo glyph)."
-  },
-  "vpnPromo_text": {
-    "message": "搭配 Proton VPN 使用",
-    "description": "Footer cross-link inviting the user to pair GeoSpoof with Proton VPN (a disclosed affiliate recommendation); shown on non-Apple operating systems (Windows/Linux/Android/ChromeOS) in place of the Apple App Store link. Points at the on-site /vpn recommendation page."
-  },
-  "vpnPromo_ariaLabel": {
-    "message": "搭配 Proton VPN 使用（广告）",
-    "description": "Accessible label for the footer Proton VPN affiliate cross-link (the visible text sits next to a shield glyph)."
-  },
-  "vpnPromo_tag": {
-    "message": "广告",
-    "description": "Small inline marker disclosing that the adjacent Proton VPN link is an affiliate link."
   },
   "advanced_language": {
     "message": "语言",
@@ -626,5 +674,49 @@
   "advanced_language_system": {
     "message": "系统（浏览器语言）",
     "description": "Language selector option that follows the browser's UI language instead of a fixed choice."
+  },
+  "advanced_locale": {
+    "message": "报告的语言",
+    "description": "Label for the control that sets the language websites see (navigator.language, Intl formats, and the Accept-Language header). Deliberately distinct from 'Language', which sets GeoSpoof's own popup language."
+  },
+  "advanced_locale_off": {
+    "message": "关闭（使用真实语言）",
+    "description": "Reported Language option that leaves the browser's real language untouched (the default)."
+  },
+  "advanced_locale_match": {
+    "message": "跟随位置",
+    "description": "Reported Language option that derives the language automatically from the spoofed location."
+  },
+  "advanced_locale_custom": {
+    "message": "选择语言…",
+    "description": "Reported Language option that reveals a text input for picking a specific language tag."
+  },
+  "advanced_locale_customTag": {
+    "message": "语言标签",
+    "description": "Accessible label for the text input where a BCP47 language tag such as fr-FR is entered."
+  },
+  "advanced_locale_customSet": {
+    "message": "设置",
+    "description": "Button that commits the typed language tag. The value is applied only when this button is clicked or Enter is pressed."
+  },
+  "advanced_locale_customEdit": {
+    "message": "编辑",
+    "description": "Button that reopens the language editor from the compact display showing the committed tag."
+  },
+  "advanced_locale_customHint": {
+    "message": "请输入浏览器支持的语言标签，例如 fr-FR 或 ja",
+    "description": "Inline hint shown when the entered language tag is malformed or unsupported by the browser, so it was not applied."
+  },
+  "advanced_locale_warning": {
+    "message": "⚠️ 许多网站会切换到该语言，并且每次请求都会发送该语言。",
+    "description": "Caution shown while a reported language is active, explaining that sites will visibly change language and that the choice is also sent as an HTTP header."
+  },
+  "advanced_locale_hint": {
+    "message": "设置网站看到的语言 — navigator.language、日期和数字格式，以及 Accept-Language 标头。",
+    "description": "Explanatory note under the Reported Language control describing which signals it changes."
+  },
+  "advanced_locale_proNote": {
+    "message": "🔒 报告的语言是 GeoSpoof Pro 功能。请在 GeoSpoof 应用中升级，以更改网站看到的语言。",
+    "description": "Shown for non-Pro users when the Reported Language control is disabled, explaining that it is a Pro feature."
   }
 }

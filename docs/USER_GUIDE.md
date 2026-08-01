@@ -93,7 +93,9 @@ Use the built-in test links at the bottom of the extension:
 
 ⚠️ **VPN Recommended**: This extension spoofs browser data only. For full privacy, use a VPN that matches your spoofed location.
 
-⚠️ **Language/Locale Not Spoofed**: This extension does NOT change your browser's language or locale settings. Some websites (like streaming services) may detect inconsistencies if your browser language doesn't match your spoofed location. This is intentional - changing language settings could break your browsing experience.
+⚠️ **Language/Locale Spoofing Is Opt-In**: By default GeoSpoof leaves your language alone, so a site can still notice that your browser reports `en-US` while your location says Paris. **Reported Language** closes that gap — turn it on in **Details → Advanced → Reported Language** and pick either "Match my location" or a specific language. It moves `navigator.language`, every `Intl` format, and the `Accept-Language` header together, so they can't contradict each other.
+
+It stays off unless you turn it on, because it visibly changes browsing: many sites will switch language outright, and the language you pick is sent with every request. Free on Firefox and Chrome; part of GeoSpoof Pro on Safari. This is separate from the **Language** setting, which only changes GeoSpoof's own interface and is never sent to websites. See [Reported Language](../README.md#reported-language-opt-in) for the full list of what it covers and what it can't.
 
 ⚠️ **Terms of Service**: Using location spoofing may violate the terms of service of some websites, particularly streaming services. Use responsibly and at your own risk.
 

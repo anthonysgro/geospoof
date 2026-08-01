@@ -57,9 +57,9 @@ GeoSpoof is a privacy utility for technically literate people. The English copy
 is plain, direct, and unhedged, and it explains consequences rather than
 promising outcomes. Match that register:
 
-- Prefer the plain equivalent over the formal or marketing one. Where a language
-  distinguishes formal and informal address, use the register Apple's own system
-  UI uses for that language (for example `Sie` in German, `vous` in French).
+- Use the register in the table below. It is not a per-translator judgement call —
+  it was measured against `site/src/lib/i18n/dictionaries/`, which is the most
+  carefully written copy we have, and the app now matches it.
 - Keep sentences short. The English is short because the UI is dense; a
   translation that doubles the length will truncate. See "Length" below.
 - Do not add enthusiasm the English does not have. No exclamation marks unless
@@ -67,6 +67,70 @@ promising outcomes. Match that register:
 - Technical accuracy outranks fluency. "Spoofing" means presenting false data to
   websites; do not soften it to "hiding" or "protecting" — the glossary's
   established renderings already make this choice per language.
+
+### Register per language
+
+Counts are occurrences measured across the whole surface, given so the next
+person can re-check rather than take this on faith.
+
+| language   | address                   | evidence                                    |
+| ---------- | ------------------------- | ------------------------------------------- |
+| German     | **informal `du`**         | website 385 informal / 7 formal             |
+| Spanish    | informal `tú`             | app 72 informal / 2 formal, website agrees  |
+| Dutch      | informal `je` / `jouw`    | app 98 informal / 0 formal (no website ref) |
+| Swedish    | informal `du`             | no T–V split in modern Swedish              |
+| French     | **formal `vous`**         | website 379 formal / 6 informal             |
+| Russian    | formal `вы` / `ваш`       | website 144 formal / 0 informal             |
+| Indonesian | polite `Anda`             | website 321 `Anda` / 0 `kamu`               |
+| Portuguese | `você`                    | website 236 / 0                             |
+| Japanese   | `です`/`ます`, no pronoun | website 411 polite, 3 plain                 |
+| Chinese    | `您`                      | matches website register                    |
+
+German is the one that changed. It was `Sie` throughout the app until the website
+comparison showed the marketing copy had committed to `du`, which meant a German
+user met two different relationships with the same product. `du` won because the
+website already used it at volume and Apple's own German App Store voice is
+informal. Note this is **not** just pronouns: it is also construction —
+`Wähle einen Standort`, never `Wählen Sie einen Standort`.
+
+The one German `Sie` still in the catalog is in
+"… benötigt die … Mac-Begleit-App … **Sie** nutzt Apples übliche
+Entwickler-Werkzeuge", where `Sie` is the pronoun for `die Pro-Funktion`, not the
+reader. Leave it.
+
+### Do not sound like a circumvention tool
+
+This is the highest-stakes tone rule, because getting it wrong reads as
+encouraging misuse and puts App Review at risk. Measured density of
+evasion vocabulary in the app is currently **0.00 per 1000 characters in every
+language**. Hold that line.
+
+Avoid, per language: `umgehen`/`austricksen`/`knacken` (de), `eludir`/`burlar`
+(es), `contourner`/`déjouer`/`pirater` (fr), `contornar`/`burlar` (pt-BR),
+`обход`/`взлом` (ru), `melewati`/`membobol` (id), `回避`/`突破`/`ハック` (ja),
+`绕过`/`破解` (zh-Hans). Likewise avoid `illegal`, `anonymous`, and `invisible` as
+selling points in any language.
+
+Two words were removed for exactly this reason and must not come back:
+
+- French `usurper` / `l'usurpation` → use `simuler` / `la simulation`. `Usurper`
+  is what identity theft is called.
+- Spanish `suplantar` / `la suplantación` → use `falsificar` / `la falsificación`.
+  `Suplantar` likewise means to impersonate someone.
+
+Prefer framing that describes user control over framing that describes defeating
+something: `Privatsphäre`, `kontrollieren`, `confidentialité`, `contrôler`,
+`privacidad`, `隐私`, `управление`. The app already runs 1.5–2× denser in this
+vocabulary than the website does; that is the right direction.
+
+### Not overly serious, not overly playful
+
+- **No exclamation marks**, with exactly two sanctioned exceptions — the tip-jar
+  thank-you strings. The website uses zero across all 9 locales.
+- No emoji in app strings. (The store description and `_locales` are separate
+  surfaces with their own conventions.)
+- Explain the consequence, don't sell the feature. "Websites read your true
+  location through …" is the register; "Take back control of your privacy!" is not.
 
 ## Length
 
@@ -234,8 +298,8 @@ These already ship in the extension popup. **Reuse them verbatim.** The
 **`Spoofing applies to every site.`** — `_locales` key `filters_modeAllDesc`
 
 - `de` — Die Fälschung gilt für jede Website.
-- `es` — La suplantación se aplica a todos los sitios.
-- `fr` — L'usurpation s'applique à tous les sites.
+- `es` — La falsificación se aplica a todos los sitios.
+- `fr` — La simulation s'applique à tous les sites.
 - `id` — Pemalsuan berlaku untuk setiap situs.
 - `ja` — 偽装はすべてのサイトに適用されます。
 - `nl` — Spoofing geldt voor elke site.
@@ -243,13 +307,13 @@ These already ship in the extension popup. **Reuse them verbatim.** The
 - `ru` — Подмена применяется ко всем сайтам.
 - `sv` — Förfalskning gäller alla webbplatser.
 - `vi` — Giả mạo áp dụng cho mọi trang web.
-- `zh-Hans` — 伪装适用于所有网站。
+- `zh-Hans` — 伪造适用于所有网站。
 
 **`Spoofing applies only to listed sites.`** — `_locales` key `filters_modeAllowlistDesc`
 
 - `de` — Die Fälschung gilt nur für aufgelistete Websites.
-- `es` — La suplantación se aplica solo a los sitios listados.
-- `fr` — L'usurpation s'applique uniquement aux sites listés.
+- `es` — La falsificación se aplica solo a los sitios listados.
+- `fr` — La simulation s'applique uniquement aux sites listés.
 - `id` — Pemalsuan hanya berlaku untuk situs yang terdaftar.
 - `ja` — 偽装はリストに登録されたサイトのみに適用されます。
 - `nl` — Spoofing geldt alleen voor vermelde sites.
@@ -257,13 +321,13 @@ These already ship in the extension popup. **Reuse them verbatim.** The
 - `ru` — Подмена применяется только к перечисленным сайтам.
 - `sv` — Förfalskning gäller endast listade webbplatser.
 - `vi` — Giả mạo chỉ áp dụng cho các trang web trong danh sách.
-- `zh-Hans` — 伪装仅适用于列出的网站。
+- `zh-Hans` — 伪造仅适用于列出的网站。
 
 **`Spoofing applies to every site except listed ones.`** — `_locales` key `filters_modeDenylistDesc`
 
 - `de` — Die Fälschung gilt für jede Website außer den aufgelisteten.
-- `es` — La suplantación se aplica a todos los sitios excepto los listados.
-- `fr` — L'usurpation s'applique à tous les sites sauf ceux listés.
+- `es` — La falsificación se aplica a todos los sitios excepto los listados.
+- `fr` — La simulation s'applique à tous les sites sauf ceux listés.
 - `id` — Pemalsuan berlaku untuk setiap situs kecuali yang terdaftar.
 - `ja` — 偽装はリストに登録されたサイトを除くすべてのサイトに適用されます。
 - `nl` — Spoofing geldt voor elke site behalve de vermelde.
@@ -271,13 +335,13 @@ These already ship in the extension popup. **Reuse them verbatim.** The
 - `ru` — Подмена применяется ко всем сайтам, кроме перечисленных.
 - `sv` — Förfalskning gäller alla webbplatser utom de listade.
 - `vi` — Giả mạo áp dụng cho mọi trang web trừ các trang trong danh sách.
-- `zh-Hans` — 伪装适用于除列出网站之外的所有网站。
+- `zh-Hans` — 伪造适用于除列出网站之外的所有网站。
 
 **`Spoofed Location`** — `_locales` key `details_spoofedLocation`
 
 - `de` — Vorgetäuschter Standort
 - `es` — Ubicación falsificada
-- `fr` — Localisation usurpée
+- `fr` — Localisation simulée
 - `id` — Lokasi Palsu
 - `ja` — 偽装された位置
 - `nl` — Vervalste locatie
@@ -291,7 +355,7 @@ These already ship in the extension popup. **Reuse them verbatim.** The
 
 - `de` — Vorgetäuschte Zeitzone
 - `es` — Zona horaria falsificada
-- `fr` — Fuseau horaire usurpé
+- `fr` — Fuseau horaire simulé
 - `id` — Zona Waktu Palsu
 - `ja` — 偽装されたタイムゾーン
 - `nl` — Vervalste tijdzone

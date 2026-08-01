@@ -279,12 +279,21 @@ GPS, Safari & Timezone Spoofer
 `Spoofer` moved here from the name, so name + subtitle together still form both
 "location changer" and "location spoofer".
 
-⚠️ **Unresolved:** this now leads with `GPS`, which inverts the earlier reasoning —
-the subtitle used to lead with `Safari` so scope was honest up front, keeping out
-the wrong installs and the 1-star "doesn't work in Pokémon GO" reviews. Since that
-decision, Device GPS became **Pro _and_ Experimental _and_ Mac-dependent**, so the
-promise got weaker while the subtitle started leading with it. Revisit before the
-next metadata push; the localized subtitles mirror whatever this settles on.
+**GPS leads, deliberately — decided, do not silently revert.** An earlier revision
+of this file argued for `Safari` first, on the grounds that leading with GPS invites
+the wrong installs and the 1-star "doesn't work in Pokémon GO" reviews. That
+reasoning is on the record and was overruled: GPS is the higher-intent query and
+the differentiator worth ranking for.
+
+The honesty work that `Safari`-first was doing is instead carried by the
+description, which states plainly that Device GPS is Pro, Experimental, and needs
+a Mac companion. If wrong-fit installs or AR-game reviews show up, that's the
+signal to revisit — not a style preference.
+
+All 11 localized subtitles lead with `GPS` too, verified by
+`tests/unit/appstore-metadata-parity.unit.test.ts`. Two needed rewording to get
+there: German was `Safari-GPS & Zeitzone fälschen` and Swedish was
+`Spoofa GPS, Safari & tidszon`.
 
 ## Keywords field (100 chars — no spaces, no name/subtitle repeats)
 
@@ -317,8 +326,17 @@ spoof geolocation, location emulator, teleport location.
 NEW — GeoSpoof GPS moves your iPhone's GPS to your chosen location, driven from a Mac companion app. A Pro feature; Safari spoofing stays free.
 ```
 
-Plain text only — App Store promotional text renders **no** markdown. `**NEW**`
-would display as literal asterisks.
+Plain text only — App Store promotional text renders **no** markdown.
+
+🔴 **Live defect, confirmed:** App Store Connect currently holds
+`**NEW** — GeoSpoof GPS moves…`, so customers are seeing literal asterisks on the
+product page right now. The `.txt` files in `fastlane/metadata/` are already
+correct (plain `NEW —`), so a metadata push fixes it.
+
+Promotional text is one of the fields editable **without submitting a new version**
+(`deliver`'s `LOCALISED_LIVE_VALUES`), so this can also be corrected by hand in
+App Store Connect immediately, independently of the localization rollout. Worth
+doing that rather than waiting.
 
 Not indexed and updatable without review, so this is the place to announce
 GeoSpoof GPS (device-level location). Rotate the previous Auto Background Sync

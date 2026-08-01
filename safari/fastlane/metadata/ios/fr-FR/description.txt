@@ -32,7 +32,6 @@ ABONNEMENTS
 GeoSpoof est gratuit. GeoSpoof Pro débloque la Synchronisation auto en arrière-plan, le GPS de l'appareil, les règles par site, les widgets, la précision personnalisée et le choix sur la carte, proposé sous forme d'abonnement à renouvellement automatique :
 
 • GeoSpoof Pro Mensuel — facturé chaque mois.
-
 • GeoSpoof Pro Annuel — facturé chaque année (meilleure offre).
 
 Un achat unique GeoSpoof Pro À vie, qui débloque les mêmes fonctionnalités de façon permanente et ne se renouvelle pas, est également disponible. Les prix sont affichés dans l'app et varient selon la région.

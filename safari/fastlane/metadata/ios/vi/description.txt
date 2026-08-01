@@ -32,7 +32,6 @@ GeoSpoof là công cụ bảo mật và dành cho nhà phát triển, giúp ki�
 GeoSpoof miễn phí sử dụng. GeoSpoof Pro mở khóa Tự động đồng bộ ở chế độ nền, GPS thiết bị, quy tắc theo từng trang, widget, độ chính xác tùy chỉnh và bộ chọn trên bản đồ, được cung cấp dưới dạng đăng ký tự động gia hạn:
 
 • GeoSpoof Pro Hằng tháng — thanh toán hằng tháng.
-
 • GeoSpoof Pro Hằng năm — thanh toán hằng năm (đáng giá nhất).
 
 Cũng có bản mua một lần GeoSpoof Pro Vĩnh viễn, mở khóa các tính năng tương tự mãi mãi và không gia hạn. Giá được hiển thị trong ứng dụng và thay đổi theo khu vực.

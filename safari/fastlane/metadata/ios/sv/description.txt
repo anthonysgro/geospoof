@@ -32,7 +32,6 @@ PRENUMERATIONER
 GeoSpoof är gratis att använda. GeoSpoof Pro låser upp Automatisk synk i bakgrunden, Enhetens GPS, regler per webbplats, widgetar, anpassad noggrannhet och val på kartan, och erbjuds som en prenumeration med automatisk förnyelse:
 
 • GeoSpoof Pro Månatlig — faktureras varje månad.
-
 • GeoSpoof Pro Årlig — faktureras varje år (bäst värde).
 
 Det finns även ett engångsköp, GeoSpoof Pro Livstid, som låser upp samma funktioner permanent och inte förnyas. Priserna visas i appen och varierar mellan regioner.
