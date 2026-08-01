@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3FD5A21C351D88911366F99A /* LocaleCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ADFFB8D17454FBD794A95AE /* LocaleCatalog.swift */; };
+		6D90E0177254A4FDAF739668 /* ReportedLanguageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BBF04959C46CB14930260C9 /* ReportedLanguageView.swift */; };
 		92279E462FE7033C008F59A5 /* ProStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92279E452FE7033C008F59A5 /* ProStore.swift */; };
 		92279E472FE7033C008F59A5 /* ProStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92279E452FE7033C008F59A5 /* ProStore.swift */; };
 		92279E492FE7033C008F59A5 /* ProPaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92279E482FE7033C008F59A5 /* ProPaywallView.swift */; };
@@ -52,6 +54,8 @@
 		9281AAE92FA50691007C77A7 /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 9281AADD2FA50691007C77A7 /* manifest.json */; };
 		92AABCDF2FB8E9C200B1E5DB /* _locales in Resources */ = {isa = PBXBuildFile; fileRef = 92AABCDE2FB8E9C200B1E5DB /* _locales */; };
 		92AABCE02FB8E9C200B1E5DB /* _locales in Resources */ = {isa = PBXBuildFile; fileRef = 92AABCDE2FB8E9C200B1E5DB /* _locales */; };
+		B9805F1A39769F7C1669D4F0 /* ReportedLanguageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BBF04959C46CB14930260C9 /* ReportedLanguageView.swift */; };
+		BC38EFF12404B1EA3AD0FE9B /* LocaleCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ADFFB8D17454FBD794A95AE /* LocaleCatalog.swift */; };
 		C0DE000000000000000000B1 /* SpoofModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000A1 /* SpoofModel.swift */; };
 		C0DE000000000000000000B2 /* SpoofControlPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000A2 /* SpoofControlPanel.swift */; };
 		C0DE000000000000000000B3 /* SpoofDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000A3 /* SpoofDetailsView.swift */; };
@@ -123,6 +127,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		1BBF04959C46CB14930260C9 /* ReportedLanguageView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReportedLanguageView.swift; sourceTree = "<group>"; };
+		2ADFFB8D17454FBD794A95AE /* LocaleCatalog.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LocaleCatalog.swift; sourceTree = "<group>"; };
 		92279E452FE7033C008F59A5 /* ProStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProStore.swift; sourceTree = "<group>"; };
 		92279E482FE7033C008F59A5 /* ProPaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProPaywallView.swift; sourceTree = "<group>"; };
 		923A6B042FD501A800D06B19 /* GeoSpoof (iOS)Release.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "GeoSpoof (iOS)Release.entitlements"; sourceTree = "<group>"; };
@@ -289,6 +295,8 @@
 				C0DE000000000000000000D3 /* PrivacyInfo.xcprivacy */,
 				9281AA842FA50690007C77A7 /* Assets.xcassets */,
 				9281AA7D2FA50690007C77A7 /* Resources */,
+				2ADFFB8D17454FBD794A95AE /* LocaleCatalog.swift */,
+				1BBF04959C46CB14930260C9 /* ReportedLanguageView.swift */,
 			);
 			path = "Shared (App)";
 			sourceTree = "<group>";
@@ -397,8 +405,6 @@
 			dependencies = (
 			);
 			name = "GeoSpoof WidgetExtension";
-			packageProductDependencies = (
-			);
 			productName = "GeoSpoof WidgetExtension";
 			productReference = 923A6B0C2FD78C6100D06B19 /* GeoSpoof WidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
@@ -419,8 +425,6 @@
 				923A6B1F2FD78C6200D06B19 /* PBXTargetDependency */,
 			);
 			name = "GeoSpoof (iOS)";
-			packageProductDependencies = (
-			);
 			productName = "GeoSpoof (iOS)";
 			productReference = 9281AA8B2FA50690007C77A7 /* GeoSpoof.app */;
 			productType = "com.apple.product-type.application";
@@ -440,8 +444,6 @@
 				9281AAB62FA50690007C77A7 /* PBXTargetDependency */,
 			);
 			name = "GeoSpoof (macOS)";
-			packageProductDependencies = (
-			);
 			productName = "GeoSpoof (macOS)";
 			productReference = 9281AA9D2FA50690007C77A7 /* GeoSpoof.app */;
 			productType = "com.apple.product-type.application";
@@ -459,8 +461,6 @@
 			dependencies = (
 			);
 			name = "GeoSpoof Extension (iOS)";
-			packageProductDependencies = (
-			);
 			productName = "GeoSpoof Extension (iOS)";
 			productReference = 9281AAA92FA50690007C77A7 /* GeoSpoof Extension.appex */;
 			productType = "com.apple.product-type.app-extension";
@@ -479,8 +479,6 @@
 			dependencies = (
 			);
 			name = "GeoSpoof Extension (macOS)";
-			packageProductDependencies = (
-			);
 			productName = "GeoSpoof Extension (macOS)";
 			productReference = 9281AAB32FA50690007C77A7 /* GeoSpoof Extension.appex */;
 			productType = "com.apple.product-type.app-extension";
@@ -653,6 +651,8 @@
 				9281AA912FA50690007C77A7 /* SceneDelegate.swift in Sources */,
 				92279E462FE7033C008F59A5 /* ProStore.swift in Sources */,
 				92279E492FE7033C008F59A5 /* ProPaywallView.swift in Sources */,
+				3FD5A21C351D88911366F99A /* LocaleCatalog.swift in Sources */,
+				B9805F1A39769F7C1669D4F0 /* ReportedLanguageView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -669,6 +669,8 @@
 				9281AAA02FA50690007C77A7 /* AppDelegate.swift in Sources */,
 				92279E472FE7033C008F59A5 /* ProStore.swift in Sources */,
 				92279E4A2FE7033C008F59A5 /* ProPaywallView.swift in Sources */,
+				BC38EFF12404B1EA3AD0FE9B /* LocaleCatalog.swift in Sources */,
+				6D90E0177254A4FDAF739668 /* ReportedLanguageView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

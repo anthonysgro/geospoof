@@ -61,6 +61,7 @@ enum AppGroup {
     static let regionDenylist    = "region_denylist"
     static let regionAccuracySetting = "region_accuracySetting"
     static let regionLocationPrecision = "region_locationPrecision"
+    static let regionLocaleSpoofing = "region_localeSpoofing"
 
     // App -> Extension (a full desired-state snapshot the extension adopts on
     // next launch / tab activity, last-writer-wins by `pending_updatedAt`).
@@ -83,6 +84,7 @@ enum AppGroup {
     static let pendingDenylist    = "pending_denylist"
     static let pendingAccuracySetting = "pending_accuracySetting"
     static let pendingLocationPrecision = "pending_locationPrecision"
+    static let pendingLocaleSpoofing = "pending_localeSpoofing"
 
     // App -> Extension: automatic-background-sync gate. `pending_autoSyncBlocked`
     // is the computed value the extension reads (true = don't auto-sync). It's
@@ -359,6 +361,87 @@ enum SpoofLocationPrecision: Equatable {
             return "{\"mode\":\"approximate\",\"radiusMeters\":\(Self.clamp(radius))}"
         }
     }
+}
+
+/// Reported-Language ("locale spoofing") setting. Mirrors the extension's
+/// `LocaleSpoofing` union in `src/shared/types/settings.ts`:
+///   • `off`    → report the real browser locale (default; pre-feature behavior)
+///   • `match`  → derive a locale from the spoofed timezone's region
+///   • `custom` → report an explicit BCP-47 tag
+///
+/// Governs what *websites* see — `navigator.language`, `navigator.languages`,
+/// every `Intl` default locale, the `toLocale*` family, and the `Accept-Language`
+/// header. Distinct from the app's own UI language, which this never touches.
+///
+/// Only this raw PREFERENCE crosses the bridge. The *resolved* locale is derived
+/// in the extension background per payload, so the app cannot put the page world
+/// and the Accept-Language header out of step with each other.
+///
+/// Unlike `SpoofAccuracySetting` / `SpoofLocationPrecision` there's no seed:
+/// resolution is fully deterministic from the setting plus the spoofed timezone.
+enum SpoofLocaleSpoofing: Equatable {
+    case off
+    case match
+    case custom(locale: String)
+
+    /// Decode from the JSON string stored in the App Group. Returns `.off` on any
+    /// malformed/unknown input, mirroring the extension's `validateLocaleSpoofing`
+    /// — including an empty or whitespace-only tag, which also collapses to `.off`
+    /// rather than becoming a half-configured `custom`.
+    ///
+    /// Deliberately does NOT replicate the extension's canonicalization or its
+    /// `engineSupportsLocale` check. The picker only offers tags drawn from
+    /// `LocaleCatalog` (ICU-derived), and the extension re-validates on adopt and
+    /// falls back to `off`, so an unsupported tag cannot take effect.
+    static func fromJSON(_ json: String?) -> SpoofLocaleSpoofing {
+        guard let json,
+              let data = json.data(using: .utf8),
+              let obj = try? JSONSerialization.jsonObject(with: data),
+              let dict = obj as? [String: Any],
+              let mode = dict["mode"] as? String else {
+            return .off
+        }
+
+        switch mode {
+        case "off":
+            return .off
+        case "match":
+            return .match
+        case "custom":
+            guard let raw = dict["locale"] as? String else { return .off }
+            let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return .off }
+            return .custom(locale: trimmed)
+        default:
+            return .off
+        }
+    }
+
+    /// Encode to the compact JSON the extension expects. The tag is escaped via
+    /// JSONSerialization rather than string-interpolated: it comes from a catalog
+    /// today, but hand-building the string would silently emit invalid JSON if a
+    /// tag ever contained a quote or backslash.
+    func toJSON() -> String {
+        switch self {
+        case .off:
+            return "{\"mode\":\"off\"}"
+        case .match:
+            return "{\"mode\":\"match\"}"
+        case .custom(let locale):
+            let trimmed = locale.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty,
+                  let data = try? JSONSerialization.data(
+                    withJSONObject: ["mode": "custom", "locale": trimmed]
+                  ),
+                  let json = String(data: data, encoding: .utf8) else {
+                // An empty tag is not a valid `custom`; fail closed to `off` so we
+                // never hand the extension a half-configured setting.
+                return "{\"mode\":\"off\"}"
+            }
+            return json
+        }
+    }
+
 }
 
 enum AppLogLevel: Int, CaseIterable, Identifiable {
@@ -696,6 +779,14 @@ final class SpoofController: ObservableObject {
     /// No didSet, so adoption never echoes back as a pending write.
     /// `precisionSeed` is extension-owned and not modeled here.
     @Published var locationPrecision: SpoofLocationPrecision = .exact
+    /// Reported-Language setting. Set via `setLocaleSpoofing` (which writes the
+    /// pending bridge record) from the native `ReportedLanguageView` picker, and
+    /// adopted from the extension's region snapshot / pending in
+    /// refreshFromExtension / restoreLocalPending — exactly like
+    /// `locationPrecision`. No didSet, so adoption never echoes back as a pending
+    /// write. Defaults to `.off`: locale spoofing is visibly disruptive (many sites
+    /// switch language outright), so it must be opt-in.
+    @Published var localeSpoofing: SpoofLocaleSpoofing = .off
     @Published var favorites: [SpoofFavorite] = [] {
         didSet {
             saveFavorites()
@@ -1169,6 +1260,16 @@ final class SpoofController: ObservableObject {
         guard setting != locationPrecision else { return }
         Log.location.info("Location precision → \(setting.toJSON())")
         locationPrecision = setting
+        writePending()
+    }
+    /// Change the Reported-Language setting. Mirrors `setLocationPrecision`:
+    /// writes the pending bridge record so the extension adopts it. Adoption paths
+    /// (`refreshFromExtension` / `restoreLocalPending`) set `localeSpoofing`
+    /// directly and never call this, so they don't echo back.
+    func setLocaleSpoofing(_ setting: SpoofLocaleSpoofing) {
+        guard setting != localeSpoofing else { return }
+        Log.location.info("Reported language → \(setting.toJSON())")
+        localeSpoofing = setting
         writePending()
     }
 
@@ -1749,6 +1850,10 @@ final class SpoofController: ObservableObject {
         // Location-precision setting as a JSON string (passthrough via the native
         // handler). precisionSeed is extension-owned and is not written here.
         dict[AppGroup.pendingLocationPrecision] = locationPrecision.toJSON()
+        // Reported-Language setting as a JSON string (passthrough via the native
+        // handler). Only the raw preference is bridged — the extension derives the
+        // resolved locale per payload.
+        dict[AppGroup.pendingLocaleSpoofing] = localeSpoofing.toJSON()
 
         // Location + its derived display fields. The three cases collapse to:
         //   • location present → publish coords + display fields, not cleared.
@@ -1927,6 +2032,9 @@ final class SpoofController: ObservableObject {
         if let raw = dict[AppGroup.pendingLocationPrecision] as? String {
             locationPrecision = SpoofLocationPrecision.fromJSON(raw)
         }
+        if let raw = dict[AppGroup.pendingLocaleSpoofing] as? String {
+            localeSpoofing = SpoofLocaleSpoofing.fromJSON(raw)
+        }
 
         if let lat = dict[AppGroup.pendingLatitude] as? Double,
            let lon = dict[AppGroup.pendingLongitude] as? Double {
@@ -2044,6 +2152,11 @@ final class SpoofController: ObservableObject {
         // no-didSet / no-echo rationale as the accuracy setting above.
         if let raw = dict[AppGroup.regionLocationPrecision] as? String {
             locationPrecision = SpoofLocationPrecision.fromJSON(raw)
+        }
+        // Adopt the extension's Reported-Language setting (JSON string), same
+        // no-didSet / no-echo rationale as the two settings above.
+        if let raw = dict[AppGroup.regionLocaleSpoofing] as? String {
+            localeSpoofing = SpoofLocaleSpoofing.fromJSON(raw)
         }
     }
 

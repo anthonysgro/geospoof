@@ -1636,6 +1636,143 @@ private struct EnvironmentReviewModifier: ViewModifier {
 
 // MARK: - Site Filters (scope)
 
+/// iOS "Browser" tab: an index of the settings that govern what websites see.
+///
+/// Every row here is a one-of-N choice or a list, so every row pushes a detail
+/// screen and shows its current value inline — the shape iOS Settings uses
+/// (Settings › Safari), and the reason it stays scannable as it grows. The lone
+/// boolean, Preserve Location Prompts, stays inline as a toggle, because pushing
+/// a screen to flip one switch is a wasted tap.
+///
+/// This replaced an earlier layout that put the location settings, the language
+/// setting, and the whole site-filter UI inline on one tab. Site filters are an
+/// unbounded list, so they pushed everything else further off-screen as the list
+/// grew; the previous code compensated by ordering the fixed settings above them,
+/// which treated the symptom. Pushing the list fixes the cause, and the trailing
+/// value labels mean you still read the entire configuration without a single tap.
+///
+/// macOS deliberately does NOT use this: it keeps Filters as a sidebar pane and
+/// the location settings in Settings › Advanced, which suits a resizable window
+/// with room to show everything at once.
+struct BrowserSettingsView: View {
+    @ObservedObject var controller: SpoofController
+
+    var body: some View {
+        AdaptiveNavigationStack {
+            Form {
+                Section {
+                    NavigationLink {
+                        AccuracyPickerView(controller: controller)
+                    } label: {
+                        settingRow(
+                            "Location Accuracy",
+                            systemImage: "scope",
+                            value: accuracyValueLabel(for: controller.accuracySetting)
+                        )
+                    }
+                    NavigationLink {
+                        PrecisionPickerView(controller: controller)
+                    } label: {
+                        settingRow(
+                            "Location Precision",
+                            systemImage: "mappin.and.ellipse",
+                            value: precisionValueLabel(for: controller.locationPrecision)
+                        )
+                    }
+                    // A boolean belongs inline. Its explanation moves to this
+                    // section's footer rather than sitting in a Text row, which
+                    // would pick up row separators and insets and read as content.
+                    PreservePromptRows(controller: controller, showsFootnote: false)
+                } header: {
+                    Text("Location")
+                } footer: {
+                    Text(PreservePromptRows.footnote(locked: !ProStore.shared.isPro))
+                }
+
+                // Locale is its own concern, not a location setting — it drives
+                // language, formatting, and the Accept-Language header — so it
+                // gets its own section rather than being filed under Location.
+                Section {
+                    NavigationLink {
+                        ReportedLanguageView(controller: controller)
+                    } label: {
+                        settingRow(
+                            "Reported Language",
+                            systemImage: "globe",
+                            value: controller.localeSpoofing.rowLabel
+                        )
+                    }
+                } header: {
+                    Text("Language")
+                }
+
+                Section {
+                    NavigationLink {
+                        SiteFiltersView(
+                            controller: controller,
+                            title: "Site Filters",
+                            wrapsInNavigationStack: false
+                        )
+                    } label: {
+                        settingRow(
+                            "Site Filters",
+                            systemImage: "line.3.horizontal.decrease.circle",
+                            value: scopeValueLabel
+                        )
+                    }
+                } header: {
+                    Text("Sites")
+                } footer: {
+                    // Surface the "spoofing nowhere" state on the index too. It's
+                    // the one filter condition where the app is silently doing
+                    // nothing, so it must not be hidden behind the push.
+                    if controller.enabled
+                        && controller.scopeMode == .allowlist
+                        && controller.allowlist.isEmpty {
+                        Label(
+                            "Allowlist is empty, so spoofing is inactive on every site.",
+                            systemImage: "exclamationmark.triangle.fill"
+                        )
+                        .foregroundStyle(.orange)
+                    } else {
+                        Text(controller.scopeMode.detail)
+                    }
+                }
+            }
+            .groupedFormStyle()
+            .tint(.brand)
+            .navigationTitle("Browser")
+        }
+    }
+
+    /// Shared row shape: icon + title on the left, current value on the right.
+    /// Consistency here is what makes the tab readable as an index — a row whose
+    /// value is missing or styled differently reads as a different kind of control.
+    private func settingRow(_ title: String, systemImage: String, value: String) -> some View {
+        HStack {
+            Label(title, systemImage: systemImage)
+            Spacer(minLength: 12)
+            Text(value)
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+        }
+    }
+
+    /// Scope state for the index row: the mode, plus the list count when a list
+    /// is what's actually in force. The count is the part people want — it's the
+    /// difference between "filtering" and "filtering nothing".
+    private var scopeValueLabel: String {
+        switch controller.scopeMode {
+        case .all:
+            return "All Sites"
+        case .allowlist:
+            return "Allowlist · \(controller.allowlist.count)"
+        case .denylist:
+            return "Denylist · \(controller.denylist.count)"
+        }
+    }
+}
+
 /// Native counterpart to the extension popup's Filters tab: a scope-mode picker
 /// plus the active allow/deny list. Backed by the shared `SpoofController`,
 /// which syncs scope to the extension through the App Group bridge (mode +
@@ -1650,12 +1787,13 @@ private struct EnvironmentReviewModifier: ViewModifier {
 /// page-context convenience).
 struct SiteFiltersView: View {
     @ObservedObject var controller: SpoofController
-    /// Navigation title. iOS presents this as the "Browser" tab; macOS keeps "Filters".
+    /// Navigation title. macOS shows this as its "Filters" pane; iOS pushes it
+    /// from the Browser tab as "Site Filters".
     var title: String = "Filters"
-    /// When true (the iOS Browser tab), append the browser-geolocation settings — Location
-    /// Accuracy + Preserve Location Prompts — below the site filters. macOS keeps those in
-    /// its own Settings › Advanced, so it leaves this off.
-    var showBrowserSettings: Bool = false
+    /// macOS presents this as a standalone sidebar pane and needs its own
+    /// navigation container. On iOS it's pushed onto the Browser tab's existing
+    /// stack, where a nested stack would swallow the back button.
+    var wrapsInNavigationStack: Bool = true
     @ObservedObject private var pro = ProStore.shared
     @State private var showingAdd = false
     @State private var showPaywall = false
@@ -1674,81 +1812,66 @@ struct SiteFiltersView: View {
     }
 
     var body: some View {
-        AdaptiveNavigationStack {
-            Form {
-                // iOS "Browser" tab: browser-geolocation settings sit ABOVE the site filters
-                // (filters can grow long). Moved out of Settings › Advanced; macOS leaves off.
-                if showBrowserSettings {
-                    Section {
-                        NavigationLink {
-                            AccuracyPickerView(controller: controller)
-                        } label: {
-                            HStack {
-                                Label("Location Accuracy", systemImage: "scope")
-                                Spacer()
-                                Text(accuracyValueLabel(for: controller.accuracySetting))
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        PreservePromptRows(controller: controller)
-                        PrecisionSettingsRows(controller: controller)
-                    } header: {
-                        Text("Location")
-                    }
-                }
+        if wrapsInNavigationStack {
+            AdaptiveNavigationStack { formContent }
+        } else {
+            formContent
+        }
+    }
 
-                Section {
-                    Picker("Mode", selection: $pickerMode) {
-                        ForEach(ScopeMode.allCases) { mode in
-                            Text(mode.label).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .onChange(of: pickerMode) { newMode in
-                        if filtersLocked && newMode != .all {
-                            // Locked: pitch Pro and reject the change by snapping
-                            // the control back to the real (still-.all) mode.
-                            showPaywall = true
-                            if pickerMode != controller.scopeMode {
-                                pickerMode = controller.scopeMode
-                            }
-                        } else if newMode != controller.scopeMode {
-                            controller.setScopeMode(newMode)
-                        }
-                    }
-                    // Keep the mirror in sync with the source of truth (e.g. an
-                    // update synced in from the extension).
-                    .onChange(of: controller.scopeMode) { pickerMode = $0 }
-                    .onAppear { pickerMode = controller.scopeMode }
-                } header: {
-                    Text("Mode")
-                } footer: {
-                    if filtersLocked {
-                        Text("Allowlist and Denylist are a GeoSpoof Pro feature. Upgrade to limit spoofing to specific sites.")
-                    } else if controller.scopeMode == .all {
-                        Text("\(controller.scopeMode.detail) Choose Allowlist or Denylist to limit spoofing to specific sites.")
-                    } else {
-                        Text(controller.scopeMode.detail)
+    private var formContent: some View {
+        Form {
+            Section {
+                Picker("Mode", selection: $pickerMode) {
+                    ForEach(ScopeMode.allCases) { mode in
+                        Text(mode.label).tag(mode)
                     }
                 }
+                .pickerStyle(.segmented)
+                .onChange(of: pickerMode) { newMode in
+                    if filtersLocked && newMode != .all {
+                        // Locked: pitch Pro and reject the change by snapping
+                        // the control back to the real (still-.all) mode.
+                        showPaywall = true
+                        if pickerMode != controller.scopeMode {
+                            pickerMode = controller.scopeMode
+                        }
+                    } else if newMode != controller.scopeMode {
+                        controller.setScopeMode(newMode)
+                    }
+                }
+                // Keep the mirror in sync with the source of truth (e.g. an
+                // update synced in from the extension).
+                .onChange(of: controller.scopeMode) { pickerMode = $0 }
+                .onAppear { pickerMode = controller.scopeMode }
+            } header: {
+                Text("Mode")
+            } footer: {
+                if filtersLocked {
+                    Text("Allowlist and Denylist are a GeoSpoof Pro feature. Upgrade to limit spoofing to specific sites.")
+                } else if controller.scopeMode == .all {
+                    Text("\(controller.scopeMode.detail) Choose Allowlist or Denylist to limit spoofing to specific sites.")
+                } else {
+                    Text(controller.scopeMode.detail)
+                }
+            }
 
-                if controller.scopeMode != .all {
-                    sitesSection
-                }
+            if controller.scopeMode != .all {
+                sitesSection
             }
-            .groupedFormStyle()
-            .tint(.brand)
-            .navigationTitle(title)
-            .sheet(isPresented: $showingAdd) {
-                AddSiteSheet(
-                    mode: controller.scopeMode,
-                    onAdd: { controller.addScopeSite($0, to: controller.scopeMode) },
-                    onRemove: { controller.removeScopeSite($0, from: controller.scopeMode) }
-                )
-            }
-            .sheet(isPresented: $showPaywall) {
-                ProPaywallView()
-            }
+        }
+        .groupedFormStyle()
+        .tint(.brand)
+        .navigationTitle(title)
+        .sheet(isPresented: $showingAdd) {
+            AddSiteSheet(
+                mode: controller.scopeMode,
+                onAdd: { controller.addScopeSite($0, to: controller.scopeMode) },
+                onRemove: { controller.removeScopeSite($0, from: controller.scopeMode) }
+            )
+        }
+        .sheet(isPresented: $showPaywall) {
+            ProPaywallView()
         }
     }
 
@@ -2046,7 +2169,28 @@ private enum AccuracyPreset: String, CaseIterable, Identifiable {
         case .custom: return "Custom"
         }
     }
+
+    /// Plain-language consequence of the preset, for the pushed picker.
+    var detail: String {
+        switch self {
+        case .realistic:
+            return "Vary the figure the way a real device does."
+        case .custom:
+            return "Always report the same fixed figure."
+        }
+    }
 }
+
+/// What the accuracy setting actually controls, for the picker's footer.
+///
+/// Worth spelling out because Accuracy and Precision sit next to each other on
+/// the Browser tab and sound like the same thing. They aren't: accuracy is a
+/// number reported *alongside* the coordinates, while precision moves the
+/// coordinates themselves. Someone who wants to be harder to pin down reaches for
+/// the wrong one roughly half the time unless told.
+private let accuracyExplanation =
+    "The accuracy figure sites receive with your coordinates — how certain the "
+    + "device claims to be. This never moves your location; Location Precision does that."
 
 /// Accuracy control rows (a Picker + a conditional Custom meters field) intended
 /// to be embedded inside a Form Section. Reads/writes `controller.accuracySetting`,
@@ -2226,7 +2370,7 @@ struct AccuracySettingsRows: View {
 /// `SpoofLocationPrecision`: Exact → `.exact`; the approximate presets →
 /// `.approximate(radiusMeters:)`. Distinct from accuracy — precision moves the
 /// reported point within a radius; accuracy sets the reported uncertainty value.
-private enum LocationPrecisionPreset: String, CaseIterable, Identifiable {
+fileprivate enum LocationPrecisionPreset: String, CaseIterable, Identifiable {
     case exact, street, neighborhood, city
     var id: String { rawValue }
     var label: String {
@@ -2247,6 +2391,136 @@ private enum LocationPrecisionPreset: String, CaseIterable, Identifiable {
         case .city: return 10000
         }
     }
+
+    /// Plain-language consequence of the preset, for the pushed picker.
+    ///
+    /// Says the distance out loud on purpose. "Street" sounds like a precision
+    /// level you'd want, and gives no hint that coordinates get moved — which is
+    /// exactly how a user ends up reporting a bug about their location being off
+    /// by a few hundred metres.
+    var detail: String {
+        switch self {
+        case .exact: return "Report your chosen location precisely."
+        case .street: return "Move the reported point up to 500 m away."
+        case .neighborhood: return "Move the reported point up to 2 km away."
+        case .city: return "Move the reported point up to 10 km away."
+        }
+    }
+}
+
+/// Derive the active preset from a committed precision setting. An approximate
+/// radius snaps to the nearest preset, so a value bridged in from the browser
+/// popup (which allows any radius) still selects a sensible option.
+///
+/// File-level so the inline rows and the pushed picker share one mapping — two
+/// copies could disagree about which preset a bridged radius belongs to, and the
+/// two surfaces would then show different things for the same setting.
+fileprivate func precisionPreset(for setting: SpoofLocationPrecision) -> LocationPrecisionPreset {
+    switch setting {
+    case .exact:
+        return .exact
+    case .approximate(let radius):
+        let presets: [LocationPrecisionPreset] = [.street, .neighborhood, .city]
+        return presets.min(by: {
+            abs(($0.radiusMeters ?? 0) - radius) < abs(($1.radiusMeters ?? 0) - radius)
+        }) ?? .street
+    }
+}
+
+/// Settings-row label for the location-precision setting, mirroring
+/// `accuracyValueLabel(for:)`. Names the preset rather than the raw radius so the
+/// index row reads the way the picker does.
+func precisionValueLabel(for setting: SpoofLocationPrecision) -> String {
+    switch setting {
+    case .exact:
+        return "Exact"
+    case .approximate(let radius):
+        switch radius {
+        case ..<1000: return "Street"
+        case ..<5000: return "Neighborhood"
+        default: return "City"
+        }
+    }
+}
+
+/// Pushed picker for location precision — the iOS counterpart to the inline
+/// `PrecisionSettingsRows` that macOS Settings › Advanced uses.
+///
+/// Mirrors `AccuracyPickerView` exactly, and exists for the same reason that pair
+/// exists: a macOS settings pane has room for an inline popup menu, while iOS
+/// wants a pushed list where each option can carry its own copy and the Pro gate
+/// can decline a tap without a control snapping back under the user's finger.
+struct PrecisionPickerView: View {
+    @ObservedObject var controller: SpoofController
+    @ObservedObject private var pro = ProStore.shared
+    @State private var showPaywall = false
+
+    /// Approximate location is Pro on the Apple apps, matching
+    /// `PrecisionSettingsRows.precisionLocked`. The extension enforces the same
+    /// gate independently via `computeEffectiveLocationPrecision`.
+    private var precisionLocked: Bool { !pro.isPro }
+
+    private var currentPreset: LocationPrecisionPreset {
+        precisionPreset(for: controller.locationPrecision)
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                ForEach(LocationPrecisionPreset.allCases) { preset in
+                    Button {
+                        select(preset)
+                    } label: {
+                        HStack(alignment: .firstTextBaseline) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(preset.label).foregroundStyle(.primary)
+                                Text(preset.detail)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer(minLength: 12)
+                            if currentPreset == preset {
+                                Image(systemName: "checkmark")
+                                    .font(.body.weight(.semibold))
+                                    .foregroundStyle(Color.brand)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            } footer: {
+                // Mirrors AccuracyPickerView's footer: always explain, append the
+                // upsell when locked, and name the sibling setting so the two
+                // similar-sounding rows can be told apart from either side.
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Moves the coordinates sites receive to a random point within the chosen distance of your location. Your chosen location stays the anchor; this doesn't change the reported accuracy figure.")
+                    if precisionLocked {
+                        Text("Approximate location is a GeoSpoof Pro feature. Upgrade to report a random nearby point; free spoofing uses your exact chosen location.")
+                    }
+                }
+            }
+        }
+        .navigationTitle("Location Precision")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
+        .sheet(isPresented: $showPaywall) {
+            ProPaywallView()
+        }
+    }
+
+    private func select(_ preset: LocationPrecisionPreset) {
+        if precisionLocked && preset != .exact {
+            showPaywall = true
+            return
+        }
+        if let radius = preset.radiusMeters {
+            controller.setLocationPrecision(.approximate(radiusMeters: radius))
+        } else {
+            controller.setLocationPrecision(.exact)
+        }
+    }
 }
 
 /// Location-precision control (a single menu Picker) intended to be embedded in
@@ -2262,23 +2536,8 @@ struct PrecisionSettingsRows: View {
 
     private var precisionLocked: Bool { !pro.isPro }
 
-    /// Derive the active preset from the committed setting; an approximate
-    /// radius snaps to the nearest preset (so a bridged/hand-set value still
-    /// selects a sensible option).
-    private static func preset(for setting: SpoofLocationPrecision) -> LocationPrecisionPreset {
-        switch setting {
-        case .exact:
-            return .exact
-        case .approximate(let radius):
-            let presets: [LocationPrecisionPreset] = [.street, .neighborhood, .city]
-            return presets.min(by: {
-                abs(($0.radiusMeters ?? 0) - radius) < abs(($1.radiusMeters ?? 0) - radius)
-            }) ?? .street
-        }
-    }
-
     private var currentPreset: LocationPrecisionPreset {
-        Self.preset(for: controller.locationPrecision)
+        precisionPreset(for: controller.locationPrecision)
     }
 
     private var presetSelection: Binding<LocationPrecisionPreset> {
@@ -2350,10 +2609,25 @@ func precisionDetailValue(for setting: SpoofLocationPrecision) -> String {
 /// same gate. A free user sees a locked PRO row that opens the paywall.
 struct PreservePromptRows: View {
     @ObservedObject var controller: SpoofController
+    /// When false, the explanatory paragraph is omitted so the caller can put it
+    /// in the enclosing `Section`'s `footer:` instead — where help text belongs,
+    /// and where it renders without row separators or row insets.
+    ///
+    /// Defaults to true so macOS Settings › Advanced keeps its existing inline
+    /// layout unchanged; the iOS Browser index passes false.
+    var showsFootnote: Bool = true
     @ObservedObject private var pro = ProStore.shared
     @State private var showPaywall = false
 
     private var locked: Bool { !pro.isPro }
+
+    /// The explanatory copy, exposed so a caller rendering it in a Section footer
+    /// uses the same strings rather than a drifting second copy.
+    static func footnote(locked: Bool) -> String {
+        locked
+            ? "Preserving a site's native location prompt is a GeoSpoof Pro feature. Free spoofing answers permission prompts automatically with your spoofed location."
+            : "Sites will show their own location permission prompt. Your spoofed location is used only after you allow it."
+    }
 
     var body: some View {
         if locked {
@@ -2375,9 +2649,11 @@ struct PreservePromptRows: View {
             .buttonStyle(.plain)
             .sheet(isPresented: $showPaywall) { ProPaywallView() }
 
-            Text("Preserving a site's native location prompt is a GeoSpoof Pro feature. Free spoofing answers permission prompts automatically with your spoofed location.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            if showsFootnote {
+                Text(Self.footnote(locked: true))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
         } else {
             Toggle(isOn: Binding(
                 get: { controller.preserveGeolocationPrompt },
@@ -2463,9 +2739,14 @@ struct AccuracyPickerView: View {
             Section {
                 ForEach(AccuracyPreset.allCases) { preset in
                     Button { selectPreset(preset) } label: {
-                        HStack {
-                            Text(preset.label).foregroundStyle(.primary)
-                            Spacer()
+                        HStack(alignment: .firstTextBaseline) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(preset.label).foregroundStyle(.primary)
+                                Text(preset.detail)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer(minLength: 12)
                             if currentPreset == preset {
                                 Image(systemName: "checkmark")
                                     .font(.body.weight(.semibold))
@@ -2477,8 +2758,15 @@ struct AccuracyPickerView: View {
                     .buttonStyle(.plain)
                 }
             } footer: {
-                if accuracyLocked {
-                    Text("Custom accuracy is a GeoSpoof Pro feature. Upgrade to set a fixed accuracy; free spoofing uses a realistic, device-appropriate value.")
+                // The explanation shows unconditionally; the upsell is appended
+                // only when locked. Previously this footer was empty for Pro
+                // users, so the screen explained itself only to people who
+                // couldn't use it.
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(accuracyExplanation)
+                    if accuracyLocked {
+                        Text("Custom accuracy is a GeoSpoof Pro feature. Upgrade to set a fixed accuracy; free spoofing uses a realistic, device-appropriate value.")
+                    }
                 }
             }
 

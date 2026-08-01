@@ -60,7 +60,7 @@ struct RootView: View {
                     Label("Home", systemImage: "house")
                 }
 
-            SiteFiltersView(controller: controller, title: "Browser", showBrowserSettings: true)
+            BrowserSettingsView(controller: controller)
                 .tabItem {
                     Label("Browser", systemImage: "globe")
                 }

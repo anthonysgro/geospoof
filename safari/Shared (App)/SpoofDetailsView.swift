@@ -159,6 +159,33 @@ struct SpoofDetailsView: View {
             ]))
         }
 
+        // Mirrors the browser popup's "Language & Locale" group (src/popup/ui.ts).
+        // Keep the two lists in step — this screen is a technical readout, so a
+        // surface listed on one platform and missing on the other reads as a bug.
+        if controller.localeSpoofing != .off {
+            groups.append(APICategory(title: "Language & Locale", apis: [
+                "navigator.language",
+                "navigator.languages",
+                "WorkerNavigator.language / languages (worker scopes)",
+                "Accept-Language (request header)",
+                "Intl.DateTimeFormat() (locale + timezone)",
+                "Intl.NumberFormat()",
+                "Intl.Collator()",
+                "Intl.RelativeTimeFormat()",
+                "Intl.ListFormat()",
+                "Intl.PluralRules()",
+                "Intl.DisplayNames()",
+                "Intl.Segmenter()",
+                "Intl.DurationFormat()",
+                "Intl.*.prototype.resolvedOptions()",
+                "Number.prototype.toLocaleString()",
+                "BigInt.prototype.toLocaleString()",
+                "Array.prototype.toLocaleString()",
+                "Date.prototype.toLocaleString() / toLocaleDateString() / toLocaleTimeString()",
+                "String.prototype.localeCompare()",
+                "String.prototype.toLocaleUpperCase() / toLocaleLowerCase()",
+            ]))
+        }
         if controller.webrtcProtection {
             groups.append(APICategory(title: "WebRTC", apis: [
                 "RTCPeerConnection (constructor wrapper)",

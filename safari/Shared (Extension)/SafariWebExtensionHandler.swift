@@ -56,6 +56,12 @@ enum RegionKey {
     // control lives only in the browser popup; the app persists + relays it.
     static let locationPrecision  = "region_locationPrecision"   // Extension -> App (JSON string)
     static let pLocationPrecision = "pending_locationPrecision"  // App -> Extension (JSON string)
+    // Reported-Language setting (passthrough both ways) as a JSON string. Only
+    // the raw PREFERENCE crosses — the extension derives the resolved locale per
+    // payload so the page world and the Accept-Language header can never be put
+    // out of step by the app.
+    static let localeSpoofing  = "region_localeSpoofing"   // Extension -> App (JSON string)
+    static let pLocaleSpoofing = "pending_localeSpoofing"  // App -> Extension (JSON string)
 
     // App -> Extension: a full desired-state snapshot the extension adopts on
     // next launch / tab activity (last-writer-wins by pending_updatedAt).
@@ -233,6 +239,13 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
                 dict[RegionKey.locationPrecision] = precisionJSON
             }
 
+            // Reported-Language setting arrives as a JSON string; store verbatim
+            // for the app to decode + display. Only the raw preference is bridged
+            // — the resolved locale is derived in the extension background.
+            if let localeJSON = input["localeSpoofing"] as? String {
+                dict[RegionKey.localeSpoofing] = localeJSON
+            }
+
             dict[RegionKey.updatedAt] = Date().timeIntervalSince1970
         }
 
@@ -298,6 +311,9 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         }
         if let precisionJSON = dict[RegionKey.pLocationPrecision] as? String {
             pending["locationPrecision"] = precisionJSON
+        }
+        if let localeJSON = dict[RegionKey.pLocaleSpoofing] as? String {
+            pending["localeSpoofing"] = localeJSON
         }
         return ["pending": pending]
     }
