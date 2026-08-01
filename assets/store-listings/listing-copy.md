@@ -237,7 +237,7 @@ for search. Only three fields feed App Store search ranking:
 | **Promotional text** | 170 chars  | Above the description; updatable without review. Not indexed.                                                                     |
 | **Description**      | 4000 chars | Conversion copy only — NOT indexed. Do not keyword-stuff.                                                                         |
 
-> **Source of truth for the App Store listing is now `safari/fastlane/metadata/ios/<locale>/`**,
+> **Source of truth for the App Store listing is now `safari/fastlane/metadata/<locale>/`**,
 > not this file. `fastlane deliver` uploads that tree directly, so the hand-paste step is
 > gone. Twelve locales ship: `en-US`, `de-DE`, `es-ES`, `fr-FR`, `id`, `ja`, `nl-NL`,
 > `pt-BR`, `ru`, `sv`, `vi`, `zh-Hans`. Field limits are enforced by
@@ -348,7 +348,7 @@ NEW Auto Background Sync: switch VPN servers and your Safari location follows au
 
 ## Description
 
-**Lives in `safari/fastlane/metadata/ios/en-US/description.txt`** — edit it there, not
+**Lives in `safari/fastlane/metadata/en-US/description.txt`** — edit it there, not
 here, so the uploaded copy and the reviewed copy can't diverge. 2654 of 4000 chars;
 German, the longest translation, lands at 3115.
 
@@ -374,10 +374,18 @@ updated in place — keeping a second copy here is what let it drift in the firs
 
 ## macOS listing
 
-Not written yet. `safari/fastlane/metadata/` has only an `ios/` tree.
+Not written yet. `safari/fastlane/metadata/` holds the iOS copy at its root.
 
 The iOS description can't be reused as-is: it casts the Mac app as the companion
 ("requires the free GeoSpoof GPS companion app for Mac"), which is backwards on the
 Mac listing, where that app is the thing being installed. Same App Store record,
-separate per-platform listings, so this needs its own copy and its own
-`fastlane/metadata/macos/` tree.
+separate per-platform listings, so this needs its own copy.
+
+⚠️ **Do not add it as `fastlane/metadata/macos/`.** `deliver` validates every
+directory inside `metadata_path` against its list of App Store locales and aborts on
+anything else — and it does that **even when `skip_metadata: true`**, so a platform
+subfolder breaks routine binary-only uploads with `Unsupported directory name(s)`.
+That failure shipped once and broke a release build. macOS copy goes in a sibling
+tree (e.g. `fastlane/metadata-macos/`) with an explicit `metadata_path:` on the macOS
+lane only. `tests/unit/appstore-metadata-parity.unit.test.ts` fails on any
+non-locale directory under `fastlane/metadata/` to keep this from recurring.
