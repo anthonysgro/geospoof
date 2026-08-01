@@ -322,4 +322,56 @@ platform :ios do
       run_precheck_before_submit: false
     )
   end
+
+  # ---------------------------------------------------------------------------
+  # Store listing copy. Deliberately separate from the build lanes above, which
+  # all pass skip_metadata: true.
+  #
+  # That split is the safety property, not a style choice: a routine release
+  # physically cannot alter store copy, and this lane physically cannot ship a
+  # binary. Neither can do the other's job by accident.
+  #
+  # Run from the "iOS App Store Metadata" workflow (workflow_dispatch only).
+  # ---------------------------------------------------------------------------
+
+  desc "Upload localized App Store listing copy. No binary, no screenshots."
+  lane :upload_metadata do
+    deliver(
+      platform: "ios",
+      metadata_path: "./fastlane/metadata",
+
+      # This lane can only ever write listing text.
+      skip_binary_upload: true,
+      skip_screenshots: true,
+      skip_app_version_update: true,
+      submit_for_review: false,
+      automatic_release: false,
+
+      # The one genuinely destructive flag deliver has ("Clear all previously
+      # uploaded screenshots"). Pinned off rather than left to the default.
+      overwrite_screenshots: false,
+
+      # Required: a runner has no TTY, so deliver's HTML preview confirmation
+      # cannot be answered and the lane would hang without it. The review gate is
+      # the git diff on fastlane/metadata/ instead — versioned and reviewable,
+      # rather than a one-shot y/n in a terminal nobody is watching.
+      force: true,
+
+      run_precheck_before_submit: false
+    )
+  end
+
+  desc "Download the live App Store listing copy for diffing. Writes files, uploads nothing."
+  lane :download_metadata do
+    # `download_metadata` is a deliver *command*, not an option on the deliver
+    # action, so it has to go through the CLI. Authentication comes from the
+    # SPACESHIP_CONNECT_API_* environment variables the workflow sets.
+    sh(
+      "bundle", "exec", "fastlane", "deliver", "download_metadata",
+      "--app_identifier", "com.moonloaf.geospoof",
+      "--platform", "ios",
+      "--metadata_path", "./fastlane/metadata"
+    )
+    UI.important("Downloaded live copy into fastlane/metadata. Diff before uploading.")
+  end
 end

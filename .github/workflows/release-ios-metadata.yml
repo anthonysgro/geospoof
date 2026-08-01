@@ -1,0 +1,121 @@
+name: iOS App Store Metadata
+
+# Publishes the localized App Store listing copy in safari/fastlane/metadata/.
+#
+# Kept entirely separate from "Release iOS (App Store)" on purpose. The build
+# workflows pass skip_metadata: true, so a routine release cannot alter store
+# copy; this workflow passes skip_binary_upload: true, so it cannot ship a build.
+# Neither can do the other's job by accident.
+#
+# Much lighter than the build workflows: no Xcode selection, no certificates, no
+# provisioning profiles, no npm. Uploading listing text needs none of that.
+#
+# Two modes:
+#   download - pulls the CURRENT live copy from App Store Connect into
+#              fastlane/metadata/ and publishes it as an artifact. Uploads
+#              nothing. Use this to see exactly what an upload would overwrite.
+#   upload   - pushes the committed copy. Requires typing the confirmation.
+#
+# Requires the repository secret ASC_API_KEY_P8 (already used by the build jobs).
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "download (read-only, artifact only) or upload (writes to App Store Connect)"
+        required: true
+        type: choice
+        default: download
+        options:
+          - download
+          - upload
+      confirm:
+        description: 'For upload only: type "upload" to confirm. Ignored in download mode.'
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  metadata:
+    runs-on: macos-26
+    permissions:
+      contents: read
+    steps:
+      # Fail before touching App Store Connect if the confirmation is missing.
+      # deliver has to run with force: true (no TTY on a runner), so its own
+      # HTML-preview confirmation is unavailable — this replaces it.
+      - name: Verify upload confirmation
+        if: ${{ inputs.mode == 'upload' }}
+        run: |
+          if [ "${{ inputs.confirm }}" != "upload" ]; then
+            echo "::error::Upload not confirmed. Re-run with confirm = upload."
+            exit 1
+          fi
+          echo "Upload confirmed."
+
+      - uses: actions/checkout@v7
+
+      - uses: ruby/setup-ruby@v1.317.0
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+          working-directory: safari
+
+      - name: Place App Store Connect API key
+        env:
+          ASC_API_KEY_BASE64: ${{ secrets.ASC_API_KEY_P8 }}
+        run: |
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          echo "$ASC_API_KEY_BASE64" | base64 --decode > "$HOME/.appstoreconnect/private_keys/AuthKey_BXMZW4LMSP.p8"
+          chmod 600 "$HOME/.appstoreconnect/private_keys/AuthKey_BXMZW4LMSP.p8"
+
+      # What the tree looks like going in. For upload mode this is the record of
+      # exactly what was published; for download mode it is the "before" side.
+      - name: Show the metadata tree
+        working-directory: safari
+        run: |
+          echo "locales: $(ls fastlane/metadata | tr '\n' ' ')"
+          echo
+          for f in fastlane/metadata/*/*.txt; do
+            printf '%-52s %4d chars\n' "$f" "$(tr -d '\n' < "$f" | wc -c | tr -d ' ')"
+          done
+
+      - name: Download live listing copy
+        if: ${{ inputs.mode == 'download' }}
+        working-directory: safari
+        env:
+          SPACESHIP_CONNECT_API_KEY_ID: BXMZW4LMSP
+          SPACESHIP_CONNECT_API_ISSUER_ID: 2a0c5baa-92b0-489c-b4c7-b1771b5e6df8
+          SPACESHIP_CONNECT_API_KEY_FILEPATH: /Users/runner/.appstoreconnect/private_keys/AuthKey_BXMZW4LMSP.p8
+        run: bundle exec fastlane ios download_metadata
+
+      # The diff IS the review. Nothing is written to App Store Connect in this
+      # mode, so this is a safe way to learn what an upload would change.
+      - name: Diff downloaded copy against the repo
+        if: ${{ inputs.mode == 'download' }}
+        run: |
+          echo "### Live App Store Connect copy vs the repo" >> "$GITHUB_STEP_SUMMARY"
+          echo '```diff' >> "$GITHUB_STEP_SUMMARY"
+          git diff --no-color -- safari/fastlane/metadata/ >> "$GITHUB_STEP_SUMMARY" || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          git diff --stat -- safari/fastlane/metadata/ || true
+          echo
+          echo "Nothing was written to App Store Connect. Review the diff above,"
+          echo "then commit whichever side you want to keep."
+
+      - name: Upload the downloaded copy as an artifact
+        if: ${{ inputs.mode == 'download' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: appstore-metadata-live
+          path: safari/fastlane/metadata/
+          if-no-files-found: error
+
+      - name: Upload listing copy to App Store Connect
+        if: ${{ inputs.mode == 'upload' }}
+        working-directory: safari
+        run: bundle exec fastlane ios upload_metadata
+
+      - name: Clean up API key
+        if: always()
+        run: rm -f "$HOME/.appstoreconnect/private_keys/AuthKey_BXMZW4LMSP.p8"
