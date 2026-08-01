@@ -1,0 +1,44 @@
+Các trang web đọc vị trí thật của bạn qua Geolocation API của trình duyệt, múi giờ, định dạng ngày và WebRTC. Khi những tín hiệu đó không khớp với khu vực VPN của bạn, bạn sẽ trở nên nổi bật. GeoSpoof đưa tất cả về một vị trí nhất quán duy nhất.
+
+TÍNH NĂNG
+
+• Đổi vị trí Safari miễn phí
+• Mô phỏng vị trí GPS trong mạng nội bộ
+• Đặt vị trí chỉ với một cú nhấp
+• Đồng bộ vị trí với VPN
+• Tự động đồng bộ ở chế độ nền với VPN
+• Đồng bộ múi giờ và các tín hiệu vị trí khác
+• Chặn rò rỉ WebRTC
+• Chống lấy dấu vân tay số
+• Kiểm soát theo từng trang
+• Lưu yêu thích — ghim tối đa 10 địa điểm
+• Không cần tài khoản, không theo dõi, không phân tích
+• Widget và điều khiển
+
+GPS THIẾT BỊ (PRO · THỬ NGHIỆM)
+
+Vượt ra ngoài trình duyệt: đưa vị trí hệ thống của iPhone về nơi bạn chọn, để các ứng dụng dùng vị trí — không chỉ Safari — cũng thấy như vậy. Tính năng Pro tùy chọn này cần ứng dụng đồng hành miễn phí GeoSpoof GPS cho Mac: thiết lập một lần qua cáp, sau đó hoạt động qua Wi-Fi. Nó dùng công cụ vị trí chuẩn của Apple dành cho nhà phát triển và không bao giờ sửa đổi iOS.
+
+GEOSPOOF KHÔNG LÀM GÌ
+
+GeoSpoof không phải VPN và không đổi địa chỉ IP của bạn. Để bảo mật vị trí trọn vẹn, hãy dùng cùng VPN. Ứng dụng không đổi ngôn ngữ hay cài đặt vùng của trình duyệt, không vượt qua phát hiện phía máy chủ (IP, phương thức thanh toán, lịch sử tài khoản) và không thu thập bất kỳ dữ liệu nào về bạn hay việc bạn duyệt web.
+
+LƯU Ý
+
+GeoSpoof là công cụ bảo mật và dành cho nhà phát triển, giúp kiểm soát vị trí mà bạn chọn chia sẻ từ thiết bị của mình. Việc giả mạo vị trí có thể vi phạm điều khoản dịch vụ của một số trang web và ứng dụng, đặc biệt là dịch vụ phát trực tuyến, tài chính và thương mại điện tử. Bạn tự chịu trách nhiệm đảm bảo việc sử dụng tuân thủ các điều khoản và luật hiện hành.
+
+ĐĂNG KÝ
+
+GeoSpoof miễn phí sử dụng. GeoSpoof Pro mở khóa Tự động đồng bộ ở chế độ nền, GPS thiết bị, quy tắc theo từng trang, widget, độ chính xác tùy chỉnh và bộ chọn trên bản đồ, được cung cấp dưới dạng đăng ký tự động gia hạn:
+
+• GeoSpoof Pro Hằng tháng — thanh toán hằng tháng.
+
+• GeoSpoof Pro Hằng năm — thanh toán hằng năm (đáng giá nhất).
+
+Cũng có bản mua một lần GeoSpoof Pro Vĩnh viễn, mở khóa các tính năng tương tự mãi mãi và không gia hạn. Giá được hiển thị trong ứng dụng và thay đổi theo khu vực.
+
+Khoản thanh toán được trừ vào Tài khoản Apple của bạn khi xác nhận mua. Đăng ký sẽ tự động gia hạn trừ khi được hủy ít nhất 24 giờ trước khi kết thúc kỳ hiện tại. Tài khoản của bạn bị trừ phí gia hạn trong vòng 24 giờ trước khi kết thúc kỳ hiện tại. Bạn có thể quản lý hoặc hủy đăng ký trong cài đặt Tài khoản Apple sau khi mua.
+
+Điều khoản sử dụng (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+
+Chính sách bảo mật: https://www.geospoof.com/privacy

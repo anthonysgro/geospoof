@@ -74,6 +74,9 @@
 		C0DE000000000000000000F2 /* timezones.topo.json in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D2 /* timezones.topo.json */; };
 		C0DE000000000000000000F3 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D3 /* PrivacyInfo.xcprivacy */; };
 		C0DE000000000000000000F4 /* Outfit.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D4 /* Outfit.ttf */; };
+		C0DE000000000000000000E5 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D5 /* Localizable.xcstrings */; };
+		C0DE000000000000000000F5 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D5 /* Localizable.xcstrings */; };
+		C0DE000000000000000000A6 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D5 /* Localizable.xcstrings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -180,6 +183,7 @@
 		C0DE000000000000000000D2 /* timezones.topo.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = timezones.topo.json; sourceTree = "<group>"; };
 		C0DE000000000000000000D3 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		C0DE000000000000000000D4 /* Outfit.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Outfit.ttf; sourceTree = "<group>"; };
+		C0DE000000000000000000D5 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -311,6 +315,7 @@
 				C0DE000000000000000000D1 /* cities.json */,
 				C0DE000000000000000000D2 /* timezones.topo.json */,
 				C0DE000000000000000000D4 /* Outfit.ttf */,
+				C0DE000000000000000000D5 /* Localizable.xcstrings */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -516,6 +521,17 @@
 			knownRegions = (
 				en,
 				Base,
+				de,
+				es,
+				fr,
+				id,
+				ja,
+				nl,
+				"pt-BR",
+				ru,
+				sv,
+				vi,
+				"zh-Hans",
 			);
 			mainGroup = 9281AA772FA50690007C77A7;
 			minimizedProjectReferenceProxies = 1;
@@ -538,6 +554,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C0DE000000000000000000A6 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -556,6 +573,7 @@
 				9281AA972FA50690007C77A7 /* Main.storyboard in Resources */,
 				9281AABD2FA50690007C77A7 /* Style.css in Resources */,
 				C0DE000000000000000000E4 /* Outfit.ttf in Resources */,
+				C0DE000000000000000000E5 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -573,6 +591,7 @@
 				C0DE000000000000000000F3 /* PrivacyInfo.xcprivacy in Resources */,
 				9281AABA2FA50690007C77A7 /* Main.html in Resources */,
 				C0DE000000000000000000F4 /* Outfit.ttf in Resources */,
+				C0DE000000000000000000F5 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1019,7 +1038,7 @@
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1062,7 +1081,7 @@
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

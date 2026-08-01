@@ -1,0 +1,44 @@
+Los sitios web leen tu ubicación real a través de la API de geolocalización del navegador, la zona horaria, el formato de fecha y WebRTC. Cuando esas señales no coinciden con la región de tu VPN, destacas. GeoSpoof las alinea todas en un único lugar coherente.
+
+FUNCIONES
+
+• Cambia la ubicación de Safari gratis
+• Simula una ubicación GPS en la red local
+• Establece tu ubicación con un clic
+• Sincroniza la ubicación con el VPN
+• Sincronización automática en segundo plano con el VPN
+• Sincroniza la zona horaria y otras señales de ubicación
+• Bloquea las fugas de WebRTC
+• Anti-fingerprinting
+• Control por sitio
+• Guarda favoritos — fija hasta 10 lugares
+• Sin cuenta, sin rastreo, sin analíticas
+• Widgets y controles
+
+GPS DEL DISPOSITIVO (PRO · EXPERIMENTAL)
+
+Ve más allá del navegador: alinea la ubicación del sistema de tu iPhone con el lugar que elijas, para que las apps que usan tu ubicación — no solo Safari — también la vean. Esta función Pro opcional requiere la app complementaria gratuita GeoSpoof GPS para Mac: una configuración única por cable y después funciona por Wi-Fi. Usa las herramientas de ubicación estándar de Apple para desarrolladores y nunca modifica iOS.
+
+LO QUE GEOSPOOF NO HACE
+
+GeoSpoof no es un VPN y no cambia tu dirección IP. Para una privacidad de ubicación completa, úsalo junto a un VPN. No cambia el idioma ni la configuración regional de tu navegador, no evita la detección del lado del servidor (IP, métodos de pago, historial de la cuenta) ni recopila datos sobre ti o tu navegación.
+
+NOTA
+
+GeoSpoof es una herramienta de privacidad y desarrollo para controlar la ubicación que decides compartir desde tu propio dispositivo. Falsear la ubicación puede infringir las condiciones de servicio de algunos sitios y apps, en especial servicios de streaming, financieros y de comercio electrónico. Eres responsable de que tu uso cumpla las condiciones y leyes aplicables.
+
+SUSCRIPCIONES
+
+GeoSpoof es gratis. GeoSpoof Pro desbloquea Sincronización automática en segundo plano, GPS del dispositivo, reglas por sitio, widgets, exactitud personalizada y el selector sobre el mapa, y se ofrece como suscripción de renovación automática:
+
+• GeoSpoof Pro Mensual — facturación mensual.
+
+• GeoSpoof Pro Anual — facturación anual (mejor precio).
+
+También está disponible una compra única de GeoSpoof Pro De por vida, que desbloquea las mismas funciones de forma permanente y no se renueva. Los precios se muestran en la app y varían según la región.
+
+El pago se carga a tu cuenta de Apple al confirmar la compra. Una suscripción se renueva automáticamente a menos que se cancele al menos 24 horas antes del final del periodo en curso. El cargo por la renovación se realiza dentro de las 24 horas previas al final del periodo en curso. Puedes gestionar o cancelar tus suscripciones en los ajustes de tu cuenta de Apple después de la compra.
+
+Términos de uso (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+
+Política de privacidad: https://www.geospoof.com/privacy

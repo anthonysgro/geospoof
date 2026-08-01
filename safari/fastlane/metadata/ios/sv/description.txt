@@ -1,0 +1,44 @@
+Webbplatser läser din verkliga plats via webbläsarens Geolocation-API, tidszonen, datumformatet och WebRTC. När de signalerna inte stämmer med ditt VPN:s region sticker du ut. GeoSpoof samlar dem alla på en enda konsekvent plats.
+
+FUNKTIONER
+
+• Byt plats i Safari gratis
+• Simulera GPS-plats på det lokala nätverket
+• Ställ in din plats med ett klick
+• Synka platsen med VPN
+• Automatisk synk i bakgrunden med VPN
+• Synkar tidszon och andra platssignaler
+• Blockera WebRTC-läckor
+• Anti-fingerprinting
+• Kontroll per webbplats
+• Spara favoriter — fäst upp till 10 platser
+• Inget konto, ingen spårning, ingen analys
+• Widgetar och reglage
+
+ENHETENS GPS (PRO · EXPERIMENTELLT)
+
+Gå längre än webbläsaren: ställ in iPhones systemplats på den plats du väljer, så att platsbaserade appar — inte bara Safari — också ser den. Den här valfria Pro-funktionen kräver den kostnadsfria följeappen GeoSpoof GPS för Mac: en engångsinställning via kabel, sedan fungerar det över Wi-Fi. Den använder Apples vanliga utvecklarverktyg för plats och ändrar aldrig iOS.
+
+VAD GEOSPOOF INTE GÖR
+
+GeoSpoof är inte ett VPN och ändrar inte din IP-adress. Använd det tillsammans med ett VPN för fullständig platsintegritet. Det ändrar inte webbläsarens språk eller regionsinställning, kringgår inte detektering på serversidan (IP, betalningsmetoder, kontohistorik) och samlar inte in några uppgifter om dig eller din surfning.
+
+OBSERVERA
+
+GeoSpoof är ett integritets- och utvecklarverktyg för att styra vilken plats du väljer att dela från din egen enhet. Att förfalska plats kan bryta mot användarvillkoren för vissa webbplatser och appar, särskilt streaming-, finans- och e-handelstjänster. Du ansvarar själv för att din användning följer tillämpliga villkor och lagar.
+
+PRENUMERATIONER
+
+GeoSpoof är gratis att använda. GeoSpoof Pro låser upp Automatisk synk i bakgrunden, Enhetens GPS, regler per webbplats, widgetar, anpassad noggrannhet och val på kartan, och erbjuds som en prenumeration med automatisk förnyelse:
+
+• GeoSpoof Pro Månatlig — faktureras varje månad.
+
+• GeoSpoof Pro Årlig — faktureras varje år (bäst värde).
+
+Det finns även ett engångsköp, GeoSpoof Pro Livstid, som låser upp samma funktioner permanent och inte förnyas. Priserna visas i appen och varierar mellan regioner.
+
+Betalningen dras från ditt Apple-konto när köpet bekräftas. En prenumeration förnyas automatiskt om den inte avslutas minst 24 timmar före den aktuella periodens slut. Ditt konto debiteras för förnyelsen inom 24 timmar före den aktuella periodens slut. Du kan hantera eller avsluta prenumerationer i inställningarna för ditt Apple-konto efter köpet.
+
+Användarvillkor (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+
+Integritetspolicy: https://www.geospoof.com/privacy

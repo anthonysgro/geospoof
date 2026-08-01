@@ -237,36 +237,54 @@ for search. Only three fields feed App Store search ranking:
 | **Promotional text** | 170 chars  | Above the description; updatable without review. Not indexed.                                                                     |
 | **Description**      | 4000 chars | Conversion copy only — NOT indexed. Do not keyword-stuff.                                                                         |
 
+> **Source of truth for the App Store listing is now `safari/fastlane/metadata/ios/<locale>/`**,
+> not this file. `fastlane deliver` uploads that tree directly, so the hand-paste step is
+> gone. Twelve locales ship: `en-US`, `de-DE`, `es-ES`, `fr-FR`, `id`, `ja`, `nl-NL`,
+> `pt-BR`, `ru`, `sv`, `vi`, `zh-Hans`. Field limits are enforced by
+> `tests/unit/appstore-metadata-parity.unit.test.ts`.
+>
+> The sections below keep the **English ASO reasoning** — why each token was chosen — which
+> the `.txt` files have nowhere to record. Chrome and AMO above have no automation path and
+> remain hand-pasted from this file.
+>
+> Localization note: the four short fields were **authored per locale, not translated.**
+> English uses 87–100% of every short-field budget, so a translated subtitle overflows in 9
+> of 11 languages and a translated promo text in 8 of 11. Keyword sets were built from terms
+> already shipped in `_locales/<locale>/messages.json` and are **not** volume-validated —
+> run them through a keyword tool before treating them as final.
+
 Apple auto-handles singular/plural and forms phrases by combining tokens across
 name + subtitle + keywords, so never repeat a word across those fields.
 
-## App name (30 chars)
+## App name (26 chars)
 
 ```
-GeoSpoof: Location Spoofer
+GeoSpoof: Location Changer
 ```
 
-Recommended — accurate to what the app does (spoofs Safari's location), captures
-the "location spoofer" query. Alternatives:
+Captures the higher-volume "location changer" query; "location spoofer" is still
+formed by combining with the `spoof` keyword token. Alternatives:
 
 ```
 GeoSpoof - Fake GPS Location   (higher-volume "fake gps" query, but still risky — device GPS exists only as a Pro feature that needs the Mac companion, so a "Fake GPS" name over-promises for free/iPhone-only users and pulls game-cheat installs)
 GeoSpoof: Spoof Location       (shorter; "spoof location")
 ```
 
-## Subtitle (29 chars)
+## Subtitle (30 chars — at the hard limit, zero headroom)
 
 ```
-Safari GPS & Timezone Changer
+GPS, Safari & Timezone Spoofer
 ```
 
-Leads with "Safari" so scope is honest up front (the app itself spoofs Safari;
-device-level system GPS is a separate Pro feature that needs the Mac companion,
-so the indexed metadata intentionally doesn't lead with it), which keeps out the
-wrong installs and the 1-star "doesn't work in Pokémon GO" reviews. Keeps the
-high-value `changer` token (→ "location changer") plus `gps` and `timezone`,
-with no wasted stop words. `fake` and `safari`'s extra reach are carried by the
-keyword field instead.
+`Spoofer` moved here from the name, so name + subtitle together still form both
+"location changer" and "location spoofer".
+
+⚠️ **Unresolved:** this now leads with `GPS`, which inverts the earlier reasoning —
+the subtitle used to lead with `Safari` so scope was honest up front, keeping out
+the wrong installs and the 1-star "doesn't work in Pokémon GO" reviews. Since that
+decision, Device GPS became **Pro _and_ Experimental _and_ Mac-dependent**, so the
+promise got weaker while the subtitle started leading with it. Revisit before the
+next metadata push; the localized subtitles mirror whatever this settles on.
 
 ## Keywords field (100 chars — no spaces, no name/subtitle repeats)
 
@@ -293,11 +311,14 @@ location changer, change location, fake location, spoof location, fake gps,
 spoof gps, gps location, location privacy, hide location, vpn location, fake gps,
 spoof geolocation, location emulator, teleport location.
 
-## Promotional text (153 chars)
+## Promotional text (143 chars)
 
 ```
-NEW — GeoSpoof GPS moves your iPhone's real system GPS to your chosen location, driven from a Mac companion app. A Pro feature; Safari spoofing stays free.
+NEW — GeoSpoof GPS moves your iPhone's GPS to your chosen location, driven from a Mac companion app. A Pro feature; Safari spoofing stays free.
 ```
+
+Plain text only — App Store promotional text renders **no** markdown. `**NEW**`
+would display as literal asterisks.
 
 Not indexed and updatable without review, so this is the place to announce
 GeoSpoof GPS (device-level location). Rotate the previous Auto Background Sync
@@ -307,44 +328,38 @@ line back in later if you want:
 NEW Auto Background Sync: switch VPN servers and your Safari location follows automatically — no manual re-sync, no need to open the app.
 ```
 
-## Description (conversion copy — paste into App Store Connect)
+## Description
 
-Your VPN changes your IP address. Your browser is still telling websites where you actually are.
+**Lives in `safari/fastlane/metadata/ios/en-US/description.txt`** — edit it there, not
+here, so the uploaded copy and the reviewed copy can't diverge. 2654 of 4000 chars;
+German, the longest translation, lands at 3115.
 
-GeoSpoof makes Safari report a location and timezone you choose — not your real one.
+Structural notes for whoever edits it next:
 
-Websites read your true location through the browser's Geolocation API, timezone, date formatting, and WebRTC. When those signals don't match your VPN's region, you stand out. GeoSpoof aligns all of them to a single, consistent place.
+- Blank lines between bullets are **intentional**. The App Store renders line breaks
+  literally, so they produce real vertical spacing. The parity test asserts every
+  translation keeps the same paragraph and bullet counts as English.
+- The SUBSCRIPTIONS block is required by Guideline 3.1.2: billing period, renewal
+  terms, cancellation window, and functional EULA + privacy links. The test asserts
+  both links survive in all 12 locales.
+- `GeoSpoof Pro Monthly / Annual / Lifetime` are **also IAP display names**. The
+  localized descriptions translate the period word and keep `GeoSpoof Pro` as brand
+  (`GeoSpoof Pro Monatlich`), matching the app's own `Monthly`/`Annual`/`Lifetime`
+  catalog strings. **The ASC in-app purchase display names must be set to match** —
+  they currently have zero localizations, so today a German reader sees a translated
+  name in the listing and an English one at the paywall.
 
-FEATURES
+The stale version previously inlined here opened with "Your VPN changes your IP
+address…" and claimed "33,000+ cities"; neither is in the live copy. It also had no
+SUBSCRIPTIONS block, which Guideline 3.1.2 requires. It has been removed rather than
+updated in place — keeping a second copy here is what let it drift in the first place.
 
-• Sync with VPN — detect your VPN's exit region and automatically match your spoofed location to it. One tap.
+## macOS listing
 
-• Auto Background Sync (Pro) — switch VPN servers and your Safari location follows automatically. No manual re-sync, and no need to open the GeoSpoof app.
+Not written yet. `safari/fastlane/metadata/` has only an `ios/` tree.
 
-• Device GPS (Pro) — move your iPhone's real system GPS, not just Safari, to your chosen location. Driven from the GeoSpoof GPS companion app for Mac over a secure, one-time pairing (no jailbreak). Reverts to your real GPS when you turn it off.
-
-• Pick any location — search 33,000+ cities offline, or enter coordinates directly.
-
-• Full signal alignment — Geolocation, timezone, Date, Intl, Temporal, and WebRTC all report the same place. Every browser API that can reveal your location is covered.
-
-• WebRTC protection — prevents your real IP from leaking through WebRTC connections.
-
-• Filters — choose which websites to spoof, with allow and deny lists.
-
-• Favorites — save locations and switch between them instantly from the app or the home screen widget.
-
-• Widgets and Controls — see your spoofed location and re-sync from the Home Screen, Lock Screen, and Control Center without opening the app.
-
-• Private by design — no account, no login, no tracking, no analytics, no developer servers. Open source and auditable.
-
-GEOSPOOF GPS — DEVICE-LEVEL LOCATION (NEW, PRO)
-
-Safari spoofing keeps your browser private. GeoSpoof GPS goes further: it sets your iPhone's real, system-level location to the place you pick, so location-aware apps — not just Safari — match it too. It's driven from a companion Mac app, built for privacy and for testing location-based features. It's an optional Pro feature, requires a Mac for a one-time setup, and is not designed for AR games.
-
-WHAT GEOSPOOF DOES NOT DO
-
-GeoSpoof is not a VPN and does not change your IP address. For full location privacy, use it alongside a VPN. On its own, the GeoSpoof app spoofs Safari; moving your device's real system GPS is a separate Pro feature that uses the GeoSpoof GPS companion app for Mac. It does not change your browser's language or locale, bypass server-side detection (IP, payment methods, account history), or collect any data about you or your browsing.
-
-NOTE
-
-Using location spoofing may violate the terms of service of certain websites, particularly streaming services, financial platforms, and e-commerce sites. You are responsible for ensuring your use complies with applicable terms of service and laws.
+The iOS description can't be reused as-is: it casts the Mac app as the companion
+("requires the free GeoSpoof GPS companion app for Mac"), which is backwards on the
+Mac listing, where that app is the thing being installed. Same App Store record,
+separate per-platform listings, so this needs its own copy and its own
+`fastlane/metadata/macos/` tree.

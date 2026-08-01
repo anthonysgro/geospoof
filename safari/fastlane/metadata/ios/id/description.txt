@@ -1,0 +1,44 @@
+Situs web membaca lokasi Anda yang sebenarnya melalui Geolocation API peramban, zona waktu, format tanggal, dan WebRTC. Ketika sinyal-sinyal itu tidak cocok dengan wilayah VPN Anda, Anda jadi menonjol. GeoSpoof menyelaraskan semuanya ke satu lokasi yang konsisten.
+
+FITUR
+
+• Ubah lokasi Safari secara gratis
+• Simulasikan lokasi GPS di jaringan lokal
+• Atur lokasi Anda dengan satu klik
+• Sinkronkan lokasi dengan VPN
+• Sinkronisasi otomatis di latar belakang dengan VPN
+• Menyinkronkan zona waktu dan sinyal lokasi lainnya
+• Blokir kebocoran WebRTC
+• Anti-fingerprinting
+• Kontrol per situs
+• Simpan favorit — sematkan hingga 10 tempat
+• Tanpa akun, tanpa pelacakan, tanpa analitik
+• Widget dan Kontrol
+
+GPS PERANGKAT (PRO · EKSPERIMENTAL)
+
+Lebih dari sekadar peramban: selaraskan lokasi sistem iPhone Anda dengan tempat yang Anda pilih, sehingga aplikasi berbasis lokasi — bukan hanya Safari — juga melihatnya. Fitur Pro opsional ini memerlukan aplikasi pendamping gratis GeoSpoof GPS untuk Mac: satu kali penyiapan melalui kabel, lalu berjalan melalui Wi-Fi. Fitur ini memakai alat lokasi standar Apple untuk pengembang dan tidak pernah mengubah iOS.
+
+YANG TIDAK DILAKUKAN GEOSPOOF
+
+GeoSpoof bukan VPN dan tidak mengubah alamat IP Anda. Untuk privasi lokasi penuh, gunakan bersama VPN. Aplikasi ini tidak mengubah bahasa atau setelan wilayah peramban, tidak melewati deteksi di sisi server (IP, metode pembayaran, riwayat akun), dan tidak mengumpulkan data apa pun tentang Anda atau aktivitas menjelajah Anda.
+
+CATATAN
+
+GeoSpoof adalah alat privasi dan pengembangan untuk mengatur lokasi yang Anda pilih untuk dibagikan dari perangkat Anda sendiri. Memalsukan lokasi dapat melanggar ketentuan layanan situs dan aplikasi tertentu, terutama layanan streaming, keuangan, dan e-commerce. Anda bertanggung jawab memastikan penggunaan Anda mematuhi ketentuan dan hukum yang berlaku.
+
+LANGGANAN
+
+GeoSpoof gratis digunakan. GeoSpoof Pro membuka Sinkronisasi otomatis di latar belakang, GPS perangkat, aturan per situs, widget, akurasi khusus, dan pemilih pada peta, ditawarkan sebagai langganan dengan perpanjangan otomatis:
+
+• GeoSpoof Pro Bulanan — ditagih bulanan.
+
+• GeoSpoof Pro Tahunan — ditagih tahunan (nilai terbaik).
+
+Tersedia juga pembelian sekali bayar GeoSpoof Pro Selamanya, yang membuka fitur yang sama secara permanen dan tidak diperpanjang. Harga ditampilkan di aplikasi dan berbeda menurut wilayah.
+
+Pembayaran dibebankan ke Akun Apple Anda saat pembelian dikonfirmasi. Langganan diperpanjang otomatis kecuali dibatalkan setidaknya 24 jam sebelum akhir periode saat ini. Akun Anda ditagih untuk perpanjangan dalam 24 jam sebelum akhir periode saat ini. Anda dapat mengelola atau membatalkan langganan di setelan Akun Apple setelah pembelian.
+
+Ketentuan Penggunaan (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+
+Kebijakan Privasi: https://www.geospoof.com/privacy

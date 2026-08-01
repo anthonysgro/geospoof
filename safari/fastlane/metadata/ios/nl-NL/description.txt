@@ -1,0 +1,44 @@
+Websites lezen je echte locatie via de Geolocation-API van de browser, de tijdzone, de datumopmaak en WebRTC. Als die signalen niet overeenkomen met de regio van je VPN, val je op. GeoSpoof brengt ze allemaal op één consistente plek.
+
+FUNCTIES
+
+• Safari-locatie gratis wijzigen
+• Gps-locatie simuleren op het lokale netwerk
+• Je locatie instellen met één klik
+• Locatie synchroniseren met VPN
+• Automatisch synchroniseren op achtergrond met VPN
+• Synchroniseert tijdzone en andere locatiesignalen
+• WebRTC-lekken blokkeren
+• Anti-fingerprinting
+• Beheer per site
+• Favorieten opslaan — maximaal 10 plekken vastzetten
+• Geen account, geen tracking, geen analytics
+• Widgets en regelaars
+
+GPS VAN APPARAAT (PRO · EXPERIMENTEEL)
+
+Verder dan de browser: breng de systeemlocatie van je iPhone naar de plek die je kiest, zodat locatiegebonden apps — niet alleen Safari — die ook zien. Deze optionele Pro-functie vereist de gratis Mac-companionapp GeoSpoof GPS: eenmalig instellen via een kabel, daarna werkt het via wifi. Hij gebruikt Apple's gebruikelijke ontwikkelaarstools voor locatie en wijzigt iOS nooit.
+
+WAT GEOSPOOF NIET DOET
+
+GeoSpoof is geen VPN en verandert je IP-adres niet. Gebruik het samen met een VPN voor volledige locatieprivacy. Het verandert niet de taal of landinstelling van je browser, omzeilt geen detectie aan de serverkant (IP, betaalmethoden, accountgeschiedenis) en verzamelt geen gegevens over jou of je browsegedrag.
+
+OPMERKING
+
+GeoSpoof is een privacy- en ontwikkelaarstool waarmee je bepaalt welke locatie je vanaf je eigen apparaat deelt. Het vervalsen van je locatie kan in strijd zijn met de voorwaarden van bepaalde sites en apps, met name streaming-, financiële en e-commercediensten. Je bent er zelf verantwoordelijk voor dat je gebruik voldoet aan de geldende voorwaarden en wetten.
+
+ABONNEMENTEN
+
+GeoSpoof is gratis te gebruiken. GeoSpoof Pro ontgrendelt Automatisch synchroniseren op achtergrond, GPS van apparaat, regels per site, widgets, aangepaste nauwkeurigheid en de kiezer op de kaart, aangeboden als automatisch verlengend abonnement:
+
+• GeoSpoof Pro Maandelijks — maandelijks gefactureerd.
+
+• GeoSpoof Pro Jaarlijks — jaarlijks gefactureerd (voordeligst).
+
+Een eenmalige aankoop GeoSpoof Pro Levenslang, die dezelfde functies permanent ontgrendelt en niet wordt verlengd, is ook beschikbaar. Prijzen staan in de app en verschillen per regio.
+
+De betaling wordt bij aankoopbevestiging van je Apple Account afgeschreven. Een abonnement wordt automatisch verlengd tenzij het minstens 24 uur voor het einde van de huidige periode wordt opgezegd. De verlenging wordt binnen 24 uur voor het einde van de huidige periode van je account afgeschreven. Je kunt abonnementen na aankoop beheren of opzeggen in de instellingen van je Apple Account.
+
+Gebruiksvoorwaarden (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+
+Privacybeleid: https://www.geospoof.com/privacy

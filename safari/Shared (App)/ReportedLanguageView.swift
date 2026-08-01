@@ -19,11 +19,19 @@ extension SpoofLocaleSpoofing {
     /// the model would drag the whole ICU-derived catalog (and its ~660-entry
     /// static initializer) into a memory-constrained extension for nothing. Keeping
     /// presentation out of the model is the right layering regardless.
-    var rowLabel: String {
+    var rowLabel: LocalizedStringKey {
         switch self {
         case .off: return "Off"
         case .match: return "Match Location"
-        case .custom(let locale): return LocaleCatalog.displayName(for: locale)
+        case .custom(let locale):
+            // Deliberate passthrough of already-localized runtime text.
+            // `LocaleCatalog.displayName` is an ICU display name that Foundation
+            // has already rendered in the app's display locale ("French (France)"
+            // in English, "français (France)" in French), so it must not be looked
+            // up in our own string table. Wrapping it as a key is a miss that
+            // falls back to the key itself, which is exactly the value we want —
+            // and because it isn't a source literal, Xcode extracts nothing.
+            return LocalizedStringKey(stringLiteral: LocaleCatalog.displayName(for: locale))
         }
     }
 }
@@ -95,7 +103,9 @@ struct ReportedLanguageView: View {
                         HStack {
                             Text("Language")
                             Spacer()
-                            Text(LocaleCatalog.displayName(for: tag))
+                            // verbatim: an ICU display name, already rendered in
+                            // the app's display locale by Foundation.
+                            Text(verbatim: LocaleCatalog.displayName(for: tag))
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -157,7 +167,7 @@ enum ReportedLanguageMode: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    var label: String {
+    var label: LocalizedStringKey {
         switch self {
         case .off: return "Off"
         case .match: return "Match Location"
@@ -165,7 +175,7 @@ enum ReportedLanguageMode: String, CaseIterable, Identifiable {
         }
     }
 
-    var detail: String {
+    var detail: LocalizedStringKey {
         switch self {
         case .off: return "Report this device's real language."
         case .match: return "Derive the language from the spoofed location."
@@ -220,8 +230,11 @@ struct LanguageListView: View {
                 } label: {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(entry.name).foregroundStyle(.primary)
-                            Text(entry.tag)
+                            // verbatim on both: `name` is an ICU display name and
+                            // `tag` is a raw BCP47 identifier. Neither belongs in
+                            // our string table.
+                            Text(verbatim: entry.name).foregroundStyle(.primary)
+                            Text(verbatim: entry.tag)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }

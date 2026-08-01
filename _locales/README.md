@@ -27,6 +27,36 @@ Files marked machine-translated were produced by an LLM and intentionally
 merged without native review because any localization is better than none
 for first-time users. Review PRs are welcome.
 
+### Known gap: 23 English-only keys
+
+`_locales/en/messages.json` has 177 keys; every other locale has 154. The
+missing 23 are almost entirely the two newest features — all `advanced_locale*`
+(Reported Language) and all `advanced_precision*` (Location Precision) keys, plus
+`advanced_verbosity_error`, `advanced_verbosity_warn`, `details_section_locale`,
+`tab_settings`, and `tab_settings_ariaLabel`. Those strings currently render in
+English in all 11 other languages.
+
+The parity test only _warns_ on missing keys (it fails on extra keys and
+placeholder mismatches), which is why this went unnoticed. Missing keys fall back
+to English at runtime, so the popup is functional but partly untranslated.
+
+## Relationship to the native app
+
+The Safari **app** (as opposed to the extension popup) is localized separately,
+through an Xcode String Catalog at
+`safari/Shared (App)/Resources/Localizable.xcstrings`. Different format, different
+runtime, same product — so the two must agree on terminology.
+
+`TRANSLATION.md` at the repo root holds the shared glossary. It is derived _from_
+this directory: where a term already has a translation here, the native app reuses
+it verbatim rather than re-deriving it. If you change an established term here,
+update the glossary and the catalog to match, or a user moving between the popup
+and the app will see two different words for one feature.
+
+For the 23 keys above there is nothing to reuse, so the native app is setting the
+precedent for that vocabulary. Once it has translations, backfill them into this
+directory rather than translating independently.
+
 ## Helping translate
 
 1. Read `_locales/en/messages.json` end-to-end. The `description` field on
@@ -50,8 +80,12 @@ for first-time users. Review PRs are welcome.
    using the [Chrome locale codes][codes] (two-letter ISO 639-1, or
    underscore-separated variants like `pt_BR`, `zh_CN`, `zh_TW`).
 2. Translate every `message` value, leaving `description` untouched.
-3. Run `npm run validate:locales` to confirm key parity with `en`.
-4. Add a row to the status table above.
+3. Run `npm test` to confirm key parity with `en` (see [Validation](#validation)).
+   A focused run is `npx vitest run tests/unit/locales.unit.test.ts`.
+4. Add the locale to `SUPPORTED_UI_LOCALES` in `src/shared/i18n/locales.ts`, with
+   its endonym. `tests/unit/shared/i18n-locales.unit.test.ts` asserts every entry
+   there has a matching `_locales/` directory.
+5. Add a row to the status table above.
 
 [codes]: https://developer.chrome.com/docs/extensions/reference/api/i18n#locales
 

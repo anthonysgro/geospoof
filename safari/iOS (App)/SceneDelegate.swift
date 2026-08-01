@@ -126,7 +126,7 @@ enum AppearanceMode: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    var displayName: String {
+    var displayName: LocalizedStringKey {
         switch self {
         case .system: return "System"
         case .light: return "Light"
@@ -437,7 +437,11 @@ struct GpsView: View {
         guard let s = statusStore.status, !statusStore.isStale else { return .waitingForMac }
         if s.session == "lost" { return .lost }
         if !s.connected {
-            return .setupNeeded(s.remediation.isEmpty ? "Connecting to your iPhone…" : s.remediation)
+            // Pass the agent's remediation through even when empty. Substituting
+            // our own fallback copy here would bake it into a `String` before it
+            // reached a `Text`, making it unlocalizable; the view supplies the
+            // fallback instead, where it can be a real key.
+            return .setupNeeded(s.remediation)
         }
         if s.session == "spoofing" { return .spoofing }
         if !s.remediation.isEmpty { return .setupNeeded(s.remediation) }
@@ -551,7 +555,9 @@ struct GpsView: View {
     }
 
     /// One benefit row in the Pro pitch — a green check plus a short line.
-    private func pitchPoint(_ text: String) -> some View {
+    /// Takes a key, not a `String`, so the literals at the call sites are
+    /// extracted rather than rendered verbatim.
+    private func pitchPoint(_ text: LocalizedStringKey) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             Image(systemName: "checkmark.circle.fill")
                 .foregroundColor(.green)
@@ -610,7 +616,16 @@ struct GpsView: View {
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundColor(.orange)
-                Text(message)
+                // Two sources, two treatments. Remediation text is authored by
+                // the Mac agent and read from its status report, so it is
+                // runtime data and must be verbatim. The empty case is our own
+                // copy and is looked up. Renders exactly as before, when the
+                // fallback was substituted upstream as a plain `String`.
+                if message.isEmpty {
+                    Text("Connecting to your iPhone…")
+                } else {
+                    Text(verbatim: message)
+                }
             }
             // When the blocker is specifically "Pro required" — which a genuine founder can
             // hit if this device's signed record can't prove the grant — offer the founder
@@ -637,7 +652,8 @@ struct GpsView: View {
                     HStack {
                         Image(systemName: "desktopcomputer")
                             .foregroundColor(.brand)
-                        Text(c.name)
+                        // The Mac's own name, reported by the agent — user data.
+                        Text(verbatim: c.name)
                             .foregroundColor(.primary)
                         Spacer()
                         if controller.selectedControllerId == c.id {
@@ -665,7 +681,8 @@ struct GpsView: View {
                     set: { controller.setSelectedController($0.isEmpty ? nil : $0) }
                 )) {
                     ForEach(statusStore.controllers) { c in
-                        Text(c.name).tag(c.id)
+                        // The Mac's own name, reported by the agent — user data.
+                        Text(verbatim: c.name).tag(c.id)
                     }
                 } label: {
                     Label("Controlling Mac", systemImage: "desktopcomputer")
@@ -686,12 +703,13 @@ struct GpsView: View {
                 Spacer()
             }
             if let device = statusStore.status?.device {
-                infoRow("Device", device.name)
+                // Device name reported by the agent — user/device data, not copy.
+                infoRow("Device", Text(verbatim: device.name))
             }
             if active {
                 infoRow("Location", locationText)
                 if let prov = provenanceLabel(statusStore.status?.provenance ?? "") {
-                    infoRow("Source", prov)
+                    infoRow("Source", Text(prov))
                 }
             }
         } header: {
@@ -732,25 +750,34 @@ struct GpsView: View {
 
     // MARK: Helpers
 
-    private func infoRow(_ label: String, _ value: String) -> some View {
+    /// `value` is a built `Text`, not a `String`, so each call site declares
+    /// whether its value is localizable copy or a technical readout — the same
+    /// split `LabeledRow` uses. A single `String` parameter renders everything
+    /// verbatim and loses that distinction silently.
+    private func infoRow(_ label: LocalizedStringKey, _ value: Text) -> some View {
         HStack {
             Text(label)
             Spacer()
-            Text(value)
+            value
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.trailing)
         }
     }
 
-    private var locationText: String {
-        if let name = controller.locationName?.displayName, !name.isEmpty { return name }
+    /// Returns a built `Text` rather than a key: the first two branches are data
+    /// (a reverse-geocoded place name, then formatted coordinates) and the third
+    /// is copy, so only the literal is looked up.
+    private var locationText: Text {
+        // Reverse-geocoded place name — runtime data, not copy.
+        if let name = controller.locationName?.displayName, !name.isEmpty { return Text(verbatim: name) }
         if let loc = controller.location {
-            return String(format: "%.4f, %.4f", loc.latitude, loc.longitude)
+            // Formatted coordinates — numeric data, not copy.
+            return Text(verbatim: String(format: "%.4f, %.4f", loc.latitude, loc.longitude))
         }
-        return "No location chosen"
+        return Text("No location chosen")
     }
 
-    private func provenanceLabel(_ provenance: String) -> String? {
+    private func provenanceLabel(_ provenance: String) -> LocalizedStringKey? {
         switch provenance {
         case "vpn-sync": return "Matched to your VPN"
         case "manual": return "Manual"
@@ -840,7 +867,8 @@ struct SettingsView: View {
                 } header: {
                     Text("Help & Legal")
                 } footer: {
-                    Text(AppInfo.versionWithBuild)
+                    // Version + build identifier ("v1.19.10 (87)"), not copy.
+                    Text(verbatim: AppInfo.versionWithBuild)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.top, 8)
                 }
@@ -1094,7 +1122,7 @@ enum AppIconOption: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    var displayName: String {
+    var displayName: LocalizedStringKey {
         switch self {
         case .standard: return "Default"
         case .dark: return "Dark"

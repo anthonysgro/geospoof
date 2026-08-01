@@ -21,6 +21,45 @@ import StoreKit
 import Foundation
 import Combine
 
+// MARK: - Failure + plan-name presentation
+
+private extension ProStoreError {
+    /// A built `Text` rather than a `String`, so the two cases we author are
+    /// looked up while system error text passes through verbatim. Lives here in
+    /// the view layer rather than on the enum in `ProStore.swift`, which stays
+    /// free of view types.
+    var text: Text {
+        switch self {
+        case .purchaseUnverified:
+            return Text("Purchase could not be verified.")
+        case .appStoreUnreachable:
+            return Text("Couldn't reach the App Store. Your Pro access is unaffected; try again later.")
+        case .system(let message):
+            // Already localized by StoreKit / Foundation.
+            return Text(verbatim: message)
+        }
+    }
+}
+
+private extension ProStore {
+    /// The "<plan> plan" label for the subscription status rows.
+    ///
+    /// Prefers StoreKit's `displayName` through the `"%@ plan"` key — that value
+    /// is localized by App Store Connect, so the only part needing translation
+    /// is the surrounding sentence. When the product hasn't loaded there is no
+    /// localized name to interpolate, so each tier gets its own whole key
+    /// instead of the English plan name the store previously supplied. Renders
+    /// identically to the old code in every reachable state.
+    var planLabel: LocalizedStringKey {
+        if let plan = subscriptionDetails?.planName, !plan.isEmpty {
+            return "\(plan) plan"
+        }
+        if activeProductIDs.contains(ProductID.annual) { return "Annual plan" }
+        if activeProductIDs.contains(ProductID.monthly) { return "Monthly plan" }
+        return "Pro plan"
+    }
+}
+
 struct ProPaywallView: View {
     @ObservedObject private var store = ProStore.shared
     @Environment(\.dismiss) private var dismiss
@@ -48,13 +87,15 @@ struct ProPaywallView: View {
                     planPicker
                     VStack(spacing: 8) {
                         ctaButton
-                        Text(ctaSubtitle)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
+                        if let ctaSubtitle {
+                            Text(ctaSubtitle)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
                     }
                     if let err = store.lastError {
-                        Text(err)
+                        err.text
                             .font(.footnote)
                             .foregroundStyle(.red)
                             .multilineTextAlignment(.center)
@@ -66,7 +107,10 @@ struct ProPaywallView: View {
                 .frame(maxWidth: 520)
                 .frame(maxWidth: .infinity)
             }
-            .navigationTitle("")
+            // `Text(verbatim:)` rather than the `""` literal: an empty string
+            // literal in a `LocalizedStringKey` position becomes an empty
+            // catalog key, which is a translatable row containing nothing.
+            .navigationTitle(Text(verbatim: ""))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
@@ -247,7 +291,7 @@ struct ProPaywallView: View {
                     PlanCard(
                         product: lifetime,
                         isSelected: selectedProductID == lifetime.id,
-                        periodText: "lifetime",
+                        isAnnual: false,
                         priceCaption: "one-time",
                         trialText: nil,
                         badgeText: "Best value",
@@ -258,8 +302,8 @@ struct ProPaywallView: View {
                     PlanCard(
                         product: annual,
                         isSelected: selectedProductID == annual.id,
-                        periodText: periodText(annual),
-                        priceCaption: "per \(periodText(annual))",
+                        isAnnual: true,
+                        priceCaption: priceCaption(annual),
                         trialText: trialText(annual),
                         badgeText: savingsText,
                         subPriceText: monthlyEquivalent(annual)
@@ -269,8 +313,8 @@ struct ProPaywallView: View {
                     PlanCard(
                         product: monthly,
                         isSelected: selectedProductID == monthly.id,
-                        periodText: periodText(monthly),
-                        priceCaption: "per \(periodText(monthly))",
+                        isAnnual: false,
+                        priceCaption: priceCaption(monthly),
                         trialText: trialText(monthly),
                         badgeText: nil,
                         subPriceText: nil
@@ -305,7 +349,7 @@ struct ProPaywallView: View {
         .disabled(store.purchaseInFlight || selectedProduct == nil)
     }
 
-    private var ctaTitle: String {
+    private var ctaTitle: LocalizedStringKey {
         guard let product = selectedProduct else { return "Subscribe" }
         if isLifetime(product) { return "Unlock Lifetime Access" }
         if trialText(product) != nil { return "Start Free Trial" }
@@ -314,17 +358,43 @@ struct ProPaywallView: View {
 
     /// Reassurance + exact billing terms directly under the CTA — what users
     /// look for before committing (free-trial length, real price, cancel).
-    private var ctaSubtitle: String {
-        guard let product = selectedProduct else { return "" }
+    ///
+    /// One whole sentence per billing period, rather than interpolating a bare
+    /// period noun into a shared template. The keys derived here are complete
+    /// sentences with `%@`/`%lld` placeholders for the price and trial length
+    /// only — e.g. `"%lld days free, then %@/year. Cancel anytime."` — so a
+    /// translator can reorder the clause and inflect the period correctly.
+    ///
+    /// The cost is one key per period unit. That is the right trade: the
+    /// alternative renders as literal nonsense in most of the 12 languages.
+    /// `nil` rather than `""` when there is nothing to say. An empty string
+    /// literal in a `LocalizedStringKey` position is extracted as an empty
+    /// catalog key — a translatable row containing nothing, which then costs a
+    /// round trip in all 12 languages. Optional also states the real intent:
+    /// with no product selected there is no subtitle.
+    private var ctaSubtitle: LocalizedStringKey? {
+        guard let product = selectedProduct else { return nil }
         let price = product.displayPrice
         if isLifetime(product) {
             return "\(price) once. Yours forever — no subscription."
         }
-        let period = periodText(product)
+        guard let unit = product.subscription?.subscriptionPeriod.unit else { return nil }
         if let days = trialDays(product) {
-            return "\(days) days free, then \(price)/\(period). Cancel anytime."
+            switch unit {
+            case .day: return "\(days) days free, then \(price)/day. Cancel anytime."
+            case .week: return "\(days) days free, then \(price)/week. Cancel anytime."
+            case .month: return "\(days) days free, then \(price)/month. Cancel anytime."
+            case .year: return "\(days) days free, then \(price)/year. Cancel anytime."
+            @unknown default: return nil
+            }
         }
-        return "\(price)/\(period). Cancel anytime."
+        switch unit {
+        case .day: return "\(price)/day. Cancel anytime."
+        case .week: return "\(price)/week. Cancel anytime."
+        case .month: return "\(price)/month. Cancel anytime."
+        case .year: return "\(price)/year. Cancel anytime."
+        @unknown default: return nil
+        }
     }
 
     /// True for the one-time, non-consumable lifetime unlock (which has no
@@ -362,7 +432,7 @@ struct ProPaywallView: View {
         .padding(.top, 4)
     }
 
-    private var disclosureText: String {
+    private var disclosureText: LocalizedStringKey {
         if let product = selectedProduct, isLifetime(product) {
             return "A one-time purchase billed to your Apple Account. Not a subscription — it doesn't renew."
         }
@@ -371,14 +441,22 @@ struct ProPaywallView: View {
 
     // MARK: Pricing helpers
 
-    private func periodText(_ product: Product) -> String {
-        guard let unit = product.subscription?.subscriptionPeriod.unit else { return "" }
+    /// Caption under the price. One whole key per billing period rather than
+    /// `"per " + <noun>`: a bare period noun cannot be translated in isolation
+    /// (many languages inflect it by the preposition, and some reorder the
+    /// phrase entirely), so composing one into a sentence produces wrong output
+    /// no matter how good the translation of each part is.
+    /// Optional for the same reason as `ctaSubtitle`: a future StoreKit period
+    /// unit we do not recognise has no correct caption, and `""` would leave an
+    /// empty key in the catalog.
+    private func priceCaption(_ product: Product) -> LocalizedStringKey? {
+        guard let unit = product.subscription?.subscriptionPeriod.unit else { return "one-time" }
         switch unit {
-        case .day: return "day"
-        case .week: return "week"
-        case .month: return "month"
-        case .year: return "year"
-        @unknown default: return ""
+        case .day: return "per day"
+        case .week: return "per week"
+        case .month: return "per month"
+        case .year: return "per year"
+        @unknown default: return nil
         }
     }
 
@@ -398,20 +476,28 @@ struct ProPaywallView: View {
     }
 
     /// e.g. "7-day free trial" — nil when the product has no free-trial intro.
-    private func trialText(_ product: Product) -> String? {
+    /// Localizable: the literal derives the key "%lld-day free trial".
+    private func trialText(_ product: Product) -> LocalizedStringKey? {
         guard let days = trialDays(product) else { return nil }
         return "\(days)-day free trial"
     }
 
     /// Per-month equivalent shown on the annual card (makes annual feel cheap).
-    private func monthlyEquivalent(_ product: Product) -> String? {
+    ///
+    /// Localizable: the literal derives the key `"≈ %@/mo"`. The interpolated
+    /// value stays StoreKit's own locale-formatted price string, so only the
+    /// `/mo` abbreviation is translated — which is the part that needs it
+    /// ("/Mon.", "/mois", "/月"). Leaving this a `String` would have pinned that
+    /// abbreviation to English in all 12 languages.
+    private func monthlyEquivalent(_ product: Product) -> LocalizedStringKey? {
         guard product.subscription?.subscriptionPeriod.unit == .year else { return nil }
         let perMonth = product.price / 12
         return "≈ \(perMonth.formatted(product.priceFormatStyle))/mo"
     }
 
     /// "Save N%" comparing the annual price to 12× the monthly price.
-    private var savingsText: String? {
+    /// Localizable: the literal derives the key "Save %lld%%".
+    private var savingsText: LocalizedStringKey? {
         guard let monthly = store.monthlyProduct,
               let annual = store.annualProduct else { return nil }
         let yearAtMonthly = monthly.price * 12
@@ -443,13 +529,19 @@ private struct HeroSatellite: Identifiable {
 private struct PlanCard: View {
     let product: Product
     let isSelected: Bool
-    let periodText: String
-    /// Caption under the price, e.g. "per year" for a subscription or
-    /// "one-time" for the lifetime non-consumable.
-    let priceCaption: String
-    let trialText: String?
-    let badgeText: String?
-    let subPriceText: String?
+    /// Selects the `defaultName` fallback. Replaces what used to be a `String`
+    /// period compared against the literal `"year"` — an English-text comparison
+    /// driving control flow, which would have silently broken the moment that
+    /// string was localized.
+    let isAnnual: Bool
+    /// Caption under the price: `"per year"` for a subscription, `"one-time"`
+    /// for the lifetime non-consumable. A whole localizable phrase. Optional so
+    /// an unrecognised billing period renders nothing rather than an empty key.
+    let priceCaption: LocalizedStringKey?
+    let trialText: LocalizedStringKey?
+    let badgeText: LocalizedStringKey?
+    /// Localized `"≈ %@/mo"`, whose `%@` is StoreKit's formatted price.
+    let subPriceText: LocalizedStringKey?
     let onTap: () -> Void
 
     var body: some View {
@@ -462,8 +554,16 @@ private struct PlanCard: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 8) {
-                        Text(product.displayName.isEmpty ? defaultName : product.displayName)
-                            .font(.headline)
+                        // Split rather than a ternary inside one `Text`: the two
+                        // branches need different treatment. The App Store name
+                        // is already localized by App Store Connect and must be
+                        // verbatim; our fallback is our own copy and must be
+                        // looked up. A ternary forces both down one path.
+                        if product.displayName.isEmpty {
+                            Text(defaultName).font(.headline)
+                        } else {
+                            Text(verbatim: product.displayName).font(.headline)
+                        }
                         if let badgeText {
                             Text(badgeText)
                                 .font(.caption2.bold())
@@ -483,11 +583,14 @@ private struct PlanCard: View {
                 Spacer(minLength: 8)
 
                 VStack(alignment: .trailing, spacing: 1) {
-                    Text(product.displayPrice)
+                    // verbatim: StoreKit's locale-formatted price string.
+                    Text(verbatim: product.displayPrice)
                         .font(.headline)
-                    Text(priceCaption)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    if let priceCaption {
+                        Text(priceCaption)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                     if let subPriceText {
                         Text(subPriceText)
                             .font(.caption2)
@@ -512,8 +615,13 @@ private struct PlanCard: View {
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 
-    private var defaultName: String {
-        periodText == "year" ? "Annual" : "Monthly"
+    /// Shown only when StoreKit hands back an empty `displayName`. Now
+    /// localizable, and keyed off `isAnnual` rather than an English string
+    /// comparison. Behavior is unchanged, including for the lifetime card, which
+    /// passes `isAnnual: false` and so still falls back to "Monthly" exactly as
+    /// the old `periodText == "year"` test did for `"lifetime"`.
+    private var defaultName: LocalizedStringKey {
+        isAnnual ? "Annual" : "Monthly"
     }
 }
 
@@ -608,12 +716,12 @@ struct ProSettingsSection: View {
         }
     }
 
-    private var summarySubtitle: String {
+    private var summarySubtitle: LocalizedStringKey {
         switch store.status {
         case .founder: return "Founding Supporter — free for life"
         case .lifetime: return "Lifetime — yours forever"
         case .subscribed:
-            if let plan = store.subscriptionDetails?.planName { return "\(plan) plan" }
+            if store.subscriptionDetails != nil { return store.planLabel }
             return "Active"
         case .none: return "Upgrade to unlock all features"
         }
@@ -697,7 +805,7 @@ struct ProDetailView: View {
                           subtitle: "You own GeoSpoof Pro — yours forever, on all your Apple devices. No subscription.")
             case .subscribed:
                 statusRow(icon: "checkmark.seal.fill", tint: .green,
-                          title: "\(store.subscriptionDetails?.planName ?? "Pro") plan",
+                          title: store.planLabel,
                           subtitle: subscriptionStatusText)
             case .none:
                 statusRow(icon: "location.fill.viewfinder", tint: .brand,
@@ -709,7 +817,7 @@ struct ProDetailView: View {
         }
     }
 
-    private var subscriptionStatusText: String {
+    private var subscriptionStatusText: LocalizedStringKey {
         guard let details = store.subscriptionDetails else { return "Active" }
         guard let date = details.renewalDate else {
             return details.autoRenews ? "Active" : "Canceled"
@@ -718,7 +826,9 @@ struct ProDetailView: View {
         return details.autoRenews ? "Renews \(formatted)" : "Active until \(formatted)"
     }
 
-    private func statusRow(icon: String, tint: Color, title: String, subtitle: String) -> some View {
+    /// `icon` is an SF Symbol name (not display text); `title` / `subtitle` are.
+    private func statusRow(icon: String, tint: Color,
+                           title: LocalizedStringKey, subtitle: LocalizedStringKey) -> some View {
         HStack(spacing: 14) {
             Image(systemName: icon)
                 .font(.system(size: 28))
@@ -826,7 +936,8 @@ struct ProDetailView: View {
                         if store.purchaseInFlight {
                             ProgressView().controlSize(.small)
                         } else {
-                            Text(lifetime.displayPrice)
+                            // verbatim: StoreKit's locale-formatted price string.
+                            Text(verbatim: lifetime.displayPrice)
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -902,9 +1013,10 @@ struct ProDetailView: View {
 
 struct ProFeatureItem: Identifiable {
     let id = UUID()
+    /// SF Symbol name — not display text.
     let icon: String
-    let title: String
-    let detail: String
+    let title: LocalizedStringKey
+    let detail: LocalizedStringKey
     let tint: Color
 }
 

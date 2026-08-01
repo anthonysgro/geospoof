@@ -97,6 +97,26 @@ Use the built-in test links at the bottom of the extension:
 
 ⚠️ **Terms of Service**: Using location spoofing may violate the terms of service of some websites, particularly streaming services. Use responsibly and at your own risk.
 
+## Languages
+
+GeoSpoof is available in 12 languages: English, German, Spanish, French, Indonesian, Japanese, Dutch, Portuguese (Brazil), Russian, Swedish, Vietnamese, and Simplified Chinese.
+
+Both the browser extension popup and the Safari app for iPhone, iPad, and Mac are translated. Everything except English is machine-translated and awaiting review by native speakers, so you may hit the occasional awkward phrase — corrections are very welcome, either as a GitHub issue or through TestFlight feedback.
+
+**To change the language of the Safari app**, use the system setting rather than anything inside GeoSpoof:
+
+- **iPhone / iPad** — Settings › Apps › GeoSpoof › Language
+- **Mac** — System Settings › General › Language & Region › Applications, then add GeoSpoof and pick a language
+
+There is deliberately no language picker inside the app. iOS and macOS already provide a per-app one, and using the system setting means GeoSpoof behaves like every other app on your device.
+
+**To change the language of the extension popup**, use the picker in the popup's Advanced section. Browsers don't offer a per-extension language setting, which is why the popup has its own.
+
+Two things are worth keeping separate:
+
+- **The app's language** is the one described above — what _you_ read.
+- **Reported Language** is a different feature entirely. It changes the language _websites_ think you speak, to match a spoofed location. Turning it on does not change GeoSpoof's own language, and changing GeoSpoof's language does not change what websites see.
+
 ## Safari Permissions FAQ
 
 When you enable GeoSpoof in Safari, you'll see a prompt warning that the extension can "read and alter webpages" and "see your browsing history," possibly including "passwords, phone numbers, and credit cards." This is alarming the first time you see it. Here's what's actually going on.

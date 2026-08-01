@@ -323,7 +323,7 @@ struct SpoofControlPanel: View {
                 autoBackgroundSyncRow
 
                 if let ip = controller.lastSyncedIP {
-                    LabeledRow(label: "Detected IP", value: ip)
+                    LabeledRow(label: "Detected IP", value: Text(verbatim: ip))
                 }
                 if let err = controller.vpnError {
                     Text(err).font(.subheadline).foregroundStyle(.red)
@@ -724,8 +724,14 @@ struct LocationMapPane: View {
         hSizeClass == .compact ? 180 : 320
     }
 
-    private var title: String {
-        if let name = controller.locationName?.displayName, !name.isEmpty { return name }
+    private var title: LocalizedStringKey {
+        // The resolved place name is reverse-geocoded runtime data, so it is
+        // passed through as a key that misses and falls back to itself rather
+        // than being looked up. Only the "Custom Location" fallback is a real
+        // localizable literal, and Xcode extracts just that one.
+        if let name = controller.locationName?.displayName, !name.isEmpty {
+            return LocalizedStringKey(stringLiteral: name)
+        }
         return "Custom Location"
     }
 
@@ -1151,7 +1157,8 @@ struct SetLocationView: View {
     @State private var searchText = ""
     @State private var latText = ""
     @State private var lonText = ""
-    @State private var coordError: String?
+    /// `LocalizedStringKey?`: all three messages are our own validation copy.
+    @State private var coordError: LocalizedStringKey?
 
     private enum CoordinateField { case latitude, longitude }
     @FocusState private var focusedField: CoordinateField?
@@ -1337,13 +1344,20 @@ struct SetLocationView: View {
 // MARK: - Small components
 
 struct LabeledRow: View {
-    let label: String
-    let value: String
+    let label: LocalizedStringKey
+    /// Passed as a built `Text` rather than a `String` so each call site states
+    /// whether its value is localizable copy or a technical readout. Most values
+    /// here are data — coordinates, IANA identifiers, IP addresses, UTC offsets —
+    /// and must use `Text(verbatim:)`; a couple are display text
+    /// (`accuracyDetailValue`, `precisionDetailValue`) and must be localized. A
+    /// single `String` parameter cannot express that difference, which is how the
+    /// distinction gets lost silently.
+    let value: Text
     var body: some View {
         HStack {
             Text(label)
             Spacer()
-            Text(value)
+            value
                 .foregroundStyle(.secondary)
                 .monospacedDigit()
                 .textSelection(.enabled)
@@ -1408,7 +1422,8 @@ final class TipStore: ObservableObject {
     @Published private(set) var purchasing: Product.ID?
     /// Set true after any successful tip, to show a thank-you state.
     @Published var didTip = false
-    @Published var errorMessage: String?
+    /// `LocalizedStringKey?`: all three messages are our own copy, not StoreKit's.
+    @Published var errorMessage: LocalizedStringKey?
 
     /// Fetch the products, sorted cheapest-first so tiers render low → high.
     func loadProducts() async {
@@ -1748,7 +1763,12 @@ struct BrowserSettingsView: View {
     /// Shared row shape: icon + title on the left, current value on the right.
     /// Consistency here is what makes the tab readable as an index — a row whose
     /// value is missing or styled differently reads as a different kind of control.
-    private func settingRow(_ title: String, systemImage: String, value: String) -> some View {
+    /// `title` and `value` are `LocalizedStringKey`, not `String`, so both reach
+    /// SwiftUI's localizing initializers. Typed as `String` they would bind to the
+    /// `StringProtocol` overloads of `Label`/`Text`, which render verbatim — the
+    /// row would compile, look correct in English, and never translate.
+    /// `systemImage` stays a `String`: it is an SF Symbol name, not display text.
+    private func settingRow(_ title: LocalizedStringKey, systemImage: String, value: LocalizedStringKey) -> some View {
         HStack {
             Label(title, systemImage: systemImage)
             Spacer(minLength: 12)
@@ -1761,10 +1781,13 @@ struct BrowserSettingsView: View {
     /// Scope state for the index row: the mode, plus the list count when a list
     /// is what's actually in force. The count is the part people want — it's the
     /// difference between "filtering" and "filtering nothing".
-    private var scopeValueLabel: String {
+    private var scopeValueLabel: LocalizedStringKey {
         switch controller.scopeMode {
         case .all:
             return "All Sites"
+        // Locale-grouped like `accuracyValueLabel`. Only observable with a
+        // four-digit filter list, which is unlikely but costs nothing to get
+        // right. Same approved exception (Requirement 2.6).
         case .allowlist:
             return "Allowlist · \(controller.allowlist.count)"
         case .denylist:
@@ -1789,7 +1812,7 @@ struct SiteFiltersView: View {
     @ObservedObject var controller: SpoofController
     /// Navigation title. macOS shows this as its "Filters" pane; iOS pushes it
     /// from the Browser tab as "Site Filters".
-    var title: String = "Filters"
+    var title: LocalizedStringKey = "Filters"
     /// macOS presents this as a standalone sidebar pane and needs its own
     /// navigation container. On iOS it's pushed onto the Browser tab's existing
     /// stack, where a nested stack would swallow the back button.
@@ -1850,7 +1873,14 @@ struct SiteFiltersView: View {
                 if filtersLocked {
                     Text("Allowlist and Denylist are a GeoSpoof Pro feature. Upgrade to limit spoofing to specific sites.")
                 } else if controller.scopeMode == .all {
-                    Text("\(controller.scopeMode.detail) Choose Allowlist or Denylist to limit spoofing to specific sites.")
+                    // Concatenated `Text` rather than string interpolation: both
+                    // halves are localizable keys in their own right, and
+                    // `LocalizedStringKey` cannot be interpolated into another
+                    // key. Sentence-level joining is safe — each part is a whole
+                    // sentence, so no translation needs to reorder across them.
+                    // Renders identically to the previous interpolated form.
+                    Text(controller.scopeMode.detail)
+                        + Text(" Choose Allowlist or Denylist to limit spoofing to specific sites.")
                 } else {
                     Text(controller.scopeMode.detail)
                 }
@@ -1880,7 +1910,8 @@ struct SiteFiltersView: View {
             ForEach(controller.activeScopeList, id: \.self) { domain in
                 HStack(spacing: 10) {
                     ScopeMonogram(domain: domain)
-                    Text(domain)
+                    // verbatim: a user-entered site pattern.
+                    Text(verbatim: domain)
                         .lineLimit(1)
                         .truncationMode(.middle)
                     Spacer()
@@ -1915,7 +1946,9 @@ struct SiteFiltersView: View {
             HStack {
                 Text(controller.scopeMode.listTitle)
                 Spacer()
-                Text("\(controller.activeScopeList.count)")
+                // Locale-formatted digits via the verbatim path, so this count
+                // badge doesn't derive a catalog key of just `%lld`.
+                Text(controller.activeScopeList.count.formatted())
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
             }
@@ -1931,7 +1964,7 @@ struct SiteFiltersView: View {
         }
     }
 
-    private var addRowTitle: String {
+    private var addRowTitle: LocalizedStringKey {
         controller.scopeMode == .denylist ? "Add Blocked Site" : "Add Allowed Site"
     }
 
@@ -1958,17 +1991,18 @@ private struct AddSiteSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var text = ""
-    @State private var hint: String?
+    /// `LocalizedStringKey?`: both hints are our own validation copy.
+    @State private var hint: LocalizedStringKey?
     /// Sites added during this sheet session, newest first — live confirmation
     /// of what's been entered without duplicating the full list behind it.
     @State private var added: [String] = []
     @FocusState private var focused: Bool
 
-    private var navTitle: String {
+    private var navTitle: LocalizedStringKey {
         mode == .denylist ? "Add Blocked Sites" : "Add Allowed Sites"
     }
 
-    private var helpText: String {
+    private var helpText: LocalizedStringKey {
         mode == .denylist
             ? "Spoofing is skipped on the sites you add here."
             : "Spoofing applies only to the sites you add here."
@@ -2038,7 +2072,8 @@ private struct AddSiteSheet: View {
                         ForEach(added, id: \.self) { domain in
                             HStack(spacing: 10) {
                                 ScopeMonogram(domain: domain)
-                                Text(domain)
+                                // verbatim: a user-entered site pattern.
+                                Text(verbatim: domain)
                                     .lineLimit(1)
                                     .truncationMode(.middle)
                                 Spacer()
@@ -2081,9 +2116,12 @@ private struct AddSiteSheet: View {
     /// One row of the pattern-syntax reference: a monospaced example above its
     /// plain-language description, mirroring the popup's `scope-syntax-row`.
     @ViewBuilder
-    private func patternSyntaxRow(_ code: String, _ desc: String) -> some View {
+    private func patternSyntaxRow(_ code: String, _ desc: LocalizedStringKey) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(code)
+            // verbatim: `code` is a literal pattern example (`*.example.com`).
+            // It is syntax, not prose, and must survive translation unchanged —
+            // hence a plain `String` rendered verbatim, while `desc` localizes.
+            Text(verbatim: code)
                 .font(.system(.subheadline, design: .monospaced))
             Text(desc)
                 .font(.caption)
@@ -2091,7 +2129,15 @@ private struct AddSiteSheet: View {
         }
         .padding(.vertical, 2)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(code): \(desc)")
+        // Concatenated `Text`, not interpolation. Interpolating a
+        // `LocalizedStringKey` into another key hits a deprecated
+        // `appendInterpolation` overload that substitutes the value's *debug
+        // description* — VoiceOver would read
+        // `LocalizedStringKey(key: "…", hasFormatting: false, arguments: [])`
+        // aloud, and the derived catalog key collapses to a context-free
+        // `"%@: %@"`. `code` is a pattern example and stays verbatim; `desc` is
+        // looked up.
+        .accessibilityLabel(Text(verbatim: "\(code): ") + Text(desc))
     }
 
     private func add() {
@@ -2128,7 +2174,8 @@ struct ScopeMonogram: View {
     let domain: String
 
     var body: some View {
-        Text(initial)
+        // verbatim: the first character of a user-entered domain.
+        Text(verbatim: initial)
             .font(.system(size: 11, weight: .bold))
             .foregroundStyle(.white)
             .frame(width: 22, height: 22)
@@ -2163,7 +2210,7 @@ struct ScopeMonogram: View {
 private enum AccuracyPreset: String, CaseIterable, Identifiable {
     case realistic, custom
     var id: String { rawValue }
-    var label: String {
+    var label: LocalizedStringKey {
         switch self {
         case .realistic: return "Realistic"
         case .custom: return "Custom"
@@ -2171,7 +2218,7 @@ private enum AccuracyPreset: String, CaseIterable, Identifiable {
     }
 
     /// Plain-language consequence of the preset, for the pushed picker.
-    var detail: String {
+    var detail: LocalizedStringKey {
         switch self {
         case .realistic:
             return "Vary the figure the way a real device does."
@@ -2188,9 +2235,12 @@ private enum AccuracyPreset: String, CaseIterable, Identifiable {
 /// number reported *alongside* the coordinates, while precision moves the
 /// coordinates themselves. Someone who wants to be harder to pin down reaches for
 /// the wrong one roughly half the time unless told.
-private let accuracyExplanation =
-    "The accuracy figure sites receive with your coordinates — how certain the "
-    + "device claims to be. This never moves your location; Location Precision does that."
+/// One literal, not two concatenated ones. `+` on string literals produces a
+/// `String` at compile time, which bound `Text` to the verbatim overload and made
+/// this paragraph untranslatable; a `LocalizedStringKey` also cannot be built by
+/// concatenation. The joined text is byte-identical to the previous two parts.
+private let accuracyExplanation: LocalizedStringKey =
+    "The accuracy figure sites receive with your coordinates — how certain the device claims to be. This never moves your location; Location Precision does that."
 
 /// Accuracy control rows (a Picker + a conditional Custom meters field) intended
 /// to be embedded inside a Form Section. Reads/writes `controller.accuracySetting`,
@@ -2292,7 +2342,10 @@ struct AccuracySettingsRows: View {
     /// visible leading label, which otherwise showed "45" twice (once as that
     /// label, once as the entered value).
     private var metersField: some View {
-        let field = TextField("Accuracy in meters", text: $customText, prompt: Text("45"))
+        // `Text(verbatim:)` for the prompt: "45" is a sample numeric value, not
+        // copy. As a bare literal it became the catalog key "45", a translatable
+        // row holding a number.
+        let field = TextField("Accuracy in meters", text: $customText, prompt: Text(verbatim: "45"))
             .labelsHidden()
         #if os(iOS)
         return field.keyboardType(.numberPad)
@@ -2373,7 +2426,7 @@ struct AccuracySettingsRows: View {
 fileprivate enum LocationPrecisionPreset: String, CaseIterable, Identifiable {
     case exact, street, neighborhood, city
     var id: String { rawValue }
-    var label: String {
+    var label: LocalizedStringKey {
         switch self {
         case .exact: return "Exact"
         case .street: return "Street (~0.5 km)"
@@ -2398,7 +2451,7 @@ fileprivate enum LocationPrecisionPreset: String, CaseIterable, Identifiable {
     /// level you'd want, and gives no hint that coordinates get moved — which is
     /// exactly how a user ends up reporting a bug about their location being off
     /// by a few hundred metres.
-    var detail: String {
+    var detail: LocalizedStringKey {
         switch self {
         case .exact: return "Report your chosen location precisely."
         case .street: return "Move the reported point up to 500 m away."
@@ -2430,7 +2483,7 @@ fileprivate func precisionPreset(for setting: SpoofLocationPrecision) -> Locatio
 /// Settings-row label for the location-precision setting, mirroring
 /// `accuracyValueLabel(for:)`. Names the preset rather than the raw radius so the
 /// index row reads the way the picker does.
-func precisionValueLabel(for setting: SpoofLocationPrecision) -> String {
+func precisionValueLabel(for setting: SpoofLocationPrecision) -> LocalizedStringKey {
     switch setting {
     case .exact:
         return "Exact"
@@ -2589,7 +2642,7 @@ struct PrecisionSettingsRows: View {
 
 /// Detail-panel readout for the reported location precision: "Exact" or the
 /// approximate radius (e.g. "±2 km"). Mirrors `accuracyDetailValue`.
-func precisionDetailValue(for setting: SpoofLocationPrecision) -> String {
+func precisionDetailValue(for setting: SpoofLocationPrecision) -> LocalizedStringKey {
     switch setting {
     case .exact:
         return "Exact"
@@ -2623,7 +2676,7 @@ struct PreservePromptRows: View {
 
     /// The explanatory copy, exposed so a caller rendering it in a Section footer
     /// uses the same strings rather than a drifting second copy.
-    static func footnote(locked: Bool) -> String {
+    static func footnote(locked: Bool) -> LocalizedStringKey {
         locked
             ? "Preserving a site's native location prompt is a GeoSpoof Pro feature. Free spoofing answers permission prompts automatically with your spoofed location."
             : "Sites will show their own location permission prompt. Your spoofed location is used only after you allow it."
@@ -2670,8 +2723,17 @@ struct PreservePromptRows: View {
 /// Short label for the currently selected accuracy, e.g. "Realistic" or
 /// "Custom · 250 m". Used as the trailing value on the iOS NavigationLink row
 /// (mirrors the Appearance/App Icon rows).
-func accuracyValueLabel(for setting: SpoofAccuracySetting) -> String {
+func accuracyValueLabel(for setting: SpoofAccuracySetting) -> LocalizedStringKey {
     switch setting {
+    // Interpolating a bare `Int` into a `LocalizedStringKey` formats it through
+    // the display locale, so this groups at four digits and above: "Custom ·
+    // 1,500 m" in en-US, "1.500" in de-DE, "1 500" in fr-FR. Metres range
+    // 1...10000, so grouping is routinely visible here.
+    //
+    // This is a deliberate, approved change to shipping English copy — the app
+    // previously rendered an ungrouped "Custom · 1500 m". It is the one
+    // sanctioned exception to the Phase 1 English-invariance gate, recorded in
+    // requirements.md Requirement 2.6, and it is what Requirement 10.2 wants.
     case .fixed(let m): return "Custom · \(m) m"
     case .auto, .range: return "Realistic"
     }
@@ -2683,7 +2745,7 @@ func accuracyValueLabel(for setting: SpoofAccuracySetting) -> String {
 /// value as "±N m", and auto (or a legacy range) as "Realistic" (no fixed
 /// number — the emitted value varies per location/seed and the app, which
 /// doesn't hold the extension-owned seed, can't compute the exact figure).
-func accuracyDetailValue(for setting: SpoofAccuracySetting) -> String {
+func accuracyDetailValue(for setting: SpoofAccuracySetting) -> LocalizedStringKey {
     switch setting {
     case .fixed(let m): return "±\(m) m"
     case .auto, .range: return "Realistic"
@@ -2816,7 +2878,13 @@ struct AccuracyPickerView: View {
     /// own, so we set the selection when editing begins (deferred a tick, since
     /// UIKit places its own caret first).
     private var metersField: some View {
-        let field = TextField("45", text: $customText)
+        // Same shape as `AccuracyRows.metersField`: a real localizable label for
+        // accessibility, hidden visually, with the sample value as a verbatim
+        // `prompt`. Passing "45" as the title made it a catalog key — a
+        // translatable row holding a number — and left the field unlabelled for
+        // VoiceOver.
+        let field = TextField("Accuracy in meters", text: $customText, prompt: Text(verbatim: "45"))
+            .labelsHidden()
         #if os(iOS)
         return field
             .keyboardType(.numbersAndPunctuation)

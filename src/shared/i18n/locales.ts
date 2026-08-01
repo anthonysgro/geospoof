@@ -37,6 +37,28 @@ export const SUPPORTED_UI_LOCALES: readonly SupportedLocale[] = [
 
 const LOCALE_CODES: readonly string[] = SUPPORTED_UI_LOCALES.map((l) => l.code);
 
+/**
+ * Map a `_locales` code to the language code Apple uses in the native app's
+ * String Catalog (`safari/Shared (App)/Resources/Localizable.xcstrings`).
+ *
+ * The two platforms spell the same languages differently: WebExtensions use
+ * underscore region tags, while Apple uses hyphens and keys Chinese by *script*
+ * rather than region. Only two of the twelve differ:
+ *
+ *   `pt_BR` → `pt-BR`      (separator only)
+ *   `zh_CN` → `zh-Hans`    (region → script)
+ *
+ * This lives here, beside the locale list itself, because it is the only bridge
+ * between the extension's locale vocabulary and the native app's. Kept in one
+ * place so the two cannot drift; consumed by the native-catalog parity test.
+ * Nothing at runtime needs it — the extension never reads the native catalog and
+ * the native app never reads `_locales`.
+ */
+export function toAppleLocaleCode(code: string): string {
+  if (code === "zh_CN") return "zh-Hans";
+  return code.replace("_", "-");
+}
+
 /** Whether `code` is a supported `_locales` directory code. */
 export function isSupportedLocale(code: string): boolean {
   return LOCALE_CODES.includes(code);

@@ -54,7 +54,7 @@ struct MacRootView: View {
         NavigationSplitView {
             List(selection: $section) {
                 ForEach(MacSection.allCases) { item in
-                    Label(item.rawValue, systemImage: item.icon)
+                    Label(item.label, systemImage: item.icon)
                         .font(.title3)
                         .tag(item)
                 }
@@ -76,7 +76,8 @@ struct MacRootView: View {
                             Text("GeoSpoof")
                                 .font(.custom("Outfit", size: 26).weight(.medium))
                                 .foregroundStyle(.primary)
-                            Text(AppInfo.version)
+                            // Version identifier ("v1.19.10"), not copy.
+                            Text(verbatim: AppInfo.version)
                                 .font(.system(size: 13))
                                 .foregroundStyle(.secondary)
                         }
@@ -113,6 +114,27 @@ enum MacSection: String, CaseIterable, Identifiable {
     case settings = "Settings"
 
     var id: String { rawValue }
+
+    /// Sidebar display text, stated separately from `rawValue`.
+    ///
+    /// The raw values double as `id` (and as this enum's `Hashable` identity for
+    /// the `List` selection), so they must stay stable English regardless of the
+    /// display language — a localized identity would change the selection key
+    /// per language. They also can't be localized in place: `rawValue` is a
+    /// `String`, so `Label(item.rawValue, …)` bound to the `StringProtocol`
+    /// overload and rendered verbatim, which is why these four labels were
+    /// untranslatable. The literals below are identical to the raw values today;
+    /// the point is that they are now free to diverge.
+    var label: LocalizedStringKey {
+        switch self {
+        case .home: return "Home"
+        case .filters: return "Filters"
+        case .details: return "Details"
+        case .settings: return "Settings"
+        }
+    }
+
+    /// SF Symbol name — never localized.
     var icon: String {
         switch self {
         case .home: return "location.circle"
@@ -259,7 +281,8 @@ struct MacSettingsView: View {
                 } header: {
                     Text("Help & Legal")
                 } footer: {
-                    Text(AppInfo.versionWithBuild)
+                    // Version + build identifier ("v1.19.10 (87)"), not copy.
+                    Text(verbatim: AppInfo.versionWithBuild)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.top, 8)
                 }
@@ -422,7 +445,7 @@ enum AppearanceMode: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    var displayName: String {
+    var displayName: LocalizedStringKey {
         switch self {
         case .system: return "System"
         case .light: return "Light"
@@ -460,22 +483,31 @@ final class ExtensionStateModel: ObservableObject {
         category: "ExtensionState"
     )
 
-    private var settingsLocation: String {
+    /// Whole sentences per state, duplicated across the two Safari settings
+    /// names, rather than interpolating a shared `settingsLocation` fragment.
+    /// `LocalizedStringKey` cannot be interpolated into another key, and a
+    /// translator needs the full sentence anyway to place the clause and
+    /// inflect the location name. The rendered English is unchanged: each
+    /// literal here is the previous interpolated result, spelled out.
+    var statusText: LocalizedStringKey {
         if #available(macOS 13, *) {
-            return "the Extensions section of Safari Settings"
+            switch state {
+            case .on:
+                return "GeoSpoof’s extension is currently on. You can turn it off in the Extensions section of Safari Settings."
+            case .off:
+                return "GeoSpoof’s extension is currently off. You can turn it on in the Extensions section of Safari Settings."
+            case .unknown:
+                return "You can turn on GeoSpoof’s extension in the Extensions section of Safari Settings."
+            }
         } else {
-            return "Safari Extensions preferences"
-        }
-    }
-
-    var statusText: String {
-        switch state {
-        case .on:
-            return "GeoSpoof’s extension is currently on. You can turn it off in \(settingsLocation)."
-        case .off:
-            return "GeoSpoof’s extension is currently off. You can turn it on in \(settingsLocation)."
-        case .unknown:
-            return "You can turn on GeoSpoof’s extension in \(settingsLocation)."
+            switch state {
+            case .on:
+                return "GeoSpoof’s extension is currently on. You can turn it off in Safari Extensions preferences."
+            case .off:
+                return "GeoSpoof’s extension is currently off. You can turn it on in Safari Extensions preferences."
+            case .unknown:
+                return "You can turn on GeoSpoof’s extension in Safari Extensions preferences."
+            }
         }
     }
 

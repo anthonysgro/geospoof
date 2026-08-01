@@ -44,12 +44,17 @@ struct SpoofDetailsView: View {
     private var locationSection: some View {
         Section("Spoofed Location") {
             if let loc = controller.location {
-                LabeledRow(label: "Latitude", value: String(format: "%.5f", loc.latitude))
-                LabeledRow(label: "Longitude", value: String(format: "%.5f", loc.longitude))
-                LabeledRow(label: "Accuracy", value: accuracyDetailValue(for: controller.accuracySetting))
-                LabeledRow(label: "Precision", value: precisionDetailValue(for: controller.locationPrecision))
+                // verbatim: fixed-format coordinates. Deliberately not run
+                // through a locale — this is a technical readout and a
+                // comma decimal separator would misread as a pair separator.
+                LabeledRow(label: "Latitude", value: Text(verbatim: String(format: "%.5f", loc.latitude)))
+                LabeledRow(label: "Longitude", value: Text(verbatim: String(format: "%.5f", loc.longitude)))
+                // Localized: both helpers return display copy ("Exact", "Realistic", "±2 km").
+                LabeledRow(label: "Accuracy", value: Text(accuracyDetailValue(for: controller.accuracySetting)))
+                LabeledRow(label: "Precision", value: Text(precisionDetailValue(for: controller.locationPrecision)))
                 if let name = controller.locationName?.displayName, !name.isEmpty {
-                    LabeledRow(label: "Location", value: name)
+                    // verbatim: reverse-geocoded place name.
+                    LabeledRow(label: "Location", value: Text(verbatim: name))
                 }
             } else {
                 Text("Not configured").foregroundStyle(.secondary)
@@ -62,9 +67,11 @@ struct SpoofDetailsView: View {
     private var timezoneSection: some View {
         Section("Spoofed Timezone") {
             if let tz = controller.timezone {
-                LabeledRow(label: "Identifier", value: tz.identifier)
-                LabeledRow(label: "Offset", value: tz.utcOffsetText)
-                LabeledRow(label: "DST Offset", value: "\(tz.dstOffsetMinutes) min")
+                // verbatim: IANA timezone id and a formatted UTC offset — both identifiers.
+                LabeledRow(label: "Identifier", value: Text(verbatim: tz.identifier))
+                LabeledRow(label: "Offset", value: Text(verbatim: tz.utcOffsetText))
+                // Localized: "min" is an abbreviation that translates.
+                LabeledRow(label: "DST Offset", value: Text("\(tz.dstOffsetMinutes) min"))
                 if tz.fallback {
                     Text("⚠️ Estimated (API unavailable)")
                         .font(.caption).foregroundStyle(.orange)
@@ -102,7 +109,7 @@ struct SpoofDetailsView: View {
         var groups: [APICategory] = []
 
         if controller.hasLocation {
-            groups.append(APICategory(title: "Geolocation", apis: [
+            groups.append(APICategory(id: "Geolocation", title: "Geolocation", apis: [
                 "navigator.geolocation.getCurrentPosition()",
                 "navigator.geolocation.watchPosition()",
                 "navigator.geolocation.clearWatch()",
@@ -122,7 +129,7 @@ struct SpoofDetailsView: View {
         }
 
         if controller.timezone != nil {
-            groups.append(APICategory(title: "Date & Time", apis: [
+            groups.append(APICategory(id: "Date & Time", title: "Date & Time", apis: [
                 "Date() constructor",
                 "Date.parse()",
                 "Date.prototype.getTimezoneOffset()",
@@ -138,7 +145,7 @@ struct SpoofDetailsView: View {
                 "Intl.DateTimeFormat.prototype.formatRange() / formatRangeToParts()",
             ]))
 
-            groups.append(APICategory(title: "Temporal", apis: [
+            groups.append(APICategory(id: "Temporal", title: "Temporal", apis: [
                 "Temporal.Now.timeZoneId()",
                 "Temporal.Now.plainDateTimeISO()",
                 "Temporal.Now.plainDateISO()",
@@ -146,13 +153,13 @@ struct SpoofDetailsView: View {
                 "Temporal.Now.zonedDateTimeISO()",
             ]))
 
-            groups.append(APICategory(title: "XSLT / EXSLT", apis: [
+            groups.append(APICategory(id: "XSLT / EXSLT", title: "XSLT / EXSLT", apis: [
                 "XSLTProcessor.prototype.transformToFragment()",
                 "XSLTProcessor.prototype.transformToDocument()",
                 "EXSLT date:date-time() (result rewriting)",
             ]))
 
-            groups.append(APICategory(title: "Workers", apis: [
+            groups.append(APICategory(id: "Workers", title: "Workers", apis: [
                 "Worker (constructor wrapper)",
                 "SharedWorker (constructor wrapper)",
                 "navigator.serviceWorker.register()",
@@ -163,7 +170,7 @@ struct SpoofDetailsView: View {
         // Keep the two lists in step — this screen is a technical readout, so a
         // surface listed on one platform and missing on the other reads as a bug.
         if controller.localeSpoofing != .off {
-            groups.append(APICategory(title: "Language & Locale", apis: [
+            groups.append(APICategory(id: "Language & Locale", title: "Language & Locale", apis: [
                 "navigator.language",
                 "navigator.languages",
                 "WorkerNavigator.language / languages (worker scopes)",
@@ -187,13 +194,13 @@ struct SpoofDetailsView: View {
             ]))
         }
         if controller.webrtcProtection {
-            groups.append(APICategory(title: "WebRTC", apis: [
+            groups.append(APICategory(id: "WebRTC", title: "WebRTC", apis: [
                 "RTCPeerConnection (constructor wrapper)",
                 "RTCPeerConnection.prototype.getStats()",
             ]))
         }
 
-        groups.append(APICategory(title: "Anti-Fingerprinting & Structural", apis: [
+        groups.append(APICategory(id: "Anti-Fingerprinting & Structural", title: "Anti-Fingerprinting & Structural", apis: [
             "Function.prototype.toString()",
             "Document.prototype.lastModified",
             "HTMLIFrameElement.prototype.contentWindow",
@@ -240,7 +247,12 @@ struct SpoofDetailsView: View {
                                 .font(.subheadline.weight(.medium))
                                 .foregroundStyle(.primary)
                             Spacer()
-                            Text("\(group.apis.count)")
+                            // `.formatted()` keeps locale-correct digits (digit
+                            // shaping, separators) while going through the
+                            // verbatim path. `Text("\(count)")` would instead
+                            // derive a catalog key of just `%lld` — a
+                            // translatable row containing only a placeholder.
+                            Text(group.apis.count.formatted())
                                 .font(.caption.monospacedDigit())
                                 .foregroundStyle(.secondary)
                             Image(systemName: "chevron.right")
@@ -257,7 +269,8 @@ struct SpoofDetailsView: View {
 
                     if isExpanded {
                         ForEach(group.apis, id: \.self) { api in
-                            Text(api)
+                            // verbatim: JavaScript API identifiers — code, not prose.
+                            Text(verbatim: api)
                                 .font(.caption.monospaced())
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -271,8 +284,12 @@ struct SpoofDetailsView: View {
 }
 
 private struct APICategory: Identifiable {
-    var id: String { title }
-    let title: String
+    /// Identity for the expansion set. Stays a plain `String` — identity values
+    /// are never localized — and is stated separately from `title` because a
+    /// `LocalizedStringKey` can't be read back out as a `String`. The values are
+    /// the same literals the ids used to derive from, so behavior is unchanged.
+    let id: String
+    let title: LocalizedStringKey
     let apis: [String]
 }
 
@@ -331,7 +348,7 @@ struct OnboardingView: View {
         }
     }
 
-    private func title(_ kind: StepKind) -> String {
+    private func title(_ kind: StepKind) -> LocalizedStringKey {
         switch kind {
         case .welcome: return "Welcome to GeoSpoof"
         case .enable: return "Enable in Safari"
@@ -341,7 +358,7 @@ struct OnboardingView: View {
         }
     }
 
-    private func subtitle(_ kind: StepKind) -> String {
+    private func subtitle(_ kind: StepKind) -> LocalizedStringKey {
         switch kind {
         case .welcome:
             return "Mask the location and timezone you reveal online with a tap -- and keep your real whereabouts private."
@@ -364,7 +381,7 @@ struct OnboardingView: View {
         }
     }
 
-    private var primaryTitle: String {
+    private var primaryTitle: LocalizedStringKey {
         isLast ? "Get Started" : "Continue"
     }
 
@@ -580,7 +597,8 @@ struct PermissionPromptsView: View {
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
-    private func shot(image: String, index: Int, caption: String) -> some View {
+    /// `image` stays a `String` (asset catalog name); `caption` is display copy.
+    private func shot(image: String, index: Int, caption: LocalizedStringKey) -> some View {
         VStack(spacing: 8) {
             Image(image)
                 .resizable()
@@ -594,7 +612,9 @@ struct PermissionPromptsView: View {
                 .shadow(color: .black.opacity(0.18), radius: 6, y: 2)
 
             HStack(spacing: 6) {
-                Text("\(index)")
+                // Locale-formatted digits, no `%lld` catalog key — see the API
+                // count badge above.
+                Text(index.formatted())
                     .font(.caption2.bold())
                     .foregroundStyle(.white)
                     .frame(width: 16, height: 16)
@@ -606,7 +626,11 @@ struct PermissionPromptsView: View {
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Step \(index): \(caption)")
+        // Concatenated `Text` rather than interpolation: `caption` is now a
+        // `LocalizedStringKey`, and a key can't be interpolated into another key.
+        // The prefix is a standalone numbering pattern, not half a sentence, and
+        // the spoken result is identical to the previous interpolated form.
+        .accessibilityLabel(Text("Step \(index): ") + Text(caption))
     }
 }
 
@@ -618,7 +642,9 @@ struct PermissionPromptsView: View {
 struct TrustSheet: View {
     @Environment(\.dismiss) private var dismiss
 
-    private let points: [(symbol: String, text: String)] = [
+    /// `symbol` stays a `String` (SF Symbol name, and the `ForEach` identity);
+    /// `text` is display copy.
+    private let points: [(symbol: String, text: LocalizedStringKey)] = [
         ("lock.fill",           "Spoofing runs on your device — we operate no data-collecting backend."),
         ("eye.slash.fill",      "Never reads, stores, or transmits your browsing."),
         ("chevron.left.forwardslash.chevron.right", "Open source — the code is public and auditable."),
@@ -627,8 +653,9 @@ struct TrustSheet: View {
 
     private struct TrustLink: Identifiable {
         let id = UUID()
-        let title: String
-        let detail: String
+        let title: LocalizedStringKey
+        let detail: LocalizedStringKey
+        /// SF Symbol name — never localized.
         let symbol: String
         let url: URL
     }
@@ -746,7 +773,7 @@ struct TrustSheet: View {
 
     /// A titled group: uppercase section header above a material card.
     @ViewBuilder
-    private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+    private func section<Content: View>(_ title: LocalizedStringKey, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
                 .font((isPad ? Font.subheadline : .footnote).weight(.semibold))
@@ -843,7 +870,10 @@ struct SafariActivationAnimation: View {
                         .scaleEffect(pressed ? 0.88 : 1)
                 }
 
-                Text("example.com")
+                // verbatim: a placeholder domain in a mock Safari address bar.
+                // A domain is not prose and must not be translated; as a bare
+                // literal it was being extracted as a translatable key.
+                Text(verbatim: "example.com")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -888,9 +918,10 @@ struct SafariActivationAnimation: View {
         }
     }
 
-    private func stepLine(_ n: Int, _ text: String) -> some View {
+    private func stepLine(_ n: Int, _ text: LocalizedStringKey) -> some View {
         HStack(spacing: 8) {
-            Text("\(n)")
+            // Locale-formatted digits, no `%lld` catalog key.
+            Text(n.formatted())
                 .font(.caption2.bold())
                 .foregroundStyle(.white)
                 .frame(width: 16, height: 16)

@@ -192,7 +192,7 @@ enum ScopeMode: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    var label: String {
+    var label: LocalizedStringKey {
         switch self {
         case .all: return "All"
         case .allowlist: return "Allowlist"
@@ -201,7 +201,7 @@ enum ScopeMode: String, CaseIterable, Identifiable {
     }
 
     /// One-line description shown under the mode picker (mirrors the popup).
-    var detail: String {
+    var detail: LocalizedStringKey {
         switch self {
         case .all: return "Spoofing applies to every site."
         case .allowlist: return "Spoofing applies only to listed sites."
@@ -210,7 +210,7 @@ enum ScopeMode: String, CaseIterable, Identifiable {
     }
 
     /// Header label for the active list section.
-    var listTitle: String {
+    var listTitle: LocalizedStringKey {
         switch self {
         case .denylist: return "Blocked Sites"
         default: return "Allowed Sites"
@@ -452,7 +452,7 @@ enum AppLogLevel: Int, CaseIterable, Identifiable {
     case trace = 4
 
     var id: Int { rawValue }
-    var label: String {
+    var label: LocalizedStringKey {
         switch self {
         case .error: return "Error"
         case .warn: return "Warning"
@@ -799,7 +799,10 @@ final class SpoofController: ObservableObject {
     // VPN sync UI state
     @Published var isSyncing = false
     @Published var lastSyncedIP: String?
-    @Published var vpnError: String?
+    /// `LocalizedStringKey?`, not `String?`: every value assigned here is copy we
+    /// author, not system error text. As a `String?` it reached `Text` through
+    /// the verbatim overload and could never be translated.
+    @Published var vpnError: LocalizedStringKey?
 
     /// Inline "list full" flag for the favorites star, auto-clears after a beat.
     @Published var atCapacity = false

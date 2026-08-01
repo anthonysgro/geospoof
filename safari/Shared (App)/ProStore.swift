@@ -100,6 +100,27 @@ enum DebugProOverride: Int {
     case subscription = 3 // force an active subscription
 }
 
+// MARK: - Purchase / restore failure
+
+/// Why a purchase or restore failed.
+///
+/// An enum rather than a `String` so the two messages we author stay
+/// localizable. As a single `String?` this property mixed our own English
+/// sentences with `error.localizedDescription` from StoreKit, and the display
+/// site could not tell them apart — so it had to render everything verbatim,
+/// permanently pinning our copy to English in all 12 languages. The rendering
+/// lives in the view layer (`ProStoreError.text` in `ProPaywallView.swift`) to
+/// keep this store free of view types.
+enum ProStoreError: Equatable {
+    /// The purchase succeeded at Apple's layer but its signed payload failed
+    /// local verification, so Pro was not unlocked.
+    case purchaseUnverified
+    /// `AppStore.sync()` failed or timed out during a restore.
+    case appStoreUnreachable
+    /// Text from StoreKit or Foundation, already localized by its source.
+    case system(String)
+}
+
 // MARK: - ProStore
 
 @MainActor
@@ -197,7 +218,7 @@ final class ProStore: ObservableObject {
     /// Transaction id of the lifetime purchase, for the refund-request sheet.
     /// `nil` unless the user bought lifetime.
     @Published private(set) var lifetimeTransactionID: UInt64?
-    @Published var lastError: String?
+    @Published var lastError: ProStoreError?
 
     /// The single gate the rest of the app should read.
     var isPro: Bool { isFounder || ownsLifetime || !activeProductIDs.isEmpty }
@@ -244,6 +265,10 @@ final class ProStore: ObservableObject {
     /// screen (plan name, renewal/expiry, auto-renew flag, and the transaction
     /// id needed to start a refund request). `nil` for founders / non-Pro.
     struct SubscriptionDetails: Equatable {
+        /// StoreKit's `product.displayName` (already localized by App Store
+        /// Connect), or `""` when the product hasn't loaded. Stays a `String`
+        /// because it is external data; the empty case is resolved to a
+        /// localized per-tier label by `ProStore.planLabel` in the view layer.
         var planName: String
         var renewalDate: Date?
         var autoRenews: Bool
@@ -721,7 +746,7 @@ final class ProStore: ObservableObject {
             products = loaded.sorted { lhs, _ in lhs.id == ProductID.annual }
             Log.pro.info("Loaded \(self.products.count) Pro products")
         } catch {
-            lastError = error.localizedDescription
+            lastError = .system(error.localizedDescription)
             Log.pro.error("Product load failed: \(error.localizedDescription)")
         }
     }
@@ -779,7 +804,7 @@ final class ProStore: ObservableObject {
                     if case .unverified(_, let error) = verification {
                         Log.pro.error("Purchase UNVERIFIED for \(product.id): \(error.localizedDescription)")
                     }
-                    lastError = "Purchase could not be verified."
+                    lastError = .purchaseUnverified
                     return false
                 }
                 #if DEBUG
@@ -806,7 +831,7 @@ final class ProStore: ObservableObject {
                 return false
             }
         } catch {
-            lastError = error.localizedDescription
+            lastError = .system(error.localizedDescription)
             Log.pro.error("Purchase failed: \(error.localizedDescription)")
             return false
         }
@@ -843,7 +868,7 @@ final class ProStore: ObservableObject {
         }
         if !didSync {
             Log.pro.warn("AppStore.sync failed or timed out during restore")
-            lastError = "Couldn't reach the App Store. Your Pro access is unaffected; try again later."
+            lastError = .appStoreUnreachable
         }
         await refreshEntitlements()
     }
@@ -946,16 +971,22 @@ final class ProStore: ObservableObject {
         )
     }
 
+    /// Prefers StoreKit's localized `displayName`; the hardcoded fallbacks are a
+    /// last resort when the product isn't loaded. Kept as `String` (not
+    /// `LocalizedStringKey`) because the primary path is external App Store data
+    /// and because callers interpolate it into "\(plan) plan" — see the
+    /// whole-sentence-key restructure noted in ProPaywallView.
     private func planName(for productID: String) -> String {
         if let product = products.first(where: { $0.id == productID }),
            !product.displayName.isEmpty {
             return product.displayName
         }
-        switch productID {
-        case ProductID.annual: return "Annual"
-        case ProductID.monthly: return "Monthly"
-        default: return "Pro"
-        }
+        // Empty rather than an English plan name. This value is interpolated
+        // into a displayed sentence, so returning "Annual"/"Monthly"/"Pro" from
+        // here shipped untranslatable English into the UI. The view derives a
+        // localized per-tier label from `activeProductIDs` instead — see
+        // `ProStore.planLabel` in ProPaywallView.swift.
+        return ""
     }
 
     private func listenForTransactions() -> Task<Void, Never> {

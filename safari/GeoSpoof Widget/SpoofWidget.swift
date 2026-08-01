@@ -150,12 +150,13 @@ struct SpoofWidgetEntryView: View {
             }
             Spacer(minLength: 0)
             if snap.enabled, snap.hasLocation {
-                Text(primaryTitle)
+                primaryTitle
                     .font(.headline)
                     .lineLimit(2)
                     .minimumScaleFactor(0.8)
                 if !snap.timezoneID.isEmpty {
-                    Text(snap.timezoneID)
+                    // IANA timezone identifier ("Europe/Paris") — an id, not copy.
+                    Text(verbatim: snap.timezoneID)
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -210,13 +211,14 @@ struct SpoofWidgetEntryView: View {
     private var locationSummary: some View {
         if snap.enabled, snap.hasLocation {
             VStack(alignment: .leading, spacing: 2) {
-                Text(primaryTitle)
+                primaryTitle
                     .font(.headline)
                     .lineLimit(2)
                     .minimumScaleFactor(0.85)
                     .opacityTransition()
                 if let lat = snap.latitude, let lon = snap.longitude {
-                    Text(String(format: "%.5f, %.5f", lat, lon))
+                    // Formatted coordinates — numeric data, not copy.
+                    Text(verbatim: String(format: "%.5f, %.5f", lat, lon))
                         .font(.subheadline.monospacedDigit())
                         .foregroundStyle(.secondary)
                         .opacityTransition()
@@ -312,7 +314,8 @@ struct SpoofWidgetEntryView: View {
         HStack(spacing: 6) {
             Image(systemName: isActive ? "mappin.circle.fill" : "mappin.circle")
                 .foregroundStyle(isActive ? brandGreen : .secondary)
-            Text(fav.chipTitle)
+            // The favorite's own name — user-typed or place data, not copy.
+            Text(verbatim: fav.chipTitle)
                 .font(.caption.weight(.medium))
                 .lineLimit(1)
             Spacer(minLength: 0)
@@ -334,25 +337,29 @@ struct SpoofWidgetEntryView: View {
         VStack(alignment: .leading, spacing: 6) {
             Divider().padding(.vertical, 2)
             if !snap.timezoneID.isEmpty {
-                detailRow(icon: "clock", label: "Timezone", value: snap.timezoneID)
+                // IANA timezone identifier ("Europe/Paris") — an id, not copy.
+                detailRow(icon: "clock", label: "Timezone", value: Text(verbatim: snap.timezoneID))
             }
             if !snap.ip.isEmpty {
-                detailRow(icon: "network", label: "Exit IP", value: snap.ip)
+                // IP address — network data, not copy.
+                detailRow(icon: "network", label: "Exit IP", value: Text(verbatim: snap.ip))
             }
             detailRow(
                 icon: snap.vpnSync ? "shield.lefthalf.filled" : "mappin.and.ellipse",
                 label: "Mode",
-                value: snap.vpnSync ? "VPN sync" : "Manual"
+                value: Text(snap.vpnSync ? "VPN sync" : "Manual")
             )
             detailRow(
                 icon: snap.webrtc ? "network.badge.shield.half.filled" : "shield.slash",
                 label: "WebRTC",
-                value: snap.webrtc ? "Protected" : "Off"
+                value: Text(snap.webrtc ? "Protected" : "Off")
             )
         }
     }
 
-    private func detailRow(icon: String, label: String, value: String) -> some View {
+    /// `value` is a built `Text` so each row states whether its readout is copy
+    /// ("VPN sync", "Protected") or data (an IANA id, an IP address).
+    private func detailRow(icon: String, label: LocalizedStringKey, value: Text) -> some View {
         HStack(spacing: 8) {
             Image(systemName: icon)
                 .font(.caption)
@@ -362,7 +369,7 @@ struct SpoofWidgetEntryView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Spacer()
-            Text(value)
+            value
                 .font(.caption.monospacedDigit())
                 .lineLimit(1)
                 .truncationMode(.middle)
@@ -426,11 +433,16 @@ struct SpoofWidgetEntryView: View {
         }
     }
 
-    private var primaryTitle: String {
+    /// Returns a built `Text` rather than a key: the city/country pair and the
+    /// saved display name are data (cities.json entries and the user's own
+    /// favorite name), so they must not be looked up. Only the fallback is copy.
+    private var primaryTitle: Text {
         let parts = [snap.city, snap.country].filter { !$0.isEmpty }
-        if !parts.isEmpty { return parts.joined(separator: ", ") }
-        if !snap.displayName.isEmpty { return snap.displayName }
-        return "Custom location"
+        // City / country from cities.json — place data, not copy.
+        if !parts.isEmpty { return Text(verbatim: parts.joined(separator: ", ")) }
+        // The saved location's display name — user/place data, not copy.
+        if !snap.displayName.isEmpty { return Text(verbatim: snap.displayName) }
+        return Text("Custom location")
     }
 
     private func relative(_ date: Date) -> String {

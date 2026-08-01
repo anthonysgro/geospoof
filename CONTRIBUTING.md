@@ -115,6 +115,99 @@ tests/
 └── property/            # Property-based tests (fast-check)
 ```
 
+## Adding User-Facing Strings
+
+Two separate localization systems, because the extension and the native Safari app
+have different runtimes. Both ship the same 12 languages and must agree on
+terminology — the shared glossary is [`TRANSLATION.md`](TRANSLATION.md).
+
+### Extension popup
+
+Add the string to `_locales/en/messages.json` with a `message` and a
+`description`, then reference it from markup via `data-i18n` (or
+`data-i18n-placeholder` / `data-i18n-title` / `data-i18n-aria-label`) rather than
+hardcoding English. See [`_locales/README.md`](_locales/README.md).
+
+### Native Safari app
+
+The app uses an Xcode String Catalog at
+`safari/Shared (App)/Resources/Localizable.xcstrings`, shared by the iOS app, the
+macOS app, and the widget. You don't add keys to it by hand — the compiler
+extracts them.
+
+**The rule that matters:** SwiftUI localizes string _literals_, because they bind
+to `LocalizedStringKey`. A `String`-typed value binds to the `StringProtocol`
+overload instead and renders **verbatim** — no lookup, no catalog entry, and no
+compiler warning. So this translates:
+
+```swift
+Text("Match Location")
+```
+
+and this silently never will:
+
+```swift
+var label: String { "Match Location" }   // wrong type
+Text(label)
+```
+
+Guidelines:
+
+- A helper returning display text must return `LocalizedStringKey`, not `String`.
+- Data is the opposite: city names, IANA timezone ids, IP addresses, coordinates,
+  SF Symbol names, version strings, and StoreKit `displayPrice` must render with
+  `Text(verbatim:)` and a one-line comment saying why.
+- A helper that returns _both_ — copy in one branch, data in another — should
+  return a built `Text` so each branch states its own treatment. `LabeledRow`,
+  `infoRow`, and `detailRow` all do this.
+- Never interpolate a `LocalizedStringKey` into another one. It hits a deprecated
+  overload that substitutes the value's _debug description_, and derives a
+  context-free key. Concatenate `Text` values instead.
+- Interpolation _inside_ a literal is fine: `Text("±\(m) m")` derives the key
+  `"±%lld m"` automatically, and Xcode adds positional specifiers (`%1$lld`)
+  when there are several so translators can reorder them.
+
+To populate the catalog after adding strings, build both schemes and sync:
+
+```bash
+cd safari
+xcodebuild -project GeoSpoof.xcodeproj -scheme GeoSpoof-iOS \
+  -configuration Release -destination 'generic/platform=iOS Simulator' \
+  -derivedDataPath /tmp/dd-ios CODE_SIGNING_ALLOWED=NO build
+xcodebuild -project GeoSpoof.xcodeproj -scheme GeoSpoof-macOS \
+  -configuration Release -destination 'platform=macOS' \
+  -derivedDataPath /tmp/dd-mac CODE_SIGNING_ALLOWED=NO build
+
+# Merge the discovered strings into the catalog. Pass all three app targets in
+# one invocation, or strings present on only one platform get marked stale.
+xcstringstool sync "Shared (App)/Resources/Localizable.xcstrings" \
+  $(find /tmp/dd-ios /tmp/dd-mac -name '*.stringsdata' \
+     \( -path '*GeoSpoof (iOS).build*' -o -path '*GeoSpoof (macOS).build*' \
+        -o -path '*GeoSpoof WidgetExtension.build*' \) \
+     -exec printf -- '--stringsdata %s ' {} +)
+```
+
+Notes on that:
+
+- Build **Release**, not Debug. A Debug build extracts `#if DEBUG` UI into the
+  catalog, which then gets translated into 12 languages for nothing.
+- `xcodebuild` alone does **not** write the catalog — it emits `.stringsdata` and
+  leaves the file untouched. Either run `xcstringstool sync` as above, or build
+  once in the Xcode IDE, which does the merge for you.
+- Always pass `-derivedDataPath`; the shared DerivedData is locked whenever the
+  project is open in Xcode.
+
+### Validation
+
+`npm test` covers both systems:
+
+- `tests/unit/locales.unit.test.ts` — `_locales` key and placeholder parity.
+- `tests/unit/native-catalog-parity.unit.test.ts` — the String Catalog's language
+  set must equal `SUPPORTED_UI_LOCALES` (via `toAppleLocaleCode`), format
+  specifiers must match the source key, load-bearing whitespace must survive, and
+  no translation may be empty. Untranslated and stale keys warn rather than fail,
+  since a missing translation falls back to the source text.
+
 ## Project Configuration
 
 ### Path Aliases

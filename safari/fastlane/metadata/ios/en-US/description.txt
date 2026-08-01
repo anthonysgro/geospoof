@@ -1,0 +1,44 @@
+Websites read your true location through the browser's Geolocation API, timezone, date formatting, and WebRTC. When those signals don't match your VPN's region, you stand out. GeoSpoof aligns all of them to a single, consistent place.
+
+FEATURES
+
+• Change Safari location free
+• Simulate GPS location on local network
+• Set your location in one click
+• Sync location with VPN
+• Automatic background sync with VPN
+• Synchronizes timezone and other location signals
+• Block WebRTC leaks
+• Anti-fingerprinting
+• Per-site control
+• Save favorites — pin up to 10 places
+• No account, no tracking, no analytics
+• Widgets and Controls
+
+DEVICE GPS (PRO · EXPERIMENTAL)
+
+Go beyond the browser: align your iPhone's system location to the place you choose, so location-aware apps — not just Safari — see it too. This optional Pro feature requires the free GeoSpoof GPS companion app for Mac: a one-time setup over a cable, then it works over Wi-Fi. It uses Apple's standard developer location tools and never modifies iOS.
+
+WHAT GEOSPOOF DOES NOT DO
+
+GeoSpoof is not a VPN and does not change your IP address. For full location privacy, use it alongside a VPN. It does not change your browser's language or locale, bypass server-side detection (IP, payment methods, account history), or collect any data about you or your browsing.
+
+NOTE
+
+GeoSpoof is a privacy and developer tool for controlling the location you choose to share from your own device. Using location spoofing may violate the terms of service of certain websites and apps, particularly streaming, financial, and e-commerce services. You are responsible for ensuring your use complies with applicable terms and laws.
+
+SUBSCRIPTIONS
+
+GeoSpoof is free to use. GeoSpoof Pro unlocks Auto Background Sync, Device GPS, per-site rules, widgets, custom accuracy, and the on-map picker, offered as an auto-renewable subscription:
+
+• GeoSpoof Pro Monthly — billed monthly.
+
+• GeoSpoof Pro Annual — billed yearly (best value).
+
+A one-time GeoSpoof Pro Lifetime purchase, which unlocks the same features permanently and does not renew, is also available. Prices are shown in the app and vary by region.
+
+Payment is charged to your Apple Account at confirmation of purchase. A subscription automatically renews unless it is canceled at least 24 hours before the end of the current period. Your account is charged for renewal within 24 hours prior to the end of the current period. You can manage or cancel subscriptions in your Apple Account settings after purchase.
+
+Terms of Use (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+
+Privacy Policy: https://www.geospoof.com/privacy
