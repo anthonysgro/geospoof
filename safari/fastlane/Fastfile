@@ -340,6 +340,13 @@ platform :ios do
       platform: "ios",
       metadata_path: "./fastlane/metadata",
 
+      # Required here, unlike in the build lanes. Those pass an `ipa`, and
+      # deliver reads the bundle id out of it (DetectValues#find_app_identifier).
+      # This lane has no binary by design, and fastlane/Appfile is entirely
+      # commented out, so there is nothing to infer from — deliver would prompt
+      # for it and then crash, since a runner is non-interactive.
+      app_identifier: "com.moonloaf.geospoof",
+
       # This lane can only ever write listing text.
       skip_binary_upload: true,
       skip_screenshots: true,
