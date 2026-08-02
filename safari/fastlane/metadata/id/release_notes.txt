@@ -1,0 +1,24 @@
+Halo, GeoSpoofers! GeoSpoof kini berbicara dalam bahasa Anda.
+
+Pembaruan ini menambahkan pelokalan lengkap dalam 12 bahasa:
+
+• Inggris
+• Belanda
+• Prancis
+• Jerman
+• Indonesia
+• Jepang
+• Portugis (Brasil)
+• Rusia
+• Tionghoa Sederhana
+• Spanyol
+• Swedia
+• Vietnam
+
+JUGA BARU SEJAK PEMBARUAN TERAKHIR ANDA
+
+• Bahasa yang dilaporkan — jika mau, selaraskan bahasa yang dilihat situs web dengan lokasi palsu Anda.
+
+• Pengaturan yang didesain ulang — kontrol yang sebelumnya berada di balik bagian Lanjutan kini punya tabnya sendiri.
+
+• Peningkatan aksesibilitas dan VoiceOver di berbagai tempat.

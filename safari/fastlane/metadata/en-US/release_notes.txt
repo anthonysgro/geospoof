@@ -15,21 +15,10 @@ This update adds full localization in 12 languages:
 • Swedish
 • Vietnamese
 
-The app, the Safari extension popup, and the Home Screen widgets are all translated. GeoSpoof follows your device language automatically, or you can set it just for this app in Settings › Apps › GeoSpoof › Language.
-
-Everything except English is machine-translated and waiting on review by native speakers, so you may hit the occasional awkward phrase. Corrections are genuinely welcome — send feedback from inside the app or open an issue on GitHub.
-
 ALSO NEW SINCE YOUR LAST UPDATE
 
-• Reported Language — optionally line up the language websites see with your spoofed location. It moves navigator.language, date and number formats, and the Accept-Language header together, so they can't contradict each other and give you away. Off by default, because it visibly changes browsing.
+• Reported Language — optionally line up the language websites see with your spoofed location.
 
 • Redesigned Settings — the controls that used to sit behind the Advanced section now have a tab of their own.
 
 • Accessibility and VoiceOver improvements throughout.
-
-FIXES
-
-• Overridden Intl constructors stay constructible, fixing sites that build their own date and number formatters.
-• More faithful function masking, so the overridden APIs are harder to detect.
-
-Thanks for using GeoSpoof.

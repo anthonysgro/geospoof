@@ -1,0 +1,24 @@
+Xin chào các GeoSpoofer! GeoSpoof giờ đã nói ngôn ngữ của bạn.
+
+Bản cập nhật này bổ sung bản địa hóa đầy đủ cho 12 ngôn ngữ:
+
+• Tiếng Anh
+• Tiếng Hà Lan
+• Tiếng Pháp
+• Tiếng Đức
+• Tiếng Indonesia
+• Tiếng Nhật
+• Tiếng Bồ Đào Nha (Brazil)
+• Tiếng Nga
+• Tiếng Trung giản thể
+• Tiếng Tây Ban Nha
+• Tiếng Thụy Điển
+• Tiếng Việt
+
+CŨNG MỚI TỪ LẦN CẬP NHẬT TRƯỚC CỦA BẠN
+
+• Ngôn ngữ được báo — nếu muốn, hãy đồng bộ ngôn ngữ mà các trang web thấy với vị trí giả mạo của bạn.
+
+• Cài đặt được thiết kế lại — các tùy chọn từng nằm sau mục Nâng cao giờ có tab riêng.
+
+• Cải thiện khả năng truy cập và VoiceOver ở nhiều nơi.

@@ -1,0 +1,24 @@
+Bonjour les GeoSpoofers ! GeoSpoof parle maintenant votre langue.
+
+Cette mise à jour ajoute une localisation complète en 12 langues :
+
+• Anglais
+• Néerlandais
+• Français
+• Allemand
+• Indonésien
+• Japonais
+• Portugais (Brésil)
+• Russe
+• Chinois simplifié
+• Espagnol
+• Suédois
+• Vietnamien
+
+ÉGALEMENT NOUVEAU DEPUIS VOTRE DERNIÈRE MISE À JOUR
+
+• Langue indiquée — alignez si vous le souhaitez la langue que voient les sites sur votre position simulée.
+
+• Réglages repensés — les commandes qui se trouvaient derrière la section Avancé ont désormais leur propre onglet.
+
+• Améliorations d’accessibilité et de VoiceOver un peu partout.

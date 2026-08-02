@@ -1,0 +1,24 @@
+Hallo GeoSpoofer! GeoSpoof spricht jetzt deine Sprache.
+
+Dieses Update bringt vollständige Lokalisierung in 12 Sprachen:
+
+• Englisch
+• Niederländisch
+• Französisch
+• Deutsch
+• Indonesisch
+• Japanisch
+• Portugiesisch (Brasilien)
+• Russisch
+• Chinesisch (vereinfacht)
+• Spanisch
+• Schwedisch
+• Vietnamesisch
+
+AUSSERDEM NEU SEIT DEINEM LETZTEN UPDATE
+
+• Gemeldete Sprache — richte die Sprache, die Websites sehen, auf Wunsch an deinem vorgetäuschten Standort aus.
+
+• Neu gestaltete Einstellungen — die Regler, die früher hinter dem Bereich „Erweitert“ steckten, haben jetzt einen eigenen Tab.
+
+• Verbesserungen bei Barrierefreiheit und VoiceOver an vielen Stellen.

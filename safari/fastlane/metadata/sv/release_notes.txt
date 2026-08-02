@@ -1,0 +1,24 @@
+Hej GeoSpoofers! GeoSpoof talar nu ditt språk.
+
+Den här uppdateringen ger fullständig lokalisering på 12 språk:
+
+• Engelska
+• Nederländska
+• Franska
+• Tyska
+• Indonesiska
+• Japanska
+• Portugisiska (Brasilien)
+• Ryska
+• Förenklad kinesiska
+• Spanska
+• Svenska
+• Vietnamesiska
+
+OCKSÅ NYTT SEDAN DIN SENASTE UPPDATERING
+
+• Rapporterat språk — anpassa om du vill det språk webbplatser ser till din förfalskade plats.
+
+• Omarbetade inställningar — reglagen som låg bakom avsnittet Avancerat har nu en egen flik.
+
+• Förbättringar av tillgänglighet och VoiceOver på flera ställen.

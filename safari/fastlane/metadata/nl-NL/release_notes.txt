@@ -1,0 +1,24 @@
+Hallo GeoSpoofers! GeoSpoof spreekt nu jouw taal.
+
+Deze update voegt volledige localisatie in 12 talen toe:
+
+• Engels
+• Nederlands
+• Frans
+• Duits
+• Indonesisch
+• Japans
+• Portugees (Brazilië)
+• Russisch
+• Vereenvoudigd Chinees
+• Spaans
+• Zweeds
+• Vietnamees
+
+OOK NIEUW SINDS JE LAATSTE UPDATE
+
+• Doorgegeven taal — stem de taal die sites zien desgewenst af op je vervalste locatie.
+
+• Opnieuw ingerichte instellingen — de regelaars die achter het gedeelte Geavanceerd zaten, hebben nu hun eigen tab.
+
+• Verbeteringen voor toegankelijkheid en VoiceOver op veel plekken.
