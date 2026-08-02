@@ -18,11 +18,23 @@ name: IAP Pricing Plan
 on:
   workflow_dispatch:
     inputs:
+      # An explicit choice rather than "clear the text box to mean everything".
+      # The previous version pre-filled the smoke set as a default, so leaving the
+      # field untouched silently planned four territories while looking like it
+      # planned all of them.
+      scope:
+        description: "smoke = BRA,IND,JPN,CHE (fast). all = every classified territory (~950 requests, several minutes)."
+        required: true
+        type: choice
+        default: smoke
+        options:
+          - smoke
+          - all
       territories:
-        description: "Comma-separated territory codes. Leave blank for every classified territory (~850 requests, may hit rate limits)."
+        description: "Optional explicit list, e.g. DEU,FRA,MEX. Overrides scope when set."
         required: false
         type: string
-        default: "BRA,IND,JPN,CHE"
+        default: ""
       products:
         description: "Optional product id filter, e.g. pro.monthly. Blank means all six."
         required: false
@@ -84,11 +96,20 @@ jobs:
           # `${{ inputs.x }}` inside a run block is substituted before bash sees
           # it, so a value containing shell metacharacters would execute. These
           # are collaborator-only inputs, but quoting is free.
+          SCOPE: ${{ inputs.scope }}
           TERRITORIES: ${{ inputs.territories }}
           PRODUCTS: ${{ inputs.products }}
         run: |
           args=()
-          [ -n "$TERRITORIES" ] && args+=(--territories "$TERRITORIES")
+          if [ -n "$TERRITORIES" ]; then
+            args+=(--territories "$TERRITORIES")
+            echo "scope: explicit list — $TERRITORIES"
+          elif [ "$SCOPE" = "smoke" ]; then
+            args+=(--territories "BRA,IND,JPN,CHE")
+            echo "scope: smoke — BRA,IND,JPN,CHE (three currencies plus the one above-US coefficient)"
+          else
+            echo "scope: ALL classified territories — expect several minutes and ~950 requests"
+          fi
           [ -n "$PRODUCTS" ] && args+=(--products "$PRODUCTS")
           echo "running: bundle exec ruby fastlane/iap/plan_pricing.rb ${args[*]}"
           bundle exec ruby fastlane/iap/plan_pricing.rb "${args[@]}"
