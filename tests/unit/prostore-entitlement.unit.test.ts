@@ -230,6 +230,83 @@ describe("pending purchases are reported", () => {
   });
 });
 
+describe("local-testing fallback cannot reach production", () => {
+  // Xcode's local StoreKit testing returns an empty Transaction.currentEntitlements
+  // even right after a purchase verifies, so the unlock is untestable locally
+  // without a fallback that trusts the transaction we verified ourselves.
+  //
+  // That fallback must NEVER compile into a release build: with the entitlement
+  // stream empty we cannot see refunds or revocations, so trusting a locally
+  // recorded purchase in production would keep granting Pro after a refund.
+  const guardedSymbols = [
+    "DebugVerifiedPurchase",
+    "debugVerifiedPurchases",
+    "recordDebugVerifiedPurchase",
+    "DEBUG fallback: currentEntitlements was empty",
+    "debug_verified_purchases",
+  ];
+
+  /** Every #if DEBUG … #endif region in the file. */
+  function debugRegions(): Array<[number, number]> {
+    const regions: Array<[number, number]> = [];
+    let from = 0;
+    for (;;) {
+      const open = swift.indexOf("#if DEBUG", from);
+      if (open === -1) break;
+      const close = swift.indexOf("#endif", open);
+      if (close === -1) break;
+      regions.push([open, close]);
+      from = close + 1;
+    }
+    return regions;
+  }
+
+  const regions = debugRegions();
+
+  it("finds DEBUG regions to check against", () => {
+    expect(regions.length).toBeGreaterThan(3);
+  });
+
+  // The `Key` enum is a flat list of UserDefaults key *names*. Shipping an unused
+  // string constant is harmless — the pre-existing `debugProOverride` key is
+  // declared the same way — so declarations there are exempt. What must be
+  // DEBUG-gated is every read and write.
+  const keyEnumStart = swift.indexOf("private enum Key {");
+  const keyEnumEnd = swift.indexOf("\n    }", keyEnumStart);
+
+  it.each(guardedSymbols)("every use of %s is inside #if DEBUG", (sym) => {
+    const hits = [...swift.matchAll(new RegExp(sym.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"))]
+      .map((m) => m.index)
+      .filter((at) => !(at > keyEnumStart && at < keyEnumEnd));
+    expect(hits.length, `${sym} not found outside the Key enum`).toBeGreaterThan(0);
+    for (const at of hits) {
+      const inside = regions.some(([open, close]) => at > open && at < close);
+      expect(inside, `${sym} at offset ${at} is outside #if DEBUG — it would ship to users`).toBe(
+        true
+      );
+    }
+  });
+
+  it("only applies when StoreKit returned nothing at all", () => {
+    // If the scan yielded anything it is authoritative, including for products it
+    // deliberately omitted (lapsed / refunded / revoked).
+    const body = funcBody("func refreshEntitlements() async {");
+    const at = body.indexOf("DEBUG fallback");
+    expect(at).toBeGreaterThan(-1);
+    const preceding = body.slice(0, at);
+    expect(
+      preceding.lastIndexOf("if seen == 0 {"),
+      "the fallback must be gated on seen == 0"
+    ).toBeGreaterThan(-1);
+  });
+
+  it("still honours expiry when applying a recorded purchase", () => {
+    const body = funcBody("func refreshEntitlements() async {");
+    const region = body.slice(body.indexOf("if seen == 0 {"));
+    expect(region).toContain("expiration < .now");
+  });
+});
+
 describe("the Pro gate stays observable", () => {
   it("every input to isPro is @Published", () => {
     // isPro is computed, so the paywall's .onChange(of: store.isPro) only fires
