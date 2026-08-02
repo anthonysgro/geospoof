@@ -33,10 +33,8 @@
     "The multipliers are a BUSINESS DECISION. 1.0/0.6/0.4/0.3 is a conventional",
     "indie starting point, not a recommendation."
   ],
-
   "base_storefront": "USA",
   "unclassified_behavior": "keep_apple_automatic",
-
   "allow_increases_one_time": true,
   "allow_increases_subscription": false,
   "$allow_increases_comment": [
@@ -55,7 +53,6 @@
     "it is just not one to take by accident.",
     "https://go.adapty.io/pricing-index"
   ],
-
   "rounding": "nearest",
   "$rounding_comment": [
     "'nearest' picks the closest available price point in either direction.",
@@ -67,7 +64,6 @@
     "6.99. Choose deliberately: 'nearest' is balanced, 'down' guarantees the",
     "discount is never partially undone but costs proceeds on every rounding."
   ],
-
   "tie_break": "cheaper",
   "$tie_break_comment": [
     "When two available price points are equally far from the target AND share an",
@@ -77,7 +73,6 @@
     "'dearer' protects proceeds. Stated explicitly because otherwise the outcome",
     "is whatever the sort happens to reach first, which is nobody's decision."
   ],
-
   "reference_us_prices": {
     "$comment": [
       "DOCUMENTATION ONLY — the planner does not scale from these. Recorded so a",
@@ -98,7 +93,6 @@
     "com.moonloaf.geospoof.tip.medium": 4.99,
     "com.moonloaf.geospoof.tip.large": 9.99
   },
-
   "tier_multipliers": {
     "$comment": [
       "Applied to the territory's CURRENT local price, then snapped to the nearest",
@@ -115,7 +109,6 @@
     "lower_middle_income": 0.35,
     "low_income": 0.3
   },
-
   "coefficient_overrides": {
     "$comment": [
       "Per-country coefficients, which is what apps operating at scale actually use",
@@ -153,47 +146,186 @@
     "DNK": 1.05,
     "ISL": 1.05
   },
-
   "tiers": {
     "high_income": [
-      "USA", "CAN", "GBR", "IRL", "FRA", "DEU", "NLD", "BEL", "LUX", "AUT",
-      "CHE", "DNK", "SWE", "NOR", "FIN", "ISL", "ESP", "PRT", "ITA", "GRC",
-      "MLT", "CYP", "SVN", "EST", "LVA", "LTU", "CZE", "SVK", "POL", "HRV",
-      "HUN", "JPN", "KOR", "SGP", "HKG", "TWN", "AUS", "NZL", "ISR", "ARE",
-      "SAU", "QAT", "KWT", "BHR", "OMN", "CHL", "URY"
+      "USA",
+      "CAN",
+      "GBR",
+      "IRL",
+      "FRA",
+      "DEU",
+      "NLD",
+      "BEL",
+      "LUX",
+      "AUT",
+      "CHE",
+      "DNK",
+      "SWE",
+      "NOR",
+      "FIN",
+      "ISL",
+      "ESP",
+      "PRT",
+      "ITA",
+      "GRC",
+      "MLT",
+      "CYP",
+      "SVN",
+      "EST",
+      "LVA",
+      "LTU",
+      "CZE",
+      "SVK",
+      "POL",
+      "HRV",
+      "HUN",
+      "JPN",
+      "KOR",
+      "SGP",
+      "HKG",
+      "TWN",
+      "AUS",
+      "NZL",
+      "ISR",
+      "ARE",
+      "SAU",
+      "QAT",
+      "KWT",
+      "BHR",
+      "OMN",
+      "CHL",
+      "URY"
     ],
     "upper_middle_income": [
-      "BRA", "MEX", "CHN", "RUS", "TUR", "ZAF", "MYS", "THA", "ARG", "COL",
-      "PER", "ECU", "DOM", "GTM", "PRY", "CRI", "PAN", "JAM", "TTO", "BRB",
-      "BHS", "SUR", "BLZ", "SRB", "MKD", "ALB", "BIH", "MNE", "BGR", "ROU",
-      "GEO", "ARM", "AZE", "KAZ", "BLR", "MUS", "BWA", "NAM", "FJI", "TON"
+      "BRA",
+      "MEX",
+      "CHN",
+      "RUS",
+      "TUR",
+      "ZAF",
+      "MYS",
+      "THA",
+      "ARG",
+      "COL",
+      "PER",
+      "ECU",
+      "DOM",
+      "GTM",
+      "PRY",
+      "CRI",
+      "PAN",
+      "JAM",
+      "TTO",
+      "BRB",
+      "BHS",
+      "SUR",
+      "BLZ",
+      "SRB",
+      "MKD",
+      "ALB",
+      "BIH",
+      "MNE",
+      "BGR",
+      "ROU",
+      "GEO",
+      "ARM",
+      "AZE",
+      "KAZ",
+      "BLR",
+      "MUS",
+      "BWA",
+      "NAM",
+      "FJI",
+      "TON"
     ],
     "lower_middle_income": [
-      "IND", "IDN", "PHL", "VNM", "PAK", "BGD", "LKA", "NPL", "KHM", "LAO",
-      "MMR", "MNG", "UZB", "KGZ", "TJK", "EGY", "MAR", "TUN", "DZA", "JOR",
-      "LBN", "IRQ", "UKR", "MDA", "NGA", "KEN", "GHA", "CIV", "SEN", "CMR",
-      "ZMB", "ZWE", "AGO", "BOL", "HND", "SLV", "NIC", "PNG"
+      "IND",
+      "IDN",
+      "PHL",
+      "VNM",
+      "PAK",
+      "LKA",
+      "NPL",
+      "KHM",
+      "LAO",
+      "MMR",
+      "MNG",
+      "UZB",
+      "KGZ",
+      "TJK",
+      "EGY",
+      "MAR",
+      "TUN",
+      "DZA",
+      "JOR",
+      "LBN",
+      "IRQ",
+      "UKR",
+      "MDA",
+      "NGA",
+      "KEN",
+      "GHA",
+      "CIV",
+      "SEN",
+      "CMR",
+      "ZMB",
+      "ZWE",
+      "AGO",
+      "BOL",
+      "HND",
+      "SLV",
+      "NIC",
+      "PNG"
     ],
     "low_income": [
-      "ETH", "RWA", "MOZ", "MDG", "MWI", "NER", "MLI", "BFA", "TCD", "COD",
-      "SLE", "LBR", "UGA", "TZA", "YEM", "AFG"
+      "RWA",
+      "MOZ",
+      "MDG",
+      "MWI",
+      "NER",
+      "MLI",
+      "BFA",
+      "TCD",
+      "COD",
+      "SLE",
+      "LBR",
+      "UGA",
+      "TZA",
+      "YEM",
+      "AFG"
     ]
   },
-
   "needs_review": {
     "$comment": "Territories I am least confident about, either because they recently changed World Bank group or because they sit close to a boundary. Verify these before the first apply; a wrong tier here is a real mispricing, not a rounding error.",
     "territories": [
-      "ROU", "BGR", "CRI", "PAN", "MUS", "MYS", "TUR", "ARG", "RUS", "CHN",
-      "KAZ", "BLR", "TTO", "BRB", "BHS", "GEO", "ARM", "UKR", "MDA"
+      "ROU",
+      "BGR",
+      "CRI",
+      "PAN",
+      "MUS",
+      "MYS",
+      "TUR",
+      "ARG",
+      "RUS",
+      "CHN",
+      "KAZ",
+      "BLR",
+      "TTO",
+      "BRB",
+      "BHS",
+      "GEO",
+      "ARM",
+      "UKR",
+      "MDA"
     ]
   },
-
   "territory_overrides": {
     "$comment": "Explicit per-territory target prices in that territory's own currency, bypassing the tier multiplier. Use where you know the psychologically right number. Still snapped to the nearest available Apple price point.",
-    "IND": { "com.moonloaf.geospoof.pro.monthly": 99, "com.moonloaf.geospoof.pro.annual": 499 },
-    "JPN": { "com.moonloaf.geospoof.pro.monthly": 400, "com.moonloaf.geospoof.pro.annual": 2000 }
+    "IND": {
+      "com.moonloaf.geospoof.pro.monthly": 99,
+      "com.moonloaf.geospoof.pro.annual": 499
+    }
   },
-
   "attractive_endings": {
     "$comment": [
       "Preference order when several points sit equally close to the target. Apple's",
@@ -204,25 +336,77 @@
       "the .99 convention and every yen price is a whole number. Territory keys are",
       "for genuine one-offs."
     ],
-    "default": [0.99, 0.49, 0.0],
-
-    "EUR": [0.99, 0.49, 0.0],
-    "GBP": [0.99, 0.49, 0.0],
-    "USD": [0.99, 0.49, 0.0],
-    "BRL": [0.9, 0.5, 0.0],
-    "MXN": [0.0, 0.9],
-    "INR": [9.0, 0.0],
-    "JPY": [0.0],
-    "KRW": [0.0],
-    "VND": [0.0],
-    "IDR": [0.0],
-    "CLP": [0.0],
-    "COP": [0.0],
-    "HUF": [0.0],
-    "ISK": [0.0],
-    "TWD": [0.0],
-    "TRY": [0.99, 0.0],
-    "ZAR": [0.99, 0.0],
-    "RUB": [0.0, 0.99]
+    "default": [
+      0.99,
+      0.49,
+      0.0
+    ],
+    "EUR": [
+      0.99,
+      0.49,
+      0.0
+    ],
+    "GBP": [
+      0.99,
+      0.49,
+      0.0
+    ],
+    "USD": [
+      0.99,
+      0.49,
+      0.0
+    ],
+    "BRL": [
+      0.9,
+      0.5,
+      0.0
+    ],
+    "MXN": [
+      0.0,
+      0.9
+    ],
+    "INR": [
+      9.0,
+      0.0
+    ],
+    "JPY": [
+      0.0
+    ],
+    "KRW": [
+      0.0
+    ],
+    "VND": [
+      0.0
+    ],
+    "IDR": [
+      0.0
+    ],
+    "CLP": [
+      0.0
+    ],
+    "COP": [
+      0.0
+    ],
+    "HUF": [
+      0.0
+    ],
+    "ISK": [
+      0.0
+    ],
+    "TWD": [
+      0.0
+    ],
+    "TRY": [
+      0.99,
+      0.0
+    ],
+    "ZAR": [
+      0.99,
+      0.0
+    ],
+    "RUB": [
+      0.0,
+      0.99
+    ]
   }
 }

@@ -160,33 +160,40 @@ def current_prices(client, prod)
   #   Subscriptions: individual subscriptionPrices resources, one per territory.
   #   IAPs:          a single inAppPurchasePriceSchedule whose id IS the IAP id,
   #                  holding a set of manualPrices.
-  path, params =
+  # For an IAP on automatic pricing, `manualPrices` holds ONLY the base territory
+  # — everything else is derived by Apple and lives in `automaticPrices`. Reading
+  # manual alone returns one row and the product looks unpriceable. Read both and
+  # let manual win where it exists, since a manual price is the live one.
+  paths =
     if prod[:kind] == :subscription
-      ["#{V1}/subscriptions/#{prod[:id]}/prices",
-       { "include" => "subscriptionPricePoint,territory", "limit" => 200 }]
+      [["#{V1}/subscriptions/#{prod[:id]}/prices", "subscriptionPricePoint,territory", :only]]
     else
-      ["#{V1}/inAppPurchasePriceSchedules/#{prod[:id]}/manualPrices",
-       { "include" => "inAppPurchasePricePoint,territory", "limit" => 200 }]
+      [["#{V1}/inAppPurchasePriceSchedules/#{prod[:id]}/automaticPrices", "inAppPurchasePricePoint,territory", :base],
+       ["#{V1}/inAppPurchasePriceSchedules/#{prod[:id]}/manualPrices", "inAppPurchasePricePoint,territory", :overlay]]
     end
 
-  data, included = fetch_all(client, path, params)
-  points = included.select { |i| i["type"].to_s.include?("PricePoint") }
-                   .to_h { |i| [i["id"], i.dig("attributes", "customerPrice").to_f] }
-  terrs = included.select { |i| i["type"] == "territories" }.map { |i| i["id"] }
-
   out = {}
-  data.each do |row|
-    # `preserved: true` marks the price retained for existing subscribers after a
-    # change. Skip those — the live selling price is the non-preserved row, and
-    # taking the preserved one would scale from a stale baseline.
-    next if row.dig("attributes", "preserved") == true
-    pp_id = row.dig("relationships", "subscriptionPricePoint", "data", "id") ||
-            row.dig("relationships", "inAppPurchasePricePoint", "data", "id")
-    t = row.dig("relationships", "territory", "data", "id")
-    next unless pp_id && t
-    out[t] = points[pp_id]
+  rows_seen = 0
+  paths.each do |path, includes, role|
+    data, included = fetch_all(client, path, { "include" => includes, "limit" => 200 })
+    rows_seen += data.length
+    points = included.select { |i| i["type"].to_s.include?("PricePoint") }
+                     .to_h { |i| [i["id"], i.dig("attributes", "customerPrice").to_f] }
+    data.each do |row|
+      # `preserved: true` marks the price retained for existing subscribers after
+      # a change. Skip those — the live selling price is the non-preserved row,
+      # and taking the preserved one would scale from a stale baseline.
+      next if row.dig("attributes", "preserved") == true
+      pp_id = row.dig("relationships", "subscriptionPricePoint", "data", "id") ||
+              row.dig("relationships", "inAppPurchasePricePoint", "data", "id")
+      t = row.dig("relationships", "territory", "data", "id")
+      next unless pp_id && t
+      # :overlay runs second and is allowed to replace; :base only fills gaps.
+      out[t] = points[pp_id] if role != :base || out[t].nil?
+    end
+    puts "      #{role}: #{data.length} rows from #{path.split('/').last}"
   end
-  [out, data.length, terrs.length]
+  [out, rows_seen, out.length]
 end
 
 def endings_for(policy, terr, currency)
