@@ -117,8 +117,20 @@ enum ProStoreError: Equatable {
     case purchaseUnverified
     /// `AppStore.sync()` failed or timed out during a restore.
     case appStoreUnreachable
+    /// StoreKit returned `.pending`: the payment needs approval from outside the
+    /// app (Ask to Buy, or a bank's SCA challenge) before it completes.
+    ///
+    /// NOT a failure. It is the one outcome where Apple has accepted the request
+    /// but Pro legitimately isn't unlocked yet, so saying nothing reads as "I
+    /// paid and the app ignored it" — which is how it was reported. Rendered in
+    /// the neutral style, not the error style; see `isInformational`.
+    case purchasePending
     /// Text from StoreKit or Foundation, already localized by its source.
     case system(String)
+
+    /// True when this state is expected progress rather than something broken.
+    /// Drives the paywall's styling so a pending approval isn't shown in red.
+    var isInformational: Bool { self == .purchasePending }
 }
 
 // MARK: - ProStore
@@ -185,11 +197,27 @@ final class ProStore: ObservableObject {
         /// permanent, so its Apple-signed evidence must be durable too, not re-derived
         /// live every launch. Only ever written from a `.verified` result.
         static let appTransactionJWS = "pro_appTransactionJWS"
+        /// Latched once a VERIFIED `AppTransaction` proves this install is running
+        /// against a non-production StoreKit environment (App Review / TestFlight
+        /// sandbox, or Xcode).
+        ///
+        /// Without it, founder suppression only happened on launches where
+        /// `AppTransaction` actually verified. On a launch where it didn't
+        /// (offline, transient hiccup, beta OS) the cached production grant
+        /// survived and the tester looked like a founder — so the same TestFlight
+        /// build showed Pro or not depending on the launch, which is exactly the
+        /// flapping reported from TestFlight. Sticky per install, and cleared the
+        /// moment a production transaction verifies (TestFlight → App Store).
+        static let sandboxEnvironment = "pro_sandboxEnvironment"
         /// Debug-only override read from standard UserDefaults. Stores a
         /// `DebugProOverride` raw Int to force a Pro tier (founder / not-Pro /
         /// subscription) where real StoreKit isn't available (simulator / dev builds).
         /// Absent = auto (real check). Never set in production builds.
         static let debugProOverride = "debug_pro_override"
+        /// DEBUG-only record of purchases this build verified itself, used to work
+        /// around Xcode local StoreKit testing returning an empty
+        /// `currentEntitlements`. Never read in release builds.
+        static let debugVerifiedPurchases = "debug_verified_purchases"
     }
 
     /// Keys in `NSUbiquitousKeyValueStore` (iCloud), synced per-Apple-ID across
@@ -329,6 +357,17 @@ final class ProStore: ObservableObject {
         localFounder = cache.bool(forKey: Key.isFounder)
         cloudFounder = cloud.bool(forKey: CloudKey.founder)
         isFounder = localFounder || cloudFounder
+        // If a previous launch already proved this install is non-production, apply
+        // that verdict synchronously instead of waiting on an AppTransaction that
+        // may not verify this time. Otherwise the first frame shows the cached
+        // production grant and the paywall + IAPs stay hidden for the whole
+        // session whenever AppTransaction is unavailable.
+        if cache.bool(forKey: Key.sandboxEnvironment) {
+            founderSuppressedByEnvironment = true
+            localFounder = false
+            cloudFounder = false
+            isFounder = false
+        }
         // Restore the last verified AppTransaction JWS so we can hand the GPS agent its
         // founder proof even on a launch where `AppTransaction.shared` doesn't re-verify
         // (offline / transient). Refreshed whenever a new verified one arrives.
@@ -480,8 +519,20 @@ final class ProStore: ObservableObject {
             // production grant on this same device stays intact for its next
             // production launch.
             Log.pro.info("Non-production StoreKit environment (originalAppVersion '\(appTransaction.originalAppVersion)'): forcing founder OFF so the paywall + IAPs are visible.")
+            // Latch it so the next launch suppresses immediately, even if
+            // AppTransaction can't be verified then. See Key.sandboxEnvironment.
+            cache.set(true, forKey: Key.sandboxEnvironment)
             suppressFounderForNonProduction()
             return
+        }
+
+        // A verified production transaction is the only thing that clears the
+        // latch, so an install that moves from TestFlight to the App Store stops
+        // suppressing and a real founder grant resolves normally again.
+        if cache.bool(forKey: Key.sandboxEnvironment) {
+            Log.pro.info("Production StoreKit environment verified; clearing the sandbox latch.")
+            cache.set(false, forKey: Key.sandboxEnvironment)
+            founderSuppressedByEnvironment = false
         }
 
         let originalString = appTransaction.originalAppVersion
@@ -514,6 +565,48 @@ final class ProStore: ObservableObject {
             return appTransaction.originalAppVersion != "1.0"
         }
     }
+
+    #if DEBUG
+    /// A purchase this build verified itself, kept as a fallback for Xcode's local
+    /// StoreKit testing.
+    ///
+    /// `Transaction.currentEntitlements` is widely reported to come back empty
+    /// there even immediately after a purchase verifies — observed in this project
+    /// as `Purchase verified: …pro.annual txn=3` followed by
+    /// `refreshEntitlements: seen=0`, so the unlock could not be exercised at all
+    /// locally. See the Apple Developer Forums thread 723126 and the
+    /// "local Transaction Manager with auto-renewable subscriptions" reports.
+    ///
+    /// DEBUG-ONLY BY CONSTRUCTION. A release build must only ever grant Pro from a
+    /// live entitlement scan; trusting a locally-recorded purchase in production
+    /// would keep granting access after a refund or revocation, which we cannot
+    /// see while the entitlement stream is empty.
+    private struct DebugVerifiedPurchase: Codable {
+        let productID: String
+        let expiration: Date?
+        let jws: String
+    }
+
+    /// Persisted rather than held in memory: changing the app language relaunches
+    /// the process, which is precisely when this is being exercised.
+    private var debugVerifiedPurchases: [DebugVerifiedPurchase] {
+        get {
+            guard let data = cache.data(forKey: Key.debugVerifiedPurchases) else { return [] }
+            return (try? JSONDecoder().decode([DebugVerifiedPurchase].self, from: data)) ?? []
+        }
+        set {
+            cache.set(try? JSONEncoder().encode(newValue), forKey: Key.debugVerifiedPurchases)
+        }
+    }
+
+    private func recordDebugVerifiedPurchase(_ transaction: StoreKit.Transaction, jws: String) {
+        var all = debugVerifiedPurchases.filter { $0.productID != transaction.productID }
+        all.append(DebugVerifiedPurchase(productID: transaction.productID,
+                                         expiration: transaction.expirationDate,
+                                         jws: jws))
+        debugVerifiedPurchases = all
+    }
+    #endif
 
     /// Force founder OFF for this session because we verified a non-production
     /// StoreKit environment (App Review / TestFlight sandbox, or Xcode). Latches
@@ -616,6 +709,21 @@ final class ProStore: ObservableObject {
     @objc nonisolated private func appBecameActive() {
         Task { @MainActor [weak self] in
             guard let self else { return }
+            // Re-scan entitlements on every foreground, before the founder rails.
+            // A purchase can land while we're backgrounded — Ask-to-Buy approval,
+            // SCA, or plain sandbox lag where `currentEntitlements` hadn't caught
+            // up at the moment `purchase()` read it. `Transaction.updates` does
+            // not re-yield a transaction we already finished, so without this the
+            // unlock waits for a cold launch: "I paid and it still doesn't show
+            // Pro", as reported from TestFlight.
+            //
+            // Deliberately ahead of the two guards below. Those exist for the
+            // founder grant rails, and `founderSuppressedByEnvironment` is latched
+            // on for the whole session in TestFlight — putting the rescan after
+            // them would skip it in exactly the builds where it matters most.
+            // `refreshEntitlements()` handles the debug override itself.
+            await self.refreshEntitlements()
+
             if self.debugProOverride() != .auto { return }
             if self.founderSuppressedByEnvironment { return }
             self.cloud.synchronize()
@@ -740,6 +848,11 @@ final class ProStore: ObservableObject {
     func loadProducts() async {
         isLoadingProducts = true
         defer { isLoadingProducts = false }
+        // Clear stale failure text before retrying. `lastError` is rendered
+        // inline on the paywall for as long as it is non-nil, so an error left
+        // over from an earlier attempt otherwise sits there contradicting
+        // whatever happens next.
+        lastError = nil
         do {
             let loaded = try await Product.products(for: ProductID.all)
             // Stable order: annual first (the plan we want to anchor), monthly second.
@@ -790,6 +903,12 @@ final class ProStore: ObservableObject {
         guard !purchaseInFlight else { return false }
         purchaseInFlight = true
         defer { purchaseInFlight = false }
+        // A new attempt supersedes any previous failure. Without this, a
+        // `.appStoreUnreachable` left behind by an earlier Restore stays on the
+        // paywall through a *successful* purchase, so the user reads Apple's
+        // "your purchase completed" alert and our "couldn't reach the App Store"
+        // at the same time. Reported from TestFlight.
+        lastError = nil
 
         do {
             let result = try await product.purchase()
@@ -809,23 +928,55 @@ final class ProStore: ObservableObject {
                 }
                 #if DEBUG
                 Log.pro.info("Purchase verified: \(transaction.productID) txn=\(transaction.id) type=\(String(describing: transaction.productType))")
+                // Remember it before finishing, so local testing can still unlock
+                // when currentEntitlements comes back empty. DEBUG only.
+                recordDebugVerifiedPurchase(transaction, jws: verification.jwsRepresentation)
                 #endif
                 await transaction.finish()
                 await refreshEntitlements()
+                // Not DEBUG-only: this line is the difference between "Apple took
+                // the payment and we unlocked" and "Apple took the payment and we
+                // did not", which is the exact ambiguity reported from TestFlight.
+                if isPro {
+                    Log.pro.info("Post-purchase state: isPro=true active=\(self.activeProductIDs) lifetime=\(self.ownsLifetime)")
+                } else {
+                    // Apple took the payment and we did not unlock. Logged at error
+                    // level *deliberately*: `Log.pro.info` is gated behind the
+                    // `app_log_enabled` setting (default off), so an info-level line
+                    // here would be invisible in exactly the situation someone is
+                    // trying to diagnose. error/warn always emit.
+                    Log.pro.error("PURCHASE DID NOT UNLOCK: \(product.id) verified and finished, but isPro=false "
+                        + "(active=\(self.activeProductIDs) lifetime=\(self.ownsLifetime) founder=\(self.isFounder)). "
+                        + "currentEntitlements returned nothing usable for this product.")
+                }
                 #if DEBUG
-                Log.pro.info("Post-purchase state: isPro=\(self.isPro) active=\(self.activeProductIDs) lifetime=\(self.ownsLifetime)")
+                // An active override owns the entitlement state, so the
+                // refreshEntitlements() above just discarded this real purchase.
+                // Say so on screen, not only in the log: setting Pro Override to
+                // "Not Pro" is how you reach the paywall in the first place, and
+                // then being unable to buy anything — with the transaction plainly
+                // visible in Xcode's StoreKit manager — gives no hint why. Compiled
+                // out of release, so it can never reach a user.
+                let override = debugProOverride()
+                if override != .auto {
+                    let message = "Pro Override is set to \(override), which overrides real purchases — "
+                        + "this one was discarded. Set Settings → Pro Override to Auto to test buying."
+                    Log.pro.error("\(message)")
+                    lastError = .system(message)
+                    return false
+                }
                 #endif
                 return isPro
             case .userCancelled:
-                #if DEBUG
                 Log.pro.info("Purchase userCancelled for \(product.id)")
-                #endif
                 return false
             case .pending:
-                // Ask-to-buy / SCA — entitlement arrives later via Transaction.updates.
-                #if DEBUG
-                Log.pro.info("Purchase pending for \(product.id)")
-                #endif
+                // Ask-to-buy / SCA — entitlement arrives later via Transaction.updates
+                // or the next foreground rescan in appBecameActive(). Tell the user
+                // that, rather than leaving them on an unchanged paywall having just
+                // authorised a payment.
+                Log.pro.info("Purchase pending for \(product.id) — awaiting external approval")
+                lastError = .purchasePending
                 return false
             @unknown default:
                 return false
@@ -842,6 +993,7 @@ final class ProStore: ObservableObject {
     /// no StoreKit purchase to restore, but their grant lives in the iCloud bit,
     /// so we force a sync and re-resolve first.
     func restore() async {
+        lastError = nil
         // Re-pull the cross-device founder bit and re-run the local check.
         cloud.synchronize()
         if cloud.bool(forKey: CloudKey.founder), !cloudFounder {
@@ -866,11 +1018,19 @@ final class ProStore: ObservableObject {
             group.cancelAll()
             return first
         }
-        if !didSync {
-            Log.pro.warn("AppStore.sync failed or timed out during restore")
-            lastError = .appStoreUnreachable
-        }
+        // Scan entitlements first, then decide whether the sync failure is worth
+        // telling the user about. `AppStore.sync()` timing out is routine in the
+        // sandbox, and if `currentEntitlements` still resolved Pro then the
+        // warning is noise that contradicts the state the user can see.
         await refreshEntitlements()
+        if !didSync {
+            if isPro {
+                Log.pro.warn("AppStore.sync failed or timed out during restore, but entitlements resolved (isPro) — not surfacing")
+            } else {
+                Log.pro.warn("AppStore.sync failed or timed out during restore")
+                lastError = .appStoreUnreachable
+            }
+        }
     }
 
     // MARK: Entitlement resolution
@@ -881,7 +1041,13 @@ final class ProStore: ObservableObject {
         #if DEBUG
         // An active debug override owns the entitlement state; don't let the real (usually
         // empty on simulator) scan clobber it.
+        //
+        // Logged because this return used to be silent: with an override set, no
+        // `refreshEntitlements:` line was emitted at all, so the log looked
+        // identical to "StoreKit was never asked" and gave no clue that the real
+        // scan had been deliberately skipped.
         if debugProOverride() != .auto {
+            Log.pro.info("refreshEntitlements: SKIPPED the real StoreKit scan — Pro Override = \(self.debugProOverride())")
             applyDebugOverride()
             return
         }
@@ -893,21 +1059,19 @@ final class ProStore: ObservableObject {
         // Apple-signed JWS of each entitlement we count, for the GPS agent's offline
         // verification. Collected in lockstep with the accepted transactions below.
         var proofJWS: [String] = []
-        #if DEBUG
-        // DIAGNOSTIC counters (DEBUG only): distinguish "StoreKit yielded
-        // nothing" (env / simulator state) from "yielded something we filtered
-        // out" (code).
+        // Diagnostic counters. Deliberately NOT DEBUG-only: they distinguish
+        // "StoreKit yielded nothing" (environment / account state) from "yielded
+        // something we filtered out" (our code), and the builds that need that
+        // answer most — TestFlight and App Review — are Release. Product IDs and
+        // counts only, no account or payment data.
         var seen = 0
         var unverifiedSeen = 0
-        #endif
         for await result in Transaction.currentEntitlements {
-            #if DEBUG
             seen += 1
             // Release: verified only. DEBUG: also accepts unverified (see
             // acceptableTransaction) so a failing local test cert doesn't
             // silently drop the just-purchased entitlement on every refresh.
             if case .unverified = result { unverifiedSeen += 1 }
-            #endif
             guard let transaction = acceptableTransaction(result) else { continue }
             guard transaction.revocationDate == nil else { continue }
             #if DEBUG
@@ -933,13 +1097,49 @@ final class ProStore: ObservableObject {
             activeTransaction = transaction
             proofJWS.append(result.jwsRepresentation)
         }
+        #if DEBUG
+        // Only when StoreKit yielded nothing at all. If it yielded anything, it is
+        // authoritative and stays so — including for products it deliberately
+        // omitted (lapsed, refunded, revoked). This rescues the documented
+        // local-testing case without ever second-guessing a real scan.
+        if seen == 0 {
+            let recorded = debugVerifiedPurchases
+            var applied: [String] = []
+            for purchase in recorded {
+                if let expiration = purchase.expiration, expiration < .now { continue }
+                if purchase.productID == ProductID.lifetime {
+                    lifetimeOwned = true
+                } else if ProductID.subscriptions.contains(purchase.productID) {
+                    active.insert(purchase.productID)
+                } else {
+                    continue
+                }
+                proofJWS.append(purchase.jws)
+                applied.append(purchase.productID)
+            }
+            if !applied.isEmpty {
+                Log.pro.warn("DEBUG fallback: currentEntitlements was empty, applying \(applied.count) "
+                    + "self-verified purchase(s) from local StoreKit testing: \(applied). "
+                    + "This path is compiled out of release builds.")
+            }
+        }
+        #endif
+
         activeProductIDs = active
         ownsLifetime = lifetimeOwned
         lifetimeTransactionID = lifetimeTxnID
         entitlementTransactionsJWS = proofJWS
-        #if DEBUG
-        Log.pro.info("refreshEntitlements: seen=\(seen) unverified=\(unverifiedSeen) active=\(active) lifetime=\(lifetimeOwned) isFounder=\(self.isFounder) isPro=\(self.isPro)")
-        #endif
+        // `seen` counts what StoreKit yielded; `active`/`lifetime` count what we
+        // accepted. When StoreKit yielded transactions and we accepted none, the
+        // filtering is the suspect, and that must be visible without the
+        // `app_log_enabled` setting being on — so it goes out at warn level.
+        let summary = "refreshEntitlements: seen=\(seen) unverified=\(unverifiedSeen) active=\(active) "
+            + "lifetime=\(lifetimeOwned) isFounder=\(self.isFounder) isPro=\(self.isPro)"
+        if seen > 0 && active.isEmpty && !lifetimeOwned {
+            Log.pro.warn("\(summary) — StoreKit returned \(seen) entitlement(s) but none were accepted")
+        } else {
+            Log.pro.info(summary)
+        }
         await updateSubscriptionDetails(from: activeTransaction)
         persistIsPro()
     }

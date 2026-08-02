@@ -34,6 +34,8 @@ private extension ProStoreError {
             return Text("Purchase could not be verified.")
         case .appStoreUnreachable:
             return Text("Couldn't reach the App Store. Your Pro access is unaffected; try again later.")
+        case .purchasePending:
+            return Text("This purchase is waiting for approval. Pro unlocks automatically once it's approved.")
         case .system(let message):
             // Already localized by StoreKit / Foundation.
             return Text(verbatim: message)
@@ -97,7 +99,10 @@ struct ProPaywallView: View {
                     if let err = store.lastError {
                         err.text
                             .font(.footnote)
-                            .foregroundStyle(.red)
+                            // A pending approval is expected progress, not a
+                            // fault — showing it in red would tell the user
+                            // something broke when nothing has.
+                            .foregroundStyle(err.isInformational ? AnyShapeStyle(.secondary) : AnyShapeStyle(.red))
                             .multilineTextAlignment(.center)
                     }
                     restoreButton

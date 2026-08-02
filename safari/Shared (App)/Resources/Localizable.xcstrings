@@ -25001,6 +25001,76 @@
         }
       }
     },
+    "This purchase is waiting for approval. Pro unlocks automatically once it's approved.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Dieser Kauf muss noch bestätigt werden. Sobald das erledigt ist, wird dein Pro-Zugang automatisch freigeschaltet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Esta compra está pendiente de aprobación. Tu acceso Pro se desbloqueará automáticamente en cuanto se apruebe."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Cet achat est en attente d’approbation. Votre accès Pro sera débloqué automatiquement dès qu’il sera approuvé."
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Pembelian ini menunggu persetujuan. Akses Pro Anda akan aktif otomatis setelah disetujui."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "この購入は承認待ちです。承認されると、Proのアクセス権が自動的に有効になります。"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Deze aankoop wacht op goedkeuring. Je Pro-toegang wordt automatisch ontgrendeld zodra deze is goedgekeurd."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Esta compra está aguardando aprovação. Seu acesso Pro será liberado automaticamente após a aprovação."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Эта покупка ожидает подтверждения. Доступ Pro активируется автоматически, как только оно будет получено."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Det här köpet väntar på godkännande. Din Pro-åtkomst låses upp automatiskt när det har godkänts."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Giao dịch mua này đang chờ phê duyệt. Quyền dùng Pro của bạn sẽ được mở tự động sau khi được phê duyệt."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "此次购买正在等待批准。批准后将自动解锁你的 Pro 权限。"
+          }
+        }
+      }
+    },
     "Timezone": {
       "localizations": {
         "de": {
