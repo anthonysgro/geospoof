@@ -59,6 +59,10 @@ policy = JSON.parse(File.read(POLICY))
 tier_of = {}
 policy["tiers"].each { |tier, codes| codes.each { |c| tier_of[c] = tier } }
 
+# The storefront every other territory's equalized price is derived from. Used to
+# find the price point whose equalizations give us a stable per-territory baseline.
+BASE_TERRITORY = policy.fetch("base_storefront")
+
 def die(msg)
   warn "\n[FATAL] #{msg}"
   exit 1
@@ -153,47 +157,84 @@ puts "planning #{scope.length} territories (#{unclassified.length} left on Apple
 # This is the baseline. Endpoints differ between subscriptions and IAPs and are
 # the part of this script most likely to need adjusting on first contact, so any
 # surprise is reported loudly rather than defaulted away.
-def current_prices(client, prod)
-  # Subscriptions and IAPs use entirely different pricing models, which is the
-  # single biggest source of confusion in this API.
-  #
-  #   Subscriptions: individual subscriptionPrices resources, one per territory.
-  #   IAPs:          a single inAppPurchasePriceSchedule whose id IS the IAP id,
-  #                  holding a set of manualPrices.
-  # For an IAP on automatic pricing, `manualPrices` holds ONLY the base territory
-  # — everything else is derived by Apple and lives in `automaticPrices`. Reading
-  # manual alone returns one row and the product looks unpriceable. Read both and
-  # let manual win where it exists, since a manual price is the live one.
-  paths =
-    if prod[:kind] == :subscription
-      [["#{V1}/subscriptions/#{prod[:id]}/prices", "subscriptionPricePoint,territory", :only]]
-    else
-      [["#{V1}/inAppPurchasePriceSchedules/#{prod[:id]}/automaticPrices", "inAppPurchasePricePoint,territory", :base],
-       ["#{V1}/inAppPurchasePriceSchedules/#{prod[:id]}/manualPrices", "inAppPurchasePricePoint,territory", :overlay]]
-    end
+# Returns { baseline: {territory => price}, live: {territory => price} }.
+#
+# THE DISTINCTION MATTERS AND IT IS NOT COSMETIC.
+#
+# `baseline` is Apple's EQUALIZED price — what the territory would cost if it were
+# derived from the base storefront. It is a function of the US price, so it does
+# not move when we set a manual price.
+#
+# `live` is what the customer pays right now: the equalized price, or a manual
+# override where one exists.
+#
+# The multiplier must scale `baseline`, never `live`. Scaling `live` compounds:
+# apply -55% to Brazil once and the next plan run reads 5.90 as its starting point
+# and asks for 2.66, another -55%. Every re-run would cut again. Scaling `baseline`
+# is idempotent — re-running produces the same target and the plan comes back
+# `unchanged`, which is what makes the verify step meaningful.
+#
+# `live` is still needed, because the delta a customer experiences is measured
+# against what they pay today, and the increase gate has to compare against that.
+def price_context(client, prod)
+  baseline = {}
+  live = {}
 
-  out = {}
-  rows_seen = 0
-  paths.each do |path, includes, role|
-    data, included = fetch_all(client, path, { "include" => includes, "limit" => 200 })
-    rows_seen += data.length
+  if prod[:kind] == :subscription
+    # Subscriptions have no automatic/manual split — every price is explicit. The
+    # equalized set comes from asking Apple what the BASE territory's price point
+    # is worth everywhere else.
+    data, included = fetch_all(client, "#{V1}/subscriptions/#{prod[:id]}/prices",
+                               { "include" => "subscriptionPricePoint,territory", "limit" => 200 })
     points = included.select { |i| i["type"].to_s.include?("PricePoint") }
                      .to_h { |i| [i["id"], i.dig("attributes", "customerPrice").to_f] }
+    base_point = nil
     data.each do |row|
-      # `preserved: true` marks the price retained for existing subscribers after
-      # a change. Skip those — the live selling price is the non-preserved row,
-      # and taking the preserved one would scale from a stale baseline.
       next if row.dig("attributes", "preserved") == true
-      pp_id = row.dig("relationships", "subscriptionPricePoint", "data", "id") ||
-              row.dig("relationships", "inAppPurchasePricePoint", "data", "id")
+      pp_id = row.dig("relationships", "subscriptionPricePoint", "data", "id")
       t = row.dig("relationships", "territory", "data", "id")
       next unless pp_id && t
-      # :overlay runs second and is allowed to replace; :base only fills gaps.
-      out[t] = points[pp_id] if role != :base || out[t].nil?
+      live[t] = points[pp_id]
+      base_point = pp_id if t == BASE_TERRITORY
     end
-    puts "      #{role}: #{data.length} rows from #{path.split('/').last}"
+
+    if base_point
+      eq, = fetch_all(client, "#{V1}/subscriptionPricePoints/#{base_point}/equalizations",
+                      { "include" => "territory", "limit" => 200 })
+      eq.each do |pt|
+        t = pt.dig("relationships", "territory", "data", "id")
+        baseline[t] = pt.dig("attributes", "customerPrice").to_f if t
+      end
+      puts "      baseline: #{baseline.length} equalizations from the #{BASE_TERRITORY} price point"
+    else
+      # Without a base price point there is no stable baseline, and falling back to
+      # `live` would silently reintroduce compounding. Refuse instead.
+      puts "      !! no #{BASE_TERRITORY} price found — cannot establish a stable baseline"
+    end
+  else
+    auto, auto_inc = fetch_all(client, "#{V1}/inAppPurchasePriceSchedules/#{prod[:id]}/automaticPrices",
+                               { "include" => "inAppPurchasePricePoint,territory", "limit" => 200 })
+    man, man_inc = fetch_all(client, "#{V1}/inAppPurchasePriceSchedules/#{prod[:id]}/manualPrices",
+                             { "include" => "inAppPurchasePricePoint,territory", "limit" => 200 })
+    [[auto, auto_inc, :baseline], [man, man_inc, :manual]].each do |data, included, role|
+      points = included.select { |i| i["type"].to_s.include?("PricePoint") }
+                       .to_h { |i| [i["id"], i.dig("attributes", "customerPrice").to_f] }
+      data.each do |row|
+        pp_id = row.dig("relationships", "inAppPurchasePricePoint", "data", "id")
+        t = row.dig("relationships", "territory", "data", "id")
+        next unless pp_id && t
+        if role == :baseline
+          baseline[t] = points[pp_id]
+          live[t] ||= points[pp_id]
+        else
+          live[t] = points[pp_id] # a manual price is what the customer pays
+        end
+      end
+    end
+    puts "      baseline: #{baseline.length} automatic, #{man.length} manual override(s)"
   end
-  [out, rows_seen, out.length]
+
+  { baseline: baseline, live: live }
 end
 
 def endings_for(policy, terr, currency)
@@ -228,10 +269,12 @@ allow_inc_sub = policy.fetch("allow_increases_subscription", false)
 puts "increases permitted — one-time: #{allow_inc_one_time}   subscription: #{allow_inc_sub}"
 
 products.each do |prod|
-  baseline, n_rows, n_terr = current_prices(client, prod)
-  puts "  #{prod[:product_id]}: current prices for #{baseline.length} territories (#{n_rows} rows, #{n_terr} territory refs)"
+  puts "  #{prod[:product_id]}:"
+  ctx = price_context(client, prod)
+  baseline = ctx[:baseline]
+  live = ctx[:live]
   if baseline.empty?
-    warnings << "#{prod[:product_id]}: no current prices returned — cannot establish a local baseline, product skipped"
+    warnings << "#{prod[:product_id]}: no equalized baseline available — skipped rather than scale from the live price, which would compound on every run"
     next
   end
 
@@ -239,9 +282,10 @@ products.each do |prod|
   pp_path = prod[:kind] == :subscription ? "#{V1}/subscriptions/#{prod[:id]}/pricePoints" : "#{V2}/inAppPurchases/#{prod[:id]}/pricePoints"
 
   scope.each_with_index do |terr, i|
-    cur = baseline[terr]
-    if cur.nil?
-      warnings << "#{prod[:product_id]} / #{terr}: no current price, skipped (no baseline to scale)"
+    base = baseline[terr]
+    cur = live[terr] || base
+    if base.nil?
+      warnings << "#{prod[:product_id]} / #{terr}: no equalized baseline, skipped"
       next
     end
     currency = currency_of[terr]
@@ -261,9 +305,10 @@ products.each do |prod|
       next
     end
 
-    # Both branches are in local currency: the override is authored that way, and
-    # the tier target scales Apple's own local equalized price.
-    target = override ? override.to_f : (cur * mult)
+    # Scale the EQUALIZED baseline, not the live price — see price_context. Both
+    # branches are already in local currency: an override is authored that way,
+    # and the baseline is Apple's own local equalized figure.
+    target = override ? override.to_f : (base * mult)
     chosen = snap(available, target, endings_for(policy, terr, currency), tie_break, rounding)
 
     delta = chosen[:price] - cur
@@ -279,7 +324,7 @@ products.each do |prod|
     rows << {
       product: prod[:product_id], kind: prod[:kind], territory: terr, currency: currency,
       tier: tier, basis: override ? "override(local)" : "#{basis_kind} x #{mult}",
-      current: cur, target: target.round(2), chosen: chosen[:price],
+      equalized: base, current: cur, target: target.round(2), chosen: chosen[:price],
       delta_pct: cur.zero? ? "" : ((delta / cur) * 100).round(1),
       direction: is_increase ? "increase" : (delta.abs < 0.0001 ? "unchanged" : "decrease"),
       price_point_id: chosen[:id],
@@ -293,7 +338,10 @@ end
 FileUtils.mkdir_p(OUT_DIR)
 stamp = Time.now.utc.strftime("%Y%m%dT%H%M%SZ")
 csv_path = File.join(OUT_DIR, "plan-#{stamp}.csv")
-cols = %i[product kind territory currency tier basis current target chosen delta_pct direction price_point_id needs_review]
+# `equalized` is what the multiplier scales (stable, derived from the base
+# storefront). `current` is what the customer pays today, which is what delta_pct
+# is measured against. They differ once a manual price is in place.
+cols = %i[product kind territory currency tier basis equalized current target chosen delta_pct direction price_point_id needs_review]
 CSV.open(csv_path, "w") do |csv|
   csv << cols.map(&:to_s)
   rows.each { |r| csv << r.values_at(*cols) }
