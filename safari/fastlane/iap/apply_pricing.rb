@@ -127,6 +127,46 @@ iaps.each { |p| products[p.dig("attributes", "productId")] = { kind: :iap, id: p
 missing = rows.map { |r| r["product"] }.uniq - products.keys
 die "plan references products that do not exist: #{missing}" unless missing.empty?
 
+# --- the base territory's current price, per IAP ------------------------------
+# A replace-all schedule must carry a price for its own baseTerritory. The plan
+# never contains one: the planner reads its baseline from `automaticPrices` (IAP)
+# and from `equalizations` (subscriptions), and the base territory appears in
+# neither — it has a manual price, and equalizations returns the *other*
+# territories. So USA is absent from all 928 rows by construction.
+#
+# Omitting it from manualPrices would delete the existing US manual price and
+# leave the US price to be derived automatically from baseTerritory: USA, which is
+# circular. Anchoring it at today's price makes the schedule a no-op for the US.
+# Being manual is the base territory's normal state — it is where the price is set.
+def base_price_point(client, prod, base_territory)
+  %w[manualPrices automaticPrices].each do |rel|
+    data, inc = fetch_all(client, "#{V1}/inAppPurchasePriceSchedules/#{prod[:id]}/#{rel}",
+                          { "include" => "inAppPurchasePricePoint,territory" })
+    prices = inc.select { |i| i["type"].to_s.include?("PricePoint") }
+                .to_h { |i| [i["id"], i.dig("attributes", "customerPrice")] }
+    row = data.find { |d| d.dig("relationships", "territory", "data", "id") == base_territory }
+    next unless row
+    pp_id = row.dig("relationships", "inAppPurchasePricePoint", "data", "id")
+    next unless pp_id
+    return { id: pp_id, price: prices[pp_id], source: rel }
+  end
+  nil
+end
+
+base_points = {}
+iap_pids = rows.map { |r| r["product"] }.uniq.select { |pid| products[pid][:kind] == :iap }
+unless iap_pids.empty?
+  puts "\nresolving the #{base_territory} anchor price for #{iap_pids.length} one-time product(s)..."
+  iap_pids.each do |pid|
+    bp = base_price_point(client, products[pid], base_territory)
+    die "cannot determine the current #{base_territory} price for #{pid}.\n" \
+        "        Applying without it would drop that manual price and leave the\n" \
+        "        #{base_territory} price derived from itself. Refusing." if bp.nil?
+    base_points[pid] = bp
+    puts "  #{pid}: #{bp[:price]} (from #{bp[:source]}) — will be re-sent unchanged"
+  end
+end
+
 # --- guard 1: has the world moved since the plan was generated? -------------
 # Apple adjusts automatic prices for FX and tax. If the live price no longer
 # matches what the plan recorded, the plan's target was computed from a stale
@@ -179,6 +219,9 @@ rows.group_by { |r| r["product"] }.select { |pid, _| products[pid][:kind] == :ia
                     { "include" => "territory" })
   currently_manual = data.map { |d| d.dig("relationships", "territory", "data", "id") }.compact
   planned = prows.map { |r| r["territory"] }
+  # base_territory is exempt because the request builder re-sends it unchanged as
+  # the schedule's anchor, so it is never actually dropped. That exemption is only
+  # sound while base_points is populated — hence the die() above if it is not.
   dropped = currently_manual - planned - [base_territory]
   reverts << "#{pid}: #{dropped.length} territor#{dropped.length == 1 ? 'y' : 'ies'} would revert (#{dropped.sort.join(', ')})" unless dropped.empty?
 end
@@ -240,20 +283,26 @@ rows.group_by { |r| r["product"] }.each do |pid, prows|
       }
     end
   else
-    # One replace-all schedule carrying every planned territory for this product.
-    included = prows.each_with_index.map do |r, i|
+    # One replace-all schedule carrying every planned territory for this product,
+    # plus the base territory pinned at its current price. The base entry is not a
+    # price change — it exists so the replace-all does not delete the anchor. See
+    # base_price_point above.
+    entries = [{ territory: base_territory, point: base_points.fetch(pid)[:id] }] +
+              prows.map { |r| { territory: r["territory"], point: r["price_point_id"] } }
+    included = entries.each_with_index.map do |e, i|
       {
         type: "inAppPurchasePrices",
         id: "price-#{i}",
         attributes: { startDate: nil },
         relationships: {
-          inAppPurchasePricePoint: { data: { type: "inAppPurchasePricePoints", id: r["price_point_id"] } },
-          territory: { data: { type: "territories", id: r["territory"] } }
+          inAppPurchasePricePoint: { data: { type: "inAppPurchasePricePoints", id: e[:point] } },
+          territory: { data: { type: "territories", id: e[:territory] } }
         }
       }
     end
     requests << {
-      label: "#{pid} schedule -> #{prows.length} territories (#{prows.map { |r| r['territory'] }.sort.join(', ')})",
+      label: "#{pid} schedule -> #{prows.length} territories + #{base_territory} anchor " \
+             "(#{prows.map { |r| r['territory'] }.sort.join(', ')})",
       path: "#{V1}/inAppPurchasePriceSchedules",
       body: {
         data: {

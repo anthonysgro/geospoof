@@ -106,6 +106,29 @@ placeholder ids** referenced from the relationship:
 
 `startDate: null` means "effective immediately".
 
+### The schedule must carry its own baseTerritory
+
+Creating a schedule **replaces the entire set** of manual prices. Territories left
+out fall back to the automatic price derived from `baseTerritory`.
+
+That includes the base territory itself, which is the trap. `plan_pricing.rb`
+never produces a row for it: the IAP baseline is read from `automaticPrices`, and
+the base territory has a *manual* price so it is absent from that list. (For
+subscriptions the baseline comes from `equalizations`, which likewise returns only
+the other territories.) On the 157-territory run, USA was the one classified
+territory with zero rows for exactly this reason.
+
+So a schedule built purely from plan rows omits USA, which deletes the US manual
+price and leaves the US price derived from `baseTerritory: USA` — circular. Apple
+either rejects it or resolves it in a way nobody chose, and either outcome puts the
+largest storefront in play during an operation whose plan contains no US rows.
+
+`apply_pricing.rb` therefore looks up the current base-territory price point and
+re-sends it unchanged as the first entry of every IAP schedule. It is not a price
+change; it stops the replace-all from dropping the anchor. If that price cannot be
+resolved the script refuses to run rather than guess. Being manual is the normal
+state for a base territory anyway — it is where the price is set.
+
 **409 Conflict on POST is common and widely reported** — see
 [Apple Developer Forums 798230](https://developer.apple.com/forums/thread/798230)
 and [this StackOverflow thread](https://stackoverflow.com/questions/74105965/how-to-add-a-temporary-price-change-of-inapppurchase-with-v1-inapppurchaseprice).
@@ -128,12 +151,38 @@ which is a cheap guard against the currency class of bug.
   subscriber to consent (since 2025-08-04) or they churn at cycle end. One-time
   purchases have no such constraint. See `pricing-policy.json`.
 
-## Rate limits
+## Rate limits and run time
 
 Roughly 3600 requests/hour. The price-points endpoints require a territory filter
-(App Store Connect API 3.6+), so a naive full plan is one request per product per
-territory — 141 × 6 ≈ 850 before pagination. Use `--territories` to smoke-test,
-and consider `equalizations` for subscriptions.
+(App Store Connect API 3.6+), so a full plan is one request per product per
+territory — 157 × 6 ≈ 950 before pagination. That takes **20–25 minutes**, and
+the sequential pacing is deliberate: firing these concurrently would exceed the
+hourly limit. Use `--territories` to smoke-test first.
+
+## Surviving a transient failure
+
+A 20-minute run of ~950 requests will occasionally meet an Apple 500. Two things
+make that survivable:
+
+- **Retry with real backoff** (2s, 4s, 8s, 16s, 32s). Spaceship appears to handle
+  this already but does not: `api_client.rb#with_asc_retry` raises
+  `TimeoutRetryError` on a 500 with the message "Retrying after 3 seconds", yet
+  that rescue branch has no `sleep` in it — only the 429 branch does. All five
+  attempts are spent inside a second, then the failed response reaches
+  `handle_response`, which raises `InternalServerError`. Run #5 died this way at
+  19m41s on the fifth of six products.
+- **Rows are flushed to the CSV as they are produced**, so an abort keeps
+  everything that finished. The workflow uploads the artifact on failure too.
+
+To continue rather than start over:
+
+```bash
+bundle exec ruby fastlane/iap/plan_pricing.rb --resume plans/plan-<stamp>.csv
+```
+
+Carried rows are re-emitted into the new CSV, so the output is always complete on
+its own. In CI, pass the failed run's ID as the `resume_run_id` input and it
+fetches that artifact itself.
 
 ## Files
 

@@ -254,9 +254,11 @@ struct SpoofControlPanel: View {
         // activation heartbeat. Note: iOS has no public API to force Safari
         // specifically; this opens the user's default browser, which is Safari
         // for the vast majority.
-        if let url = URL(string: "https://geospoof.com/verify?utm_source=ios-app&utm_medium=app&utm_campaign=verify-setup") {
-            UIApplication.shared.open(url)
-        }
+        //
+        // Shares verifyURL(campaign:) with the home-screen link so both follow the
+        // app's language. This previously hardcoded a bare `geospoof.com` host,
+        // which cost a redirect hop on every open.
+        UIApplication.shared.open(verifyURL(campaign: "verify-setup"))
     }
 
     /// Quiet "GeoSpoof is running in Safari" confirmation, shown once the
@@ -416,7 +418,7 @@ struct SpoofControlPanel: View {
 
     private var verificationSection: some View {
         Section {
-            Link(destination: verifyURL) {
+            Link(destination: verifyURL(campaign: "verify")) {
                 HStack {
                     Label("Verify Your Protection", systemImage: "checkmark.shield")
                     Spacer()
@@ -428,15 +430,50 @@ struct SpoofControlPanel: View {
         }
     }
 
-    /// The verify-page URL, UTM-tagged so visits attribute to the right native
-    /// app surface (iOS vs macOS) in analytics rather than landing in "unknown".
-    private var verifyURL: URL {
+    /// URL prefix for the site locale matching the language the app is currently
+    /// displaying, or `""` for English.
+    ///
+    /// The site serves English at the bare path and every other locale under a
+    /// `/<code>` prefix (`site/src/lib/i18n/config.ts`). Two things stop this
+    /// from being a straight pass-through of the app's language code:
+    ///
+    /// - The app ships more languages than the site translates. `nl`, `sv` and
+    ///   `vi` have no site copy, so they fall through to unprefixed English
+    ///   rather than requesting a prefix that does not exist.
+    /// - The app's Chinese catalog is `zh-Hans` (script) while the site's locale
+    ///   is `zh-CN` (region). They refer to the same copy under different codes.
+    ///
+    /// `tests/unit/verify-link-locale.unit.test.ts` asserts this stays in step
+    /// with both the app catalog and the site's locale list.
+    private var siteLocalePrefix: String {
+        // preferredLocalizations resolves against the .lproj sets actually in the
+        // bundle, so this is the language the UI is really rendering — not the
+        // raw system preference, which may be a language we do not ship.
+        guard let language = Bundle.main.preferredLocalizations.first else { return "" }
+        switch language {
+        case "de", "es", "fr", "id", "ja", "ru": return "/\(language)"
+        case "pt-BR": return "/pt-BR"
+        case "zh-Hans": return "/zh-CN"
+        default: return "" // en, plus nl/sv/vi and anything unrecognised
+        }
+    }
+
+    /// The verify-page URL for the app's current language, UTM-tagged so visits
+    /// attribute to the right native app surface (iOS vs macOS) in analytics
+    /// rather than landing in "unknown".
+    ///
+    /// - Parameter campaign: distinguishes the entry point, since the setup card
+    ///   and the home-screen link lead to the same page for different reasons.
+    private func verifyURL(campaign: String) -> URL {
         #if os(iOS)
         let source = "ios-app"
         #else
         let source = "macos-app"
         #endif
-        return URL(string: "https://www.geospoof.com/verify?utm_source=\(source)&utm_medium=app&utm_campaign=verify")!
+        // Force-unwrap is safe: the host is a literal, the path prefix comes from
+        // the closed set above, and both query values are caller-side literals.
+        return URL(string: "https://www.geospoof.com\(siteLocalePrefix)/verify"
+            + "?utm_source=\(source)&utm_medium=app&utm_campaign=\(campaign)")!
     }
 
     // MARK: Favorites
