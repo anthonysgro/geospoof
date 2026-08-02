@@ -13,6 +13,20 @@ import { describe, expect, it } from "vitest";
 const SRC = join(__dirname, "..", "..", "safari", "Shared (App)", "ProStore.swift");
 const swift = readFileSync(SRC, "utf8");
 
+/**
+ * The same source with `//` and `///` lines blanked out, preserving offsets so
+ * `#if DEBUG` region maths still lines up.
+ *
+ * Needed because the comments in this file quote the very log strings and symbol
+ * names these tests search for — an unstripped search finds the prose describing
+ * a diagnostic rather than the diagnostic itself, and then reports it as living
+ * in whichever `#if DEBUG` block the comment happens to sit in.
+ */
+const swiftCode = swift
+  .split("\n")
+  .map((line) => (line.trim().startsWith("//") ? " ".repeat(line.length) : line))
+  .join("\n");
+
 /** Body of a `func name(...)` up to the next same-indentation closing brace. */
 function funcBody(signature: string): string {
   const start = swift.indexOf(signature);
@@ -164,11 +178,14 @@ describe("purchase diagnostics survive Release", () => {
     "Purchase pending for",
     "Purchase userCancelled for",
   ])("%s is logged unconditionally", (needle) => {
-    const at = swift.indexOf(needle);
+    // swiftCode, not swift: the comments in ProStore.swift quote these very log
+    // strings, and the first match would otherwise be the prose describing the
+    // diagnostic — which sits inside a #if DEBUG block and fails spuriously.
+    const at = swiftCode.indexOf(needle);
     expect(at, `${needle} not found`).toBeGreaterThan(-1);
     // Walk back to the nearest #if DEBUG / #endif and make sure the log is not
     // inside a DEBUG-only region.
-    const before = swift.slice(0, at);
+    const before = swiftCode.slice(0, at);
     const lastIf = before.lastIndexOf("#if DEBUG");
     const lastEndif = before.lastIndexOf("#endif");
     expect(lastIf < lastEndif || lastIf === -1, `${needle} sits inside a #if DEBUG block`).toBe(
@@ -238,12 +255,13 @@ describe("local-testing fallback cannot reach production", () => {
   // That fallback must NEVER compile into a release build: with the entitlement
   // stream empty we cannot see refunds or revocations, so trusting a locally
   // recorded purchase in production would keep granting Pro after a refund.
+  // `debug_verified_purchases` is deliberately absent: it exists only as a key
+  // *name* in the Key enum, which is exempt (see below).
   const guardedSymbols = [
     "DebugVerifiedPurchase",
     "debugVerifiedPurchases",
     "recordDebugVerifiedPurchase",
     "DEBUG fallback: currentEntitlements was empty",
-    "debug_verified_purchases",
   ];
 
   /** Every #if DEBUG … #endif region in the file. */
@@ -251,9 +269,9 @@ describe("local-testing fallback cannot reach production", () => {
     const regions: Array<[number, number]> = [];
     let from = 0;
     for (;;) {
-      const open = swift.indexOf("#if DEBUG", from);
+      const open = swiftCode.indexOf("#if DEBUG", from);
       if (open === -1) break;
-      const close = swift.indexOf("#endif", open);
+      const close = swiftCode.indexOf("#endif", open);
       if (close === -1) break;
       regions.push([open, close]);
       from = close + 1;
@@ -271,11 +289,13 @@ describe("local-testing fallback cannot reach production", () => {
   // string constant is harmless — the pre-existing `debugProOverride` key is
   // declared the same way — so declarations there are exempt. What must be
   // DEBUG-gated is every read and write.
-  const keyEnumStart = swift.indexOf("private enum Key {");
-  const keyEnumEnd = swift.indexOf("\n    }", keyEnumStart);
+  const keyEnumStart = swiftCode.indexOf("private enum Key {");
+  const keyEnumEnd = swiftCode.indexOf("\n    }", keyEnumStart);
 
   it.each(guardedSymbols)("every use of %s is inside #if DEBUG", (sym) => {
-    const hits = [...swift.matchAll(new RegExp(sym.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"))]
+    const hits = [
+      ...swiftCode.matchAll(new RegExp(sym.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")),
+    ]
       .map((m) => m.index)
       .filter((at) => !(at > keyEnumStart && at < keyEnumEnd));
     expect(hits.length, `${sym} not found outside the Key enum`).toBeGreaterThan(0);
