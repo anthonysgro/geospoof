@@ -49,10 +49,11 @@ BUNDLE_ID = "com.moonloaf.geospoof"
 POLICY = File.join(__dir__, "pricing-policy.json")
 OUT_DIR = File.join(__dir__, "plans")
 
-options = { territories: nil, products: nil }
+options = { territories: nil, products: nil, resume: nil }
 OptionParser.new do |o|
   o.on("--territories LIST") { |v| options[:territories] = v.split(",").map { |s| s.strip.upcase } }
   o.on("--products LIST") { |v| options[:products] = v.split(",").map(&:strip) }
+  o.on("--resume PATH", "carry over rows from an earlier plan CSV and skip those pairs") { |v| options[:resume] = v }
 end.parse!
 
 policy = JSON.parse(File.read(POLICY))
@@ -94,10 +95,50 @@ puts "authenticated as key #{ENV['SPACESHIP_CONNECT_API_KEY_ID']}"
 V1 = "v1"
 V2 = "v2"
 
+# Transient failures that deserve another attempt. A wide run is ~950 sequential
+# requests over ~20 minutes, so the chance of hitting at least one Apple blip is
+# high and a single one must not be fatal.
+RETRYABLE = [
+  Spaceship::InternalServerError,   # 500
+  Spaceship::BadGatewayError,       # 502
+  Spaceship::GatewayTimeoutError,   # 504
+  Spaceship::AppleTimeoutError,
+  Spaceship::TooManyRequestsError,  # 429, if it escapes spaceship's own backoff
+  Faraday::TimeoutError,
+  Faraday::ConnectionFailed,
+  Errno::ECONNRESET,
+  Errno::EPIPE
+].freeze
+
+MAX_TRIES = 6
+
+# Spaceship's built-in retry does not cover this case, despite appearing to.
+# api_client.rb#with_asc_retry raises TimeoutRetryError on 500/504 with the
+# message "Retrying after 3 seconds" — but the TimeoutRetryError rescue branch
+# has no sleep in it (only the 429 branch does). All 5 attempts are therefore
+# spent within about a second, the still-failing response is returned, and
+# handle_response raises InternalServerError. Any blip lasting longer than that
+# one second is fatal, and the attempts are silent unless verbose is on.
+#
+# This adds the missing backoff: 2s, 4s, 8s, 16s, 32s.
+def with_retry(label)
+  tries = 0
+  begin
+    tries += 1
+    yield
+  rescue *RETRYABLE => e
+    raise if tries >= MAX_TRIES
+    delay = 2**tries
+    warn "    [retry #{tries}/#{MAX_TRIES - 1}] #{e.class.name.split('::').last} on #{label} — waiting #{delay}s"
+    sleep delay
+    retry
+  end
+end
+
 # Wrapper so an unexpected response shape is diagnosable on the first run rather
 # than surfacing as a NoMethodError deep in a block.
 def fetch(client, path, params = nil)
-  resp = client.get(path, params)
+  resp = with_retry("#{path} #{params.inspect}"[0, 120]) { client.get(path, params) }
   body = resp.respond_to?(:body) ? resp.body : resp
   body = JSON.parse(body) if body.is_a?(String)
   die "no `data` for GET #{path} params=#{params.inspect}\n  body=#{body.inspect[0, 800]}" unless body["data"]
@@ -260,16 +301,77 @@ def snap(points, target, endings, tie_break, rounding)
 end
 
 # --- build the plan ---------------------------------------------------------
+# `equalized` is what the multiplier scales (stable, derived from the base
+# storefront). `current` is what the customer pays today, which is what delta_pct
+# is measured against. They differ once a manual price is in place.
+COLS = %i[product kind territory currency tier basis equalized current target chosen delta_pct direction price_point_id needs_review].freeze
+
 rows = []
 warnings = []
+
+# Carry over an interrupted run. A wide plan takes ~20 minutes; losing all of it
+# to one transient error on the fifth of six products is why this exists.
+done = {}
+if options[:resume]
+  die "resume file not found: #{options[:resume]}" unless File.exist?(options[:resume])
+  CSV.foreach(options[:resume], headers: true) do |r|
+    h = r.to_h
+    key = [h["product"], h["territory"]]
+    next if done.key?(key)
+    done[key] = true
+    row = {}
+    COLS.each { |c| row[c] = h[c.to_s] }
+    # Re-typed so carried rows are indistinguishable from fresh ones downstream.
+    %i[equalized current target chosen].each { |c| row[c] = row[c].to_f }
+    row[:delta_pct] = row[:delta_pct].to_s.empty? ? "" : row[:delta_pct].to_f
+    row[:needs_review] = row[:needs_review].to_s == "true"
+    row[:kind] = row[:kind].to_s.to_sym
+    rows << row
+  end
+  puts "resuming: carried #{rows.length} rows from #{File.basename(options[:resume])}"
+end
+
+FileUtils.mkdir_p(OUT_DIR)
+stamp = Time.now.utc.strftime("%Y%m%dT%H%M%SZ")
+csv_path = File.join(OUT_DIR, "plan-#{stamp}.csv")
+# Opened before any planning work and flushed per row, so an abort still leaves a
+# usable partial plan to resume from rather than nothing at all.
+csv_io = CSV.open(csv_path, "w")
+csv_io << COLS.map(&:to_s)
+rows.each { |r| csv_io << r.values_at(*COLS) }
+csv_io.flush
+
+# Rows reach disk as they are produced, so whatever completed before an abort is
+# already durable. What was missing was any hint that it survived: run #5 died on
+# the fifth of six products and looked like a total loss. Registered here rather
+# than as a begin/ensure around the loop so it covers every exit path, `die`
+# included, without re-indenting the body.
+at_exit do
+  err = $!
+  aborted = err && !(err.is_a?(SystemExit) && err.success?)
+  csv_io.close unless csv_io.closed?
+  next unless aborted
+  warn "\n[ABORTED] #{rows.length} rows survived in #{csv_path}"
+  warn "Resume without redoing them:"
+  resume_args = +"--resume #{csv_path}"
+  resume_args << " --territories #{options[:territories].join(',')}" if options[:territories]
+  resume_args << " --products #{options[:products].join(',')}" if options[:products]
+  warn "  bundle exec ruby fastlane/iap/plan_pricing.rb #{resume_args}"
+end
+
 tie_break = policy.fetch("tie_break", "cheaper")
 rounding = policy.fetch("rounding", "nearest")
 allow_inc_one_time = policy.fetch("allow_increases_one_time", false)
 allow_inc_sub = policy.fetch("allow_increases_subscription", false)
 puts "increases permitted — one-time: #{allow_inc_one_time}   subscription: #{allow_inc_sub}"
 
-products.each do |prod|
-  puts "  #{prod[:product_id]}:"
+products.each_with_index do |prod, pi|
+  remaining = scope.reject { |t| done.key?([prod[:product_id], t]) }
+  if remaining.empty?
+    puts "  [#{pi + 1}/#{products.length}] #{prod[:product_id]}: all #{scope.length} territories already planned, skipping"
+    next
+  end
+  puts "  [#{pi + 1}/#{products.length}] #{prod[:product_id]}: #{remaining.length} territories to plan"
   ctx = price_context(client, prod)
   baseline = ctx[:baseline]
   live = ctx[:live]
@@ -281,7 +383,7 @@ products.each do |prod|
   # Version differs by product type: the IAP resource is v2, the subscription v1.
   pp_path = prod[:kind] == :subscription ? "#{V1}/subscriptions/#{prod[:id]}/pricePoints" : "#{V2}/inAppPurchases/#{prod[:id]}/pricePoints"
 
-  scope.each_with_index do |terr, i|
+  remaining.each_with_index do |terr, i|
     base = baseline[terr]
     cur = live[terr] || base
     if base.nil?
@@ -321,7 +423,7 @@ products.each do |prod|
       next
     end
 
-    rows << {
+    row = {
       product: prod[:product_id], kind: prod[:kind], territory: terr, currency: currency,
       tier: tier, basis: override ? "override(local)" : "#{basis_kind} x #{mult}",
       equalized: base, current: cur, target: target.round(2), chosen: chosen[:price],
@@ -330,21 +432,15 @@ products.each do |prod|
       price_point_id: chosen[:id],
       needs_review: policy.dig("needs_review", "territories").include?(terr)
     }
-    print "\r    #{prod[:product_id]}  #{i + 1}/#{scope.length}   "
-  end
-  puts
-end
+    rows << row
+    csv_io << row.values_at(*COLS)
+    csv_io.flush # a crash on the next territory must not lose this one
 
-FileUtils.mkdir_p(OUT_DIR)
-stamp = Time.now.utc.strftime("%Y%m%dT%H%M%SZ")
-csv_path = File.join(OUT_DIR, "plan-#{stamp}.csv")
-# `equalized` is what the multiplier scales (stable, derived from the base
-# storefront). `current` is what the customer pays today, which is what delta_pct
-# is measured against. They differ once a manual price is in place.
-cols = %i[product kind territory currency tier basis equalized current target chosen delta_pct direction price_point_id needs_review]
-CSV.open(csv_path, "w") do |csv|
-  csv << cols.map(&:to_s)
-  rows.each { |r| csv << r.values_at(*cols) }
+    # One line per territory per product was ~950 lines of log for a wide run,
+    # which buries the warnings. \r is useless in CI (no TTY), so print marks.
+    done_n = i + 1
+    puts "      #{done_n}/#{remaining.length}" if done_n % 25 == 0 || done_n == remaining.length
+  end
 end
 
 puts "\nplan rows: #{rows.length}   written: #{csv_path}"

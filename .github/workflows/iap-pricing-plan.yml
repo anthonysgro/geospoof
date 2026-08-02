@@ -10,8 +10,14 @@ name: IAP Pricing Plan
 #
 # Start with a few territories. BRA,IND,JPN,CHE is the useful smoke set — three
 # distinct currencies plus the one above-US coefficient — and it answers whether
-# the API response shapes match what the script assumes before spending ~850
+# the API response shapes match what the script assumes before spending ~950
 # requests on a full run.
+#
+# A wide run takes ~20-25 minutes: the price-point endpoints require a territory
+# filter, so it is one sequential request per product per territory. Transient
+# Apple 500s are retried with backoff, rows are flushed to the CSV as they are
+# produced, and the artifact uploads even on failure — so if a run does die, pass
+# its ID as resume_run_id rather than starting over.
 #
 # Requires the repository secret ASC_API_KEY_P8 (already used by the build jobs).
 
@@ -40,14 +46,43 @@ on:
         required: false
         type: string
         default: ""
+      resume_run_id:
+        description: "Optional run ID of a failed wide run. Carries over its rows instead of re-fetching them."
+        required: false
+        type: string
+        default: ""
 
 jobs:
   plan:
     runs-on: macos-26
+    # A wide run is ~950 sequential requests at roughly a second each, so ~20-25
+    # minutes is normal. This only exists to cap a genuine hang.
+    timeout-minutes: 90
     permissions:
       contents: read
+      actions: read # for `gh run download` when resuming
     steps:
       - uses: actions/checkout@v7
+
+      # Recover the rows a failed run already paid for. Run #5 died 19 minutes in
+      # on the fifth of six products; without this, the only option is to start
+      # over.
+      - name: Fetch rows from the run being resumed
+        if: inputs.resume_run_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESUME_RUN_ID: ${{ inputs.resume_run_id }}
+        run: |
+          mkdir -p /tmp/resume
+          gh run download "$RESUME_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name iap-pricing-plan --dir /tmp/resume
+          found=$(find /tmp/resume -name 'plan-*.csv' | sort | tail -1)
+          if [ -z "$found" ]; then
+            echo "::error::run $RESUME_RUN_ID has no plan CSV artifact to resume from"
+            exit 1
+          fi
+          echo "RESUME_CSV=$found" >> "$GITHUB_ENV"
+          echo "resuming from $found ($(($(wc -l < "$found") - 1)) rows)"
 
       - uses: ruby/setup-ruby@v1.317.0
         with:
@@ -111,6 +146,8 @@ jobs:
             echo "scope: ALL classified territories — expect several minutes and ~950 requests"
           fi
           [ -n "$PRODUCTS" ] && args+=(--products "$PRODUCTS")
+          # RESUME_CSV is exported by the download step above, when resuming.
+          [ -n "${RESUME_CSV:-}" ] && args+=(--resume "$RESUME_CSV")
           echo "running: bundle exec ruby fastlane/iap/plan_pricing.rb ${args[*]}"
           bundle exec ruby fastlane/iap/plan_pricing.rb "${args[@]}"
 
@@ -131,19 +168,62 @@ jobs:
           path = files[-1]
           rows = list(csv.DictReader(open(path)))
           print(f"## Pricing plan — {os.path.basename(path)}\n")
-          print(f"{len(rows)} rows\n")
           if not rows:
               print("Plan is empty. Every candidate was either dropped as an increase or had no baseline — see WARNINGS in the log.")
               raise SystemExit(0)
-          cols = ["product", "territory", "currency", "tier", "basis", "current", "target", "chosen", "delta_pct", "direction", "needs_review"]
-          print("| " + " | ".join(cols) + " |")
-          print("|" + "|".join(["---"] * len(cols)) + "|")
-          for r in rows:
-              print("| " + " | ".join(str(r.get(c, "")) for c in cols) + " |")
+
           dirs = {}
           for r in rows:
               dirs[r["direction"]] = dirs.get(r["direction"], 0) + 1
-          print(f"\n**By direction:** {dirs}")
+          terrs = sorted({r["territory"] for r in rows})
+          prods = sorted({r["product"] for r in rows})
+          print(f"{len(rows)} rows — {len(prods)} products x {len(terrs)} territories")
+          print(f"\n**By direction:** {dirs}\n")
+
+          # A wide run is ~940 rows. Only the ones that change what a customer pays
+          # are worth a table; `unchanged` rows are the x1.0 high-income
+          # territories and the apply step drops them anyway.
+          cols = ["product", "territory", "currency", "tier", "basis", "equalized", "current", "target", "chosen", "delta_pct", "direction", "needs_review"]
+
+          def table(rs):
+              print("| " + " | ".join(cols) + " |")
+              print("|" + "|".join(["---"] * len(cols)) + "|")
+              for r in rs:
+                  print("| " + " | ".join(str(r.get(c, "")) for c in cols) + " |")
+
+          changed = [r for r in rows if r["direction"] != "unchanged"]
+          unchanged = [r for r in rows if r["direction"] == "unchanged"]
+
+          print(f"### Rows that change a price ({len(changed)})\n")
+          if changed:
+              table(sorted(changed, key=lambda r: (r["product"], r["territory"])))
+          else:
+              print("None.\n")
+
+          if unchanged:
+              print(f"\n<details><summary>Unchanged ({len(unchanged)}) — already at the target, skipped on apply</summary>\n")
+              table(sorted(unchanged, key=lambda r: (r["product"], r["territory"])))
+              print("\n</details>\n")
+
+          # Where Apple's ladder is coarse the chosen point can land well away from
+          # the intended target. Worth eyeballing before applying, because it is
+          # the difference between the policy and what customers actually see.
+          def snap_err(r):
+              try:
+                  t, c = float(r["target"]), float(r["chosen"])
+                  return abs(c - t) / t * 100 if t else 0.0
+              except (ValueError, TypeError, ZeroDivisionError):
+                  return 0.0
+          coarse = sorted([r for r in changed if snap_err(r) > 5], key=snap_err, reverse=True)
+          if coarse:
+              print(f"\n### Ladder forced a price >5% off target ({len(coarse)})\n")
+              print("| product | territory | currency | target | chosen | off by |")
+              print("|---|---|---|---|---|---|")
+              for r in coarse[:40]:
+                  print(f"| {r['product']} | {r['territory']} | {r['currency']} | {r['target']} | {r['chosen']} | {snap_err(r):.1f}% |")
+              if len(coarse) > 40:
+                  print(f"\n... {len(coarse) - 40} more, see the CSV.")
+
           flagged = sum(1 for r in rows if r.get("needs_review") == "true")
           print(f"\n**Rows in needs_review territories:** {flagged}")
           print("\nNothing was written to App Store Connect.")
