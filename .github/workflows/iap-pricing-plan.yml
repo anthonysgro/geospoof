@@ -1,0 +1,141 @@
+name: IAP Pricing Plan
+
+# Generates a per-territory pricing plan for the IAPs and subscriptions and
+# publishes it as an artifact plus a table in the run summary.
+#
+# READ-ONLY. safari/fastlane/iap/plan_pricing.rb issues GET requests only and has
+# no write verbs in it. Nothing in App Store Connect is modified by this workflow.
+# Applying a plan is deliberately a separate, not-yet-built step, because IAP price
+# schedules are replace-all: one bad apply un-sets every territory at once.
+#
+# Start with a few territories. BRA,IND,JPN,CHE is the useful smoke set — three
+# distinct currencies plus the one above-US coefficient — and it answers whether
+# the API response shapes match what the script assumes before spending ~850
+# requests on a full run.
+#
+# Requires the repository secret ASC_API_KEY_P8 (already used by the build jobs).
+
+on:
+  workflow_dispatch:
+    inputs:
+      territories:
+        description: "Comma-separated territory codes. Leave blank for every classified territory (~850 requests, may hit rate limits)."
+        required: false
+        type: string
+        default: "BRA,IND,JPN,CHE"
+      products:
+        description: "Optional product id filter, e.g. pro.monthly. Blank means all six."
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  plan:
+    runs-on: macos-26
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ruby/setup-ruby@v1.317.0
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+          working-directory: safari
+
+      - name: Place App Store Connect API key
+        env:
+          ASC_API_KEY_BASE64: ${{ secrets.ASC_API_KEY_P8 }}
+        run: |
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          echo "$ASC_API_KEY_BASE64" | base64 --decode > "$HOME/.appstoreconnect/private_keys/AuthKey_BXMZW4LMSP.p8"
+          chmod 600 "$HOME/.appstoreconnect/private_keys/AuthKey_BXMZW4LMSP.p8"
+
+      - name: Show the policy being applied
+        working-directory: safari
+        run: |
+          python3 - <<'PY'
+          import json
+          p = json.load(open("fastlane/iap/pricing-policy.json"))
+          print("base storefront      :", p["base_storefront"])
+          print("rounding             :", p["rounding"])
+          print("tie_break            :", p["tie_break"])
+          print("increases one-time   :", p["allow_increases_one_time"])
+          print("increases subscription:", p["allow_increases_subscription"])
+          print("unclassified          :", p["unclassified_behavior"])
+          print()
+          for tier, mult in p["tier_multipliers"].items():
+              if tier.startswith("$"):
+                  continue
+              print(f"  {tier:22} x{mult}  ({len(p['tiers'][tier])} territories)")
+          ov = {k: v for k, v in p["coefficient_overrides"].items() if not k.startswith("$")}
+          print(f"\n  per-country overrides: {len(ov)}")
+          for k, v in sorted(ov.items(), key=lambda kv: kv[1]):
+              print(f"    {k} x{v}")
+          PY
+
+      - name: Generate plan
+        working-directory: safari
+        env:
+          SPACESHIP_CONNECT_API_KEY_ID: BXMZW4LMSP
+          SPACESHIP_CONNECT_API_ISSUER_ID: 2a0c5baa-92b0-489c-b4c7-b1771b5e6df8
+          SPACESHIP_CONNECT_API_KEY_FILEPATH: /Users/runner/.appstoreconnect/private_keys/AuthKey_BXMZW4LMSP.p8
+          # Inputs come through the environment, not interpolated into the shell.
+          # `${{ inputs.x }}` inside a run block is substituted before bash sees
+          # it, so a value containing shell metacharacters would execute. These
+          # are collaborator-only inputs, but quoting is free.
+          TERRITORIES: ${{ inputs.territories }}
+          PRODUCTS: ${{ inputs.products }}
+        run: |
+          args=()
+          [ -n "$TERRITORIES" ] && args+=(--territories "$TERRITORIES")
+          [ -n "$PRODUCTS" ] && args+=(--products "$PRODUCTS")
+          echo "running: bundle exec ruby fastlane/iap/plan_pricing.rb ${args[*]}"
+          bundle exec ruby fastlane/iap/plan_pricing.rb "${args[@]}"
+
+      # Render the CSV into the run summary so the plan is reviewable without
+      # downloading anything. delta_pct is the column that matters — it shows the
+      # realised discount, which differs from the coefficient wherever Apple's
+      # price ladder is coarse.
+      - name: Render plan into the run summary
+        if: always()
+        working-directory: safari
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import csv, glob, os
+          files = sorted(glob.glob("fastlane/iap/plans/plan-*.csv"))
+          if not files:
+              print("## No plan produced\n\nThe planner did not write a CSV. Check the step log above.")
+              raise SystemExit(0)
+          path = files[-1]
+          rows = list(csv.DictReader(open(path)))
+          print(f"## Pricing plan — {os.path.basename(path)}\n")
+          print(f"{len(rows)} rows\n")
+          if not rows:
+              print("Plan is empty. Every candidate was either dropped as an increase or had no baseline — see WARNINGS in the log.")
+              raise SystemExit(0)
+          cols = ["product", "territory", "currency", "tier", "basis", "current", "target", "chosen", "delta_pct", "direction", "needs_review"]
+          print("| " + " | ".join(cols) + " |")
+          print("|" + "|".join(["---"] * len(cols)) + "|")
+          for r in rows:
+              print("| " + " | ".join(str(r.get(c, "")) for c in cols) + " |")
+          dirs = {}
+          for r in rows:
+              dirs[r["direction"]] = dirs.get(r["direction"], 0) + 1
+          print(f"\n**By direction:** {dirs}")
+          flagged = sum(1 for r in rows if r.get("needs_review") == "true")
+          print(f"\n**Rows in needs_review territories:** {flagged}")
+          print("\nNothing was written to App Store Connect.")
+          PY
+
+      - name: Upload plan CSV
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iap-pricing-plan
+          path: safari/fastlane/iap/plans/
+          if-no-files-found: warn
+
+      - name: Clean up API key
+        if: always()
+        run: rm -f "$HOME/.appstoreconnect/private_keys/AuthKey_BXMZW4LMSP.p8"

@@ -49,3 +49,8 @@ npm-debug.log*
 *.p8
 
 assets/Proton_Assets/*
+
+# Generated pricing plans. The workflow publishes each run as an artifact, which
+# is the durable record; committing timestamped CSVs would just accumulate.
+# Commit a specific plan deliberately if you want it as an audit trail.
+safari/fastlane/iap/plans/

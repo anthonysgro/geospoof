@@ -46,8 +46,13 @@ jobs:
       # HTML-preview confirmation is unavailable — this replaces it.
       - name: Verify upload confirmation
         if: ${{ inputs.mode == 'upload' }}
+        env:
+          # Through the environment rather than interpolated into the shell:
+          # `${{ inputs.x }}` is substituted before bash parses the line, so a
+          # value containing a quote could break out of the comparison.
+          CONFIRM: ${{ inputs.confirm }}
         run: |
-          if [ "${{ inputs.confirm }}" != "upload" ]; then
+          if [ "$CONFIRM" != "upload" ]; then
             echo "::error::Upload not confirmed. Re-run with confirm = upload."
             exit 1
           fi
