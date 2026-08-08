@@ -70,7 +70,7 @@ struct ProPaywallView: View {
     @State private var selectedProductID = ProStore.ProductID.annual
 
     // Links shown in the required disclosure footer.
-    private let privacyURL = URL(string: "https://www.geospoof.com/privacy")!
+    private let privacyURL = AppLink.site("/privacy", campaign: "paywall-privacy")
     // Apple's standard EULA is an acceptable Terms link when you don't ship a
     // custom one; swap for your own terms URL if you add it.
     private let termsURL = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!

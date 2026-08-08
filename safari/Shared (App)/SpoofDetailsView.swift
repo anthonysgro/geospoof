@@ -677,7 +677,7 @@ struct TrustSheet: View {
             title: "Help & support",
             detail: "Questions? We're happy to help.",
             symbol: "questionmark.circle",
-            url: URL(string: "https://www.geospoof.com/support")!
+            url: AppLink.site("/support", campaign: "trust-sheet")
         ),
     ]
 

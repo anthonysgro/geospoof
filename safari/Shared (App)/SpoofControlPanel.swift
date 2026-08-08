@@ -32,9 +32,12 @@ struct SpoofControlPanel: View {
     @State private var showOnboarding = false
     @State private var showTrustInfo = false
     @State private var renaming: SpoofFavorite?
-    @State private var reviewToken = 0
     @State private var showPaywall = false
     @State private var showFounderWelcome = false
+    /// Used to re-check the review gate when the app comes back to the
+    /// foreground. Without it, a resident process that never gets a fresh
+    /// `onAppear` stops accruing qualifying occasions entirely.
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         Form {
@@ -71,7 +74,6 @@ struct SpoofControlPanel: View {
         .sheet(isPresented: $showPaywall) {
             ProPaywallView()
         }
-        .requestReview(on: reviewToken)
         .onAppear {
             controller.refreshFromExtension()
             if !onboardingCompleted { showOnboarding = true }
@@ -79,6 +81,9 @@ struct SpoofControlPanel: View {
             if pro.isFounder && !founderWelcomeShown { showFounderWelcome = true }
         }
         .onChange(of: controller.isActiveInSafari) { _ in
+            // `refreshFromExtension()` is async, so on a cold start this is
+            // usually where the extension check-in first lands — `onAppear`
+            // above runs before it and finds `isActiveInSafari` still false.
             evaluateReviewPrompt()
         }
         .onChange(of: controller.hasLocation) { _ in
@@ -87,24 +92,45 @@ struct SpoofControlPanel: View {
             // a qualifying session until a later relaunch.
             evaluateReviewPrompt()
         }
+        .onChange(of: onboardingCompleted) { _ in
+            // Finishing setup is the highest-goodwill moment in the app's life,
+            // and it's gated behind the very flag it flips — so without this the
+            // first-run success could never count.
+            evaluateReviewPrompt()
+        }
+        .onChange(of: scenePhase) { phase in
+            if phase == .active { evaluateReviewPrompt() }
+        }
+        // Visible failures keep the review ask quiet for a few days. Observed
+        // here in the view layer rather than reported from the models, so
+        // `SpoofModel` (which is also compiled into the widget target) stays
+        // free of any dependency on `ReviewPrompt`.
+        .onChange(of: controller.vpnError != nil) { failed in
+            if failed { ReviewPrompt.shared.noteTrouble() }
+        }
+        .onChange(of: pro.lastError != nil) { failed in
+            if failed { ReviewPrompt.shared.noteTrouble() }
+        }
         .onChange(of: pro.isFounder) { isFounder in
             if isFounder && !founderWelcomeShown { showFounderWelcome = true }
         }
     }
 
-    /// Surfaces the App Store review ask at a genuinely positive moment —
-    /// GeoSpoof confirmed running in Safari with a location set — heavily
-    /// throttled by `ReviewPrompt` (several qualifying sessions, once per
-    /// version). Note: we deliberately do *not* pitch Pro here. An interrupting
-    /// modal at this exact moment hijacks the user's first successful spoof
-    /// before they can even see the result; Pro awareness is handled passively
-    /// by `proDiscoverySection` instead.
+    /// Reports a genuinely positive moment — GeoSpoof confirmed running in
+    /// Safari with a location set — to `ReviewPrompt`, which owns all the
+    /// throttling and decides whether to actually ask.
+    ///
+    /// Called from several triggers on purpose; `ReviewPrompt` debounces, so
+    /// over-reporting is harmless and under-reporting is what previously left
+    /// users stuck below the threshold. Note we deliberately do *not* pitch Pro
+    /// here — an interrupting modal at this exact moment hijacks the user's
+    /// first successful spoof before they can even see the result; Pro awareness
+    /// is handled passively by `proDiscoverySection` instead.
     private func evaluateReviewPrompt() {
         guard onboardingCompleted,
               controller.isActiveInSafari,
-              controller.hasLocation,
-              ReviewPrompt.shouldRequestReview() else { return }
-        reviewToken += 1
+              controller.hasLocation else { return }
+        ReviewPrompt.shared.recordSignificantEvent()
     }
 
     // MARK: Pro discovery
@@ -465,15 +491,13 @@ struct SpoofControlPanel: View {
     /// - Parameter campaign: distinguishes the entry point, since the setup card
     ///   and the home-screen link lead to the same page for different reasons.
     private func verifyURL(campaign: String) -> URL {
-        #if os(iOS)
-        let source = "ios-app"
-        #else
-        let source = "macos-app"
-        #endif
+        // Can't go through `AppLink.site(_:campaign:)` — this is the one link that
+        // carries the site locale prefix. It shares `AppLink.source` so the app
+        // identifier is still defined in exactly one place.
         // Force-unwrap is safe: the host is a literal, the path prefix comes from
         // the closed set above, and both query values are caller-side literals.
         return URL(string: "https://www.geospoof.com\(siteLocalePrefix)/verify"
-            + "?utm_source=\(source)&utm_medium=app&utm_campaign=\(campaign)")!
+            + "?utm_source=\(AppLink.source)&utm_medium=app&utm_campaign=\(campaign)")!
     }
 
     // MARK: Favorites
@@ -1577,109 +1601,360 @@ struct TipJarView: View {
 
 // MARK: - Review Prompt
 
-/// Gating logic for the App Store review prompt. Presentation is done by the
-/// view via the recommended SwiftUI `requestReview` environment action — see
-/// the `requestReview(on:)` view modifier below — so this type holds no UI.
+/// Gating and trigger for the App Store review prompt.
 ///
-/// Asks at a genuinely positive moment (GeoSpoof confirmed running in Safari
-/// with a location set), heavily throttled: at most one counted event per app
-/// launch, only after a few qualifying sessions, and never more than once per
-/// app version (Apple also caps its own prompt at 3×/year).
-enum ReviewPrompt {
-    private static let eventCountKey = "reviewSignificantEventCount"
-    private static let lastPromptedVersionKey = "reviewLastPromptedVersion"
-    /// Qualifying sessions before we ask. Small, since the trigger is already a
-    /// strong "it's working" signal. Kept at 2 (not 1) so we don't ask on the
-    /// very first success, but still surface early while goodwill is high.
-    private static let threshold = 2
+/// Two rules shape this type:
+///
+/// 1. **Only the system prompt, never a custom one.** App Review guideline
+///    5.6.1 requires the provided API and disallows custom review prompts —
+///    which includes an "enjoying the app?" pre-question that routes only the
+///    happy answers to the rating flow. We ask at moments that are *already*
+///    positive and stay quiet otherwise; we never make the user self-select.
+///    Unhappy users get a support path instead, offered unconditionally.
+/// 2. **Counting an occasion and asking for a review are separate operations.**
+///    `recordSignificantEvent()` mutates the persisted counters; `mayAskNow()`
+///    only reads them. The previous version fused the two, so a call that ended
+///    up *not* asking still consumed the state that would have allowed a later
+///    ask.
+///
+/// Presentation lives in the view layer (`View.requestReview(on:)`), driven by
+/// `token`. The token is published from this shared object rather than held as
+/// local view state so the presenting modifier can sit at the root of the view
+/// tree, outside any `NavigationStack` — see `requestReview(on:)` for why that
+/// placement is load-bearing.
+@MainActor
+final class ReviewPrompt: ObservableObject {
+    static let shared = ReviewPrompt()
 
-    /// Only count one significant event per process launch, so navigating back
-    /// to the panel within a session can't inflate the counter.
-    private static var countedThisLaunch = false
+    /// Incremented when a qualifying moment clears every gate. The hosting view
+    /// observes this and presents the system prompt.
+    @Published private(set) var token = 0
 
-    /// Call when the user is in a clearly positive state. Returns `true` at most
-    /// once per launch — after `threshold` qualifying sessions and only once per
-    /// app version — meaning the caller should present the review prompt now.
-    @MainActor
-    static func shouldRequestReview() -> Bool {
-        guard !countedThisLaunch else { return false }
-        countedThisLaunch = true
+    /// Highest token already handed to StoreKit.
+    ///
+    /// More than one presenter can be attached at once — debug builds add a
+    /// second one in Settings — and two `requestReview` calls in the same
+    /// runloop tick can race badly enough that nothing ends up on screen. So the
+    /// first presenter to claim a token wins and the others no-op.
+    private var presentedToken = 0
 
-        let defaults = UserDefaults.standard
-        let count = defaults.integer(forKey: eventCountKey) + 1
-        defaults.set(count, forKey: eventCountKey)
-        guard count >= threshold else { return false }
-
-        let currentVersion =
-            Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
-        guard defaults.string(forKey: lastPromptedVersionKey) != currentVersion else { return false }
-
-        defaults.set(currentVersion, forKey: lastPromptedVersionKey)
+    /// Claims `token` for presentation. Returns `true` at most once per value.
+    func claimForPresentation(token: Int) -> Bool {
+        guard token > 0, token > presentedToken else { return false }
+        presentedToken = token
         return true
     }
 
-    #if os(iOS)
-    /// Fallback for iOS 15, where the SwiftUI `requestReview` action (iOS 16+)
-    /// isn't available.
-    @MainActor
-    static func legacyRequest() {
-        let scene =
-            UIApplication.shared.connectedScenes
-            .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene
-            ?? UIApplication.shared.connectedScenes.first as? UIWindowScene
-        guard let scene else { return }
-        SKStoreReviewController.requestReview(in: scene)
+    private enum Key {
+        /// Cumulative qualifying occasions. Kept under the original key so
+        /// progress already earned by existing installs carries over.
+        static let eventCount = "reviewSignificantEventCount"
+        /// App version we last *attempted* a prompt on.
+        static let lastPromptedVersion = "reviewLastPromptedVersion"
+        /// When the most recent occasion was counted (the debounce anchor).
+        static let lastEventAt = "reviewLastSignificantEventAt"
+        /// When we last asked the system to present the prompt.
+        static let lastRequestedAt = "reviewLastRequestedAt"
+        /// Attempts already made on `lastPromptedVersion`.
+        static let attemptsForVersion = "reviewAttemptsForVersion"
+        /// When the user last hit something visibly broken.
+        static let lastTroubleAt = "reviewLastTroubleAt"
+    }
+
+    /// Distinct usage occasions before the first ask. Two, so we don't ask on the
+    /// very first success but still catch the user while goodwill is high.
+    private static let threshold = 2
+
+    /// Minimum gap between counted occasions. This replaces a per-process flag,
+    /// which capped a long-lived process at exactly one countable occasion for
+    /// its entire lifetime — and both platforms keep the app alive for a long
+    /// time (macOS runs while not frontmost, iOS stays resident for days), so in
+    /// practice most users never reached `threshold` at all.
+    private static let occasionGap: TimeInterval = 4 * 60 * 60
+
+    /// We cannot observe whether the system actually showed the prompt. It is
+    /// silently suppressed by the 3-per-365-days cap, by the user turning off
+    /// In-App Ratings & Reviews, in TestFlight builds, and when there is no
+    /// active scene — so a single attempt per version can vanish without a
+    /// trace, and the old once-per-version rule then meant no ask until the next
+    /// release. One spaced-out retry recovers that case while staying well
+    /// inside Apple's own ceiling.
+    private static let maxAttemptsPerVersion = 2
+    private static let retryDelay: TimeInterval = 120 * 24 * 60 * 60
+
+    /// How long a visible failure keeps us quiet. Recorded as a timestamp rather
+    /// than checked as live state because failures are often transient — a VPN
+    /// resync error or a failed purchase can be cleared by the time the user
+    /// reaches a qualifying moment, and asking someone for a review an hour
+    /// after the app broke on them is how you earn the one-star.
+    ///
+    /// This is suppression on signals we observe ourselves. It is *not* a
+    /// sentiment gate: we never ask the user to declare whether they're happy
+    /// and then route them accordingly. See `.kiro/steering/review-prompts.md`.
+    private static let troubleCooldown: TimeInterval = 72 * 60 * 60
+
+    private let defaults: UserDefaults
+    private let now: () -> Date
+
+    init(defaults: UserDefaults = .standard, now: @escaping () -> Date = Date.init) {
+        self.defaults = defaults
+        self.now = now
+    }
+
+    /// Call when the user is in a clearly positive state.
+    ///
+    /// Records the occasion (at most one per `occasionGap`) and presents the
+    /// system prompt if every gate passes. Deliberately cheap and idempotent to
+    /// call, so callers can wire it to every genuine success signal instead of
+    /// hunting for the one perfect trigger.
+    func recordSignificantEvent() {
+        let instant = now()
+        guard countOccasion(at: instant) else { return }
+
+        let occasions = defaults.integer(forKey: Key.eventCount)
+        guard mayAskNow(at: instant) else {
+            Log.app.debug("ReviewPrompt: occasion \(occasions) counted, not asking yet")
+            return
+        }
+
+        markRequested(at: instant)
+        token += 1
+        Log.app.info(
+            "ReviewPrompt: requesting system prompt (occasions=\(occasions) version=\(Self.currentVersion))"
+        )
+    }
+
+    /// Record that the user hit something visibly broken, which keeps us quiet
+    /// for `troubleCooldown`. Cheap to call from any error path.
+    func noteTrouble() {
+        let instant = now()
+        // Don't let a repeating failure walk the timestamp backwards.
+        if let last = storedDate(Key.lastTroubleAt), last > instant { return }
+        defaults.set(instant, forKey: Key.lastTroubleAt)
+        Log.app.debug("ReviewPrompt: trouble noted, suppressing asks for \(Int(Self.troubleCooldown / 3600))h")
+    }
+
+    /// Whether a system prompt is warranted right now. Pure read — no mutation.
+    func mayAskNow(at instant: Date? = nil) -> Bool {
+        let instant = instant ?? now()
+        guard defaults.integer(forKey: Key.eventCount) >= Self.threshold else { return false }
+
+        if let trouble = storedDate(Key.lastTroubleAt) {
+            let since = instant.timeIntervalSince(trouble)
+            if since >= 0 && since < Self.troubleCooldown { return false }
+        }
+
+        // A version we've never attempted on gets a fresh budget.
+        guard defaults.string(forKey: Key.lastPromptedVersion) == Self.currentVersion else {
+            return true
+        }
+        guard defaults.integer(forKey: Key.attemptsForVersion) < Self.maxAttemptsPerVersion else {
+            return false
+        }
+
+        // No recorded attempt time means the attempt predates this bookkeeping:
+        // an install whose single ask the previous implementation burned before
+        // anything was presented. Let those users straight through.
+        guard let last = storedDate(Key.lastRequestedAt) else { return true }
+
+        let elapsed = instant.timeIntervalSince(last)
+        // A negative interval means the clock moved backwards — plausible here,
+        // given the app exists to shift location and users change time zones to
+        // match. Treat it as stale rather than wedging the gate shut forever.
+        return elapsed < 0 || elapsed >= Self.retryDelay
+    }
+
+    /// Records one qualifying occasion, debounced to `occasionGap`. Returns
+    /// whether this call actually counted.
+    private func countOccasion(at instant: Date) -> Bool {
+        if let last = storedDate(Key.lastEventAt) {
+            let elapsed = instant.timeIntervalSince(last)
+            if elapsed >= 0 && elapsed < Self.occasionGap {
+                // Logged so a debounced call is never silent. Silence here reads
+                // as "the trigger is broken" when it's actually working.
+                Log.app.debug(
+                    "ReviewPrompt: occasion debounced — \(Int(elapsed / 60))m since the last one,"
+                        + " needs \(Int(Self.occasionGap / 60))m"
+                )
+                return false
+            }
+        }
+        defaults.set(instant, forKey: Key.lastEventAt)
+        defaults.set(defaults.integer(forKey: Key.eventCount) + 1, forKey: Key.eventCount)
+        return true
+    }
+
+    private func markRequested(at instant: Date) {
+        let version = Self.currentVersion
+        if defaults.string(forKey: Key.lastPromptedVersion) == version {
+            defaults.set(
+                defaults.integer(forKey: Key.attemptsForVersion) + 1,
+                forKey: Key.attemptsForVersion
+            )
+        } else {
+            defaults.set(version, forKey: Key.lastPromptedVersion)
+            defaults.set(1, forKey: Key.attemptsForVersion)
+        }
+        defaults.set(instant, forKey: Key.lastRequestedAt)
+    }
+
+    private func storedDate(_ key: String) -> Date? {
+        defaults.object(forKey: key) as? Date
+    }
+
+    private static var currentVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+    }
+
+    #if DEBUG
+    /// Clears all gating state so the flow can be exercised from scratch. The
+    /// system prompt is still rate-limited by the OS, so a reset doesn't
+    /// guarantee a *visible* prompt — see `forcePrompt()` for that.
+    func resetForTesting() {
+        for key in [
+            Key.eventCount, Key.lastPromptedVersion, Key.lastEventAt,
+            Key.lastRequestedAt, Key.attemptsForVersion, Key.lastTroubleAt,
+        ] {
+            defaults.removeObject(forKey: key)
+        }
+        // Nothing here is `@Published`, so nudge observers to re-read
+        // `debugSummary`.
+        objectWillChange.send()
+        Log.app.info("ReviewPrompt: gating state reset")
+    }
+
+    /// Which StoreKit API the debug menu wants the presenter to use.
+    ///
+    /// Exists because reports conflict about which one actually renders on
+    /// current OS versions: the scene-based call and the SwiftUI environment
+    /// action have each been reported working while the other silently does
+    /// nothing. Production picks one; this lets the other be tried on a real
+    /// device so the choice is made on evidence.
+    enum DebugPresentationPath {
+        /// What production does: scene-based StoreKit on iOS, env action on macOS.
+        case automatic
+        /// Force the SwiftUI `requestReview` environment action on both platforms.
+        case environmentAction
+    }
+
+    private(set) var debugPath: DebugPresentationPath = .automatic
+
+    /// Bumps the token with no gating at all, so the debug menu can show the
+    /// real system prompt on demand.
+    ///
+    /// Goes through the same token → `requestReview(on:)` path production uses,
+    /// rather than calling StoreKit directly, so this exercises the actual
+    /// presentation plumbing instead of a parallel copy of it.
+    func forcePrompt(using path: DebugPresentationPath = .automatic) {
+        debugPath = path
+        token += 1
+        Log.app.info("ReviewPrompt: forced prompt from debug menu (path=\(path))")
+    }
+
+    /// Records a qualifying occasion the same way the real triggers do, so the
+    /// gate itself can be exercised rather than bypassed.
+    ///
+    /// Clears the debounce anchor first so each press counts as a distinct
+    /// occasion. Without that, the second press is swallowed by `occasionGap`
+    /// and the threshold can't be reached in a sitting — which makes the button
+    /// look broken and the gate untestable.
+    func recordEventForTesting() {
+        defaults.removeObject(forKey: Key.lastEventAt)
+        recordSignificantEvent()
+        objectWillChange.send()
+    }
+
+    /// One-line gate state for the debug settings footer.
+    var debugSummary: String {
+        let occasions = defaults.integer(forKey: Key.eventCount)
+        let attempts = defaults.integer(forKey: Key.attemptsForVersion)
+        let version = defaults.string(forKey: Key.lastPromptedVersion) ?? "none"
+        var parts = [
+            "occasions \(occasions)/\(Self.threshold)",
+            "attempts \(attempts)/\(Self.maxAttemptsPerVersion) on \(version)",
+        ]
+        if let trouble = storedDate(Key.lastTroubleAt) {
+            let hours = Int(now().timeIntervalSince(trouble) / 3600)
+            let cooling = now().timeIntervalSince(trouble) < Self.troubleCooldown
+            parts.append("trouble \(hours)h ago\(cooling ? " (suppressing)" : "")")
+        }
+        parts.append(mayAskNow() ? "may ask: YES" : "may ask: no")
+        return parts.joined(separator: " · ")
     }
     #endif
 }
 
 extension View {
-    /// Presents the system review prompt whenever `token` changes to a new
-    /// non-zero value. On iOS 16+/macOS 13+ this uses the scene-based
-    /// `AppStore.requestReview(in:)` (iOS) / `requestReview` environment action
-    /// (macOS); on iOS 15 it falls back to `SKStoreReviewController`. Bump an
-    /// `@State` token to trigger.
-    @ViewBuilder
+    /// Presents the system review prompt when `token` changes to a new non-zero
+    /// value.
+    ///
+    /// Attach this at the root of the hosting view, **outside** any
+    /// `NavigationStack`. The SwiftUI `requestReview` action is reported to
+    /// silently do nothing when invoked from a view nested inside a navigation
+    /// container, which is exactly what made the macOS path a no-op while this
+    /// modifier lived on the `Form` inside `AdaptiveNavigationStack`. iOS can
+    /// sidestep the quirk with the scene-based StoreKit call; macOS has no
+    /// scene-based equivalent, so correct placement is the only fix there.
     func requestReview(on token: Int) -> some View {
-        if #available(iOS 16.0, macOS 13.0, *) {
-            modifier(EnvironmentReviewModifier(token: token))
-        } else {
-            onChange(of: token) { newValue in
-                #if os(iOS)
-                if newValue > 0 { ReviewPrompt.legacyRequest() }
-                #endif
-            }
-        }
+        modifier(ReviewPresentationModifier(token: token))
     }
 }
 
-/// Reads the `requestReview` environment action and fires it when `token`
-/// changes. Isolated in its own `@available` type because the action is iOS 16+
-/// / macOS 13+ and the app targets iOS 15.
-@available(iOS 16.0, macOS 13.0, *)
-private struct EnvironmentReviewModifier: ViewModifier {
+/// Fires the review request when `token` changes. Both APIs used here are
+/// available at the app's deployment targets (iOS 16 / macOS 13), so this needs
+/// no availability branching.
+private struct ReviewPresentationModifier: ViewModifier {
     @Environment(\.requestReview) private var requestReview
     let token: Int
 
     func body(content: Content) -> some View {
         content.onChange(of: token) { newValue in
-            guard newValue > 0 else { return }
+            // Deduped across presenters — see `claimForPresentation(token:)`.
+            guard ReviewPrompt.shared.claimForPresentation(token: newValue) else {
+                Log.app.debug("ReviewPrompt: token=\(newValue) already claimed, skipping duplicate present")
+                return
+            }
+            // Logged because there is no API to observe whether the system
+            // actually presented anything. Without a line here, a prompt that
+            // doesn't appear is indistinguishable from a trigger that never
+            // ran, which is the single hardest thing about this feature.
+            #if DEBUG
+            if ReviewPrompt.shared.debugPath == .environmentAction {
+                Log.app.info(
+                    "ReviewPrompt: presenting via requestReview environment action (debug override)"
+                        + " token=\(newValue)"
+                )
+                requestReview()
+                return
+            }
+            #endif
             #if os(iOS)
-            // Prefer the scene-based StoreKit call over the environment action:
-            // the environment `requestReview()` can silently no-op when invoked
-            // from a view nested inside a NavigationStack (a long-standing quirk),
-            // whereas the scene-based API presents reliably. `AppStore.requestReview(in:)`
-            // is the modern, non-deprecated replacement for `SKStoreReviewController`.
-            let scene =
+            // `AppStore.requestReview(in:)` is the modern, non-deprecated
+            // replacement for `SKStoreReviewController` and presents reliably
+            // given a scene. The environment action is the fallback for the
+            // case where no scene can be found at all.
+            let active =
                 UIApplication.shared.connectedScenes
                 .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene
-                ?? UIApplication.shared.connectedScenes.first as? UIWindowScene
+            let scene = active ?? UIApplication.shared.connectedScenes.first as? UIWindowScene
             if let scene {
+                Log.app.info(
+                    "ReviewPrompt: presenting via AppStore.requestReview(in:)"
+                        + " token=\(newValue) scene=\(scene.session.persistentIdentifier)"
+                        + " state=\(scene.activationState.rawValue)"
+                        + " foregroundActive=\(active != nil)"
+                )
                 AppStore.requestReview(in: scene)
             } else {
+                Log.app.warn(
+                    "ReviewPrompt: no UIWindowScene found (connectedScenes="
+                        + "\(UIApplication.shared.connectedScenes.count)),"
+                        + " falling back to the environment action"
+                )
                 requestReview()
             }
             #else
+            Log.app.info("ReviewPrompt: presenting via requestReview environment action token=\(newValue)")
             requestReview()
             #endif
         }

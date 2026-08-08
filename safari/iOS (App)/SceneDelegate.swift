@@ -148,12 +148,16 @@ enum AppearanceMode: String, CaseIterable, Identifiable {
 
 struct HomeView: View {
     @ObservedObject var controller: SpoofController
+    @ObservedObject private var review = ReviewPrompt.shared
 
     var body: some View {
         AdaptiveNavigationStack {
             SpoofControlPanel(controller: controller)
                 .navigationTitle("GeoSpoof")
         }
+        // Outside the navigation stack on purpose — the review action can
+        // silently no-op when fired from a view nested inside one.
+        .requestReview(on: review.token)
     }
 }
 
@@ -325,12 +329,16 @@ struct GpsView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     /// Where to send users to get the desktop app. TODO: confirm final URL.
-    private let downloadURL = URL(string: "https://www.geospoof.com/gps")!
+    private let downloadURL = AppLink.site("/gps", campaign: "gps-download")
     /// Support contact for founders whose grant can't be auto-verified on this device
-    /// (see `founderSupportLink`). TODO: confirm final URL.
-    private let supportURL = URL(string: "https://www.geospoof.com/support")!
+    /// (see `founderSupportLink`). Tagged separately from `gpsSupportURL`: both land
+    /// on /support, but a founder who can't unlock and a user stuck on GPS setup are
+    /// different problems, and lumping them together hides which one is growing.
+    private let founderSupportURL = AppLink.site("/support", campaign: "founder-support")
+    /// Support contact for the GPS feature itself.
+    private let gpsSupportURL = AppLink.site("/support", campaign: "gps-support")
     /// Feedback for this (experimental) feature.
-    private let feedbackURL = URL(string: "https://www.geospoof.com/feedback")!
+    private let feedbackURL = AppLink.site("/feedback", campaign: "gps-feedback")
     private let refreshTimer = Timer.publish(every: 3, on: .main, in: .common).autoconnect()
 
     var body: some View {
@@ -465,7 +473,7 @@ struct GpsView: View {
             Link(destination: feedbackURL) {
                 Label("Give Feedback", systemImage: "text.bubble")
             }
-            Link(destination: supportURL) {
+            Link(destination: gpsSupportURL) {
                 Label("Contact Support", systemImage: "questionmark.circle")
             }
         } footer: {
@@ -483,7 +491,7 @@ struct GpsView: View {
             Text("Founding supporter and can’t access?")
                 .font(.footnote)
                 .foregroundColor(.secondary)
-            Link("Contact support", destination: supportURL)
+            Link("Contact support", destination: founderSupportURL)
                 .font(.footnote)
         }
     }
@@ -800,6 +808,7 @@ struct SettingsView: View {
     @State private var showDebugFounderWelcome = false
     @State private var showDebugOnboarding = false
     @State private var debugProOverride = ProStore.debugProOverrideSelection()
+    @ObservedObject private var review = ReviewPrompt.shared
     #endif
 
     var body: some View {
@@ -923,6 +932,34 @@ struct SettingsView: View {
                 } footer: {
                     Text("Founder status normally comes from the App Store original-download version, which isn't available on the simulator. Force Founder / Not Pro / Subscription to test each tier. (Overrides the app's local Pro gate only — the GPS agent still needs a real signed purchase.)")
                 }
+
+                Section {
+                    Button {
+                        review.forcePrompt()
+                    } label: {
+                        Label("Show Prompt (Scene API)", systemImage: "star.bubble")
+                    }
+                    Button {
+                        review.forcePrompt(using: .environmentAction)
+                    } label: {
+                        Label("Show Prompt (Env Action)", systemImage: "star.bubble.fill")
+                    }
+                    Button {
+                        review.recordEventForTesting()
+                    } label: {
+                        Label("Record Qualifying Occasion", systemImage: "plus.circle")
+                    }
+                    Button(role: .destructive) {
+                        review.resetForTesting()
+                    } label: {
+                        Label("Reset Review Gating", systemImage: "arrow.counterclockwise")
+                    }
+                } header: {
+                    Text("Debug · Review Prompt")
+                } footer: {
+                    // Live gate state, not copy — verbatim keeps it out of the catalog.
+                    Text(verbatim: review.debugSummary)
+                }
                 #endif
             }
             .navigationTitle("Settings")
@@ -938,6 +975,11 @@ struct SettingsView: View {
             #endif
         }
         .navigationViewStyle(.stack)
+        #if DEBUG
+        // Outside the navigation stack, same as the production attachment in
+        // `HomeView`. Debug-only, so release builds keep exactly one presenter.
+        .requestReview(on: review.token)
+        #endif
     }
 }
 

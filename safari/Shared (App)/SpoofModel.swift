@@ -2678,6 +2678,43 @@ enum AppInfo {
     }
 }
 
+// MARK: - Outbound site links
+/// Builds UTM-tagged links from the native apps to geospoof.com, so visits
+/// attribute to the app surface they came from instead of landing in "unknown".
+enum AppLink {
+    /// Which native app the click came from. One definition, rather than the
+    /// literal being repeated at every call site.
+    static let source: String = {
+        #if os(iOS)
+        return "ios-app"
+        #else
+        return "macos-app"
+        #endif
+    }()
+
+    /// A tagged URL for `path` on the marketing site.
+    ///
+    /// Deliberately *not* locale-prefixed. Only `/verify` is locale-aware today,
+    /// through `siteLocalePrefix` + `verifyURL(campaign:)` in
+    /// SpoofControlPanel.swift, which `tests/unit/verify-link-locale.unit.test.ts`
+    /// parses out of that file by name. Copying the mapping here would create
+    /// exactly the drift that test exists to catch — so localizing these other
+    /// pages means moving the mapping into this helper (and updating that test),
+    /// not duplicating it.
+    ///
+    /// - Parameters:
+    ///   - path: absolute site path, e.g. `"/support"`.
+    ///   - campaign: the surface the click came from, so two links to the same
+    ///     page stay distinguishable in analytics.
+    static func site(_ path: String, campaign: String) -> URL {
+        // Force-unwrap is safe: every component is a literal from within the app.
+        URL(
+            string: "https://www.geospoof.com\(path)"
+                + "?utm_source=\(source)&utm_medium=app&utm_campaign=\(campaign)"
+        )!
+    }
+}
+
 // MARK: - Haptics
 /// Lightweight haptic feedback wrapper. iOS-only; a no-op on macOS so it can be
 /// called freely from shared code (e.g. the SpoofController intents).

@@ -30,6 +30,11 @@ import { syncVpnLocation } from "./vpn-sync";
 import { installProxyWatcher } from "./proxy-watcher";
 import { installActivityWatcher } from "./activity-watcher";
 import { adoptPendingSettingsFromApp } from "./app-bridge";
+import {
+  installMainWorldInjection,
+  ensureMainWorldRegistration,
+  isMainWorldInjectionSupported,
+} from "./main-world-inject";
 import { installBgLogRelay } from "./log-relay";
 import { updateBootstrapRegistration } from "./bootstrap-register";
 import { installDebuggerWatchers, syncDebuggerSpoofing, ensureTabSpoofed } from "./debugger-spoof";
@@ -123,6 +128,13 @@ export {
   GEO_TIMEOUT,
 } from "./vpn-sync";
 export type { IpGeolocationResult, VpnSyncError, VpnSyncResponse } from "./vpn-sync";
+export {
+  installMainWorldInjection,
+  ensureMainWorldRegistration,
+  removeMainWorldRegistration,
+  isMainWorldInjectionSupported,
+  MAIN_WORLD_SCRIPT_ID,
+} from "./main-world-inject";
 export {
   installProxyWatcher,
   isProxyWatcherSupported,
@@ -258,6 +270,20 @@ async function initialize(): Promise<void> {
   await installWorkerRequestFilter();
   logger.debug(`[init] worker-request-filter support: ${isWorkerFilterSupported() ? "yes" : "no"}`);
 
+  // Safari only: make sure the MAIN-world injection is registered before we
+  // broadcast settings to any tab. The top-level installMainWorldInjection()
+  // above already kicked this off fire-and-forget on this spawn; awaiting it
+  // here on the install/startup path means a fresh install has the registration
+  // in place as early as possible, and surfaces the outcome in the logs.
+  // Idempotent, so the double call costs one extra API read.
+  if (__SAFARI__) {
+    logger.debug(
+      `[init] MAIN-world injection support: ${isMainWorldInjectionSupported() ? "yes" : "no"}`
+    );
+    const registered = await ensureMainWorldRegistration();
+    logger.debug(`[init] MAIN-world injection registered: ${registered ? "yes" : "no"}`);
+  }
+
   // Prime the Accept-Language snapshot and (on Chromium/Safari) install the DNR
   // rule, so the header is aligned from the first request after a cold start
   // rather than only after the next settings change.
@@ -365,6 +391,22 @@ void installWorkerRequestFilter();
 // background script. Idempotent, and a no-op on non-Firefox engines (which use
 // the declarativeNetRequest path instead).
 installAcceptLanguageRewriter();
+
+// Safari only: register the MAIN-world injection of content/injected.js.
+//
+// Safari ignores the `content_scripts[].world` manifest key before Safari 18,
+// so the Safari manifest omits that entry entirely and this runtime
+// registration is the ONLY thing that gets the page overrides into the page.
+// See main-world-inject.ts for why there is no static/dynamic split.
+//
+// Registered at top level, alongside the watchers above, for the same
+// non-persistent-background reason: onStartup/onInstalled do not fire on
+// event-driven respawns (and onStartup is unreliable on iOS Safari), so
+// asserting it here means every spawn re-checks — which also serves as the
+// retry path if a previous attempt failed. The call is idempotent: the steady
+// state is one getRegisteredContentScripts() read that finds the existing
+// registration and writes nothing. Compiled out on Firefox/Chromium.
+installMainWorldInjection();
 
 export { initialize };
 

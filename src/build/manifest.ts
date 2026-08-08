@@ -224,16 +224,30 @@ export function generateManifest(target: BrowserTarget, version: string): Record
         type: "module",
         persistent: false,
       },
-      content_scripts: [
-        ...(shared.content_scripts as Array<Record<string, unknown>>),
-        {
-          matches: ["<all_urls>"],
-          js: ["content/injected.js"],
-          run_at: "document_start",
-          all_frames: true,
-          world: "MAIN",
-        },
-      ],
+      // NOTE: unlike Firefox/Chromium, the Safari manifest deliberately does
+      // NOT declare a `world: "MAIN"` content script for injected.js. Safari
+      // only honours the `content_scripts[].world` key from **Safari 18**; on
+      // Safari 17 and earlier it is ignored, so injected.js never reaches the
+      // page and every override (geolocation, Date, Intl, WebRTC) silently
+      // does nothing while the extension still looks installed and enabled.
+      //
+      // Instead the background registers it at runtime via
+      // `scripting.registerContentScripts({ world: "MAIN" })`, supported since
+      // Safari 16.4 — see src/background/main-world-inject.ts for the full
+      // rationale. The static entry is omitted rather than kept as a
+      // "Safari 18+ fast path" on purpose: keeping both would double-inject
+      // injected.js on Safari 18+, and suppressing that would require sniffing
+      // the Safari major version out of the user agent, putting an untestable
+      // version branch on the critical path of the core feature. One runtime
+      // path for every Safari version means the configuration we test on a
+      // current Safari is exactly the one that runs on Safari 17.
+      //
+      // `shared.content_scripts` (the isolated-world content.js entry) is
+      // inherited unchanged via the spread above.
+      //
+      // injected.js is still built and shipped in the bundle; it does NOT need
+      // to be listed in `web_accessible_resources`, because dynamic
+      // registration reads it from the package rather than the page fetching it.
     };
   }
 

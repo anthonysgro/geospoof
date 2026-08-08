@@ -162,6 +162,7 @@ private func applyAppearance(_ mode: AppearanceMode) {
 struct MacHomeView: View {
     @ObservedObject var controller: SpoofController
     @StateObject private var model = ExtensionStateModel()
+    @ObservedObject private var review = ReviewPrompt.shared
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -175,7 +176,19 @@ struct MacHomeView: View {
             }
             .navigationTitle("Home")
         }
+        // Outside the navigation stack on purpose. macOS has no scene-based
+        // StoreKit review call, so the environment action is the only path here
+        // and placement is what makes it fire at all.
+        .requestReview(on: review.token)
         .onAppear { model.refresh() }
+        // A disabled extension is the most visible way GeoSpoof can be broken on
+        // macOS, and the banner above is the user seeing it — so keep the review
+        // ask quiet for a few days afterwards. Only `.off` counts: `.unknown`
+        // just means the state query hasn't landed or failed, and suppressing on
+        // that would penalise users whose lookup merely flaked.
+        .onChange(of: model.state == .off) { isOff in
+            if isOff { ReviewPrompt.shared.noteTrouble() }
+        }
         .onChange(of: scenePhase) { phase in
             if phase == .active {
                 model.refresh()
@@ -211,6 +224,13 @@ struct ExtensionStatusBanner: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 8)
+            // A user staring at a broken extension needs somewhere to go that
+            // isn't the App Store. Offered whenever the banner is up, never
+            // conditioned on the user telling us how they feel about the app.
+            Link(destination: URL(string: "https://www.geospoof.com/support?utm_source=macos-app&utm_medium=app&utm_campaign=extension-off")!) {
+                Text("Contact Support")
+            }
+            .font(.callout)
             Button("Open Settings…") { model.openSafariSettings() }
                 .glassButtonStyle(prominent: true)
         }
@@ -230,6 +250,7 @@ struct MacSettingsView: View {
     @State private var showDebugFounderWelcome = false
     @State private var showDebugOnboarding = false
     @State private var debugProOverride = ProStore.debugProOverrideSelection()
+    @ObservedObject private var review = ReviewPrompt.shared
     #endif
 
     var body: some View {
@@ -269,6 +290,9 @@ struct MacSettingsView: View {
                 }
 
                 Section {
+                    Link(destination: URL(string: "https://www.geospoof.com/feedback?utm_source=macos-app&utm_medium=app&utm_campaign=feedback")!) {
+                        Label("Give Feedback", systemImage: "text.bubble")
+                    }
                     Link(destination: URL(string: "https://www.geospoof.com/support?utm_source=macos-app&utm_medium=app&utm_campaign=support")!) {
                         Label("Help & Support", systemImage: "questionmark.circle")
                     }
@@ -337,6 +361,34 @@ struct MacSettingsView: View {
                 } footer: {
                     Text("Founder status normally comes from the App Store original-download version, which isn't available in dev builds / the simulator. Force Founder / Not Pro / Subscription to test each tier. (Overrides the app's local Pro gate only — the GPS agent still needs a real signed purchase.)")
                 }
+
+                Section {
+                    Button {
+                        review.forcePrompt()
+                    } label: {
+                        Label("Show Prompt (Scene API)", systemImage: "star.bubble")
+                    }
+                    Button {
+                        review.forcePrompt(using: .environmentAction)
+                    } label: {
+                        Label("Show Prompt (Env Action)", systemImage: "star.bubble.fill")
+                    }
+                    Button {
+                        review.recordEventForTesting()
+                    } label: {
+                        Label("Record Qualifying Occasion", systemImage: "plus.circle")
+                    }
+                    Button(role: .destructive) {
+                        review.resetForTesting()
+                    } label: {
+                        Label("Reset Review Gating", systemImage: "arrow.counterclockwise")
+                    }
+                } header: {
+                    Text("Debug · Review Prompt")
+                } footer: {
+                    // Live gate state, not copy — verbatim keeps it out of the catalog.
+                    Text(verbatim: review.debugSummary)
+                }
                 #endif
             }
             .groupedFormStyle()
@@ -352,6 +404,13 @@ struct MacSettingsView: View {
             }
             #endif
         }
+        #if DEBUG
+        // Outside the navigation stack, same as the production attachment in
+        // `MacHomeView`. This placement is the whole reason the macOS prompt
+        // works, so the debug button has to respect it too or it would "fail"
+        // for a reason that has nothing to do with the gate.
+        .requestReview(on: review.token)
+        #endif
     }
 }
 
