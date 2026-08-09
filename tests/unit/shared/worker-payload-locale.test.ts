@@ -103,16 +103,35 @@ describe("worker locale payload — Intl default locale", () => {
     expect(formatted).not.toBe("1,234,567.89");
   });
 
-  // IMPORTANT: `resolvedOptions().locale` does NOT always echo the requested
-  // tag. ICU minimizes it per service where the region doesn't affect that
-  // service's data — `Collator` and `PluralRules` both report "fr" for a
-  // requested "fr-FR", while `NumberFormat` reports "fr-FR". So the invariant to
-  // assert is "matches what the NATIVE constructor produces for this tag", not
-  // "equals the tag". That is also the correct privacy property: a genuine
-  // French browser reports exactly the same minimized values, so matching native
-  // behavior is what makes the spoof indistinguishable.
-  it("every Intl constructor resolves exactly as the native one does for the spoofed tag", () => {
+  // This assertion previously used `new Intl.Collator("fr-FR")` as the reference
+  // for "what a genuine French browser reports", and required the spoofed default
+  // to match its minimized "fr". That reference was wrong, and pinning it hid a
+  // detectable tell for a release.
+  //
+  // ECMA-402 `ResolveLocale` has two branches, and they do not agree:
+  //
+  //   - EXPLICIT request → `BestAvailableLocale` strips trailing subtags until it
+  //     finds a bundle in *that service's* available-locale set. Collation data is
+  //     language-keyed, so a requested "fr-FR" minimizes to "fr" for `Collator`
+  //     while `NumberFormat` keeps "fr-FR". Which services minimize is
+  //     engine-specific: V8 also minimizes `PluralRules`, SpiderMonkey does not.
+  //   - NO request (the branch a genuine French browser takes) → no candidate
+  //     matches, so the spec falls back to `DefaultLocale()` and reports it
+  //     VERBATIM. No availability lookup runs at all. `DefaultLocale()` is a
+  //     single engine-wide string, so this branch CANNOT disagree across services.
+  //
+  // Verified empirically: with the host default locale forced to ja-JP, all nine
+  // constructors report "ja-JP" — including the two that minimize an explicit
+  // "ja-JP" to "ja".
+  //
+  // So a genuine French browser reports "fr-FR" from every constructor, and the
+  // old expectation had us reporting "fr" from `Collator` and "fr-FR" from the
+  // rest. arkenfox TZP collects `resolvedOptions().locale` from nine
+  // constructors, dedupes, and reports `locale: mixed` as a detected lie — which
+  // is exactly what shipped. The invariant is AGREEMENT on the tag.
+  it("every Intl constructor reports the spoofed tag, so the nine agree", () => {
     const r = realmWith(TZ, LOCALE);
+    const reported: Record<string, string> = {};
     for (const ctor of [
       "NumberFormat",
       "Collator",
@@ -121,22 +140,25 @@ describe("worker locale payload — Intl default locale", () => {
       "RelativeTimeFormat",
       "Segmenter",
       "DurationFormat",
+      "DateTimeFormat",
     ] as const) {
       const available = r.evalInRealm<boolean>(`typeof Intl.${ctor} === "function"`);
       if (!available) continue;
-
-      const spoofed = r.evalInRealm<string>(`new Intl.${ctor}().resolvedOptions().locale`);
-      const IntlAny = Intl as unknown as Record<
-        string,
-        new (locales?: string) => { resolvedOptions: () => { locale: string } }
-      >;
-      const reference = new IntlAny[ctor]("fr-FR").resolvedOptions().locale;
-
-      expect(spoofed, `Intl.${ctor} default locale`).toBe(reference);
-      // Whatever the minimized form is, it must still be the spoofed language —
-      // never the host's.
-      expect(spoofed.startsWith("fr")).toBe(true);
+      reported[ctor] = r.evalInRealm<string>(`new Intl.${ctor}().resolvedOptions().locale`);
     }
+
+    expect(Object.keys(reported).length).toBeGreaterThan(1);
+    // TZP's own reduction: dedupe, and anything but a single value is "mixed".
+    expect([...new Set(Object.values(reported))], JSON.stringify(reported)).toEqual(["fr-FR"]);
+  });
+
+  it("an explicit request still gets the engine's genuine minimization", () => {
+    // Only the default is replayed. A page that explicitly asks for "fr-FR"
+    // collation is entitled to see that it got "fr" data, exactly as it would
+    // with no extension present.
+    const r = realmWith(TZ, LOCALE);
+    const spoofed = r.evalInRealm<string>('new Intl.Collator("fr-FR").resolvedOptions().locale');
+    expect(spoofed).toBe(new Intl.Collator("fr-FR").resolvedOptions().locale);
   });
 
   it("honors an explicit locales argument instead of overriding it", () => {

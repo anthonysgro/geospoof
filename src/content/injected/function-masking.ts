@@ -78,6 +78,51 @@ export function registerOverride(fn: AnyFunction, nativeName: string): void {
 }
 
 /**
+ * Whether this engine's native accessor `toString()` carries the same `get `/`set `
+ * prefix that its `.name` carries. Engines disagree, and the difference is visible:
+ *
+ *   - **V8**: `.name` is `"get size"` and `toString()` is
+ *     `"function get size() { [native code] }"` — prefixed in both.
+ *   - **SpiderMonkey**: `.name` is `"get size"` but `toString()` is
+ *     `"function size() {\n    [native code]\n}"` — prefixed in `name` ONLY.
+ *
+ * Masking every accessor as `function get <prop>()` therefore matched V8 and stood
+ * out on Firefox, where every genuine accessor omits the prefix. Confirmed against
+ * live controls: `Navigator.prototype.userAgent`, `vendor` and
+ * `hardwareConcurrency` all report `function <prop>()` on Firefox, while our
+ * overridden `language` reported `function get language()`.
+ *
+ * Derived at runtime from `Map.prototype.size` — a native accessor we never
+ * override, present on every engine we support — rather than branched on a
+ * build-time engine flag, so a future engine or a change in either engine's
+ * formatting is picked up automatically. Same approach as the `[native code]`
+ * surround derivation in {@link initFunctionMasking}.
+ */
+const nativeAccessorToStringIsPrefixed: boolean = (() => {
+  try {
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- intentional: the detached getter is only ever passed to toString, never invoked
+    const nativeGet = Object.getOwnPropertyDescriptor(Map.prototype, "size")?.get;
+    if (typeof nativeGet !== "function") return true; // assume V8 shape
+    // Must use the captured original: our own toString patch may already be live.
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+    const src: unknown = (originalCall as any).call(originalFunctionToString, nativeGet);
+    return typeof src === "string" && src.includes("get size");
+  } catch {
+    return true;
+  }
+})();
+
+/**
+ * The name an accessor override should be MASKED as, for `toString()` purposes.
+ *
+ * Not the same as its `.name`, which keeps the `get `/`set ` prefix on every
+ * engine — see {@link nativeAccessorToStringIsPrefixed}.
+ */
+export function accessorMaskName(kind: "get" | "set", prop: string): string {
+  return nativeAccessorToStringIsPrefixed ? `${kind} ${prop}` : prop;
+}
+
+/**
  * Make a JS function indistinguishable from a native function by:
  * - Setting name/length to match the original
  * - Deleting the prototype property (native functions don't have one)
@@ -88,16 +133,21 @@ export function disguiseAsNative(
   nativeName: string,
   expectedLength: number
 ): void {
-  // Set name to match the native function
-  Object.defineProperty(fn, "name", {
-    value: nativeName,
+  // `length` BEFORE `name`: native functions enumerate as ["length","name"] on
+  // both V8 and SpiderMonkey, and SpiderMonkey reifies these lazily — so the
+  // order we define them in becomes the order `Reflect.ownKeys` reports. Defining
+  // `name` first produced ["name","length"], which differs from every native and
+  // is trivially enumerable. V8 is unaffected (both are already own properties by
+  // then, and redefining preserves position), so this is correct on both.
+  Object.defineProperty(fn, "length", {
+    value: expectedLength,
     configurable: true,
     enumerable: false,
     writable: false,
   });
-  // Set length to match the native function's arity
-  Object.defineProperty(fn, "length", {
-    value: expectedLength,
+  // Set name to match the native function
+  Object.defineProperty(fn, "name", {
+    value: nativeName,
     configurable: true,
     enumerable: false,
     writable: false,
@@ -365,13 +415,15 @@ export function installScrubbedAccessor(
   };
   if (accessors.get) {
     const wrappedGet = stripConstruct(accessors.get);
-    registerOverride(wrappedGet, `get ${prop}`);
+    // The MASK name drops the `get ` prefix on engines whose native accessors do
+    // (SpiderMonkey); the `.name` keeps it on every engine. See accessorMaskName.
+    registerOverride(wrappedGet, accessorMaskName("get", prop));
     disguiseAsNative(wrappedGet, `get ${prop}`, 0);
     descriptor.get = wrappedGet as () => unknown;
   }
   if (accessors.set) {
     const wrappedSet = stripConstruct(accessors.set);
-    registerOverride(wrappedSet, `set ${prop}`);
+    registerOverride(wrappedSet, accessorMaskName("set", prop));
     disguiseAsNative(wrappedSet, `set ${prop}`, 1);
     descriptor.set = wrappedSet as (value: unknown) => void;
   }

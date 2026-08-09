@@ -154,8 +154,53 @@ function __nativeMethod(fn, name, length) {
 // without caring whether the locale body was included or in what order.
 // Stays null unless the locale body sets it.
 var __spoofLocaleTag = null;
+// "Use the default locale" is NOT only \`undefined\`. ECMA-402
+// CanonicalizeLocaleList builds a LIST, and an empty list is what selects the
+// default — so \`[]\`, \`{length:0}\` and a Set (no \`length\`) all mean the same as
+// \`undefined\`. Checking only \`undefined\` left those reporting the real locale.
+// Strings are always one requested tag; Intl.Locale instances are one explicit tag
+// despite having no \`length\`. Mirrors isDefaultLocaleRequest in
+// content/injected/locale-overrides.ts.
+function __isDefaultLocales(locales) {
+  if (locales === undefined) return true;
+  if (typeof locales === "string" || locales === null) return false;
+  if (typeof locales !== "object") return false;
+  try {
+    if (Object.prototype.toString.call(locales) === "[object Intl.Locale]") return false;
+    var len = Number(locales.length);
+    return !(len > 0);
+  } catch (e) {
+    return false;
+  }
+}
 function __localeOr(locales) {
-  return locales === undefined && __spoofLocaleTag ? __spoofLocaleTag : locales;
+  return __isDefaultLocales(locales) && __spoofLocaleTag ? __spoofLocaleTag : locales;
+}
+// --- Reported locale of default-constructed Intl instances ---
+// Instances whose locale WE supplied, mapped to the tag supplied. Injecting a tag
+// switches ECMA-402 ResolveLocale from "report DefaultLocale() verbatim" to
+// "run BestAvailableLocale", and the latter truncates subtags per SERVICE:
+// collation and plural-rules data are language-keyed, so ja-JP becomes ja for
+// Collator/PluralRules while NumberFormat and DateTimeFormat keep ja-JP. No real
+// browser produces that disagreement (arkenfox TZP dedupes the nine values and
+// reports "locale: mixed"), so the tag is replayed from resolvedOptions().
+// Mirrors injectedLocaleTags in content/injected/locale-overrides.ts, which
+// carries the full rationale.
+var __injectedLocaleTags = new WeakMap();
+function __noteLocale(instance, callerLocales) {
+  if (__isDefaultLocales(callerLocales) && __spoofLocaleTag) {
+    try { __injectedLocaleTags.set(instance, __spoofLocaleTag) } catch (e) {}
+  }
+  return instance;
+}
+function __applyReportedLocale(instance, resolved) {
+  try {
+    var tag = __injectedLocaleTags.get(instance);
+    if (tag !== undefined && resolved && typeof resolved.locale === "string") {
+      resolved.locale = tag;
+    }
+  } catch (e) {}
+  return resolved;
 }
 
 `;
@@ -187,10 +232,10 @@ function SpoofedDTF() {
   if (opts && typeof opts === "object" && "timeZone" in opts) {
     var instance = Reflect.construct(OrigDTF, [loc, opts], nt);
     explicitTzInstances.add(instance);
-    return instance;
+    return __noteLocale(instance, args[0]);
   }
   var newOpts = Object.assign({}, opts || {}, { timeZone: __tz_id });
-  return Reflect.construct(OrigDTF, [loc, newOpts], nt);
+  return __noteLocale(Reflect.construct(OrigDTF, [loc, newOpts], nt), args[0]);
 }
 SpoofedDTF.prototype = OrigDTF.prototype;
 SpoofedDTF.supportedLocalesOf = OrigDTF.supportedLocalesOf;
@@ -208,7 +253,9 @@ var spoofedRO = __nativeMethod(function resolvedOptions() {
   if (!explicitTzInstances.has(this)) {
     result.timeZone = __tz_id;
   }
-  return result;
+  // The locale axis needs replaying even when the timezone axis doesn't — see
+  // __injectedLocaleTags.
+  return __applyReportedLocale(this, result);
 }, "resolvedOptions", 0);
 OrigDTF.prototype.resolvedOptions = spoofedRO;
 
@@ -974,13 +1021,17 @@ if (__locale && __locale.tag) {
           function SpoofedIntlCtor() {
             var args = Array.prototype.slice.call(arguments);
             var nt = new.target || Native;
-            // Inject only when the caller passed no explicit locales; an
-            // explicit request must be honored verbatim.
+            // Inject only when the caller requested no locale; an explicit
+            // request must be honored verbatim. Note \`[]\` and other empty
+            // array-likes count as "no request" — see __isDefaultLocales.
             var injected = args.slice();
             if (injected.length === 0) injected.push(undefined);
-            if (injected[0] === undefined) injected[0] = __locale.tag;
+            if (__isDefaultLocales(injected[0])) injected[0] = __locale.tag;
             try {
-              return Reflect.construct(Native, injected, nt);
+              // Note the injected tag so resolvedOptions() reports it verbatim
+              // instead of the engine's per-service truncation. Not done on the
+              // fallback path, which uses the caller's own arguments.
+              return __noteLocale(Reflect.construct(Native, injected, nt), args[0]);
             } catch (inner) {
               // Never let the injected tag break a construction the page would
               // otherwise have completed: retry with the caller's own arguments
@@ -1005,6 +1056,27 @@ if (__locale && __locale.tag) {
             SpoofedIntlCtor.supportedLocalesOf = Native.supportedLocalesOf;
           }
           Intl[name] = SpoofedIntlCtor;
+          // Report the injected tag rather than the engine's per-service
+          // truncation of it, so all the Intl constructors agree.
+          try {
+            var roDesc = Object.getOwnPropertyDescriptor(nativeProto, "resolvedOptions");
+            if (roDesc && typeof roDesc.value === "function") {
+              var nativeRO = roDesc.value;
+              var wrappedRO = __nativeMethod(function resolvedOptions() {
+                // Native first and unguarded: on a foreign \`this\` its brand
+                // check must throw the genuine error.
+                return __applyReportedLocale(this, nativeRO.call(this));
+              }, "resolvedOptions", nativeRO.length);
+              Object.defineProperty(nativeProto, "resolvedOptions", {
+                value: wrappedRO,
+                writable: roDesc.writable,
+                configurable: roDesc.configurable,
+                enumerable: roDesc.enumerable
+              });
+            }
+          } catch (e) {
+            // Leave resolvedOptions native for this constructor.
+          }
         } catch (e) {
           // Leave this constructor native; the others still install.
         }

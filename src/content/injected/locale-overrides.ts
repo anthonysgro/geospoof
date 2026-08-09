@@ -100,8 +100,173 @@ function activeLanguages(): readonly string[] | null {
 export function resolveEffectiveLocales(
   locales: string | string[] | undefined
 ): string | string[] | undefined {
-  if (locales !== undefined) return locales;
+  if (!isDefaultLocaleRequest(locales)) return locales;
   return activeTag() ?? undefined;
+}
+
+/**
+ * Whether `locales` means "use the default locale".
+ *
+ * `undefined` is NOT the only way to say that. ECMA-402
+ * [CanonicalizeLocaleList](https://tc39.es/ecma402/#sec-canonicalizelocalelist)
+ * builds a *list* of requested tags, and an EMPTY list is what triggers the
+ * default-locale path — so every one of these is a default request, verified
+ * against the engine:
+ *
+ *   - `undefined`
+ *   - `[]` — an empty array
+ *   - any array-like whose `length` is 0 or absent, e.g. `{ length: 0 }`, or a
+ *     `Set` (iterables aren't iterated; only `length` is read, and a Set has none)
+ *
+ * Checking only `undefined` left every one of those reporting the REAL locale.
+ * That is not academic: TZP's `get_locale_intl` passes `[]` for `Intl.DisplayNames`
+ * (`let locIntl = undefined == locTest ? [] : locTest`), so region and language
+ * display names came back in the user's actual language while everything else was
+ * spoofed — both a leak and a self-contradiction.
+ *
+ * Two things deliberately excluded:
+ *   - **Strings**, including `""`. A string is always a single requested tag, and
+ *     `""` is a malformed one the engine must reject with `RangeError`.
+ *   - **`Intl.Locale` instances**, which carry an `[[InitializedLocale]]` slot and
+ *     are treated as one explicit tag despite having no `length`. Detected by
+ *     `Symbol.toStringTag` so it works across realms. Without this check an
+ *     explicit `new Intl.Locale("de-DE")` would be silently overridden.
+ */
+function isDefaultLocaleRequest(locales: unknown): boolean {
+  if (locales === undefined) return true;
+  // A string is one requested tag; null/ToObject-hostile values must reach the
+  // native so it throws what the page would have seen anyway.
+  if (typeof locales === "string" || locales === null) return false;
+  if (typeof locales !== "object") return false;
+  try {
+    if (Object.prototype.toString.call(locales) === "[object Intl.Locale]") return false;
+    // ToLength semantics: absent/NaN/0 all yield an empty list. Reading `length`
+    // on a genuine Array is side-effect-free; for exotic array-likes the native
+    // reads it too, so at worst a contrived counting getter sees two reads.
+    const length = Number((locales as { length?: unknown }).length);
+    return !(length > 0);
+  } catch {
+    // A throwing `length` getter — leave it to the native.
+    return false;
+  }
+}
+
+// ── Reported locale of default-constructed instances ─────────────────────────
+
+/**
+ * Instances whose `locales` argument we supplied, mapped to the tag we supplied.
+ *
+ * Needed because injecting the tag changes WHICH branch of ECMA-402
+ * `ResolveLocale` the engine takes, and the two branches do not report the same
+ * string:
+ *
+ *   - Caller passed nothing → `requestedLocales` is empty → the matcher finds no
+ *     candidate and the spec falls back to `DefaultLocale()`, reported VERBATIM.
+ *     No availability lookup happens, so a region-qualified default locale stays
+ *     region-qualified on every constructor.
+ *   - Caller passed a tag → `BestAvailableLocale` truncates trailing subtags
+ *     until it finds a bundle in *that service's* available-locale set. Collation
+ *     and plural-rules data are keyed by language, so `ja-JP` resolves to `ja`
+ *     for `Intl.Collator` and `Intl.PluralRules` while `Intl.NumberFormat`,
+ *     `Intl.DateTimeFormat` and the rest keep `ja-JP`.
+ *
+ * Injecting therefore made `resolvedOptions().locale` DISAGREE across the Intl
+ * constructors, which no real browser does — arkenfox TZP dedupes those nine
+ * values and reports `locale: mixed` as a detected lie. 236 of our 247
+ * country-derived tags tripped it.
+ *
+ * So the tag captured here is replayed by the `resolvedOptions()` overrides
+ * below. That is not "faking a derived value": reporting the requested default
+ * verbatim while formatting with the engine's best-available data is EXACTLY what
+ * a native browser whose default locale is `ja-JP` does — it too reports `ja-JP`
+ * from `Intl.Collator().resolvedOptions().locale` and collates with `ja` data.
+ * We are restoring the branch the page would have taken, not inventing output.
+ *
+ * Keyed per instance and captured at construction, because `DefaultLocale()` is
+ * evaluated at construction natively: a settings change must not retroactively
+ * rewrite what an existing formatter reports.
+ */
+const injectedLocaleTags = new WeakMap<object, string>();
+
+/**
+ * Record that `instance` was built with a locale WE substituted.
+ *
+ * No-op when the caller supplied their own `locales` (explicit requests must
+ * report the engine's genuine resolution, truncation included) or when locale
+ * spoofing is off.
+ *
+ * Exported for the `Intl.DateTimeFormat` wrapper in `timezone-overrides.ts`,
+ * which injects the locale inside its own timezone-aware wrapper rather than
+ * being wrapped again here.
+ */
+export function noteInjectedLocale(
+  instance: object,
+  callerLocales: string | string[] | undefined
+): void {
+  // Must use the same predicate `resolveEffectiveLocales` does, or an instance we
+  // injected into via `[]` would go untracked and report the engine's truncation.
+  if (!isDefaultLocaleRequest(callerLocales)) return;
+  const tag = activeTag();
+  if (tag === null) return;
+  injectedLocaleTags.set(instance, tag);
+}
+
+/**
+ * The tag `instance` should report from `resolvedOptions().locale`, or `null` to
+ * report whatever the engine resolved.
+ */
+export function reportedLocaleFor(instance: object): string | null {
+  return injectedLocaleTags.get(instance) ?? null;
+}
+
+/**
+ * Make `resolvedOptions()` on one Intl prototype report the injected tag.
+ *
+ * Only rewrites `locale`, and only for instances in {@link injectedLocaleTags}.
+ * Every other field is the engine's own — `pluralCategories`, `collation`,
+ * `numberingSystem` and friends still describe the data actually in use, which
+ * is what a native browser reports too.
+ *
+ * Exported so the `Intl.DateTimeFormat` prototype can be handled by the same
+ * implementation from `timezone-overrides.ts`, which already owns that
+ * `resolvedOptions` override.
+ */
+export function applyReportedLocale<T>(instance: object, resolved: T): T {
+  try {
+    const tag = reportedLocaleFor(instance);
+    if (tag !== null) {
+      const record = resolved as { locale?: unknown };
+      // Guard on the field existing as a string so a future/exotic
+      // resolvedOptions shape can't be corrupted by us.
+      if (typeof record.locale === "string") record.locale = tag;
+    }
+  } catch (error) {
+    logger.error("Error applying reported locale to resolvedOptions:", error);
+  }
+  return resolved;
+}
+
+/** Install the `resolvedOptions` locale-reporting override on one prototype. */
+function patchResolvedOptions(proto: object): void {
+  try {
+    const descriptor = Object.getOwnPropertyDescriptor(proto, "resolvedOptions");
+    const native = descriptor?.value as ((this: object) => object) | undefined;
+    if (typeof native !== "function") return;
+
+    installOverride(
+      proto,
+      "resolvedOptions",
+      function (this: object): object {
+        // Call the native FIRST and unguarded: on a foreign `this` its brand
+        // check must throw the genuine error (stripConstruct scrubs our frames).
+        const resolved = Reflect.apply(native, this, []) as object;
+        return applyReportedLocale(this, resolved);
+      },
+      native.length
+    );
+  } catch (error) {
+    logger.error("Failed to override resolvedOptions:", error);
+  }
 }
 
 // ── Intl constructors ────────────────────────────────────────────────────────
@@ -150,12 +315,22 @@ function patchIntlConstructor(intl: typeof Intl, name: (typeof INTL_CONSTRUCTORS
       // Reflect.construct keep the subclass prototype. Called without `new`,
       // these constructors still return an instance, so fall back to Native.
       const newTarget = (new.target ?? Native) as unknown as new (...a: unknown[]) => object;
+      // Typed alias rather than `Native as never`, so `Reflect.construct` resolves
+      // to its generic overload and yields `object` — no assertion needed on the
+      // result, which `noteInjectedLocale` requires.
+      const NativeCtor = Native as unknown as new (...a: unknown[]) => object;
       try {
-        return Reflect.construct(
-          Native as never,
+        const instance = Reflect.construct(
+          NativeCtor,
           [resolveEffectiveLocales(locales), options],
           newTarget
         );
+        // Remember that this instance's locale came from us, so
+        // `resolvedOptions()` reports the tag rather than the engine's
+        // per-service truncation of it. Deliberately NOT done on the fallback
+        // path below, which builds with the caller's own arguments.
+        noteInjectedLocale(instance, locales);
+        return instance;
       } catch (error) {
         // The spoofed tag should never break a construction the page would
         // otherwise have completed — the background already confirmed the engine
@@ -191,6 +366,10 @@ function patchIntlConstructor(intl: typeof Intl, name: (typeof INTL_CONSTRUCTORS
     if (typeof supportedLocalesOf === "function") {
       (container[name] as Record<string, unknown>).supportedLocalesOf = supportedLocalesOf;
     }
+    // Report the injected tag, not the engine's per-service truncation of it.
+    // Without this, Collator and PluralRules answer `ja` while the rest answer
+    // `ja-JP` — a disagreement no real browser produces.
+    patchResolvedOptions(nativeProto);
   } catch (error) {
     logger.error(`Failed to override Intl.${name}:`, error);
   }
@@ -227,13 +406,25 @@ function patchNavigatorLanguage(win: Window & typeof globalThis): void {
     if (typeof nativeLanguageGet === "function") {
       installScrubbedAccessor(NavigatorProto, "language", {
         get: function (this: unknown): string {
+          // Call the native FIRST, unconditionally. It performs the WebIDL brand
+          // check, so `Navigator.prototype.language.get.call({})` throws the
+          // engine's genuine "called on an object that does not implement
+          // interface Navigator" TypeError — exactly as the untouched accessor
+          // does. Returning the tag before this check made a foreign `this` hand
+          // back "ja-JP" where every native accessor throws, which is a one-line
+          // tell that TZP reports as a Navigator.language lie.
+          //
+          // Same delegate-first shape as the `document.lastModified` override.
+          // The native read is cheap and side-effect-free, and on the spoofing
+          // path its result is simply discarded.
+          const native = Reflect.apply(nativeLanguageGet, this, []) as string;
           try {
             const tag = activeTag();
             if (tag !== null) return tag;
           } catch (error) {
             logger.error("Error in navigator.language override:", error);
           }
-          return Reflect.apply(nativeLanguageGet, this, []) as string;
+          return native;
         },
       });
     }
@@ -241,6 +432,8 @@ function patchNavigatorLanguage(win: Window & typeof globalThis): void {
     if (typeof nativeLanguagesGet === "function") {
       installScrubbedAccessor(NavigatorProto, "languages", {
         get: function (this: unknown): readonly string[] {
+          // Native first for the brand check — see the `language` getter above.
+          const native = Reflect.apply(nativeLanguagesGet, this, []) as readonly string[];
           try {
             const languages = activeLanguages();
             if (languages) {
@@ -252,7 +445,7 @@ function patchNavigatorLanguage(win: Window & typeof globalThis): void {
           } catch (error) {
             logger.error("Error in navigator.languages override:", error);
           }
-          return Reflect.apply(nativeLanguagesGet, this, []) as readonly string[];
+          return native;
         },
       });
     }
@@ -289,7 +482,7 @@ function patchLocaleMethod(proto: object, method: string, localesArgIndex: numbe
       function (this: unknown, ...args: unknown[]): unknown {
         try {
           const tag = activeTag();
-          if (tag !== null && args[localesArgIndex] === undefined) {
+          if (tag !== null && isDefaultLocaleRequest(args[localesArgIndex])) {
             // Pad so we can set the locales slot even when the caller passed
             // fewer arguments than its position.
             const patched = [...args];

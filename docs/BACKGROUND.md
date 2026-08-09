@@ -117,6 +117,27 @@ JavaScript engines maintain [internal slots](https://tc39.es/ecma262/#sec-object
 
 GeoSpoof's anti-fingerprinting layer — disguising overrides as `[native code]`, removing `prototype`, stripping `[[Construct]]` — defeats the checks used by real-world fingerprinting scripts. Forensic-level tools operating through engine internals and timing side-channels can still detect the overrides.
 
+### Browser UI Language
+
+The Reported Language feature covers the JavaScript and HTTP layers: `navigator.language`, `navigator.languages`, the default locale of every `Intl` constructor, the `toLocale*` family, and the `Accept-Language` header. The browser's **own** language — its UI locale and its accept-language preference — is a separate layer that no extension can reach, and several surfaces expose it directly:
+
+- **SVG `systemLanguage`.** The [conditional processing attribute](https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/systemLanguage) is evaluated by the layout engine against the user's language preferences (`intl.accept_languages` on Gecko), _not_ against `navigator.languages`. Because a real browser's `navigator.languages` **is** that preference list, the two can never disagree without tampering — which makes the attribute a direct probe for a spoofed language. Measured behavior on Firefox, where every child whose conditions pass is rendered (failed conditionals behave as `display: none`):
+
+  | reported languages       | children matching a real `en-US, en` | result          |
+  | ------------------------ | ------------------------------------ | --------------- |
+  | `en-US, en` (untampered) | both                                 | full match      |
+  | `en-GB, en`              | `en` only                            | partial match   |
+  | `ja-JP, ja`              | none                                 | no match at all |
+
+  TorZillaPrint's `languages_system` metric builds one `<text systemLanguage>` per reported language and reports what rendered, so spoofing to a different primary language leaves it with nothing (it raises an error on the empty result), and spoofing a different region within the user's own language leaves it partially matched. It agrees only when the reported list is a subset of the real one — that is, when the language was not really changed.
+
+  There is no JavaScript surface to override: conditional processing is resolved during layout, so patching the `SVGTests` IDL attribute changes nothing. And no WebExtension API can set the underlying preference — [`i18n.getAcceptLanguages()`](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/i18n/getAcceptLanguages) is read-only, and [`browserSettings`](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/browserSettings) exposes no equivalent key. Rewriting the `Accept-Language` header, which GeoSpoof does, affects HTTP only and never reaches layout.
+
+- **Localized browser-chrome strings.** Form-validation messages, XML/XSLT parser errors, `MediaDocument` titles, and Reporting API deprecation warnings are all rendered from the browser's own localization bundles. Their text — and therefore TZP's `l10n_*` hashes — reveals the real application locale regardless of what script reports.
+- **`parsererror` text direction.** Derived from the app locale's RTL/LTR setting.
+
+Aligning `navigator.language` with `Accept-Language` is what avoids the _self-contradiction_ that would be worse than not spoofing (see `docs/API.md`). It does not, and cannot, make the browser itself appear to be a different localization. A fingerprinter that cross-references the JS-reported language against these engine-level surfaces will see the mismatch.
+
 ### Timing Side-Channels
 
 High-resolution timing via [`SharedArrayBuffer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer) or [`performance.now()`](https://developer.mozilla.org/en-US/docs/Web/API/Performance/now) can measure the execution overhead of override functions. A native `getTimezoneOffset()` call completes in nanoseconds; a JavaScript override takes microseconds. Sufficiently motivated scripts can detect this discrepancy.

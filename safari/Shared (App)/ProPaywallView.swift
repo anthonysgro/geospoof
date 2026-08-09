@@ -889,8 +889,9 @@ struct ProDetailView: View {
             switchToLifetimeSection
             Section {
                 manageRow
-                refundRow
+                supportRow
                 restoreButton
+                refundRow
             } footer: {
                 Text("Manage or cancel your subscription anytime. Cancelling keeps Pro active until the end of the current period.")
             }
@@ -898,8 +899,9 @@ struct ProDetailView: View {
         case .lifetime:
             cancelRedundantSubscriptionSection
             Section {
-                refundRow
+                supportRow
                 restoreButton
+                refundRow
             } footer: {
                 Text("Lifetime is a one-time purchase tied to your Apple Account — it restores automatically when you reinstall or set up a new device. There's no subscription to manage.")
             }
@@ -988,6 +990,29 @@ struct ProDetailView: View {
             Label("Manage Subscription", systemImage: "creditcard")
         }
         #endif
+    }
+
+    /// Support, deliberately placed ABOVE `refundRow` in every section that
+    /// offers a refund.
+    ///
+    /// A paying customer with a fixable problem — extension toggled off, a
+    /// failed verification, Lifetime not restoring on a second device — was
+    /// previously offered "Request a Refund" as the first actionable row on
+    /// this screen, with no help path in front of it. That funnels a support
+    /// question into an irreversible refund: we lose the sale and the customer
+    /// still has the original problem. Help first, refund still one tap below.
+    ///
+    /// The refund row STAYS unconditionally available. This is ordering, not
+    /// gating — nothing here is contingent on the user answering anything, and
+    /// `reportaproblem.apple.com` is reachable outside the app regardless.
+    ///
+    /// Reuses the existing "Help & support" catalog key (same wording as
+    /// `TrustSheet`) so there is one canonical phrase and no new untranslated
+    /// string.
+    private var supportRow: some View {
+        Link(destination: AppLink.site("/support", campaign: "pro-management")) {
+            Label("Help & support", systemImage: "questionmark.circle")
+        }
     }
 
     @ViewBuilder

@@ -33,7 +33,11 @@ import {
   stripExtensionFramesFromStack,
 } from "./function-masking";
 import { deriveOffsetFromParts, getIntlBasedOffset } from "./timezone-helpers";
-import { resolveEffectiveLocales } from "./locale-overrides";
+import {
+  resolveEffectiveLocales,
+  noteInjectedLocale,
+  applyReportedLocale,
+} from "./locale-overrides";
 import { seedFromBootstrap } from "./bootstrap";
 import { createLogger } from "@/shared/utils/debug-logger";
 
@@ -181,12 +185,20 @@ export function installDateTimeFormatOverridesOn(
       // numberingSystem, month names) matches the tag we claim. Explicit caller
       // locales always win, exactly like an explicit timeZone.
       const effectiveLocales = resolveEffectiveLocales(locales);
-      const build = (opts: Intl.DateTimeFormatOptions | undefined): Intl.DateTimeFormat =>
-        Reflect.construct(
+      const build = (opts: Intl.DateTimeFormatOptions | undefined): Intl.DateTimeFormat => {
+        const instance = Reflect.construct(
           NativeDateTimeFormat as unknown as new (...a: unknown[]) => object,
           [effectiveLocales, opts],
           newTarget
         ) as Intl.DateTimeFormat;
+        // Track the injected tag so `resolvedOptions().locale` reports it
+        // verbatim, matching how the other eight Intl constructors now answer.
+        // DateTimeFormat truncates for far fewer tags than Collator/PluralRules
+        // do, but it does truncate for some (e.g. `ak-GH` -> `ak`), and the whole
+        // point is that all nine agree. `buildUnspoofed` deliberately skips this.
+        noteInjectedLocale(instance, locales);
+        return instance;
+      };
       // Error-path twin of `build` that uses the caller's ORIGINAL locales. If a
       // construction fails we must reproduce exactly what the page would have
       // got with no extension present, and that means backing out the injected
@@ -277,7 +289,12 @@ export function installDateTimeFormatOverridesOn(
           // spoofed timezone, so the native resolvedOptions already returns
           // the engine-normalized identifier (e.g. "Asia/Calcutta" for
           // "Asia/Kolkata"). No need to overwrite — just return as-is.
-          return options;
+          //
+          // `locale` is the exception and DOES need replaying: an explicitly
+          // requested tag goes through BestAvailableLocale, which truncates
+          // subtags the default-locale path would have kept. See
+          // `injectedLocaleTags` in locale-overrides.ts.
+          return applyReportedLocale(this, options);
         } catch (error) {
           logger.error("Error in resolvedOptions override:", error);
           return nativeResolvedOptions.call(this);
