@@ -1,11 +1,5 @@
-Hallo GeoSpoofers! Deze update brengt één belangrijke oplossing.
+Hallo GeoSpoofers! Deze update is klein onderhoud.
 
-SPOOFING WERKT NU OOK IN SAFARI 17
-
-Als je iPhone of iPad nog niet op iOS 18 zit, kon GeoSpoof er volledig ingesteld uitzien — extensie aan, locatie gekozen — terwijl sites nog steeds je echte locatie zagen en de pop-up zijn instellingen niet vasthield.
-
-De oorzaak: GeoSpoof laadt zijn spoofingcode in de pagina zelf, en de manier waarop het dat aan Safari vroeg, werkte pas vanaf Safari 18. In Safari 17 en ouder werd er dus niets geladen en werd er niets gespooft. GeoSpoof vraagt het nu op een manier die Safari sinds 16.4 ondersteunt, en gebruikt op elke versie datzelfde pad — wat wij testen, is precies wat er op je apparaat draait.
-
-Op iOS 18 en nieuwer verandert er niets.
+Lichte bugfixes en een controle van de vertalingen in alle ondersteunde talen.
 
 Geen account. Geen tracking. Open source.

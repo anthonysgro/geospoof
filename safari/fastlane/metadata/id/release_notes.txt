@@ -1,11 +1,5 @@
-Halo, GeoSpoofers! Pembaruan ini membawa satu perbaikan penting.
+Halo, GeoSpoofers! Pembaruan ini bersifat pemeliharaan kecil.
 
-PEMALSUAN KINI BEKERJA DI SAFARI 17
-
-Jika iPhone atau iPad Anda belum beralih ke iOS 18, GeoSpoof bisa terlihat sudah siap sepenuhnya — ekstensi aktif, lokasi terpilih — padahal situs web tetap melihat lokasi Anda yang sebenarnya, dan popup tidak menyimpan pengaturannya.
-
-Penyebabnya: GeoSpoof memuat kode pemalsuannya ke dalam halaman itu sendiri, dan cara ia memintanya kepada Safari baru berlaku sejak Safari 18. Di Safari 17 dan sebelumnya tidak ada yang dimuat, jadi tidak ada yang dipalsukan. Sekarang GeoSpoof memintanya dengan cara yang didukung Safari sejak versi 16.4, dan memakai jalur yang sama di semua versi — sehingga yang kami uji sama dengan yang berjalan di perangkat Anda.
-
-Di iOS 18 atau lebih baru, tidak ada yang berubah.
+Perbaikan bug ringan serta penyempurnaan terjemahan di semua bahasa yang didukung.
 
 Tanpa akun. Tanpa pelacakan. Sumber terbuka.

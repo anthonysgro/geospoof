@@ -1,11 +1,5 @@
-¡Hola, GeoSpoofers! Esta actualización trae una corrección importante.
+¡Hola, GeoSpoofers! Esta actualización es de mantenimiento.
 
-LA FALSIFICACIÓN YA FUNCIONA EN SAFARI 17
-
-Si tu iPhone o iPad todavía no está en iOS 18, GeoSpoof podía parecer perfectamente configurado —extensión activada, ubicación elegida— mientras los sitios web seguían viendo tu ubicación real y la ventana emergente no conservaba sus ajustes.
-
-El motivo: GeoSpoof carga su código de falsificación en la propia página, y la forma en que se lo pedía a Safari solo surtía efecto a partir de Safari 18. En Safari 17 y anteriores no se cargaba nada, así que no se falsificaba nada. Ahora GeoSpoof lo pide de una forma que Safari admite desde la versión 16.4, y usa esa misma vía en todas las versiones: lo que probamos es lo que se ejecuta en tu dispositivo.
-
-En iOS 18 o posterior no cambia nada.
+Correcciones menores y una revisión de las traducciones en todos los idiomas disponibles.
 
 Sin cuenta. Sin seguimiento. Código abierto.

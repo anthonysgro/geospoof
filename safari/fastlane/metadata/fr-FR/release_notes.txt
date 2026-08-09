@@ -1,11 +1,5 @@
-Bonjour les GeoSpoofers ! Cette mise à jour apporte une correction importante.
+Bonjour les GeoSpoofers ! Cette mise à jour est une simple maintenance.
 
-LA SIMULATION FONCTIONNE ENFIN SUR SAFARI 17
-
-Si votre iPhone ou iPad n’est pas encore passé à iOS 18, GeoSpoof pouvait sembler parfaitement configuré — extension activée, position choisie — alors que les sites voyaient toujours votre position réelle et que la fenêtre contextuelle ne conservait pas ses réglages.
-
-La raison : GeoSpoof charge son code de simulation dans la page elle-même, et la manière dont il le demandait à Safari ne prenait effet qu’à partir de Safari 18. Sur Safari 17 et antérieur, rien n’était chargé, donc rien n’était simulé. GeoSpoof le demande désormais d’une façon prise en charge par Safari depuis la version 16.4, et suit ce même chemin sur toutes les versions : ce que nous testons est donc ce qui s’exécute sur votre appareil.
-
-Sur iOS 18 et ultérieur, rien ne change.
+Corrections mineures et relecture des traductions dans toutes les langues prises en charge.
 
 Aucun compte. Aucun suivi. Open source.
