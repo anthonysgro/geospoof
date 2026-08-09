@@ -42,7 +42,7 @@ remembering when a line feels tight.
 | es-ES   | Cambia la ubicación / de Safari gratis  | Elige las coordenadas / que informa Safari        |
 | fr-FR   | Position Safari / gratuite              | Définissez les coordonnées / que Safari annonce   |
 | id      | Ubah Lokasi / Safari Gratis             | Atur Koordinat / yang Dilaporkan Safari           |
-| ja      | Safari の位置情報を / 無料で変更        | Safari が報告する座標を設定                       |
+| ja      | Safari の / 位置情報を / 無料で / 変更  | Safari が報告する座標を設定                       |
 | nl-NL   | Safari-locatie / gratis wijzigen        | Stel in welke coördinaten / Safari doorgeeft      |
 | pt-BR   | Mude a localização / do Safari de graça | Defina as coordenadas / que o Safari informa      |
 | ru      | Бесплатная смена / локации в Safari     | Задайте координаты, / которые сообщает Safari     |
