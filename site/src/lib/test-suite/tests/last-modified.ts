@@ -64,14 +64,21 @@ function parseLastModified(str: string): {
  */
 function getOffsetMinutes(timezoneId: string, when: Date): number | null {
   try {
-    const fmt = new Intl.DateTimeFormat(undefined, {
+    // Locale pinned to `en` on purpose: CLDR localizes the GMT-offset pattern, so
+    // `undefined` would inherit a spoofed Reported Language and produce strings
+    // this parser can't read (`UTC+2` in French, `غرينتش+٢` in Arabic, `GMT +2`
+    // with a space in Estonian, localized digits in Bengali — 69 of our 247 tags).
+    // Only the numeric offset matters here. Same reasoning as
+    // `deriveEastOfUtcMinutes` in values-correctness.ts, and as the extension's
+    // own `getIntlBasedOffset`.
+    const fmt = new Intl.DateTimeFormat("en", {
       timeZone: timezoneId,
       timeZoneName: "shortOffset",
     })
     if (typeof fmt.formatToParts !== "function") return null
     const parts = fmt.formatToParts(when)
     const tzName = parts.find((p) => p.type === "timeZoneName")?.value ?? ""
-    const match = /^GMT(?:([+-])(\d{1,2})(?::?(\d{2}))?)?$/.exec(tzName)
+    const match = /^GMT\s?(?:([+-])(\d{1,2})(?::?(\d{2}))?)?$/.exec(tzName)
     if (!match) return null
     const sign = match[1]
     if (!sign) return 0

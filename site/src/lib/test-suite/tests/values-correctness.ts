@@ -85,21 +85,49 @@ function deriveLongTimezoneName(
  * returns the opposite (east positive) so callers can negate it to get
  * the `getTimezoneOffset()` comparison value.
  *
- * `GMT` alone (no explicit sign) is treated as 0.
+ * `GMT` alone (no explicit sign) is treated as 0. Returns `null` when no offset
+ * could be parsed, which callers MUST surface as a skip rather than coercing to
+ * a number — see below.
+ *
+ * The locale is pinned to `"en"` deliberately, and that is load-bearing. CLDR
+ * localizes the GMT-offset pattern, so passing `undefined` here inherits the
+ * page's current locale — including a spoofed Reported Language — and yields
+ * strings this parser cannot read:
+ *
+ *   - `fr-*`, `fi-FI` → `UTC+2`
+ *   - `ar-*` → `غرينتش+٢` (localized label AND Arabic-Indic digits)
+ *   - `fa-*` → `+۲ گرینویچ` (RTL-reordered)
+ *   - `bs-BA`, `et-EE`, `sl-SI`, `sw-*`, `ur-PK` → `GMT +2` (note the space)
+ *   - `bn-BD`, `my-MM`, `ne-NP`, `dz-BT` → `GMT+২` (localized digits)
+ *   - `he-IL` → looks like `GMT+2` but carries invisible RTL marks
+ *
+ * That is 69 of the 247 tags `COUNTRY_LOCALE` can produce. This assertion
+ * compares NUMERIC offsets, so the localized rendering is irrelevant to what is
+ * being tested — pinning `en` removes the variable entirely, and matches what
+ * the extension's own `getIntlBasedOffset` does (`en-US`).
+ *
+ * Returning `null` instead of `0` on a parse failure matters just as much: `0`
+ * is a legitimate offset (UTC, Atlantic/Reykjavik), so a silent `0` is
+ * indistinguishable from a real reading. That is precisely how this test turned a
+ * formatting quirk into a confident "one surface is spoofed and the other isn't"
+ * verdict against a correctly-behaving extension — Europe/Paris reported
+ * "expected 0, actual -120" when -120 was right.
  */
-function deriveEastOfUtcMinutes(identifier: string, when: Date): number {
-  if (!identifier) return 0
+function deriveEastOfUtcMinutes(identifier: string, when: Date): number | null {
+  if (!identifier) return null
   try {
-    const fmt = new Intl.DateTimeFormat(undefined, {
+    // Pinned locale — see the note above. Do NOT change to `undefined`.
+    const fmt = new Intl.DateTimeFormat("en", {
       timeZone: identifier,
       timeZoneName: "shortOffset",
     })
-    if (typeof fmt.formatToParts !== "function") return 0
+    if (typeof fmt.formatToParts !== "function") return null
     const parts = fmt.formatToParts(when)
     const tzName = parts.find((p) => p.type === "timeZoneName")?.value ?? ""
-    // `GMT`, `GMT+5`, `GMT-8`, `GMT+5:30`, `GMT+05:30`, `GMT-08:00`
-    const match = /^GMT(?:([+-])(\d{1,2})(?::?(\d{2}))?)?$/.exec(tzName)
-    if (!match) return 0
+    // `GMT`, `GMT+5`, `GMT-8`, `GMT+5:30`, `GMT+05:30`, `GMT-08:00`. The optional
+    // space tolerates the `GMT +2` shape some CLDR locales use, harmless for `en`.
+    const match = /^GMT\s?(?:([+-])(\d{1,2})(?::?(\d{2}))?)?$/.exec(tzName)
+    if (!match) return null
     const sign = match[1]
     if (!sign) return 0
     const hours = Number.parseInt(match[2] ?? "0", 10)
@@ -107,7 +135,7 @@ function deriveEastOfUtcMinutes(identifier: string, when: Date): number {
     const magnitude = hours * 60 + minutes
     return sign === "-" ? -magnitude : magnitude
   } catch {
-    return 0
+    return null
   }
 }
 
@@ -320,11 +348,22 @@ const parts = new Intl.DateTimeFormat(undefined, {
 // compare to new Date().getTimezoneOffset()`,
   expected: async () => {
     const identifier = resolveLiveTimezoneIdentifier()
+    if (!identifier) {
+      return { skipReason: "Intl did not resolve a timezone identifier" }
+    }
     const eastMinutes = deriveEastOfUtcMinutes(identifier, new Date())
+    if (eastMinutes === null) {
+      // Skip rather than assert. An unparseable offset string tells us nothing
+      // about whether the two surfaces agree, and inventing 0 here previously
+      // produced a false "spoofed" verdict.
+      return {
+        skipReason: `Could not parse a GMT offset for ${identifier} from Intl shortOffset`,
+      }
+    }
     const value = -eastMinutes
     return {
       value,
-      describe: `${value} minutes (from ${identifier || "(empty)"})`,
+      describe: `${value} minutes (from ${identifier})`,
     }
   },
   observe: async () => {
