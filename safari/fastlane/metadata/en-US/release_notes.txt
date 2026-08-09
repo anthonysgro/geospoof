@@ -1,24 +1,11 @@
-Hello GeoSpoofers! GeoSpoof now speaks your language.
+Hello GeoSpoofers! One important fix in this update.
 
-This update adds full localization in 12 languages:
+SPOOFING NOW WORKS ON SAFARI 17
 
-• English
-• Dutch
-• French
-• German
-• Indonesian
-• Japanese
-• Portuguese (Brazil)
-• Russian
-• Simplified Chinese
-• Spanish
-• Swedish
-• Vietnamese
+If your iPhone or iPad hasn't moved to iOS 18, GeoSpoof could look completely set up — extension enabled, location picked — while websites still saw your real location, and the popup wouldn't hold its settings.
 
-ALSO NEW SINCE YOUR LAST UPDATE
+The reason: GeoSpoof loads its spoofing code into the page itself, and the way it asked Safari to do that only took effect in Safari 18. On Safari 17 and earlier nothing was loaded, so nothing was spoofed. GeoSpoof now asks in a way Safari has supported since 16.4, and it uses that same path on every version — so what we test is what runs on your device.
 
-• Reported Language — optionally line up the language websites see with your spoofed location.
+On iOS 18 and later, nothing changes.
 
-• Redesigned Settings — the controls that used to sit behind the Advanced section now have a tab of their own.
-
-• Accessibility and VoiceOver improvements throughout.
+No account. No tracking. Open source.

@@ -372,6 +372,11 @@ address…" and claimed "33,000+ cities"; neither is in the live copy. It also h
 SUBSCRIPTIONS block, which Guideline 3.1.2 requires. It has been removed rather than
 updated in place — keeping a second copy here is what let it drift in the first place.
 
+## Screenshot copy
+
+Lives in `assets/store-listings/appstore/screenshot-copy.md` — the headlines
+burned into the screenshot images, in all 12 locales.
+
 ## macOS listing
 
 Not written yet. `safari/fastlane/metadata/` holds the iOS copy at its root.

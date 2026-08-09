@@ -1,24 +1,11 @@
-Halo, GeoSpoofers! GeoSpoof kini berbicara dalam bahasa Anda.
+Halo, GeoSpoofers! Pembaruan ini membawa satu perbaikan penting.
 
-Pembaruan ini menambahkan pelokalan lengkap dalam 12 bahasa:
+PEMALSUAN KINI BEKERJA DI SAFARI 17
 
-• Inggris
-• Belanda
-• Prancis
-• Jerman
-• Indonesia
-• Jepang
-• Portugis (Brasil)
-• Rusia
-• Tionghoa Sederhana
-• Spanyol
-• Swedia
-• Vietnam
+Jika iPhone atau iPad Anda belum beralih ke iOS 18, GeoSpoof bisa terlihat sudah siap sepenuhnya — ekstensi aktif, lokasi terpilih — padahal situs web tetap melihat lokasi Anda yang sebenarnya, dan popup tidak menyimpan pengaturannya.
 
-JUGA BARU SEJAK PEMBARUAN TERAKHIR ANDA
+Penyebabnya: GeoSpoof memuat kode pemalsuannya ke dalam halaman itu sendiri, dan cara ia memintanya kepada Safari baru berlaku sejak Safari 18. Di Safari 17 dan sebelumnya tidak ada yang dimuat, jadi tidak ada yang dipalsukan. Sekarang GeoSpoof memintanya dengan cara yang didukung Safari sejak versi 16.4, dan memakai jalur yang sama di semua versi — sehingga yang kami uji sama dengan yang berjalan di perangkat Anda.
 
-• Bahasa yang dilaporkan — jika mau, selaraskan bahasa yang dilihat situs web dengan lokasi palsu Anda.
+Di iOS 18 atau lebih baru, tidak ada yang berubah.
 
-• Pengaturan yang didesain ulang — kontrol yang sebelumnya berada di balik bagian Lanjutan kini punya tabnya sendiri.
-
-• Peningkatan aksesibilitas dan VoiceOver di berbagai tempat.
+Tanpa akun. Tanpa pelacakan. Sumber terbuka.

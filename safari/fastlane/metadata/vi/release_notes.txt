@@ -1,24 +1,11 @@
-Xin chào các GeoSpoofer! GeoSpoof giờ đã nói ngôn ngữ của bạn.
+Xin chào các GeoSpoofer! Bản cập nhật này mang đến một bản sửa lỗi quan trọng.
 
-Bản cập nhật này bổ sung bản địa hóa đầy đủ cho 12 ngôn ngữ:
+GIẢ MẠO GIỜ ĐÃ HOẠT ĐỘNG TRÊN SAFARI 17
 
-• Tiếng Anh
-• Tiếng Hà Lan
-• Tiếng Pháp
-• Tiếng Đức
-• Tiếng Indonesia
-• Tiếng Nhật
-• Tiếng Bồ Đào Nha (Brazil)
-• Tiếng Nga
-• Tiếng Trung giản thể
-• Tiếng Tây Ban Nha
-• Tiếng Thụy Điển
-• Tiếng Việt
+Nếu iPhone hoặc iPad của bạn chưa lên iOS 18, GeoSpoof có thể trông như đã thiết lập xong — tiện ích được bật, vị trí đã chọn — trong khi các trang web vẫn thấy vị trí thật của bạn, và cửa sổ bật lên không giữ được cài đặt.
 
-CŨNG MỚI TỪ LẦN CẬP NHẬT TRƯỚC CỦA BẠN
+Lý do: GeoSpoof nạp mã giả mạo vào chính trang web, nhưng cách nó yêu cầu Safari làm việc đó chỉ có hiệu lực từ Safari 18. Trên Safari 17 và cũ hơn, không có gì được nạp, nên không có gì được giả mạo. Giờ GeoSpoof yêu cầu theo cách mà Safari đã hỗ trợ từ phiên bản 16.4, và dùng đúng đường đó trên mọi phiên bản — những gì chúng tôi kiểm thử chính là những gì chạy trên thiết bị của bạn.
 
-• Ngôn ngữ được báo — nếu muốn, hãy đồng bộ ngôn ngữ mà các trang web thấy với vị trí giả mạo của bạn.
+Trên iOS 18 trở lên, không có gì thay đổi.
 
-• Cài đặt được thiết kế lại — các tùy chọn từng nằm sau mục Nâng cao giờ có tab riêng.
-
-• Cải thiện khả năng truy cập và VoiceOver ở nhiều nơi.
+Không cần tài khoản. Không theo dõi. Nguồn mở.

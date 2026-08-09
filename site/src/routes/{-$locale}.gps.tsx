@@ -423,21 +423,19 @@ function GpsMenuShot() {
 }
 
 /**
- * Theme-aware GeoSpoof GPS app icon shown above the hero heading. The two PNGs
- * are the shipped iOS app icons (Default = light, Dark = dark) with their own
- * rounding baked in, so we let them render as-is and only add a soft shadow.
+ * GeoSpoof GPS app icon shown above the hero heading. Deliberately *not*
+ * theme-aware: the dark tile is the icon people actually see on their Mac and
+ * iPhone in every appearance, so swapping in the light variant on a light page
+ * would show an icon that doesn't match the product. Same asset the homepage
+ * products card uses. The PNG carries its own rounding, so it renders as-is
+ * with a soft shadow.
  */
 function HeroIcon() {
-  const { resolvedTheme } = useTheme()
   const { t } = useTranslations()
-  const src =
-    resolvedTheme === "dark"
-      ? "/images/gps/Icon-iOS-Dark-1024@1x.png"
-      : "/images/gps/Icon-iOS-Default-1024@1x.png"
 
   return (
     <img
-      src={src}
+      src="/images/gps/Icon-iOS-Dark-1024@1x.png"
       alt={t.gps.hero.iconAlt}
       width={1024}
       height={1024}
