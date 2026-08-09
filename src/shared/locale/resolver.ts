@@ -174,14 +174,26 @@ export function buildLanguageList(tag: string, engine: LocaleEngine = localeEngi
  * exactly the shape this resolver emits — so the 2-entry case is the one that
  * had to be measured, and was.
  *
- * Also worth knowing before "fixing" a perceived inconsistency: in Firefox the
- * `Accept-Language` preference (`intl.accept_languages`) is INDEPENDENT of the
- * browser UI locale that `navigator.language` follows. A real, untampered
- * Firefox can therefore send `Accept-Language: fr-FR` while reporting
- * `navigator.language === "en-US"`. Those two disagreeing is not inherently
- * anomalous in the wild; it is the opposite direction — claiming a locale in
- * script that the header contradicts — that reads as tampering. GeoSpoof aligns
- * both anyway, because presenting one coherent identity is the point.
+ * Worth being precise about which Firefox preference drives what, because an
+ * earlier version of this comment had it backwards. VERIFIED by setting
+ * `intl.accept_languages` to `de-DE, de` on an English-UI Firefox with the
+ * extension disabled: `navigator.languages` reported `["de-DE", "de"]`.
+ *
+ *   - `intl.accept_languages` drives `navigator.language`, `navigator.languages`,
+ *     the `Accept-Language` header, AND SVG `systemLanguage` evaluation. So
+ *     `navigator.language` is just `accept_languages[0]`; it CANNOT legitimately
+ *     contradict the header, and aligning the two is not merely tidy, it is the
+ *     only self-consistent option.
+ *   - The browser's UI/app locale is a SEPARATE preference (set by the installed
+ *     language pack). It drives localized chrome strings — form-validation
+ *     messages, XML/XSLT parser errors, `MediaDocument` titles. Those genuinely
+ *     can disagree with the reported language on an untampered browser, which is
+ *     exactly the configuration the verification above produced.
+ *
+ * The practical consequence for spoofing is in `docs/BACKGROUND.md`: the chrome
+ * strings disagreeing with our reported language is weak evidence, because a real
+ * user can produce it. SVG `systemLanguage` disagreeing is NOT, because it reads
+ * the same preference as `navigator.languages` and therefore must agree with it.
  *
  * `tests/property/locale-resolver.property.test.ts` ("Property 4") pins these
  * exact strings, so an engine changing its convention surfaces as a test failure

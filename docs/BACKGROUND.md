@@ -133,8 +133,37 @@ The Reported Language feature covers the JavaScript and HTTP layers: `navigator.
 
   There is no JavaScript surface to override: conditional processing is resolved during layout, so patching the `SVGTests` IDL attribute changes nothing. And no WebExtension API can set the underlying preference — [`i18n.getAcceptLanguages()`](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/i18n/getAcceptLanguages) is read-only, and [`browserSettings`](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/browserSettings) exposes no equivalent key. Rewriting the `Accept-Language` header, which GeoSpoof does, affects HTTP only and never reaches layout.
 
-- **Localized browser-chrome strings.** Form-validation messages, XML/XSLT parser errors, `MediaDocument` titles, and Reporting API deprecation warnings are all rendered from the browser's own localization bundles. Their text — and therefore TZP's `l10n_*` hashes — reveals the real application locale regardless of what script reports.
-- **`parsererror` text direction.** Derived from the app locale's RTL/LTR setting.
+- **Anything the browser itself writes for the user.** This is a whole class, not a list of specific probes. Every string the browser generates comes from its own localization bundles, so it reports the real application locale no matter what script says. Confirmed by measurement while reporting `fr-FR` on an English Firefox — all of these came back in English:
+  - `input.validationMessage` (~14 distinct messages, e.g. "Please fill out this field.")
+  - XML `<parsererror>` document text, and XSLT error text
+  - The XML pretty-print "no style information" banner
+  - `MediaDocument` titles ("PNG image, 100 × 100 pixels", "Scaled (50%)")
+  - `ReportingObserver` deprecation message bodies
+
+  TZP's `l10n_*` hashes sample this class; they are not the extent of it.
+
+- **Strings that can be measured rather than read.** A subtler variant, since there is no text to inspect: the default labels on `<input type="file">`, `type="submit"` and `type="reset"` are localized, are NOT exposed through `value`, and are still fingerprintable from the control's rendered width. `<input type="date">`'s placeholder ordering behaves the same way. Measured on an English build: `file=244px submit=101px reset=49px date=132px` — French labels ("Parcourir…", "Envoyer") render to different widths.
+
+- **`parsererror` text direction** and **`xsl:sort` collation**, derived from the app locale. Direction only leaks for RTL locales (`ar`, `fa`, `he`); it carries no signal between two LTR languages.
+
+- **`speechSynthesis.getVoices()`**, which exposes installed OS voices and their language codes — an operating-system signal rather than a browser one, and equally out of reach.
+
+### Two preferences, and only one of them is a real tell
+
+These surfaces are not equally incriminating, because they read different Firefox preferences. Verified by setting `intl.accept_languages` to `de-DE, de` on an English-UI Firefox with the extension disabled — `navigator.languages` reported `["de-DE", "de"]`:
+
+| driven by `intl.accept_languages`            | driven by the UI/app locale (language pack)                   |
+| -------------------------------------------- | ------------------------------------------------------------- |
+| `navigator.language` / `navigator.languages` | `input.validationMessage`                                     |
+| the `Accept-Language` header                 | XML / XSLT parser errors, pretty-print banner                 |
+| **SVG `systemLanguage`**                     | `MediaDocument` titles, `ReportingObserver` bodies            |
+|                                              | `parsererror` direction, `xsl:sort` collation, control labels |
+
+The right-hand column is **weak evidence**. Those strings disagreeing with the reported language is a configuration a real user can produce — an English Firefox whose page-language preference is German does exactly that, with no extension involved. So the l10n mismatch looks worse than it is.
+
+The left-hand column is the actual problem. All of it reads one preference, so those surfaces must agree on an untampered browser. GeoSpoof can change the first two (script and header) but not `systemLanguage`, which is resolved during layout. That mismatch cannot occur naturally, so it is a reliable tampering signal rather than a language signal.
+
+**The fix is available to the user, and it is not a language pack.** Setting Firefox's page-language preference (Settings → General → Language → "Choose your preferred language for displaying pages") to match the Reported Language aligns `systemLanguage` and removes the only hard tell. A language pack would only repaint the right-hand column, which was never the strong signal. Users should be told the former; nothing requires the latter.
 
 Aligning `navigator.language` with `Accept-Language` is what avoids the _self-contradiction_ that would be worse than not spoofing (see `docs/API.md`). It does not, and cannot, make the browser itself appear to be a different localization. A fingerprinter that cross-references the JS-reported language against these engine-level surfaces will see the mismatch.
 
