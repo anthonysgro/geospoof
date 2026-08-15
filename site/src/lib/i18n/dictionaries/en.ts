@@ -923,6 +923,81 @@ export const en = {
       ],
     },
   },
+  activate: {
+    meta: {
+      title: "Activate GeoSpoof in Safari",
+      description:
+        "Turn on the GeoSpoof Safari extension and confirm the location Safari reports.",
+    },
+    preparing: "Preparing Safari setup",
+    waiting: {
+      eyebrow: "Safari setup",
+      heading: "Turn on GeoSpoof in Safari",
+      body: "Safari keeps extensions off until you approve them. This enables browser location spoofing in Safari—it does not change your iPhone's GPS or IP address.",
+      status: "Waiting for GeoSpoof on this page…",
+      inSafari: "In Safari",
+      steps: [
+        {
+          title: "Open the Page Menu",
+          body: "Tap the Page Menu button beside Safari's address bar.",
+        },
+        {
+          title: "Choose Manage Extensions",
+          body: "Find GeoSpoof in the list and turn it on.",
+        },
+        {
+          title: "Allow website access",
+          body: "Allow GeoSpoof on this website. Safari may ask you to refresh.",
+        },
+      ],
+      retry: "I turned it on — check again",
+    },
+    troubleshooting: {
+      summary: "GeoSpoof not appearing?",
+      items: [
+        "Confirm GeoSpoof is listed and switched on.",
+        "If you use Safari Profiles, make sure GeoSpoof is enabled for the profile you're using.",
+        "Screen Time, parental controls, or device management can prevent Safari extensions from being enabled.",
+      ],
+      support: "Get help from GeoSpoof",
+    },
+    checking: {
+      eyebrow: "Safari setup",
+      heading: "Confirming your location",
+      status: "Reading what Safari reports…",
+      unavailable: "Unavailable",
+    },
+    error: {
+      eyebrow: "GeoSpoof is on",
+      heading: "Safari didn't return a location yet",
+      body: "Make sure location spoofing is on in GeoSpoof, then try the check again.",
+      retry: "Check location again",
+      support: "Get help",
+    },
+    success: {
+      status: "Safari is ready",
+      heading: "GeoSpoof is working in Safari",
+      body: "Websites in Safari now receive your GeoSpoof location. Your iPhone GPS and IP address are separate and have not changed.",
+      locationLabel: "Location reported by Safari",
+      timezoneLabel: "Reported time zone",
+      returnToApp: "Return to GeoSpoof",
+      fullVerification: "Run full verification",
+      fullVerificationNote:
+        "Full verification also compares your browser location with your IP location.",
+    },
+    wrongBrowser: {
+      eyebrow: "Safari required",
+      heading: "Open this page in Safari",
+      body: "GeoSpoof's iPhone extension runs in Safari, so this setup step has to be completed there.",
+      copyInstruction: "Copy this address, then paste it into Safari:",
+      copied: "Address copied",
+      copy: "Copy activation address",
+      copyError:
+        "Copying isn't available in this browser. Press and hold the address above to copy it.",
+      iosTip:
+        "Tip: you can also use this browser's Share menu, copy the link, and paste it into Safari.",
+    },
+  },
   verify: {
     meta: {
       title:

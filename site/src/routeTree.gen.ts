@@ -22,6 +22,7 @@ import { Route as Char123LocaleChar125PrivacyRouteImport } from './routes/{-$loc
 import { Route as Char123LocaleChar125GpsRouteImport } from './routes/{-$locale}.gps'
 import { Route as Char123LocaleChar125FeedbackRouteImport } from './routes/{-$locale}.feedback'
 import { Route as Char123LocaleChar125EngineLevelSpoofingRouteImport } from './routes/{-$locale}.engine-level-spoofing'
+import { Route as Char123LocaleChar125ActivateRouteImport } from './routes/{-$locale}.activate'
 import { Route as Char123LocaleChar125AboutRouteImport } from './routes/{-$locale}.about'
 import { Route as Char123LocaleChar125SpoofLocationIndexRouteImport } from './routes/{-$locale}.spoof-location.index'
 import { Route as Char123LocaleChar125BlogIndexRouteImport } from './routes/{-$locale}.blog.index'
@@ -104,6 +105,12 @@ const Char123LocaleChar125EngineLevelSpoofingRoute =
     path: '/engine-level-spoofing',
     getParentRoute: () => Char123LocaleChar125Route,
   } as any)
+const Char123LocaleChar125ActivateRoute =
+  Char123LocaleChar125ActivateRouteImport.update({
+    id: '/activate',
+    path: '/activate',
+    getParentRoute: () => Char123LocaleChar125Route,
+  } as any)
 const Char123LocaleChar125AboutRoute =
   Char123LocaleChar125AboutRouteImport.update({
     id: '/about',
@@ -157,6 +164,7 @@ export interface FileRoutesByFullPath {
   '/test': typeof TestRoute
   '/{-$locale}': typeof Char123LocaleChar125RouteWithChildren
   '/{-$locale}/about': typeof Char123LocaleChar125AboutRoute
+  '/{-$locale}/activate': typeof Char123LocaleChar125ActivateRoute
   '/{-$locale}/engine-level-spoofing': typeof Char123LocaleChar125EngineLevelSpoofingRoute
   '/{-$locale}/feedback': typeof Char123LocaleChar125FeedbackRoute
   '/{-$locale}/gps': typeof Char123LocaleChar125GpsRoute
@@ -179,6 +187,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/test': typeof TestRoute
   '/{-$locale}/about': typeof Char123LocaleChar125AboutRoute
+  '/{-$locale}/activate': typeof Char123LocaleChar125ActivateRoute
   '/{-$locale}/engine-level-spoofing': typeof Char123LocaleChar125EngineLevelSpoofingRoute
   '/{-$locale}/feedback': typeof Char123LocaleChar125FeedbackRoute
   '/{-$locale}/gps': typeof Char123LocaleChar125GpsRoute
@@ -203,6 +212,7 @@ export interface FileRoutesById {
   '/test': typeof TestRoute
   '/{-$locale}': typeof Char123LocaleChar125RouteWithChildren
   '/{-$locale}/about': typeof Char123LocaleChar125AboutRoute
+  '/{-$locale}/activate': typeof Char123LocaleChar125ActivateRoute
   '/{-$locale}/engine-level-spoofing': typeof Char123LocaleChar125EngineLevelSpoofingRoute
   '/{-$locale}/feedback': typeof Char123LocaleChar125FeedbackRoute
   '/{-$locale}/gps': typeof Char123LocaleChar125GpsRoute
@@ -228,6 +238,7 @@ export interface FileRouteTypes {
     | '/test'
     | '/{-$locale}'
     | '/{-$locale}/about'
+    | '/{-$locale}/activate'
     | '/{-$locale}/engine-level-spoofing'
     | '/{-$locale}/feedback'
     | '/{-$locale}/gps'
@@ -250,6 +261,7 @@ export interface FileRouteTypes {
   to:
     | '/test'
     | '/{-$locale}/about'
+    | '/{-$locale}/activate'
     | '/{-$locale}/engine-level-spoofing'
     | '/{-$locale}/feedback'
     | '/{-$locale}/gps'
@@ -273,6 +285,7 @@ export interface FileRouteTypes {
     | '/test'
     | '/{-$locale}'
     | '/{-$locale}/about'
+    | '/{-$locale}/activate'
     | '/{-$locale}/engine-level-spoofing'
     | '/{-$locale}/feedback'
     | '/{-$locale}/gps'
@@ -391,6 +404,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char123LocaleChar125EngineLevelSpoofingRouteImport
       parentRoute: typeof Char123LocaleChar125Route
     }
+    '/{-$locale}/activate': {
+      id: '/{-$locale}/activate'
+      path: '/activate'
+      fullPath: '/{-$locale}/activate'
+      preLoaderRoute: typeof Char123LocaleChar125ActivateRouteImport
+      parentRoute: typeof Char123LocaleChar125Route
+    }
     '/{-$locale}/about': {
       id: '/{-$locale}/about'
       path: '/about'
@@ -452,6 +472,7 @@ declare module '@tanstack/react-router' {
 
 interface Char123LocaleChar125RouteChildren {
   Char123LocaleChar125AboutRoute: typeof Char123LocaleChar125AboutRoute
+  Char123LocaleChar125ActivateRoute: typeof Char123LocaleChar125ActivateRoute
   Char123LocaleChar125EngineLevelSpoofingRoute: typeof Char123LocaleChar125EngineLevelSpoofingRoute
   Char123LocaleChar125FeedbackRoute: typeof Char123LocaleChar125FeedbackRoute
   Char123LocaleChar125GpsRoute: typeof Char123LocaleChar125GpsRoute
@@ -474,6 +495,7 @@ interface Char123LocaleChar125RouteChildren {
 
 const Char123LocaleChar125RouteChildren: Char123LocaleChar125RouteChildren = {
   Char123LocaleChar125AboutRoute: Char123LocaleChar125AboutRoute,
+  Char123LocaleChar125ActivateRoute: Char123LocaleChar125ActivateRoute,
   Char123LocaleChar125EngineLevelSpoofingRoute:
     Char123LocaleChar125EngineLevelSpoofingRoute,
   Char123LocaleChar125FeedbackRoute: Char123LocaleChar125FeedbackRoute,

@@ -920,6 +920,81 @@ export const id: Dictionary = {
       ],
     },
   },
+  activate: {
+    meta: {
+      title: "Aktifkan GeoSpoof di Safari",
+      description:
+        "Aktifkan ekstensi GeoSpoof di Safari dan konfirmasikan lokasi yang dilaporkan Safari.",
+    },
+    preparing: "Menyiapkan pengaturan Safari",
+    waiting: {
+      eyebrow: "Pengaturan Safari",
+      heading: "Aktifkan GeoSpoof di Safari",
+      body: "Safari menonaktifkan ekstensi sampai Anda menyetujuinya. Langkah ini mengaktifkan simulasi lokasi browser di Safari—GPS iPhone dan alamat IP Anda tidak berubah.",
+      status: "Menunggu GeoSpoof di halaman ini…",
+      inSafari: "Di Safari",
+      steps: [
+        {
+          title: "Buka Menu Halaman",
+          body: "Ketuk tombol Menu Halaman di samping bilah alamat Safari.",
+        },
+        {
+          title: "Pilih Kelola Ekstensi",
+          body: "Temukan GeoSpoof dalam daftar lalu aktifkan.",
+        },
+        {
+          title: "Izinkan akses situs web",
+          body: "Izinkan GeoSpoof mengakses situs web ini. Safari mungkin meminta Anda memuat ulang halaman.",
+        },
+      ],
+      retry: "Sudah saya aktifkan — periksa lagi",
+    },
+    troubleshooting: {
+      summary: "GeoSpoof tidak muncul?",
+      items: [
+        "Pastikan GeoSpoof tercantum dan sudah diaktifkan.",
+        "Jika Anda menggunakan Profil Safari, pastikan GeoSpoof aktif untuk profil yang sedang digunakan.",
+        "Durasi Layar, kontrol orang tua, atau pengelolaan perangkat dapat mencegah ekstensi Safari diaktifkan.",
+      ],
+      support: "Dapatkan bantuan dari GeoSpoof",
+    },
+    checking: {
+      eyebrow: "Pengaturan Safari",
+      heading: "Mengonfirmasi lokasi Anda",
+      status: "Membaca lokasi yang dilaporkan Safari…",
+      unavailable: "Tidak tersedia",
+    },
+    error: {
+      eyebrow: "GeoSpoof aktif",
+      heading: "Safari belum memberikan lokasi",
+      body: "Pastikan simulasi lokasi aktif di GeoSpoof, lalu coba periksa lagi.",
+      retry: "Periksa lokasi lagi",
+      support: "Dapatkan bantuan",
+    },
+    success: {
+      status: "Safari siap",
+      heading: "GeoSpoof berfungsi di Safari",
+      body: "Situs web di Safari sekarang menerima lokasi GeoSpoof Anda. GPS iPhone dan alamat IP Anda merupakan hal terpisah dan tidak berubah.",
+      locationLabel: "Lokasi yang dilaporkan Safari",
+      timezoneLabel: "Zona waktu yang dilaporkan",
+      returnToApp: "Kembali ke GeoSpoof",
+      fullVerification: "Jalankan verifikasi lengkap",
+      fullVerificationNote:
+        "Verifikasi lengkap juga membandingkan lokasi browser dengan lokasi alamat IP Anda.",
+    },
+    wrongBrowser: {
+      eyebrow: "Safari diperlukan",
+      heading: "Buka halaman ini di Safari",
+      body: "Ekstensi iPhone GeoSpoof berjalan di Safari, jadi langkah pengaturan ini harus diselesaikan di sana.",
+      copyInstruction: "Salin alamat ini, lalu tempelkan di Safari:",
+      copied: "Alamat disalin",
+      copy: "Salin alamat aktivasi",
+      copyError:
+        "Fitur salin tidak tersedia di browser ini. Tekan dan tahan alamat di atas untuk menyalinnya.",
+      iosTip:
+        "Tips: Anda juga dapat menggunakan menu Bagikan di browser ini, menyalin tautan, lalu menempelkannya di Safari.",
+    },
+  },
   verify: {
     meta: {
       title:

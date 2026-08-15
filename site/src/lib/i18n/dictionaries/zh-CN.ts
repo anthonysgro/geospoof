@@ -897,6 +897,79 @@ export const zhCN: Dictionary = {
       ],
     },
   },
+  activate: {
+    meta: {
+      title: "在 Safari 中启用 GeoSpoof",
+      description: "在 Safari 中启用 GeoSpoof 扩展，并确认 Safari 报告的位置。",
+    },
+    preparing: "正在准备 Safari 设置",
+    waiting: {
+      eyebrow: "Safari 设置",
+      heading: "在 Safari 中启用 GeoSpoof",
+      body: "Safari 会将扩展保持关闭，直到你明确允许。此操作会在 Safari 中启用浏览器位置模拟，但不会更改 iPhone 的 GPS 或 IP 地址。",
+      status: "正在等待此页面上的 GeoSpoof…",
+      inSafari: "在 Safari 中",
+      steps: [
+        {
+          title: "打开页面菜单",
+          body: "轻点 Safari 地址栏旁边的页面菜单按钮。",
+        },
+        {
+          title: "选择“管理扩展”",
+          body: "在列表中找到 GeoSpoof 并将其打开。",
+        },
+        {
+          title: "允许访问网站",
+          body: "允许 GeoSpoof 访问此网站。Safari 可能会要求你刷新页面。",
+        },
+      ],
+      retry: "我已打开 — 再次检查",
+    },
+    troubleshooting: {
+      summary: "没有看到 GeoSpoof？",
+      items: [
+        "确认 GeoSpoof 已列出并处于打开状态。",
+        "如果你使用 Safari 浏览器描述文件，请确认当前描述文件已启用 GeoSpoof。",
+        "屏幕使用时间、家长控制或设备管理可能会阻止启用 Safari 扩展。",
+      ],
+      support: "获取 GeoSpoof 帮助",
+    },
+    checking: {
+      eyebrow: "Safari 设置",
+      heading: "正在确认你的位置",
+      status: "正在读取 Safari 报告的信息…",
+      unavailable: "不可用",
+    },
+    error: {
+      eyebrow: "GeoSpoof 已打开",
+      heading: "Safari 尚未返回位置",
+      body: "请确认 GeoSpoof 中的位置模拟已打开，然后再次检查。",
+      retry: "再次检查位置",
+      support: "获取帮助",
+    },
+    success: {
+      status: "Safari 已准备就绪",
+      heading: "GeoSpoof 已在 Safari 中生效",
+      body: "Safari 中的网站现在会收到你的 GeoSpoof 位置。iPhone GPS 和 IP 地址是相互独立的信息，均未发生更改。",
+      locationLabel: "Safari 报告的位置",
+      timezoneLabel: "报告的时区",
+      returnToApp: "返回 GeoSpoof",
+      fullVerification: "运行完整验证",
+      fullVerificationNote:
+        "完整验证还会将浏览器位置与你的 IP 地址位置进行比较。",
+    },
+    wrongBrowser: {
+      eyebrow: "需要使用 Safari",
+      heading: "请在 Safari 中打开此页面",
+      body: "GeoSpoof 的 iPhone 扩展在 Safari 中运行，因此必须在 Safari 中完成此设置步骤。",
+      copyInstruction: "复制此地址，然后粘贴到 Safari 中：",
+      copied: "地址已复制",
+      copy: "复制激活地址",
+      copyError: "此浏览器不支持复制。请长按上方地址进行复制。",
+      iosTip:
+        "提示：你也可以使用此浏览器的共享菜单复制链接，然后将其粘贴到 Safari 中。",
+    },
+  },
   verify: {
     meta: {
       title: "浏览器位置测试 — 看看网站对你了解多少 | GeoSpoof",

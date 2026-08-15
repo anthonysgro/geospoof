@@ -912,6 +912,81 @@ export const ja: Dictionary = {
       ],
     },
   },
+  activate: {
+    meta: {
+      title: "SafariでGeoSpoofを有効にする",
+      description:
+        "SafariでGeoSpoof拡張機能を有効にし、Safariが報告する位置情報を確認します。",
+    },
+    preparing: "Safariの設定を準備しています",
+    waiting: {
+      eyebrow: "Safariの設定",
+      heading: "SafariでGeoSpoofを有効にする",
+      body: "Safari拡張機能は、許可するまでオフになっています。この設定によりSafari内のブラウザ位置情報シミュレーションが有効になります。iPhoneのGPSやIPアドレスは変更されません。",
+      status: "このページでGeoSpoofを待機しています…",
+      inSafari: "Safariでの操作",
+      steps: [
+        {
+          title: "ページメニューを開く",
+          body: "Safariのアドレスバーの横にあるページメニューボタンをタップします。",
+        },
+        {
+          title: "「機能拡張を管理」を選ぶ",
+          body: "一覧からGeoSpoofを見つけてオンにします。",
+        },
+        {
+          title: "Webサイトへのアクセスを許可する",
+          body: "このWebサイトでGeoSpoofを許可します。Safariから再読み込みを求められる場合があります。",
+        },
+      ],
+      retry: "オンにしました — もう一度確認",
+    },
+    troubleshooting: {
+      summary: "GeoSpoofが表示されませんか？",
+      items: [
+        "GeoSpoofが一覧に表示され、オンになっていることを確認してください。",
+        "Safariプロファイルを使用している場合は、現在のプロファイルでGeoSpoofが有効になっていることを確認してください。",
+        "スクリーンタイム、ペアレンタルコントロール、またはデバイス管理により、Safari拡張機能を有効にできない場合があります。",
+      ],
+      support: "GeoSpoofのサポートを利用する",
+    },
+    checking: {
+      eyebrow: "Safariの設定",
+      heading: "位置情報を確認しています",
+      status: "Safariが報告する情報を読み取っています…",
+      unavailable: "利用できません",
+    },
+    error: {
+      eyebrow: "GeoSpoofはオンです",
+      heading: "Safariから位置情報がまだ返されていません",
+      body: "GeoSpoofで位置情報シミュレーションがオンになっていることを確認して、もう一度お試しください。",
+      retry: "位置情報をもう一度確認",
+      support: "サポートを利用する",
+    },
+    success: {
+      status: "Safariの準備ができました",
+      heading: "SafariでGeoSpoofが動作しています",
+      body: "SafariのWebサイトにはGeoSpoofの位置情報が送られています。iPhoneのGPSとIPアドレスは別の情報であり、変更されていません。",
+      locationLabel: "Safariが報告する位置情報",
+      timezoneLabel: "報告されるタイムゾーン",
+      returnToApp: "GeoSpoofに戻る",
+      fullVerification: "完全な検証を実行",
+      fullVerificationNote:
+        "完全な検証では、ブラウザの位置情報とIPアドレスの位置も比較します。",
+    },
+    wrongBrowser: {
+      eyebrow: "Safariが必要です",
+      heading: "このページをSafariで開いてください",
+      body: "GeoSpoofのiPhone拡張機能はSafariで動作するため、この設定はSafariで完了する必要があります。",
+      copyInstruction: "このアドレスをコピーしてSafariに貼り付けてください：",
+      copied: "アドレスをコピーしました",
+      copy: "有効化用アドレスをコピー",
+      copyError:
+        "このブラウザではコピーできません。上のアドレスを長押ししてコピーしてください。",
+      iosTip:
+        "ヒント：このブラウザの共有メニューからリンクをコピーし、Safariに貼り付けることもできます。",
+    },
+  },
   verify: {
     meta: {
       title:

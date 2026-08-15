@@ -928,6 +928,81 @@ export const es: Dictionary = {
       ],
     },
   },
+  activate: {
+    meta: {
+      title: "Activar GeoSpoof en Safari",
+      description:
+        "Activa la extensión GeoSpoof en Safari y confirma la ubicación que comunica Safari.",
+    },
+    preparing: "Preparando la configuración de Safari",
+    waiting: {
+      eyebrow: "Configuración de Safari",
+      heading: "Activa GeoSpoof en Safari",
+      body: "Safari mantiene las extensiones desactivadas hasta que las apruebas. Esto activa la simulación de ubicación del navegador en Safari; no cambia el GPS ni la dirección IP de tu iPhone.",
+      status: "Esperando a GeoSpoof en esta página…",
+      inSafari: "En Safari",
+      steps: [
+        {
+          title: "Abre el menú de la página",
+          body: "Toca el botón del menú de la página junto a la barra de direcciones de Safari.",
+        },
+        {
+          title: "Selecciona Gestionar extensiones",
+          body: "Busca GeoSpoof en la lista y actívalo.",
+        },
+        {
+          title: "Permite el acceso al sitio web",
+          body: "Permite que GeoSpoof acceda a este sitio web. Es posible que Safari te pida recargar la página.",
+        },
+      ],
+      retry: "Ya lo activé — volver a comprobar",
+    },
+    troubleshooting: {
+      summary: "¿No aparece GeoSpoof?",
+      items: [
+        "Comprueba que GeoSpoof aparezca en la lista y esté activado.",
+        "Si usas perfiles de Safari, asegúrate de que GeoSpoof esté activado en el perfil actual.",
+        "El Tiempo de uso, los controles parentales o la gestión del dispositivo pueden impedir que se activen extensiones de Safari.",
+      ],
+      support: "Obtener ayuda de GeoSpoof",
+    },
+    checking: {
+      eyebrow: "Configuración de Safari",
+      heading: "Confirmando tu ubicación",
+      status: "Leyendo lo que comunica Safari…",
+      unavailable: "No disponible",
+    },
+    error: {
+      eyebrow: "GeoSpoof está activado",
+      heading: "Safari aún no ha devuelto una ubicación",
+      body: "Asegúrate de que la simulación de ubicación esté activada en GeoSpoof y vuelve a intentarlo.",
+      retry: "Comprobar de nuevo la ubicación",
+      support: "Obtener ayuda",
+    },
+    success: {
+      status: "Safari está listo",
+      heading: "GeoSpoof funciona en Safari",
+      body: "Los sitios web de Safari reciben ahora tu ubicación de GeoSpoof. El GPS de tu iPhone y tu dirección IP son independientes y no han cambiado.",
+      locationLabel: "Ubicación comunicada por Safari",
+      timezoneLabel: "Zona horaria comunicada",
+      returnToApp: "Volver a GeoSpoof",
+      fullVerification: "Ejecutar la verificación completa",
+      fullVerificationNote:
+        "La verificación completa también compara la ubicación de tu navegador con la de tu dirección IP.",
+    },
+    wrongBrowser: {
+      eyebrow: "Safari es necesario",
+      heading: "Abre esta página en Safari",
+      body: "La extensión para iPhone de GeoSpoof funciona en Safari, por lo que este paso de configuración debe completarse allí.",
+      copyInstruction: "Copia esta dirección y pégala en Safari:",
+      copied: "Dirección copiada",
+      copy: "Copiar dirección de activación",
+      copyError:
+        "Este navegador no permite copiar. Mantén pulsada la dirección de arriba para copiarla.",
+      iosTip:
+        "Consejo: también puedes usar el menú Compartir de este navegador, copiar el enlace y pegarlo en Safari.",
+    },
+  },
   verify: {
     meta: {
       title:
