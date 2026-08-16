@@ -289,7 +289,7 @@ export const de: Dictionary = {
       na: "N/V — Nicht zutreffend",
     },
     footnote:
-      "Firefox für Android erfordert Firefox 140+. Safari erfordert iOS 16+ oder macOS 13+.",
+      "Firefox für Android erfordert Firefox 140+. Safari erfordert iOS 18+ oder macOS 13+.",
     setupLead:
       "Browserspezifische Einrichtungsanleitungen: fälsche deinen Standort in ",
     or: " oder ",

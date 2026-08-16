@@ -286,7 +286,7 @@ export const id: Dictionary = {
       na: "T/B — Tidak berlaku",
     },
     footnote:
-      "Firefox untuk Android memerlukan Firefox 140+. Safari memerlukan iOS 16+ atau macOS 13+.",
+      "Firefox untuk Android memerlukan Firefox 140+. Safari memerlukan iOS 18+ atau macOS 13+.",
     setupLead: "Panduan penyiapan khusus browser: palsukan lokasi Anda di ",
     or: ", atau ",
     alsoLead: ". Anda juga dapat ",

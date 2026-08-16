@@ -294,7 +294,7 @@ export const en = {
       na: "N/A — Not applicable",
     },
     footnote:
-      "Firefox for Android requires Firefox 140+. Safari requires iOS 16+ or macOS 13+.",
+      "Firefox for Android requires Firefox 140+. Safari requires iOS 18+ or macOS 13+.",
     setupLead: "Browser-specific setup guides: spoof your location in ",
     or: ", or ",
     alsoLead: ". You can also ",

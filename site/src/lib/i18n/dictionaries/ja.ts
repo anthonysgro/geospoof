@@ -286,7 +286,7 @@ export const ja: Dictionary = {
       na: "N/A — 該当なし",
     },
     footnote:
-      "Firefox for Android には Firefox 140 以降が必要です。Safari には iOS 16 以降または macOS 13 以降が必要です。",
+      "Firefox for Android には Firefox 140 以降が必要です。Safari には iOS 18 以降または macOS 13 以降が必要です。",
     setupLead: "ブラウザ別の設定ガイド：位置情報を偽装するには ",
     or: " または ",
     alsoLead: "。さらに、",

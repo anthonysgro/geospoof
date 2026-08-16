@@ -300,7 +300,7 @@ export const ru: Dictionary = {
       na: "N/A — неприменимо",
     },
     footnote:
-      "Firefox для Android требует Firefox 140+. Safari требует iOS 16+ или macOS 13+.",
+      "Firefox для Android требует Firefox 140+. Safari требует iOS 18+ или macOS 13+.",
     setupLead: "Руководства по браузерам — измените геолокацию в ",
     or: " или ",
     alsoLead: ". А ещё можно ",

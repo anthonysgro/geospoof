@@ -1,10 +1,11 @@
 /**
  * The deliberately small public contract between geospoof.com/activate and
  * the GeoSpoof browser extension. The activation page only needs proof that
- * its own content script is present; location is read through the browser's
- * Geolocation API so no extension settings or identifiers cross the boundary.
+ * its MAIN-world spoofing engine is installed, configured, and active; location
+ * is read through the browser's Geolocation API so no extension settings or
+ * identifiers cross the boundary.
  */
-export const ACTIVATION_PROTOCOL_VERSION = 1 as const
+export const ACTIVATION_PROTOCOL_VERSION = 2 as const
 export const ACTIVATION_PAGE_SOURCE = "com.geospoof.activation-page" as const
 export const ACTIVATION_EXTENSION_SOURCE =
   "com.moonloaf.geospoof.extension" as const

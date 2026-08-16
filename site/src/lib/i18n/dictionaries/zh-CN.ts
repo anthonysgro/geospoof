@@ -292,7 +292,7 @@ export const zhCN: Dictionary = {
       na: "N/A — 不适用",
     },
     footnote:
-      "Firefox for Android 需要 Firefox 140+。Safari 需要 iOS 16+ 或 macOS 13+。",
+      "Firefox for Android 需要 Firefox 140+。Safari 需要 iOS 18+ 或 macOS 13+。",
     setupLead: "各浏览器设置指南：在 ",
     or: " 或 ",
     alsoLead: " 中伪造你的位置。你还可以",

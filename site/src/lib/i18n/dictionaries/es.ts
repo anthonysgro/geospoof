@@ -291,7 +291,7 @@ export const es: Dictionary = {
       na: "N/D — No aplicable",
     },
     footnote:
-      "Firefox para Android requiere Firefox 140+. Safari requiere iOS 16+ o macOS 13+.",
+      "Firefox para Android requiere Firefox 140+. Safari requiere iOS 18+ o macOS 13+.",
     setupLead: "Guías de configuración por navegador: falsea tu ubicación en ",
     or: " o ",
     alsoLead: ". También puedes ",

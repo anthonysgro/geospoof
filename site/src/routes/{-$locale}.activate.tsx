@@ -3,9 +3,12 @@ import * as React from "react"
 import {
   Check,
   ChevronDown,
+  ChevronRight,
   Copy,
   ExternalLink,
   LoaderCircle,
+  Menu,
+  Puzzle,
   RefreshCw,
 } from "lucide-react"
 
@@ -338,7 +341,9 @@ function WaitingState({
         </span>
       </div>
 
-      <div className="mt-8">
+      <SafariSetupVisual manageExtensionsLabel={waiting.steps[1].title} />
+
+      <div className="mt-7">
         <h2 className="text-sm font-bold text-(--color-canvas-foreground)">
           {waiting.inSafari}
         </h2>
@@ -368,6 +373,67 @@ function WaitingState({
         <Troubleshooting copy={copy} locale={locale} />
       ) : null}
     </section>
+  )
+}
+
+/**
+ * A compact, version-resilient Safari cue rather than a screenshot tied to one
+ * iOS release. It preserves the two visual anchors Apple documents—the Page
+ * Menu at the left of the address field and the Manage Extensions sheet—while
+ * the localized numbered instructions below carry the exact wording.
+ */
+function SafariSetupVisual({
+  manageExtensionsLabel,
+}: {
+  manageExtensionsLabel: string
+}) {
+  return (
+    <div
+      className="mt-7 overflow-hidden rounded-[1.4rem] border border-(--color-canvas-border) bg-(--color-canvas-border)/20 p-4"
+      aria-hidden="true"
+    >
+      <div className="mx-auto max-w-sm">
+        <div className="overflow-hidden rounded-[1.1rem] border border-(--color-canvas-border) bg-(--color-canvas) shadow-sm">
+          <div className="flex items-center gap-3 px-4 py-3.5">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-(--color-brand)/12 text-(--color-brand)">
+              <Puzzle className="size-4" />
+            </span>
+            <span className="min-w-0 flex-1 truncate text-sm font-semibold text-(--color-canvas-foreground)">
+              {manageExtensionsLabel}
+            </span>
+            <ChevronRight className="size-4 shrink-0 text-(--color-canvas-muted)" />
+          </div>
+
+          <div className="flex items-center gap-3 border-t border-(--color-canvas-border) px-4 py-3.5">
+            <img
+              src={navLogo}
+              alt=""
+              width={28}
+              height={28}
+              className="size-7"
+            />
+            <span className="flex-1 text-sm font-bold text-(--color-canvas-foreground)">
+              GeoSpoof
+            </span>
+            <span className="flex h-7 w-12 items-center justify-end rounded-full bg-(--color-brand) p-0.5 shadow-inner">
+              <span className="size-6 rounded-full bg-white shadow-sm" />
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-3 flex items-center gap-2.5 rounded-[1.1rem] border border-(--color-canvas-border) bg-(--color-canvas) p-2 shadow-sm">
+          <span className="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-(--color-brand)/12 text-(--color-brand) ring-2 ring-(--color-brand)/35">
+            <Menu className="size-5" />
+            <span className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-(--color-brand) text-[0.65rem] font-bold text-white shadow-sm">
+              1
+            </span>
+          </span>
+          <span className="flex h-10 min-w-0 flex-1 items-center justify-center rounded-xl bg-(--color-canvas-border)/45 px-3 text-xs font-semibold text-(--color-canvas-muted)">
+            geospoof.com
+          </span>
+        </div>
+      </div>
+    </div>
   )
 }
 

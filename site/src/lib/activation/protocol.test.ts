@@ -14,7 +14,7 @@ describe("activation protocol", () => {
     expect(makeActivationPing("request-123")).toEqual({
       source: "com.geospoof.activation-page",
       type: "GEOSPOOF_ACTIVATION_PING",
-      protocolVersion: 1,
+      protocolVersion: 2,
       nonce: "request-123",
     })
   })
@@ -29,6 +29,12 @@ describe("activation protocol", () => {
 
     expect(isActivationReadyMessage(message, "request-123")).toBe(true)
     expect(isActivationReadyMessage(message, "different-request")).toBe(false)
+    expect(
+      isActivationReadyMessage(
+        { ...message, protocolVersion: 1 },
+        "request-123"
+      )
+    ).toBe(false)
     expect(
       isActivationReadyMessage(
         { ...message, source: "another-extension" },
