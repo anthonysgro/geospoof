@@ -31,7 +31,6 @@ import { installProxyWatcher } from "./proxy-watcher";
 import { installActivityWatcher } from "./activity-watcher";
 import { adoptPendingSettingsFromApp } from "./app-bridge";
 import { removeLegacyMainWorldRegistration } from "./legacy-main-world-cleanup";
-import { installBgLogRelay } from "./log-relay";
 import { updateBootstrapRegistration } from "./bootstrap-register";
 import { installDebuggerWatchers, syncDebuggerSpoofing, ensureTabSpoofed } from "./debugger-spoof";
 import {
@@ -245,10 +244,6 @@ async function initialize(): Promise<void> {
   if (__FIREFOX__) {
     await updateBootstrapRegistration(settings);
   }
-
-  // TEMPORARY (debugging): relay background logs to the page console so they're
-  // capturable on Safari iOS, where the background inspector target is flaky.
-  installBgLogRelay();
 
   // Prime the worker-request-filter cache and install the listener
   // on engines that support webRequest.filterResponseData (Firefox
@@ -539,7 +534,7 @@ browser.runtime.onMessage.addListener((message: Message, sender: Runtime.Message
 
 browser.runtime.onInstalled.addListener((details: Runtime.OnInstalledDetailsType) => {
   if (details.reason === "install") {
-    console.log("Extension installed - onboarding will be displayed");
+    logger.info("Extension installed - onboarding will be displayed");
   }
   void initialize();
 });
@@ -604,6 +599,18 @@ if (__FIREFOX__ && browser.permissions) {
 
 if (browser.tabs && browser.tabs.onCreated) {
   browser.tabs.onCreated.addListener((tab: Tabs.Tab) => {
+    // Session restore fires onCreated for EVERY restored tab, including the
+    // discarded (unloaded) ones that populate tab groups. Those have no document
+    // and no content script, so the push below cannot be received; bail before
+    // loading settings and building a payload for each of them. A restored tab
+    // configures itself through the manifest content script's own GET_SETTINGS
+    // request, so nothing is missed. Mirrors the filter in
+    // `broadcastSettingsToTabs` — see issue #75. Undefined (engine doesn't
+    // report it) is falsy, so this fails open to the previous behaviour.
+    if (tab.discarded) {
+      return;
+    }
+
     void (async () => {
       const settings = await loadSettings();
       const {
@@ -677,7 +684,10 @@ if (browser.tabs && browser.tabs.onCreated) {
               payload: scopedPayload,
             });
           } catch (error) {
-            console.debug(`Could not send settings to new tab ${tab.id}:`, error);
+            // Expected when the tab navigated, closed, or landed somewhere we
+            // can't inject during the 100ms delay. TRACE keeps this from being
+            // an O(tabs) console dump for every user; see `sendSettingsToTab`.
+            logger.trace(`Could not send settings to new tab ${tab.id}:`, error);
           }
         })();
       }, 100);
@@ -764,7 +774,7 @@ if (browser.tabs && browser.tabs.onUpdated) {
                 delayInMinutes: ALARM_DELAYS[i] / 60000,
               });
             } catch (error) {
-              console.debug(`Failed to create alarm for tab ${tabId} attempt ${i}:`, error);
+              logger.trace(`Failed to create alarm for tab ${tabId} attempt ${i}:`, error);
             }
           }
         })();
