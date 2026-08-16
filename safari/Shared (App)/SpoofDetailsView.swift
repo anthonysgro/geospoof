@@ -310,6 +310,24 @@ struct OnboardingView: View {
     /// places plus a per-page `onAppear`, so every navigation had to remember to
     /// update both or the two would disagree.
     @State private var path: [StepKind] = []
+    /// When the user reached the Safari step. Everything the extension does after
+    /// this instant is evidence about now; everything before it is history that a
+    /// leftover stamp can imitate. See `advanceIfSafariIsActive()`.
+    ///
+    /// Set once per flow rather than on every appearance of the step: it is a
+    /// lower bound on "recently", and re-stamping it on a return from Safari would
+    /// discard the very check-in the user just went and produced.
+    @State private var safariStepEnteredAt: Date?
+    /// Set once the success screen has been reached, and never cleared for the life of
+    /// the flow.
+    ///
+    /// Stops the Safari step from pushing forward a second time. `path.last` can't
+    /// carry this: if the user ever gets back to `.enable` — a pop, or a future change
+    /// to how this screen is presented — the step is by then satisfied, so it would
+    /// re-advance immediately and bounce them, firing the success haptic again on the
+    /// way. Success having already happened is a fact about the flow, not about which
+    /// screen is currently on top of it.
+    @State private var hasReachedSafariReady = false
     #endif
     #if os(macOS)
     /// macOS swaps content in place rather than pushing, so it has no path to
@@ -382,13 +400,13 @@ struct OnboardingView: View {
     private func subtitle(_ kind: StepKind) -> LocalizedStringKey {
         switch kind {
         case .welcome:
-            return "Mask the location and timezone you reveal online with a tap -- and keep your real whereabouts private."
+            return "Mask the location and timezone you reveal online with a tap — and keep your real whereabouts private."
         case .enable:
             return "In Safari, choose Settings > Extensions and turn on GeoSpoof."
         case .permission:
-            return "The first time you browse, Safari asks to allow access. Approving it is what lets GeoSpoof work -- here's what you'll see."
+            return "The first time you browse, Safari asks to allow access. Approving it is what lets GeoSpoof work — here's what you'll see."
         case .gps:
-            return "Want more than Safari? GeoSpoof Pro can set a connected iPhone's real GPS for privacy and app testing, right from this Mac -- no jailbreak. It's optional; browser spoofing is free."
+            return "Want more than Safari? GeoSpoof Pro can set a connected iPhone's real GPS for privacy and app testing, right from this Mac — no jailbreak. It's optional; browser spoofing is free."
         case .done:
             return "Pick a location and GeoSpoof keeps the real one hidden. You can change it anytime."
         }
@@ -423,7 +441,19 @@ struct OnboardingView: View {
         // way back: users routinely switch apps instead of tapping it. The
         // extension's own check-in is an equally authoritative signal that Safari
         // is ready, so treat it as a second entrance to the same screen.
-        .onChange(of: controller.isActiveInSafari) { _ in
+        //
+        // Keyed to the timestamp rather than to `isActiveInSafari`. The bool is
+        // frequently already true on arrival — a leftover stamp from a previous
+        // install, or from Safari loading the extension before the user switched it
+        // off — and a value that is already true never reports a change, so the one
+        // check-in that actually mattered would arrive unobserved. The timestamp
+        // moves on every check-in, which is precisely the event worth waking for.
+        .onChange(of: controller.extensionLastSeen) { _ in
+            advanceIfSafariIsActive()
+        }
+        // The third entrance, and on iOS 26.2+ the one that normally fires first: the
+        // OS reporting that the extension is now switched on.
+        .onChange(of: controller.safariEnablement) { _ in
             advanceIfSafariIsActive()
         }
         #endif
@@ -470,16 +500,34 @@ struct OnboardingView: View {
             OnboardingSafariHandoffView(
                 controller: controller,
                 onOpenSetup: openSafariActivationPage,
-                onSkip: onDone
+                onSkip: onDone,
+                onShowPermissions: { showTrust = true }
             )
             .navigationBarHidden(false)
-            .task { await watchForSafariActivation() }
+            .task {
+                // Take the reference instant before the first poll reads it, so the
+                // immediate check at the top of `watchForSafariActivation()` is
+                // measured against arrival rather than against nothing.
+                if safariStepEnteredAt == nil { safariStepEnteredAt = Date() }
+                await watchForSafariActivation()
+            }
         case .safariReady:
             OnboardingSafariReadyView(
                 controller: controller,
                 onFinish: onDone
             )
             .navigationBarHidden(true)
+            // Terminal by decision rather than by side effect. Hiding the bar already
+            // removes the back button, but that is incidental — it says nothing about
+            // the edge-swipe gesture, whose availability with a hidden bar is not
+            // something to rely on staying put across iOS releases. Stating it here
+            // means the screen keeps behaving the same either way.
+            //
+            // It should be terminal because there is nothing useful behind it: the
+            // step before is either a completed location choice (whose selection state
+            // is fresh again, so it presents a finished task as unfinished) or a Safari
+            // step that is now satisfied and would immediately push forward again.
+            .navigationBarBackButtonHidden(true)
         case .welcome:
             // The welcome is the stack's root, never a pushed destination.
             EmptyView()
@@ -491,11 +539,32 @@ struct OnboardingView: View {
     /// literal next-step names across the call sites.
     private func advance(from kind: StepKind) {
         guard let index = steps.firstIndex(of: kind) else { return }
-        guard let next = steps.dropFirst(index + 1).first else {
+        // Skip anything with nothing left to ask. Previously the Safari step was
+        // pushed unconditionally and then advanced off itself the instant it appeared,
+        // so an already-configured device showed a screen that flashed and vanished —
+        // which reads as a glitch rather than as a step that wasn't needed. Not
+        // arriving at all is the honest version of the same outcome.
+        guard let next = steps.dropFirst(index + 1).first(where: { !isStepSatisfied($0) }) else {
             onDone()
             return
         }
-        path.append(next)
+        // `.safariReady` owns entry conditions and a side effect (it requires a
+        // location and warms the haptic engine), so it is always entered through its
+        // own funnel rather than appended behind its back.
+        if next == .safariReady {
+            showSafariReady()
+        } else {
+            path.append(next)
+        }
+    }
+
+    /// Whether a step can be skipped because there is nothing for the user to do on
+    /// it. Only the Safari step can currently be satisfied ahead of time.
+    private func isStepSatisfied(_ kind: StepKind) -> Bool {
+        switch kind {
+        case .enable: return isSafariStepSatisfied
+        case .welcome, .location, .safariReady: return false
+        }
     }
 
     /// Consume the one-shot route only after OnboardingView exists. This works
@@ -517,20 +586,74 @@ struct OnboardingView: View {
     private func showSafariReady() {
         guard controller.hasLocation else { return }
         guard path.last != .safariReady else { return }
+        // Both entrances funnel through here, which makes this the only place that
+        // knows a success haptic is roughly a push-animation away. The engine is
+        // reliably cold at this point — the app was backgrounded while the user
+        // worked in Safari — and preparing it inside the destination's own `task`
+        // would leave no time for the wake-up. Spending it here means the haptic
+        // lands with the screen instead of after it.
+        Haptics.prepare()
+        hasReachedSafariReady = true
         path.append(.safariReady)
     }
 
-    /// Advance on the extension's own check-in, but only from the handoff screen.
+    /// Advance on the extension's own check-in, but only on evidence produced
+    /// *after* the user arrived at this step.
     ///
-    /// The step guard is load-bearing, not defensive: `isActiveInSafari` is a
-    /// seven-day heartbeat window, so it can already be true when onboarding
-    /// starts — a user who enables the extension in Safari before ever opening
-    /// the app, or the debug replay on a device that's already set up. Without
-    /// the guard those cases would jump straight from the welcome screen to
-    /// "Safari is ready", skipping location selection entirely.
+    /// A check-in stamp is a record of a moment, not of a state, so "the extension
+    /// has checked in" is not the question this screen needs answered — "the
+    /// extension checked in since I asked you to go and enable it" is. Comparing
+    /// against `safariStepEnteredAt` is what makes that difference expressible.
+    ///
+    /// Without it, any stamp still inside the confidence window satisfies the gate,
+    /// and the screen advances on history rather than on anything the user just
+    /// did. That is not hypothetical: reinstalling and then disabling GeoSpoof in
+    /// Safari leaves a fresh stamp behind with the extension switched off, so
+    /// setup would congratulate the user on activating something they had turned
+    /// off moments earlier. Requiring the stamp to beat a reference time taken on
+    /// arrival makes stale evidence structurally unable to satisfy this, rather
+    /// than merely unlikely to.
+    ///
+    /// The step guard stays for the case it was written for: `isActiveInSafari` can
+    /// already be true when onboarding starts, so without it a user who enabled the
+    /// extension before ever opening the app would jump from welcome straight to
+    /// "Safari is ready" and never pick a location.
     private func advanceIfSafariIsActive() {
-        guard current == .enable, controller.isActiveInSafari else { return }
+        guard !hasReachedSafariReady else { return }
+        guard current == .enable, isSafariStepSatisfied else { return }
         showSafariReady()
+    }
+
+    /// Whether the Safari step has nothing left to ask of the user.
+    ///
+    /// One definition, used both to advance off the step and to decide whether to push
+    /// it at all, so the two can never disagree about the same device.
+    ///
+    /// Where the OS can be asked, its answer alone decides this — a verified-on
+    /// extension is finished, with or without a check-in. Requiring a check-in as well
+    /// meant an already-enabled user was sent out to the hosted activation page to
+    /// produce one, which is the same detour the OS query exists to remove, and it
+    /// proved nothing: the check-in comes from the background script, so it cannot
+    /// attest to per-site permission.
+    ///
+    /// Below iOS 26.2 there is no answer to ask for, so the stamp is all there is — and
+    /// there it must postdate arrival at the step, or a leftover stamp from a disabled
+    /// extension would satisfy it.
+    private var isSafariStepSatisfied: Bool {
+        switch controller.safariSetupState {
+        case .verifiedEnabled:
+            // The OS says the extension is on, which is precisely what this step asked
+            // for. Nothing further to verify, and nowhere useful to send the user.
+            return true
+        case .verifiedDisabled:
+            return false
+        case .inferred:
+            // No OS answer, so a stamp only counts as evidence about now if it
+            // postdates arrival at this step.
+            guard let safariStepEnteredAt,
+                  let lastSeen = controller.extensionLastSeen else { return false }
+            return lastSeen > safariStepEnteredAt
+        }
     }
 
     /// Keep checking for the extension's check-in while the handoff screen is on
@@ -551,6 +674,11 @@ struct OnboardingView: View {
             try? await Task.sleep(for: .seconds(2))
             guard !Task.isCancelled else { return }
             controller.refreshFromExtension()
+            // Also re-ask the OS. Foregrounding covers the ordinary return from
+            // Settings, but not iPad multitasking — where GeoSpoof and Settings can
+            // both be on screen, so the app never re-activates and would otherwise sit
+            // on a finished step with nothing left to say.
+            controller.refreshSafariEnablement()
             advanceIfSafariIsActive()
         }
     }
@@ -702,7 +830,7 @@ struct OnboardingView: View {
     }
 
     private func openSystemSettings() {
-        SFSafariApplication.showPreferencesForExtension(withIdentifier: "com.moonloaf.geospoof.Extension")
+        SFSafariApplication.showPreferencesForExtension(withIdentifier: AppGroup.extensionBundleIdentifier)
     }
     #endif
 
@@ -737,6 +865,62 @@ struct OnboardingView: View {
 #if os(iOS)
 /// A one-time, branded welcome after iOS hands control to the app. It renders in
 /// its finished state immediately: the system launch screen remains neutral,
+/// Shared measures for the onboarding screens.
+///
+/// iPad is why these exist. Every screen here reads correctly on an iPhone, where
+/// `maxWidth: .infinity` inside a 32pt gutter *is* a sensible column — but the same code
+/// on a 13" iPad produces a prominent button over a thousand points wide and body copy
+/// running the full width of the display. Two of the four screens already capped their
+/// content at 600 and centred it; naming the measures makes that the rule instead of
+/// something each screen separately remembers or forgets.
+private enum OnboardingMetrics {
+    /// Widest a *centred splash* column gets. Used by the welcome screen only, where the
+    /// icon and copy are centre-aligned and a narrow measure is the point.
+    ///
+    /// Deliberately not applied to the two page-style screens. Capping those produced a
+    /// 600pt column with roughly 216pt of empty margin either side of a 13" display —
+    /// a phone layout stranded in the middle of an iPad. Those are normal pages now.
+    static let contentMaxWidth: CGFloat = 600
+
+    /// Page margin for a full-width screen, widening with the size class the way iPad's
+    /// own detail panes do — 24pt hugs the edge on a 1000pt-wide display.
+    static func pageMargin(_ sizeClass: UserInterfaceSizeClass?) -> CGFloat {
+        sizeClass == .regular ? 44 : 24
+    }
+
+    /// Widest a primary action gets. Deliberately narrower than the content column: a
+    /// button stretched to the full measure of the prose beside it reads as a banner
+    /// rather than a control, and Apple's own setup flows keep the button tighter than
+    /// the text.
+    static let actionMaxWidth: CGFloat = 420
+
+}
+
+/// A bottom action bar that spans the display while its controls stay within
+/// `OnboardingMetrics.actionMaxWidth`.
+///
+/// The split is the point. The divider and material are chrome and should run edge to
+/// edge; the button inside is a control and should not. These bars previously carried
+/// only `.padding(.horizontal, 20)`, so on iPad the button stretched the full width
+/// directly beneath content capped at 600 — which was the most visible iPad problem in
+/// the flow, because the mismatch is between two things you can see at once.
+private struct OnboardingActionBar<Content: View>: View {
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Divider()
+
+            VStack(spacing: 0) {
+                content()
+            }
+            .frame(maxWidth: OnboardingMetrics.actionMaxWidth)
+            .frame(maxWidth: .infinity)
+        }
+        .background(.regularMaterial)
+    }
+}
+
 /// while this real app screen owns the brand, message, and action.
 private struct OnboardingWelcomeView: View {
     let onContinue: () -> Void
@@ -776,6 +960,7 @@ private struct OnboardingWelcomeView: View {
                         }
                     }
                     .padding(.horizontal, 32)
+                    .frame(maxWidth: OnboardingMetrics.contentMaxWidth)
 
                     Spacer(minLength: 44)
 
@@ -809,6 +994,10 @@ private struct OnboardingWelcomeView: View {
                     }
                     .padding(.horizontal, 32)
                     .padding(.bottom, 8)
+                    // Caps the button and the legal links together, so the two stay
+                    // visually attached instead of the button spanning the display with
+                    // a short line of small print centred under it.
+                    .frame(maxWidth: OnboardingMetrics.actionMaxWidth)
                 }
                 .frame(maxWidth: .infinity, minHeight: geo.size.height)
             }
@@ -931,7 +1120,12 @@ private struct OnboardingLocationView: View {
             }
         }
         .tint(.brand)
-        .onAppear { store.preload() }
+        .onAppear {
+            store.preload()
+            // The next thing that happens on this screen is a tap on a city, so
+            // pay the engine wake-up cost now rather than inside that tap.
+            Haptics.prepare()
+        }
     }
 
     @ViewBuilder
@@ -948,6 +1142,13 @@ private struct OnboardingLocationView: View {
         } else {
             ForEach(results) { place in
                 Button {
+                    // Selection feedback, not impact: this moves the checkmark
+                    // within a set of choices and commits nothing, which is
+                    // exactly what `UISelectionFeedbackGenerator` describes. The
+                    // main app's own city list already ticks on tap, so without
+                    // this the same gesture felt different during setup than it
+                    // does forever after.
+                    Haptics.selection()
                     selection = .place(place)
                 } label: {
                     HStack(spacing: 12) {
@@ -987,9 +1188,7 @@ private struct OnboardingLocationView: View {
     }
 
     private var confirmationBar: some View {
-        VStack(spacing: 0) {
-            Divider()
-
+        OnboardingActionBar {
             Button {
                 useSelection()
             } label: {
@@ -1004,7 +1203,6 @@ private struct OnboardingLocationView: View {
             .padding(.vertical, 12)
             .accessibilityHint("Saves the selected location and continues setup")
         }
-        .background(.regularMaterial)
     }
 
     private func useSelection() {
@@ -1017,7 +1215,17 @@ private struct OnboardingLocationView: View {
             controller.setLocation(latitude: latitude, longitude: longitude, name: nil)
         }
 
-        Haptics.notify(.success)
+        // An impact, not `.notify(.success)`. This commits a setting and moves to
+        // the next step — it is not the end of anything, and the flow now has a
+        // real completion at the end of it. Reserving the notification-success
+        // pattern for that one moment is what gives the sequence an arc; when
+        // every step fired `.success` the strongest feedback in the app was spent
+        // three screens before the user had actually finished.
+        //
+        // `.medium` places it on the existing scale deliberately: heavier than a
+        // favorite toggle (`.light`), lighter than a completed VPN sync
+        // (`.notify(.success)`).
+        Haptics.impact(.medium)
         onContinue()
     }
 
@@ -1126,6 +1334,12 @@ private struct OnboardingCoordinatesView: View {
         }
 
         error = nil
+        // Matches a city row rather than the confirm button: this sheet hands a
+        // reviewed pair back to the location screen, so what changed is the
+        // selection. The two invalid paths above already fire `.error`, and
+        // leaving the valid path silent made the sheet feel like it only had an
+        // opinion when the user got it wrong.
+        Haptics.selection()
         onSelect(latitudeValue, longitudeValue)
         dismiss()
     }
@@ -1165,6 +1379,24 @@ private struct OnboardingSafariHandoffView: View {
     @ObservedObject var controller: SpoofController
     let onOpenSetup: () -> Void
     let onSkip: () -> Void
+    /// Raises `TrustSheet`. Handed in rather than presented here, because the onboarding
+    /// container already owns a presenter for it — and this screen is inside a
+    /// `NavigationStack` that the container sits outside of, so presenting from here
+    /// would put a second modal source on the same flow.
+    let onShowPermissions: () -> Void
+
+    /// On iOS 26.2+ the app can send the user straight to GeoSpoof's row in Settings,
+    /// which removes the entire reason this screen hands off to a web page: there is
+    /// no longer any need to teach a route, depend on Safari being the default
+    /// browser, or have a page detect the extension in order to report back.
+    ///
+    /// When that route exists the screen drops both the page-menu walkthrough and the
+    /// hosted-setup button rather than offering all three. They describe alternative
+    /// ways to reach the same switch, and a setup screen listing three routes to one
+    /// destination is how people end up unsure which one they were meant to take.
+    private var canDeepLinkToSettings: Bool { controller.canOpenSafariExtensionSettings }
+
+    @Environment(\.horizontalSizeClass) private var hSizeClass
 
     private var selectedLocation: String {
         if let name = controller.locationName?.displayName, !name.isEmpty {
@@ -1198,14 +1430,81 @@ private struct OnboardingSafariHandoffView: View {
                         .font(.body)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
+
+                    // Enablement is per Safari profile, and nothing in the app can see
+                    // which profile the user browses in — the state query takes only a
+                    // bundle identifier. So someone who enables GeoSpoof in one profile
+                    // and browses in another gets an app that says it's working and a
+                    // Safari that isn't, with no signal we could act on.
+                    //
+                    // Shown only alongside the Settings route, because that is the screen
+                    // that actually lists the per-profile switches. On the hosted-page
+                    // path there is nothing to act on here, so it would just be noise.
+                    if canDeepLinkToSettings {
+                        Text("If you use Safari profiles, turn GeoSpoof on for each one.")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.top, 2)
+                    }
                 }
                 // One announcement ("Last step. Turn GeoSpoof on …") instead of two
                 // fragments, since the label only means anything attached to it.
                 .accessibilityElement(children: .combine)
                 .padding(.bottom, 20)
 
-                SafariActivationAnimation(horizontalInset: 0)
+                // One route per branch. The Settings branch shows where the button lands
+                // and how to get there by hand; the hosted-page branch shows the
+                // page-menu gesture, since that flow has one.
+                if canDeepLinkToSettings {
+                    // Compact lets it span the card. Regular caps it, because a
+                    // screenshot blown up to the full width of a 13" display stops
+                    // reading as a screenshot.
+                    SafariSettingsDestinationView(
+                        maxImageWidth: hSizeClass == .regular ? 560 : .infinity
+                    )
                     .padding(.bottom, 24)
+                } else {
+                    SafariActivationAnimation(horizontalInset: 0)
+                        .padding(.bottom, 24)
+                }
+
+                // What Safari will say once the extension is on, one tap away rather than
+                // laid out on the screen.
+                //
+                // Safari's own wording is that the extension can read passwords and
+                // credit card numbers. For a privacy tool that is the highest-stakes
+                // moment in the funnel, so the expectation still has to be settable
+                // before the hand-off — but it does not have to be *shown* to everyone
+                // to be available. It was rendered inline here, which put two screenshot
+                // cards plus an illustration on one screen; the destination screenshot
+                // above is the one that tells the user what to do, and the prompts are
+                // the question only some people stop to ask.
+                //
+                // `TrustSheet` rather than a sheet of its own: it opens on the same two
+                // screenshots, under a hero about exactly this ("Safari's permission
+                // warning sounds broad…"), and then answers the follow-up question about
+                // what GeoSpoof does with that access. A dedicated permissions sheet
+                // would be the first half of it, duplicated.
+                //
+                // Note for anyone tempted to put visual mass back on this screen: the
+                // Settings screenshot above carries it now. That was the argument for
+                // rendering the prompts inline, and it no longer applies.
+                Button(action: onShowPermissions) {
+                    Label(
+                        "What permissions does GeoSpoof ask for?",
+                        // Same mark as the sheet's hero and as the macOS step's button,
+                        // so the row reads as that sheet opening.
+                        systemImage: "checkmark.shield"
+                    )
+                    .font(.subheadline.weight(.medium))
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.brand)
+                .accessibilityHint("Opens what Safari will ask for, and what GeoSpoof does with that access")
+                .padding(.bottom, 20)
 
                 HStack(alignment: .center, spacing: 14) {
                     Image(systemName: "mappin.and.ellipse")
@@ -1227,28 +1526,49 @@ private struct OnboardingSafariHandoffView: View {
                 }
                 .accessibilityElement(children: .combine)
             }
-            .padding(.horizontal, 24)
+            // A normal full-width page. No reading-column cap: capping at 600 left ~216pt
+            // of dead margin on either side of a 13" display, which reads as a phone
+            // layout stranded in the middle of an iPad rather than as a deliberate
+            // measure. Page margins widen with the size class instead, which is what
+            // iPad's own detail panes do.
+            .padding(.horizontal, OnboardingMetrics.pageMargin(hSizeClass))
             .padding(.top, 12)
             .padding(.bottom, 32)
-            .frame(maxWidth: 600, alignment: .leading)
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .navigationTitle("Enable in Safari")
         .navigationBarTitleDisplayMode(.large)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            VStack(spacing: 0) {
-                Divider()
-
-                Button(action: onOpenSetup) {
-                    Label("Open Safari Setup", systemImage: "safari")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
+            OnboardingActionBar {
+                if canDeepLinkToSettings {
+                    // One tap to the actual switch. No default-browser dependency, no
+                    // page to load, nothing to detect — and the app reads the result
+                    // from the OS when it foregrounds, so the user does not have to
+                    // report back by tapping anything on return.
+                    Button {
+                        controller.openSafariExtensionSettings()
+                    } label: {
+                        Label("Open Safari Settings", systemImage: "gearshape")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .glassButtonStyle(prominent: true)
+                    .controlSize(.large)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
+                    .accessibilityHint("Opens Settings where you can switch GeoSpoof on for Safari")
+                } else {
+                    Button(action: onOpenSetup) {
+                        Label("Open Safari Setup", systemImage: "safari")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .glassButtonStyle(prominent: true)
+                    .controlSize(.large)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
+                    .accessibilityHint("Opens the setup page where Safari can enable and verify GeoSpoof")
                 }
-                .glassButtonStyle(prominent: true)
-                .controlSize(.large)
-                .padding(.horizontal, 20)
-                .padding(.top, 12)
-                .accessibilityHint("Opens the setup page where Safari can enable and verify GeoSpoof")
 
                 Button(action: onSkip) {
                     Text("I'll do this later")
@@ -1262,7 +1582,6 @@ private struct OnboardingSafariHandoffView: View {
                 .padding(.bottom, 4)
                 .accessibilityHint("Finishes setup without Safari. You can turn GeoSpoof on later from the Home tab.")
             }
-            .background(.regularMaterial)
         }
         .background(Color(uiColor: .systemBackground))
         .tint(.brand)
@@ -1314,12 +1633,22 @@ private struct OnboardingSafariReadyView: View {
     @ObservedObject private var pro = ProStore.shared
     @State private var showDeviceGps = false
     @State private var showVpn = false
+    /// Flipped once on arrival to drive this screen's single success haptic. Held
+    /// as state and fed to `sensoryFeedback` rather than firing imperatively from
+    /// `onAppear`, so the feedback is declared as a consequence of arriving rather
+    /// than as a side effect that runs on every appearance callback.
+    @State private var hasArrived = false
     @Environment(\.horizontalSizeClass) private var hSizeClass
 
-    /// Matches `LocationMapPane` rather than inventing a height, so the two places
-    /// the app shows a location map agree.
+    /// Compact matches `LocationMapPane`, so the two places the app shows a location map
+    /// agree on iPhone.
+    ///
+    /// Regular no longer does. `LocationMapPane`'s 320 is sized for a card inside a
+    /// `Form`, which stays narrow; this map now spans a full-width page, so at 320 it was
+    /// a ~3:1 letterbox strip. 420 brings it back to roughly the proportion it has on
+    /// iPhone.
     private var mapHeight: CGFloat {
-        hSizeClass == .compact ? 180 : 320
+        hSizeClass == .compact ? 180 : 420
     }
 
     /// The place to name on this screen, or `nil` if the app has none on record.
@@ -1460,16 +1789,13 @@ private struct OnboardingSafariReadyView: View {
                 }
                 .padding(.top, 8)
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, OnboardingMetrics.pageMargin(hSizeClass))
             .padding(.top, 32)
             .padding(.bottom, 32)
-            .frame(maxWidth: 600, alignment: .leading)
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            VStack(spacing: 0) {
-                Divider()
-
+            OnboardingActionBar {
                 Button(action: onFinish) {
                     Text("Start using GeoSpoof")
                         .font(.headline)
@@ -1480,9 +1806,21 @@ private struct OnboardingSafariReadyView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
             }
-            .background(.regularMaterial)
         }
         .background(Color(uiColor: .systemBackground))
+        // The one completion in the flow, and the only `.success` on the iOS path.
+        //
+        // This screen is reached after the user left the app, did work in another
+        // app, and came back — the longest gap in the whole experience and the
+        // point at which they most need telling that it worked. Every earlier step
+        // is a selection or a commit and is weighted accordingly, so this is the
+        // first and only time the app plays notification-success.
+        //
+        // Fires on the false → true transition, which `sensoryFeedback` treats as
+        // a change while ignoring the initial value; `showSafariReady()` has
+        // already warmed the engine by the time the push lands.
+        .sensoryFeedback(.success, trigger: hasArrived)
+        .task { hasArrived = true }
         // Both detail sheets undim their backdrop so their frost has something to
         // sample, and iOS treats undimmed as interactive — so this screen stands
         // down while one is open. Without it a tap near the sheet's edge lands on
@@ -1490,10 +1828,11 @@ private struct OnboardingSafariReadyView: View {
         // dismiss, since the flag is the same one driving the presentation.
         .allowsHitTesting(!showDeviceGps && !showVpn)
         .tint(.brand)
-        // A plain sheet, not `adaptiveModalCover`. That presenter exists to stop
-        // *tall* content rendering as a floating card on iPad, but this content is
-        // short and its detent is the whole point — a fullscreen cover would
-        // ignore the detent and hand iPad the empty screen this change removes.
+        // A plain sheet, not `adaptiveModalCover`. That presenter sends iPad to a
+        // fullscreen cover, which is right for `TrustSheet`'s stack of cards but wrong
+        // here: this content is a header, three lines and a button, so a whole iPad
+        // display is ~90% empty under it. These two want a modal card that hugs the
+        // content — `explainerSheetPresentation()` sizes it.
         .sheet(isPresented: $showDeviceGps) {
             // Dismiss first: `showPaywall` is presented from RootView, which also
             // hosts this flow, so leaving this sheet up would stack one modal on
@@ -1756,6 +2095,9 @@ struct DeviceGpsSheet: View {
     @Environment(\.dismiss) private var dismiss
     let onUpgrade: () -> Void
 
+    /// Drives the iPad card's height. Unused on iPhone, where detents own the shape.
+    @State private var contentHeight: CGFloat = 0
+
     var body: some View {
         AdaptiveNavigationStack {
             ScrollView {
@@ -1773,6 +2115,7 @@ struct DeviceGpsSheet: View {
                 .padding(20)
                 .frame(maxWidth: 600, alignment: .leading)
                 .frame(maxWidth: .infinity)
+                .measuringExplainerContentHeight(into: $contentHeight)
             }
             .navigationTitle("Device GPS")
             .navigationBarTitleDisplayMode(.inline)
@@ -1786,8 +2129,10 @@ struct DeviceGpsSheet: View {
         .tint(.brand)
         // The content is about half a phone screen, so a full-height sheet left
         // the bottom empty. Same presentation as `TrustSheet` — the app's other
-        // informational sheet — rather than a one-off detent here.
-        .explainerSheetPresentation()
+        // informational sheet — rather than a one-off detent here. It handles the
+        // iPad card too, since "don't leave the bottom empty" is the same
+        // requirement there.
+        .explainerSheetPresentation(padContentHeight: contentHeight)
         .frostedSheetBackground()
     }
 }
@@ -1816,6 +2161,9 @@ struct DeviceGpsSheet: View {
 /// review question, and the button already says the name.
 struct VpnSheet: View {
     @Environment(\.dismiss) private var dismiss
+
+    /// Drives the iPad card's height. Unused on iPhone, where detents own the shape.
+    @State private var contentHeight: CGFloat = 0
 
     var body: some View {
         AdaptiveNavigationStack {
@@ -1890,6 +2238,7 @@ struct VpnSheet: View {
                 .padding(20)
                 .frame(maxWidth: 600, alignment: .leading)
                 .frame(maxWidth: .infinity)
+                .measuringExplainerContentHeight(into: $contentHeight)
             }
             .navigationTitle("IP address")
             .navigationBarTitleDisplayMode(.inline)
@@ -1901,7 +2250,9 @@ struct VpnSheet: View {
             }
         }
         .tint(.brand)
-        .explainerSheetPresentation()
+        // Same presentation as `DeviceGpsSheet`. The two rows that open these sit next
+        // to each other, so a difference between them would read as one being broken.
+        .explainerSheetPresentation(padContentHeight: contentHeight)
         .frostedSheetBackground()
     }
 }
@@ -1955,7 +2306,7 @@ struct PermissionPromptsView: View {
                 shot(image: "PermissionPrompt2", index: 2, caption: "Confirm for every site")
             }
 
-            Text("Both are Safari's standard warnings. GeoSpoof only uses this access to spoof location and timezone -- it never reads, stores, or sends your browsing.")
+            Text("Both are Safari's standard warnings. GeoSpoof only uses this access to spoof location and timezone — it never reads, stores, or sends your browsing.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -2172,17 +2523,128 @@ struct TrustSheet: View {
     }
 }
 
+#if os(iOS)
+/// A centred modal card for iPad: a fixed comfortable width, and a height handed in from
+/// a measurement of the sheet's own content.
+///
+/// **Why a card at all.** iPad has no bottom sheet. Once the window is regular width the
+/// system stops attaching a sheet to the bottom edge and centres it as a card, and
+/// detents stop behaving like detents — so the `.medium`/`.large` pair that shapes these
+/// sheets on iPhone buys iPad nothing, and there is no public API that asks for a
+/// bottom-anchored, draggable sheet there. What iPad chooses between is card sizes.
+///
+/// **Why none of the three built-in sizes.**
+/// - `.form` (the iPadOS 18 default, and what these shipped with) is ~540pt, which wraps
+///   this copy into a narrow column while the display around it goes unused.
+/// - `.page` is a near-full-height card, so short content leaves most of it empty.
+/// - `.fitted` is the one that should have worked, and it can't measure these sheets.
+///
+/// **Why `.fitted` can't measure them, which is the whole reason this type exists.**
+/// Automatic sizing measures the *presented root* by proposing an unspecified height to
+/// it. These sheets' root is an `AdaptiveNavigationStack` wrapping a `ScrollView`, and a
+/// `ScrollView` has no preferred height under a nil height proposal — it is a view whose
+/// job is to fill whatever it's given. Probing it here returned exactly 0.0 for an
+/// unspecified proposal, and 10000.0 for a proposal of 10000: it reports back whatever it
+/// is offered and contributes no information of its own. Apple's guidance says the same
+/// thing — with a `ScrollView` in the sheet you have to measure the view *inside* it. So
+/// the content measures itself (see `measuringExplainerContentHeight(into:)`) and hands
+/// the number here.
+///
+/// **Why 640 wide.** Both callers cap their content column at `maxWidth: 600` inside
+/// `padding(20)`, so 640 is the widest card whose content isn't sitting in its own inner
+/// gutters — and it's ~100pt clear of `.form`, which is the difference between reading as
+/// a thin strip and reading as a card. It's proposed from the very first call, before any
+/// measurement exists, so the content's first layout pass is already at its final width
+/// and only the height settles afterwards.
+private struct ExplainerCardSizing: PresentationSizing {
+    /// The measured height of the sheet's scrolling content. Zero until the first layout
+    /// pass has reported one.
+    var contentHeight: CGFloat
+
+    /// Card width, and therefore the width the content gets measured at.
+    var width: CGFloat = 640
+
+    /// Room for the inline navigation bar, which sits outside the measured content and so
+    /// can't come from the measurement. Deliberately rounded up: overshooting leaves a
+    /// few points of empty card, undershooting makes short content scroll.
+    var navigationBarAllowance: CGFloat = 56
+
+    func proposedSize(
+        for root: PresentationSizingRoot,
+        context: PresentationSizingContext
+    ) -> ProposedViewSize {
+        // No measurement yet (first call, or a degenerate one): propose the width only
+        // and let the system pick the height, rather than committing to a bad number.
+        guard contentHeight > 0, contentHeight.isFinite else {
+            return ProposedViewSize(width: width, height: nil)
+        }
+        // No upper clamp. A proposal taller than the container is limited to the
+        // container by the presentation itself, and the `ScrollView` scrolls from there —
+        // which is the behaviour large Dynamic Type and long translations need.
+        return ProposedViewSize(width: width, height: contentHeight + navigationBarAllowance)
+    }
+}
+
 private extension View {
-    /// The app's presentation for an explainer sheet: opens at half height, drags
-    /// up to full for anyone who needs the room (large Dynamic Type, or a long
-    /// translation), with a drag indicator so that's discoverable.
+    /// Reports this view's laid-out height, for `ExplainerCardSizing` to size an iPad
+    /// card from.
+    ///
+    /// `onGeometryChange` rather than a `GeometryReader` + `PreferenceKey` pair: it's the
+    /// current way to do this, it writes straight to state, and it doesn't join the
+    /// layout as a greedy participant the way a bare `GeometryReader` does.
+    ///
+    /// Attach to the content *inside* the `ScrollView`, not to the sheet root — see
+    /// `ExplainerCardSizing` for why measuring the root returns nothing. iPhone ignores
+    /// the value; it's measured unconditionally so both sheets read the same.
+    func measuringExplainerContentHeight(into height: Binding<CGFloat>) -> some View {
+        onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.size.height
+        } action: { newHeight in
+            height.wrappedValue = newHeight
+        }
+    }
+}
+#endif
+
+private extension View {
+    /// The app's presentation for an explainer sheet.
+    ///
+    /// iPhone: opens at half height, drags up to full for anyone who needs the room
+    /// (large Dynamic Type, or a long translation), with a drag indicator so that's
+    /// discoverable.
+    ///
+    /// iPad: a centred card sized to `padContentHeight` instead — see
+    /// `ExplainerCardSizing` for why detents can't do the job there and why the height has
+    /// to be measured and passed in. No drag indicator, because the card isn't resizable
+    /// and a grabber would advertise a gesture that does nothing.
     ///
     /// Shared by `TrustSheet`, `DeviceGpsSheet` and `VpnSheet` so the app's three
-    /// informational sheets behave identically. Falls back to full height if
-    /// deployment targets are ever lowered. The glass treatment is separate — see
-    /// `frostedSheetBackground()`.
+    /// informational sheets behave identically. `TrustSheet` only ever takes the iPhone
+    /// branch in practice: it's presented through `adaptiveModalCover`, so on iPad it's
+    /// a fullscreen cover and any sizing here is ignored.
+    ///
+    /// Falls back to full height if deployment targets are ever lowered. The glass
+    /// treatment is separate — see `frostedSheetBackground()`.
     @ViewBuilder
-    func explainerSheetPresentation() -> some View {
+    func explainerSheetPresentation(padContentHeight: CGFloat = 0) -> some View {
+        #if os(iOS)
+        // Device idiom rather than `horizontalSizeClass`, for the reason spelled out in
+        // `AdaptiveModalCover`: the size class can read compact on iPad depending on
+        // where the modifier sits, while the idiom is stable.
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            self.presentationSizing(ExplainerCardSizing(contentHeight: padContentHeight))
+        } else {
+            self.bottomSheetPresentation()
+        }
+        #else
+        self.bottomSheetPresentation()
+        #endif
+    }
+
+    /// The half-height, draggable presentation. Split out only so the platform branch
+    /// above doesn't state it twice.
+    @ViewBuilder
+    func bottomSheetPresentation() -> some View {
         if #available(iOS 16.0, macOS 13.0, *) {
             self
                 .presentationDetents([.medium, .large])
@@ -2216,11 +2678,20 @@ private extension View {
     /// With those two in place the glass is *too* lively over a colourful backdrop —
     /// the onboarding close screen's map turns the sheet into stained glass. The
     /// scrim is the actual knob: it sits above the glass and below the content, so
-    /// the blur survives and only its intensity changes. Raised from 0.55 to 0.68
-    /// for a thicker frost: the map still reads as depth behind the sheet, but it
-    /// no longer competes with the copy. Lower shows more of the backdrop, and past
-    /// ~0.8 it stops reading as glass at all — so 0.68 is a deliberate step toward
-    /// that ceiling, not a new baseline to keep nudging.
+    /// the blur survives and only its intensity changes.
+    ///
+    /// 0.55 is the lighter of the two values this has held. It had been raised to 0.68
+    /// to stop the map competing with the copy, and that reading was reversed on
+    /// device: at 0.68 the frost is heavy enough to read as a slab rather than as
+    /// glass, which is the thing the whole helper exists to avoid. Back at 0.55 the
+    /// map is visible as depth behind the sheet, which is the intended effect.
+    ///
+    /// The useful range is narrow and bounded at both ends. Past ~0.8 it stops reading
+    /// as glass at all; near 0 the backdrop wins and the copy becomes hard to read
+    /// over a busy map. Anything outside roughly 0.5–0.7 should be checked against the
+    /// close screen specifically, since its map is the most demanding backdrop in the
+    /// app — and checked on a device, because neither failure shows up in a simulator
+    /// screenshot the way it does in the hand.
     ///
     /// The catch on undimming, per Apple: dimming and touch pass-through are the
     /// same setting, so the content behind goes live. Hosts must disable hit testing
@@ -2229,11 +2700,17 @@ private extension View {
     /// Applied by `DeviceGpsSheet` and `VpnSheet` only. `TrustSheet` keeps the plain
     /// system treatment: it's a stack of `.regularMaterial` cards, which need a
     /// calm backing to keep their edges.
+    ///
+    /// iPhone only. The two halves of this depend on the detented presentation that only
+    /// iPhone gets: `upThrough: .medium` names a detent the iPad card doesn't have, so
+    /// the backdrop stays dimmed there and the scrim would then be laid over a dim layer
+    /// rather than over live glass — the exact "reads as a slab" failure this helper
+    /// exists to avoid. iPad keeps the standard system card material.
     @ViewBuilder
     func frostedSheetBackground() -> some View {
-        if #available(iOS 16.4, *) {
+        if #available(iOS 16.4, *), UIDevice.current.userInterfaceIdiom != .pad {
             self
-                .background(Color(uiColor: .systemBackground).opacity(0.68))
+                .background(Color(uiColor: .systemBackground).opacity(0.55))
                 .presentationBackgroundInteraction(.enabled(upThrough: .medium))
         } else {
             self
@@ -2243,6 +2720,90 @@ private extension View {
 #endif
 
 #if os(iOS)
+// MARK: - Safari settings destination (iOS)
+
+/// The Settings screen the hand-off button opens, as a real screenshot, plus the manual
+/// route to it in words.
+///
+/// A photograph of the destination rather than an illustration of the gesture, because on
+/// the Settings route there is no gesture to teach — the button does the navigating, and
+/// what the user needs is to recognise the screen when it appears and know which switches
+/// matter. The screenshot carries two things the copy can only assert: that the switches
+/// are per Safari profile, and that Private Browsing is a separate one. Both are the
+/// misses that leave someone with an app reporting success and a Safari that isn't
+/// spoofing.
+///
+/// The breadcrumb is the fallback, and it is not hypothetical: the deep link depends on an
+/// OS-provided route that can land somewhere adjacent, and it does nothing at all if
+/// Settings is already open on another screen. A user who taps and sees the wrong pane has
+/// no way to recover unless the path is written down, so it's on screen before they leave
+/// rather than buried in support.
+///
+/// Sibling to `SafariActivationAnimation`, which is what the *other* branch of the
+/// hand-off screen shows. The two are alternatives, never both: they describe different
+/// routes to the same switch, and a setup screen offering two routes is how people end up
+/// unsure which one they were meant to take.
+struct SafariSettingsDestinationView: View {
+    /// Widest the screenshot gets. `.infinity` lets it span the card, which is what
+    /// compact width wants.
+    ///
+    /// Width rather than the height knob `PermissionPromptsView` takes, because this is
+    /// one near-square screenshot in a full-width card rather than two side by side.
+    /// Capping the height instead leaves it stranded in the middle of a wide card with
+    /// more empty card than screenshot either side of it.
+    var maxImageWidth: CGFloat = .infinity
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Text("The screen you're looking for")
+                .font(.subheadline.weight(.semibold))
+                .multilineTextAlignment(.center)
+                // The screenshot below is a single combined element, so this is the label
+                // that makes sense of it when skimming by heading.
+                .accessibilityAddTraits(.isHeader)
+
+            Image("SafariExtensionEnabled")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(maxWidth: maxImageWidth)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.08))
+                )
+                .shadow(color: .black.opacity(0.18), radius: 6, y: 2)
+                // Described rather than hidden: the switches are the information, and a
+                // VoiceOver user gets none of it from the surrounding copy alone.
+                .accessibilityLabel("Safari's GeoSpoof extension settings, with a switch for each Safari profile and a separate one for Private Browsing, all switched on.")
+
+            VStack(spacing: 3) {
+                Text("Not where you landed? In Settings, go to:")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+
+                // The path Apple's own Settings uses. Localizable rather than hard-coded
+                // English, because every term in it is a system UI label that iOS itself
+                // translates — a user reading Settings in French needs the French names,
+                // not ours.
+                Text("Settings › Apps › Safari › Extensions › GeoSpoof")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .accessibilityElement(children: .combine)
+        }
+        // The card spans the page even though the screenshot inside it doesn't. Without
+        // this the card shrinks to the capped image and sits narrow and left-aligned
+        // beside the full-width `PermissionPromptsView` card below it, which reads as a
+        // layout bug rather than as a choice.
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
 // MARK: - Safari activation animation (iOS)
 
 /// A lightweight, looping illustration of the iOS Safari address bar with an

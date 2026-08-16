@@ -402,8 +402,14 @@ struct SpoofWidgetEntryView: View {
 
     private var statusLine: some View {
         VStack(alignment: .leading, spacing: 1) {
+            // "Not seen" rather than "Not active": the negative case now covers a
+            // stamp that has merely gone quiet as well as one that never existed,
+            // and the widget can no more tell those apart than the app can. Stating
+            // what was observed keeps it from asserting the extension is off when it
+            // may simply not have run — the mirror image of the false "Running in
+            // Safari" this window change fixes.
             Label(
-                snap.isActiveInSafari ? "Running in Safari" : "Not active in Safari",
+                snap.isActiveInSafari ? "Running in Safari" : "Not seen in Safari",
                 systemImage: snap.isActiveInSafari ? "checkmark.circle.fill" : "circle.dashed"
             )
             .font(.caption2)

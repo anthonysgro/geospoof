@@ -16,7 +16,10 @@ import SafariServices
 typealias PlatformViewController = NSViewController
 #endif
 
-let extensionBundleIdentifier = "com.moonloaf.geospoof.Extension"
+/// Kept as a file-scope alias so the existing call sites below read unchanged, but
+/// no longer its own copy of the literal — the identifier now has one definition in
+/// `AppGroup`, which is what the enablement query and the Settings deep link use.
+let extensionBundleIdentifier = AppGroup.extensionBundleIdentifier
 
 class ViewController: PlatformViewController, WKNavigationDelegate, WKScriptMessageHandler {
 

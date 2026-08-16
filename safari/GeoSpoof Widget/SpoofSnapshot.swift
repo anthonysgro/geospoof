@@ -86,11 +86,14 @@ struct SpoofSnapshot {
         return favs
     }
 
-    /// True when the extension has checked in within the last week — best-effort
-    /// "GeoSpoof is active in Safari" signal (mirrors SpoofController).
+    /// True when the extension has checked in recently enough to claim it is
+    /// running (mirrors `SpoofController.isActiveInSafari`).
+    ///
+    /// Shares `AppGroup.safariConfidenceWindow` with the app rather than repeating
+    /// the literal, which is how this drifted into asserting "Running in Safari"
+    /// off a week-old stamp — a claim the app itself no longer makes.
     var isActiveInSafari: Bool {
-        guard let extensionLastSeen else { return false }
-        return Date().timeIntervalSince(extensionLastSeen) < 7 * 24 * 60 * 60
+        SafariActivity(lastSeen: extensionLastSeen).isActive
     }
 
     /// A placeholder used for the widget gallery / redacted previews.

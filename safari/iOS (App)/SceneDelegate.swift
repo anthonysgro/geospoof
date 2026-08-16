@@ -116,6 +116,12 @@ struct RootView: View {
         .sheet(isPresented: $router.showPaywall) {
             ProPaywallView()
         }
+        #if DEBUG
+        // TEMPORARY layout harness — removed before this change is finished.
+        .sheet(isPresented: .constant(ProcessInfo.processInfo.arguments.contains("-showDeviceGpsSheet"))) {
+            DeviceGpsSheet {}
+        }
+        #endif
     }
 
     /// How setup leaves: a cross-dissolve, with the outgoing screen easing very
@@ -992,6 +998,25 @@ struct SettingsView: View {
                 } footer: {
                     // Live gate state, not copy — verbatim keeps it out of the catalog.
                     Text(verbatim: review.debugSummary)
+                }
+
+                Section {
+                    Button {
+                        controller.refreshSafariEnablement()
+                        controller.refreshFromExtension()
+                    } label: {
+                        Label("Re-check Safari State", systemImage: "arrow.clockwise")
+                    }
+                } header: {
+                    Text("Debug · Safari State")
+                } footer: {
+                    // The two raw signals and what they resolve to. Safari's own Settings
+                    // and Manage Extensions screens can disagree with each other — and
+                    // enablement also syncs between devices over iCloud — so when the app
+                    // looks wrong, this is what says whether the OS reported something
+                    // odd or the gate mis-fired. Verbatim: live state, not copy.
+                    Text(verbatim: controller.safariDebugSummary)
+                        .monospaced()
                 }
                 #endif
             }

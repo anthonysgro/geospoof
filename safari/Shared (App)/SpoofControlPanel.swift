@@ -57,7 +57,10 @@ struct SpoofControlPanel: View {
         }
         .groupedFormStyle()
         .tint(.brand)
-        .refreshable { await controller.refreshFromExtensionInteractive() }
+        .refreshable {
+            controller.refreshSafariEnablement()
+            await controller.refreshFromExtensionInteractive()
+        }
         #if os(macOS)
         .onboardingCover(isPresented: $showOnboarding) {
             OnboardingView(controller: controller) { onboardingCompleted = true; showOnboarding = false }
@@ -80,6 +83,7 @@ struct SpoofControlPanel: View {
         }
         .onAppear {
             controller.refreshFromExtension()
+            controller.refreshSafariEnablement()
             #if os(macOS)
             if !onboardingCompleted { showOnboarding = true }
             #endif
@@ -251,21 +255,147 @@ struct SpoofControlPanel: View {
     #if os(iOS)
     /// State-driven hand-holding card for the one thing the app can't convey on
     /// its own: getting GeoSpoof running in Safari (the step users miss).
-    /// Disappears once the extension checks in. Setting a location is the app's
-    /// core UI — the Protection section already flags a missing location — so we
-    /// deliberately don't duplicate that here.
+    /// Setting a location is the app's core UI — the Protection section already
+    /// flags a missing location — so we deliberately don't duplicate that here.
+    ///
+    /// A card appears for only two of the four states, and never for the common one.
+    ///
+    /// `idle` — quiet for a day or two — deliberately shows nothing here. It is
+    /// overwhelmingly just "hasn't opened Safari lately", and a user in that state
+    /// has a working setup: putting a card in front of them, with the three-step
+    /// enable tutorial attached, tells them to repair something that isn't broken.
+    /// That state reports itself as one quiet line in `safariStatusLine` instead.
+    ///
+    /// The two cards differ in what the user is missing. `never` has never had the
+    /// extension running and needs the steps. `unverified` has done this before and
+    /// only needs to confirm, so it gets no tutorial — showing setup instructions to
+    /// someone who completed setup months ago reads as the app losing track.
     @ViewBuilder
     private var setupSection: some View {
-        if !controller.isActiveInSafari {
-            Section {
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("GeoSpoof runs inside Safari. Switch it on for the page you're viewing to start spoofing.")
-                        .font(.subheadline)
+        switch controller.safariSetupState {
+        case .verifiedEnabled:
+            // The OS confirms it's on and it has run. Nothing to ask.
+            EmptyView()
+
+        case .verifiedDisabled:
+            // The one case the app can state as fact rather than infer, so the copy
+            // says it plainly and the action goes straight to the switch. No
+            // page-menu walkthrough: that teaches the wrong step when the global
+            // toggle is what's off.
+            safariCard(
+                header: "Turn On GeoSpoof",
+                message: "GeoSpoof is switched off in Safari's extension settings. Turn it on to start spoofing.",
+                lastSeen: nil,
+                showsSteps: false,
+                action: .openSettings
+            )
+
+        case .inferred(let activity):
+            inferredSetupCard(activity)
+        }
+    }
+
+    /// The pre-iOS-26.2 path, where the OS won't reveal the toggle and the check-in
+    /// stamp is all there is. Unchanged in behaviour: `active` and `idle` stay silent,
+    /// `never` teaches, `unverified` asks.
+    @ViewBuilder
+    private func inferredSetupCard(_ activity: SafariActivity) -> some View {
+        switch activity {
+        case .active, .idle:
+            // Nothing to do, or nothing worth interrupting for. `safariStatusLine`
+            // carries both states as a single line.
+            EmptyView()
+        case .never:
+            safariCard(
+                header: "Finish Setup",
+                message: "GeoSpoof runs inside Safari. Switch it on for the page you're viewing to start spoofing.",
+                lastSeen: nil,
+                showsSteps: true,
+                action: .openSafari
+            )
+        case .unverified(let lastSeen):
+            // Asks, it does not assert. The extension may be switched off or may
+            // simply not have run, and the app cannot tell which — but the action
+            // that resolves it is the same either way, so the copy leads with that
+            // rather than guessing at a cause.
+            safariCard(
+                header: "Check Safari",
+                message: "GeoSpoof hasn't run in Safari for a while. Open Safari to confirm it's still switched on.",
+                lastSeen: lastSeen,
+                showsSteps: false,
+                action: .openSafari
+            )
+        }
+    }
+
+    /// Which primary action a setup card offers. Separate from the copy because the
+    /// destination is a property of what's wrong, not of how it's worded: a card that
+    /// says the toggle is off must lead to the toggle, and one that says the extension
+    /// hasn't run on a page must lead to a page.
+    private enum SafariCardAction: Equatable {
+        /// Settings, straight to GeoSpoof's extension pane (iOS 26.2+).
+        case openSettings
+        /// The verify page, where switching GeoSpoof on for the site produces a
+        /// check-in and visible proof in one go.
+        case openSafari
+    }
+
+    /// The Safari card. Shared by the teaching and re-checking states so they can't
+    /// drift apart in layout while differing in wording and in whether the enable
+    /// steps are included.
+    private func safariCard(
+        header: LocalizedStringKey,
+        message: LocalizedStringKey,
+        lastSeen: Date?,
+        showsSteps: Bool,
+        action: SafariCardAction
+    ) -> some View {
+        Section {
+            VStack(alignment: .leading, spacing: 14) {
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                if let lastSeen {
+                    lastSeenLine(lastSeen)
+                        .font(.caption)
                         .foregroundStyle(.secondary)
+                }
+
+                // Same caveat the onboarding handoff carries, for the same reason:
+                // enablement is per Safari profile and the app cannot see which profile
+                // is in use. Tied to the Settings destination, since that's the screen
+                // listing the per-profile switches.
+                if action == .openSettings {
+                    Text("If you use Safari profiles, turn GeoSpoof on for each one.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                }
 
+                if showsSteps {
                     SafariActivationAnimation()
+                }
 
+                // Either destination is self-resolving: flipping the toggle in
+                // Settings is picked up when the app foregrounds, and loading the
+                // verify page makes the extension check in within a second. Both make
+                // this card remove itself without the user coming back to press
+                // anything.
+                switch action {
+                case .openSettings:
+                    Button {
+                        controller.openSafariExtensionSettings()
+                    } label: {
+                        Label("Open Safari Settings", systemImage: "gearshape")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .glassButtonStyle(prominent: true)
+                    .controlSize(.large)
+                case .openSafari:
                     Button {
                         openSafari()
                     } label: {
@@ -274,23 +404,40 @@ struct SpoofControlPanel: View {
                     }
                     .glassButtonStyle(prominent: true)
                     .controlSize(.large)
-
-                    Button {
-                        showTrustInfo = true
-                    } label: {
-                        Label("Is GeoSpoof safe?", systemImage: "checkmark.shield")
-                            .font(.subheadline)
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(Color.brand)
                 }
-                .padding(.vertical, 6)
-                .adaptiveModalCover(isPresented: $showTrustInfo) { TrustSheet() }
-            } header: {
-                Text("Finish Setup")
+
+                Button {
+                    showTrustInfo = true
+                } label: {
+                    Label("Is GeoSpoof safe?", systemImage: "checkmark.shield")
+                        .font(.subheadline)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.brand)
             }
+            .padding(.vertical, 6)
+            .adaptiveModalCover(isPresented: $showTrustInfo) { TrustSheet() }
+        } header: {
+            Text(header)
         }
+    }
+
+    /// "Last seen in Safari — 2 days ago". The relative date is system-formatted, so
+    /// this needs no string of its own beyond the label, and it reads correctly in
+    /// every locale the app ships.
+    /// Sets no font of its own: in the card it is deliberately `.caption` under the
+    /// message, while in the Protection footer it has to match the green `active`
+    /// line beside it, which inherits the footer's own size. Forcing a size here made
+    /// the two states render at different scales, so crossing between them looked
+    /// like a layout glitch rather than a status change.
+    private func lastSeenLine(_ lastSeen: Date) -> some View {
+        HStack(spacing: 4) {
+            Text("Last seen in Safari")
+            Text(lastSeen, format: .relative(presentation: .named))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
     }
 
     private func openSafari() {
@@ -307,14 +454,44 @@ struct SpoofControlPanel: View {
         UIApplication.shared.open(verifyURL(campaign: "verify-setup"))
     }
 
-    /// Quiet "GeoSpoof is running in Safari" confirmation, shown once the
-    /// extension has checked in. The not-yet-detected nudge lives in the
-    /// Setup card above, so this only surfaces the positive state.
+    /// One line for the two states that don't warrant a card.
+    ///
+    /// `active` is the confident green confirmation. `idle` is the same fact with the
+    /// certainty removed: it names when the extension was last seen and stops there,
+    /// in secondary grey rather than a warning colour, because nothing is wrong — the
+    /// user just hasn't browsed. This is the whole answer to "will skipping Safari for
+    /// a couple of days look like a fault?": it reads as a timestamp, not a problem.
+    ///
+    /// `never` and `unverified` are carried by the card above, so they add nothing
+    /// here rather than saying the same thing twice.
     @ViewBuilder
     private var safariStatusLine: some View {
-        if controller.isActiveInSafari {
+        switch controller.safariSetupState {
+        case .verifiedEnabled:
+            // Now a verified statement rather than an inference from a timestamp, so
+            // it stays green regardless of how long ago the last page load was. There
+            // is no "quiet" variant to fall back to: the OS confirmed the toggle, and
+            // hedging a fact reads as the app not trusting itself.
             Label("GeoSpoof is running in Safari.", systemImage: "checkmark.circle.fill")
                 .foregroundStyle(.green)
+        case .verifiedDisabled:
+            // Carried by the card above; saying it twice would just crowd the footer.
+            EmptyView()
+        case .inferred(let activity):
+            switch activity {
+            case .active:
+                Label("GeoSpoof is running in Safari.", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+            case .idle(let lastSeen):
+                Label {
+                    lastSeenLine(lastSeen)
+                } icon: {
+                    Image(systemName: "circle.dashed")
+                }
+                .foregroundStyle(.secondary)
+            case .never, .unverified:
+                EmptyView()
+            }
         }
     }
     #endif
@@ -725,6 +902,41 @@ struct SpoofMap: View {
     }
 
     var body: some View {
+        // Don't instantiate MapKit until there's a real size to give it.
+        //
+        // `.mapStyle(.hybrid)` draws satellite imagery through a multisampled pass. Laid
+        // out at zero size, MapKit builds a render pass whose
+        // `MTLStoreActionMultisampleResolve` has no resolve texture to write into,
+        // Metal's debug layer asserts, and the process traps —
+        // `_MTLDebugValidateRenderPassDescriptorAndTrackAttachments:370`. It is a hard
+        // crash in a debug build rather than a warning, and it is preceded in the log by
+        // `CAMetalLayer ignoring invalid setDrawableSize width=0.000000 height=0.000000`,
+        // which is the actual cause showing itself.
+        //
+        // The zero-size pass happens on iPad during a navigation push, where the
+        // incoming column can be measured once before its width settles. Release builds
+        // ship without Metal validation so a customer wouldn't crash, but it blocks
+        // device testing, and handing MapKit an impossible size is wrong regardless of
+        // who notices.
+        //
+        // Gating here rather than at the call sites so every map in the app is covered
+        // by one fix. Both current callers give definite bounds — an explicit
+        // `.frame(height:)` on the onboarding success screen, and a full-screen
+        // container in `LocationMapPane` — so a greedy `GeometryReader` sizes the same
+        // as the `Map` it replaces.
+        GeometryReader { proxy in
+            if proxy.size.width >= 1, proxy.size.height >= 1 {
+                mapContent
+            } else {
+                // One frame at most, and the callers clip and border this area anyway,
+                // so there's nothing to see rather than a flash of placeholder.
+                Color.clear
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var mapContent: some View {
         if #available(iOS 17.0, macOS 14.0, *) {
             Map(initialPosition: .region(region), interactionModes: interactive ? .all : []) {
                 Annotation(String(), coordinate: coordinate) { Self.pin }

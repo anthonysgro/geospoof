@@ -26,19 +26,185 @@ import WidgetKit
 @preconcurrency import Dispatch
 #if os(iOS)
 import UIKit
+// iOS 26.2 finally exposes the extension's real on/off state to the containing
+// app (`SFSafariExtensionManager`) and a direct route to its Settings pane
+// (`SFSafariSettings.openExtensionsSettings`). Both are gated at the call site;
+// anything below that keeps using the check-in heuristic, since the deployment
+// target is iOS 18.
+import SafariServices
 #else
 import AppKit
 #endif
 
 // MARK: - App Group
 
+/// What the app knows about GeoSpoof running in Safari, derived from the
+/// extension's check-in stamp.
+///
+/// Four states because a user who disabled the extension and a user who simply
+/// hasn't browsed are indistinguishable from here, and the two need different
+/// volumes rather than different verdicts.
+///
+/// Tuning a single threshold cannot resolve that: a short window catches a manual
+/// disable quickly but tells every idle user their setup is broken, and a long one
+/// does the reverse. What separates them is confidence from loudness. `idle` is the
+/// band where we are no longer certain but have no reason for concern, so it states
+/// what it observed and nothing more. Only a silence long enough to be unusual in
+/// its own right earns an interruption.
+enum SafariActivity: Equatable {
+    /// No check-in on record — the extension has never run for this install.
+    /// The only state that warrants teaching the setup steps.
+    case never
+    /// Checked in within `AppGroup.safariConfidenceWindow`. Confident enough to say
+    /// so in the present tense.
+    case active(Date)
+    /// Quiet for a while, but well within normal use. Almost always "hasn't opened
+    /// Safari lately", so this must not raise an alarm — it reports the last
+    /// confirmation and leaves it there.
+    case idle(Date)
+    /// Silent past `AppGroup.safariReverifyWindow`. Still not proof that anything is
+    /// wrong, but long enough that a privacy tool should not keep quiet — silently
+    /// appearing protected while unprotected is the one failure mode worth
+    /// interrupting for.
+    case unverified(Date)
+
+    /// Whether the app can say GeoSpoof is running in Safari in the present tense.
+    var isActive: Bool {
+        if case .active = self { return true }
+        return false
+    }
+
+    /// Whether the extension has ever run for this install. False only for `never`,
+    /// which is what separates "needs teaching" from "needs re-checking".
+    var hasEverRun: Bool { lastSeen != nil }
+
+    /// When the extension was last heard from, if ever.
+    var lastSeen: Date? {
+        switch self {
+        case .never: return nil
+        case .active(let at), .idle(let at), .unverified(let at): return at
+        }
+    }
+
+    /// Derive the state for a stamp against a reference instant.
+    init(
+        lastSeen: Date?,
+        now: Date = Date(),
+        confidenceWindow: TimeInterval = AppGroup.safariConfidenceWindow,
+        reverifyWindow: TimeInterval = AppGroup.safariReverifyWindow
+    ) {
+        guard let lastSeen else {
+            self = .never
+            return
+        }
+        // A stamp in the future means the clock moved backwards, which is more
+        // plausible here than in most apps — GeoSpoof exists to shift location and
+        // users do change time zones to match. Treat it as current rather than
+        // aging it out instantly.
+        let elapsed = now.timeIntervalSince(lastSeen)
+        if elapsed < confidenceWindow {
+            self = .active(lastSeen)
+        } else if elapsed < reverifyWindow {
+            self = .idle(lastSeen)
+        } else {
+            self = .unverified(lastSeen)
+        }
+    }
+}
+
+/// The global Safari extension toggle, as reported by the OS.
+///
+/// A separate signal from `SafariActivity`, not a replacement for it, because the
+/// two answer different questions. This one is the switch in Settings › Apps ›
+/// Safari › Extensions; `SafariActivity` is whether the extension has actually run
+/// on a page. On iOS those come apart constantly — the most common support case is
+/// a user who allowed the extension in Settings and never switched it on for a site
+/// via Safari's page menu, which looks identical to "off" if you only have one
+/// signal. Having both is what lets the app name that specific mistake.
+enum SafariEnablement: Equatable {
+    /// The OS won't say: below iOS 26.2, or the query failed. Fall back to
+    /// inference from the check-in stamp.
+    case unknown
+    case enabled
+    case disabled
+}
+
+/// What the Safari section of the UI should say, resolved from the OS toggle and
+/// the check-in stamp together.
+///
+/// Split into "verified" and "inferred" halves so it is impossible to render an
+/// inference-only state (`idle`, `unverified`) on an OS that could have simply been
+/// asked, and impossible to claim verification on one that couldn't.
+enum SafariSetupState: Equatable {
+    /// The OS says the extension is switched off. The one actionable fault, and the
+    /// only one the app can state as fact.
+    case verifiedDisabled
+    /// The OS says it's on. Nothing to ask of the user.
+    ///
+    /// Deliberately not subdivided by whether the extension has also checked in. An
+    /// earlier version split out an "on but never run" case and asked those users to
+    /// go and switch it on for a page — which was based on a wrong reading of the
+    /// bridge. The check-in is written by the *background* script during
+    /// `initialize()`, and the extension holds `host_permissions: ["<all_urls>"]`, so
+    /// a check-in only proves "enabled, and Safari has run since". It says nothing
+    /// about per-site permission, which is what that state was supposedly catching.
+    ///
+    /// So the absence of a check-in on an enabled extension means only that Safari
+    /// hasn't launched yet. That resolves itself the moment the user browses, there is
+    /// nothing useful to ask, and asking anyway sent people on a round trip that
+    /// proved nothing. `enabled` is the strongest true statement available, and it is
+    /// exactly what setup asked them to do.
+    case verifiedEnabled
+    /// The OS won't say; fall back to what the check-in stamp implies.
+    case inferred(SafariActivity)
+}
+
 enum AppGroup {
     static let suite = "group.com.moonloaf.geospoof"
+
+    /// The Safari web extension's bundle identifier. Shared so the enablement
+    /// query, the Settings deep link, and the macOS `ExtensionStateModel` can't
+    /// drift onto different strings.
+    static let extensionBundleIdentifier = "com.moonloaf.geospoof.Extension"
 
     // Extension -> App: "last seen" heartbeat (Unix seconds). Written on every
     // native-handler invocation, so the app can tell whether GeoSpoof is
     // actually running in Safari.
     static let extensionLastSeenAt = "extension_lastSeenAt"
+
+    /// How recently the extension must have checked in before the app or a widget
+    /// will say, in the present tense, that GeoSpoof is running in Safari.
+    ///
+    /// The stamp is a record of a moment, never of a state. An enabled extension
+    /// refreshes it constantly through ordinary browsing — background boot, tab
+    /// switch, navigation start, every content-script settings read — but it
+    /// cannot report its own death: turning GeoSpoof off in Safari's Manage
+    /// Extensions simply stops the writes and leaves nothing behind, and iOS
+    /// gives the container app no equivalent of macOS's
+    /// `SFSafariExtensionManager.getStateOfSafariExtension` to ask directly. So
+    /// an old stamp only ever means "unknown", and the window is what separates
+    /// a claim we can defend from one we can't.
+    ///
+    /// Shared by the app and the widget so the two can't disagree about the same
+    /// timestamp; it previously existed as a 7-day literal in both.
+    ///
+    /// Crossing it is not a problem — it only retires the present-tense claim. Any
+    /// Safari use at all refreshes the stamp (a single page load is enough), so a
+    /// user who browses daily stays inside it without doing anything deliberate.
+    static let safariConfidenceWindow: TimeInterval = 24 * 60 * 60
+
+    /// How long the extension can stay silent before the app stops waiting quietly
+    /// and asks the user to confirm it is still switched on.
+    ///
+    /// Set well past the confidence window on purpose. Between the two, the app says
+    /// only when it last heard from the extension: not browsing for a few days is
+    /// ordinary, and treating it as a fault would show a setup card to people whose
+    /// setup is fine — which is both wrong and the fastest way to teach users that
+    /// the app's warnings don't mean anything.
+    ///
+    /// A week of total Safari silence is different in kind. It is still not proof of
+    /// a fault, so the copy at that point asks rather than asserts.
+    static let safariReverifyWindow: TimeInterval = 7 * 24 * 60 * 60
 
     // Extension -> App (current active region, for display).
     static let regionEnabled     = "region_enabled"
@@ -810,14 +976,160 @@ final class SpoofController: ObservableObject {
     /// When the extension last checked in via the App Group, or nil if we've
     /// never heard from it. Drives the "running in Safari" status. Updated on
     /// every refresh, independent of whether region state changed.
-    @Published var extensionLastSeen: Date?
+    @Published private(set) var extensionLastSeen: Date?
 
-    /// Best-effort "GeoSpoof is running in Safari" signal: the extension has
-    /// checked in recently. Proves the extension is enabled and its background
-    /// is alive — not necessarily that it's been granted on the current site.
+    /// What the app can honestly say about GeoSpoof running in Safari.
+    ///
+    /// Three states rather than a Bool because there are genuinely three
+    /// situations, and the middle one used to be reported as the wrong end of a
+    /// binary: a user who disabled the extension kept being told it was running,
+    /// because the only evidence available — a check-in stamp — cannot distinguish
+    /// "still on, just hasn't browsed" from "switched off". Naming the uncertainty
+    /// is what lets the UI offer a way to resolve it instead of guessing.
+    @Published private(set) var safariActivity: SafariActivity = .never
+
+    /// The extension's global toggle as reported by the OS, or `.unknown` where the
+    /// OS won't say. Refreshed by `refreshSafariEnablement()`.
+    @Published private(set) var safariEnablement: SafariEnablement = .unknown
+
+    /// What the UI should actually say about Safari, from both signals together.
+    ///
+    /// When the OS answers, inference stops entirely — there is no reason to age a
+    /// timestamp out or nag someone to go and re-check something we can simply ask
+    /// about. That is why the `verified*` cases carry no windows: `idle` and
+    /// `unverified` exist only to manage uncertainty, and on iOS 26.2+ there isn't
+    /// any.
+    var safariSetupState: SafariSetupState {
+        switch safariEnablement {
+        case .unknown:
+            return .inferred(safariActivity)
+        case .disabled:
+            return .verifiedDisabled
+        case .enabled:
+            // The check-in adds nothing here — see `SafariSetupState.verifiedEnabled`
+            // for why its absence means "Safari hasn't launched yet" rather than
+            // "something is wrong".
+            return .verifiedEnabled
+        }
+    }
+
+    /// Whether the app can state in the present tense that GeoSpoof is running in
+    /// Safari.
+    ///
+    /// Prefers the OS's answer and falls back to the check-in window. Deliberately
+    /// false once an unverified stamp ages out: a week-old check-in was previously
+    /// enough to show a green checkmark and to let onboarding declare setup complete.
     var isActiveInSafari: Bool {
-        guard let extensionLastSeen else { return false }
-        return Date().timeIntervalSince(extensionLastSeen) < 7 * 24 * 60 * 60
+        switch safariEnablement {
+        case .enabled: return true
+        case .disabled: return false
+        case .unknown: return safariActivity.isActive
+        }
+    }
+
+    #if DEBUG
+    /// The raw inputs behind `safariSetupState`, for the debug screen.
+    ///
+    /// Exists because this session's confusion was never about the logic — it was about
+    /// not being able to see what the OS actually answered. Every time Safari's own
+    /// screens disagreed with each other, the only way to tell "the API said enabled"
+    /// from "our gate mis-fired" was to reason about it, and reasoning got it wrong more
+    /// than once. Printing the inputs verbatim ends that.
+    var safariDebugSummary: String {
+        let enablement: String
+        switch safariEnablement {
+        case .unknown: enablement = "unknown (OS won't say — pre-26.2 or query failed)"
+        case .enabled: enablement = "enabled"
+        case .disabled: enablement = "disabled"
+        }
+
+        let activity: String
+        switch safariActivity {
+        case .never: activity = "never checked in"
+        case .active(let at): activity = "active, last seen \(at.formatted(date: .abbreviated, time: .standard))"
+        case .idle(let at): activity = "idle, last seen \(at.formatted(date: .abbreviated, time: .standard))"
+        case .unverified(let at): activity = "unverified, last seen \(at.formatted(date: .abbreviated, time: .standard))"
+        }
+
+        let resolved: String
+        switch safariSetupState {
+        case .verifiedDisabled: resolved = "verifiedDisabled"
+        case .verifiedEnabled: resolved = "verifiedEnabled"
+        case .inferred: resolved = "inferred (heuristic path)"
+        }
+
+        return """
+        OS toggle: \(enablement)
+        Check-in: \(activity)
+        Resolved: \(resolved)
+        Deep link available: \(canOpenSafariExtensionSettings)
+        """
+    }
+    #endif
+
+    /// Ask the OS whether the extension is switched on.
+    ///
+    /// A no-op below iOS 26.2, which leaves `safariEnablement` at `.unknown` and the
+    /// UI on the inference path. A failed query is also treated as `.unknown` rather
+    /// than as `.disabled`: "we couldn't ask" and "it's off" are different facts, and
+    /// reporting the second when we mean the first is the exact class of overclaim
+    /// this whole change exists to remove.
+    func refreshSafariEnablement() {
+        #if os(iOS)
+        guard #available(iOS 26.2, *) else { return }
+        Task { @MainActor in
+            let resolved: SafariEnablement
+            do {
+                let state = try await SFSafariExtensionManager.stateOfExtension(
+                    withIdentifier: AppGroup.extensionBundleIdentifier
+                )
+                resolved = state.isEnabled ? .enabled : .disabled
+            } catch {
+                Log.bridge.warn("Safari enablement query failed: \(error.localizedDescription)")
+                resolved = .unknown
+            }
+            if safariEnablement != resolved {
+                Log.bridge.info("Safari enablement: \(String(describing: safariEnablement)) → \(String(describing: resolved))")
+                safariEnablement = resolved
+                // The widget shows the same status and can't run this query itself,
+                // so hand it the fresh answer.
+                Self.scheduleWidgetReload()
+            }
+        }
+        #endif
+    }
+
+    /// Open Settings directly on GeoSpoof's Safari extension pane.
+    ///
+    /// Returns false when the route isn't available, so callers can fall back to the
+    /// hosted activation page rather than offering a button that does nothing. Must
+    /// be called with the app foregrounded — the API errors otherwise.
+    @discardableResult
+    func openSafariExtensionSettings() -> Bool {
+        #if os(iOS)
+        guard #available(iOS 26.2, *) else { return false }
+        SFSafariSettings.openExtensionsSettings(
+            forIdentifiers: [AppGroup.extensionBundleIdentifier]
+        ) { error in
+            if let error {
+                Log.app.error("Couldn't open Safari extension settings: \(error.localizedDescription)")
+            }
+        }
+        return true
+        #else
+        return false
+        #endif
+    }
+
+    /// Whether the direct Settings route exists on this OS. Drives which primary
+    /// action the setup card and onboarding offer.
+    var canOpenSafariExtensionSettings: Bool {
+        #if os(iOS)
+        if #available(iOS 26.2, *) { return true }
+        return false
+        #else
+        return false
+        #endif
     }
 
     /// Mirrors the extension's `MAX_FAVORITES` (src/shared/types/settings.ts) —
@@ -870,10 +1182,14 @@ final class SpoofController: ObservableObject {
     init() {
         Log.app.info("SpoofController init")
         loadFavorites()
-        // Restore the device-GPS opt-in (§13) so the toggle survives relaunch.
-        deviceGpsEnabled = UserDefaults(suiteName: suite)?.bool(forKey: "gps_deviceEnabled") ?? false
-        // Restore the chosen controlling Mac (controller-arbitration), if any.
-        selectedControllerId = UserDefaults(suiteName: suite)?.string(forKey: "gps_ownerId")
+        // Restore the device-GPS opt-in (§13) so the toggle survives relaunch, and the
+        // chosen controlling Mac (controller-arbitration) if any. Read straight from the
+        // App Group plist rather than through `UserDefaults(suiteName:)` — see
+        // `setSharedPrefsValue`. These two ran on every launch, which is why the
+        // cfprefsd detach warning showed up before anything else in the log.
+        let gpsPrefs = Self.readSharedPrefs(suite: suite)
+        deviceGpsEnabled = (gpsPrefs?["gps_deviceEnabled"] as? Bool) ?? false
+        selectedControllerId = gpsPrefs?["gps_ownerId"] as? String
         // Restore our own last-written desired state BEFORE reconciling with the
         // extension. The app keeps no other durable copy of its toggle/location
         // state, so on a cold launch (iOS terminating the backgrounded app, or
@@ -881,6 +1197,7 @@ final class SpoofController: ObservableObject {
         // the user set and falling back to defaults ("everything off").
         restoreLocalPending()
         refreshFromExtension()
+        refreshSafariEnablement()
         CityStore.shared.preload()
         startForegroundObserver()
         startNetworkWatcher()
@@ -910,6 +1227,10 @@ final class SpoofController: ObservableObject {
                 guard let self else { return }
                 Log.app.debug("App foregrounded — refreshing from extension + VPN re-check")
                 self.refreshFromExtension()
+                // Load-bearing for the whole flow: returning from Settings is exactly
+                // how a user gets here after flipping the extension on or off, and
+                // this is the moment the app can see it.
+                self.refreshSafariEnablement()
                 // Resume the network watcher + heartbeat that were torn down on
                 // background, then take a single fresh sample (the network is
                 // already settled when the app is opened, so no need to poll —
@@ -1282,7 +1603,7 @@ final class SpoofController: ObservableObject {
     func setDeviceGpsEnabled(_ value: Bool) {
         Log.location.info("Device GPS sync \(value ? "enabled" : "disabled")")
         deviceGpsEnabled = value
-        UserDefaults(suiteName: suite)?.set(value, forKey: "gps_deviceEnabled")
+        setSharedPrefsValue("gps_deviceEnabled", value)
         writePending()
     }
 
@@ -1293,12 +1614,7 @@ final class SpoofController: ObservableObject {
         guard selectedControllerId != id else { return }
         Log.location.info("GPS controlling Mac → \(id ?? "auto")")
         selectedControllerId = id
-        let defaults = UserDefaults(suiteName: suite)
-        if let id {
-            defaults?.set(id, forKey: "gps_ownerId")
-        } else {
-            defaults?.removeObject(forKey: "gps_ownerId")
-        }
+        setSharedPrefsValue("gps_ownerId", id)
         writePending()
     }
 
@@ -1633,6 +1949,15 @@ final class SpoofController: ObservableObject {
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 3_000_000_000)
             atCapacity = false
+        }
+    }
+
+    /// Re-derive `safariActivity` from the current stamp and the clock.
+    private func refreshSafariActivity(now: Date = Date()) {
+        let updated = SafariActivity(lastSeen: extensionLastSeen, now: now)
+        if safariActivity != updated {
+            Log.bridge.debug("Safari activity: \(String(describing: safariActivity)) → \(String(describing: updated))")
+            safariActivity = updated
         }
     }
 
@@ -2084,6 +2409,17 @@ final class SpoofController: ObservableObject {
                 Self.scheduleWidgetReload()
             }
         }
+        // Re-derive the activity state on every refresh, not just when the stamp
+        // moves — otherwise nothing ever ages `recent` into `stale`.
+        //
+        // This is also why the state is stored rather than computed: the previous
+        // version evaluated `Date()` inside a plain computed property, so crossing
+        // the expiry boundary published no change and the UI kept rendering the old
+        // answer until some unrelated edit forced a redraw. Refresh runs on app
+        // foreground, on Home appearing, on pull-to-refresh and on the onboarding
+        // poll — every point a user could be looking at this — so no timer is
+        // needed whose only job is to age a value out.
+        refreshSafariActivity()
 
         guard let dict = prefs,
               let regionAt = dict[AppGroup.regionUpdatedAt] as? Double,
@@ -2161,6 +2497,36 @@ final class SpoofController: ObservableObject {
         if let raw = dict[AppGroup.regionLocaleSpoofing] as? String {
             localeSpoofing = SpoofLocaleSpoofing.fromJSON(raw)
         }
+    }
+
+    /// Merge a single key into the App Group plist, or remove it when `value` is nil.
+    ///
+    /// Exists so the GPS opt-in and controlling-Mac id can be persisted the same way
+    /// everything else in this container is. They previously went through
+    /// `UserDefaults(suiteName:)`, which is the one thing every other writer here
+    /// deliberately avoids: against an app-group container cfprefsd uses
+    /// `kCFPreferencesAnyUser`, the system refuses it and detaches, and each access
+    /// logs `Couldn't read values in CFPrefsPlistSource … detaching from cfprefsd`.
+    /// Beyond the noise it is a correctness hazard — cfprefsd caches the whole suite
+    /// and rewrites the entire file on flush, so it can clobber the `pending_*` and
+    /// `region_*` keys written directly. Same file either way, so nothing needs
+    /// migrating.
+    private func setSharedPrefsValue(_ key: String, _ value: Any?) {
+        guard let container = FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: suite) else {
+            Log.bridge.error("setSharedPrefsValue: App Group container unavailable (\(self.suite))")
+            return
+        }
+        let plistURL = container.appendingPathComponent("Library/Preferences/\(suite).plist")
+        var dict: [String: Any] = (NSDictionary(contentsOf: plistURL) as? [String: Any]) ?? [:]
+        if let value {
+            dict[key] = value
+        } else {
+            dict.removeValue(forKey: key)
+        }
+        let prefsDir = plistURL.deletingLastPathComponent()
+        try? FileManager.default.createDirectory(at: prefsDir, withIntermediateDirectories: true)
+        (dict as NSDictionary).write(to: plistURL, atomically: true)
     }
 
     private static func readSharedPrefs(suite: String) -> [String: Any]? {
@@ -2773,12 +3139,31 @@ enum AppLink {
 // MARK: - Haptics
 /// Lightweight haptic feedback wrapper. iOS-only; a no-op on macOS so it can be
 /// called freely from shared code (e.g. the SpoofController intents).
+/// Generators are retained for the life of the process rather than built per
+/// call, because `prepare()` only does anything while the generator it was
+/// called on stays alive. The previous version constructed a generator, called
+/// `prepare()`, and fired on the very next line — so the Taptic Engine was still
+/// spinning up when the event arrived and the first haptic of a session landed
+/// late enough to read as unrelated to the tap that caused it. A haptic that
+/// arrives after the animation it is supposed to punctuate is worse than none.
+///
+/// The user's System Haptics setting is honoured by `UIFeedbackGenerator`
+/// itself, so there is deliberately no app-level toggle to keep in sync.
 enum Haptics {
     enum Impact { case light, medium, soft, rigid }
     enum Notify { case success, warning, error }
 
-    static func impact(_ style: Impact = .light) {
-        #if os(iOS)
+    #if os(iOS)
+    /// Built on first use per style and kept afterwards. Main-actor isolated by
+    /// the project's default isolation, which is also what `UIFeedbackGenerator`
+    /// requires.
+    private static var impactGenerators: [Impact: UIImpactFeedbackGenerator] = [:]
+    private static let notificationGenerator = UINotificationFeedbackGenerator()
+    private static let selectionGenerator = UISelectionFeedbackGenerator()
+
+    private static func impactGenerator(_ style: Impact) -> UIImpactFeedbackGenerator {
+        if let existing = impactGenerators[style] { return existing }
+
         let mapped: UIImpactFeedbackGenerator.FeedbackStyle
         switch style {
         case .light: mapped = .light
@@ -2787,8 +3172,27 @@ enum Haptics {
         case .rigid: mapped = .rigid
         }
         let generator = UIImpactFeedbackGenerator(style: mapped)
-        generator.prepare()
-        generator.impactOccurred()
+        impactGenerators[style] = generator
+        return generator
+    }
+    #endif
+
+    /// Wake the Taptic Engine ahead of a haptic that is about to happen.
+    ///
+    /// Worth calling when there is real time between knowing feedback is coming
+    /// and delivering it — a screen that is about to be pushed, a list that is
+    /// about to be tapped. The engine idles back down on its own shortly after,
+    /// so this is not something to call speculatively on a timer.
+    static func prepare() {
+        #if os(iOS)
+        notificationGenerator.prepare()
+        selectionGenerator.prepare()
+        #endif
+    }
+
+    static func impact(_ style: Impact = .light) {
+        #if os(iOS)
+        impactGenerator(style).impactOccurred()
         #endif
     }
 
@@ -2800,13 +3204,17 @@ enum Haptics {
         case .warning: mapped = .warning
         case .error: mapped = .error
         }
-        UINotificationFeedbackGenerator().notificationOccurred(mapped)
+        notificationGenerator.notificationOccurred(mapped)
         #endif
     }
 
     static func selection() {
         #if os(iOS)
-        UISelectionFeedbackGenerator().selectionChanged()
+        selectionGenerator.selectionChanged()
+        // Selection feedback arrives in streams — scrubbing a map, moving down a
+        // list — so unlike the one-shot cases it is worth holding the engine
+        // ready for the tick that almost certainly follows.
+        selectionGenerator.prepare()
         #endif
     }
 }

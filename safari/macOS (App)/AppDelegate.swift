@@ -535,7 +535,7 @@ final class ExtensionStateModel: ObservableObject {
     @Published var state: ExtensionState = .unknown
     @Published var openSettingsFailed = false
 
-    private let bundleIdentifier = "com.moonloaf.geospoof.Extension"
+    private let bundleIdentifier = AppGroup.extensionBundleIdentifier
 
     private static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "com.moonloaf.geospoof",
