@@ -77,18 +77,32 @@ struct RootView: View {
     @ObservedObject private var router = AppRouter.shared
     @AppStorage("appearanceMode") private var appearance: AppearanceMode = .system
     @AppStorage("spoofOnboardingCompleted") private var onboardingCompleted = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Whether setup owns the screen. Named so the branch below and the animation
+    /// keyed to it read the same expression and can't drift apart.
+    private var showingOnboarding: Bool {
+        !onboardingCompleted || router.showOnboarding
+    }
 
     var body: some View {
         Group {
-            if !onboardingCompleted || router.showOnboarding {
+            if showingOnboarding {
                 OnboardingView(controller: controller) {
                     onboardingCompleted = true
                     router.showOnboarding = false
                 }
+                .transition(onboardingTransition)
             } else {
                 mainTabs
+                    .transition(.opacity)
             }
         }
+        // Keyed to the value rather than wrapping the mutation in `withAnimation`,
+        // because this swap has three triggers — the close screen's button, the
+        // skip path, and the debug replay in Settings — and a value-keyed animation
+        // covers all of them without each having to remember.
+        .animation(.easeInOut(duration: 0.35), value: showingOnboarding)
         .onAppear {
             applyInterfaceStyle(appearance)
             // A locked control (which can't open the app itself) may have left a
@@ -104,9 +118,40 @@ struct RootView: View {
         }
     }
 
+    /// How setup leaves: a cross-dissolve, with the outgoing screen easing very
+    /// slightly toward the viewer as it goes.
+    ///
+    /// A dissolve rather than a slide. A slide claims the two screens are siblings
+    /// you moved between, and offers a direction to come back from — neither is
+    /// true here: onboarding is a one-way launch state that ceases to exist, and on
+    /// iOS it isn't a modal being dismissed (see `mainTabs` on why the tabs aren't
+    /// built underneath it), so there is no edge for it to go back to. The 1.03
+    /// scale is the whole gesture: enough to read as the screen lifting off rather
+    /// than blinking out, small enough that nothing looks like it zoomed.
+    ///
+    /// The tabs only fade — no counter-scale. Transforming a `TabView` mid-insertion
+    /// also transforms the tab bar, and scaling OS 26's glass bar for a third of a
+    /// second draws the eye to exactly the wrong element.
+    private var onboardingTransition: AnyTransition {
+        // Reduce Motion drops the scale, not the transition. A cross-fade is the
+        // sanctioned substitute for motion; removing the whole thing would just
+        // restore the hard cut this exists to fix.
+        guard !reduceMotion else { return .opacity }
+        return .asymmetric(
+            // Insertion is the debug replay re-entering setup, so it stays a plain
+            // fade — a screen arriving shouldn't mirror the "lifting away" read.
+            insertion: .opacity,
+            removal: .opacity.combined(with: .scale(scale: 1.03))
+        )
+    }
+
     /// The normal application surface is built only after onboarding. Keeping
     /// it out of the first frame prevents a Home-screen flash and makes the
     /// welcome a true launch state rather than a modal placed over the app.
+    ///
+    /// It now fades in rather than appearing instantly, so the first build of the
+    /// tabs lands under a dissolve instead of a cut — which also hides any layout
+    /// settling on that first frame rather than showing it.
     private var mainTabs: some View {
         TabView {
             HomeView(controller: controller)
@@ -390,7 +435,6 @@ struct GpsView: View {
                 case .notPro:
                     proPitchSection
                     compatibilitySection
-                    gpsForMacSection
                 case .waitingForMac:
                     aboutSection
                     waitingSection
@@ -561,6 +605,10 @@ struct GpsView: View {
     /// on OS 26, bordered fallback below) at `.large` so it matches every other
     /// primary button and gets a full 44pt tap target. Restore lives in Settings
     /// and on the paywall itself, so it's intentionally not duplicated here.
+    ///
+    /// `DeviceGpsPitch` now carries the "Learn about GeoSpoof GPS for Mac" link
+    /// itself, so the standalone section this tab used to add below it is gone —
+    /// otherwise the same link would appear twice on this screen.
     private var proPitchSection: some View {
         Section {
             DeviceGpsPitch { router.showPaywall = true }
@@ -601,17 +649,6 @@ struct GpsView: View {
             }
             .font(.footnote)
             .foregroundColor(.secondary)
-        }
-    }
-
-    /// Link to the GeoSpoof GPS Mac companion, shown on the non-Pro pitch so a
-    /// prospective buyer can read what it is (and that it needs Pro) before
-    /// upgrading. Same destination as the setup download link.
-    private var gpsForMacSection: some View {
-        Section {
-            Link(destination: downloadURL) {
-                Label("Learn about GeoSpoof GPS for Mac", systemImage: "arrow.up.right")
-            }
         }
     }
 

@@ -30352,6 +30352,76 @@
         }
       }
     },
+    "You have Pro — you just need a Mac" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Du hast Pro — dir fehlt nur ein Mac"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ya tienes Pro: solo necesitas un Mac"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Vous avez Pro : il ne vous manque qu’un Mac"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Anda sudah memiliki Pro — hanya perlu sebuah Mac"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Proをお持ちです。あとはMacだけです"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Je hebt Pro — je hebt alleen nog een Mac nodig"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Você já tem o Pro — só falta um Mac"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "У вас есть Pro — нужен только Mac"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Du har Pro – du behöver bara en Mac"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bạn đã có Pro — chỉ cần một máy Mac"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "你已拥有 Pro，只需一台 Mac"
+          }
+        }
+      }
+    },
     "You own GeoSpoof Pro — yours forever, on all your Apple devices. No subscription." : {
       "localizations" : {
         "de" : {

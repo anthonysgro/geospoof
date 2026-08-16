@@ -1306,6 +1306,12 @@ private struct OnboardingSafariReadyView: View {
     let onFinish: () -> Void
 
     @ObservedObject private var router = AppRouter.shared
+    /// Observed so the Device GPS row states what this user still needs rather
+    /// than what a new customer needs. Someone can arrive here already owning Pro
+    /// — a founder, or a subscriber setting up a second device — and quoting them
+    /// a price they have already paid is the worst possible read of the screen
+    /// that is supposed to tell them setup went well.
+    @ObservedObject private var pro = ProStore.shared
     @State private var showDeviceGps = false
     @State private var showVpn = false
     @Environment(\.horizontalSizeClass) private var hSizeClass
@@ -1421,7 +1427,13 @@ private struct OnboardingSafariReadyView: View {
                             // fought the brand tint.
                             symbol: "location.circle.fill",
                             title: "Device GPS",
-                            detail: "Needs Pro and a Mac",
+                            // What is outstanding *for this user*. An owner is
+                            // missing only the Mac, and the sheet behind this row
+                            // agrees — both read `isPro`, so the row can never
+                            // promise an upsell the sheet no longer shows.
+                            detail: pro.isPro
+                                ? DeviceGpsPitch.ownedNeedsMac
+                                : "Needs Pro and a Mac",
                             showsChevron: true
                         )
                     }
@@ -1576,7 +1588,19 @@ private struct OnboardingSafariReadyView: View {
 /// `Form` `Section` and in a plain `ScrollView` without doubling up on chrome.
 struct DeviceGpsPitch: View {
     /// Opens the paywall. Injected because the two hosts reach it differently.
+    /// Never called once the user is Pro — see `body`.
     let onUpgrade: () -> Void
+
+    /// The ask is replaced by a confirmation once the user owns Pro.
+    ///
+    /// Branching here rather than at the call sites is deliberate: this type
+    /// exists so a customer who meets the explanation twice gets one account of
+    /// the feature, and that guarantee has to cover "do I already have this?"
+    /// too. The GPS tab only renders this in its `.notPro` phase, so today the
+    /// owned branch is reached from onboarding alone — but a host that starts
+    /// showing the pitch to an owner gets the right behaviour for free instead of
+    /// re-deriving it.
+    @ObservedObject private var pro = ProStore.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -1606,14 +1630,63 @@ struct DeviceGpsPitch: View {
                 PitchPoint("Secure Mac pairing with no jailbreak")
             }
 
-            Button(action: onUpgrade) {
-                Label("Upgrade to Pro", systemImage: "sparkles")
-                    .frame(maxWidth: .infinity)
+            if pro.isPro {
+                // Confirmation, not a badge: this is the answer to "have I already
+                // paid for this?", so it names the entitlement and then names the
+                // one thing still standing between them and the feature. Green +
+                // sealed check is the mark the Pro screens already use for an
+                // active entitlement.
+                Label {
+                    Text(Self.ownedNeedsMac)
+                } icon: {
+                    Image(systemName: "checkmark.seal.fill")
+                }
+                .font(.subheadline)
+                .foregroundColor(.green)
+                .fixedSize(horizontal: false, vertical: true)
+
+                // The remaining step, in the place the ask used to occupy. Same
+                // destination and campaign as the GPS tab's two Mac links, so
+                // "went to get the Mac app" stays one number.
+                //
+                // A web link rather than a jump to the GPS tab: onboarding builds
+                // the tabs only once it finishes, so there is nothing in-app to
+                // route to yet. `glassButtonStyle` is a `buttonStyle`, which
+                // `Link` honours, so this matches the button it replaces.
+                Link(destination: Self.macAppURL) {
+                    Label("Get GeoSpoof GPS for Mac", systemImage: "arrow.down.circle")
+                        .frame(maxWidth: .infinity)
+                }
+                .glassButtonStyle(prominent: true)
+                .controlSize(.large)
+                .padding(.top, 2)
+            } else {
+                Button(action: onUpgrade) {
+                    Label("Upgrade to Pro", systemImage: "sparkles")
+                        .frame(maxWidth: .infinity)
+                }
+                .glassButtonStyle(prominent: true)
+                .controlSize(.large)
+                .padding(.top, 2)
+                .accessibilityHint("Opens GeoSpoof Pro upgrade options")
+
+                // Somewhere to go that isn't the paywall. The GPS tab already gave
+                // its non-Pro visitors this link; the onboarding sheet did not, so
+                // the only forward move there was "buy", and reading more meant
+                // closing the sheet and finding the site yourself. Now it lives on
+                // the shared pitch, which is also what stops the tab from showing
+                // it twice — see `GpsView`, where the standalone section it used to
+                // occupy is gone.
+                //
+                // Quiet on purpose: secondary weight, no button chrome. The screen
+                // keeps one primary action and this isn't it.
+                Link(destination: Self.macAppURL) {
+                    Label("Learn about GeoSpoof GPS for Mac", systemImage: "arrow.up.right")
+                        .font(.subheadline.weight(.medium))
+                        .frame(maxWidth: .infinity)
+                }
+                .padding(.top, 4)
             }
-            .glassButtonStyle(prominent: true)
-            .controlSize(.large)
-            .padding(.top, 2)
-            .accessibilityHint("Opens GeoSpoof Pro upgrade options")
         }
     }
 
@@ -1622,6 +1695,22 @@ struct DeviceGpsPitch: View {
     /// than at each call site, where it was the same sentence typed out twice.
     static let compatibilityCaveat: LocalizedStringKey =
         "Not for AR games like Pokémon GO — device GPS is for privacy, browsing, and development."
+
+    /// Where the Mac companion is explained and downloaded. One definition for both
+    /// branches, and the same `gps-download` campaign the GPS tab's setup link uses,
+    /// so "went to get the Mac app" stays a single number regardless of which
+    /// surface sent them.
+    private static var macAppURL: URL { AppLink.site("/gps", campaign: "gps-download") }
+
+    /// Shown to a user who already owns Pro, in place of "Needs Pro and a Mac"
+    /// and in place of the upgrade ask.
+    ///
+    /// One key for both, on purpose: the onboarding row and the sheet it opens are
+    /// the same statement at two sizes, and the previous pair of near-identical
+    /// sentences is what this file has been burned by before. "Pro" rather than
+    /// "GeoSpoof Pro" because the row's other state says "Needs Pro", and the
+    /// sheet names the product in its header two lines up.
+    static let ownedNeedsMac: LocalizedStringKey = "You have Pro — you just need a Mac"
 }
 
 /// A checked line in a pitch — a quiet brand check plus a short claim. Shared by
@@ -2127,9 +2216,11 @@ private extension View {
     /// With those two in place the glass is *too* lively over a colourful backdrop —
     /// the onboarding close screen's map turns the sheet into stained glass. The
     /// scrim is the actual knob: it sits above the glass and below the content, so
-    /// the blur survives and only its intensity changes. 0.55 keeps a clear sense of
-    /// depth while leaving body copy comfortable; lower shows more, and past ~0.8 it
-    /// stops reading as glass at all.
+    /// the blur survives and only its intensity changes. Raised from 0.55 to 0.68
+    /// for a thicker frost: the map still reads as depth behind the sheet, but it
+    /// no longer competes with the copy. Lower shows more of the backdrop, and past
+    /// ~0.8 it stops reading as glass at all — so 0.68 is a deliberate step toward
+    /// that ceiling, not a new baseline to keep nudging.
     ///
     /// The catch on undimming, per Apple: dimming and touch pass-through are the
     /// same setting, so the content behind goes live. Hosts must disable hit testing
@@ -2142,7 +2233,7 @@ private extension View {
     func frostedSheetBackground() -> some View {
         if #available(iOS 16.4, *) {
             self
-                .background(Color(uiColor: .systemBackground).opacity(0.55))
+                .background(Color(uiColor: .systemBackground).opacity(0.68))
                 .presentationBackgroundInteraction(.enabled(upThrough: .medium))
         } else {
             self
