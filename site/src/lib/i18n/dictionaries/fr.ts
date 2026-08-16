@@ -976,7 +976,7 @@ export const fr: Dictionary = {
         "Le Temps d'écran, le contrôle parental ou la gestion de l'appareil peuvent empêcher l'activation des extensions Safari.",
       ],
       support: "Obtenir de l'aide auprès de GeoSpoof",
-      appleSupport: "Voir le guide Apple sur les extensions Safari",
+      appleSupport: "Un problème ? Consultez les instructions d’Apple",
     },
     checking: {
       eyebrow: "Configuration de Safari",

@@ -977,7 +977,7 @@ export const de: Dictionary = {
         "Bildschirmzeit, Kindersicherung oder Geräteverwaltung können das Aktivieren von Safari-Erweiterungen verhindern.",
       ],
       support: "Hilfe von GeoSpoof erhalten",
-      appleSupport: "Apples Anleitung zu Safari-Erweiterungen ansehen",
+      appleSupport: "Probleme? Sieh dir Apples Anleitung an",
     },
     checking: {
       eyebrow: "Safari-Einrichtung",

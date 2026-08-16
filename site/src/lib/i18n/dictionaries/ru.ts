@@ -977,7 +977,7 @@ export const ru: Dictionary = {
         "Экранное время, родительский контроль или управление устройством могут запрещать включение расширений Safari.",
       ],
       support: "Получить помощь GeoSpoof",
-      appleSupport: "Открыть руководство Apple по расширениям Safari",
+      appleSupport: "Возникли трудности? Посмотрите инструкции Apple",
     },
     checking: {
       eyebrow: "Настройка Safari",

@@ -963,7 +963,7 @@ export const id: Dictionary = {
         "Durasi Layar, kontrol orang tua, atau pengelolaan perangkat dapat mencegah ekstensi Safari diaktifkan.",
       ],
       support: "Dapatkan bantuan dari GeoSpoof",
-      appleSupport: "Lihat panduan ekstensi Safari dari Apple",
+      appleSupport: "Mengalami masalah? Lihat petunjuk Apple",
     },
     checking: {
       eyebrow: "Pengaturan Safari",

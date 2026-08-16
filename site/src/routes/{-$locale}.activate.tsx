@@ -405,9 +405,24 @@ function WaitingState({
       />
 
       <Button
+        asChild
+        variant="link"
+        className="mt-2 -ml-2 min-h-11 justify-start px-2 font-semibold text-(--color-brand)"
+      >
+        <a
+          href={APPLE_SAFARI_EXTENSION_GUIDES[safariSetupVariant]}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {copy.troubleshooting.appleSupport}
+          <ExternalLink className="ml-1.5 size-3.5" aria-hidden="true" />
+        </a>
+      </Button>
+
+      <Button
         type="button"
         size="lg"
-        className={cn(primaryButtonClass, "mt-6")}
+        className={cn(primaryButtonClass, "mt-3")}
         onClick={() => window.location.reload()}
       >
         <RefreshCw className="size-4" aria-hidden="true" />
@@ -415,11 +430,7 @@ function WaitingState({
       </Button>
 
       {showTroubleshooting ? (
-        <Troubleshooting
-          copy={copy}
-          locale={locale}
-          safariSetupVariant={safariSetupVariant}
-        />
+        <Troubleshooting copy={copy} locale={locale} />
       ) : null}
     </section>
   )
@@ -445,19 +456,19 @@ function SafariSetupVisual({
         className="w-full divide-y divide-(--color-canvas-border)"
         aria-label={waiting.inSafari}
       >
-        <li className="grid grid-cols-[1.5rem_2rem_minmax(0,1fr)] items-center gap-3 px-4 py-3.5">
+        <li className="grid grid-cols-[1.5rem_minmax(0,1fr)] items-start gap-3 px-4 py-3.5">
           <span className="flex size-6 items-center justify-center rounded-full bg-(--color-brand) text-xs font-bold text-white">
             1
           </span>
-          <img
-            src="/images/support/page-menu-ios.png"
-            alt=""
-            width={15}
-            height={20}
-            className="h-5 w-auto justify-self-center opacity-80 dark:invert"
-          />
           <div className="min-w-0">
             <p className="text-sm font-bold text-(--color-canvas-foreground)">
+              <img
+                src="/images/support/page-menu-ios.png"
+                alt=""
+                width={12}
+                height={16}
+                className="mr-2 inline-block h-4 w-auto align-[-0.2em] opacity-80 dark:invert"
+              />
               {pageControl.title}
             </p>
             <p className="mt-0.5 text-xs leading-5 text-(--color-canvas-muted)">
@@ -513,11 +524,9 @@ function SafariSetupVisual({
 function Troubleshooting({
   copy,
   locale,
-  safariSetupVariant,
 }: {
   copy: ActivationCopy
   locale: Locale
-  safariSetupVariant: SafariSetupVariant
 }) {
   const troubleshooting = copy.troubleshooting
   return (
@@ -545,20 +554,6 @@ function Troubleshooting({
             >
               <a href={localizedPath("/support", locale)}>
                 {troubleshooting.support}
-                <ExternalLink className="ml-1.5 size-3.5" aria-hidden="true" />
-              </a>
-            </Button>
-            <Button
-              asChild
-              variant="link"
-              className="-ml-2 min-h-11 px-2 font-semibold text-(--color-canvas-muted)"
-            >
-              <a
-                href={APPLE_SAFARI_EXTENSION_GUIDES[safariSetupVariant]}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {troubleshooting.appleSupport}
                 <ExternalLink className="ml-1.5 size-3.5" aria-hidden="true" />
               </a>
             </Button>

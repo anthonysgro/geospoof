@@ -966,7 +966,7 @@ export const en = {
         "Screen Time, parental controls, or device management can prevent Safari extensions from being enabled.",
       ],
       support: "Get help from GeoSpoof",
-      appleSupport: "View Apple's Safari extension guide",
+      appleSupport: "Having trouble? See Apple's instructions",
     },
     checking: {
       eyebrow: "Safari setup",

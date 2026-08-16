@@ -955,7 +955,7 @@ export const ja: Dictionary = {
         "スクリーンタイム、ペアレンタルコントロール、またはデバイス管理により、Safari拡張機能を有効にできない場合があります。",
       ],
       support: "GeoSpoofのサポートを利用する",
-      appleSupport: "AppleのSafari機能拡張ガイドを見る",
+      appleSupport: "お困りですか？Appleの手順を確認",
     },
     checking: {
       eyebrow: "Safariの設定",

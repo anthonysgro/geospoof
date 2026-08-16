@@ -939,7 +939,7 @@ export const zhCN: Dictionary = {
         "屏幕使用时间、家长控制或设备管理可能会阻止启用 Safari 扩展。",
       ],
       support: "获取 GeoSpoof 帮助",
-      appleSupport: "查看 Apple 的 Safari 扩展指南",
+      appleSupport: "遇到问题？查看 Apple 的操作说明",
     },
     checking: {
       eyebrow: "Safari 设置",

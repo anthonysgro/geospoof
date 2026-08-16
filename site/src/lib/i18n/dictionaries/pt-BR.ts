@@ -974,7 +974,7 @@ export const ptBR: Dictionary = {
         "Tempo de Uso, controles parentais ou o gerenciamento do dispositivo podem impedir a ativação de extensões do Safari.",
       ],
       support: "Obter ajuda do GeoSpoof",
-      appleSupport: "Ver o guia da Apple sobre extensões do Safari",
+      appleSupport: "Está com dificuldades? Veja as instruções da Apple",
     },
     checking: {
       eyebrow: "Configuração do Safari",
