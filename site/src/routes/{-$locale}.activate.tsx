@@ -27,6 +27,7 @@ import { Card } from "@/components/ui/card"
 import { SkipLink } from "@/components/landing/SkipLink"
 import { useTranslations } from "@/hooks/use-i18n"
 import { getDictionary, localizedPath, toLocale } from "@/lib/i18n"
+import { resolveNetworkIdentity } from "@/lib/verification/network-identity"
 import { SITE_URL } from "@/lib/blog"
 import { cn } from "@/lib/utils"
 import {
@@ -226,6 +227,54 @@ function useExtensionHandshake(browser: ActivationBrowser) {
   return { detected, showTroubleshooting, rechecking, checkNow }
 }
 
+type NetworkCheck =
+  | { status: "idle" }
+  | { status: "checking" }
+  | { status: "ready"; label: string }
+  | { status: "error" }
+
+/**
+ * Resolve the city/country the visitor's IP maps to, for the success screen's
+ * third proof row.
+ *
+ * Gated on `enabled` rather than running at page load: there is no reason to
+ * look anything up while the user is still being told to turn on an extension,
+ * and it keeps the request off the path of the state everyone waits in.
+ *
+ * Failure is deliberately quiet. The row is supporting evidence, not the lesson
+ * — the sentence under the card states the same fact whether or not a value
+ * arrives — so a blocked or slow lookup must never make setup look broken.
+ */
+function useNetworkLocation(enabled: boolean): NetworkCheck {
+  const [check, setCheck] = React.useState<NetworkCheck>({ status: "idle" })
+
+  React.useEffect(() => {
+    if (!enabled) return
+    let cancelled = false
+    setCheck({ status: "checking" })
+
+    resolveNetworkIdentity().then(
+      (identity) => {
+        if (cancelled) return
+        const label =
+          [identity.city, identity.countryName].filter(Boolean).join(", ") ||
+          identity.countryName ||
+          identity.ip
+        setCheck(label ? { status: "ready", label } : { status: "error" })
+      },
+      () => {
+        if (!cancelled) setCheck({ status: "error" })
+      }
+    )
+
+    return () => {
+      cancelled = true
+    }
+  }, [enabled])
+
+  return check
+}
+
 /**
  * Move focus to the incoming heading when the page swaps one state for another.
  *
@@ -326,6 +375,7 @@ export function ActivatePage() {
   }, [browser, detected, location.status])
 
   const headingRef = useHeadingFocus(stateKey)
+  const network = useNetworkLocation(location.status === "ready")
 
   return (
     <div className="flex min-h-svh flex-col bg-(--color-canvas)">
@@ -356,7 +406,9 @@ export function ActivatePage() {
         ) : location.status === "ready" ? (
           <SuccessState
             location={location.value}
+            network={network}
             copy={copy}
+            t={t}
             locale={locale}
             headingRef={headingRef}
           />
@@ -834,16 +886,30 @@ function LocationCheckState({
 
 function SuccessState({
   location,
+  network,
   copy,
+  t,
   locale,
   headingRef,
 }: {
   location: ReportedLocation
+  network: NetworkCheck
   copy: ActivationCopy
+  t: Dictionary
   locale: Locale
   headingRef: HeadingRef
 }) {
   const coordinates = `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`
+
+  // Borrowed from the leak detector rather than duplicated: this is the same
+  // concept on the same site, and those keys already ship in all nine locales.
+  const ipRow = t.verify.rows
+  const ipValue =
+    network.status === "ready"
+      ? network.label
+      : network.status === "error"
+        ? ipRow.lookupFailed
+        : ipRow.lookingUp
 
   return (
     <section
@@ -872,7 +938,10 @@ function SuccessState({
         size="sm"
         className="mt-7 w-full gap-0 rounded-[1.25rem] border border-(--color-canvas-border) bg-(--color-canvas-border)/15 py-0 shadow-none ring-0"
       >
-        <dl className="w-full divide-y divide-(--color-canvas-border) px-4">
+        <dl
+          className="w-full divide-y divide-(--color-canvas-border) px-4"
+          aria-busy={network.status === "checking"}
+        >
           <ProofRow
             label={copy.success.locationLabel}
             value={coordinates}
@@ -882,8 +951,19 @@ function SuccessState({
             label={copy.success.timezoneLabel}
             value={location.timezone}
           />
+          {/* The row that teaches the distinction. Two values agree and one does
+              not, in the user's own data — which lands with someone who skims,
+              where a sentence explaining that GeoSpoof cannot change an IP does
+              not. */}
+          <ProofRow label={ipRow.ipAddress} value={ipValue} />
         </dl>
       </Card>
+
+      {/* Names what the row above shows. Rendered unconditionally: it is true
+          whether or not the lookup resolved, so the lesson survives a failure. */}
+      <p className="mt-4 text-sm leading-6 text-(--color-canvas-muted)">
+        {t.verify.vpnCard.line1}
+      </p>
 
       <Button asChild size="lg" className={cn(primaryButtonClass, "mt-7")}>
         <a href={APP_RETURN_URL}>{copy.success.returnToApp}</a>

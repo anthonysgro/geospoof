@@ -150,6 +150,21 @@ export function PrivacyPage() {
                 identify individual visitors. This applies to the website only —
                 never to the extension or apps, which remain analytics-free.
               </p>
+              <p>
+                <strong>IP location on the website</strong> — Separately from
+                analytics, a few pages on this site show you what the network
+                reveals about you: the leak detector (<strong>/verify</strong>),
+                the Safari setup page (<strong>/activate</strong>), and the
+                exposure prompt on the home page. To do that, the site reads
+                your public IP address and the approximate city and country it
+                maps to. This is normally resolved on our own server from the
+                request headers your connection already carries, so no external
+                request is made. When that is unavailable, the lookup falls back
+                to the same third-party geolocation services listed under
+                "Third-Party API Usage" below. In every case the value is
+                displayed back to you and used for nothing else: it is not
+                stored, not logged, and not sent to the developer.
+              </p>
             </PolicySection>
 
             <PolicySection title="Local Data Storage">

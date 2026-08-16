@@ -62,16 +62,29 @@ describe("Safari onboarding return contract", () => {
     expect(onboarding).not.toContain("onLearnAboutGPS: showGPSDetails");
   });
 
-  it("uses an editorial close instead of a templated success dashboard", () => {
+  it("closes on the three location layers, not just the Safari one", () => {
     expect(safariReadyView).toContain('Text("Safari is ready")');
-    expect(safariReadyView).toContain('Text("Websites now see")');
-    expect(safariReadyView).toContain(
-      'Text("This changes websites in Safari. Your iPhone GPS and IP address remain unchanged.")'
-    );
     expect(safariReadyView).toContain('Text("Start using GeoSpoof")');
-    expect(safariReadyView).not.toContain("checkmark.circle.fill");
-    expect(safariReadyView).not.toContain("statusRow(");
-    expect(safariReadyView).not.toContain("Learn about iPhone GPS");
+
+    // All three layers are named. Customers conflate them because the store
+    // listing sells browser spoofing as "fake your GPS location", so this screen
+    // is the first place the app can separate them — losing a row silently
+    // reintroduces the confusion it exists to fix.
+    expect(safariReadyView).toContain('title: "Safari location & timezone"');
+    expect(safariReadyView).toContain('title: "This iPhone\'s GPS"');
+    expect(safariReadyView).toContain('title: "Your IP address"');
+
+    // The two layers GeoSpoof does not move must say why, on the row itself. The
+    // Mac requirement in particular is what causes refunds when it is discovered
+    // only after purchase.
+    expect(safariReadyView).toContain('.unchanged("Needs Pro and a Mac")');
+    expect(safariReadyView).toContain('.unchanged("Only a VPN can change this")');
+
+    // Rows stay non-interactive: pushing a Pro screen from inside onboarding
+    // would end the flow at a paywall, and this screen is terminal.
+    expect(safariReadyView).not.toContain("NavigationLink");
+    expect(safariReadyView).not.toContain("ProDetailView");
+    expect(safariReadyView).not.toContain("showPaywall");
   });
 
   it("passes the native Safari UI generation to the activation page", () => {

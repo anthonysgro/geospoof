@@ -1273,9 +1273,26 @@ private struct OnboardingSafariHandoffView: View {
     }
 }
 
-/// A quiet bridge from verified Safari activation into the product. The hosted
-/// page already supplies explicit success feedback, so this screen focuses on
-/// the outcome, one essential product boundary, and a single exit action.
+/// The bridge from verified Safari activation into the product, and the one place
+/// the app draws its three location layers side by side.
+///
+/// The layered list exists because customers conflate the three. The store
+/// listing sells "fake your GPS location" for ASO reasons, so a new user often
+/// arrives believing the free tier moves their device's GPS and hides their IP.
+/// This is the first moment the app can correct that: they have just succeeded at
+/// the one layer that is free, so the other two read as "what else exists" rather
+/// than as a list of things they don't have.
+///
+/// Shown as three rows rather than a paragraph on purpose — the previous version
+/// stated the same boundary in one sentence ("This changes websites in Safari.
+/// Your iPhone GPS and IP address remain unchanged.") and it was being skimmed
+/// past. Three rows with three distinct states is a structure a non-reader still
+/// absorbs.
+///
+/// Rows are deliberately *not* tappable. Pushing a Pro screen from inside
+/// onboarding turns the flow into something that ends at a paywall, and this is a
+/// terminal screen with nowhere sensible to return to. The rows inform; the GPS
+/// tab and the Pro card on Home are where acting on them belongs.
 private struct OnboardingSafariReadyView: View {
     @ObservedObject var controller: SpoofController
     let onFinish: () -> Void
@@ -1311,31 +1328,39 @@ private struct OnboardingSafariReadyView: View {
                     .font(.largeTitle.bold())
                     .accessibilityAddTraits(.isHeader)
 
-                // Only assert what websites see when there is something to name.
-                // `showSafariReady()` already requires a location, so this is the
-                // second line of defence rather than the first — but the heading
-                // stands on its own either way, because the deep link proves Safari
-                // is set up regardless of what the app has on record.
-                if let selectedLocation {
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("Websites now see")
-                            .font(.body)
-                            .foregroundStyle(.secondary)
-
-                        Text(verbatim: selectedLocation)
-                            .font(.title2.weight(.semibold))
-                            .foregroundStyle(.primary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .padding(.top, 36)
-                    .accessibilityElement(children: .combine)
-                }
-
-                Text("This changes websites in Safari. Your iPhone GPS and IP address remain unchanged.")
-                    .font(.body)
+                Text("What this covers")
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 30)
+                    .padding(.top, 34)
+                    .accessibilityAddTraits(.isHeader)
+
+                VStack(alignment: .leading, spacing: 0) {
+                    // `showSafariReady()` requires a location, so the nil branch is
+                    // the second line of defence rather than the first. The heading
+                    // stands on its own either way: the deep link proves Safari is
+                    // set up regardless of what the app has on record.
+                    layerRow(
+                        symbol: "globe",
+                        title: "Safari location & timezone",
+                        state: selectedLocation.map { .value($0) } ?? .changed,
+                        tint: .green
+                    )
+                    Divider()
+                    layerRow(
+                        symbol: "location.slash",
+                        title: "This iPhone's GPS",
+                        state: .unchanged("Needs Pro and a Mac"),
+                        tint: .secondary
+                    )
+                    Divider()
+                    layerRow(
+                        symbol: "network",
+                        title: "Your IP address",
+                        state: .unchanged("Only a VPN can change this"),
+                        tint: .secondary
+                    )
+                }
+                .padding(.top, 12)
             }
             .padding(.horizontal, 24)
             .padding(.top, 32)
@@ -1361,6 +1386,71 @@ private struct OnboardingSafariReadyView: View {
         }
         .background(Color(uiColor: .systemBackground))
         .tint(.brand)
+    }
+
+    /// What a layer currently reports.
+    private enum LayerState {
+        /// Spoofed, and the place is known.
+        case value(String)
+        /// Spoofed, but the app has no name for the place.
+        case changed
+        /// Not spoofed, with the reason it isn't.
+        case unchanged(LocalizedStringKey)
+    }
+
+    /// One layer: what it is, whether GeoSpoof moved it, and — when it didn't —
+    /// what would. The "why not" sits on the row rather than behind a tap, because
+    /// the Mac requirement for GPS is the single fact most likely to cause a refund
+    /// if someone only discovers it after paying.
+    @ViewBuilder
+    private func layerRow(
+        symbol: String,
+        title: LocalizedStringKey,
+        state: LayerState,
+        tint: Color
+    ) -> some View {
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: symbol)
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(tint)
+                .frame(width: 24)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.body)
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                switch state {
+                case .value(let place):
+                    // verbatim: a place name from the city catalog, not copy.
+                    Text(verbatim: place)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.green)
+                        .fixedSize(horizontal: false, vertical: true)
+                case .changed:
+                    Text("Changed")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.green)
+                case .unchanged(let reason):
+                    // Two strings rather than one: "Not changed" is the state and is
+                    // shared between rows, the reason varies. Splitting them also
+                    // keeps the state scannable straight down the column.
+                    Text("Not changed")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text(reason)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 12)
+        .accessibilityElement(children: .combine)
     }
 
     private static func coordinateSummary(latitude: Double, longitude: Double) -> String {
