@@ -301,29 +301,43 @@ struct OnboardingView: View {
     @ObservedObject var controller: SpoofController
     let onDone: () -> Void
 
-    @State private var step = 0
     @State private var showTrust = false
     #if os(iOS)
     @ObservedObject private var router = AppRouter.shared
-    @State private var navigationPath: [StepKind] = []
+    /// The navigation stack's path is the whole of the flow's state: the page on
+    /// screen *is* the current step. An earlier version also kept an index and
+    /// hand-synced the two through a `syncStep(with:)` helper called from four
+    /// places plus a per-page `onAppear`, so every navigation had to remember to
+    /// update both or the two would disagree.
+    @State private var path: [StepKind] = []
     #endif
     #if os(macOS)
+    /// macOS swaps content in place rather than pushing, so it has no path to
+    /// read and keeps an index it walks with Continue/Back.
+    @State private var step = 0
     @StateObject private var extState = ExtensionStateModel()
     @Environment(\.scenePhase) private var scenePhase
     #endif
 
-    /// The flow is modeled as an ordered list of steps rather than index-based
-    /// switches, because it diverges by platform. Index math across a divergent
-    /// flow is error-prone, so the step list is the single source of truth for
-    /// count, progress, and content.
+    /// The flow is modeled as an ordered list of steps rather than index math,
+    /// because it diverges by platform. `steps` is the one place the order lives.
+    ///
+    /// Only `welcome` and `enable` are shared. The rest belong to a single
+    /// platform, so they are declared per platform — that way the string catalog
+    /// never carries copy for a step the running OS cannot reach, which is how
+    /// "Safari is Ready" and its subtitle ended up as translatable keys that
+    /// nothing rendered.
     private enum StepKind: Hashable {
         case welcome
-        case location
         case enable
+        #if os(iOS)
+        case location
         case safariReady
+        #else
         case permission
         case gps
         case done
+        #endif
     }
 
     private var steps: [StepKind] {
@@ -338,16 +352,17 @@ struct OnboardingView: View {
         #endif
     }
 
-    private var stepCount: Int { steps.count }
+    #if os(iOS)
+    /// The page on screen. An empty path is the welcome root.
+    private var current: StepKind { path.last ?? .welcome }
+    #else
     private var current: StepKind { steps[min(step, steps.count - 1)] }
-    private var isLast: Bool { step == stepCount - 1 }
+    private var isLast: Bool { step == steps.count - 1 }
 
     private func symbol(_ kind: StepKind) -> String {
         switch kind {
         case .welcome: return "globe" // unused — welcome uses the app icon
-        case .location: return "mappin.and.ellipse"
         case .enable: return "puzzlepiece.extension.fill"
-        case .safariReady: return "checkmark.circle.fill"
         case .permission: return "lock.shield.fill"
         case .gps: return "location.circle.fill"
         case .done: return "checkmark.circle.fill"
@@ -357,9 +372,7 @@ struct OnboardingView: View {
     private func title(_ kind: StepKind) -> LocalizedStringKey {
         switch kind {
         case .welcome: return "Welcome to GeoSpoof"
-        case .location: return "Choose a Location"
         case .enable: return "Enable in Safari"
-        case .safariReady: return "Safari is Ready"
         case .permission: return "When Safari Asks"
         case .gps: return "Match Your iPhone's Real GPS"
         case .done: return "You're All Set"
@@ -370,24 +383,12 @@ struct OnboardingView: View {
         switch kind {
         case .welcome:
             return "Mask the location and timezone you reveal online with a tap -- and keep your real whereabouts private."
-        case .location:
-            return "Pick the location you want GeoSpoof to report. You can change it anytime."
         case .enable:
-            #if os(iOS)
-            return "Turn GeoSpoof on in Safari's extension settings."
-            #else
             return "In Safari, choose Settings > Extensions and turn on GeoSpoof."
-            #endif
-        case .safariReady:
-            return "Websites in Safari now receive your GeoSpoof location."
         case .permission:
             return "The first time you browse, Safari asks to allow access. Approving it is what lets GeoSpoof work -- here's what you'll see."
         case .gps:
-            #if os(iOS)
-            return "Want more than Safari? GeoSpoof Pro can set your iPhone's real GPS for privacy and app testing, driven from a companion Mac app -- no jailbreak. It's optional; browser spoofing is free."
-            #else
             return "Want more than Safari? GeoSpoof Pro can set a connected iPhone's real GPS for privacy and app testing, right from this Mac -- no jailbreak. It's optional; browser spoofing is free."
-            #endif
         case .done:
             return "Pick a location and GeoSpoof keeps the real one hidden. You can change it anytime."
         }
@@ -396,6 +397,7 @@ struct OnboardingView: View {
     private var primaryTitle: LocalizedStringKey {
         isLast ? "Get Started" : "Continue"
     }
+    #endif
 
     var body: some View {
         Group {
@@ -444,88 +446,56 @@ struct OnboardingView: View {
     /// owns movement through setup. This gives the transition standard iOS
     /// physics, back-swipe behavior, and accessibility instead of a bespoke
     /// onboarding animation.
-    @ViewBuilder
     private var iOSFlow: some View {
-        if #available(iOS 16.0, *) {
-            NavigationStack(path: $navigationPath) {
-                welcomeRoot
-                    .navigationDestination(for: StepKind.self) { kind in
-                        iOSPage(kind)
-                    }
+        NavigationStack(path: $path) {
+            OnboardingWelcomeView {
+                advance(from: .welcome)
             }
-            .onChange(of: navigationPath) { path in
-                syncStep(with: path.last)
+            .navigationBarHidden(true)
+            .navigationDestination(for: StepKind.self) { kind in
+                iOSPage(kind)
             }
-        } else {
-            NavigationView {
-                welcomeRoot
-                    .background {
-                        NavigationLink(
-                            destination: iOSPage(current),
-                            isActive: Binding(
-                                get: { step > 0 },
-                                set: { if !$0 { step = 0 } }
-                            )
-                        ) {
-                            EmptyView()
-                        }
-                        .hidden()
-                    }
-            }
-            .navigationViewStyle(.stack)
         }
-    }
-
-    private var welcomeRoot: some View {
-        OnboardingWelcomeView {
-            showFirstSetupStep()
-        }
-        .navigationBarHidden(true)
     }
 
     @ViewBuilder
     private func iOSPage(_ kind: StepKind) -> some View {
-        if kind == .location {
+        switch kind {
+        case .location:
             OnboardingLocationView(controller: controller) {
-                advance()
+                advance(from: .location)
             }
             .navigationBarHidden(false)
-        } else if kind == .enable {
+        case .enable:
             OnboardingSafariHandoffView(
                 controller: controller,
-                onOpenSetup: openSafariActivationPage
+                onOpenSetup: openSafariActivationPage,
+                onSkip: onDone
             )
             .navigationBarHidden(false)
-            .onAppear { syncStep(with: kind) }
             .task { await watchForSafariActivation() }
-        } else if kind == .safariReady {
+        case .safariReady:
             OnboardingSafariReadyView(
                 controller: controller,
                 onFinish: onDone
             )
             .navigationBarHidden(true)
-            .onAppear { syncStep(with: kind) }
-        } else {
-            setupStep
-                .navigationBarHidden(false)
-                .onAppear { syncStep(with: kind) }
+        case .welcome:
+            // The welcome is the stack's root, never a pushed destination.
+            EmptyView()
         }
     }
 
-    private func showFirstSetupStep() {
-        guard let firstSetup = steps.dropFirst().first else { return }
-        step = 1
-        if #available(iOS 16.0, *) {
-            navigationPath.append(firstSetup)
-        }
-    }
-
-    private func syncStep(with kind: StepKind?) {
-        guard let kind, let index = steps.firstIndex(of: kind) else {
-            step = 0
+    /// Push whatever follows `kind` in `steps`, or finish if it is the last one.
+    /// Driving this off `steps` keeps the order in one place instead of spreading
+    /// literal next-step names across the call sites.
+    private func advance(from kind: StepKind) {
+        guard let index = steps.firstIndex(of: kind) else { return }
+        guard let next = steps.dropFirst(index + 1).first else {
+            onDone()
             return
         }
-        step = index
+        path.append(next)
     }
 
     /// Consume the one-shot route only after OnboardingView exists. This works
@@ -536,15 +506,18 @@ struct OnboardingView: View {
         showSafariReady()
     }
 
+    /// The single way onto the verified-success screen, from either entrance: the
+    /// hosted page's return link and the extension's own check-in both land here.
+    ///
+    /// Gated on having a location because that is what the screen exists to name,
+    /// and because someone who arrives without one has not actually finished
+    /// setup — dropping the request leaves them in the flow, which is where they
+    /// still need to be. The realistic way to hit that is a cold launch straight
+    /// from the return link before the location step was ever completed.
     private func showSafariReady() {
-        guard let readyIndex = steps.firstIndex(of: .safariReady) else { return }
-        step = readyIndex
-
-        if #available(iOS 16.0, *) {
-            if navigationPath.last != .safariReady {
-                navigationPath.append(.safariReady)
-            }
-        }
+        guard controller.hasLocation else { return }
+        guard path.last != .safariReady else { return }
+        path.append(.safariReady)
     }
 
     /// Advance on the extension's own check-in, but only from the handoff screen.
@@ -554,12 +527,9 @@ struct OnboardingView: View {
     /// starts — a user who enables the extension in Safari before ever opening
     /// the app, or the debug replay on a device that's already set up. Without
     /// the guard those cases would jump straight from the welcome screen to
-    /// "Safari is ready", skipping location selection and leaving the success
-    /// screen with no location to name.
+    /// "Safari is ready", skipping location selection entirely.
     private func advanceIfSafariIsActive() {
-        guard current == .enable,
-              controller.isActiveInSafari,
-              controller.hasLocation else { return }
+        guard current == .enable, controller.isActiveInSafari else { return }
         showSafariReady()
     }
 
@@ -587,9 +557,14 @@ struct OnboardingView: View {
 
     #endif
 
-    /// The instructional steps retain the established scrolling layout. The
-    /// iOS welcome deliberately does not use this scaffold: it is a launch
-    /// scene, while these are the setup flow that begins after Continue.
+    #if os(macOS)
+    /// macOS's in-place setup scaffold: header, per-step extras, dot progress, and
+    /// a Continue/Back pair.
+    ///
+    /// This is macOS-only on purpose. iOS gives every step a bespoke screen and
+    /// reaches none of this, but while it was merely *unreachable* on iOS rather
+    /// than *absent*, the compiler still extracted its copy into the shared string
+    /// catalog — which is where the untranslated "Safari is Ready" key came from.
     private var setupStep: some View {
         GeometryReader { geo in
             ScrollView {
@@ -599,7 +574,6 @@ struct OnboardingView: View {
             standardHeader
 
             if current == .enable {
-                #if os(macOS)
                 if extState.state == .on {
                     Label("GeoSpoof is enabled in Safari", systemImage: "checkmark.circle.fill")
                         .font(.subheadline.weight(.semibold))
@@ -627,7 +601,6 @@ struct OnboardingView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                #endif
             }
 
             if current == .permission {
@@ -660,14 +633,12 @@ struct OnboardingView: View {
             .controlSize(.large)
             .padding(.horizontal)
 
-            #if os(macOS)
             if step > 0 {
                 Button("Back") {
                     withAnimation { step -= 1 }
                 }
                 .font(.subheadline)
             }
-            #endif
                 }
                 .padding()
                 .padding(.bottom, 12)
@@ -678,22 +649,12 @@ struct OnboardingView: View {
 
     private var stepProgress: some View {
         HStack(spacing: 8) {
-            ForEach(progressRange, id: \.self) { i in
+            ForEach(0..<steps.count, id: \.self) { i in
                 Circle()
                     .fill(i == step ? Color.brand : Color.secondary.opacity(0.3))
                     .frame(width: 8, height: 8)
             }
         }
-    }
-
-    /// On iOS the welcome is the doorway into setup, not one of its pages, so
-    /// progress starts with the first real task. macOS keeps its existing count.
-    private var progressRange: Range<Int> {
-        #if os(iOS)
-        return 1..<stepCount
-        #else
-        return 0..<stepCount
-        #endif
     }
 
     private var standardHeader: some View {
@@ -718,6 +679,10 @@ struct OnboardingView: View {
                 Text(title(current))
                     .font(.largeTitle.bold())
                     .multilineTextAlignment(.center)
+                    // Looks like a heading and is one, but a styled `Text` carries
+                    // no trait on its own — only `navigationTitle` gets that for
+                    // free, and this scaffold has no navigation bar.
+                    .accessibilityAddTraits(.isHeader)
                 Text(subtitle(current))
                     .font(.body)
                     .foregroundStyle(.secondary)
@@ -732,22 +697,14 @@ struct OnboardingView: View {
         if isLast {
             onDone()
         } else {
-            #if os(iOS)
-            step += 1
-            if #available(iOS 16.0, *) {
-                navigationPath.append(current)
-            }
-            #else
             withAnimation { step += 1 }
-            #endif
         }
     }
 
     private func openSystemSettings() {
-        #if os(macOS)
         SFSafariApplication.showPreferencesForExtension(withIdentifier: "com.moonloaf.geospoof.Extension")
-        #endif
     }
+    #endif
 
     #if os(iOS)
     /// Opens the first-party activation page in the user's default browser.
@@ -803,6 +760,11 @@ private struct OnboardingWelcomeView: View {
                             Text("GeoSpoof")
                                 .font(.custom("Nunito-Bold", size: 34, relativeTo: .largeTitle))
                                 .tracking(-0.5)
+                                // The welcome hides its navigation bar, so this is
+                                // the screen's only title and nothing else supplies
+                                // the trait. Rotor navigation lands nowhere without
+                                // it.
+                                .accessibilityAddTraits(.isHeader)
 
                             Text("Control the location you share—from Safari to your iPhone’s GPS.")
                                 .font(.body)
@@ -1014,7 +976,12 @@ private struct OnboardingLocationView: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityValue(selection == .place(place) ? "Selected" : "")
+                // The selected trait, not a value string: VoiceOver already has
+                // standard phrasing for selection in a list, and it doesn't need
+                // translating. The previous `accessibilityValue(… : "")` form also
+                // put a bare `""` in a LocalizedStringKey position, which the
+                // string catalog extracted as an empty translatable row.
+                .accessibilityAddTraits(selection == .place(place) ? [.isSelected] : [])
             }
         }
     }
@@ -1178,12 +1145,26 @@ private struct OnboardingCoordinatesView: View {
     }
 }
 
-/// A compact handoff from native setup to Safari. The preceding screen already
-/// explains location selection, so this page only confirms the choice and
-/// presents the next action.
+/// The handoff from native setup to Safari: what the user chose, what they're
+/// about to do in Safari, and two ways out.
+///
+/// The steps are shown here and not only on the hosted page because the handoff
+/// can fail in ways the app never sees — the default browser isn't Safari, the
+/// page doesn't load, the device is offline — and because some people want to
+/// read the task before leaving for it. `SafariActivationAnimation` is the same
+/// component Home's Setup card uses, so there is one description of this step
+/// rather than two that can drift.
+///
+/// `onSkip` is deliberately unconditional. Screen Time, parental controls, and
+/// device management can all prevent Safari extensions from being enabled at
+/// all, and on iOS this flow *is* the app's root — without an exit those users
+/// have no reachable app. Skipping finishes onboarding and lands on Home, whose
+/// Setup card carries the same instructions and stays until the extension checks
+/// in, so nothing is lost by leaving early.
 private struct OnboardingSafariHandoffView: View {
     @ObservedObject var controller: SpoofController
     let onOpenSetup: () -> Void
+    let onSkip: () -> Void
 
     private var selectedLocation: String {
         if let name = controller.locationName?.displayName, !name.isEmpty {
@@ -1199,11 +1180,32 @@ private struct OnboardingSafariHandoffView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Text("Turn GeoSpoof on in Safari's extension settings.")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.bottom, 28)
+                // Not a step counter. What the user needs here isn't "2 of 2" — it's
+                // knowing that nothing else is waiting for them after they leave for
+                // Safari. Kept as its own short label rather than folded into the
+                // sentence below, because that sentence is already translated into
+                // all 11 languages and rewording it would send a full sentence back
+                // through native review to add two words.
+                //
+                // Sentence case, not uppercase: `.textCase(.uppercase)` reads as
+                // shouting in Cyrillic and does nothing in CJK.
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Last step")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Color.brand)
+
+                    Text("Turn GeoSpoof on in Safari's extension settings.")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                // One announcement ("Last step. Turn GeoSpoof on …") instead of two
+                // fragments, since the label only means anything attached to it.
+                .accessibilityElement(children: .combine)
+                .padding(.bottom, 20)
+
+                SafariActivationAnimation(horizontalInset: 0)
+                    .padding(.bottom, 24)
 
                 HStack(alignment: .center, spacing: 14) {
                     Image(systemName: "mappin.and.ellipse")
@@ -1245,8 +1247,20 @@ private struct OnboardingSafariHandoffView: View {
                 .glassButtonStyle(prominent: true)
                 .controlSize(.large)
                 .padding(.horizontal, 20)
-                .padding(.vertical, 12)
+                .padding(.top, 12)
                 .accessibilityHint("Opens the setup page where Safari can enable and verify GeoSpoof")
+
+                Button(action: onSkip) {
+                    Text("I'll do this later")
+                        .font(.subheadline)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.brand)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 4)
+                .accessibilityHint("Finishes setup without Safari. You can turn GeoSpoof on later from the Home tab.")
             }
             .background(.regularMaterial)
         }
@@ -1266,7 +1280,14 @@ private struct OnboardingSafariReadyView: View {
     @ObservedObject var controller: SpoofController
     let onFinish: () -> Void
 
-    private var selectedLocation: String {
+    /// The place to name on this screen, or `nil` if the app has none on record.
+    ///
+    /// Optional rather than falling back to placeholder copy. The previous
+    /// fallback returned the literal string "Selected Location", which reaches the
+    /// view through `Text(verbatim:)` — so it stayed English in all twelve
+    /// languages and read as though that were the name of somewhere. There is no
+    /// honest way to word "we don't know", so the claim is dropped instead.
+    private var selectedLocation: String? {
         if let name = controller.locationName {
             let conciseName = [name.city, name.country]
                 .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -1276,7 +1297,7 @@ private struct OnboardingSafariReadyView: View {
             if !name.displayName.isEmpty { return name.displayName }
         }
 
-        guard let location = controller.location else { return "Selected Location" }
+        guard let location = controller.location else { return nil }
         return Self.coordinateSummary(
             latitude: location.latitude,
             longitude: location.longitude
@@ -1290,18 +1311,25 @@ private struct OnboardingSafariReadyView: View {
                     .font(.largeTitle.bold())
                     .accessibilityAddTraits(.isHeader)
 
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("Websites now see")
-                        .font(.body)
-                        .foregroundStyle(.secondary)
+                // Only assert what websites see when there is something to name.
+                // `showSafariReady()` already requires a location, so this is the
+                // second line of defence rather than the first — but the heading
+                // stands on its own either way, because the deep link proves Safari
+                // is set up regardless of what the app has on record.
+                if let selectedLocation {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Websites now see")
+                            .font(.body)
+                            .foregroundStyle(.secondary)
 
-                    Text(verbatim: selectedLocation)
-                        .font(.title2.weight(.semibold))
-                        .foregroundStyle(.primary)
-                        .fixedSize(horizontal: false, vertical: true)
+                        Text(verbatim: selectedLocation)
+                            .font(.title2.weight(.semibold))
+                            .foregroundStyle(.primary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.top, 36)
+                    .accessibilityElement(children: .combine)
                 }
-                .padding(.top, 36)
-                .accessibilityElement(children: .combine)
 
                 Text("This changes websites in Safari. Your iPhone GPS and IP address remain unchanged.")
                     .font(.body)
@@ -1356,6 +1384,10 @@ struct PermissionPromptsView: View {
             Text("The prompts you'll see")
                 .font(.subheadline.weight(.semibold))
                 .multilineTextAlignment(.center)
+                // Subheading for the card. The two screenshots below are already
+                // combined into single elements, so this is the label that makes
+                // sense of them when skimming by heading.
+                .accessibilityAddTraits(.isHeader)
 
             HStack(alignment: .top, spacing: 14) {
                 shot(image: "PermissionPrompt1", index: 1, caption: "Safari asks for access")
@@ -1610,6 +1642,11 @@ private extension View {
 /// tap and what to choose. Honors Reduce Motion by falling back to a static
 /// highlighted state.
 struct SafariActivationAnimation: View {
+    /// Outer horizontal inset around the card. Home's Setup card insets it
+    /// inside its Form row; the onboarding handoff screen already supplies page
+    /// margins, so it passes 0 rather than nesting a second gutter.
+    var horizontalInset: CGFloat = 16
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pressed = false
     @State private var ripple = false
@@ -1672,7 +1709,7 @@ struct SafariActivationAnimation: View {
         }
         .padding()
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .padding(.horizontal)
+        .padding(.horizontal, horizontalInset)
         .padding(.top, 4)
         .onAppear(perform: startAnimating)
         .accessibilityElement(children: .combine)

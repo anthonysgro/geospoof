@@ -957,13 +957,14 @@ export const zhCN: Dictionary = {
     success: {
       status: "Safari 已准备就绪",
       heading: "GeoSpoof 已在 Safari 中生效",
-      body: "Safari 中的网站现在会收到你的 GeoSpoof 位置。iPhone GPS 和 IP 地址是相互独立的信息，均未发生更改。",
       locationLabel: "Safari 报告的位置",
       timezoneLabel: "报告的时区",
       returnToApp: "返回 GeoSpoof",
       fullVerification: "运行完整验证",
-      fullVerificationNote:
-        "完整验证还会将浏览器位置与你的 IP 地址位置进行比较。",
+    },
+    desktop: {
+      heading: "在 Mac 应用中设置 GeoSpoof",
+      body: "本页介绍的是 iPhone 上的设置。在 Mac 上，请打开 GeoSpoof 并使用「在 Safari 中启用」，它会直接带你进入 Safari 的扩展设置。",
     },
     wrongBrowser: {
       eyebrow: "需要使用 Safari",

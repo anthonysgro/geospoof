@@ -152,32 +152,36 @@ struct SpoofControlPanel: View {
     private var proDiscoverySection: some View {
         if !pro.isPro && controller.hasLocation && !proCardDismissed {
             Section {
+                #if os(iOS)
+                // The NavigationLink is the whole row, so the system draws its
+                // own disclosure chevron at the trailing edge — no competing
+                // dismiss glyph. Dismissal lives in the swipe action, which is
+                // the standard iOS gesture for removing a list row.
+                NavigationLink {
+                    ProDetailView()
+                } label: {
+                    proDiscoveryLabel
+                }
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        proCardDismissed = true
+                    } label: {
+                        Label("Dismiss", systemImage: "xmark")
+                    }
+                }
+                #else
+                // macOS Form rows have no swipe gesture, so the card keeps an
+                // explicit dismiss control. `.borderless` keeps it a discrete
+                // tap target so it doesn't trigger the NavigationLink.
                 HStack(spacing: 12) {
                     NavigationLink {
                         ProDetailView()
                     } label: {
-                        HStack(spacing: 12) {
-                            Image(systemName: "sparkles")
-                                .font(.system(size: 22))
-                                .foregroundStyle(Color.brand)
-                                .frame(width: 30)
-                                .accessibilityHidden(true)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Do more with GeoSpoof Pro")
-                                    .font(.headline)
-                                Text("iPhone GPS, automatic sync with your VPN, per-site rules, and more.")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                        }
+                        proDiscoveryLabel
                     }
 
                     Spacer(minLength: 8)
 
-                    // Visible dismiss — works on macOS (no swipe in a Form) and
-                    // iOS alike. `.borderless` keeps it a discrete tap target so
-                    // it doesn't trigger the NavigationLink.
                     Button {
                         proCardDismissed = true
                     } label: {
@@ -189,15 +193,25 @@ struct SpoofControlPanel: View {
                     .buttonStyle(.borderless)
                     .accessibilityLabel("Dismiss")
                 }
-                #if os(iOS)
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button(role: .destructive) {
-                        proCardDismissed = true
-                    } label: {
-                        Label("Dismiss", systemImage: "xmark")
-                    }
-                }
                 #endif
+            }
+        }
+    }
+
+    private var proDiscoveryLabel: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 22))
+                .foregroundStyle(Color.brand)
+                .frame(width: 30)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Do more with GeoSpoof Pro")
+                    .font(.headline)
+                Text("iPhone GPS, automatic sync with your VPN, per-site rules, and more.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }

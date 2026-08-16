@@ -973,13 +973,14 @@ export const ja: Dictionary = {
     success: {
       status: "Safariの準備ができました",
       heading: "SafariでGeoSpoofが動作しています",
-      body: "SafariのWebサイトにはGeoSpoofの位置情報が送られています。iPhoneのGPSとIPアドレスは別の情報であり、変更されていません。",
       locationLabel: "Safariが報告する位置情報",
       timezoneLabel: "報告されるタイムゾーン",
       returnToApp: "GeoSpoofに戻る",
       fullVerification: "完全な検証を実行",
-      fullVerificationNote:
-        "完全な検証では、ブラウザの位置情報とIPアドレスの位置も比較します。",
+    },
+    desktop: {
+      heading: "MacアプリからGeoSpoofを設定",
+      body: "このページはiPhoneでの設定について説明しています。Macでは GeoSpoof を開き、「Safariで有効にする」を使ってください。Safariの機能拡張設定に直接移動します。",
     },
     wrongBrowser: {
       eyebrow: "Safariが必要です",

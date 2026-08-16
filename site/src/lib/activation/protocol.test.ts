@@ -92,6 +92,18 @@ describe("activation browser detection", () => {
       )
     ).toBe("other")
   })
+
+  it("separates desktop Safari from mobile Safari", () => {
+    // No touch points and no Mobile token: a real Mac, which cannot follow any of
+    // the tap-based instructions this page renders.
+    expect(
+      detectActivationBrowser(
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/18.0 Safari/605.1.15",
+        "MacIntel",
+        0
+      )
+    ).toBe("safari-desktop")
+  })
 })
 
 describe("Safari setup variant", () => {

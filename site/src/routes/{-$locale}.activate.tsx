@@ -24,6 +24,7 @@ import {
 import { Alert, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { SkipLink } from "@/components/landing/SkipLink"
 import { useTranslations } from "@/hooks/use-i18n"
 import { getDictionary, localizedPath, toLocale } from "@/lib/i18n"
 import { SITE_URL } from "@/lib/blog"
@@ -118,6 +119,11 @@ function useSafariSetupVariant(): SafariSetupVariant {
 function useExtensionHandshake(browser: ActivationBrowser) {
   const [detected, setDetected] = React.useState(false)
   const [showTroubleshooting, setShowTroubleshooting] = React.useState(false)
+  // Purely presentational: a manual check almost always resolves faster than a
+  // person can perceive, so without a brief visible state the button looks dead.
+  const [rechecking, setRechecking] = React.useState(false)
+  const pingRef = React.useRef<() => void>(() => {})
+  const recheckTimer = React.useRef<number | undefined>(undefined)
 
   React.useEffect(() => {
     if (browser !== "safari") return
@@ -125,6 +131,8 @@ function useExtensionHandshake(browser: ActivationBrowser) {
     const nonce = createActivationNonce()
     const ping = makeActivationPing(nonce)
     let acknowledged = false
+    // Held on an object so `acknowledge` can stop the poll it is declared before.
+    const timers: { poll?: number } = {}
 
     const sendPing = () => {
       if (acknowledged) return
@@ -143,8 +151,12 @@ function useExtensionHandshake(browser: ActivationBrowser) {
       if (!isActivationReadyMessage(data, nonce)) return
 
       acknowledged = true
+      // The `acknowledged` guard already makes further pings no-ops, but leaving
+      // a timer running for the life of the page to do nothing is just litter.
+      window.clearInterval(timers.poll)
       setDetected(true)
       setShowTroubleshooting(false)
+      setRechecking(false)
     }
 
     const receiveReady = (event: MessageEvent<unknown>) => {
@@ -172,15 +184,18 @@ function useExtensionHandshake(browser: ActivationBrowser) {
     window.addEventListener("focus", sendPing)
     document.addEventListener("visibilitychange", pingWhenVisible)
 
+    pingRef.current = sendPing
+
     sendPing()
     const earlyRetry = window.setTimeout(sendPing, 350)
     const laterRetry = window.setTimeout(sendPing, 1_200)
-    const interval = window.setInterval(sendPing, 2_000)
+    timers.poll = window.setInterval(sendPing, 2_000)
     const helpTimer = window.setTimeout(() => {
       if (!acknowledged) setShowTroubleshooting(true)
     }, 4_000)
 
     return () => {
+      pingRef.current = () => {}
       window.removeEventListener(ACTIVATION_READY_EVENT, receiveReadyEvent)
       window.removeEventListener("message", receiveReady)
       window.removeEventListener("focus", sendPing)
@@ -188,12 +203,66 @@ function useExtensionHandshake(browser: ActivationBrowser) {
       window.clearTimeout(earlyRetry)
       window.clearTimeout(laterRetry)
       window.clearTimeout(helpTimer)
-      window.clearInterval(interval)
+      window.clearInterval(timers.poll)
     }
   }, [browser])
 
-  return { detected, showTroubleshooting }
+  React.useEffect(() => () => window.clearTimeout(recheckTimer.current), [])
+
+  /**
+   * Re-ping on demand. The polling loop would find the extension within two
+   * seconds anyway, so this exists for the person who just flipped the switch and
+   * wants to feel like they did something — which is why it pings rather than
+   * reloading. The reload it replaces threw away the troubleshooting panel they
+   * were part-way through reading and restarted the timer that revealed it.
+   */
+  const checkNow = React.useCallback(() => {
+    pingRef.current()
+    setRechecking(true)
+    window.clearTimeout(recheckTimer.current)
+    recheckTimer.current = window.setTimeout(() => setRechecking(false), 700)
+  }, [])
+
+  return { detected, showTroubleshooting, rechecking, checkNow }
 }
+
+/**
+ * Move focus to the incoming heading when the page swaps one state for another.
+ *
+ * Each state is a separate subtree, so a transition unmounts the element that had
+ * focus and the browser drops focus to `<body>` — a keyboard user who was on
+ * "Check again" when the extension was detected loses their place entirely, and
+ * has to tab from the top to find out what happened. The `aria-live` regions
+ * announce the change but do not move focus, which is a separate concern.
+ *
+ * Deliberately does nothing for the first resolved state. `preparing` is a
+ * hydration placeholder, so the state that follows it is the page arriving rather
+ * than changing; focusing there would interrupt a screen reader mid-announcement
+ * and jump past the skip link before it can be used.
+ */
+function useHeadingFocus(stateKey: string) {
+  const headingRef = React.useRef<HTMLHeadingElement | null>(null)
+  const previousKey = React.useRef<string | null>(null)
+
+  React.useEffect(() => {
+    const previous = previousKey.current
+    previousKey.current = stateKey
+    if (previous === null || previous === "preparing") return
+    headingRef.current?.focus()
+  }, [stateKey])
+
+  return headingRef
+}
+
+/** Focusable-but-not-tabbable heading target. */
+type HeadingRef = React.RefObject<HTMLHeadingElement | null>
+
+const focusableHeadingProps = {
+  // Programmatic focus only — the heading is not in the tab order, so suppressing
+  // the ring avoids a stray outline appearing on a title nobody tabbed to.
+  tabIndex: -1,
+  className: "focus:outline-none",
+} as const
 
 function readReportedLocation(
   onChange: React.Dispatch<React.SetStateAction<LocationCheck>>,
@@ -229,7 +298,8 @@ export function ActivatePage() {
   const copy = t.activate
   const browser = useActivationBrowser()
   const safariSetupVariant = useSafariSetupVariant()
-  const { detected, showTroubleshooting } = useExtensionHandshake(browser)
+  const { detected, showTroubleshooting, rechecking, checkNow } =
+    useExtensionHandshake(browser)
   const [location, setLocation] = React.useState<LocationCheck>({
     status: "idle",
   })
@@ -240,8 +310,28 @@ export function ActivatePage() {
     }
   }, [copy.checking.unavailable, detected, location.status])
 
+  // `idle` and `checking` share a key because they render the same heading, so a
+  // detected extension moves focus once rather than twice.
+  const stateKey = React.useMemo(() => {
+    if (browser === "unknown") return "preparing"
+    if (browser === "safari-desktop") return "desktop"
+    if (browser !== "safari") return "wrong-browser"
+    if (location.status === "ready") return "success"
+    if (detected) {
+      return location.status === "error"
+        ? "location-error"
+        : "location-checking"
+    }
+    return "waiting"
+  }, [browser, detected, location.status])
+
+  const headingRef = useHeadingFocus(stateKey)
+
   return (
     <div className="flex min-h-svh flex-col bg-(--color-canvas)">
+      {/* Every other route renders this; without it the `main-content` id below
+          is an anchor target nothing can reach. */}
+      <SkipLink />
       <ActivationHeader locale={locale} t={t} />
       <main
         id="main-content"
@@ -249,15 +339,27 @@ export function ActivatePage() {
       >
         {browser === "unknown" ? (
           <PreparingState label={copy.preparing} />
+        ) : browser === "safari-desktop" ? (
+          <DesktopSafariState
+            copy={copy}
+            locale={locale}
+            headingRef={headingRef}
+          />
         ) : browser !== "safari" ? (
           <WrongBrowserState
             browser={browser}
             copy={copy}
             locale={locale}
             safariSetupVariant={safariSetupVariant}
+            headingRef={headingRef}
           />
         ) : location.status === "ready" ? (
-          <SuccessState location={location.value} copy={copy} locale={locale} />
+          <SuccessState
+            location={location.value}
+            copy={copy}
+            locale={locale}
+            headingRef={headingRef}
+          />
         ) : detected ? (
           <LocationCheckState
             state={location.status}
@@ -266,13 +368,17 @@ export function ActivatePage() {
             }
             copy={copy}
             locale={locale}
+            headingRef={headingRef}
           />
         ) : (
           <WaitingState
             showTroubleshooting={showTroubleshooting}
+            rechecking={rechecking}
+            onCheckNow={checkNow}
             copy={copy}
             locale={locale}
             safariSetupVariant={safariSetupVariant}
+            headingRef={headingRef}
           />
         )}
       </main>
@@ -353,14 +459,20 @@ function PreparingState({ label }: { label: string }) {
 
 function WaitingState({
   showTroubleshooting,
+  rechecking,
+  onCheckNow,
   copy,
   locale,
   safariSetupVariant,
+  headingRef,
 }: {
   showTroubleshooting: boolean
+  rechecking: boolean
+  onCheckNow: () => void
   copy: ActivationCopy
   locale: Locale
   safariSetupVariant: SafariSetupVariant
+  headingRef: HeadingRef
 }) {
   const waiting = copy.waiting
   return (
@@ -368,9 +480,18 @@ function WaitingState({
       className="mx-auto w-full max-w-md"
       aria-labelledby="activation-heading"
     >
+      {/* Every other state on this page leads with an eyebrow; this one had the
+          copy translated in all nine locales but never rendered it, so the
+          waiting → checking transition changed layout for no reason. */}
+      <Eyebrow>{waiting.eyebrow}</Eyebrow>
       <h1
+        ref={headingRef}
+        {...focusableHeadingProps}
         id="activation-heading"
-        className="text-[1.75rem] leading-[1.15] font-bold tracking-[-0.02em] text-(--color-canvas-foreground) sm:text-[2rem]"
+        className={cn(
+          focusableHeadingProps.className,
+          "text-[1.75rem] leading-[1.15] font-bold tracking-[-0.02em] text-(--color-canvas-foreground) sm:text-[2rem]"
+        )}
       >
         {waiting.heading}
       </h1>
@@ -423,9 +544,13 @@ function WaitingState({
         type="button"
         size="lg"
         className={cn(primaryButtonClass, "mt-3")}
-        onClick={() => window.location.reload()}
+        onClick={onCheckNow}
       >
-        <RefreshCw className="size-4" aria-hidden="true" />
+        {rechecking ? (
+          <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+        ) : (
+          <RefreshCw className="size-4" aria-hidden="true" />
+        )}
         {waiting.retry}
       </Button>
 
@@ -436,7 +561,54 @@ function WaitingState({
   )
 }
 
-/** A compact, version-resilient rendering of Safari's two setup actions. */
+/**
+ * Desktop Safari. Not an error state — the extension works fine here, but every
+ * instruction on this page is a tap gesture on an iPhone control, and the Mac app
+ * opens Safari's extension settings natively. So point at the app rather than
+ * teaching a flow that doesn't exist, and offer /verify for anyone who has already
+ * enabled it and just wants to see what websites read.
+ */
+function DesktopSafariState({
+  copy,
+  locale,
+  headingRef,
+}: {
+  copy: ActivationCopy
+  locale: Locale
+  headingRef: HeadingRef
+}) {
+  return (
+    <section aria-labelledby="desktop-heading">
+      <Eyebrow>{copy.waiting.eyebrow}</Eyebrow>
+      <h1
+        ref={headingRef}
+        {...focusableHeadingProps}
+        id="desktop-heading"
+        className={cn(
+          focusableHeadingProps.className,
+          "text-[2rem] leading-[1.12] font-bold tracking-[-0.025em] text-(--color-canvas-foreground) sm:text-[2.35rem]"
+        )}
+      >
+        {copy.desktop.heading}
+      </h1>
+      <p className="mt-4 text-base leading-7 text-(--color-canvas-muted) sm:text-lg">
+        {copy.desktop.body}
+      </p>
+      <Button
+        asChild
+        variant="outline"
+        size="lg"
+        className={cn(secondaryButtonClass, "mt-8")}
+      >
+        <a href={localizedPath("/verify", locale)}>
+          {copy.success.fullVerification}
+        </a>
+      </Button>
+    </section>
+  )
+}
+
+/** A compact, version-resilient rendering of Safari's three setup actions. */
 function SafariSetupVisual({
   waiting,
   safariSetupVariant,
@@ -510,8 +682,22 @@ function SafariSetupVisual({
                 <span className="size-6 rounded-full bg-white shadow-sm" />
               </span>
             </div>
+          </div>
+        </li>
 
-            <p className="mt-2.5 text-xs leading-5 text-(--color-canvas-muted)">
+        {/* Granting site access is its own action, not a footnote to turning the
+            extension on — and it is the step people most often miss. It was
+            previously rendered as an unlabelled paragraph inside step 2, which
+            left `steps[2].title` translated into nine languages and never shown. */}
+        <li className="grid grid-cols-[1.5rem_minmax(0,1fr)] items-start gap-3 px-4 py-3.5">
+          <span className="flex size-6 items-center justify-center rounded-full bg-(--color-brand) text-xs font-bold text-white">
+            3
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-(--color-canvas-foreground)">
+              {waiting.steps[2].title}
+            </p>
+            <p className="mt-0.5 text-xs leading-5 text-(--color-canvas-muted)">
               {waiting.steps[2].body}
             </p>
           </div>
@@ -569,19 +755,26 @@ function LocationCheckState({
   onRetry,
   copy,
   locale,
+  headingRef,
 }: {
   state: "idle" | "checking" | "error"
   onRetry: () => void
   copy: ActivationCopy
   locale: Locale
+  headingRef: HeadingRef
 }) {
   if (state !== "error") {
     return (
       <section aria-labelledby="location-check-heading">
         <Eyebrow>{copy.checking.eyebrow}</Eyebrow>
         <h1
+          ref={headingRef}
+          {...focusableHeadingProps}
           id="location-check-heading"
-          className="text-[2rem] leading-[1.12] font-bold tracking-[-0.025em] text-(--color-canvas-foreground) sm:text-[2.35rem]"
+          className={cn(
+            focusableHeadingProps.className,
+            "text-[2rem] leading-[1.12] font-bold tracking-[-0.025em] text-(--color-canvas-foreground) sm:text-[2.35rem]"
+          )}
         >
           {copy.checking.heading}
         </h1>
@@ -605,8 +798,13 @@ function LocationCheckState({
     <section aria-labelledby="location-error-heading">
       <Eyebrow>{copy.error.eyebrow}</Eyebrow>
       <h1
+        ref={headingRef}
+        {...focusableHeadingProps}
         id="location-error-heading"
-        className="text-[2rem] leading-[1.12] font-bold tracking-[-0.025em] text-(--color-canvas-foreground) sm:text-[2.35rem]"
+        className={cn(
+          focusableHeadingProps.className,
+          "text-[2rem] leading-[1.12] font-bold tracking-[-0.025em] text-(--color-canvas-foreground) sm:text-[2.35rem]"
+        )}
       >
         {copy.error.heading}
       </h1>
@@ -638,10 +836,12 @@ function SuccessState({
   location,
   copy,
   locale,
+  headingRef,
 }: {
   location: ReportedLocation
   copy: ActivationCopy
   locale: Locale
+  headingRef: HeadingRef
 }) {
   const coordinates = `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`
 
@@ -656,8 +856,13 @@ function SuccessState({
         </div>
         <span className="sr-only">{copy.success.status}</span>
         <h1
+          ref={headingRef}
+          {...focusableHeadingProps}
           id="success-heading"
-          className="mt-5 text-[1.75rem] leading-[1.15] font-bold tracking-[-0.02em] text-(--color-canvas-foreground) sm:text-[2rem]"
+          className={cn(
+            focusableHeadingProps.className,
+            "mt-5 text-[1.75rem] leading-[1.15] font-bold tracking-[-0.02em] text-(--color-canvas-foreground) sm:text-[2rem]"
+          )}
         >
           {copy.success.heading}
         </h1>
@@ -728,11 +933,13 @@ function WrongBrowserState({
   copy,
   locale,
   safariSetupVariant,
+  headingRef,
 }: {
   browser: ActivationBrowser
   copy: ActivationCopy
   locale: Locale
   safariSetupVariant: SafariSetupVariant
+  headingRef: HeadingRef
 }) {
   const [copyState, setCopyState] = React.useState<"idle" | "copied" | "error">(
     "idle"
@@ -758,8 +965,13 @@ function WrongBrowserState({
     <section aria-labelledby="wrong-browser-heading">
       <Eyebrow>{copy.wrongBrowser.eyebrow}</Eyebrow>
       <h1
+        ref={headingRef}
+        {...focusableHeadingProps}
         id="wrong-browser-heading"
-        className="max-w-lg text-[2rem] leading-[1.12] font-bold tracking-[-0.025em] text-(--color-canvas-foreground) sm:text-[2.35rem]"
+        className={cn(
+          focusableHeadingProps.className,
+          "max-w-lg text-[2rem] leading-[1.12] font-bold tracking-[-0.025em] text-(--color-canvas-foreground) sm:text-[2.35rem]"
+        )}
       >
         {copy.wrongBrowser.heading}
       </h1>

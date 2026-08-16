@@ -28,7 +28,12 @@ export interface ActivationReadyMessage {
   nonce: string
 }
 
-export type ActivationBrowser = "safari" | "other-ios" | "other" | "unknown"
+export type ActivationBrowser =
+  | "safari"
+  | "safari-desktop"
+  | "other-ios"
+  | "other"
+  | "unknown"
 export type SafariSetupVariant = "ios18" | "ios26"
 
 export function createActivationNonce(): string {
@@ -63,6 +68,12 @@ export function isActivationReadyMessage(
  * Distinguish Safari from iOS browsers that also include the Safari token in
  * their user agent. HTTPS links open in the user's default browser on iOS, but
  * the extension can only be enabled from Safari itself.
+ *
+ * Desktop Safari is reported separately from mobile Safari. Every instruction on
+ * this page describes tapping an iPhone control that does not exist on a Mac, and
+ * the Mac app enables its extension natively through
+ * `SFSafariApplication.showPreferencesForExtension` — so a Mac visitor needs
+ * pointing at the app, not walking through a gesture they cannot perform.
  */
 export function detectActivationBrowser(
   userAgent: string,
@@ -83,7 +94,9 @@ export function detectActivationBrowser(
     )
 
   if (isIOS && isAlternativeIOSBrowser) return "other-ios"
-  if (isSafari) return "safari"
+  // `isIOS` covers iPadOS reporting a Mac platform, so an iPad with a desktop-class
+  // user agent still lands on the touch instructions rather than the Mac notice.
+  if (isSafari) return isIOS ? "safari" : "safari-desktop"
   return "other"
 }
 

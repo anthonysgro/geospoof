@@ -992,13 +992,14 @@ export const ptBR: Dictionary = {
     success: {
       status: "O Safari está pronto",
       heading: "O GeoSpoof está funcionando no Safari",
-      body: "Os sites no Safari agora recebem sua localização do GeoSpoof. O GPS do seu iPhone e seu endereço IP são informações separadas e não foram alterados.",
       locationLabel: "Localização informada pelo Safari",
       timezoneLabel: "Fuso horário informado",
       returnToApp: "Voltar ao GeoSpoof",
       fullVerification: "Executar verificação completa",
-      fullVerificationNote:
-        "A verificação completa também compara a localização do navegador com a localização do seu endereço IP.",
+    },
+    desktop: {
+      heading: "Configure o GeoSpoof pelo app para Mac",
+      body: "Esta página trata da configuração no iPhone. No Mac, abra o GeoSpoof e use “Ativar no Safari” — você vai direto para os ajustes de extensões do Safari.",
     },
     wrongBrowser: {
       eyebrow: "Safari necessário",

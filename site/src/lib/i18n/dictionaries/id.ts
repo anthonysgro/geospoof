@@ -981,13 +981,14 @@ export const id: Dictionary = {
     success: {
       status: "Safari siap",
       heading: "GeoSpoof berfungsi di Safari",
-      body: "Situs web di Safari sekarang menerima lokasi GeoSpoof Anda. GPS iPhone dan alamat IP Anda merupakan hal terpisah dan tidak berubah.",
       locationLabel: "Lokasi yang dilaporkan Safari",
       timezoneLabel: "Zona waktu yang dilaporkan",
       returnToApp: "Kembali ke GeoSpoof",
       fullVerification: "Jalankan verifikasi lengkap",
-      fullVerificationNote:
-        "Verifikasi lengkap juga membandingkan lokasi browser dengan lokasi alamat IP Anda.",
+    },
+    desktop: {
+      heading: "Siapkan GeoSpoof dari app Mac",
+      body: "Halaman ini membahas penyiapan di iPhone. Di Mac, buka GeoSpoof dan gunakan “Aktifkan di Safari” — Anda akan langsung dibawa ke pengaturan ekstensi Safari.",
     },
     wrongBrowser: {
       eyebrow: "Safari diperlukan",
