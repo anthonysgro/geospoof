@@ -2,31 +2,49 @@ import { createFileRoute } from "@tanstack/react-router"
 import * as React from "react"
 import {
   Check,
-  ChevronDown,
-  ChevronRight,
+  CircleAlert,
   Copy,
   ExternalLink,
   LoaderCircle,
-  Menu,
-  Puzzle,
   RefreshCw,
 } from "lucide-react"
 
-import type { ActivationBrowser } from "@/lib/activation/protocol"
+import type {
+  ActivationBrowser,
+  SafariSetupVariant,
+} from "@/lib/activation/protocol"
 import type { Dictionary, Locale } from "@/lib/i18n"
 import navLogo from "@/assets/nav-logo.webp"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
+import { Alert, AlertTitle } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
 import { useTranslations } from "@/hooks/use-i18n"
 import { getDictionary, localizedPath, toLocale } from "@/lib/i18n"
 import { SITE_URL } from "@/lib/blog"
 import { cn } from "@/lib/utils"
 import {
+  ACTIVATION_PING_EVENT,
+  ACTIVATION_READY_EVENT,
   createActivationNonce,
   detectActivationBrowser,
   isActivationReadyMessage,
   makeActivationPing,
+  resolveSafariSetupVariant,
 } from "@/lib/activation/protocol"
 
 const APP_RETURN_URL = "geospoof://onboarding/safari-complete"
+const APPLE_SAFARI_EXTENSION_GUIDES: Record<SafariSetupVariant, string> = {
+  ios18:
+    "https://support.apple.com/guide/iphone/get-extensions-iphab0432bf6/18.0/ios/18.0",
+  ios26:
+    "https://support.apple.com/guide/iphone/get-extensions-iphab0432bf6/26/ios/26",
+}
 
 type ActivationCopy = Dictionary["activate"]
 
@@ -64,21 +82,11 @@ type LocationCheck =
   | { status: "ready"; value: ReportedLocation }
   | { status: "error" }
 
-const primaryButtonClass = cn(
-  "inline-flex min-h-12 w-full items-center justify-center gap-2",
-  "rounded-(--radius-md-brand) bg-(--color-brand) px-5 py-3",
-  "text-base font-bold text-white shadow-sm",
-  "transition-colors hover:bg-(--color-brand-dark)",
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand)"
-)
+const primaryButtonClass =
+  "min-h-12 w-full rounded-(--radius-md-brand) bg-(--color-brand) px-5 py-3 text-base font-bold text-white shadow-sm hover:bg-(--color-brand-dark) focus-visible:border-(--color-brand) focus-visible:ring-(--color-brand)/30"
 
-const secondaryButtonClass = cn(
-  "inline-flex min-h-12 w-full items-center justify-center gap-2",
-  "rounded-(--radius-md-brand) border border-(--color-canvas-border) px-5 py-3",
-  "text-base font-bold text-(--color-canvas-foreground)",
-  "transition-colors hover:bg-(--color-canvas-border)/45",
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand)"
-)
+const secondaryButtonClass =
+  "min-h-12 w-full rounded-(--radius-md-brand) border-(--color-canvas-border) px-5 py-3 text-base font-bold text-(--color-canvas-foreground) hover:bg-(--color-canvas-border)/45 focus-visible:border-(--color-brand) focus-visible:ring-(--color-brand)/30"
 
 function useActivationBrowser(): ActivationBrowser {
   const [browser, setBrowser] = React.useState<ActivationBrowser>("unknown")
@@ -96,6 +104,17 @@ function useActivationBrowser(): ActivationBrowser {
   return browser
 }
 
+function useSafariSetupVariant(): SafariSetupVariant {
+  const [variant, setVariant] = React.useState<SafariSetupVariant>("ios26")
+
+  React.useEffect(() => {
+    const hint = new URLSearchParams(window.location.search).get("safari_ui")
+    setVariant(resolveSafariSetupVariant(hint, navigator.userAgent))
+  }, [])
+
+  return variant
+}
+
 function useExtensionHandshake(browser: ActivationBrowser) {
   const [detected, setDetected] = React.useState(false)
   const [showTroubleshooting, setShowTroubleshooting] = React.useState(false)
@@ -108,7 +127,24 @@ function useExtensionHandshake(browser: ActivationBrowser) {
     let acknowledged = false
 
     const sendPing = () => {
-      if (!acknowledged) window.postMessage(ping, window.location.origin)
+      if (acknowledged) return
+
+      // Safari's most reliable page-world bridge is a DOM event (the same
+      // mechanism GeoSpoof uses for live settings). Keep postMessage as a
+      // fallback for browsers whose extension realms preserve normal window
+      // identity across the message boundary.
+      window.dispatchEvent(
+        new CustomEvent(ACTIVATION_PING_EVENT, { detail: ping })
+      )
+      window.postMessage(ping, window.location.origin)
+    }
+
+    const acknowledge = (data: unknown) => {
+      if (!isActivationReadyMessage(data, nonce)) return
+
+      acknowledged = true
+      setDetected(true)
+      setShowTroubleshooting(false)
     }
 
     const receiveReady = (event: MessageEvent<unknown>) => {
@@ -120,15 +156,18 @@ function useExtensionHandshake(browser: ActivationBrowser) {
         return
       }
 
-      acknowledged = true
-      setDetected(true)
-      setShowTroubleshooting(false)
+      acknowledge(event.data)
+    }
+
+    const receiveReadyEvent = (event: Event) => {
+      acknowledge((event as CustomEvent<unknown>).detail)
     }
 
     const pingWhenVisible = () => {
       if (document.visibilityState === "visible") sendPing()
     }
 
+    window.addEventListener(ACTIVATION_READY_EVENT, receiveReadyEvent)
     window.addEventListener("message", receiveReady)
     window.addEventListener("focus", sendPing)
     document.addEventListener("visibilitychange", pingWhenVisible)
@@ -139,9 +178,10 @@ function useExtensionHandshake(browser: ActivationBrowser) {
     const interval = window.setInterval(sendPing, 2_000)
     const helpTimer = window.setTimeout(() => {
       if (!acknowledged) setShowTroubleshooting(true)
-    }, 8_000)
+    }, 4_000)
 
     return () => {
+      window.removeEventListener(ACTIVATION_READY_EVENT, receiveReadyEvent)
       window.removeEventListener("message", receiveReady)
       window.removeEventListener("focus", sendPing)
       document.removeEventListener("visibilitychange", pingWhenVisible)
@@ -188,6 +228,7 @@ export function ActivatePage() {
   const { locale, t } = useTranslations()
   const copy = t.activate
   const browser = useActivationBrowser()
+  const safariSetupVariant = useSafariSetupVariant()
   const { detected, showTroubleshooting } = useExtensionHandshake(browser)
   const [location, setLocation] = React.useState<LocationCheck>({
     status: "idle",
@@ -209,7 +250,12 @@ export function ActivatePage() {
         {browser === "unknown" ? (
           <PreparingState label={copy.preparing} />
         ) : browser !== "safari" ? (
-          <WrongBrowserState browser={browser} copy={copy} locale={locale} />
+          <WrongBrowserState
+            browser={browser}
+            copy={copy}
+            locale={locale}
+            safariSetupVariant={safariSetupVariant}
+          />
         ) : location.status === "ready" ? (
           <SuccessState location={location.value} copy={copy} locale={locale} />
         ) : detected ? (
@@ -226,6 +272,7 @@ export function ActivatePage() {
             showTroubleshooting={showTroubleshooting}
             copy={copy}
             locale={locale}
+            safariSetupVariant={safariSetupVariant}
           />
         )}
       </main>
@@ -308,194 +355,217 @@ function WaitingState({
   showTroubleshooting,
   copy,
   locale,
+  safariSetupVariant,
 }: {
   showTroubleshooting: boolean
   copy: ActivationCopy
   locale: Locale
+  safariSetupVariant: SafariSetupVariant
 }) {
   const waiting = copy.waiting
   return (
-    <section aria-labelledby="activation-heading">
-      <Eyebrow>{waiting.eyebrow}</Eyebrow>
+    <section
+      className="mx-auto w-full max-w-md"
+      aria-labelledby="activation-heading"
+    >
       <h1
         id="activation-heading"
-        className="max-w-lg text-[2rem] leading-[1.12] font-bold tracking-[-0.025em] text-(--color-canvas-foreground) sm:text-[2.35rem]"
+        className="text-[1.75rem] leading-[1.15] font-bold tracking-[-0.02em] text-(--color-canvas-foreground) sm:text-[2rem]"
       >
         {waiting.heading}
       </h1>
-      <p className="mt-4 max-w-xl text-base leading-7 text-(--color-canvas-muted) sm:text-lg">
+      <p className="mt-3 max-w-sm text-sm leading-6 text-(--color-canvas-muted) sm:text-base">
         {waiting.body}
       </p>
 
-      <div
-        className="mt-8 flex items-center gap-3 border-y border-(--color-canvas-border) py-4"
+      <Alert
+        className="mt-6 w-full items-center rounded-[1rem] border border-(--color-canvas-border) bg-(--color-canvas-border)/15 px-4 py-3.5 text-left"
         role="status"
         aria-live="polite"
       >
-        <LoaderCircle
-          className="size-4 shrink-0 animate-spin text-(--color-brand)"
-          aria-hidden="true"
-        />
-        <span className="text-sm font-semibold text-(--color-canvas-foreground)">
-          {waiting.status}
-        </span>
-      </div>
+        {showTroubleshooting ? (
+          <CircleAlert
+            className="size-4 shrink-0 text-amber-600"
+            aria-hidden="true"
+          />
+        ) : (
+          <LoaderCircle
+            className="size-4 shrink-0 animate-spin text-(--color-brand)"
+            aria-hidden="true"
+          />
+        )}
+        <AlertTitle className="text-sm font-semibold text-(--color-canvas-foreground)">
+          {showTroubleshooting ? waiting.notActive : waiting.status}
+        </AlertTitle>
+      </Alert>
 
-      <SafariSetupVisual manageExtensionsLabel={waiting.steps[1].title} />
+      <SafariSetupVisual
+        waiting={waiting}
+        safariSetupVariant={safariSetupVariant}
+      />
 
-      <div className="mt-7">
-        <h2 className="text-sm font-bold text-(--color-canvas-foreground)">
-          {waiting.inSafari}
-        </h2>
-        <ol className="mt-2 divide-y divide-(--color-canvas-border)">
-          {waiting.steps.map((step, index) => (
-            <InstructionStep
-              key={step.title}
-              number={String(index + 1)}
-              title={step.title}
-            >
-              {step.body}
-            </InstructionStep>
-          ))}
-        </ol>
-      </div>
-
-      <button
+      <Button
         type="button"
-        className={cn(primaryButtonClass, "mt-8")}
+        size="lg"
+        className={cn(primaryButtonClass, "mt-6")}
         onClick={() => window.location.reload()}
       >
         <RefreshCw className="size-4" aria-hidden="true" />
         {waiting.retry}
-      </button>
+      </Button>
 
       {showTroubleshooting ? (
-        <Troubleshooting copy={copy} locale={locale} />
+        <Troubleshooting
+          copy={copy}
+          locale={locale}
+          safariSetupVariant={safariSetupVariant}
+        />
       ) : null}
     </section>
   )
 }
 
-/**
- * A compact, version-resilient Safari cue rather than a screenshot tied to one
- * iOS release. It preserves the two visual anchors Apple documents—the Page
- * Menu at the left of the address field and the Manage Extensions sheet—while
- * the localized numbered instructions below carry the exact wording.
- */
+/** A compact, version-resilient rendering of Safari's two setup actions. */
 function SafariSetupVisual({
-  manageExtensionsLabel,
+  waiting,
+  safariSetupVariant,
 }: {
-  manageExtensionsLabel: string
+  waiting: ActivationCopy["waiting"]
+  safariSetupVariant: SafariSetupVariant
 }) {
+  const pageControl =
+    safariSetupVariant === "ios18" ? waiting.pageSettings : waiting.steps[0]
+
   return (
-    <div
-      className="mt-7 overflow-hidden rounded-[1.4rem] border border-(--color-canvas-border) bg-(--color-canvas-border)/20 p-4"
-      aria-hidden="true"
+    <Card
+      size="sm"
+      className="mt-5 w-full gap-0 rounded-[1.1rem] border border-(--color-canvas-border) bg-(--color-canvas) py-0 text-left shadow-none ring-0"
     >
-      <div className="mx-auto max-w-sm">
-        <div className="overflow-hidden rounded-[1.1rem] border border-(--color-canvas-border) bg-(--color-canvas) shadow-sm">
-          <div className="flex items-center gap-3 px-4 py-3.5">
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-(--color-brand)/12 text-(--color-brand)">
-              <Puzzle className="size-4" />
-            </span>
-            <span className="min-w-0 flex-1 truncate text-sm font-semibold text-(--color-canvas-foreground)">
-              {manageExtensionsLabel}
-            </span>
-            <ChevronRight className="size-4 shrink-0 text-(--color-canvas-muted)" />
-          </div>
-
-          <div className="flex items-center gap-3 border-t border-(--color-canvas-border) px-4 py-3.5">
-            <img
-              src={navLogo}
-              alt=""
-              width={28}
-              height={28}
-              className="size-7"
-            />
-            <span className="flex-1 text-sm font-bold text-(--color-canvas-foreground)">
-              GeoSpoof
-            </span>
-            <span className="flex h-7 w-12 items-center justify-end rounded-full bg-(--color-brand) p-0.5 shadow-inner">
-              <span className="size-6 rounded-full bg-white shadow-sm" />
-            </span>
-          </div>
-        </div>
-
-        <div className="mt-3 flex items-center gap-2.5 rounded-[1.1rem] border border-(--color-canvas-border) bg-(--color-canvas) p-2 shadow-sm">
-          <span className="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-(--color-brand)/12 text-(--color-brand) ring-2 ring-(--color-brand)/35">
-            <Menu className="size-5" />
-            <span className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-(--color-brand) text-[0.65rem] font-bold text-white shadow-sm">
-              1
-            </span>
-          </span>
-          <span className="flex h-10 min-w-0 flex-1 items-center justify-center rounded-xl bg-(--color-canvas-border)/45 px-3 text-xs font-semibold text-(--color-canvas-muted)">
-            geospoof.com
-          </span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function InstructionStep({
-  number,
-  title,
-  children,
-}: {
-  number: string
-  title: string
-  children: React.ReactNode
-}) {
-  return (
-    <li className="grid grid-cols-[1.5rem_1fr] gap-3 py-4 first:pt-3">
-      <span
-        className="pt-0.5 text-sm font-bold text-(--color-canvas-muted)"
-        aria-hidden="true"
+      <ol
+        className="w-full divide-y divide-(--color-canvas-border)"
+        aria-label={waiting.inSafari}
       >
-        {number}
-      </span>
-      <div>
-        <p className="font-bold text-(--color-canvas-foreground)">{title}</p>
-        <p className="mt-1 text-sm leading-6 text-(--color-canvas-muted)">
-          {children}
-        </p>
-      </div>
-    </li>
+        <li className="grid grid-cols-[1.5rem_2rem_minmax(0,1fr)] items-center gap-3 px-4 py-3.5">
+          <span className="flex size-6 items-center justify-center rounded-full bg-(--color-brand) text-xs font-bold text-white">
+            1
+          </span>
+          <img
+            src="/images/support/page-menu-ios.png"
+            alt=""
+            width={15}
+            height={20}
+            className="h-5 w-auto justify-self-center opacity-80 dark:invert"
+          />
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-(--color-canvas-foreground)">
+              {pageControl.title}
+            </p>
+            <p className="mt-0.5 text-xs leading-5 text-(--color-canvas-muted)">
+              {pageControl.body}
+            </p>
+          </div>
+        </li>
+
+        <li className="grid grid-cols-[1.5rem_minmax(0,1fr)] items-start gap-3 px-4 py-4">
+          <span className="flex size-6 items-center justify-center rounded-full bg-(--color-brand) text-xs font-bold text-white">
+            2
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-(--color-canvas-foreground)">
+              {waiting.steps[1].title}
+            </p>
+            <p className="mt-0.5 text-xs leading-5 text-(--color-canvas-muted)">
+              {waiting.steps[1].body}
+            </p>
+
+            <div className="mt-3 flex items-center gap-2.5 rounded-xl border border-(--color-canvas-border) bg-(--color-canvas-border)/15 px-3 py-2.5">
+              <img
+                src={navLogo}
+                alt=""
+                width={28}
+                height={28}
+                className="size-7 shrink-0"
+              />
+              <span className="min-w-0 flex-1 text-sm font-bold text-(--color-canvas-foreground)">
+                GeoSpoof
+              </span>
+              <span className="text-xs font-bold text-(--color-brand)">
+                {waiting.onLabel}
+              </span>
+              <span
+                className="flex h-7 w-12 shrink-0 items-center justify-end rounded-full bg-(--color-brand) p-0.5 shadow-inner"
+                aria-hidden="true"
+              >
+                <span className="size-6 rounded-full bg-white shadow-sm" />
+              </span>
+            </div>
+
+            <p className="mt-2.5 text-xs leading-5 text-(--color-canvas-muted)">
+              {waiting.steps[2].body}
+            </p>
+          </div>
+        </li>
+      </ol>
+    </Card>
   )
 }
 
 function Troubleshooting({
   copy,
   locale,
+  safariSetupVariant,
 }: {
   copy: ActivationCopy
   locale: Locale
+  safariSetupVariant: SafariSetupVariant
 }) {
   const troubleshooting = copy.troubleshooting
   return (
-    <details className="group mt-7 border-t border-(--color-canvas-border) pt-5">
-      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 rounded-sm-brand font-semibold text-(--color-canvas-foreground) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand)">
-        {troubleshooting.summary}
-        <ChevronDown
-          className="size-4 text-(--color-canvas-muted) transition-transform group-open:rotate-180"
-          aria-hidden="true"
-        />
-      </summary>
-      <div className="pt-2 pb-1 text-sm leading-6 text-(--color-canvas-muted)">
-        <ul className="list-disc space-y-2 pl-5">
-          {troubleshooting.items.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
-        <a
-          href={localizedPath("/support", locale)}
-          className="mt-4 inline-flex min-h-11 items-center font-bold text-(--color-brand) hover:underline"
-        >
-          {troubleshooting.support}
-          <ExternalLink className="ml-1.5 size-3.5" aria-hidden="true" />
-        </a>
-      </div>
-    </details>
+    <Accordion type="single" collapsible className="mt-6 w-full text-left">
+      <AccordionItem
+        value="troubleshooting"
+        className="border-t border-(--color-canvas-border)"
+      >
+        <AccordionTrigger className="min-h-11 py-4 text-sm font-semibold text-(--color-canvas-foreground) hover:no-underline">
+          {troubleshooting.summary}
+        </AccordionTrigger>
+        <AccordionContent className="pb-1 text-left text-sm leading-6 text-(--color-canvas-muted)">
+          <ul className="list-outside list-disc space-y-2 pl-5 text-left">
+            {troubleshooting.items.map((item) => (
+              <li key={item} className="pl-1">
+                {item}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-2 flex flex-col items-start">
+            <Button
+              asChild
+              variant="link"
+              className="-ml-2 min-h-11 px-2 font-bold text-(--color-brand)"
+            >
+              <a href={localizedPath("/support", locale)}>
+                {troubleshooting.support}
+                <ExternalLink className="ml-1.5 size-3.5" aria-hidden="true" />
+              </a>
+            </Button>
+            <Button
+              asChild
+              variant="link"
+              className="-ml-2 min-h-11 px-2 font-semibold text-(--color-canvas-muted)"
+            >
+              <a
+                href={APPLE_SAFARI_EXTENSION_GUIDES[safariSetupVariant]}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {troubleshooting.appleSupport}
+                <ExternalLink className="ml-1.5 size-3.5" aria-hidden="true" />
+              </a>
+            </Button>
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   )
 }
 
@@ -548,20 +618,23 @@ function LocationCheckState({
       <p className="mt-4 text-base leading-7 text-(--color-canvas-muted) sm:text-lg">
         {copy.error.body}
       </p>
-      <button
+      <Button
         type="button"
+        size="lg"
         className={cn(primaryButtonClass, "mt-8")}
         onClick={onRetry}
       >
         <RefreshCw className="size-4" aria-hidden="true" />
         {copy.error.retry}
-      </button>
-      <a
-        href={localizedPath("/support", locale)}
+      </Button>
+      <Button
+        asChild
+        variant="outline"
+        size="lg"
         className={cn(secondaryButtonClass, "mt-3")}
       >
-        {copy.error.support}
-      </a>
+        <a href={localizedPath("/support", locale)}>{copy.error.support}</a>
+      </Button>
     </section>
   )
 }
@@ -578,42 +651,53 @@ function SuccessState({
   const coordinates = `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`
 
   return (
-    <section aria-labelledby="success-heading">
-      <div className="mb-4 flex items-center gap-2 text-sm font-bold text-(--color-brand)">
-        <Check className="size-4 stroke-[2.5]" aria-hidden="true" />
-        {copy.success.status}
+    <section
+      className="mx-auto flex w-full max-w-md flex-col items-center text-center sm:pt-4"
+      aria-labelledby="success-heading"
+    >
+      <div role="status" aria-live="polite">
+        <div className="mx-auto flex size-20 items-center justify-center rounded-full bg-(--color-brand) text-white shadow-sm">
+          <Check className="size-9 stroke-[2.5]" aria-hidden="true" />
+        </div>
+        <span className="sr-only">{copy.success.status}</span>
+        <h1
+          id="success-heading"
+          className="mt-5 text-[1.75rem] leading-[1.15] font-bold tracking-[-0.02em] text-(--color-canvas-foreground) sm:text-[2rem]"
+        >
+          {copy.success.heading}
+        </h1>
       </div>
-      <h1
-        id="success-heading"
-        className="max-w-lg text-[2rem] leading-[1.12] font-bold tracking-[-0.025em] text-(--color-canvas-foreground) sm:text-[2.35rem]"
-      >
-        {copy.success.heading}
-      </h1>
-      <p className="mt-4 max-w-xl text-base leading-7 text-(--color-canvas-muted) sm:text-lg">
-        {copy.success.body}
-      </p>
 
-      <dl className="mt-8 divide-y divide-(--color-canvas-border) border-y border-(--color-canvas-border)">
-        <ProofRow label={copy.success.locationLabel} value={coordinates} mono />
-        <ProofRow
-          label={copy.success.timezoneLabel}
-          value={location.timezone}
-        />
-      </dl>
-
-      <a href={APP_RETURN_URL} className={cn(primaryButtonClass, "mt-8")}>
-        {copy.success.returnToApp}
-      </a>
-      <a
-        href={localizedPath("/verify", locale)}
-        className={cn(secondaryButtonClass, "mt-3")}
+      <Card
+        size="sm"
+        className="mt-7 w-full gap-0 rounded-[1.25rem] border border-(--color-canvas-border) bg-(--color-canvas-border)/15 py-0 shadow-none ring-0"
       >
-        {copy.success.fullVerification}
-        <ExternalLink className="size-4" aria-hidden="true" />
-      </a>
-      <p className="mt-4 text-center text-xs leading-5 text-(--color-canvas-muted)">
-        {copy.success.fullVerificationNote}
-      </p>
+        <dl className="w-full divide-y divide-(--color-canvas-border) px-4">
+          <ProofRow
+            label={copy.success.locationLabel}
+            value={coordinates}
+            mono
+          />
+          <ProofRow
+            label={copy.success.timezoneLabel}
+            value={location.timezone}
+          />
+        </dl>
+      </Card>
+
+      <Button asChild size="lg" className={cn(primaryButtonClass, "mt-7")}>
+        <a href={APP_RETURN_URL}>{copy.success.returnToApp}</a>
+      </Button>
+      <Button
+        asChild
+        variant="link"
+        className="mt-2 min-h-11 px-4 font-bold text-(--color-brand)"
+      >
+        <a href={localizedPath("/verify", locale)}>
+          {copy.success.fullVerification}
+          <ExternalLink className="size-3.5" aria-hidden="true" />
+        </a>
+      </Button>
     </section>
   )
 }
@@ -628,14 +712,14 @@ function ProofRow({
   mono?: boolean
 }) {
   return (
-    <div className="py-4">
-      <dt className="text-xs font-semibold tracking-wide text-(--color-canvas-muted) uppercase">
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-3.5 text-left">
+      <dt className="text-sm font-medium text-(--color-canvas-muted)">
         {label}
       </dt>
       <dd
         className={cn(
-          "mt-1.5 text-base font-bold break-words text-(--color-canvas-foreground)",
-          mono && "font-mono text-[0.95rem]"
+          "max-w-48 text-right text-sm font-bold break-words text-(--color-canvas-foreground)",
+          mono && "font-mono text-[0.8rem]"
         )}
       >
         {value}
@@ -648,20 +732,27 @@ function WrongBrowserState({
   browser,
   copy,
   locale,
+  safariSetupVariant,
 }: {
   browser: ActivationBrowser
   copy: ActivationCopy
   locale: Locale
+  safariSetupVariant: SafariSetupVariant
 }) {
   const [copyState, setCopyState] = React.useState<"idle" | "copied" | "error">(
     "idle"
   )
-  const activationUrl = `${SITE_URL}${localizedPath("/activate", locale)}`
-  const displayAddress = activationUrl.replace(/^https:\/\//, "")
+  const activationUrl = new URL(localizedPath("/activate", locale), SITE_URL)
+  activationUrl.searchParams.set(
+    "safari_ui",
+    safariSetupVariant === "ios18" ? "18" : "26"
+  )
+  const activationUrlString = activationUrl.toString()
+  const displayAddress = activationUrlString.replace(/^https:\/\//, "")
 
   const copyAddress = async () => {
     try {
-      await navigator.clipboard.writeText(activationUrl)
+      await navigator.clipboard.writeText(activationUrlString)
       setCopyState("copied")
     } catch {
       setCopyState("error")
@@ -690,8 +781,9 @@ function WrongBrowserState({
         </p>
       </div>
 
-      <button
+      <Button
         type="button"
+        size="lg"
         className={cn(primaryButtonClass, "mt-8")}
         onClick={() => void copyAddress()}
       >
@@ -703,7 +795,7 @@ function WrongBrowserState({
         {copyState === "copied"
           ? copy.wrongBrowser.copied
           : copy.wrongBrowser.copy}
-      </button>
+      </Button>
 
       {copyState === "error" ? (
         <p

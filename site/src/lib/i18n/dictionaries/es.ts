@@ -937,10 +937,16 @@ export const es: Dictionary = {
     preparing: "Preparando la configuración de Safari",
     waiting: {
       eyebrow: "Configuración de Safari",
-      heading: "Activa GeoSpoof en Safari",
-      body: "Safari mantiene las extensiones desactivadas hasta que las apruebas. Esto activa la simulación de ubicación del navegador en Safari; no cambia el GPS ni la dirección IP de tu iPhone.",
+      heading: "Termina de configurar Safari",
+      body: "Activa GeoSpoof en Safari. Continuaremos automáticamente.",
       status: "Esperando a GeoSpoof en esta página…",
+      notActive: "GeoSpoof aún no está activo en esta página.",
+      onLabel: "Activado",
       inSafari: "En Safari",
+      pageSettings: {
+        title: "Abre los ajustes de página",
+        body: "Toca el botón de ajustes de página junto a la barra de direcciones de Safari.",
+      },
       steps: [
         {
           title: "Abre el menú de la página",
@@ -955,7 +961,7 @@ export const es: Dictionary = {
           body: "Permite que GeoSpoof acceda a este sitio web. Es posible que Safari te pida recargar la página.",
         },
       ],
-      retry: "Ya lo activé — volver a comprobar",
+      retry: "Comprobar de nuevo",
     },
     troubleshooting: {
       summary: "¿No aparece GeoSpoof?",
@@ -965,6 +971,7 @@ export const es: Dictionary = {
         "El Tiempo de uso, los controles parentales o la gestión del dispositivo pueden impedir que se activen extensiones de Safari.",
       ],
       support: "Obtener ayuda de GeoSpoof",
+      appleSupport: "Ver la guía de Apple sobre extensiones de Safari",
     },
     checking: {
       eyebrow: "Configuración de Safari",

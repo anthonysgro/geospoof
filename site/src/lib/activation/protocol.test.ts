@@ -2,14 +2,22 @@ import { describe, expect, it } from "vitest"
 
 import {
   ACTIVATION_EXTENSION_SOURCE,
+  ACTIVATION_PING_EVENT,
   ACTIVATION_PROTOCOL_VERSION,
+  ACTIVATION_READY_EVENT,
   ACTIVATION_READY_TYPE,
   detectActivationBrowser,
   isActivationReadyMessage,
   makeActivationPing,
+  resolveSafariSetupVariant,
 } from "./protocol"
 
 describe("activation protocol", () => {
+  it("uses stable versioned DOM event channels", () => {
+    expect(ACTIVATION_PING_EVENT).toBe("geospoof:activation-ping:v2")
+    expect(ACTIVATION_READY_EVENT).toBe("geospoof:activation-ready:v2")
+  })
+
   it("builds a minimal nonce-bound ping", () => {
     expect(makeActivationPing("request-123")).toEqual({
       source: "com.geospoof.activation-page",
@@ -83,5 +91,32 @@ describe("activation browser detection", () => {
         0
       )
     ).toBe("other")
+  })
+})
+
+describe("Safari setup variant", () => {
+  const ios18UserAgent =
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 Version/18.6 Mobile/15E148 Safari/604.1"
+  const ios26UserAgent =
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 Version/26.0 Mobile/15E148 Safari/604.1"
+
+  it("prefers the native app hint over user-agent detection", () => {
+    expect(resolveSafariSetupVariant("18", ios26UserAgent)).toBe("ios18")
+    expect(resolveSafariSetupVariant("26", ios18UserAgent)).toBe("ios26")
+  })
+
+  it("recognizes iPhone and iPadOS 18 user agents on direct visits", () => {
+    expect(resolveSafariSetupVariant(null, ios18UserAgent)).toBe("ios18")
+    expect(
+      resolveSafariSetupVariant(
+        null,
+        "Mozilla/5.0 (iPad; CPU OS 18_5 like Mac OS X) AppleWebKit/605.1.15 Version/18.5 Mobile/15E148 Safari/604.1"
+      )
+    ).toBe("ios18")
+  })
+
+  it("uses current instructions for modern or unidentifiable browsers", () => {
+    expect(resolveSafariSetupVariant(undefined, ios26UserAgent)).toBe("ios26")
+    expect(resolveSafariSetupVariant("unexpected", "")).toBe("ios26")
   })
 })

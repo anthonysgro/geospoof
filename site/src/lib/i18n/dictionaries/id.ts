@@ -929,10 +929,16 @@ export const id: Dictionary = {
     preparing: "Menyiapkan pengaturan Safari",
     waiting: {
       eyebrow: "Pengaturan Safari",
-      heading: "Aktifkan GeoSpoof di Safari",
-      body: "Safari menonaktifkan ekstensi sampai Anda menyetujuinya. Langkah ini mengaktifkan simulasi lokasi browser di Safari—GPS iPhone dan alamat IP Anda tidak berubah.",
+      heading: "Selesaikan pengaturan Safari",
+      body: "Aktifkan GeoSpoof di Safari. Kami akan melanjutkan secara otomatis.",
       status: "Menunggu GeoSpoof di halaman ini…",
+      notActive: "GeoSpoof belum aktif di halaman ini.",
+      onLabel: "Aktif",
       inSafari: "Di Safari",
+      pageSettings: {
+        title: "Buka Pengaturan Halaman",
+        body: "Ketuk tombol Pengaturan Halaman di samping bilah alamat Safari.",
+      },
       steps: [
         {
           title: "Buka Menu Halaman",
@@ -947,7 +953,7 @@ export const id: Dictionary = {
           body: "Izinkan GeoSpoof mengakses situs web ini. Safari mungkin meminta Anda memuat ulang halaman.",
         },
       ],
-      retry: "Sudah saya aktifkan — periksa lagi",
+      retry: "Periksa lagi",
     },
     troubleshooting: {
       summary: "GeoSpoof tidak muncul?",
@@ -957,6 +963,7 @@ export const id: Dictionary = {
         "Durasi Layar, kontrol orang tua, atau pengelolaan perangkat dapat mencegah ekstensi Safari diaktifkan.",
       ],
       support: "Dapatkan bantuan dari GeoSpoof",
+      appleSupport: "Lihat panduan ekstensi Safari dari Apple",
     },
     checking: {
       eyebrow: "Pengaturan Safari",

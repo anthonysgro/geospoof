@@ -921,10 +921,16 @@ export const ja: Dictionary = {
     preparing: "Safariの設定を準備しています",
     waiting: {
       eyebrow: "Safariの設定",
-      heading: "SafariでGeoSpoofを有効にする",
-      body: "Safari拡張機能は、許可するまでオフになっています。この設定によりSafari内のブラウザ位置情報シミュレーションが有効になります。iPhoneのGPSやIPアドレスは変更されません。",
+      heading: "Safariの設定を完了",
+      body: "SafariでGeoSpoofをオンにしてください。確認後、自動的に続行します。",
       status: "このページでGeoSpoofを待機しています…",
+      notActive: "このページではGeoSpoofがまだ有効になっていません。",
+      onLabel: "オン",
       inSafari: "Safariでの操作",
+      pageSettings: {
+        title: "ページ設定を開く",
+        body: "Safariのアドレスバーの横にあるページ設定ボタンをタップします。",
+      },
       steps: [
         {
           title: "ページメニューを開く",
@@ -939,7 +945,7 @@ export const ja: Dictionary = {
           body: "このWebサイトでGeoSpoofを許可します。Safariから再読み込みを求められる場合があります。",
         },
       ],
-      retry: "オンにしました — もう一度確認",
+      retry: "もう一度確認",
     },
     troubleshooting: {
       summary: "GeoSpoofが表示されませんか？",
@@ -949,6 +955,7 @@ export const ja: Dictionary = {
         "スクリーンタイム、ペアレンタルコントロール、またはデバイス管理により、Safari拡張機能を有効にできない場合があります。",
       ],
       support: "GeoSpoofのサポートを利用する",
+      appleSupport: "AppleのSafari機能拡張ガイドを見る",
     },
     checking: {
       eyebrow: "Safariの設定",

@@ -943,10 +943,16 @@ export const ru: Dictionary = {
     preparing: "Подготовка настройки Safari",
     waiting: {
       eyebrow: "Настройка Safari",
-      heading: "Включите GeoSpoof в Safari",
-      body: "Safari не включает расширения без вашего разрешения. Этот шаг включает подмену местоположения в браузере Safari, но не меняет GPS вашего iPhone или IP-адрес.",
+      heading: "Завершите настройку Safari",
+      body: "Включите GeoSpoof в Safari. После этого мы продолжим автоматически.",
       status: "Ожидание GeoSpoof на этой странице…",
+      notActive: "GeoSpoof пока не активен на этой странице.",
+      onLabel: "Вкл.",
       inSafari: "В Safari",
+      pageSettings: {
+        title: "Откройте настройки страницы",
+        body: "Нажмите кнопку настроек страницы рядом с адресной строкой Safari.",
+      },
       steps: [
         {
           title: "Откройте меню страницы",
@@ -961,7 +967,7 @@ export const ru: Dictionary = {
           body: "Разрешите GeoSpoof доступ к этому сайту. Safari может попросить обновить страницу.",
         },
       ],
-      retry: "Расширение включено — проверить снова",
+      retry: "Проверить снова",
     },
     troubleshooting: {
       summary: "GeoSpoof не отображается?",
@@ -971,6 +977,7 @@ export const ru: Dictionary = {
         "Экранное время, родительский контроль или управление устройством могут запрещать включение расширений Safari.",
       ],
       support: "Получить помощь GeoSpoof",
+      appleSupport: "Открыть руководство Apple по расширениям Safari",
     },
     checking: {
       eyebrow: "Настройка Safari",

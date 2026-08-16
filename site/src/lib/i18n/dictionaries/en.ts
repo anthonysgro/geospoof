@@ -932,10 +932,16 @@ export const en = {
     preparing: "Preparing Safari setup",
     waiting: {
       eyebrow: "Safari setup",
-      heading: "Turn on GeoSpoof in Safari",
-      body: "Safari keeps extensions off until you approve them. This enables browser location spoofing in Safari—it does not change your iPhone's GPS or IP address.",
+      heading: "Finish setting up Safari",
+      body: "Turn on GeoSpoof in Safari. We'll continue automatically.",
       status: "Waiting for GeoSpoof on this page…",
+      notActive: "GeoSpoof isn't active on this page yet.",
+      onLabel: "On",
       inSafari: "In Safari",
+      pageSettings: {
+        title: "Open Page Settings",
+        body: "Tap the Page Settings button beside Safari's address bar.",
+      },
       steps: [
         {
           title: "Open the Page Menu",
@@ -950,7 +956,7 @@ export const en = {
           body: "Allow GeoSpoof on this website. Safari may ask you to refresh.",
         },
       ],
-      retry: "I turned it on — check again",
+      retry: "Check again",
     },
     troubleshooting: {
       summary: "GeoSpoof not appearing?",
@@ -960,6 +966,7 @@ export const en = {
         "Screen Time, parental controls, or device management can prevent Safari extensions from being enabled.",
       ],
       support: "Get help from GeoSpoof",
+      appleSupport: "View Apple's Safari extension guide",
     },
     checking: {
       eyebrow: "Safari setup",

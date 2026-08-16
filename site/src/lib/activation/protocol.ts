@@ -11,6 +11,8 @@ export const ACTIVATION_EXTENSION_SOURCE =
   "com.moonloaf.geospoof.extension" as const
 export const ACTIVATION_PING_TYPE = "GEOSPOOF_ACTIVATION_PING" as const
 export const ACTIVATION_READY_TYPE = "GEOSPOOF_ACTIVATION_READY" as const
+export const ACTIVATION_PING_EVENT = "geospoof:activation-ping:v2" as const
+export const ACTIVATION_READY_EVENT = "geospoof:activation-ready:v2" as const
 
 export interface ActivationPingMessage {
   source: typeof ACTIVATION_PAGE_SOURCE
@@ -27,6 +29,7 @@ export interface ActivationReadyMessage {
 }
 
 export type ActivationBrowser = "safari" | "other-ios" | "other" | "unknown"
+export type SafariSetupVariant = "ios18" | "ios26"
 
 export function createActivationNonce(): string {
   return globalThis.crypto.randomUUID()
@@ -82,4 +85,24 @@ export function detectActivationBrowser(
   if (isIOS && isAlternativeIOSBrowser) return "other-ios"
   if (isSafari) return "safari"
   return "other"
+}
+
+/**
+ * Select the Safari terminology shown by the setup page. The native iOS app
+ * supplies the authoritative hint because iPadOS can present a desktop-style
+ * user agent. Direct visits still receive a conservative user-agent fallback.
+ */
+export function resolveSafariSetupVariant(
+  hint: string | null | undefined,
+  userAgent: string
+): SafariSetupVariant {
+  if (hint === "18") return "ios18"
+  if (hint === "26") return "ios26"
+
+  const iosVersion = userAgent.match(/CPU(?: iPhone)? OS (\d+)[_.]/i)
+  if (iosVersion && Number.parseInt(iosVersion[1], 10) < 26) {
+    return "ios18"
+  }
+
+  return "ios26"
 }

@@ -905,10 +905,16 @@ export const zhCN: Dictionary = {
     preparing: "正在准备 Safari 设置",
     waiting: {
       eyebrow: "Safari 设置",
-      heading: "在 Safari 中启用 GeoSpoof",
-      body: "Safari 会将扩展保持关闭，直到你明确允许。此操作会在 Safari 中启用浏览器位置模拟，但不会更改 iPhone 的 GPS 或 IP 地址。",
+      heading: "完成 Safari 设置",
+      body: "在 Safari 中启用 GeoSpoof。确认后，我们将自动继续。",
       status: "正在等待此页面上的 GeoSpoof…",
+      notActive: "GeoSpoof 尚未在此页面上启用。",
+      onLabel: "已开启",
       inSafari: "在 Safari 中",
+      pageSettings: {
+        title: "打开页面设置",
+        body: "轻点 Safari 地址栏旁边的页面设置按钮。",
+      },
       steps: [
         {
           title: "打开页面菜单",
@@ -923,7 +929,7 @@ export const zhCN: Dictionary = {
           body: "允许 GeoSpoof 访问此网站。Safari 可能会要求你刷新页面。",
         },
       ],
-      retry: "我已打开 — 再次检查",
+      retry: "再次检查",
     },
     troubleshooting: {
       summary: "没有看到 GeoSpoof？",
@@ -933,6 +939,7 @@ export const zhCN: Dictionary = {
         "屏幕使用时间、家长控制或设备管理可能会阻止启用 Safari 扩展。",
       ],
       support: "获取 GeoSpoof 帮助",
+      appleSupport: "查看 Apple 的 Safari 扩展指南",
     },
     checking: {
       eyebrow: "Safari 设置",
