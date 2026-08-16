@@ -2725,6 +2725,49 @@ enum AppLink {
                 + "?utm_source=\(source)&utm_medium=app&utm_campaign=\(campaign)"
         )!
     }
+
+    /// Platform segment of a `/go/proton` path. Note these are *not* the same
+    /// strings as `source` above — the redirect table uses bare `ios`/`macos`.
+    private static let protonPlatform: String = {
+        #if os(iOS)
+        return "ios"
+        #else
+        return "macos"
+        #endif
+    }()
+
+    /// Where in the app a Proton VPN click came from.
+    ///
+    /// The raw value is the `aff_sub` Proton reports on, so pick one and never
+    /// rename it — renaming splits the report history. Each case must also have a
+    /// matching row in the `/go/proton/*` redirect table in `site/vercel.json`
+    /// for the current platform, or the link dead-ends. Rows that exist today:
+    /// `ios/onboarding`, `ios/settings`, `ios/vpnsync`, `macos/settings`.
+    ///
+    /// Mirrors `VpnPlacement` in the site's `src/lib/affiliate.ts`.
+    enum ProtonPlacement: String {
+        /// The IP-address detail opened from the onboarding close screen.
+        case onboarding
+        /// Settings entry point. iOS and macOS.
+        case settings
+        /// "Sync with VPN" contextual callouts.
+        case vpnsync
+    }
+
+    /// A link to the Proton VPN offer for a given in-app placement.
+    ///
+    /// Points at our own `/go/proton/…` redirect rather than the affiliate URL
+    /// itself, matching what the site and the extensions do. The real destination
+    /// — offer ID, affiliate ID, tracking params — lives only in
+    /// `site/vercel.json`, so it can change server-side without shipping an app
+    /// update, and nothing partner-specific is baked into the binary.
+    ///
+    /// No UTM tags: these attribute through Proton's own `source`/`aff_sub`
+    /// params, which the redirect supplies.
+    static func proton(_ placement: ProtonPlacement) -> URL {
+        // Force-unwrap is safe: both components are from closed sets.
+        URL(string: "https://www.geospoof.com/go/proton/\(protonPlatform)/\(placement.rawValue)")!
+    }
 }
 
 // MARK: - Haptics

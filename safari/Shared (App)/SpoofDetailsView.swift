@@ -1289,13 +1289,32 @@ private struct OnboardingSafariHandoffView: View {
 /// past. Three rows with three distinct states is a structure a non-reader still
 /// absorbs.
 ///
-/// Rows are deliberately *not* tappable. Pushing a Pro screen from inside
-/// onboarding turns the flow into something that ends at a paywall, and this is a
-/// terminal screen with nowhere sensible to return to. The rows inform; the GPS
-/// tab and the Pro card on Home are where acting on them belongs.
+/// Both rows open a detail sheet rather than pushing: this is a terminal screen
+/// that hides its navigation bar, so a push would have no way back.
+///
+/// They started out non-tappable, on the reasoning that sending someone from
+/// onboarding to a Pro screen turns the flow into something that ends at a
+/// paywall. That still holds as a warning, and it is the thing to watch here —
+/// between them these two rows now lead to a Pro upsell and a disclosed affiliate
+/// recommendation, so the close screen is carrying more commerce than it used to.
+/// What keeps it honest is that both sheets answer the question first and are
+/// dismissible without acting, and neither row is on the path to finishing: the
+/// primary button is still "Start using GeoSpoof". If a third selling row ever
+/// wants in, that's the signal this screen has drifted.
 private struct OnboardingSafariReadyView: View {
     @ObservedObject var controller: SpoofController
     let onFinish: () -> Void
+
+    @ObservedObject private var router = AppRouter.shared
+    @State private var showDeviceGps = false
+    @State private var showVpn = false
+    @Environment(\.horizontalSizeClass) private var hSizeClass
+
+    /// Matches `LocationMapPane` rather than inventing a height, so the two places
+    /// the app shows a location map agree.
+    private var mapHeight: CGFloat {
+        hSizeClass == .compact ? 180 : 320
+    }
 
     /// The place to name on this screen, or `nil` if the app has none on record.
     ///
@@ -1328,39 +1347,98 @@ private struct OnboardingSafariReadyView: View {
                     .font(.largeTitle.bold())
                     .accessibilityAddTraits(.isHeader)
 
-                Text("What this covers")
+                // The win, at full weight. `showSafariReady()` requires a location,
+                // so the nil branch is the second line of defence rather than the
+                // first — the heading stands on its own either way, because the
+                // deep link proves Safari is set up regardless of what the app has
+                // on record.
+                if let selectedLocation {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Safari location & timezone")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+
+                        // verbatim: a place name from the city catalog, not copy.
+                        Text(verbatim: selectedLocation)
+                            .font(.title2.weight(.semibold))
+                            .foregroundStyle(.primary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.top, 32)
+                    .accessibilityElement(children: .combine)
+
+                    // The place, shown rather than described. A name is a claim; the
+                    // map is the evidence, and it's the one element on this screen
+                    // that carries any colour.
+                    //
+                    // Non-interactive twice over (`SpoofMap` defaults to a static
+                    // window, and hit testing is off anyway) so it can never swallow
+                    // a scroll gesture on a screen whose job is to be left. Hidden
+                    // from VoiceOver because the name above already says it, and a
+                    // map is nothing a screen reader can use.
+                    if let location = controller.location {
+                        SpoofMap(
+                            latitude: location.latitude,
+                            longitude: location.longitude,
+                            span: 5
+                        )
+                        .frame(height: mapHeight)
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .strokeBorder(Color.primary.opacity(0.08))
+                        )
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                        .padding(.top, 16)
+                    }
+                }
+
+                // Category, not capability. GeoSpoof *does* change device GPS — with
+                // Pro and a Mac — so any header phrased as "GeoSpoof doesn't change
+                // these" denies the product to the customer who bought it for that.
+                //
+                // "Signal" is the vocabulary the rest of the product already uses
+                // ("the one signal GeoSpoof can't change" on /verify), and framing
+                // these as *other* signals does the teaching: the Safari location
+                // above was one of them, here are the rest. That membership is
+                // precisely what customers who conflate the three are missing.
+                Text("Other location signals")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
                     .padding(.top, 34)
                     .accessibilityAddTraits(.isHeader)
 
                 VStack(alignment: .leading, spacing: 0) {
-                    // `showSafariReady()` requires a location, so the nil branch is
-                    // the second line of defence rather than the first. The heading
-                    // stands on its own either way: the deep link proves Safari is
-                    // set up regardless of what the app has on record.
-                    layerRow(
-                        symbol: "globe",
-                        title: "Safari location & timezone",
-                        state: selectedLocation.map { .value($0) } ?? .changed,
-                        tint: .green
-                    )
+                    Button {
+                        showDeviceGps = true
+                    } label: {
+                        gapRow(
+                            symbol: "location.slash",
+                            title: "Device GPS",
+                            detail: "Needs Pro and a Mac",
+                            showsChevron: true
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Opens what Device GPS does and how to get it")
+
                     Divider()
-                    layerRow(
-                        symbol: "location.slash",
-                        title: "This iPhone's GPS",
-                        state: .unchanged("Needs Pro and a Mac"),
-                        tint: .secondary
-                    )
-                    Divider()
-                    layerRow(
-                        symbol: "network",
-                        title: "Your IP address",
-                        state: .unchanged("Only a VPN can change this"),
-                        tint: .secondary
-                    )
+
+                    Button {
+                        showVpn = true
+                    } label: {
+                        gapRow(
+                            symbol: "network",
+                            title: "IP address",
+                            detail: "Only a VPN can change this",
+                            showsChevron: true
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Opens why a VPN is the only thing that changes this")
                 }
-                .padding(.top, 12)
+                .padding(.top, 8)
             }
             .padding(.horizontal, 24)
             .padding(.top, 32)
@@ -1386,70 +1464,70 @@ private struct OnboardingSafariReadyView: View {
         }
         .background(Color(uiColor: .systemBackground))
         .tint(.brand)
+        // A plain sheet, not `adaptiveModalCover`. That presenter exists to stop
+        // *tall* content rendering as a floating card on iPad, but this content is
+        // short and its detent is the whole point — a fullscreen cover would
+        // ignore the detent and hand iPad the empty screen this change removes.
+        .sheet(isPresented: $showDeviceGps) {
+            // Dismiss first: `showPaywall` is presented from RootView, which also
+            // hosts this flow, so leaving this sheet up would stack one modal on
+            // another.
+            DeviceGpsSheet {
+                showDeviceGps = false
+                router.showPaywall = true
+            }
+        }
+        // No paywall hand-off to sequence here, so this one is a plain sheet with
+        // nothing to dismiss first.
+        .sheet(isPresented: $showVpn) {
+            VpnSheet()
+        }
     }
 
-    /// What a layer currently reports.
-    private enum LayerState {
-        /// Spoofed, and the place is known.
-        case value(String)
-        /// Spoofed, but the app has no name for the place.
-        case changed
-        /// Not spoofed, with the reason it isn't.
-        case unchanged(LocalizedStringKey)
-    }
-
-    /// One layer: what it is, whether GeoSpoof moved it, and — when it didn't —
-    /// what would. The "why not" sits on the row rather than behind a tap, because
-    /// the Mac requirement for GPS is the single fact most likely to cause a refund
-    /// if someone only discovers it after paying.
-    @ViewBuilder
-    private func layerRow(
+    /// One signal that lies outside Safari, and what would move it.
+    ///
+    /// No "Not changed" status text: the section header already establishes that,
+    /// so repeating it per row was the padding that made this read like a
+    /// comparison table. What each row needs is the useful part.
+    ///
+    /// Centre-aligned rather than top-aligned so the glyph and the chevron sit on
+    /// the row's midline instead of pinning to the first line of a two-line row —
+    /// the same way a Settings row with a subtitle behaves.
+    private func gapRow(
         symbol: String,
         title: LocalizedStringKey,
-        state: LayerState,
-        tint: Color
+        detail: LocalizedStringKey,
+        showsChevron: Bool
     ) -> some View {
-        HStack(alignment: .top, spacing: 14) {
+        HStack(alignment: .center, spacing: 14) {
             Image(systemName: symbol)
                 .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(tint)
+                .foregroundStyle(.secondary)
                 .frame(width: 24)
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.body)
                     .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true)
-
-                switch state {
-                case .value(let place):
-                    // verbatim: a place name from the city catalog, not copy.
-                    Text(verbatim: place)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.green)
-                        .fixedSize(horizontal: false, vertical: true)
-                case .changed:
-                    Text("Changed")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.green)
-                case .unchanged(let reason):
-                    // Two strings rather than one: "Not changed" is the state and is
-                    // shared between rows, the reason varies. Splitting them also
-                    // keeps the state scannable straight down the column.
-                    Text("Not changed")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    Text(reason)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Spacer(minLength: 0)
+
+            if showsChevron {
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
+            }
         }
         .padding(.vertical, 12)
+        .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }
 
@@ -1458,6 +1536,288 @@ private struct OnboardingSafariReadyView: View {
     }
 }
 #endif
+
+// MARK: - Device GPS pitch
+
+#if os(iOS)
+/// What Device GPS is, what it needs, and the way to get it.
+///
+/// Shared by the GPS tab's non-Pro state and the sheet the onboarding close
+/// screen opens, because those are the same explanation given to the same person
+/// at two moments — and a customer who reads one then the other must not find two
+/// different accounts of what they'd be buying.
+///
+/// The Mac requirement is stated in the body rather than the fine print. It is the
+/// fact most likely to produce a refund when discovered after purchase, and the
+/// store listing's "fake your GPS location" gives people every reason to assume
+/// the phone can do it alone.
+///
+/// Carries no background or outer padding of its own, because it has to sit in a
+/// `Form` `Section` and in a plain `ScrollView` without doubling up on chrome.
+struct DeviceGpsPitch: View {
+    /// Opens the paywall. Injected because the two hosts reach it differently.
+    let onUpgrade: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "location.circle.fill")
+                    .font(.title2)
+                    .foregroundColor(.brand)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Device GPS")
+                        .font(.headline)
+                    Text("Included with GeoSpoof Pro")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .accessibilityElement(children: .combine)
+
+            Text("Use your Mac to control the GPS location your iPhone reports.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            VStack(alignment: .leading, spacing: 8) {
+                PitchPoint("Location simulation for privacy and app testing")
+                PitchPoint("Choose any location or match your VPN")
+                PitchPoint("Secure Mac pairing with no jailbreak")
+            }
+
+            Button(action: onUpgrade) {
+                Label("Upgrade to Pro", systemImage: "sparkles")
+                    .frame(maxWidth: .infinity)
+            }
+            .glassButtonStyle(prominent: true)
+            .controlSize(.large)
+            .padding(.top, 2)
+            .accessibilityHint("Opens GeoSpoof Pro upgrade options")
+        }
+    }
+
+    /// The scope caveat both hosts show alongside this pitch — the GPS tab in its
+    /// own `Section`, the onboarding sheet directly beneath. Lives here rather
+    /// than at each call site, where it was the same sentence typed out twice.
+    static let compatibilityCaveat: LocalizedStringKey =
+        "Not for AR games like Pokémon GO — device GPS is for privacy, browsing, and development."
+}
+
+/// A checked line in a pitch — a quiet brand check plus a short claim. Shared by
+/// `DeviceGpsPitch` and `VpnSheet` so the two detail sheets reachable from the
+/// onboarding close screen read as one family.
+///
+/// Takes a key, not a `String`, so the literals at the call sites are extracted
+/// for translation rather than rendered verbatim.
+struct PitchPoint: View {
+    private let text: LocalizedStringKey
+
+    init(_ text: LocalizedStringKey) {
+        self.text = text
+    }
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Image(systemName: "checkmark")
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(.brand)
+                .frame(width: 18)
+                .accessibilityHidden(true)
+            Text(text)
+                .font(.subheadline)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+/// The onboarding close screen's Device GPS detail, presented as a sheet.
+///
+/// A sheet rather than a push: the close screen is terminal and hides its
+/// navigation bar, so a pushed detail would have no way back.
+///
+/// Deliberately short, and sized to its content rather than to the screen. This
+/// is a "what is that?" tap at the end of setup, not a considered purchase — the
+/// GPS tab is where someone goes when they've decided to act. So it answers the
+/// question and stops: the same pitch the tab shows, plus the scope caveat, in a
+/// medium sheet. An earlier version filled the height with setup steps, a
+/// requirements list and a Mac-to-iPhone diagram, which turned a one-tap
+/// curiosity into a page of homework.
+struct DeviceGpsSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let onUpgrade: () -> Void
+
+    var body: some View {
+        AdaptiveNavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    DeviceGpsPitch(onUpgrade: onUpgrade)
+
+                    Label {
+                        Text(DeviceGpsPitch.compatibilityCaveat)
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle")
+                    }
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                }
+                .padding(20)
+                .frame(maxWidth: 600, alignment: .leading)
+                .frame(maxWidth: .infinity)
+            }
+            .navigationTitle("Device GPS")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button { dismiss() } label: { Image(systemName: "xmark") }
+                        .accessibilityLabel("Close")
+                }
+            }
+        }
+        .tint(.brand)
+        // The content is about half a phone screen, so a full-height sheet left
+        // the bottom empty. Same presentation as `TrustSheet` — the app's other
+        // informational sheet — rather than a one-off detent here.
+        .explainerSheetPresentation()
+    }
+}
+
+// MARK: - IP address / VPN
+
+/// The onboarding close screen's IP-address detail: the one location signal
+/// GeoSpoof can't move, and the (disclosed) affiliate recommendation for the tool
+/// that can.
+///
+/// Built as a sibling of `DeviceGpsSheet` — same header shape, same `PitchPoint`
+/// rows, same presentation — because the two rows sit next to each other on the
+/// close screen and tapping either should feel like the same gesture.
+///
+/// A heavily condensed port of the site's `/vpn` page, which runs to a hero, a
+/// two-layer explainer, three Proton reasons, plan guidance, five FAQ entries and
+/// two disclosures. None of that belongs on a phone sheet: the site already has a
+/// condensed form of itself (the `verify.vpnCard` callout reused on /verify and
+/// /gps) and this is the native version of *that*, not of the page.
+///
+/// Two things are deliberately left out. The "up to 70% off" figure, because a
+/// price claim compiled into a binary can't be corrected when Proton changes the
+/// promo, and a stale discount is both a review risk and a broken promise — the
+/// site can carry it because the site can be edited. And the Proton logotype,
+/// because bundling a partner's trademark is a separate brand-guidelines and
+/// review question, and the button already says the name.
+struct VpnSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        AdaptiveNavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack(alignment: .top, spacing: 12) {
+                        // Same glyph as the row that opens this, so the sheet
+                        // reads as that row expanding.
+                        Image(systemName: "network")
+                            .font(.title2)
+                            .foregroundColor(.brand)
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("IP address")
+                                .font(.headline)
+                            Text("Handled by a VPN")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+
+                    // The site's established sentence for this, word for word.
+                    // It is the "GeoSpoof isn't a VPN" line, and saying it plainly
+                    // is the point of the screen.
+                    Text("Your IP address is the one signal GeoSpoof can't change. Only a VPN can.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text("Why Proton VPN")
+                        .font(.subheadline.weight(.semibold))
+                        .padding(.top, 2)
+                        .accessibilityAddTraits(.isHeader)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        PitchPoint("No-logs, independently audited")
+                        PitchPoint("Swiss, open-source")
+                        PitchPoint("Works with VPN Sync")
+                    }
+
+                    // Above the button, not below it and not on the far side of a
+                    // tap: the relationship has to be clear before anyone acts on
+                    // the recommendation.
+                    Label {
+                        Text("We partner with Proton VPN. If you subscribe through our link, we earn a commission at no extra cost to you.")
+                            .fixedSize(horizontal: false, vertical: true)
+                    } icon: {
+                        Image(systemName: "info.circle")
+                    }
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 2)
+                    .accessibilityElement(children: .combine)
+
+                    Link(destination: AppLink.proton(.onboarding)) {
+                        Text("See Proton VPN plans")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .glassButtonStyle(prominent: true)
+                    .controlSize(.large)
+                    .accessibilityHint("Opens in your browser")
+
+                    // Non-negotiable counterweight to an affiliate link: the
+                    // recommendation is only honest if the alternative is stated
+                    // in the same breath, on the same screen.
+                    Text("GeoSpoof works with any VPN — you’re never locked in.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(20)
+                .frame(maxWidth: 600, alignment: .leading)
+                .frame(maxWidth: .infinity)
+            }
+            .navigationTitle("IP address")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button { dismiss() } label: { Image(systemName: "xmark") }
+                        .accessibilityLabel("Close")
+                }
+            }
+        }
+        .tint(.brand)
+        .explainerSheetPresentation()
+    }
+}
+#endif
+
+// MARK: - Shared explainer pieces
+
+/// The numbered brand circle that marks a step. Drawn by both the Safari
+/// activation illustration and the permission-prompt screenshots, which had each
+/// grown their own copy of it.
+///
+/// Always decorative: both hosts speak the number as part of a label they set on
+/// the whole row, so a VoiceOver user never hears a bare digit.
+struct StepBadge: View {
+    let number: Int
+
+    var body: some View {
+        // Locale-formatted digits, not a `%lld` catalog key — a bare numeral is
+        // nothing a translator can act on, and some locales use other digits.
+        Text(number.formatted())
+            .font(.caption2.bold())
+            .foregroundStyle(.white)
+            .frame(width: 16, height: 16)
+            .background(Color.brand, in: Circle())
+            .accessibilityHidden(true)
+    }
+}
 
 // MARK: - Permission prompts illustration
 
@@ -1508,13 +1868,7 @@ struct PermissionPromptsView: View {
                 .shadow(color: .black.opacity(0.18), radius: 6, y: 2)
 
             HStack(spacing: 6) {
-                // Locale-formatted digits, no `%lld` catalog key — see the API
-                // count badge above.
-                Text(index.formatted())
-                    .font(.caption2.bold())
-                    .foregroundStyle(.white)
-                    .frame(width: 16, height: 16)
-                    .background(Color.brand, in: Circle())
+                StepBadge(number: index)
                 Text(caption)
                     .font(.caption)
                     .foregroundStyle(.primary)
@@ -1629,7 +1983,7 @@ struct TrustSheet: View {
                 }
             }
         }
-        .trustSheetPresentation()
+        .explainerSheetPresentation()
         #if os(macOS)
         .frame(minWidth: 460, minHeight: 600)
         #endif
@@ -1708,10 +2062,15 @@ struct TrustSheet: View {
 }
 
 private extension View {
-    /// Applies medium/large detents + a drag indicator on current targets, with
-    /// a defensive full-height fallback if deployment targets are lowered.
+    /// The app's presentation for an explainer sheet: opens at half height, drags
+    /// up to full for anyone who needs the room (large Dynamic Type, or a long
+    /// translation), with a drag indicator so that's discoverable.
+    ///
+    /// Shared by `TrustSheet` and `DeviceGpsSheet` so the two informational sheets
+    /// behave identically. Falls back to full height if deployment targets are
+    /// ever lowered.
     @ViewBuilder
-    func trustSheetPresentation() -> some View {
+    func explainerSheetPresentation() -> some View {
         if #available(iOS 16.0, macOS 13.0, *) {
             self
                 .presentationDetents([.medium, .large])
@@ -1821,12 +2180,7 @@ struct SafariActivationAnimation: View {
 
     private func stepLine(_ n: Int, _ text: LocalizedStringKey) -> some View {
         HStack(spacing: 8) {
-            // Locale-formatted digits, no `%lld` catalog key.
-            Text(n.formatted())
-                .font(.caption2.bold())
-                .foregroundStyle(.white)
-                .frame(width: 16, height: 16)
-                .background(Color.brand, in: Circle())
+            StepBadge(number: n)
             Text(text)
                 .font(.caption)
                 .foregroundStyle(.primary)

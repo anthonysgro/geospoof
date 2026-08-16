@@ -563,59 +563,8 @@ struct GpsView: View {
     /// and on the paywall itself, so it's intentionally not duplicated here.
     private var proPitchSection: some View {
         Section {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: "location.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(.brand)
-                        .accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Device GPS")
-                            .font(.headline)
-                        Text("Included with GeoSpoof Pro")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-
-                Text("Use your Mac to control the GPS location your iPhone reports.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-
-                VStack(alignment: .leading, spacing: 8) {
-                    pitchPoint("Location simulation for privacy and app testing")
-                    pitchPoint("Choose any location or match your VPN")
-                    pitchPoint("Secure Mac pairing with no jailbreak")
-                }
-
-                Button {
-                    router.showPaywall = true
-                } label: {
-                    Label("Upgrade to Pro", systemImage: "sparkles")
-                        .frame(maxWidth: .infinity)
-                }
-                .glassButtonStyle(prominent: true)
-                .controlSize(.large)
-                .padding(.top, 2)
-                .accessibilityHint("Opens GeoSpoof Pro upgrade options")
-            }
-            .padding(.vertical, 4)
-        }
-    }
-
-    /// One benefit row in the Pro pitch — a quiet brand check plus a short line.
-    /// Takes a key, not a `String`, so the literals at the call sites are
-    /// extracted rather than rendered verbatim.
-    private func pitchPoint(_ text: LocalizedStringKey) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Image(systemName: "checkmark")
-                .font(.subheadline.weight(.semibold))
-                .foregroundColor(.brand)
-                .frame(width: 18)
-                .accessibilityHidden(true)
-            Text(text)
-                .font(.subheadline)
-                .fixedSize(horizontal: false, vertical: true)
+            DeviceGpsPitch { router.showPaywall = true }
+                .padding(.vertical, 4)
         }
     }
 
@@ -639,10 +588,14 @@ struct GpsView: View {
     /// Compatibility caveat, shown beneath the "Waiting for your Mac" setup
     /// section: device GPS is for privacy/browsing/development, not AR games.
     /// A single small, muted row so it sets expectations without dominating.
+    ///
+    /// The wording lives on `DeviceGpsPitch` rather than here, because
+    /// `DeviceGpsSheet` shows the same caveat and the two were previously the same
+    /// sentence typed out twice.
     private var compatibilitySection: some View {
         Section {
             Label {
-                Text("Not for AR games like Pokémon GO — device GPS is for privacy, browsing, and development.")
+                Text(DeviceGpsPitch.compatibilityCaveat)
             } icon: {
                 Image(systemName: "exclamationmark.triangle")
             }

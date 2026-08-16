@@ -28,6 +28,15 @@ const activationPage = readFileSync(
 const safariReadyStart = onboarding.indexOf("private struct OnboardingSafariReadyView");
 const safariReadyEnd = onboarding.indexOf("\n}\n#endif", safariReadyStart);
 const safariReadyView = onboarding.slice(safariReadyStart, safariReadyEnd);
+/**
+ * The same view with comment lines dropped, for assertions about copy that must
+ * *not* appear. Comments in this file explain which phrasings were rejected and
+ * why, so matching against raw source would flag the explanation as the offence.
+ */
+const safariReadyCode = safariReadyView
+  .split("\n")
+  .filter((line) => !line.trim().startsWith("//"))
+  .join("\n");
 
 describe("Safari onboarding return contract", () => {
   it("keeps the hosted return URL aligned with SceneDelegate", () => {
@@ -62,29 +71,53 @@ describe("Safari onboarding return contract", () => {
     expect(onboarding).not.toContain("onLearnAboutGPS: showGPSDetails");
   });
 
-  it("closes on the three location layers, not just the Safari one", () => {
+  it("names all three location layers on the close screen", () => {
     expect(safariReadyView).toContain('Text("Safari is ready")');
     expect(safariReadyView).toContain('Text("Start using GeoSpoof")');
 
-    // All three layers are named. Customers conflate them because the store
-    // listing sells browser spoofing as "fake your GPS location", so this screen
-    // is the first place the app can separate them — losing a row silently
-    // reintroduces the confusion it exists to fix.
-    expect(safariReadyView).toContain('title: "Safari location & timezone"');
-    expect(safariReadyView).toContain('title: "This iPhone\'s GPS"');
-    expect(safariReadyView).toContain('title: "Your IP address"');
+    // Customers conflate browser geolocation, device GPS, and IP location —
+    // partly because the store listing sells browser spoofing as "fake your GPS
+    // location". This screen is the first place the app can separate them, so
+    // losing a row silently reintroduces the confusion it exists to fix.
+    expect(safariReadyView).toContain('Text("Safari location & timezone")');
+    expect(safariReadyView).toContain('title: "Device GPS"');
+    expect(safariReadyView).toContain('title: "IP address"');
 
-    // The two layers GeoSpoof does not move must say why, on the row itself. The
-    // Mac requirement in particular is what causes refunds when it is discovered
-    // only after purchase.
-    expect(safariReadyView).toContain('.unchanged("Needs Pro and a Mac")');
-    expect(safariReadyView).toContain('.unchanged("Only a VPN can change this")');
+    // Each row says what would move it. The Mac requirement especially: it is
+    // what produces refunds when discovered only after purchase.
+    expect(safariReadyView).toContain('detail: "Needs Pro and a Mac"');
+    expect(safariReadyView).toContain('detail: "Only a VPN can change this"');
 
-    // Rows stay non-interactive: pushing a Pro screen from inside onboarding
-    // would end the flow at a paywall, and this screen is terminal.
+    // The section header names a category, never a capability. GeoSpoof does
+    // change device GPS with Pro and a Mac, so any header phrased as "GeoSpoof
+    // doesn't change these" contradicts the product to the customer who bought it
+    // for exactly that.
+    expect(safariReadyView).toContain('Text("Other location signals")');
+    expect(safariReadyCode).not.toMatch(/GeoSpoof (doesn't|does not) change/);
+
+    // "Device GPS" is the app's own term for this layer. The GPS tab uses it too,
+    // and the two must not drift into separate vocabularies.
+    expect(onboarding).toContain('Text("Device GPS")');
+  });
+
+  it("opens Device GPS as a sheet, and closes it before the paywall", () => {
+    // A sheet, not a push: the close screen hides its navigation bar, so a pushed
+    // detail would strand the user with no way back.
+    expect(safariReadyView).toContain("adaptiveModalCover(isPresented: $showDeviceGps)");
     expect(safariReadyView).not.toContain("NavigationLink");
-    expect(safariReadyView).not.toContain("ProDetailView");
-    expect(safariReadyView).not.toContain("showPaywall");
+
+    // The paywall is presented by RootView, which also hosts this flow, so the
+    // sheet has to come down first or one modal stacks on the other.
+    expect(safariReadyView).toMatch(/showDeviceGps = false\s*\n\s*router\.showPaywall = true/);
+  });
+
+  it("shares one Device GPS pitch between onboarding and the GPS tab", () => {
+    // Same explanation, same person, two moments — a customer who reads both must
+    // not find two different accounts of what they would be buying.
+    expect(onboarding).toContain("struct DeviceGpsPitch");
+    expect(onboarding).toContain("struct DeviceGpsSheet");
+    expect(sceneDelegate).toContain("DeviceGpsPitch { router.showPaywall = true }");
+    expect(sceneDelegate).toContain("DeviceGpsPitch.point(text)");
   });
 
   it("passes the native Safari UI generation to the activation page", () => {
