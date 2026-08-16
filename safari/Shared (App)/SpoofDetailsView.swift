@@ -295,27 +295,32 @@ private struct APICategory: Identifiable {
 
 // MARK: - Onboarding
 
-/// A classic multi-step native onboarding that walks the user through enabling
-/// the Safari extension, with a button that jumps to the system settings.
+/// A native activation flow that starts with a real product action, then walks
+/// the user through enabling the Safari extension.
 struct OnboardingView: View {
+    @ObservedObject var controller: SpoofController
     let onDone: () -> Void
 
     @State private var step = 0
     @State private var showTrust = false
+    #if os(iOS)
+    @ObservedObject private var router = AppRouter.shared
+    @State private var navigationPath: [StepKind] = []
+    #endif
     #if os(macOS)
     @StateObject private var extState = ExtensionStateModel()
     @Environment(\.scenePhase) private var scenePhase
     #endif
 
     /// The flow is modeled as an ordered list of steps rather than index-based
-    /// switches, because it diverges by platform: iOS has an extra "turn it on
-    /// for the page" step (the address-bar → Manage Extensions action) that
-    /// doesn't exist on macOS, where website access is granted right in Safari
-    /// Settings. Index math across a divergent flow is error-prone, so the
-    /// step list is the single source of truth for count, dots, and content.
-    private enum StepKind: Equatable {
+    /// switches, because it diverges by platform. Index math across a divergent
+    /// flow is error-prone, so the step list is the single source of truth for
+    /// count, progress, and content.
+    private enum StepKind: Hashable {
         case welcome
+        case location
         case enable
+        case safariReady
         case permission
         case gps
         case done
@@ -323,12 +328,11 @@ struct OnboardingView: View {
 
     private var steps: [StepKind] {
         #if os(iOS)
-        // iOS modal covers only what we can't detect or guide from the home
-        // screen: the welcome and the Settings toggle. Activating it for a page
-        // (+ the permission prompt and trust info) is handled just-in-time by
-        // the state-driven Setup card on the home screen. A closing GPS teaser
-        // introduces the optional Pro device-GPS layer (nothing to set up here).
-        [.welcome, .enable, .gps]
+        // The first setup action is the product's core action, not an
+        // explanation: choose the location that Safari will report. The choice
+        // is written to the App Group immediately and Safari adopts it when the
+        // extension is enabled later in this flow.
+        [.welcome, .location, .enable, .safariReady]
         #else
         [.welcome, .enable, .permission, .gps, .done]
         #endif
@@ -341,7 +345,9 @@ struct OnboardingView: View {
     private func symbol(_ kind: StepKind) -> String {
         switch kind {
         case .welcome: return "globe" // unused — welcome uses the app icon
+        case .location: return "mappin.and.ellipse"
         case .enable: return "puzzlepiece.extension.fill"
+        case .safariReady: return "checkmark.circle.fill"
         case .permission: return "lock.shield.fill"
         case .gps: return "location.circle.fill"
         case .done: return "checkmark.circle.fill"
@@ -351,7 +357,9 @@ struct OnboardingView: View {
     private func title(_ kind: StepKind) -> LocalizedStringKey {
         switch kind {
         case .welcome: return "Welcome to GeoSpoof"
+        case .location: return "Choose a Location"
         case .enable: return "Enable in Safari"
+        case .safariReady: return "Safari is Ready"
         case .permission: return "When Safari Asks"
         case .gps: return "Match Your iPhone's Real GPS"
         case .done: return "You're All Set"
@@ -362,12 +370,16 @@ struct OnboardingView: View {
         switch kind {
         case .welcome:
             return "Mask the location and timezone you reveal online with a tap -- and keep your real whereabouts private."
+        case .location:
+            return "Pick the location you want GeoSpoof to report. You can change it anytime."
         case .enable:
             #if os(iOS)
             return "Turn GeoSpoof on in Safari's extension settings."
             #else
             return "In Safari, choose Settings > Extensions and turn on GeoSpoof."
             #endif
+        case .safariReady:
+            return "Websites in Safari now receive your GeoSpoof location."
         case .permission:
             return "The first time you browse, Safari asks to allow access. Approving it is what lets GeoSpoof work -- here's what you'll see."
         case .gps:
@@ -386,38 +398,205 @@ struct OnboardingView: View {
     }
 
     var body: some View {
+        Group {
+            #if os(iOS)
+            iOSFlow
+            #else
+            setupStep
+            #endif
+        }
+        .adaptiveModalCover(isPresented: $showTrust) {
+            TrustSheet()
+        }
+        #if os(iOS)
+        .onAppear {
+            consumeSafariCompletionRequest()
+        }
+        .onChange(of: router.safariOnboardingCompletionRequested) { requested in
+            if requested {
+                consumeSafariCompletionRequest()
+            }
+        }
+        // The hosted page's return link is the happy path, but it is not the only
+        // way back: users routinely switch apps instead of tapping it. The
+        // extension's own check-in is an equally authoritative signal that Safari
+        // is ready, so treat it as a second entrance to the same screen.
+        .onChange(of: controller.isActiveInSafari) { _ in
+            advanceIfSafariIsActive()
+        }
+        #endif
+        #if os(macOS)
+        .animation(.easeInOut(duration: 0.25), value: step)
+        .animation(.easeInOut(duration: 0.2), value: extState.state)
+        .onAppear { extState.refresh() }
+        .onChange(of: scenePhase) { phase in
+            // Re-check when the user returns from Safari's settings.
+            if phase == .active { extState.refresh() }
+        }
+        .onChange(of: step) { _ in extState.refresh() }
+        .frame(minWidth: 460, minHeight: 560)
+        #endif
+        .interactiveDismissDisabled()
+    }
+
+    #if os(iOS)
+    /// Once the welcome's single action is taken, the system navigation stack
+    /// owns movement through setup. This gives the transition standard iOS
+    /// physics, back-swipe behavior, and accessibility instead of a bespoke
+    /// onboarding animation.
+    @ViewBuilder
+    private var iOSFlow: some View {
+        if #available(iOS 16.0, *) {
+            NavigationStack(path: $navigationPath) {
+                welcomeRoot
+                    .navigationDestination(for: StepKind.self) { kind in
+                        iOSPage(kind)
+                    }
+            }
+            .onChange(of: navigationPath) { path in
+                syncStep(with: path.last)
+            }
+        } else {
+            NavigationView {
+                welcomeRoot
+                    .background {
+                        NavigationLink(
+                            destination: iOSPage(current),
+                            isActive: Binding(
+                                get: { step > 0 },
+                                set: { if !$0 { step = 0 } }
+                            )
+                        ) {
+                            EmptyView()
+                        }
+                        .hidden()
+                    }
+            }
+            .navigationViewStyle(.stack)
+        }
+    }
+
+    private var welcomeRoot: some View {
+        OnboardingWelcomeView {
+            showFirstSetupStep()
+        }
+        .navigationBarHidden(true)
+    }
+
+    @ViewBuilder
+    private func iOSPage(_ kind: StepKind) -> some View {
+        if kind == .location {
+            OnboardingLocationView(controller: controller) {
+                advance()
+            }
+            .navigationBarHidden(false)
+        } else if kind == .enable {
+            OnboardingSafariHandoffView(
+                controller: controller,
+                onOpenSetup: openSafariActivationPage
+            )
+            .navigationBarHidden(false)
+            .onAppear { syncStep(with: kind) }
+            .task { await watchForSafariActivation() }
+        } else if kind == .safariReady {
+            OnboardingSafariReadyView(
+                controller: controller,
+                onFinish: onDone
+            )
+            .navigationBarHidden(true)
+            .onAppear { syncStep(with: kind) }
+        } else {
+            setupStep
+                .navigationBarHidden(false)
+                .onAppear { syncStep(with: kind) }
+        }
+    }
+
+    private func showFirstSetupStep() {
+        guard let firstSetup = steps.dropFirst().first else { return }
+        step = 1
+        if #available(iOS 16.0, *) {
+            navigationPath.append(firstSetup)
+        }
+    }
+
+    private func syncStep(with kind: StepKind?) {
+        guard let kind, let index = steps.firstIndex(of: kind) else {
+            step = 0
+            return
+        }
+        step = index
+    }
+
+    /// Consume the one-shot route only after OnboardingView exists. This works
+    /// for both a warm return from Safari and a cold launch where SceneDelegate
+    /// receives the URL before SwiftUI has mounted the navigation stack.
+    private func consumeSafariCompletionRequest() {
+        guard router.consumeSafariOnboardingCompletion() else { return }
+        showSafariReady()
+    }
+
+    private func showSafariReady() {
+        guard let readyIndex = steps.firstIndex(of: .safariReady) else { return }
+        step = readyIndex
+
+        if #available(iOS 16.0, *) {
+            if navigationPath.last != .safariReady {
+                navigationPath.append(.safariReady)
+            }
+        }
+    }
+
+    /// Advance on the extension's own check-in, but only from the handoff screen.
+    ///
+    /// The step guard is load-bearing, not defensive: `isActiveInSafari` is a
+    /// seven-day heartbeat window, so it can already be true when onboarding
+    /// starts — a user who enables the extension in Safari before ever opening
+    /// the app, or the debug replay on a device that's already set up. Without
+    /// the guard those cases would jump straight from the welcome screen to
+    /// "Safari is ready", skipping location selection and leaving the success
+    /// screen with no location to name.
+    private func advanceIfSafariIsActive() {
+        guard current == .enable,
+              controller.isActiveInSafari,
+              controller.hasLocation else { return }
+        showSafariReady()
+    }
+
+    /// Keep checking for the extension's check-in while the handoff screen is on
+    /// screen.
+    ///
+    /// `SpoofController` refreshes from the App Group on
+    /// `didBecomeActive`, which covers the ordinary return from Safari on iPhone.
+    /// Two cases it doesn't cover: iPad multitasking, where GeoSpoof and Safari
+    /// can both be visible so the app never re-activates, and a first check-in
+    /// that lands a moment after the app is already frontmost. Both leave the
+    /// user parked on a screen that has nothing left to say. The poll is a small
+    /// App Group plist read, runs only while this step is displayed, and stops
+    /// on its own when iOS suspends the app.
+    private func watchForSafariActivation() async {
+        advanceIfSafariIsActive()
+
+        while !Task.isCancelled {
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else { return }
+            controller.refreshFromExtension()
+            advanceIfSafariIsActive()
+        }
+    }
+
+    #endif
+
+    /// The instructional steps retain the established scrolling layout. The
+    /// iOS welcome deliberately does not use this scaffold: it is a launch
+    /// scene, while these are the setup flow that begins after Continue.
+    private var setupStep: some View {
         GeometryReader { geo in
             ScrollView {
                 VStack(spacing: 20) {
                     Spacer(minLength: 0)
 
-            Group {
-                if current == .welcome {
-                    Image("LargeIcon")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 104, height: 104)
-                } else {
-                    Image(systemName: symbol(current))
-                        .font(.system(size: 68))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(Color.brand)
-                }
-            }
-            .transition(.scale.combined(with: .opacity))
-            .id("symbol-\(step)")
-
-            VStack(spacing: 10) {
-                Text(title(current))
-                    .font(.largeTitle.bold())
-                    .multilineTextAlignment(.center)
-                Text(subtitle(current))
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            .padding(.horizontal)
-            .id("text-\(step)")
+            standardHeader
 
             if current == .enable {
                 #if os(macOS)
@@ -448,29 +627,6 @@ struct OnboardingView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                #else
-                // iOS has no public deep link into Safari → Extensions, and no
-                // API to read the extension's enabled state. The only
-                // App-Store-safe jump is openSettingsURLString, which lands on
-                // the Settings app (this app's own page); from there the user
-                // navigates to Apps › Safari › Extensions. We avoid the private
-                // `prefs:root=SAFARI` scheme — it's undocumented, version-fragile,
-                // and a review-rejection risk.
-                Button {
-                    openAppSettings()
-                } label: {
-                    Label("Open Settings", systemImage: "arrow.up.forward.app")
-                        .frame(maxWidth: .infinity)
-                }
-                .glassButtonStyle()
-                .controlSize(.large)
-                .padding(.horizontal)
-                .padding(.top, 4)
-
-                Label("Apps › Safari › Extensions › GeoSpoof", systemImage: "gearshape")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 2)
                 #endif
             }
 
@@ -493,13 +649,7 @@ struct OnboardingView: View {
 
             Spacer(minLength: 0)
 
-            HStack(spacing: 8) {
-                ForEach(0..<stepCount, id: \.self) { i in
-                    Circle()
-                        .fill(i == step ? Color.brand : Color.secondary.opacity(0.3))
-                        .frame(width: 8, height: 8)
-                }
-            }
+            stepProgress
 
             Button {
                 advance()
@@ -510,42 +660,86 @@ struct OnboardingView: View {
             .controlSize(.large)
             .padding(.horizontal)
 
-            Button("Back") {
-                withAnimation { step -= 1 }
+            #if os(macOS)
+            if step > 0 {
+                Button("Back") {
+                    withAnimation { step -= 1 }
+                }
+                .font(.subheadline)
             }
-            .font(.subheadline)
-            .opacity(step > 0 ? 1 : 0)
-            .disabled(step == 0)
+            #endif
                 }
                 .padding()
                 .padding(.bottom, 12)
                 .frame(maxWidth: .infinity, minHeight: geo.size.height)
             }
         }
-        .adaptiveModalCover(isPresented: $showTrust) {
-            TrustSheet()
+    }
+
+    private var stepProgress: some View {
+        HStack(spacing: 8) {
+            ForEach(progressRange, id: \.self) { i in
+                Circle()
+                    .fill(i == step ? Color.brand : Color.secondary.opacity(0.3))
+                    .frame(width: 8, height: 8)
+            }
         }
-        .animation(.easeInOut(duration: 0.25), value: step)
-        #if os(macOS)
-        .animation(.easeInOut(duration: 0.2), value: extState.state)
-        .onAppear { extState.refresh() }
-        .onChange(of: scenePhase) { phase in
-            // Re-check when the user returns from Safari's settings.
-            if phase == .active { extState.refresh() }
+    }
+
+    /// On iOS the welcome is the doorway into setup, not one of its pages, so
+    /// progress starts with the first real task. macOS keeps its existing count.
+    private var progressRange: Range<Int> {
+        #if os(iOS)
+        return 1..<stepCount
+        #else
+        return 0..<stepCount
+        #endif
+    }
+
+    private var standardHeader: some View {
+        VStack(spacing: 20) {
+            Group {
+                if current == .welcome {
+                    Image("LargeIcon")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 104, height: 104)
+                } else {
+                    Image(systemName: symbol(current))
+                        .font(.system(size: 68))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(Color.brand)
+                }
+            }
+            .transition(.scale.combined(with: .opacity))
+            .id("symbol-\(step)")
+
+            VStack(spacing: 10) {
+                Text(title(current))
+                    .font(.largeTitle.bold())
+                    .multilineTextAlignment(.center)
+                Text(subtitle(current))
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal)
+            .id("text-\(step)")
         }
-        .onChange(of: step) { _ in extState.refresh() }
-        #endif
-        #if os(macOS)
-        .frame(minWidth: 460, minHeight: 560)
-        #endif
-        .interactiveDismissDisabled()
     }
 
     private func advance() {
         if isLast {
             onDone()
         } else {
+            #if os(iOS)
+            step += 1
+            if #available(iOS 16.0, *) {
+                navigationPath.append(current)
+            }
+            #else
             withAnimation { step += 1 }
+            #endif
         }
     }
 
@@ -556,16 +750,596 @@ struct OnboardingView: View {
     }
 
     #if os(iOS)
-    /// Opens the Settings app. iOS only permits deep-linking to this app's own
-    /// Settings page (openSettingsURLString); there is no public route straight
-    /// to Safari → Extensions, so the on-screen path label guides the rest.
-    private func openAppSettings() {
-        if let url = URL(string: UIApplication.openSettingsURLString) {
-            UIApplication.shared.open(url)
+    /// Opens the first-party activation page in the user's default browser.
+    /// The page itself will handle the non-Safari fallback in the next slice;
+    /// iOS provides no public API for forcing an HTTPS link into Safari.
+    private func openSafariActivationPage() {
+        let activationURL = AppLink.site(
+            "/activate",
+            campaign: "onboarding-activate",
+            localized: true
+        )
+        var components = URLComponents(url: activationURL, resolvingAgainstBaseURL: false)
+        let safariUI: String
+        if #available(iOS 26.0, *) {
+            safariUI = "26"
+        } else {
+            safariUI = "18"
         }
+        var queryItems = components?.queryItems ?? []
+        queryItems.append(URLQueryItem(name: "safari_ui", value: safariUI))
+        components?.queryItems = queryItems
+
+        // AppLink always produces a valid URL; preserve that URL if component
+        // reconstruction ever fails rather than interrupting onboarding.
+        UIApplication.shared.open(components?.url ?? activationURL)
     }
     #endif
 }
+
+#if os(iOS)
+/// A one-time, branded welcome after iOS hands control to the app. It renders in
+/// its finished state immediately: the system launch screen remains neutral,
+/// while this real app screen owns the brand, message, and action.
+private struct OnboardingWelcomeView: View {
+    let onContinue: () -> Void
+
+    var body: some View {
+        GeometryReader { geo in
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 0) {
+                    Spacer(minLength: 44)
+
+                    VStack(spacing: 28) {
+                        Image("LargeIcon")
+                            .resizable()
+                            .renderingMode(.template)
+                            .aspectRatio(contentMode: .fit)
+                            .foregroundStyle(Color.brand)
+                            .frame(width: 136, height: 136)
+                            .accessibilityHidden(true)
+
+                        VStack(spacing: 10) {
+                            Text("GeoSpoof")
+                                .font(.custom("Nunito-Bold", size: 34, relativeTo: .largeTitle))
+                                .tracking(-0.5)
+
+                            Text("Control the location you share—from Safari to your iPhone’s GPS.")
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                                .lineSpacing(2)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(maxWidth: 330)
+                        }
+                    }
+                    .padding(.horizontal, 32)
+
+                    Spacer(minLength: 44)
+
+                    VStack(spacing: 2) {
+                        Button(action: onContinue) {
+                            Text("Continue")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .glassButtonStyle(prominent: true)
+                        .controlSize(.large)
+
+                        HStack(spacing: 4) {
+                            Link(destination: AppLink.site("/privacy", campaign: "onboarding-privacy")) {
+                                Text("Privacy Policy")
+                                    .frame(minHeight: 44)
+                                    .contentShape(Rectangle())
+                            }
+
+                            Text(verbatim: "•")
+                                .accessibilityHidden(true)
+
+                            Link(destination: AppLink.site("/terms", campaign: "onboarding-terms")) {
+                                Text("Terms of Service")
+                                    .frame(minHeight: 44)
+                                    .contentShape(Rectangle())
+                            }
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 8)
+                    }
+                    .padding(.horizontal, 32)
+                    .padding(.bottom, 8)
+                }
+                .frame(maxWidth: .infinity, minHeight: geo.size.height)
+            }
+        }
+        .background(Color(uiColor: .systemBackground).ignoresSafeArea())
+        .tint(.brand)
+    }
+}
+
+/// The first activation task. City search stays entirely on-device through the
+/// bundled catalog; selecting a row is reversible until the user confirms it.
+/// That separation prevents an exploratory tap from silently changing the
+/// location and gives the screen one unambiguous completion action.
+private struct OnboardingLocationView: View {
+    @ObservedObject var controller: SpoofController
+    @ObservedObject private var store = CityStore.shared
+
+    let onContinue: () -> Void
+
+    @State private var searchText = ""
+    @State private var selection: Selection?
+    @State private var showCoordinates = false
+
+    private enum Selection: Equatable {
+        case place(PlaceResult)
+        case coordinates(latitude: Double, longitude: Double)
+    }
+
+    private var results: [PlaceResult] {
+        searchText.isEmpty ? store.popular(7) : store.search(searchText)
+    }
+
+    private var selectedCoordinates: (latitude: Double, longitude: Double)? {
+        guard case let .coordinates(latitude, longitude)? = selection else { return nil }
+        return (latitude, longitude)
+    }
+
+    var body: some View {
+        List {
+            Section {
+                Text("Pick the location you want GeoSpoof to report. You can change it anytime.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 4, bottom: 8, trailing: 4))
+                    .listRowSeparator(.hidden)
+            }
+
+            Section {
+                locationRows
+            } header: {
+                Text(searchText.isEmpty ? "Popular Cities" : "Results")
+            }
+
+            Section {
+                Button {
+                    showCoordinates = true
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "number")
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(Color.brand)
+                            .frame(width: 28)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Enter Coordinates")
+                                .foregroundStyle(.primary)
+                            if let selectedCoordinates {
+                                Text(Self.coordinateSummary(
+                                    latitude: selectedCoordinates.latitude,
+                                    longitude: selectedCoordinates.longitude
+                                ))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .monospacedDigit()
+                            }
+                        }
+
+                        Spacer()
+
+                        if case .coordinates? = selection {
+                            Image(systemName: "checkmark")
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(Color.brand)
+                                .accessibilityHidden(true)
+                        } else {
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.tertiary)
+                                .accessibilityHidden(true)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            } header: {
+                Text("Exact Location")
+            } footer: {
+                Text("Use coordinates when you need a precise point.")
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle("Choose a Location")
+        .navigationBarTitleDisplayMode(.large)
+        .searchable(
+            text: $searchText,
+            placement: .navigationBarDrawer(displayMode: .always),
+            prompt: "Search cities and countries"
+        )
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            confirmationBar
+        }
+        .sheet(isPresented: $showCoordinates) {
+            OnboardingCoordinatesView(
+                initialLatitude: selectedCoordinates?.latitude,
+                initialLongitude: selectedCoordinates?.longitude
+            ) { latitude, longitude in
+                selection = .coordinates(latitude: latitude, longitude: longitude)
+            }
+        }
+        .tint(.brand)
+        .onAppear { store.preload() }
+    }
+
+    @ViewBuilder
+    private var locationRows: some View {
+        if !store.isLoaded && searchText.isEmpty {
+            HStack(spacing: 12) {
+                ProgressView().controlSize(.small)
+                Text("Loading cities…")
+                    .foregroundStyle(.secondary)
+            }
+        } else if results.isEmpty {
+            Text("No locations found")
+                .foregroundStyle(.secondary)
+        } else {
+            ForEach(results) { place in
+                Button {
+                    selection = .place(place)
+                } label: {
+                    HStack(spacing: 12) {
+                        Text(place.flag)
+                            .font(.title2)
+                            .frame(width: 30)
+                            .accessibilityHidden(true)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(place.city)
+                                .foregroundStyle(.primary)
+                            Text(place.country)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+
+                        if selection == .place(place) {
+                            Image(systemName: "checkmark")
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(Color.brand)
+                                .accessibilityHidden(true)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityValue(selection == .place(place) ? "Selected" : "")
+            }
+        }
+    }
+
+    private var confirmationBar: some View {
+        VStack(spacing: 0) {
+            Divider()
+
+            Button {
+                useSelection()
+            } label: {
+                Text("Use This Location")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+            }
+            .glassButtonStyle(prominent: true)
+            .controlSize(.large)
+            .disabled(selection == nil)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .accessibilityHint("Saves the selected location and continues setup")
+        }
+        .background(.regularMaterial)
+    }
+
+    private func useSelection() {
+        guard let selection else { return }
+
+        switch selection {
+        case .place(let place):
+            controller.setLocation(from: place)
+        case let .coordinates(latitude, longitude):
+            controller.setLocation(latitude: latitude, longitude: longitude, name: nil)
+        }
+
+        Haptics.notify(.success)
+        onContinue()
+    }
+
+    private static func coordinateSummary(latitude: Double, longitude: Double) -> String {
+        "\(latitude.formatted(.number.precision(.fractionLength(0...5)))), \(longitude.formatted(.number.precision(.fractionLength(0...5))))"
+    }
+}
+
+/// Progressive disclosure for users who already have an exact coordinate. It
+/// returns a reviewed pair to the location screen rather than committing it on
+/// its own, so every selection still goes through the same confirmation action.
+private struct OnboardingCoordinatesView: View {
+    let onSelect: (Double, Double) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var latitude = ""
+    @State private var longitude = ""
+    @State private var error: LocalizedStringKey?
+
+    private enum Field { case latitude, longitude }
+    @FocusState private var focusedField: Field?
+
+    init(
+        initialLatitude: Double? = nil,
+        initialLongitude: Double? = nil,
+        onSelect: @escaping (Double, Double) -> Void
+    ) {
+        self.onSelect = onSelect
+        _latitude = State(initialValue: initialLatitude.map(Self.coordinateString) ?? "")
+        _longitude = State(initialValue: initialLongitude.map(Self.coordinateString) ?? "")
+    }
+
+    var body: some View {
+        AdaptiveNavigationStack {
+            Form {
+                Section {
+                    TextField("Latitude", text: $latitude)
+                        .keyboardType(.numbersAndPunctuation)
+                        .focused($focusedField, equals: .latitude)
+                        .submitLabel(.next)
+
+                    TextField("Longitude", text: $longitude)
+                        .keyboardType(.numbersAndPunctuation)
+                        .focused($focusedField, equals: .longitude)
+                        .submitLabel(.done)
+
+                    Button("Paste Coordinates") {
+                        pasteCoordinates()
+                    }
+                } footer: {
+                    if let error {
+                        Text(error)
+                            .foregroundStyle(.red)
+                    } else {
+                        Text("Latitude must be between −90 and 90; longitude between −180 and 180.")
+                    }
+                }
+            }
+            .navigationTitle("Enter Coordinates")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Select") { selectCoordinates() }
+                        .disabled(latitude.isEmpty || longitude.isEmpty)
+                }
+            }
+            .onSubmit {
+                switch focusedField {
+                case .latitude: focusedField = .longitude
+                case .longitude: selectCoordinates()
+                case .none: break
+                }
+            }
+        }
+        .tint(.brand)
+    }
+
+    private func pasteCoordinates() {
+        let raw = (UIPasteboard.general.string ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !raw.isEmpty else { return }
+        guard let parsed = CoordinateParser.parse(raw) else {
+            error = "Couldn't read coordinates — try a coordinate pair or a geohash"
+            Haptics.notify(.error)
+            return
+        }
+
+        latitude = Self.coordinateString(parsed.latitude)
+        longitude = Self.coordinateString(parsed.longitude)
+        error = nil
+    }
+
+    private func selectCoordinates() {
+        guard let latitudeValue = Self.value(latitude), (-90...90).contains(latitudeValue) else {
+            error = "Latitude must be between −90 and 90."
+            Haptics.notify(.error)
+            return
+        }
+        guard let longitudeValue = Self.value(longitude), (-180...180).contains(longitudeValue) else {
+            error = "Longitude must be between −180 and 180."
+            Haptics.notify(.error)
+            return
+        }
+
+        error = nil
+        onSelect(latitudeValue, longitudeValue)
+        dismiss()
+    }
+
+    private static func value(_ text: String) -> Double? {
+        let normalized = text.replacingOccurrences(of: "−", with: "-")
+        if let direct = Double(normalized) { return direct }
+
+        let formatter = NumberFormatter()
+        formatter.locale = .current
+        formatter.numberStyle = .decimal
+        return formatter.number(from: normalized)?.doubleValue
+    }
+
+    private static func coordinateString(_ value: Double) -> String {
+        String((value * 1_000_000).rounded() / 1_000_000)
+    }
+}
+
+/// A compact handoff from native setup to Safari. The preceding screen already
+/// explains location selection, so this page only confirms the choice and
+/// presents the next action.
+private struct OnboardingSafariHandoffView: View {
+    @ObservedObject var controller: SpoofController
+    let onOpenSetup: () -> Void
+
+    private var selectedLocation: String {
+        if let name = controller.locationName?.displayName, !name.isEmpty {
+            return name
+        }
+        guard let location = controller.location else { return "—" }
+        return Self.coordinateSummary(
+            latitude: location.latitude,
+            longitude: location.longitude
+        )
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Turn GeoSpoof on in Safari's extension settings.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.bottom, 28)
+
+                HStack(alignment: .center, spacing: 14) {
+                    Image(systemName: "mappin.and.ellipse")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(Color.brand)
+                        .frame(width: 28, height: 28)
+                        .accessibilityHidden(true)
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Selected Location")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+
+                        Text(verbatim: selectedLocation)
+                            .font(.body)
+                            .foregroundStyle(.primary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .accessibilityElement(children: .combine)
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 12)
+            .padding(.bottom, 32)
+            .frame(maxWidth: 600, alignment: .leading)
+            .frame(maxWidth: .infinity)
+        }
+        .navigationTitle("Enable in Safari")
+        .navigationBarTitleDisplayMode(.large)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            VStack(spacing: 0) {
+                Divider()
+
+                Button(action: onOpenSetup) {
+                    Label("Open Safari Setup", systemImage: "safari")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                }
+                .glassButtonStyle(prominent: true)
+                .controlSize(.large)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .accessibilityHint("Opens the setup page where Safari can enable and verify GeoSpoof")
+            }
+            .background(.regularMaterial)
+        }
+        .background(Color(uiColor: .systemBackground))
+        .tint(.brand)
+    }
+
+    private static func coordinateSummary(latitude: Double, longitude: Double) -> String {
+        "\(latitude.formatted(.number.precision(.fractionLength(0...5)))), \(longitude.formatted(.number.precision(.fractionLength(0...5))))"
+    }
+}
+
+/// A quiet bridge from verified Safari activation into the product. The hosted
+/// page already supplies explicit success feedback, so this screen focuses on
+/// the outcome, one essential product boundary, and a single exit action.
+private struct OnboardingSafariReadyView: View {
+    @ObservedObject var controller: SpoofController
+    let onFinish: () -> Void
+
+    private var selectedLocation: String {
+        if let name = controller.locationName {
+            let conciseName = [name.city, name.country]
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+                .joined(separator: ", ")
+            if !conciseName.isEmpty { return conciseName }
+            if !name.displayName.isEmpty { return name.displayName }
+        }
+
+        guard let location = controller.location else { return "Selected Location" }
+        return Self.coordinateSummary(
+            latitude: location.latitude,
+            longitude: location.longitude
+        )
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Safari is ready")
+                    .font(.largeTitle.bold())
+                    .accessibilityAddTraits(.isHeader)
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Websites now see")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+
+                    Text(verbatim: selectedLocation)
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.top, 36)
+                .accessibilityElement(children: .combine)
+
+                Text("This changes websites in Safari. Your iPhone GPS and IP address remain unchanged.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 30)
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 32)
+            .padding(.bottom, 32)
+            .frame(maxWidth: 600, alignment: .leading)
+            .frame(maxWidth: .infinity)
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            VStack(spacing: 0) {
+                Divider()
+
+                Button(action: onFinish) {
+                    Text("Start using GeoSpoof")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                }
+                .glassButtonStyle(prominent: true)
+                .controlSize(.large)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+            }
+            .background(.regularMaterial)
+        }
+        .background(Color(uiColor: .systemBackground))
+        .tint(.brand)
+    }
+
+    private static func coordinateSummary(latitude: Double, longitude: Double) -> String {
+        "\(latitude.formatted(.number.precision(.fractionLength(0...5)))), \(longitude.formatted(.number.precision(.fractionLength(0...5))))"
+    }
+}
+#endif
 
 // MARK: - Permission prompts illustration
 
@@ -812,8 +1586,8 @@ struct TrustSheet: View {
 }
 
 private extension View {
-    /// Applies medium/large detents + a drag indicator where available
-    /// (iOS 16 / macOS 13+); a no-op full-height sheet on iOS 15.
+    /// Applies medium/large detents + a drag indicator on current targets, with
+    /// a defensive full-height fallback if deployment targets are lowered.
     @ViewBuilder
     func trustSheetPresentation() -> some View {
         if #available(iOS 16.0, macOS 13.0, *) {
@@ -951,6 +1725,15 @@ struct SafariActivationAnimation: View {
 // MARK: - Adaptive modal presentation
 
 extension View {
+    /// macOS keeps onboarding in a focused window-sized sheet. iOS launches it
+    /// directly from RootView and intentionally does not call this presenter.
+    func onboardingCover<C: View>(
+        isPresented: Binding<Bool>,
+        @ViewBuilder content: @escaping () -> C
+    ) -> some View {
+        modifier(OnboardingCover(isPresented: isPresented, coverContent: content))
+    }
+
     /// Presents content fullscreen on iPad (regular width) — where a sheet
     /// renders as a centered card that looks like it's floating — while keeping
     /// the normal sheet/bottom-sheet behavior on iPhone (compact) and macOS.
@@ -959,6 +1742,19 @@ extension View {
         @ViewBuilder content: @escaping () -> C
     ) -> some View {
         modifier(AdaptiveModalCover(isPresented: isPresented, sheetContent: content))
+    }
+}
+
+private struct OnboardingCover<C: View>: ViewModifier {
+    @Binding var isPresented: Bool
+    @ViewBuilder var coverContent: () -> C
+
+    func body(content: Content) -> some View {
+        #if os(iOS)
+        content.fullScreenCover(isPresented: $isPresented, content: coverContent)
+        #else
+        content.sheet(isPresented: $isPresented, content: coverContent)
+        #endif
     }
 }
 

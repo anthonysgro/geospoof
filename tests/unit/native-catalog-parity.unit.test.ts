@@ -91,7 +91,7 @@ describe("Native String Catalog parity", () => {
 
   test("catalog is well-formed and non-empty", () => {
     expect(catalog.sourceLanguage).toBe("en");
-    expect(catalog.version).toBe("1.0");
+    expect(catalog.version).toBe("1.1");
     expect(keys.length).toBeGreaterThan(0);
   });
 

@@ -91,9 +91,10 @@ enum LocaleCatalog {
 
     /// The language and region of a locale, as plain subtag strings.
     ///
-    /// `Locale.language` / `Locale.region` are iOS 16 / macOS 13, and the app still
-    /// ships to iOS 15, so the deprecated `languageCode` / `regionCode` remain the
-    /// fallback. Both spellings resolve a script-qualified identifier the same way
+    /// `Locale.language` / `Locale.region` are available on both current
+    /// deployment targets (iOS 18 / macOS 13). The defensive fallback remains
+    /// source-compatible if those targets change. Both spellings resolve a
+    /// script-qualified identifier the same way
     /// (`zh_Hans_CN` → `zh` + `CN`), which is what the catalog relies on. Branching
     /// in one place keeps the availability check off the call sites.
     static func languageAndRegion(of locale: Locale) -> (language: String, region: String)? {

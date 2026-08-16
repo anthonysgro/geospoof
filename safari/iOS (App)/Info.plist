@@ -31,6 +31,7 @@
 	<string>26.4.1</string>
 	<key>UIAppFonts</key>
 	<array>
+		<string>Nunito-Variable.ttf</string>
 		<string>Outfit.ttf</string>
 	</array>
 	<key>UIApplicationSceneManifest</key>

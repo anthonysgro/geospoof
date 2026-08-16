@@ -5,7 +5,7 @@
 //  The GeoSpoof Pro paywall and the one-time "founder" thank-you sheet.
 //
 //  The paywall is fully custom (rather than StoreKit's SubscriptionStoreView,
-//  which is iOS 17+) because the app deploys back to iOS 15 / macOS 13. It
+//  which is iOS 17+) to keep one consistent custom design on iOS 18 / macOS 13. It
 //  reads products / pricing / intro-offer info from `ProStore` and routes
 //  purchase + restore through it, so the `isPro` gate updates automatically via
 //  ProStore's Transaction.updates listener.
@@ -127,7 +127,7 @@ struct ProPaywallView: View {
             }
             .task { if store.products.isEmpty { await store.loadProducts() } }
             // Dismiss as soon as the user becomes Pro (purchase or restore).
-            // Single-arg onChange for iOS 15 compatibility.
+            // Single-arg onChange for the macOS 13 deployment target.
             .onChange(of: store.isPro) { isPro in
                 if isPro { dismiss() }
             }
@@ -1081,6 +1081,26 @@ final class AppRouter: ObservableObject {
 
     /// Drives a one-shot presentation of ProPaywallView from RootView.
     @Published var showPaywall = false
+
+    /// Switches the iOS root to onboarding without presenting a modal. Used by
+    /// the debug menu so its preview follows the same path as a real first run.
+    @Published var showOnboarding = false
+
+    /// One-shot handoff from the hosted Safari activation page back into the
+    /// native onboarding flow. A stored Boolean would replay on a later launch;
+    /// this request lives only for the current process and is consumed by
+    /// OnboardingView as soon as it presents the verified-success screen.
+    @Published private(set) var safariOnboardingCompletionRequested = false
+
+    func requestSafariOnboardingCompletion() {
+        safariOnboardingCompletionRequested = true
+    }
+
+    func consumeSafariOnboardingCompletion() -> Bool {
+        guard safariOnboardingCompletionRequested else { return false }
+        safariOnboardingCompletionRequested = false
+        return true
+    }
 }
 
 /// Bridges a "show the paywall" request written by a locked widget/control

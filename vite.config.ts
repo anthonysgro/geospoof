@@ -128,7 +128,7 @@ function browserTargetPlugin(target: BrowserTarget): Plugin {
               format: "iife",
               outfile: scriptPath,
               allowOverwrite: true,
-              target: target === "safari" ? "safari17" : "firefox140",
+              target: target === "safari" ? "safari18" : "firefox140",
               ...(script === "content/injected.js" ? { banner: { js: '"use strict";' } } : {}),
               nodePaths: [resolve(__dirname, "node_modules")],
             });

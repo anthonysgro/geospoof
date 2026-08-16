@@ -19,6 +19,10 @@ function chromiumManifest(): Record<string, unknown> {
   return generateManifest("chromium", TEST_VERSION);
 }
 
+function safariManifest(): Record<string, unknown> {
+  return generateManifest("safari", TEST_VERSION);
+}
+
 // ---------------------------------------------------------------------------
 // Firefox manifest structure
 // ---------------------------------------------------------------------------
@@ -151,6 +155,31 @@ describe("Chromium manifest structure", () => {
       "Spoof geolocation, fake your GPS location & timezone — change your location to any city or sync it to your VPN. No account."
     );
     expect(m.default_locale).toBe("en");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Safari 18+ manifest structure
+// ---------------------------------------------------------------------------
+describe("Safari manifest structure", () => {
+  test('declares injected.js once in world: "MAIN" at document_start', () => {
+    const m = safariManifest();
+    const scripts = m.content_scripts as Array<Record<string, unknown>>;
+    const injectedEntries = scripts.filter(
+      (entry) => Array.isArray(entry.js) && (entry.js as string[]).includes("content/injected.js")
+    );
+
+    expect(injectedEntries).toHaveLength(1);
+    expect(injectedEntries[0].world).toBe("MAIN");
+    expect(injectedEntries[0].run_at).toBe("document_start");
+    expect(injectedEntries[0].all_frames).toBe(true);
+  });
+
+  test("keeps the isolated relay as the other declarative content script", () => {
+    const scripts = safariManifest().content_scripts as Array<Record<string, unknown>>;
+    expect(scripts).toHaveLength(2);
+    expect(scripts[0].js).toEqual(["content/content.js"]);
+    expect(scripts[0].world).toBeUndefined();
   });
 });
 

@@ -399,8 +399,8 @@ struct MacSettingsView: View {
             .sheet(isPresented: $showDebugFounderWelcome) {
                 FounderWelcomeSheet { showDebugFounderWelcome = false }
             }
-            .adaptiveModalCover(isPresented: $showDebugOnboarding) {
-                OnboardingView { showDebugOnboarding = false }
+            .onboardingCover(isPresented: $showDebugOnboarding) {
+                OnboardingView(controller: controller) { showDebugOnboarding = false }
             }
             #endif
         }

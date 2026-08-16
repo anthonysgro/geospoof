@@ -29,7 +29,9 @@ struct SpoofControlPanel: View {
     /// it stays gone once dismissed. (Replaces the old auto-presented pitch
     /// sheet, which interrupted users mid-task — see `proDiscoverySection`.)
     @AppStorage("proCardDismissed") private var proCardDismissed = false
+    #if os(macOS)
     @State private var showOnboarding = false
+    #endif
     @State private var showTrustInfo = false
     @State private var renaming: SpoofFavorite?
     @State private var showPaywall = false
@@ -56,9 +58,11 @@ struct SpoofControlPanel: View {
         .groupedFormStyle()
         .tint(.brand)
         .refreshable { await controller.refreshFromExtensionInteractive() }
-        .adaptiveModalCover(isPresented: $showOnboarding) {
-            OnboardingView { onboardingCompleted = true; showOnboarding = false }
+        #if os(macOS)
+        .onboardingCover(isPresented: $showOnboarding) {
+            OnboardingView(controller: controller) { onboardingCompleted = true; showOnboarding = false }
         }
+        #endif
         .sheet(item: $renaming) { fav in
             RenameFavoriteSheet(favorite: fav) { newLabel in
                 controller.renameFavorite(fav, to: newLabel)
@@ -76,7 +80,9 @@ struct SpoofControlPanel: View {
         }
         .onAppear {
             controller.refreshFromExtension()
+            #if os(macOS)
             if !onboardingCompleted { showOnboarding = true }
+            #endif
             evaluateReviewPrompt()
             if pro.isFounder && !founderWelcomeShown { showFounderWelcome = true }
         }
@@ -159,7 +165,7 @@ struct SpoofControlPanel: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Do more with GeoSpoof Pro")
                                     .font(.headline)
-                                Text("Automatic VPN sync, per-site rules, widgets, and more.")
+                                Text("iPhone GPS, automatic sync with your VPN, per-site rules, and more.")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                     .fixedSize(horizontal: false, vertical: true)
@@ -456,34 +462,6 @@ struct SpoofControlPanel: View {
         }
     }
 
-    /// URL prefix for the site locale matching the language the app is currently
-    /// displaying, or `""` for English.
-    ///
-    /// The site serves English at the bare path and every other locale under a
-    /// `/<code>` prefix (`site/src/lib/i18n/config.ts`). Two things stop this
-    /// from being a straight pass-through of the app's language code:
-    ///
-    /// - The app ships more languages than the site translates. `nl`, `sv` and
-    ///   `vi` have no site copy, so they fall through to unprefixed English
-    ///   rather than requesting a prefix that does not exist.
-    /// - The app's Chinese catalog is `zh-Hans` (script) while the site's locale
-    ///   is `zh-CN` (region). They refer to the same copy under different codes.
-    ///
-    /// `tests/unit/verify-link-locale.unit.test.ts` asserts this stays in step
-    /// with both the app catalog and the site's locale list.
-    private var siteLocalePrefix: String {
-        // preferredLocalizations resolves against the .lproj sets actually in the
-        // bundle, so this is the language the UI is really rendering — not the
-        // raw system preference, which may be a language we do not ship.
-        guard let language = Bundle.main.preferredLocalizations.first else { return "" }
-        switch language {
-        case "de", "es", "fr", "id", "ja", "ru": return "/\(language)"
-        case "pt-BR": return "/pt-BR"
-        case "zh-Hans": return "/zh-CN"
-        default: return "" // en, plus nl/sv/vi and anything unrecognised
-        }
-    }
-
     /// The verify-page URL for the app's current language, UTM-tagged so visits
     /// attribute to the right native app surface (iOS vs macOS) in analytics
     /// rather than landing in "unknown".
@@ -491,13 +469,7 @@ struct SpoofControlPanel: View {
     /// - Parameter campaign: distinguishes the entry point, since the setup card
     ///   and the home-screen link lead to the same page for different reasons.
     private func verifyURL(campaign: String) -> URL {
-        // Can't go through `AppLink.site(_:campaign:)` — this is the one link that
-        // carries the site locale prefix. It shares `AppLink.source` so the app
-        // identifier is still defined in exactly one place.
-        // Force-unwrap is safe: the host is a literal, the path prefix comes from
-        // the closed set above, and both query values are caller-side literals.
-        return URL(string: "https://www.geospoof.com\(siteLocalePrefix)/verify"
-            + "?utm_source=\(AppLink.source)&utm_medium=app&utm_campaign=\(campaign)")!
+        AppLink.site("/verify", campaign: campaign, localized: true)
     }
 
     // MARK: Favorites
@@ -614,7 +586,7 @@ private struct LiveMapPreview: View {
                     .foregroundStyle(Color.mapHighlight.opacity(0.28))
                     .stroke(Color.mapHighlight.opacity(0.95), lineWidth: 1.0)
             }
-            Annotation("", coordinate: coordinate, anchor: .bottom) { SpoofMap.pin }
+            Annotation(String(), coordinate: coordinate, anchor: .bottom) { SpoofMap.pin }
         }
         .mapStyle(.hybrid(elevation: .realistic))
         .onChange(of: "\(latitude),\(longitude)") { _, _ in
@@ -741,7 +713,7 @@ struct SpoofMap: View {
     var body: some View {
         if #available(iOS 17.0, macOS 14.0, *) {
             Map(initialPosition: .region(region), interactionModes: interactive ? .all : []) {
-                Annotation("", coordinate: coordinate) { Self.pin }
+                Annotation(String(), coordinate: coordinate) { Self.pin }
             }
             .mapStyle(.hybrid)
         } else {
@@ -947,7 +919,7 @@ struct FullScreenMapView: View {
             .safeAreaInset(edge: .bottom) {
                 if isPicking { placementConfirmBar }
             }
-            .navigationTitle(isPicking ? "" : tzTitle)
+            .navigationTitle(Text(verbatim: isPicking ? "" : tzTitle))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
@@ -1169,7 +1141,7 @@ private struct FullScreenMap3D: View {
             // centered reticle (drawn by FullScreenMapView) is the placement
             // indicator instead.
             if !isPicking {
-                Annotation("", coordinate: coordinate, anchor: .bottom) { SpoofMap.pin }
+                Annotation(String(), coordinate: coordinate, anchor: .bottom) { SpoofMap.pin }
             }
         }
         .mapStyle(.hybrid(elevation: (is3D && !isPicking) ? .realistic : .flat))
@@ -1901,7 +1873,7 @@ extension View {
 }
 
 /// Fires the review request when `token` changes. Both APIs used here are
-/// available at the app's deployment targets (iOS 16 / macOS 13), so this needs
+/// available at the app's deployment targets (iOS 18 / macOS 13), so this needs
 /// no availability branching.
 private struct ReviewPresentationModifier: ViewModifier {
     @Environment(\.requestReview) private var requestReview

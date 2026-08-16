@@ -231,5 +231,18 @@ import { installXsltOverrides } from "./xslt-overrides";
 installXsltOverrides();
 
 import { createLogger } from "@/shared/utils/debug-logger";
+import { installActivationResponder } from "@/content/activation-responder";
+import { settingsReceived, spoofedLocation, spoofingEnabled } from "./state";
 const logger = createLogger("INJ");
 logger.info("Geolocation API overrides installed");
+
+// The activation page must be acknowledged by the MAIN-world engine, not the
+// isolated relay. Installing this only after every override above has returned
+// makes a READY response proof that the page-facing spoofing layer is present;
+// the live state bindings also keep it silent until real, enabled settings with
+// a selected location have arrived. The responder discloses no settings or
+// coordinates and is restricted to the dedicated first-party top-level route.
+installActivationResponder(
+  () => settingsReceived && spoofingEnabled && spoofedLocation !== null,
+  (message) => logger.debug(message)
+);

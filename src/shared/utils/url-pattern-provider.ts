@@ -14,7 +14,7 @@ import { URLPattern as PolyfillURLPattern } from "urlpattern-polyfill/urlpattern
  * The decision is by *feature detection* — `typeof globalThis.URLPattern ===
  * "function"` — not by browser/version sniffing, matching the repo's
  * capability-detection convention (see `safe-time.ts`). GeoSpoof supports
- * Firefox 140+ and a Safari extension targeting iOS 16+ / macOS 13+, so older
+ * Firefox 140+ and a Safari extension targeting iOS 18+ / macOS 13+, so older
  * engines fall back to the polyfill and match identically to native ones.
  *
  * Anti-fingerprinting: this module reads `globalThis.URLPattern` but never

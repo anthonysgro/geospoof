@@ -70,6 +70,8 @@
 		C0DE000000000000000000E2 /* timezones.topo.json in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D2 /* timezones.topo.json */; };
 		C0DE000000000000000000E3 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D3 /* PrivacyInfo.xcprivacy */; };
 		C0DE000000000000000000E4 /* Outfit.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D4 /* Outfit.ttf */; };
+		C0DE000000000000000000E6 /* Nunito-Variable.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D6 /* Nunito-Variable.ttf */; };
+		C0DE000000000000000000E7 /* Nunito-OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D7 /* Nunito-OFL.txt */; };
 		C0DE000000000000000000F1 /* cities.json in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D1 /* cities.json */; };
 		C0DE000000000000000000F2 /* timezones.topo.json in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D2 /* timezones.topo.json */; };
 		C0DE000000000000000000F3 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D3 /* PrivacyInfo.xcprivacy */; };
@@ -184,6 +186,8 @@
 		C0DE000000000000000000D3 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		C0DE000000000000000000D4 /* Outfit.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Outfit.ttf; sourceTree = "<group>"; };
 		C0DE000000000000000000D5 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		C0DE000000000000000000D6 /* Nunito-Variable.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Nunito-Variable.ttf"; sourceTree = "<group>"; };
+		C0DE000000000000000000D7 /* Nunito-OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Nunito-OFL.txt"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -315,6 +319,8 @@
 				C0DE000000000000000000D1 /* cities.json */,
 				C0DE000000000000000000D2 /* timezones.topo.json */,
 				C0DE000000000000000000D4 /* Outfit.ttf */,
+				C0DE000000000000000000D6 /* Nunito-Variable.ttf */,
+				C0DE000000000000000000D7 /* Nunito-OFL.txt */,
 				C0DE000000000000000000D5 /* Localizable.xcstrings */,
 			);
 			path = Resources;
@@ -457,6 +463,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 9281AAC92FA50690007C77A7 /* Build configuration list for PBXNativeTarget "GeoSpoof Extension (iOS)" */;
 			buildPhases = (
+				C0DE000000000000000000A8 /* Build Web Extension */,
 				9281AAA52FA50690007C77A7 /* Sources */,
 				9281AAA62FA50690007C77A7 /* Frameworks */,
 				9281AAA72FA50690007C77A7 /* Resources */,
@@ -474,7 +481,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 9281AAD02FA50690007C77A7 /* Build configuration list for PBXNativeTarget "GeoSpoof Extension (macOS)" */;
 			buildPhases = (
-				928E356C2FA53A0000A67B9A /* ShellScript */,
+				928E356C2FA53A0000A67B9A /* Build Web Extension */,
 				9281AAAF2FA50690007C77A7 /* Sources */,
 				9281AAB02FA50690007C77A7 /* Frameworks */,
 				9281AAB12FA50690007C77A7 /* Resources */,
@@ -573,6 +580,8 @@
 				9281AA972FA50690007C77A7 /* Main.storyboard in Resources */,
 				9281AABD2FA50690007C77A7 /* Style.css in Resources */,
 				C0DE000000000000000000E4 /* Outfit.ttf in Resources */,
+				C0DE000000000000000000E6 /* Nunito-Variable.ttf in Resources */,
+				C0DE000000000000000000E7 /* Nunito-OFL.txt in Resources */,
 				C0DE000000000000000000E5 /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -626,7 +635,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		928E356C2FA53A0000A67B9A /* ShellScript */ = {
+		C0DE000000000000000000A8 /* Build Web Extension */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -636,13 +645,33 @@
 			);
 			inputPaths = (
 			);
+			name = "Build Web Extension";
 			outputFileListPaths = (
 			);
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "export PATH=\"/usr/local/bin:/opt/homebrew/bin:$PATH\"\n\n# Load nvm so node/npm are found in Xcode's minimal PATH (local dev).\nexport NVM_DIR=\"$HOME/.nvm\"\nif [ -s \"$NVM_DIR/nvm.sh\" ]; then\n  . \"$NVM_DIR/nvm.sh\"\nfi\n\n# Fallback: if npm still isn't on PATH, use the newest nvm-installed node.\nif ! command -v npm >/dev/null 2>&1 && [ -d \"$NVM_DIR/versions/node\" ]; then\n  NODE_BIN=\"$NVM_DIR/versions/node/$(ls -1 \"$NVM_DIR/versions/node\" | sort -V | tail -1)/bin\"\n  export PATH=\"$NODE_BIN:$PATH\"\nfi\n\ncd \"${SRCROOT}/..\"\nnpm run build:safari\n";
+			shellScript = "export PATH=\"/usr/local/bin:/opt/homebrew/bin:$PATH\"\n\n# Load nvm so node/npm are found in Xcode's minimal PATH (local dev).\nexport NVM_DIR=\"$HOME/.nvm\"\nif [ -s \"$NVM_DIR/nvm.sh\" ]; then\n  . \"$NVM_DIR/nvm.sh\"\nfi\n\n# Fallback: if npm still isn't on PATH, use the newest nvm-installed node.\nif ! command -v npm >/dev/null 2>&1 && [ -d \"$NVM_DIR/versions/node\" ]; then\n  NODE_BIN=\"$NVM_DIR/versions/node/$(ls -1 \"$NVM_DIR/versions/node\" | sort -V | tail -1)/bin\"\n  export PATH=\"$NODE_BIN:$PATH\"\nfi\n\ncd \"${SRCROOT}/..\"\nif [ \"$CONFIGURATION\" = \"Debug\" ]; then\n  npm run build:safari:dev\nelse\n  npm run build:safari\nfi\n";
+		};
+		928E356C2FA53A0000A67B9A /* Build Web Extension */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Build Web Extension";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "export PATH=\"/usr/local/bin:/opt/homebrew/bin:$PATH\"\n\n# Load nvm so node/npm are found in Xcode's minimal PATH (local dev).\nexport NVM_DIR=\"$HOME/.nvm\"\nif [ -s \"$NVM_DIR/nvm.sh\" ]; then\n  . \"$NVM_DIR/nvm.sh\"\nfi\n\n# Fallback: if npm still isn't on PATH, use the newest nvm-installed node.\nif ! command -v npm >/dev/null 2>&1 && [ -d \"$NVM_DIR/versions/node\" ]; then\n  NODE_BIN=\"$NVM_DIR/versions/node/$(ls -1 \"$NVM_DIR/versions/node\" | sort -V | tail -1)/bin\"\n  export PATH=\"$NODE_BIN:$PATH\"\nfi\n\ncd \"${SRCROOT}/..\"\nif [ \"$CONFIGURATION\" = \"Debug\" ]; then\n  npm run build:safari:dev\nelse\n  npm run build:safari\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -777,7 +806,7 @@
 				INFOPLIST_FILE = "GeoSpoof Widget/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "GeoSpoof Widget";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -809,7 +838,7 @@
 				INFOPLIST_FILE = "GeoSpoof Widget/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "GeoSpoof Widget";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -956,11 +985,12 @@
 				CODE_SIGN_ENTITLEMENTS = "GeoSpoof Extension (iOS)Release.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 69;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "iOS (Extension)/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "GeoSpoof Extension";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -991,11 +1021,12 @@
 				CODE_SIGN_ENTITLEMENTS = "GeoSpoof Extension (iOS)Release.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 69;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "iOS (Extension)/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "GeoSpoof Extension";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1038,7 +1069,7 @@
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1081,7 +1112,7 @@
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1118,6 +1149,7 @@
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "macOS (Extension)/Info.plist";
@@ -1158,6 +1190,7 @@
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "macOS (Extension)/Info.plist";

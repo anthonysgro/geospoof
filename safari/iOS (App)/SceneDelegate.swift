@@ -21,26 +21,50 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         self.window = window
         window.makeKeyAndVisible()
 
-        // Cold launch via a widget deep link (e.g. a locked free user tapping
-        // "Tap to upgrade", which opens geospoof://paywall).
-        handlePaywallDeepLink(connectionOptions.urlContexts)
+        // Cold launch via a widget or hosted-onboarding deep link.
+        handleDeepLinks(connectionOptions.urlContexts)
     }
 
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
-        // Warm open via a widget deep link.
-        handlePaywallDeepLink(URLContexts)
+        // Warm open via a widget or hosted-onboarding deep link.
+        handleDeepLinks(URLContexts)
     }
 
-    /// Surface the Pro paywall when a widget's `geospoof://paywall` link opens
-    /// the app. Handled here (not via SwiftUI `.onOpenURL`, which fires
-    /// inconsistently from widgets) and bridged to RootView through AppRouter.
-    private func handlePaywallDeepLink(_ contexts: Set<UIOpenURLContext>) {
+    /// Route app-owned URL schemes in one place. SceneDelegate handles both
+    /// cold and warm opens reliably, including widget links where SwiftUI's
+    /// `.onOpenURL` has been inconsistent.
+    private func handleDeepLinks(_ contexts: Set<UIOpenURLContext>) {
         let wantsPaywall = contexts.contains { ctx in
             ctx.url.scheme == "geospoof" && ctx.url.host == "paywall"
         }
-        guard wantsPaywall else { return }
+
+        let wantsSafariCompletion = contexts.contains { ctx in
+            ctx.url.scheme == "geospoof" &&
+                ctx.url.host == "onboarding" &&
+                ctx.url.path == "/safari-complete"
+        }
+
+        guard wantsPaywall || wantsSafariCompletion else { return }
+
         Task { @MainActor in
-            AppRouter.shared.showPaywall = true
+            let router = AppRouter.shared
+
+            if wantsPaywall {
+                router.showPaywall = true
+            }
+
+            if wantsSafariCompletion {
+                // A regular user who has already finished onboarding should
+                // simply return to the app. Preserve the route while the debug
+                // onboarding preview is active so the full flow remains
+                // testable without clearing app data.
+                let onboardingCompleted = UserDefaults.standard.bool(
+                    forKey: "spoofOnboardingCompleted"
+                )
+                if !onboardingCompleted || router.showOnboarding {
+                    router.requestSafariOnboardingCompletion()
+                }
+            }
         }
     }
 
@@ -52,8 +76,38 @@ struct RootView: View {
     @StateObject private var controller = SpoofController()
     @ObservedObject private var router = AppRouter.shared
     @AppStorage("appearanceMode") private var appearance: AppearanceMode = .system
+    @AppStorage("spoofOnboardingCompleted") private var onboardingCompleted = false
 
     var body: some View {
+        Group {
+            if !onboardingCompleted || router.showOnboarding {
+                OnboardingView(controller: controller) {
+                    onboardingCompleted = true
+                    router.showOnboarding = false
+                }
+            } else {
+                mainTabs
+            }
+        }
+        .onAppear {
+            applyInterfaceStyle(appearance)
+            // A locked control (which can't open the app itself) may have left a
+            // paywall request; surface it now.
+            if WidgetPaywallRequest.consume() { router.showPaywall = true }
+        }
+        .onChange(of: appearance) { newValue in applyInterfaceStyle(newValue) }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            if WidgetPaywallRequest.consume() { router.showPaywall = true }
+        }
+        .sheet(isPresented: $router.showPaywall) {
+            ProPaywallView()
+        }
+    }
+
+    /// The normal application surface is built only after onboarding. Keeping
+    /// it out of the first frame prevents a Home-screen flash and makes the
+    /// welcome a true launch state rather than a modal placed over the app.
+    private var mainTabs: some View {
         TabView {
             HomeView(controller: controller)
                 .tabItem {
@@ -82,19 +136,6 @@ struct RootView: View {
                 .tabItem {
                     Label("Settings", systemImage: "gearshape")
                 }
-        }
-        .onAppear {
-            applyInterfaceStyle(appearance)
-            // A locked control (which can't open the app itself) may have left a
-            // paywall request; surface it now.
-            if WidgetPaywallRequest.consume() { router.showPaywall = true }
-        }
-        .onChange(of: appearance) { newValue in applyInterfaceStyle(newValue) }
-        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
-            if WidgetPaywallRequest.consume() { router.showPaywall = true }
-        }
-        .sheet(isPresented: $router.showPaywall) {
-            ProPaywallView()
         }
     }
 }
@@ -537,14 +578,14 @@ struct GpsView: View {
                     }
                 }
 
-                Text("Move your iPhone’s real system GPS — not just the browser — to your chosen location, controlled from your Mac.")
+                Text("Use your Mac to control the GPS location your iPhone reports.")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
 
                 VStack(alignment: .leading, spacing: 8) {
-                    pitchPoint("System-wide location, for privacy and app testing")
-                    pitchPoint("Set it to your VPN, or a location you pick")
-                    pitchPoint("No jailbreak — a secure, one-time Mac pairing")
+                    pitchPoint("Location simulation for privacy and app testing")
+                    pitchPoint("Choose any location or match your VPN")
+                    pitchPoint("Secure Mac pairing with no jailbreak")
                 }
 
                 Button {
@@ -562,13 +603,15 @@ struct GpsView: View {
         }
     }
 
-    /// One benefit row in the Pro pitch — a green check plus a short line.
+    /// One benefit row in the Pro pitch — a quiet brand check plus a short line.
     /// Takes a key, not a `String`, so the literals at the call sites are
     /// extracted rather than rendered verbatim.
     private func pitchPoint(_ text: LocalizedStringKey) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundColor(.green)
+            Image(systemName: "checkmark")
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(.brand)
+                .frame(width: 18)
                 .accessibilityHidden(true)
             Text(text)
                 .font(.subheadline)
@@ -806,8 +849,8 @@ struct SettingsView: View {
     @State private var showDebugPaywall = false
     @State private var showDebugProPitch = false
     @State private var showDebugFounderWelcome = false
-    @State private var showDebugOnboarding = false
     @State private var debugProOverride = ProStore.debugProOverrideSelection()
+    @ObservedObject private var router = AppRouter.shared
     @ObservedObject private var review = ReviewPrompt.shared
     #endif
 
@@ -912,7 +955,7 @@ struct SettingsView: View {
                         Label("Show Founder Welcome", systemImage: "sparkles")
                     }
                     Button {
-                        showDebugOnboarding = true
+                        router.showOnboarding = true
                     } label: {
                         Label("Show Onboarding", systemImage: "hand.wave")
                     }
@@ -968,9 +1011,6 @@ struct SettingsView: View {
             .sheet(isPresented: $showDebugProPitch) { ProPitchSheet() }
             .sheet(isPresented: $showDebugFounderWelcome) {
                 FounderWelcomeSheet { showDebugFounderWelcome = false }
-            }
-            .adaptiveModalCover(isPresented: $showDebugOnboarding) {
-                OnboardingView { showDebugOnboarding = false }
             }
             #endif
         }

@@ -2692,24 +2692,36 @@ enum AppLink {
         #endif
     }()
 
-    /// A tagged URL for `path` on the marketing site.
+    /// URL prefix for the site locale matching the language the app is currently
+    /// displaying, or `""` when the site should use its default English copy.
     ///
-    /// Deliberately *not* locale-prefixed. Only `/verify` is locale-aware today,
-    /// through `siteLocalePrefix` + `verifyURL(campaign:)` in
-    /// SpoofControlPanel.swift, which `tests/unit/verify-link-locale.unit.test.ts`
-    /// parses out of that file by name. Copying the mapping here would create
-    /// exactly the drift that test exists to catch — so localizing these other
-    /// pages means moving the mapping into this helper (and updating that test),
-    /// not duplicating it.
+    /// The app ships a few languages the site does not yet serve; those correctly
+    /// fall back to English. Simplified Chinese uses different codes in the app
+    /// (`zh-Hans`) and on the site (`zh-CN`), so it is mapped explicitly.
+    static var siteLocalePrefix: String {
+        // This resolves against the localizations actually bundled with the app,
+        // rather than a raw system preference the current UI may not support.
+        guard let language = Bundle.main.preferredLocalizations.first else { return "" }
+        switch language {
+        case "de", "es", "fr", "id", "ja", "ru": return "/\(language)"
+        case "pt-BR": return "/pt-BR"
+        case "zh-Hans": return "/zh-CN"
+        default: return "" // en, plus nl/sv/vi and anything unrecognised
+        }
+    }
+
+    /// A tagged URL for `path` on the marketing site.
     ///
     /// - Parameters:
     ///   - path: absolute site path, e.g. `"/support"`.
     ///   - campaign: the surface the click came from, so two links to the same
     ///     page stay distinguishable in analytics.
-    static func site(_ path: String, campaign: String) -> URL {
-        // Force-unwrap is safe: every component is a literal from within the app.
-        URL(
-            string: "https://www.geospoof.com\(path)"
+    ///   - localized: whether to use the site's copy matching the app language.
+    static func site(_ path: String, campaign: String, localized: Bool = false) -> URL {
+        let prefix = localized ? siteLocalePrefix : ""
+        // Force-unwrap is safe: every component is from a closed set in the app.
+        return URL(
+            string: "https://www.geospoof.com\(prefix)\(path)"
                 + "?utm_source=\(source)&utm_medium=app&utm_campaign=\(campaign)"
         )!
     }
@@ -2759,7 +2771,7 @@ enum Haptics {
 // MARK: - Modern SwiftUI helpers
 
 /// Wraps content in a Liquid Glass surface on OS 26+, falling back to a
-/// material on the iOS 15 / macOS 13 baseline.
+/// material on the iOS 18 / macOS 13 deployment targets.
 struct GlassCardModifier: ViewModifier {
     var cornerRadius: CGFloat = 22
     var padding: CGFloat = 16
@@ -2808,8 +2820,8 @@ extension View {
         }
     }
 
-    /// `.formStyle(.grouped)` where available (iOS 16 / macOS 13+); no-op on the
-    /// iOS 15 baseline, where `Form` is already grouped by default.
+    /// `.formStyle(.grouped)` on current targets, with a defensive fallback if
+    /// the deployment targets are lowered later.
     @ViewBuilder
     func groupedFormStyle() -> some View {
         if #available(iOS 16.0, macOS 13.0, *) {
@@ -2838,8 +2850,8 @@ extension View {
     }
 }
 
-/// `NavigationStack` on OS that supports it, `NavigationView` on the iOS 15
-/// baseline. Keeps the call sites clean while staying back-deployable.
+/// `NavigationStack` on current targets, with a defensive `NavigationView`
+/// fallback if the deployment targets are lowered later.
 struct AdaptiveNavigationStack<Root: View>: View {
     @ViewBuilder var root: () -> Root
 

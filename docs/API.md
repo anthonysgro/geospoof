@@ -517,6 +517,55 @@ interface SettingsEventDetail {
 
 On Firefox, `cloneInto()` is used to make the detail object accessible across content-script / page-context boundaries.
 
+### Hosted Safari activation handshake
+
+The isolated-world content script also owns a deliberately narrow `window.postMessage`
+handshake for the iOS onboarding page. It is active only in the top frame at
+`https://geospoof.com/activate` or `https://www.geospoof.com/activate` (an optional
+trailing slash and query parameters are allowed). Development-mode Safari bundles also
+accept the exact loopback origins `localhost:3000` and `127.0.0.1:3000` over HTTP or
+HTTPS so the hosted flow can be exercised locally. Production bundles never enable
+those loopback origins.
+
+The page sends a random, per-load nonce:
+
+```typescript
+{
+  source: "com.geospoof.activation-page";
+  type: "GEOSPOOF_ACTIVATION_PING";
+  protocolVersion: 1;
+  nonce: string;
+}
+```
+
+The content script responds only after background settings have loaded, protection is
+enabled, and a spoofed location exists:
+
+```typescript
+{
+  source: "com.moonloaf.geospoof.extension";
+  type: "GEOSPOOF_ACTIVATION_READY";
+  protocolVersion: 1;
+  nonce: string;
+}
+```
+
+Both the page origin and `event.source === window` are checked, and the response is
+bound to the request nonce. No coordinates, settings, entitlement, install identifier,
+or other user data are sent. Silence is intentionally ambiguous: it can mean the
+extension is absent, lacks website access, is blocked by restrictions, is still loading,
+or does not currently have protection plus a location enabled. The activation page must
+therefore describe silence as “not detected yet,” never as proof that the extension is
+disabled.
+
+After Safari returns a spoofed location successfully, the page offers
+`geospoof://onboarding/safari-complete`. The iOS `SceneDelegate` routes that URL for both
+cold and warm app opens through a process-local, one-shot `AppRouter` request. An active
+first-run or debug onboarding flow consumes the request and presents the native
+“Safari is ready” screen; users who already completed onboarding simply return to the
+app. The custom URL is navigation, not a security attestation—the nonce-bound extension
+handshake and successful browser geolocation read are the proof shown by the hosted page.
+
 ## Message Types and Payloads
 
 The extension uses `browser.runtime.sendMessage` and `browser.runtime.onMessage` for inter-component communication. All messages follow this structure:

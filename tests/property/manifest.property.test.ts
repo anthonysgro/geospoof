@@ -124,8 +124,8 @@ test("Chromium manifest: injected.js declared as world:MAIN content script", () 
   expect(injectedEntry!.all_frames).toBe(true);
 });
 
-test("Both Firefox and Chromium use world:MAIN for injected.js", () => {
-  for (const target of ["firefox", "chromium"] as const) {
+test("Every supported browser uses world:MAIN for injected.js", () => {
+  for (const target of ["firefox", "chromium", "safari"] as const) {
     const manifest = generateManifest(target, "0.0.1") as unknown as Manifest;
     const injectedEntry = manifest.content_scripts.find(
       (cs) => cs.js?.includes("content/injected.js") && cs.world === "MAIN"
@@ -136,31 +136,23 @@ test("Both Firefox and Chromium use world:MAIN for injected.js", () => {
 });
 
 /**
- * Safari MUST NOT declare the MAIN-world content script in the manifest.
+ * Safari declares the MAIN-world content script in the manifest.
  *
- * Safari only honours `content_scripts[].world` from Safari 18. On Safari 17 and
- * earlier the key is ignored, so a manifest-declared MAIN-world script never
- * reaches the page and every override silently does nothing while the extension
- * still looks installed and enabled. Safari therefore gets injected.js via
- * runtime `scripting.registerContentScripts({ world: "MAIN" })` instead — see
- * src/background/main-world-inject.ts.
- *
- * This test exists because re-adding the static entry "for parity" would
- * double-inject injected.js on Safari 18+ (double-installing every override and
- * double-parsing a 67 kB bundle on every page load), and because the runtime
- * path is the ONLY path — there is no static fallback to silently pick up the
- * slack if it regresses.
+ * Safari 18 is the minimum supported OS, so the declarative path is both the
+ * earliest and the only injection path. This keeps injection independent of
+ * background-page startup and prevents accidental double installation.
  */
-test("Safari manifest: injected.js is NOT declared as a content script (registered at runtime)", () => {
+test("Safari manifest: injected.js is declared once as a MAIN-world content script", () => {
   const safari = generateManifest("safari", "0.0.1") as unknown as Manifest;
 
-  const injectedEntry = safari.content_scripts.find((cs) => cs.js?.includes("content/injected.js"));
-  expect(injectedEntry).toBeUndefined();
-
-  // No content script may request a world Safari cannot parse.
-  for (const cs of safari.content_scripts) {
-    expect(cs.world).toBeUndefined();
-  }
+  const injectedEntries = safari.content_scripts.filter((cs) =>
+    cs.js?.includes("content/injected.js")
+  );
+  expect(injectedEntries).toHaveLength(1);
+  expect(injectedEntries[0].world).toBe("MAIN");
+  expect(injectedEntries[0].run_at).toBe("document_start");
+  expect(injectedEntries[0].all_frames).toBe(true);
+  expect(injectedEntries[0].matches).toContain("<all_urls>");
 
   // The isolated-world relay content script must still be declared statically.
   const relayEntry = safari.content_scripts.find((cs) => cs.js?.includes("content/content.js"));
@@ -171,19 +163,17 @@ test("Safari manifest: injected.js is NOT declared as a content script (register
 });
 
 /**
- * Runtime MAIN-world registration requires the `scripting` permission. Without
- * it `scripting.registerContentScripts` throws and Safari gets no page
- * overrides at all, so the permission is load-bearing on Safari specifically —
- * not merely nice to have.
+ * Safari still needs `scripting` for best-effort catch-up injection of the
+ * isolated relay into already-open tabs after an extension update.
  */
-test("Safari manifest: retains the scripting permission that runtime registration depends on", () => {
+test("Safari manifest: retains the scripting permission used for existing-tab catch-up", () => {
   const safari = generateManifest("safari", "0.0.1") as unknown as Manifest;
   expect(safari.permissions).toContain("scripting");
 });
 
 /**
- * Runtime registration reads injected.js out of the extension package, so it
- * must NOT be exposed to pages. Listing it in `web_accessible_resources` would
+ * Manifest injection reads injected.js out of the extension package, so it
+ * must not be exposed to pages. Listing it in `web_accessible_resources` would
  * hand page code a stable probe for the extension's presence and id — a
  * regression for an extension whose value depends on not being detectable.
  */

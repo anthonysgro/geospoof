@@ -1,7 +1,7 @@
 /**
- * The app's verify link points at the marketing site's locale-prefixed copy of
- * /verify. That mapping lives in Swift (`siteLocalePrefix` in
- * SpoofControlPanel.swift) and has to agree with two lists it cannot import:
+ * The app's activation and verify links point at locale-prefixed copies on the
+ * marketing site. That mapping lives in Swift (`AppLink.siteLocalePrefix`) and
+ * has to agree with two lists it cannot import:
  *
  *   - the app's string catalog, which decides what languages the UI can render
  *   - the site's locale-data.mjs, which decides what URL prefixes exist
@@ -15,22 +15,27 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const ROOT = join(__dirname, "..", "..");
-const SWIFT = join(ROOT, "safari", "Shared (App)", "SpoofControlPanel.swift");
+const MODEL = join(ROOT, "safari", "Shared (App)", "SpoofModel.swift");
+const CONTROL_PANEL = join(ROOT, "safari", "Shared (App)", "SpoofControlPanel.swift");
+const DETAILS = join(ROOT, "safari", "Shared (App)", "SpoofDetailsView.swift");
 const CATALOG = join(ROOT, "safari", "Shared (App)", "Resources", "Localizable.xcstrings");
 const LOCALE_DATA = join(ROOT, "site", "src", "lib", "i18n", "locale-data.mjs");
 
-const swift = readFileSync(SWIFT, "utf8");
+const model = readFileSync(MODEL, "utf8");
+const controlPanel = readFileSync(CONTROL_PANEL, "utf8");
+const details = readFileSync(DETAILS, "utf8");
+const swift = `${model}\n${controlPanel}\n${details}`;
 
-/** The body of `private var siteLocalePrefix: String { ... }`. */
+/** The body of `static var siteLocalePrefix: String { ... }`. */
 function siteLocalePrefixBody(): string {
-  const start = swift.indexOf("private var siteLocalePrefix: String {");
+  const start = model.indexOf("static var siteLocalePrefix: String {");
   expect(
     start,
     "siteLocalePrefix was renamed or removed — update this test to match"
   ).toBeGreaterThan(-1);
-  const end = swift.indexOf("\n    }", start);
+  const end = model.indexOf("\n    }", start);
   expect(end).toBeGreaterThan(start);
-  return swift.slice(start, end);
+  return model.slice(start, end);
 }
 
 /**
@@ -56,9 +61,12 @@ function parseSwiftMapping(): Map<string, string> {
 
 /** Locales the app string catalog can actually render, including the source. */
 function appLocales(): string[] {
-  const catalog = JSON.parse(readFileSync(CATALOG, "utf8"));
+  const catalog = JSON.parse(readFileSync(CATALOG, "utf8")) as {
+    sourceLanguage: string;
+    strings: Record<string, { localizations?: Record<string, unknown> }>;
+  };
   const found = new Set<string>([catalog.sourceLanguage]);
-  for (const entry of Object.values<any>(catalog.strings)) {
+  for (const entry of Object.values(catalog.strings)) {
     for (const locale of Object.keys(entry.localizations ?? {})) {
       found.add(locale);
     }
@@ -158,22 +166,34 @@ describe("verify link construction", () => {
   it("builds both verify URLs through the shared locale-aware helper", () => {
     // Two entry points (home link, setup card). Both must go through
     // verifyURL(campaign:) or one of them silently stops following the language.
-    const calls = [...swift.matchAll(/verifyURL\(campaign:\s*"([^"]+)"\)/g)].map((m) => m[1]);
+    const calls = [...controlPanel.matchAll(/verifyURL\(campaign:\s*"([^"]+)"\)/g)].map(
+      (m) => m[1]
+    );
     expect(calls.sort()).toEqual(["verify", "verify-setup"]);
   });
 
   it("has no hardcoded verify URL left behind", () => {
-    // The helper's own string is expected — it interpolates siteLocalePrefix.
-    // Anything else pointing at /verify has bypassed the prefix.
-    const hardcoded = [...swift.matchAll(/"https:\/\/[^"]*\/verify[^"]*"/g)]
-      .map((m) => m[0])
-      .filter((s) => !s.includes("\\(siteLocalePrefix)"));
+    const hardcoded = [...swift.matchAll(/"https:\/\/[^"]*\/verify[^"]*"/g)].map((m) => m[0]);
     expect(hardcoded, "a literal verify URL bypasses the locale prefix").toEqual([]);
   });
 
   it("uses the www host, which is what the site serves without redirecting", () => {
-    const body = swift.slice(swift.indexOf("private func verifyURL(campaign:"));
+    const body = model.slice(model.indexOf("enum AppLink {"));
     expect(body).toContain("https://www.geospoof.com");
+  });
+
+  it("routes verify through the shared locale-aware site helper", () => {
+    const start = controlPanel.indexOf("private func verifyURL(campaign:");
+    const body = controlPanel.slice(start, controlPanel.indexOf("\n    }", start));
+    expect(body).toContain('AppLink.site("/verify", campaign: campaign, localized: true)');
+  });
+
+  it("routes activation through the same locale-aware site helper", () => {
+    const start = details.indexOf("private func openSafariActivationPage()");
+    const body = details.slice(start, details.indexOf("\n    }", start));
+    expect(body).toMatch(
+      /AppLink\.site\(\s*"\/activate",\s*campaign:\s*"onboarding-activate",\s*localized:\s*true\s*\)/
+    );
   });
 
   it("reads the language from the bundle, not the raw system preference", () => {
