@@ -109,7 +109,7 @@ struct RootView: View {
             // paywall request; surface it now.
             if WidgetPaywallRequest.consume() { router.showPaywall = true }
         }
-        .onChange(of: appearance) { newValue in applyInterfaceStyle(newValue) }
+        .onChange(of: appearance) { _, newValue in applyInterfaceStyle(newValue) }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
             if WidgetPaywallRequest.consume() { router.showPaywall = true }
         }
@@ -469,7 +469,7 @@ struct GpsView: View {
             .tint(.brand)
             .navigationTitle("GPS")
             .onAppear { refreshStatus() }
-            .onChange(of: scenePhase) { phase in
+            .onChange(of: scenePhase) { _, phase in
                 // Resume the status poll immediately when the app returns to the foreground,
                 // rather than waiting up to 3s for the next tick.
                 if phase == .active { refreshStatus() }
@@ -963,7 +963,7 @@ struct SettingsView: View {
                     } label: {
                         Label("Pro Override", systemImage: "wand.and.stars")
                     }
-                    .onChange(of: debugProOverride) { value in
+                    .onChange(of: debugProOverride) { _, value in
                         ProStore.setDebugProOverride(value)
                     }
                 } header: {

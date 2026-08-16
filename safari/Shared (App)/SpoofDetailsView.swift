@@ -432,7 +432,7 @@ struct OnboardingView: View {
         .onAppear {
             consumeSafariCompletionRequest()
         }
-        .onChange(of: router.safariOnboardingCompletionRequested) { requested in
+        .onChange(of: router.safariOnboardingCompletionRequested) { _, requested in
             if requested {
                 consumeSafariCompletionRequest()
             }
@@ -448,12 +448,12 @@ struct OnboardingView: View {
         // off — and a value that is already true never reports a change, so the one
         // check-in that actually mattered would arrive unobserved. The timestamp
         // moves on every check-in, which is precisely the event worth waking for.
-        .onChange(of: controller.extensionLastSeen) { _ in
+        .onChange(of: controller.extensionLastSeen) {
             advanceIfSafariIsActive()
         }
         // The third entrance, and on iOS 26.2+ the one that normally fires first: the
         // OS reporting that the extension is now switched on.
-        .onChange(of: controller.safariEnablement) { _ in
+        .onChange(of: controller.safariEnablement) {
             advanceIfSafariIsActive()
         }
         #endif
@@ -1354,7 +1354,11 @@ private struct OnboardingCoordinatesView: View {
         return formatter.number(from: normalized)?.doubleValue
     }
 
-    private static func coordinateString(_ value: Double) -> String {
+    /// `nonisolated` because the initializer calls it while seeding `@State`, and a
+    /// `View`'s init is not main-actor isolated. Nothing here touches actor state — it is
+    /// arithmetic on a `Double` — so the isolation the type would otherwise infer is
+    /// inherited rather than needed, and inheriting it is what made those two calls warn.
+    private nonisolated static func coordinateString(_ value: Double) -> String {
         String((value * 1_000_000).rounded() / 1_000_000)
     }
 }
@@ -1431,22 +1435,12 @@ private struct OnboardingSafariHandoffView: View {
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    // Enablement is per Safari profile, and nothing in the app can see
-                    // which profile the user browses in — the state query takes only a
-                    // bundle identifier. So someone who enables GeoSpoof in one profile
-                    // and browses in another gets an app that says it's working and a
-                    // Safari that isn't, with no signal we could act on.
-                    //
-                    // Shown only alongside the Settings route, because that is the screen
-                    // that actually lists the per-profile switches. On the hosted-page
-                    // path there is nothing to act on here, so it would just be noise.
-                    if canDeepLinkToSettings {
-                        Text("If you use Safari profiles, turn GeoSpoof on for each one.")
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.top, 2)
-                    }
+                    // No per-profile line here. Enablement is per Safari profile, and the
+                    // app can't see which profile someone browses in — but the screenshot
+                    // below shows the real "Allow Extension In" list with a switch per
+                    // profile, which states it better than a sentence about it could.
+                    // Home's Setup card still carries the sentence, because that card has
+                    // no screenshot to do the work.
                 }
                 // One announcement ("Last step. Turn GeoSpoof on …") instead of two
                 // fragments, since the label only means anything attached to it.
