@@ -1414,7 +1414,12 @@ private struct OnboardingSafariReadyView: View {
                         showDeviceGps = true
                     } label: {
                         gapRow(
-                            symbol: "location.slash",
+                            // Same mark `DeviceGpsPitch` and the GPS tab use, so
+                            // the row and the sheet it opens agree. Replaced
+                            // `location.slash`, which read as "location is off" —
+                            // wrong for a feature GeoSpoof does ship, and it
+                            // fought the brand tint.
+                            symbol: "location.circle.fill",
                             title: "Device GPS",
                             detail: "Needs Pro and a Mac",
                             showsChevron: true
@@ -1429,7 +1434,10 @@ private struct OnboardingSafariReadyView: View {
                         showVpn = true
                     } label: {
                         gapRow(
-                            symbol: "network",
+                            // Network plus a shield says "IP address, and the thing
+                            // that covers it" in one mark, which bare `network`
+                            // didn't. Matches `VpnSheet`'s header.
+                            symbol: "network.badge.shield.half.filled",
                             title: "IP address",
                             detail: "Only a VPN can change this",
                             showsChevron: true
@@ -1463,6 +1471,12 @@ private struct OnboardingSafariReadyView: View {
             .background(.regularMaterial)
         }
         .background(Color(uiColor: .systemBackground))
+        // Both detail sheets undim their backdrop so their frost has something to
+        // sample, and iOS treats undimmed as interactive — so this screen stands
+        // down while one is open. Without it a tap near the sheet's edge lands on
+        // a row behind it and stacks a second sheet on the first. Restored on
+        // dismiss, since the flag is the same one driving the presentation.
+        .allowsHitTesting(!showDeviceGps && !showVpn)
         .tint(.brand)
         // A plain sheet, not `adaptiveModalCover`. That presenter exists to stop
         // *tall* content rendering as a floating card on iPad, but this content is
@@ -1500,9 +1514,15 @@ private struct OnboardingSafariReadyView: View {
         showsChevron: Bool
     ) -> some View {
         HStack(alignment: .center, spacing: 14) {
+            // Brand tint rather than `.secondary`. These rows are navigable now,
+            // and a coloured glyph on a chevron row is the standard iOS reading of
+            // "tap this" — the grey was left over from when they were inert. The
+            // "not changed" state is carried by `detail`, not by the colour, which
+            // is the honest place for it: green here means "there's more to see",
+            // not "this signal is handled".
             Image(systemName: symbol)
                 .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.brand)
                 .frame(width: 24)
                 .accessibilityHidden(true)
 
@@ -1679,6 +1699,7 @@ struct DeviceGpsSheet: View {
         // the bottom empty. Same presentation as `TrustSheet` — the app's other
         // informational sheet — rather than a one-off detent here.
         .explainerSheetPresentation()
+        .frostedSheetBackground()
     }
 }
 
@@ -1714,7 +1735,7 @@ struct VpnSheet: View {
                     HStack(alignment: .top, spacing: 12) {
                         // Same glyph as the row that opens this, so the sheet
                         // reads as that row expanding.
-                        Image(systemName: "network")
+                        Image(systemName: "network.badge.shield.half.filled")
                             .font(.title2)
                             .foregroundColor(.brand)
                             .accessibilityHidden(true)
@@ -1792,6 +1813,7 @@ struct VpnSheet: View {
         }
         .tint(.brand)
         .explainerSheetPresentation()
+        .frostedSheetBackground()
     }
 }
 #endif
@@ -2066,9 +2088,10 @@ private extension View {
     /// up to full for anyone who needs the room (large Dynamic Type, or a long
     /// translation), with a drag indicator so that's discoverable.
     ///
-    /// Shared by `TrustSheet` and `DeviceGpsSheet` so the two informational sheets
-    /// behave identically. Falls back to full height if deployment targets are
-    /// ever lowered.
+    /// Shared by `TrustSheet`, `DeviceGpsSheet` and `VpnSheet` so the app's three
+    /// informational sheets behave identically. Falls back to full height if
+    /// deployment targets are ever lowered. The glass treatment is separate — see
+    /// `frostedSheetBackground()`.
     @ViewBuilder
     func explainerSheetPresentation() -> some View {
         if #available(iOS 16.0, macOS 13.0, *) {
@@ -2080,6 +2103,53 @@ private extension View {
         }
     }
 }
+
+#if os(iOS)
+private extension View {
+    /// Tones down a sheet's glass without giving up the translucency, by keeping the
+    /// system background and laying a scrim over it.
+    ///
+    /// Two findings drive the shape of this, both confirmed on a device rather than
+    /// reasoned about, because the obvious approaches are wrong in opposite
+    /// directions:
+    ///
+    /// 1. **Do not set `presentationBackground`.** The system sheet background on
+    ///    OS 26 is a real frosted glass that samples what's behind it. Passing a
+    ///    `Material` there *replaces* that glass with a flat render of the material,
+    ///    which comes out fully opaque — every step from `.ultraThinMaterial` to
+    ///    `.thickMaterial` looks the same slab. Reaching for a heavier material to
+    ///    get "more frost" produces less of it, not more.
+    /// 2. **Undimming is required.** iOS dims behind a detented sheet by default,
+    ///    so the glass has nothing but a dim layer to blur and reads as solid even
+    ///    untouched. `presentationBackgroundInteraction` is what gives it a live
+    ///    backdrop.
+    ///
+    /// With those two in place the glass is *too* lively over a colourful backdrop —
+    /// the onboarding close screen's map turns the sheet into stained glass. The
+    /// scrim is the actual knob: it sits above the glass and below the content, so
+    /// the blur survives and only its intensity changes. 0.55 keeps a clear sense of
+    /// depth while leaving body copy comfortable; lower shows more, and past ~0.8 it
+    /// stops reading as glass at all.
+    ///
+    /// The catch on undimming, per Apple: dimming and touch pass-through are the
+    /// same setting, so the content behind goes live. Hosts must disable hit testing
+    /// while a sheet is up — see `OnboardingSafariReadyView`.
+    ///
+    /// Applied by `DeviceGpsSheet` and `VpnSheet` only. `TrustSheet` keeps the plain
+    /// system treatment: it's a stack of `.regularMaterial` cards, which need a
+    /// calm backing to keep their edges.
+    @ViewBuilder
+    func frostedSheetBackground() -> some View {
+        if #available(iOS 16.4, *) {
+            self
+                .background(Color(uiColor: .systemBackground).opacity(0.55))
+                .presentationBackgroundInteraction(.enabled(upThrough: .medium))
+        } else {
+            self
+        }
+    }
+}
+#endif
 
 #if os(iOS)
 // MARK: - Safari activation animation (iOS)
