@@ -1812,7 +1812,7 @@ private struct OnboardingGrantAccessView: View {
                 .accessibilityHint("Opens a page in Safari where GeoSpoof asks for website access")
 
                 Button(action: onSkip) {
-                    Text("I'll do this later")
+                    Text("Continue")
                         .font(.subheadline)
                         .frame(maxWidth: .infinity, minHeight: 44)
                         .contentShape(Rectangle())
