@@ -3284,11 +3284,18 @@ struct SafariSettingsDestinationView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        // Spoken as "Step 1. Turn on Allow Extension". `StepBadge` is decorative by
+        // Spoken as "Step 1: Turn on Allow Extension". `StepBadge` is decorative by
         // design, so the ordinal has to be reintroduced here or a VoiceOver user gets
         // three unordered instructions — and the order is half of what the list is for.
+        //
+        // The prefix is deliberately byte-identical to `PermissionPromptsView`'s, trailing
+        // ": " included, so both resolve to the one `Step %lld: ` catalog key. Writing it
+        // as `Text("Step \(number)") + Text(verbatim: ". ")` instead — same spoken result —
+        // derived a second key, `Step %lld`, which no translator had ever seen: eleven
+        // languages would have said "Step" in English next to a translated instruction.
+        // Any future numbering prefix should reuse this key rather than punctuate its own.
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text("Step \(number)") + Text(verbatim: ". ") + Text(text))
+        .accessibilityLabel(Text("Step \(number): ") + Text(text))
     }
 }
 
