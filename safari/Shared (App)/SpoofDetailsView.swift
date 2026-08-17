@@ -301,7 +301,6 @@ struct OnboardingView: View {
     @ObservedObject var controller: SpoofController
     let onDone: () -> Void
 
-    @State private var showTrust = false
     #if os(iOS)
     @ObservedObject private var router = AppRouter.shared
     /// The navigation stack's path is the whole of the flow's state: the page on
@@ -328,8 +327,26 @@ struct OnboardingView: View {
     /// way. Success having already happened is a fact about the flow, not about which
     /// screen is currently on top of it.
     @State private var hasReachedSafariReady = false
+    /// Set once the flow has moved off the Safari step, and never cleared.
+    ///
+    /// Makes the back button work. `watchForSafariActivation()` re-runs whenever the
+    /// Safari step reappears, and `isSafariStepSatisfied` is still true after the user
+    /// has enabled the extension — so returning to it auto-advanced again, immediately,
+    /// which read as the back button being broken rather than as the step being done.
+    ///
+    /// The watcher exists to catch evidence *arriving while the user waits*, not to
+    /// re-decide a step they have already been past. This is the same distinction
+    /// `hasReachedSafariReady` draws for the success screen; it needs drawing one step
+    /// earlier too now that a step follows this one.
+    @State private var hasAdvancedPastEnable = false
     #endif
     #if os(macOS)
+    /// Raised by the "Why you can trust GeoSpoof" button on the permission step.
+    ///
+    /// macOS-only: iOS used to raise the same sheet from the Safari handoff screen, but
+    /// both of its routes now answer the permission question at the point it arises —
+    /// see the note where that button used to be.
+    @State private var showTrust = false
     /// macOS swaps content in place rather than pushing, so it has no path to
     /// read and keeps an index it walks with Continue/Back.
     @State private var step = 0
@@ -350,6 +367,10 @@ struct OnboardingView: View {
         case enable
         #if os(iOS)
         case location
+        /// Website access, which is a separate grant from the extension toggle and the
+        /// one the Settings deep link cannot deliver. Only in the flow when that deep
+        /// link is the route taken — see `steps`.
+        case grant
         case safariReady
         #else
         case permission
@@ -364,13 +385,30 @@ struct OnboardingView: View {
         // explanation: choose the location that Safari will report. The choice
         // is written to the App Group immediately and Safari adopts it when the
         // extension is enabled later in this flow.
-        [.welcome, .location, .enable, .safariReady]
+        //
+        // `.grant` exists only on the Settings-deep-link route, and that condition is
+        // the whole reason it exists. Enabling the extension and granting it access to
+        // websites are two separate consents, and Safari only ever asks for the second
+        // one on a web page. The hosted activation page already walks through both (its
+        // third step is "Allow website access"), so on the pre-26.2 route this step
+        // would be a second trip to a page the user is already on. The deep link is a
+        // better way to reach the toggle and no way at all to reach the grant, so the
+        // route that uses it is the route that has to ask separately.
+        if canDeepLinkToSettings {
+            return [.welcome, .location, .enable, .grant, .safariReady]
+        }
+        return [.welcome, .location, .enable, .safariReady]
         #else
         [.welcome, .enable, .permission, .gps, .done]
         #endif
     }
 
     #if os(iOS)
+    /// Whether this OS can send the user straight to GeoSpoof's row in Settings.
+    /// Decides the shape of the flow (see `steps`), so it is read here rather than
+    /// only inside the screen that offers the button.
+    private var canDeepLinkToSettings: Bool { controller.canOpenSafariExtensionSettings }
+
     /// The page on screen. An empty path is the welcome root.
     private var current: StepKind { path.last ?? .welcome }
     #else
@@ -425,9 +463,6 @@ struct OnboardingView: View {
             setupStep
             #endif
         }
-        .adaptiveModalCover(isPresented: $showTrust) {
-            TrustSheet()
-        }
         #if os(iOS)
         .onAppear {
             consumeSafariCompletionRequest()
@@ -458,6 +493,9 @@ struct OnboardingView: View {
         }
         #endif
         #if os(macOS)
+        .adaptiveModalCover(isPresented: $showTrust) {
+            TrustSheet()
+        }
         .animation(.easeInOut(duration: 0.25), value: step)
         .animation(.easeInOut(duration: 0.2), value: extState.state)
         .onAppear { extState.refresh() }
@@ -501,7 +539,11 @@ struct OnboardingView: View {
                 controller: controller,
                 onOpenSetup: openSafariActivationPage,
                 onSkip: onDone,
-                onShowPermissions: { showTrust = true }
+                // Only ever true when the user came back to a step they'd finished:
+                // on the way through, a satisfied Safari step is skipped rather than
+                // shown (see `advance`).
+                isAlreadyEnabled: hasAdvancedPastEnable && isSafariStepSatisfied,
+                onContinue: { advance(from: .enable) }
             )
             .navigationBarHidden(false)
             .task {
@@ -511,6 +553,12 @@ struct OnboardingView: View {
                 if safariStepEnteredAt == nil { safariStepEnteredAt = Date() }
                 await watchForSafariActivation()
             }
+        case .grant:
+            OnboardingGrantAccessView(
+                onOpenSafari: openSafariGrantPage,
+                onSkip: onDone
+            )
+            .navigationBarHidden(false)
         case .safariReady:
             OnboardingSafariReadyView(
                 controller: controller,
@@ -539,6 +587,9 @@ struct OnboardingView: View {
     /// literal next-step names across the call sites.
     private func advance(from kind: StepKind) {
         guard let index = steps.firstIndex(of: kind) else { return }
+        // Recorded here rather than at the watcher's call site so it holds however the
+        // step was left — detection, or the Continue button the satisfied state offers.
+        if kind == .enable { hasAdvancedPastEnable = true }
         // Skip anything with nothing left to ask. Previously the Safari step was
         // pushed unconditionally and then advanced off itself the instant it appeared,
         // so an already-configured device showed a screen that flashed and vanished —
@@ -560,10 +611,19 @@ struct OnboardingView: View {
 
     /// Whether a step can be skipped because there is nothing for the user to do on
     /// it. Only the Safari step can currently be satisfied ahead of time.
+    ///
+    /// `.grant` deliberately never is. The app cannot observe website access: the OS
+    /// query answers for the extension *toggle* only, and the check-in stamp is written
+    /// by any native-handler call — including the background script's, which runs
+    /// without host access — so a fresh stamp is not evidence of a grant. Treating it
+    /// as one would skip the step for someone who hasn't granted anything, which is
+    /// exactly the silent-failure this step exists to prevent. Only the hosted page can
+    /// prove it (a content script runs there or it doesn't), and that arrives as the
+    /// return link rather than through this gate.
     private func isStepSatisfied(_ kind: StepKind) -> Bool {
         switch kind {
         case .enable: return isSafariStepSatisfied
-        case .welcome, .location, .safariReady: return false
+        case .welcome, .location, .grant, .safariReady: return false
         }
     }
 
@@ -620,8 +680,18 @@ struct OnboardingView: View {
     /// "Safari is ready" and never pick a location.
     private func advanceIfSafariIsActive() {
         guard !hasReachedSafariReady else { return }
+        // Already been past this step, so the user is here by choice — they navigated
+        // back. Auto-advancing would overrule that and strand them.
+        guard !hasAdvancedPastEnable else { return }
         guard current == .enable, isSafariStepSatisfied else { return }
-        showSafariReady()
+        // Advance through `steps` rather than jumping to the success screen. The
+        // extension being switched on used to be the last thing setup needed, so
+        // "enabled" and "finished" were the same event and this could land directly on
+        // `.safariReady`. With `.grant` in the flow they are different events, and
+        // hard-coding the destination here would step over it — the OS reports the
+        // toggle the moment the user flips it, which is before they have granted
+        // anything. Routing through `advance` also keeps the skip logic in one place.
+        advance(from: .enable)
     }
 
     /// Whether the Safari step has nothing left to ask of the user.
@@ -839,9 +909,24 @@ struct OnboardingView: View {
     /// The page itself will handle the non-Safari fallback in the next slice;
     /// iOS provides no public API for forcing an HTTPS link into Safari.
     private func openSafariActivationPage() {
+        openActivationPage(stage: nil)
+    }
+
+    /// The grant step's route to the same page, distinguished by `stage=grant` so the
+    /// page can drop the "turn the extension on" half of its walkthrough. Someone
+    /// arriving from here has already done that in Settings, and re-teaching it invites
+    /// them to go looking for a switch that is already flipped.
+    ///
+    /// The parameter is sent before the page reads it: the site still renders the full
+    /// walkthrough, which is wrong-but-harmless (it over-explains) rather than broken.
+    private func openSafariGrantPage() {
+        openActivationPage(stage: "grant")
+    }
+
+    private func openActivationPage(stage: String?) {
         let activationURL = AppLink.site(
             "/activate",
-            campaign: "onboarding-activate",
+            campaign: stage == nil ? "onboarding-activate" : "onboarding-grant",
             localized: true
         )
         var components = URLComponents(url: activationURL, resolvingAgainstBaseURL: false)
@@ -853,6 +938,9 @@ struct OnboardingView: View {
         }
         var queryItems = components?.queryItems ?? []
         queryItems.append(URLQueryItem(name: "safari_ui", value: safariUI))
+        if let stage {
+            queryItems.append(URLQueryItem(name: "stage", value: stage))
+        }
         components?.queryItems = queryItems
 
         // AppLink always produces a valid URL; preserve that URL if component
@@ -1383,11 +1471,18 @@ private struct OnboardingSafariHandoffView: View {
     @ObservedObject var controller: SpoofController
     let onOpenSetup: () -> Void
     let onSkip: () -> Void
-    /// Raises `TrustSheet`. Handed in rather than presented here, because the onboarding
-    /// container already owns a presenter for it — and this screen is inside a
-    /// `NavigationStack` that the container sits outside of, so presenting from here
-    /// would put a second modal source on the same flow.
-    let onShowPermissions: () -> Void
+
+    /// Whether the user is revisiting a step they have already completed, which only
+    /// happens by navigating back to it.
+    ///
+    /// Changes what the screen claims and what it offers. Left as-is it would tell
+    /// someone who has already switched GeoSpoof on to go and switch it on, and hand
+    /// them a button to Settings as the only way forward — a screen with no exit except
+    /// backwards or "later".
+    let isAlreadyEnabled: Bool
+    /// Forward from the satisfied state. Distinct from the detection path, because here
+    /// the user is deciding to move on rather than the app noticing they can.
+    let onContinue: () -> Void
 
     /// On iOS 26.2+ the app can send the user straight to GeoSpoof's row in Settings,
     /// which removes the entire reason this screen hands off to a web page: there is
@@ -1426,14 +1521,34 @@ private struct OnboardingSafariHandoffView: View {
                 // Sentence case, not uppercase: `.textCase(.uppercase)` reads as
                 // shouting in Cyrillic and does nothing in CJK.
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Last step")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(Color.brand)
+                    // Only true on the hosted-page route, where that page covers website
+                    // access as well and this really is the end. On the deep-link route
+                    // the grant step follows, so the claim would be wrong — and being
+                    // told "last step" twice is how a flow loses trust. Hidden rather
+                    // than reworded: the string is translated into eleven languages and
+                    // its meaning hasn't changed, only whether it applies.
+                    if !canDeepLinkToSettings {
+                        Text("Last step")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(Color.brand)
+                    }
 
-                    Text("Turn GeoSpoof on in Safari's extension settings.")
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    if isAlreadyEnabled {
+                        // Same confirmation the macOS flow shows for this step, string
+                        // included, so the two platforms agree about what "done" looks
+                        // like. Replaces the instruction rather than sitting above it:
+                        // telling someone to turn on a switch they already turned on is
+                        // how a flow convinces them it isn't tracking what they did.
+                        Label("GeoSpoof is enabled in Safari", systemImage: "checkmark.circle.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.green)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        Text("Turn GeoSpoof on in Safari's extension settings.")
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
 
                     // No per-profile line here. Enablement is per Safari profile, and the
                     // app can't see which profile someone browses in — but the screenshot
@@ -1463,42 +1578,19 @@ private struct OnboardingSafariHandoffView: View {
                         .padding(.bottom, 24)
                 }
 
-                // What Safari will say once the extension is on, one tap away rather than
-                // laid out on the screen.
+                // No "what permissions does GeoSpoof ask for?" link here any more, on
+                // either route, because both routes now answer it closer to the moment
+                // it gets asked. `.grant` is entirely about that prompt and shows the two
+                // real dialogs. The hosted activation page carries its own "What is
+                // Safari asking for?" disclosure, and it only sends the user back with
+                // success once the extension is detected on the page — which cannot
+                // happen until access is granted, so the page has necessarily walked them
+                // through it.
                 //
-                // Safari's own wording is that the extension can read passwords and
-                // credit card numbers. For a privacy tool that is the highest-stakes
-                // moment in the funnel, so the expectation still has to be settable
-                // before the hand-off — but it does not have to be *shown* to everyone
-                // to be available. It was rendered inline here, which put two screenshot
-                // cards plus an illustration on one screen; the destination screenshot
-                // above is the one that tells the user what to do, and the prompts are
-                // the question only some people stop to ask.
-                //
-                // `TrustSheet` rather than a sheet of its own: it opens on the same two
-                // screenshots, under a hero about exactly this ("Safari's permission
-                // warning sounds broad…"), and then answers the follow-up question about
-                // what GeoSpoof does with that access. A dedicated permissions sheet
-                // would be the first half of it, duplicated.
-                //
-                // Note for anyone tempted to put visual mass back on this screen: the
-                // Settings screenshot above carries it now. That was the argument for
-                // rendering the prompts inline, and it no longer applies.
-                Button(action: onShowPermissions) {
-                    Label(
-                        "What permissions does GeoSpoof ask for?",
-                        // Same mark as the sheet's hero and as the macOS step's button,
-                        // so the row reads as that sheet opening.
-                        systemImage: "checkmark.shield"
-                    )
-                    .font(.subheadline.weight(.medium))
-                    .frame(minHeight: 44)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(Color.brand)
-                .accessibilityHint("Opens what Safari will ask for, and what GeoSpoof does with that access")
-                .padding(.bottom, 20)
+                // Raising it here as well meant asking the question one screen before
+                // anything could be done about it, and then asking again where it
+                // mattered. Reachable outside the flow from Home's Setup card
+                // ("Is GeoSpoof safe?") for anyone who wants it early.
 
                 HStack(alignment: .center, spacing: 14) {
                     Image(systemName: "mappin.and.ellipse")
@@ -1534,7 +1626,38 @@ private struct OnboardingSafariHandoffView: View {
         .navigationBarTitleDisplayMode(.large)
         .safeAreaInset(edge: .bottom, spacing: 0) {
             OnboardingActionBar {
-                if canDeepLinkToSettings {
+                if isAlreadyEnabled {
+                    // Forward is the primary action now: the thing this screen asked
+                    // for has been done, so continuing is what the user came back to be
+                    // able to do.
+                    Button(action: onContinue) {
+                        Text("Continue")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .glassButtonStyle(prominent: true)
+                    .controlSize(.large)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
+
+                    // Kept, demoted. Enablement is per Safari profile and the app cannot
+                    // see which profile someone browses in, so "it says enabled but it
+                    // isn't working" has a real cause and this is its fix — which is the
+                    // main reason coming back here is worth allowing at all.
+                    Button {
+                        controller.openSafariExtensionSettings()
+                    } label: {
+                        Text("Open Safari Settings")
+                            .font(.subheadline)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Color.brand)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 4)
+                    .accessibilityHint("Opens Settings, where you can check which Safari profiles GeoSpoof is on for")
+                } else if canDeepLinkToSettings {
                     // One tap to the actual switch. No default-browser dependency, no
                     // page to load, nothing to detect — and the app reads the result
                     // from the OS when it foregrounds, so the user does not have to
@@ -1564,6 +1687,12 @@ private struct OnboardingSafariHandoffView: View {
                     .accessibilityHint("Opens the setup page where Safari can enable and verify GeoSpoof")
                 }
 
+                // Not offered in the satisfied state. "Later" refers to the task this
+                // screen sets, and that task is done — leaving it there asks the user to
+                // defer something they already finished, next to a Continue button that
+                // is the actual way on. The step that follows carries its own skip, so
+                // no exit is lost.
+                if !isAlreadyEnabled {
                 Button(action: onSkip) {
                     Text("I'll do this later")
                         .font(.subheadline)
@@ -1575,6 +1704,7 @@ private struct OnboardingSafariHandoffView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 4)
                 .accessibilityHint("Finishes setup without Safari. You can turn GeoSpoof on later from the Home tab.")
+                }
             }
         }
         .background(Color(uiColor: .systemBackground))
@@ -1583,6 +1713,119 @@ private struct OnboardingSafariHandoffView: View {
 
     private static func coordinateSummary(latitude: Double, longitude: Double) -> String {
         "\(latitude.formatted(.number.precision(.fractionLength(0...5)))), \(longitude.formatted(.number.precision(.fractionLength(0...5))))"
+    }
+}
+
+/// Website access — the second consent, and the one the Settings deep link can't
+/// deliver.
+///
+/// Only reached on the deep-link route (see `OnboardingView.steps`). Flipping the
+/// extension toggle in Settings does not let GeoSpoof touch a single page; Safari asks
+/// about that separately, on a web page, the first time the extension wants to run. A
+/// user who stops after Settings has an extension that is on and doing nothing, and
+/// nothing in the app would say so — which is the failure this screen exists to
+/// prevent.
+///
+/// The screenshots earn their place here specifically. They were deliberately moved off
+/// the handoff screen into `TrustSheet`, because there they were answering a question
+/// ("what is Safari going to ask me?") that only some people stop to ask, and two
+/// screenshot cards plus an illustration was too much for one screen. Here they are the
+/// instruction: the user is seconds from seeing exactly these two dialogs, and the
+/// decision they have to get right is which button to tap in the second one.
+///
+/// Two actions, not three. An earlier version offered a self-certifying "I've allowed
+/// it" alongside "I'll do this later", and they were the same button: neither carries any
+/// evidence, both just move the flow on, and the pair took a third of the screen to say
+/// one thing twice. Only the label differed, and the app has no way to know which of the
+/// two labels was true.
+///
+/// So there is one way past this screen, and it is honest about what the app knows —
+/// nothing. `.safariReady` is now reached only by a route that carries proof: the hosted
+/// page's return link, which it renders only once it has detected the extension running
+/// on itself, which cannot happen before access is granted. Everything else lands on
+/// Home, whose Setup card is built to carry unfinished setup.
+///
+/// The tradeoff, stated so it isn't rediscovered as a bug: someone who grants access on
+/// the page and then app-switches back instead of tapping the return link doesn't see the
+/// success screen. That is the cost of not letting the app claim a grant it cannot
+/// observe, and it resolves the day the extension reports website access directly.
+private struct OnboardingGrantAccessView: View {
+    let onOpenSafari: () -> Void
+    let onSkip: () -> Void
+
+    @Environment(\.horizontalSizeClass) private var hSizeClass
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 6) {
+                    // Accurate here in a way it isn't on the handoff screen any more:
+                    // on this route the grant is the end of setup. Reuses the existing
+                    // translated string rather than introducing a second phrasing.
+                    Text("Last step")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Color.brand)
+
+                    // Names the button rather than describing the concept. "Grant host
+                    // permissions" is what it is; "Always Allow on Every Website" is
+                    // what they have to tap, and it's the only wording that survives
+                    // the trip into Safari.
+                    Text("Safari asks before GeoSpoof can change what websites see. Choose Always Allow on Every Website.")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .accessibilityElement(children: .combine)
+                .padding(.bottom, 24)
+
+                PermissionPromptsView(imageHeight: hSizeClass == .regular ? 260 : 170)
+                    .padding(.bottom, 20)
+
+                // The one branch worth naming, because it fails later rather than
+                // immediately: "Allow for One Day" is the prominent default, it works,
+                // and then it silently stops. A user who takes it has no reason to
+                // connect tomorrow's failure to today's tap, so this is the only chance
+                // to warn them.
+                Text("Avoid \u{201C}Allow for One Day\u{201D} — GeoSpoof stops working when it expires.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.horizontal, OnboardingMetrics.pageMargin(hSizeClass))
+            .padding(.top, 12)
+            .padding(.bottom, 32)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .navigationTitle("Allow on Websites")
+        .navigationBarTitleDisplayMode(.large)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            OnboardingActionBar {
+                Button(action: onOpenSafari) {
+                    Label("Open Safari", systemImage: "safari")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                }
+                .glassButtonStyle(prominent: true)
+                .controlSize(.large)
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .accessibilityHint("Opens a page in Safari where GeoSpoof asks for website access")
+
+                Button(action: onSkip) {
+                    Text("I'll do this later")
+                        .font(.subheadline)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 4)
+                .accessibilityHint("Finishes setup without website access. GeoSpoof won't change websites until you allow it in Safari.")
+            }
+        }
+        .background(Color(uiColor: .systemBackground))
+        .tint(.brand)
     }
 }
 

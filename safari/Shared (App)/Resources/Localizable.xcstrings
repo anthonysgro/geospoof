@@ -3091,6 +3091,9 @@
         }
       }
     },
+    "Allow on Websites" : {
+
+    },
     "Allowed Sites" : {
       "localizations" : {
         "de" : {
@@ -4562,6 +4565,9 @@
           }
         }
       }
+    },
+    "Avoid “Allow for One Day” — GeoSpoof stops working when it expires." : {
+
     },
     "Back" : {
       "localizations" : {
@@ -10095,6 +10101,9 @@
           }
         }
       }
+    },
+    "Finishes setup without website access. GeoSpoof won't change websites until you allow it in Safari." : {
+
     },
     "Five-star App Store review" : {
       "localizations" : {
@@ -18667,6 +18676,9 @@
         }
       }
     },
+    "Opens a page in Safari where GeoSpoof asks for website access" : {
+
+    },
     "Opens details about privacy and how to verify GeoSpoof" : {
       "localizations" : {
         "de" : {
@@ -18880,6 +18892,9 @@
     "Opens Settings where you can switch GeoSpoof on for Safari" : {
 
     },
+    "Opens Settings, where you can check which Safari profiles GeoSpoof is on for" : {
+
+    },
     "Opens the setup page where Safari can enable and verify GeoSpoof" : {
       "localizations" : {
         "de" : {
@@ -19019,9 +19034,6 @@
           }
         }
       }
-    },
-    "Opens what Safari will ask for, and what GeoSpoof does with that access" : {
-
     },
     "Opens why a VPN is the only thing that changes this" : {
 
@@ -22315,6 +22327,9 @@
           }
         }
       }
+    },
+    "Safari asks before GeoSpoof can change what websites see. Choose Always Allow on Every Website." : {
+
     },
     "Safari asks for access" : {
       "localizations" : {
@@ -29617,9 +29632,6 @@
           }
         }
       }
-    },
-    "What permissions does GeoSpoof ask for?" : {
-
     },
     "When on, your iPhone’s real system GPS is set to your chosen location. This affects all apps, including Find My." : {
       "localizations" : {
