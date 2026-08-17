@@ -577,6 +577,8 @@ function WaitingState({
         safariSetupVariant={safariSetupVariant}
       />
 
+      <PermissionPrompts waiting={waiting} />
+
       <Button
         asChild
         variant="link"
@@ -657,6 +659,71 @@ function DesktopSafariState({
         </a>
       </Button>
     </section>
+  )
+}
+
+/**
+ * The two prompts Safari raises after "Review", behind a collapsed disclosure.
+ *
+ * Collapsed rather than laid out, because this is reassurance and not an instruction:
+ * the steps card tells people what to do, and only some of them stop to ask why an
+ * extension wants to read every page. Rendering both screenshots inline put the
+ * scariest wording on the page for everyone, which is the same thing the native
+ * enable screen was carrying before it moved this behind a tap.
+ *
+ * Its own item rather than a row inside `Troubleshooting`, which only appears once
+ * the handshake has stalled. The moment this answers a question is the moment Safari
+ * shows the warning — earlier than "something has gone wrong", and the whole risk is
+ * that someone taps "Don't Allow" before ever reaching a troubleshooting state.
+ *
+ * Radix unmounts closed accordion content, so neither image is fetched unless the
+ * disclosure is opened. That is what makes it affordable to show them at all: as
+ * PNGs they were 687 KB, and even as WebP they are 85 KB that most visitors never
+ * need to download.
+ *
+ * `alt=""` on both: they are screenshots of the text directly above them, so the
+ * body copy already carries everything a screen reader needs, and describing each
+ * prompt again would only add two more strings for eight translators.
+ */
+function PermissionPrompts({
+  waiting,
+}: {
+  waiting: ActivationCopy["waiting"]
+}) {
+  return (
+    <Accordion type="single" collapsible className="mt-3 w-full text-left">
+      <AccordionItem
+        value="permissions"
+        className="border-t border-b-0 border-(--color-canvas-border)"
+      >
+        <AccordionTrigger className="min-h-11 py-3.5 text-sm font-semibold text-(--color-canvas-foreground) hover:no-underline">
+          {waiting.permissionsSummary}
+        </AccordionTrigger>
+        <AccordionContent className="pb-4 text-left text-sm leading-6 text-(--color-canvas-muted)">
+          <p>{waiting.permissionsBody}</p>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <img
+              src="/images/support/permission-prompt-1.webp"
+              alt=""
+              width={646}
+              height={774}
+              loading="lazy"
+              decoding="async"
+              className="w-full rounded-lg border border-(--color-canvas-border)"
+            />
+            <img
+              src="/images/support/permission-prompt-2.webp"
+              alt=""
+              width={646}
+              height={736}
+              loading="lazy"
+              decoding="async"
+              className="w-full rounded-lg border border-(--color-canvas-border)"
+            />
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   )
 }
 
@@ -752,6 +819,36 @@ function SafariSetupVisual({
             <p className="mt-0.5 text-xs leading-5 text-(--color-canvas-muted)">
               {waiting.steps[2].body}
             </p>
+
+            {/* Safari's own banner, which is how this step actually begins: turning
+                the extension on doesn't grant site access, it makes Safari ask.
+                People read "Additional Permissions Requested" as a warning that
+                something went wrong and dismiss it, which leaves an extension that
+                is on and still can't do anything.
+
+                Part of step 3 rather than a fourth step, because it is the same
+                action — and because `steps` is a widened `ReadonlyArray`, so a
+                fourth English entry would typecheck while every other locale threw
+                on `steps[3]` at runtime. A named key can't do that.
+
+                Shown to both Safari variants, not just `ios18`. The banner isn't
+                unique to 18, and gating it would hide it from iPhones on 26.0–26.1,
+                which still land here because the app's Settings deep link needs
+                26.2. The copy names no version, so it stays true either way. */}
+            <figure className="mt-3">
+              <img
+                src="/images/support/additional-permissions-requested.png"
+                alt=""
+                width={894}
+                height={100}
+                loading="lazy"
+                decoding="async"
+                className="w-full rounded-lg border border-(--color-canvas-border)"
+              />
+              <figcaption className="mt-1.5 text-xs leading-5 text-(--color-canvas-muted)">
+                {waiting.permissionsBanner}
+              </figcaption>
+            </figure>
           </div>
         </li>
       </ol>

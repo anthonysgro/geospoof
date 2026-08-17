@@ -964,6 +964,11 @@ export const ptBR: Dictionary = {
           body: "Permita que o GeoSpoof acesse este site. O Safari pode pedir que você recarregue a página.",
         },
       ],
+      permissionsBanner:
+        "If Safari shows this, tap Review, then choose Always Allow on Every Website.",
+      permissionsSummary: "What is Safari asking for?",
+      permissionsBody:
+        "Safari asks twice, and its warning is the standard wording for any extension that can read pages. GeoSpoof only uses that access to change the location and timezone websites see — it never reads, stores, or sends your browsing.",
       retry: "Verificar novamente",
     },
     troubleshooting: {

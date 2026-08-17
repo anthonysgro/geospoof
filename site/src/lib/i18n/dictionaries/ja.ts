@@ -945,6 +945,11 @@ export const ja: Dictionary = {
           body: "このWebサイトでGeoSpoofを許可します。Safariから再読み込みを求められる場合があります。",
         },
       ],
+      permissionsBanner:
+        "If Safari shows this, tap Review, then choose Always Allow on Every Website.",
+      permissionsSummary: "What is Safari asking for?",
+      permissionsBody:
+        "Safari asks twice, and its warning is the standard wording for any extension that can read pages. GeoSpoof only uses that access to change the location and timezone websites see — it never reads, stores, or sends your browsing.",
       retry: "もう一度確認",
     },
     troubleshooting: {

@@ -956,6 +956,11 @@ export const en = {
           body: "Allow GeoSpoof on this website. Safari may ask you to refresh.",
         },
       ],
+      permissionsBanner:
+        "If Safari shows this, tap Review, then choose Always Allow on Every Website.",
+      permissionsSummary: "What is Safari asking for?",
+      permissionsBody:
+        "Safari asks twice, and its warning is the standard wording for any extension that can read pages. GeoSpoof only uses that access to change the location and timezone websites see — it never reads, stores, or sends your browsing.",
       retry: "Check again",
     },
     troubleshooting: {
