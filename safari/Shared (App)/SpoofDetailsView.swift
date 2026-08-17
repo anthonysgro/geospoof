@@ -386,21 +386,38 @@ struct OnboardingView: View {
         // is written to the App Group immediately and Safari adopts it when the
         // extension is enabled later in this flow.
         //
-        // `.grant` exists only on the Settings-deep-link route, and that condition is
-        // the whole reason it exists. Enabling the extension and granting it access to
-        // websites are two separate consents, and Safari only ever asks for the second
-        // one on a web page. The hosted activation page already walks through both (its
-        // third step is "Allow website access"), so on the pre-26.2 route this step
-        // would be a second trip to a page the user is already on. The deep link is a
-        // better way to reach the toggle and no way at all to reach the grant, so the
-        // route that uses it is the route that has to ask separately.
+        // `.grant` is a repair step, not a setup step. Both routes teach both consents
+        // on the way through, so on a first run there is nothing left for it to ask.
         //
-        // It is also in the flow on the hosted-page route once the extension has
-        // *confirmed* website access is missing. That route sends the user to the page to
-        // do both halves, so on the way through this step would be a second trip to a page
-        // they are already on — but a confirmed negative means the second half didn't
-        // happen, and then it isn't a repeat, it's the correction.
-        if canDeepLinkToSettings || controller.safariWebsiteAccess.warrantsRepair {
+        // It used to be unconditional on the Settings-deep-link route, on the reasoning
+        // that the deep link reaches the extension toggle and cannot reach the website
+        // grant, so that route had to ask for the grant separately. That reasoning was
+        // built on a Settings pane that listed nine service origins above "Other
+        // Websites" — website access was buried in a list, and asking separately was the
+        // only way to be sure it was seen.
+        //
+        // Dropping those origins from the manifest collapsed the pane's Permissions
+        // section to a single "All Websites" row, which put both consents on one screen:
+        // the exact screen the deep link already opens. So the grant is now reachable by
+        // the same tap as the toggle, and `.enable` teaches both (see
+        // `SafariSettingsDestinationView`). Keeping a separate step would send the user
+        // out a second time — to a web page this time, so a second app switch and a
+        // dependency on Safari being the default browser — for a switch they were just
+        // shown.
+        //
+        // It also removes this route's dependence on Safari's permission prompt
+        // appearing, which is the thing that cannot be relied on: the "Additional
+        // Permissions Requested" banner is reported not to show at all in some cases.
+        // Settings is deterministic; the prompt is not.
+        //
+        // What stays is the correction. A *confirmed* negative from the extension means
+        // the second switch didn't get set, and then this isn't a repeat of something
+        // already taught — it's the fix, and it's the only signal that can tell the
+        // difference. `.unknown` deliberately does not qualify (see `warrantsRepair`),
+        // so a fresh install whose extension hasn't reported yet is not accused of a
+        // fault. Home's Setup card is the other half of this safety net for anyone who
+        // finishes the flow with one switch set.
+        if controller.safariWebsiteAccess.warrantsRepair {
             return [.welcome, .location, .enable, .grant, .safariReady]
         }
         return [.welcome, .location, .enable, .safariReady]
@@ -410,10 +427,11 @@ struct OnboardingView: View {
     }
 
     #if os(iOS)
-    /// Whether this OS can send the user straight to GeoSpoof's row in Settings.
-    /// Decides the shape of the flow (see `steps`), so it is read here rather than
-    /// only inside the screen that offers the button.
-    private var canDeepLinkToSettings: Bool { controller.canOpenSafariExtensionSettings }
+    // No `canDeepLinkToSettings` here any more. The flow's shape no longer depends on
+    // which route reaches the toggle — both routes now teach both consents, so `steps`
+    // branches on evidence of a missing grant instead (see `steps`). The handoff screen
+    // keeps its own copy, because *it* still branches: it has a different picture and a
+    // different button per route.
 
     /// The page on screen. An empty path is the welcome root.
     private var current: StepKind { path.last ?? .welcome }
@@ -1545,13 +1563,29 @@ private struct OnboardingSafariHandoffView: View {
                 // Sentence case, not uppercase: `.textCase(.uppercase)` reads as
                 // shouting in Cyrillic and does nothing in CJK.
                 VStack(alignment: .leading, spacing: 6) {
-                    // Only true on the hosted-page route, where that page covers website
-                    // access as well and this really is the end. On the deep-link route
-                    // the grant step follows, so the claim would be wrong — and being
-                    // told "last step" twice is how a flow loses trust. Hidden rather
-                    // than reworded: the string is translated into eleven languages and
-                    // its meaning hasn't changed, only whether it applies.
-                    if !canDeepLinkToSettings {
+                    // Hosted-page route only, and it stays that way even though the
+                    // website-access step no longer follows on either route.
+                    //
+                    // The original reason for hiding it here was that `.grant` came next
+                    // on the deep-link route, so the claim was false. That reason is gone,
+                    // but the badge still shouldn't come back: on 26.2+ this screen makes
+                    // the same point twice already — the sentence above says both switches
+                    // are on one Settings screen, and the checklist ends at three. A third
+                    // assurance about how small the task is adds nothing to the two that
+                    // are more specific than it.
+                    //
+                    // It keeps earning its place on the other route, where the numbered
+                    // list is a journey across three Safari screens rather than two
+                    // switches on one. There the badge is saying something the list can't:
+                    // three taps, still only one step of setup left.
+                    //
+                    // The second clause is the accuracy fix that the flow change made
+                    // reachable to state properly. A confirmed-missing grant puts `.grant`
+                    // after this step on *either* route (see `OnboardingView.steps`), and
+                    // this badge used to announce finality straight through that case.
+                    // Reading the same property `steps` branches on is what keeps the two
+                    // from drifting.
+                    if !canDeepLinkToSettings, !controller.safariWebsiteAccess.warrantsRepair {
                         Text("Last step")
                             .font(.footnote.weight(.semibold))
                             .foregroundStyle(Color.brand)
@@ -1566,6 +1600,16 @@ private struct OnboardingSafariHandoffView: View {
                         Label("GeoSpoof is enabled in Safari", systemImage: "checkmark.circle.fill")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.green)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else if canDeepLinkToSettings {
+                        // Sets the count before the list does, because the count is the
+                        // part that stops someone leaving after the first switch. The
+                        // existing one-switch sentence is kept for the other route below,
+                        // where it is still accurate: that route hands off to a page that
+                        // walks through website access itself.
+                        Text("GeoSpoof needs two switches turned on, and they're both on the same Settings screen.")
+                            .font(.body)
+                            .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     } else {
                         Text("Turn GeoSpoof on in Safari's extension settings.")
@@ -3053,8 +3097,8 @@ private extension View {
 #if os(iOS)
 // MARK: - Safari settings destination (iOS)
 
-/// The Settings screen the hand-off button opens, as a real screenshot, plus the manual
-/// route to it in words.
+/// What to do on the Settings screen the hand-off button opens: the switches as a
+/// numbered list, a screenshot of the real pane, and the manual route to it in words.
 ///
 /// A photograph of the destination rather than an illustration of the gesture, because on
 /// the Settings route there is no gesture to teach — the button does the navigating, and
@@ -3063,6 +3107,14 @@ private extension View {
 /// are per Safari profile, and that Private Browsing is a separate one. Both are the
 /// misses that leave someone with an app reporting success and a Safari that isn't
 /// spoofing.
+///
+/// This is also where website access is asked for now, which is why the list is here and
+/// not just a caption. There used to be a separate `.grant` step after this one for the
+/// second consent; the Settings pane's Permissions section collapsed to a single "All
+/// Websites" row once the manifest stopped declaring service origins, which put both
+/// consents on this one screen and made the extra step a second trip for something
+/// already on display. See `OnboardingView.steps` for what remains of that step, and
+/// `src/build/manifest.ts` for the coupling to the origin list.
 ///
 /// The breadcrumb is the fallback, and it is not hypothetical: the deep link depends on an
 /// OS-provided route that can land somewhere adjacent, and it does nothing at all if
@@ -3103,38 +3155,64 @@ struct SafariSettingsDestinationView: View {
     var maxImageHeight: CGFloat = .infinity
 
     var body: some View {
-        // No title above the screenshot. The caption below it already says what it is and
-        // carries the manual path with it, so labelling the same picture from both sides
-        // was framing it twice. What the picture is for is established before the reader
-        // reaches it anyway — the navigation title, the instruction above, and the button
-        // all say this is something still to do, so an already-enabled pane can't be
-        // misread here as a claim that it's done.
+        // A numbered list above the screenshot, not a title. There used to be nothing
+        // here, on the reasoning that the caption below already said what the picture was
+        // and labelling it from both sides framed it twice. That held while the pane asked
+        // for one thing. It asks for two now — the extension toggle and website access —
+        // and "recognise this screen" is no longer sufficient instruction for a screen
+        // with two switches on it that both have to be set.
+        //
+        // Ordered rather than prose because the two are not interchangeable and one of
+        // them is below the fold on the real pane: someone who reads a sentence, flips the
+        // first switch and leaves has an extension that is on and touching nothing. A list
+        // with a count is also the only form that tells the user when they are finished,
+        // which is the actual failure mode here — not doing the wrong thing, but stopping
+        // early and believing they're done.
         VStack(spacing: 12) {
+            settingsChecklist
             // Resolves per device from the image set: the iPhone capture on iPhone, the
             // iPad one on iPad. Handled by the asset catalog's `iphone`/`ipad` idioms
             // rather than by branching here, so there is nothing in code that can pick a
             // different device's screenshot than the catalog does.
+            // No border or clip shape here, and they can't simply be added back.
+            //
+            // `.aspectRatio(.fit)` inside `.frame(maxWidth:maxHeight:)` gives a frame that
+            // accepts the full width it is offered while the capture letterboxes inside
+            // it, so the frame is materially wider than the picture whenever height is the
+            // binding cap — which is the normal case for the portrait iPhone shot. Shape
+            // modifiers attach to that frame, not to the image, so a `strokeBorder`
+            // overlay drew a rounded rectangle floating in the empty space either side of
+            // the screenshot, and the `clipShape` it was paired with rounded corners that
+            // nothing ever reached.
+            //
+            // The shadow is kept and is not the same problem: it renders from the content's
+            // alpha rather than from the frame, so it hugs the capture's real edges. That's
+            // also what now separates the screenshot from the material card behind it.
+            //
+            // If a border is ever wanted, it has to go on a wrapper sized to the image —
+            // measuring the fitted rect — rather than on this frame.
             Image("SafariExtensionEnabled")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(maxWidth: maxImageWidth, maxHeight: maxImageHeight)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .strokeBorder(Color.primary.opacity(0.08))
-                )
                 .shadow(color: .black.opacity(0.18), radius: 6, y: 2)
-                // Described rather than hidden: the switches are the information, and a
-                // VoiceOver user gets none of it from the surrounding copy alone.
+                // Short now, and deliberately so. This label used to carry the
+                // instructions, because the switches were the only place the information
+                // existed and a VoiceOver user got none of it from the surrounding copy.
+                // The checklist above is that copy — real text, in order, naming the same
+                // switches — so describing the picture in detail as well would say
+                // everything twice, and say it worse the second time.
                 //
-                // Worded for what both captures have in common, because they are not the
-                // same screen. Safari only shows a per-profile list once profiles exist,
-                // so the iPad shot has a switch per profile while the iPhone one has a
-                // single "Allow Extension" — both correct for the device they were taken
-                // on. Enumerating either set here would describe a screen half the users
-                // aren't looking at, and the point that survives both is that everything
-                // on it is on.
-                .accessibilityLabel("Safari's GeoSpoof extension settings, with every switch turned on.")
+                // Still not hidden: a picture that a sighted reader is being asked to
+                // recognise should at least be announced as existing, or its absence reads
+                // as a rendering failure.
+                //
+                // Kept to what both captures have in common, because they are not the same
+                // screen: Safari only splits enablement per profile once profiles exist,
+                // so the iPad shot has a switch per profile where the iPhone one has a
+                // single "Allow Extension". Naming either set here would describe a screen
+                // half the readers aren't looking at.
+                .accessibilityLabel("A screenshot of Safari's GeoSpoof extension settings, showing the switches listed above.")
 
             VStack(spacing: 3) {
                 Text("Not where you landed? In Settings, go to:")
@@ -3161,6 +3239,56 @@ struct SafariSettingsDestinationView: View {
         .frame(maxWidth: .infinity)
         .padding()
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    /// The two switches the pane wants set, in the order they appear on it, plus the
+    /// return trip.
+    ///
+    /// Both are named with Safari's own labels rather than described as concepts — "Allow
+    /// Extension", not "enable the extension"; "All Websites", not "grant host
+    /// permissions". Those are the only words that are still on screen once the user has
+    /// left this view for Settings, which is where they'll be trying to follow this.
+    ///
+    /// "All Websites" is the row's label only because the manifest declares no service
+    /// origins. It used to be the last of ten rows, titled "Other Websites" beneath nine
+    /// named domains, and it would go back to that if those declarations returned — so
+    /// this string and the origin list in `src/build/manifest.ts` are coupled, and the
+    /// comment there says the same thing from the other side.
+    ///
+    /// Step 3 is not busywork. Nothing needs tapping on return — the OS reports the toggle
+    /// and the flow advances itself — but a user who doesn't know that can't tell "wait
+    /// here" from "you're done", and the step they left is still sitting behind Settings
+    /// looking unfinished. It also covers the case where the automatic advance doesn't
+    /// fire, which is the situation where explicit instructions matter most.
+    private var settingsChecklist: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            checklistRow(1, "Turn on Allow Extension")
+            checklistRow(2, "Set All Websites to Allow")
+            checklistRow(3, "Come back to GeoSpoof")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func checklistRow(_ number: Int, _ text: LocalizedStringKey) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            StepBadge(number: number)
+                // Aligns the badge to the first line's baseline rather than centring it on
+                // the whole row, which is what keeps a wrapped two-line step from pushing
+                // its number into the gap between the lines. A `Circle` has no baseline of
+                // its own, so one is supplied from its bottom edge.
+                .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 3 }
+
+            Text(text)
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        // Spoken as "Step 1. Turn on Allow Extension". `StepBadge` is decorative by
+        // design, so the ordinal has to be reintroduced here or a VoiceOver user gets
+        // three unordered instructions — and the order is half of what the list is for.
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text("Step \(number)") + Text(verbatim: ". ") + Text(text))
     }
 }
 

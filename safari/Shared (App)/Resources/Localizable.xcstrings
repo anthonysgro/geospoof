@@ -1901,6 +1901,9 @@
         }
       }
     },
+    "A screenshot of Safari's GeoSpoof extension settings, showing the switches listed above." : {
+
+    },
     "A subscription is still active on your Apple Account. Cancel it so you're not charged again — your Lifetime access stays forever." : {
       "localizations" : {
         "de" : {
@@ -6185,6 +6188,9 @@
           }
         }
       }
+    },
+    "Come back to GeoSpoof" : {
+
     },
     "Complete this step on your iPhone or in the GeoSpoof GPS app on your Mac." : {
       "localizations" : {
@@ -10825,6 +10831,9 @@
       }
     },
     "GeoSpoof is switched off in Safari's extension settings. Turn it on to start spoofing." : {
+
+    },
+    "GeoSpoof needs two switches turned on, and they're both on the same Settings screen." : {
 
     },
     "GeoSpoof Pro" : {
@@ -22556,9 +22565,6 @@
         }
       }
     },
-    "Safari's GeoSpoof extension settings, with every switch turned on." : {
-
-    },
     "Safari's permission warning sounds broad, but GeoSpoof uses that access narrowly — and you don't have to take our word for it." : {
       "localizations" : {
         "de" : {
@@ -23471,6 +23477,9 @@
           }
         }
       }
+    },
+    "Set All Websites to Allow" : {
+
     },
     "Set Favorite Location" : {
       "localizations" : {
@@ -25224,6 +25233,9 @@
           }
         }
       }
+    },
+    "Step %lld" : {
+
     },
     "Step %lld: " : {
       "localizations" : {
@@ -27887,6 +27899,9 @@
           }
         }
       }
+    },
+    "Turn on Allow Extension" : {
+
     },
     "Turn On GeoSpoof" : {
 

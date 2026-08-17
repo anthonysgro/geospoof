@@ -180,8 +180,6 @@ export function generateManifest(target: BrowserTarget, version: string): Record
     // no privacy permission (unsupported), no proxy permission (no proxy API),
     // no idle permission (the activity watcher's idle trigger feature-detects to
     // a no-op; tab-navigation triggers still work), no browser_specific_settings.
-    // Safari may not honor <all_urls> wildcard for CORS exemption in background pages,
-    // so we explicitly list the geo/IP service domains to ensure CORS is bypassed.
     const safariPermissions = (shared.permissions as string[]).filter(
       (p) => p !== "privacy" && p !== "proxy" && p !== "idle"
     );
@@ -201,25 +199,52 @@ export function generateManifest(target: BrowserTarget, version: string): Record
     if (!safariPermissions.includes("declarativeNetRequestWithHostAccess")) {
       safariPermissions.push("declarativeNetRequestWithHostAccess");
     }
-    const safariHostPermissions = [
-      ...(shared.host_permissions as string[]),
-      // Public-IP (exit-IP) detection — hyperscale echo endpoints, tried in
-      // order with failover (see IP_ECHO_PROVIDERS in vpn-sync.ts).
-      "https://checkip.amazonaws.com/*",
-      "https://www.cloudflare.com/*",
-      "https://whatismyip.akamai.com/*",
-      "https://api.ipify.org/*",
-      // IP geolocation providers.
-      "https://get.geojs.io/*",
-      "https://free.freeipapi.com/*",
-      "https://reallyfreegeoip.org/*",
-      "https://ipinfo.io/*",
-      "https://nominatim.openstreetmap.org/*",
-    ];
+    // Host permissions are `<all_urls>` and nothing else — deliberately.
+    //
+    // This used to also list the nine geo/IP service origins (checkip.amazonaws.com,
+    // api.ipify.org, get.geojs.io, nominatim.openstreetmap.org and friends), on the
+    // reasoning that "Safari may not honor <all_urls> for CORS exemption in background
+    // pages". That was a hedge, not a finding, and the cost of it was visible to users:
+    // Safari's Settings screen renders one row per declared origin, so GeoSpoof's
+    // permission list read as ten entries naming Amazon, Cloudflare and Akamai. For a
+    // privacy tool that invites exactly the question it shouldn't — why does a location
+    // spoofer want amazonaws.com — and the answer was in a build file nobody reads.
+    //
+    // They bought nothing in practice. Declaring an origin does not grant it: on a fresh
+    // install every one of those rows sits at "Ask" with nothing allowed, so the fetches
+    // were no more permitted than they would have been without the declaration. And once
+    // the user sets "Other Websites" to Allow, Safari records a single `*://*/*` grant
+    // that already covers them — confirmed on device, where
+    // `permissions.contains({ origins: ["https://get.geojs.io/*"] })` returned true
+    // against that wildcard with no per-origin grant present.
+    //
+    // So the only capability lost is a user allowing GeoSpoof's VPN-sync endpoints while
+    // refusing it every page — which no one would find, and which the nine rows made
+    // look like a demand rather than an option.
+    //
+    // If VPN sync's IP lookup or Change Location's geocoding ever fails on Safari with a
+    // CORS error while every-site access is granted, this is the first place to look —
+    // and the fix is to restore the specific origin that failed, with a note of what was
+    // observed, rather than the whole list on suspicion.
+    //
+    // Two things in the iOS app now depend on this list staying empty, and both break
+    // quietly rather than loudly if origins come back:
+    //
+    //   1. Onboarding's Settings step instructs the user to "Set All Websites to Allow"
+    //      by name (`settingsChecklist` in `safari/Shared (App)/SpoofDetailsView.swift`).
+    //      With declared origins that row is titled "Other Websites" instead, so the
+    //      instruction would name a row that isn't on the screen.
+    //   2. That step is also where website access is now asked for at all. It replaced a
+    //      separate `.grant` screen, on the grounds that the collapsed Permissions
+    //      section puts both consents on the one pane the deep link opens. Ten rows put
+    //      the second consent below the fold again, which is the condition that made a
+    //      separate step necessary in the first place.
+    //
+    // So restoring an origin means revisiting that step's copy and the accompanying
+    // screenshot, not just this array.
     return {
       ...shared,
       permissions: safariPermissions,
-      host_permissions: safariHostPermissions,
       background: {
         scripts: ["background/background.js"],
         type: "module",
