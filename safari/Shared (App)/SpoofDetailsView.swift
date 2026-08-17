@@ -410,14 +410,24 @@ struct OnboardingView: View {
         // Permissions Requested" banner is reported not to show at all in some cases.
         // Settings is deterministic; the prompt is not.
         //
-        // What stays is the correction. A *confirmed* negative from the extension means
-        // the second switch didn't get set, and then this isn't a repeat of something
-        // already taught — it's the fix, and it's the only signal that can tell the
-        // difference. `.unknown` deliberately does not qualify (see `warrantsRepair`),
-        // so a fresh install whose extension hasn't reported yet is not accused of a
-        // fault. Home's Setup card is the other half of this safety net for anyone who
-        // finishes the flow with one switch set.
-        if controller.safariWebsiteAccess.warrantsRepair {
+        // What stays is the correction — but only on the route whose mechanism it
+        // actually teaches. `.grant` sends the user to a web page to answer Safari's
+        // prompt. Below 26.2 that is the only way to grant access at all, so the step is
+        // how the flow gets there. Above it, it is the wrong tool: the switch is a row on
+        // the Settings pane `.enable` just showed them, so a page means a second app
+        // switch, a dependency on Safari being the default browser, and a prompt that is
+        // reported not to always appear — all to set something one tap away in Settings.
+        //
+        // So above 26.2 the repair belongs to Home's `websiteAccessCard`, which already
+        // branches on this same capability and routes to Settings. Its trigger is
+        // `warrantsRepair` too, so a user who finishes the flow with one switch set lands
+        // on Home with the correction already on screen, by the better route. Keeping this
+        // step as well would be a second implementation of one repair, in the surface with
+        // the worse route, contradicting the wording the checklist just taught.
+        //
+        // `.unknown` deliberately does not qualify on either route (see `warrantsRepair`),
+        // so a fresh install whose extension hasn't reported yet is not accused of a fault.
+        if !canDeepLinkToSettings, controller.safariWebsiteAccess.warrantsRepair {
             return [.welcome, .location, .enable, .grant, .safariReady]
         }
         return [.welcome, .location, .enable, .safariReady]
@@ -427,11 +437,13 @@ struct OnboardingView: View {
     }
 
     #if os(iOS)
-    // No `canDeepLinkToSettings` here any more. The flow's shape no longer depends on
-    // which route reaches the toggle — both routes now teach both consents, so `steps`
-    // branches on evidence of a missing grant instead (see `steps`). The handoff screen
-    // keeps its own copy, because *it* still branches: it has a different picture and a
-    // different button per route.
+    /// Whether this OS can send the user straight to GeoSpoof's row in Settings.
+    ///
+    /// Read here as well as inside the handoff screen because it decides two different
+    /// things. There it picks the picture and the button. Here it decides whether `.grant`
+    /// exists at all: that step teaches the page-prompt route, which is the only route
+    /// below 26.2 and the wrong one above it — see `steps`.
+    private var canDeepLinkToSettings: Bool { controller.canOpenSafariExtensionSettings }
 
     /// The page on screen. An empty path is the welcome root.
     private var current: StepKind { path.last ?? .welcome }
@@ -689,7 +701,15 @@ struct OnboardingView: View {
         // Diverts for the two states that look like mistakes, and not for `chosenSites` —
         // a user who scoped GeoSpoof to particular sites on purpose has finished setup, and
         // holding them on the grant screen would refuse to accept an answer they meant.
-        if controller.safariWebsiteAccess.warrantsRepair {
+        //
+        // Asked of `steps` rather than of `warrantsRepair` directly, which is load-bearing
+        // now that the step is 26.2-gated. `steps` already encodes both halves of the
+        // condition, so this reads as "divert if there is somewhere to divert to". Testing
+        // `warrantsRepair` here instead would be true on 26.2+ while `showGrantStep()`
+        // correctly refused to push a step that isn't in the flow — and the `return` would
+        // still fire, so the user would come back from Settings to a screen that silently
+        // never advances. A missing grant is precisely when that would happen.
+        if steps.contains(.grant) {
             showGrantStep()
             return
         }
@@ -3129,29 +3149,34 @@ private extension View {
 struct SafariSettingsDestinationView: View {
     /// Widest the screenshot gets. `.infinity` lets it span the card.
     ///
-    /// The artwork is idiom-specific (see the `SafariExtensionEnabled` image set), and
-    /// the two shots have opposite proportions: the iPad capture is near-square
-    /// landscape, the iPhone one is tall portrait. So neither knob alone can size both —
-    /// hence a cap in each axis, with the call site supplying whichever one binds.
+    /// The artwork is idiom-specific (see the `SafariExtensionEnabled` image set), and the
+    /// two shots do not share an aspect ratio — they are captures of the same pane on
+    /// devices whose screens differ. No single knob can size both, hence a cap in each
+    /// axis with the call site supplying whichever one binds.
+    ///
+    /// Which axis binds is deliberately not recorded here. Both captures have been
+    /// retaken more than once, most recently when the Settings pane's Permissions section
+    /// collapsed to a single row, and a comment naming this month's proportions is a
+    /// comment that goes stale silently. The mechanism below is what makes that safe.
     var maxImageWidth: CGFloat = .infinity
 
     /// Tallest the screenshot gets.
     ///
-    /// This is the one that matters on iPhone, where the capture is the taller of the
-    /// two. Left uncapped it spans the page at 429pt, which is most of a phone display
-    /// for a screenshot that is supporting evidence rather than the subject — and it
-    /// pushes the "Settings › Apps › Safari …" fallback path below the fold, which is
-    /// the part that helps anyone the button didn't land correctly for.
+    /// This is the one that matters in compact width, where a full-height phone capture
+    /// would span the page at 429pt — most of a display, for a screenshot that is
+    /// supporting evidence rather than the subject. It also pushes the
+    /// "Settings › Apps › Safari …" fallback path below the fold, which is the part that
+    /// helps anyone the button didn't land correctly for.
     ///
     /// Kept as a separate knob rather than folded into a single measurement because the
-    /// captures get retaken, and their proportions have already changed more than once.
-    /// A cap per axis holds regardless of which way the next one leans.
+    /// captures get retaken and their proportions change with them. A cap per axis holds
+    /// regardless of which way the next one leans.
     ///
     /// Both caps are always applied, so no combination can overflow: `.aspectRatio(.fit)`
     /// inside a bounded frame fits whichever constraint binds first. That matters because
-    /// the image is chosen by device idiom while the caps are chosen by size class, and
-    /// an iPad in a narrow window reads as compact while still getting the landscape
-    /// capture.
+    /// the image is chosen by device idiom while the caps are chosen by size class, so the
+    /// two can disagree — an iPad in a narrow window reads as compact while still getting
+    /// the iPad capture.
     var maxImageHeight: CGFloat = .infinity
 
     var body: some View {
@@ -3207,11 +3232,14 @@ struct SafariSettingsDestinationView: View {
                 // recognise should at least be announced as existing, or its absence reads
                 // as a rendering failure.
                 //
-                // Kept to what both captures have in common, because they are not the same
-                // screen: Safari only splits enablement per profile once profiles exist,
-                // so the iPad shot has a switch per profile where the iPhone one has a
-                // single "Allow Extension". Naming either set here would describe a screen
-                // half the readers aren't looking at.
+                // Kept to what both captures have in common, and no more. They are the same
+                // pane on different devices, and Safari varies it: enablement splits into a
+                // switch per profile once Safari profiles exist, so the number and naming
+                // of switches differs by device and by user. Enumerating either set here
+                // would describe a screen some readers aren't looking at, and would need
+                // revisiting every time a capture is retaken. "The switches listed above"
+                // stays true for both because the checklist, not the picture, is what
+                // names them.
                 .accessibilityLabel("A screenshot of Safari's GeoSpoof extension settings, showing the switches listed above.")
 
             VStack(spacing: 3) {
@@ -3266,7 +3294,13 @@ struct SafariSettingsDestinationView: View {
             checklistRow(2, "Set All Websites to Allow")
             checklistRow(3, "Come back to GeoSpoof")
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        // No width frame, so the block hugs its longest row and the enclosing `VStack`
+        // centres it. Previously `.infinity`, which pinned it to the card's left edge —
+        // fine on a phone, but on iPad it sat far left of a centred screenshot.
+        //
+        // The rows themselves stay left-aligned. They are a numbered list, and centring
+        // the lines would ragged both edges and pull each badge away from the text it
+        // numbers.
     }
 
     private func checklistRow(_ number: Int, _ text: LocalizedStringKey) -> some View {
@@ -3278,11 +3312,15 @@ struct SafariSettingsDestinationView: View {
                 // its own, so one is supplied from its bottom edge.
                 .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 3 }
 
+            // No `maxWidth: .infinity` here either — that made every row expand to the
+            // available width, which would keep the block full-width however the parent
+            // is sized. Rows hug their text now, so the widest one sets the block's width.
+            // Long translations still wrap: `fixedSize(horizontal: false)` accepts the
+            // proposed width and grows downward.
             Text(text)
                 .font(.subheadline)
                 .foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
         }
         // Spoken as "Step 1: Turn on Allow Extension". `StepBadge` is decorative by
         // design, so the ordinal has to be reintroduced here or a VoiceOver user gets
@@ -3367,7 +3405,7 @@ struct SafariActivationAnimation: View {
             .overlay(Capsule().strokeBorder(Color.primary.opacity(0.08)))
 
             VStack(alignment: .leading, spacing: 8) {
-                stepLine(1, "Tap the page menu")
+                stepLine(1, pageControlStep)
                 stepLine(2, "Choose Manage Extensions")
                 stepLine(3, "Switch on GeoSpoof")
             }
@@ -3379,7 +3417,43 @@ struct SafariActivationAnimation: View {
         .padding(.top, 4)
         .onAppear(perform: startAnimating)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("In Safari, tap the page menu button in the address bar, choose Manage Extensions, then switch on GeoSpoof.")
+        .accessibilityLabel(walkthroughSummary)
+    }
+
+    /// Safari renamed this control in iOS 26: below it, the button beside the address bar
+    /// is Page Settings; from 26 on, it is the Page Menu.
+    ///
+    /// This view is only ever shown on the pre-26.2 route, and that route spans both names
+    /// — iOS 18 through 25 on the old chrome, 26.0 and 26.1 on the new. So a single name
+    /// here was wrong for one cohort or the other no matter which one it was.
+    ///
+    /// It was also wrong against the app's own other half. `AppLink.activationPage` sends
+    /// `safari_ui=18` or `26` for exactly this reason — its comment says "Safari's own
+    /// chrome differs across these" — and the hosted page acts on it, choosing between
+    /// `waiting.pageSettings` ("Tap the Page Settings button…") and `waiting.steps[0]`
+    /// ("Tap the Page Menu button…"). So the app was naming one control and handing the
+    /// user to a page naming the other. Same `#available` check, same answer, one screen
+    /// apart.
+    ///
+    /// Only the name branches. The site renders one glyph for both variants
+    /// (`page-menu-ios.png`, unconditional), so following it keeps the two surfaces
+    /// consistent and keeps the illustration out of a judgement about chrome that can't be
+    /// verified from the repo.
+    private var pageControlStep: LocalizedStringKey {
+        if #available(iOS 26.0, *) {
+            return "Tap the page menu"
+        }
+        return "Tap Page Settings"
+    }
+
+    /// The whole walkthrough as one sentence, for VoiceOver. Branches for the same reason
+    /// as `pageControlStep`, and is a full sentence per variant rather than one assembled
+    /// from fragments, because a key can't be interpolated into another key.
+    private var walkthroughSummary: LocalizedStringKey {
+        if #available(iOS 26.0, *) {
+            return "In Safari, tap the page menu button in the address bar, choose Manage Extensions, then switch on GeoSpoof."
+        }
+        return "In Safari, tap the Page Settings button in the address bar, choose Manage Extensions, then switch on GeoSpoof."
     }
 
     /// The iOS Safari page-menu button: a small page rectangle above three
