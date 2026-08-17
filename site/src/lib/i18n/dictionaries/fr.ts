@@ -937,7 +937,7 @@ export const fr: Dictionary = {
     meta: {
       title: "Activer GeoSpoof dans Safari",
       description:
-        "Activez l'extension GeoSpoof dans Safari et confirmez la position indiquée par Safari.",
+        "Activez l’extension GeoSpoof dans Safari et confirmez la position indiquée par Safari.",
     },
     preparing: "Préparation de la configuration de Safari",
     waiting: {
@@ -950,20 +950,20 @@ export const fr: Dictionary = {
       inSafari: "Dans Safari",
       pageSettings: {
         title: "Ouvrez les réglages de la page",
-        body: "Touchez le bouton des réglages de la page à côté de la barre d'adresse de Safari.",
+        body: "Touchez le bouton des réglages de la page à côté de la barre d’adresse de Safari.",
       },
       steps: [
         {
           title: "Ouvrez le menu de la page",
-          body: "Touchez le bouton du menu de la page à côté de la barre d'adresse de Safari.",
+          body: "Touchez le bouton du menu de la page à côté de la barre d’adresse de Safari.",
         },
         {
           title: "Choisissez Gérer les extensions",
           body: "Repérez GeoSpoof dans la liste et activez-le.",
         },
         {
-          title: "Autorisez l'accès au site web",
-          body: "Autorisez GeoSpoof à accéder à ce site web. Safari peut vous demander d'actualiser la page.",
+          title: "Autorisez l’accès au site web",
+          body: "Autorisez GeoSpoof à accéder à ce site web. Safari peut vous demander d’actualiser la page.",
         },
       ],
       permissionsBanner:
@@ -974,14 +974,14 @@ export const fr: Dictionary = {
       retry: "Vérifier à nouveau",
     },
     troubleshooting: {
-      summary: "GeoSpoof n'apparaît pas ?",
+      summary: "GeoSpoof n’apparaît pas ?",
       items: [
-        "Vérifiez que GeoSpoof figure dans la liste et qu'il est activé.",
+        "Vérifiez que GeoSpoof figure dans la liste et qu’il est activé.",
         "Si vous utilisez des profils Safari, vérifiez que GeoSpoof est activé pour le profil actuel.",
-        "Le Temps d'écran, le contrôle parental ou la gestion de l'appareil peuvent empêcher l'activation des extensions Safari.",
+        "Le Temps d’écran, le contrôle parental ou la gestion de l’appareil peuvent empêcher l’activation des extensions Safari.",
       ],
-      support: "Obtenir de l'aide auprès de GeoSpoof",
-      appleSupport: "Un problème ? Consultez les instructions d’Apple",
+      support: "Obtenir de l’aide auprès de GeoSpoof",
+      appleSupport: "Un problème ? Consultez les instructions d’Apple",
     },
     checking: {
       eyebrow: "Configuration de Safari",
@@ -991,10 +991,10 @@ export const fr: Dictionary = {
     },
     error: {
       eyebrow: "GeoSpoof est activé",
-      heading: "Safari n'a pas encore renvoyé de position",
+      heading: "Safari n’a pas encore renvoyé de position",
       body: "Vérifiez que la simulation de position est activée dans GeoSpoof, puis réessayez.",
       retry: "Vérifier à nouveau la position",
-      support: "Obtenir de l'aide",
+      support: "Obtenir de l’aide",
     },
     success: {
       status: "Safari est prêt",
@@ -1006,19 +1006,19 @@ export const fr: Dictionary = {
     },
     desktop: {
       heading: "Configurez GeoSpoof depuis l’app Mac",
-      body: "Cette page décrit la configuration sur iPhone. Sur un Mac, ouvrez GeoSpoof et utilisez « Activer dans Safari » : vous arrivez directement dans les réglages des extensions de Safari.",
+      body: "Cette page décrit la configuration sur iPhone. Sur un Mac, ouvrez GeoSpoof et utilisez « Activer dans Safari » : vous arrivez directement dans les réglages des extensions de Safari.",
     },
     wrongBrowser: {
       eyebrow: "Safari requis",
       heading: "Ouvrez cette page dans Safari",
-      body: "L'extension iPhone de GeoSpoof fonctionne dans Safari. Cette étape de configuration doit donc y être effectuée.",
-      copyInstruction: "Copiez cette adresse, puis collez-la dans Safari :",
+      body: "L’extension iPhone de GeoSpoof fonctionne dans Safari. Cette étape de configuration doit donc y être effectuée.",
+      copyInstruction: "Copiez cette adresse, puis collez-la dans Safari :",
       copied: "Adresse copiée",
-      copy: "Copier l'adresse d'activation",
+      copy: "Copier l’adresse d’activation",
       copyError:
-        "La copie n'est pas disponible dans ce navigateur. Maintenez le doigt sur l'adresse ci-dessus pour la copier.",
+        "La copie n’est pas disponible dans ce navigateur. Maintenez le doigt sur l’adresse ci-dessus pour la copier.",
       iosTip:
-        "Astuce : vous pouvez aussi utiliser le menu Partager de ce navigateur, copier le lien, puis le coller dans Safari.",
+        "Astuce : vous pouvez aussi utiliser le menu Partager de ce navigateur, copier le lien, puis le coller dans Safari.",
     },
   },
   verify: {

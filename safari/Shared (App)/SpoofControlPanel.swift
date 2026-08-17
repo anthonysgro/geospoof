@@ -722,6 +722,59 @@ struct SpoofControlPanel: View {
 
 // MARK: - Map
 
+/// Withholds a Metal-backed `Map` from the view tree until its container has a size
+/// MapKit can actually render into.
+///
+/// `.mapStyle(.hybrid)` and `.hybrid(elevation:)` draw satellite imagery through a
+/// multisampled pass. Laid out at zero size, MapKit builds a render pass whose
+/// `MTLStoreActionMultisampleResolve` has no resolve texture to write into, Metal's
+/// debug layer asserts, and the process traps —
+/// `_MTLDebugValidateRenderPassDescriptorAndTrackAttachments`, reached from
+/// `md::MapEngine::renderSceneSync` on MapKit's own display link, so the crashing
+/// stack contains no app frames at all. It is a hard crash in a debug build rather
+/// than a warning, and it is preceded in the log by `CAMetalLayer ignoring invalid
+/// setDrawableSize width=0.000000 height=0.000000`, which is the actual cause showing
+/// itself.
+///
+/// A zero-size pass is always transient — a container measured once before its bounds
+/// settle. Two known windows: an incoming column during an iPad navigation push, and
+/// the first build of the Home tab on iPhone, which happens *underneath* the
+/// onboarding cross-dissolve (`RootView`) while the outgoing setup screen is still
+/// rendering a map of its own. Release builds ship without Metal validation so a
+/// customer wouldn't crash, but it blocks device testing, and handing MapKit an
+/// impossible size is wrong regardless of who notices.
+///
+/// Applied per `Map` rather than once inside `SpoofMap`. The app has three independent
+/// `Map` instances and only one of them is `SpoofMap`, so gating that single type left
+/// `LiveMapPreview` and `FullScreenMap3D` — both using the heavier
+/// `elevation: .realistic` variant of the same multisampled pass — completely
+/// unprotected. Every call site gives its map definite bounds (an explicit
+/// `.frame(height:)`, or a full-screen container), so a greedy `GeometryReader` sizes
+/// the same as the `Map` it wraps.
+///
+/// Attach last, after the map's own modifiers, so `.mapStyle`, `.onMapCameraChange`
+/// and friends stay bound directly to the `Map` and only the composed result is gated.
+private struct MapRenderSizeGate: ViewModifier {
+    func body(content: Content) -> some View {
+        GeometryReader { proxy in
+            if proxy.size.width >= 1, proxy.size.height >= 1 {
+                content
+            } else {
+                // One frame at most, and the call sites clip and border this area
+                // anyway, so there's nothing to see rather than a flash of placeholder.
+                Color.clear
+            }
+        }
+    }
+}
+
+extension View {
+    /// See `MapRenderSizeGate`. Required on every `Map` in the app.
+    fileprivate func mapRenderSizeGate() -> some View {
+        modifier(MapRenderSizeGate())
+    }
+}
+
 /// The card's map preview. On iOS 17 / macOS 14+ it's a live, non-interactive
 /// 3D flyover view with the timezone region highlighted. On older OSes it falls
 /// back to a flat static snapshot (snapshots can't render 3D or overlays).
@@ -789,6 +842,9 @@ private struct LiveMapPreview: View {
             }
         }
         .onAppear { shapes.preload() }
+        // This is the map that mounts as the Home tab is built for the first time,
+        // inside `RootView`'s onboarding cross-dissolve. See `MapRenderSizeGate`.
+        .mapRenderSizeGate()
     }
 }
 
@@ -902,37 +958,10 @@ struct SpoofMap: View {
     }
 
     var body: some View {
-        // Don't instantiate MapKit until there's a real size to give it.
-        //
-        // `.mapStyle(.hybrid)` draws satellite imagery through a multisampled pass. Laid
-        // out at zero size, MapKit builds a render pass whose
-        // `MTLStoreActionMultisampleResolve` has no resolve texture to write into,
-        // Metal's debug layer asserts, and the process traps —
-        // `_MTLDebugValidateRenderPassDescriptorAndTrackAttachments:370`. It is a hard
-        // crash in a debug build rather than a warning, and it is preceded in the log by
-        // `CAMetalLayer ignoring invalid setDrawableSize width=0.000000 height=0.000000`,
-        // which is the actual cause showing itself.
-        //
-        // The zero-size pass happens on iPad during a navigation push, where the
-        // incoming column can be measured once before its width settles. Release builds
-        // ship without Metal validation so a customer wouldn't crash, but it blocks
-        // device testing, and handing MapKit an impossible size is wrong regardless of
-        // who notices.
-        //
-        // Gating here rather than at the call sites so every map in the app is covered
-        // by one fix. Both current callers give definite bounds — an explicit
-        // `.frame(height:)` on the onboarding success screen, and a full-screen
-        // container in `LocationMapPane` — so a greedy `GeometryReader` sizes the same
-        // as the `Map` it replaces.
-        GeometryReader { proxy in
-            if proxy.size.width >= 1, proxy.size.height >= 1 {
-                mapContent
-            } else {
-                // One frame at most, and the callers clip and border this area anyway,
-                // so there's nothing to see rather than a flash of placeholder.
-                Color.clear
-            }
-        }
+        // Don't instantiate MapKit until there's a real size to give it. See
+        // `MapRenderSizeGate` for why, and for the other two maps that need the same
+        // treatment.
+        mapContent.mapRenderSizeGate()
     }
 
     @ViewBuilder
@@ -1389,6 +1418,10 @@ private struct FullScreenMap3D: View {
                 withAnimation(.easeInOut(duration: 0.4)) { camera = .region(pickingRegion) }
             }
         }
+        // Not implicated in the onboarding crash — this map is only reachable by
+        // tapping the Home card — but it is the same latent defect in the same
+        // multisampled pass. See `MapRenderSizeGate`.
+        .mapRenderSizeGate()
     }
 }
 

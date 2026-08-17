@@ -4860,7 +4860,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Ce sont les avertissements standard de Safari. GeoSpoof n’utilise cet accès que pour simuler la localisation et le fuseau horaire : votre navigation n’est jamais lue, stockée ni envoyée."
+            "value" : "Ce sont les avertissements standard de Safari. GeoSpoof n’utilise cet accès que pour simuler la localisation et le fuseau horaire : votre navigation n’est jamais lue, stockée ni envoyée."
           }
         },
         "id" : {
@@ -5633,7 +5633,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Choisir « Gérer les extensions »"
+            "value" : "Choisir « Gérer les extensions »"
           }
         },
         "id" : {
@@ -8433,7 +8433,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Le GPS de l’appareil est une nouveauté : dites-nous ce qui fonctionne et ce qui ne fonctionne pas."
+            "value" : "Le GPS de l’appareil est une nouveauté : dites-nous ce qui fonctionne et ce qui ne fonctionne pas."
           }
         },
         "id" : {
@@ -8713,7 +8713,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Décalage heure d'été"
+            "value" : "Décalage heure d’été"
           }
         },
         "id" : {
@@ -10393,7 +10393,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Soutien fondateur sans accès ?"
+            "value" : "Soutien fondateur sans accès ?"
           }
         },
         "id" : {
@@ -12298,7 +12298,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Dans Safari, touchez le bouton de menu de la page dans la barre d’adresse, choisissez « Gérer les extensions », puis activez GeoSpoof."
+            "value" : "Dans Safari, touchez le bouton de menu de la page dans la barre d’adresse, choisissez « Gérer les extensions », puis activez GeoSpoof."
           }
         },
         "id" : {
@@ -12648,7 +12648,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Installez GeoSpoof GPS sur votre Mac et ouvrez-le : il vous guide dans la configuration initiale. La position choisie est ensuite synchronisée automatiquement avec cet iPhone, via Wi-Fi."
+            "value" : "Installez GeoSpoof GPS sur votre Mac et ouvrez-le : il vous guide dans la configuration initiale. La position choisie est ensuite synchronisée automatiquement avec cet iPhone, via Wi-Fi."
           }
         },
         "id" : {
@@ -13492,7 +13492,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "La latitude doit être comprise entre −90 et 90 ; la longitude, entre −180 et 180."
+            "value" : "La latitude doit être comprise entre −90 et 90 ; la longitude, entre −180 et 180."
           }
         },
         "id" : {
@@ -15872,7 +15872,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Plusieurs Mac peuvent contrôler cet iPhone. Choisissez celui qui pilote votre GPS : les autres restent en attente."
+            "value" : "Plusieurs Mac peuvent contrôler cet iPhone. Choisissez celui qui pilote votre GPS : les autres restent en attente."
           }
         },
         "id" : {
@@ -17556,7 +17556,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Pas destiné aux jeux en RA comme Pokémon GO : le GPS de l’appareil sert à la confidentialité, à la navigation et au développement."
+            "value" : "Pas destiné aux jeux en RA comme Pokémon GO : le GPS de l’appareil sert à la confidentialité, à la navigation et au développement."
           }
         },
         "id" : {
@@ -20723,7 +20723,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Des questions ? Nous sommes là pour vous aider."
+            "value" : "Des questions ? Nous sommes là pour vous aider."
           }
         },
         "id" : {
@@ -24862,7 +24862,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "La simulation s’exécute sur votre appareil : nous n’exploitons aucun serveur collectant des données."
+            "value" : "La simulation s’exécute sur votre appareil : nous n’exploitons aucun serveur collectant des données."
           }
         },
         "id" : {
@@ -27175,7 +27175,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Lors de votre première navigation, Safari demande l’autorisation d’accès. C’est votre accord qui permet à GeoSpoof de fonctionner : voici ce que vous verrez."
+            "value" : "Lors de votre première navigation, Safari demande l’autorisation d’accès. C’est votre accord qui permet à GeoSpoof de fonctionner : voici ce que vous verrez."
           }
         },
         "id" : {
@@ -29001,7 +29001,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Vous voulez aller au-delà de Safari ? GeoSpoof Pro peut définir le GPS réel d’un iPhone connecté pour la confidentialité et les tests d’apps, directement depuis ce Mac et sans jailbreak. C’est facultatif ; la simulation dans le navigateur est gratuite."
+            "value" : "Vous voulez aller au-delà de Safari ? GeoSpoof Pro peut définir le GPS réel d’un iPhone connecté pour la confidentialité et les tests d’apps, directement depuis ce Mac et sans jailbreak. C’est facultatif ; la simulation dans le navigateur est gratuite."
           }
         },
         "id" : {
@@ -30414,7 +30414,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Vous avez Pro : il ne vous manque qu’un Mac"
+            "value" : "Vous avez Pro : il ne vous manque qu’un Mac"
           }
         },
         "id" : {
