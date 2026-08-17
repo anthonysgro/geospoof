@@ -438,8 +438,8 @@ struct SpoofControlPanel: View {
         /// screen. The label says "Open Settings" rather than "Open Safari Settings" so it
         /// promises exactly what it delivers.
         case openAppSettings
-        /// The verify page, where switching GeoSpoof on for the site produces a
-        /// check-in and visible proof in one go.
+        /// The hosted activation page, which teaches the page-menu route, detects the
+        /// extension, and confirms with the reported location once it works.
         case openSafari
     }
 
@@ -588,17 +588,26 @@ struct SpoofControlPanel: View {
     }
 
     private func openSafari() {
-        // Opens our own verify page so the user can switch GeoSpoof on for the
-        // page (via the page menu) and immediately see geolocation, timezone,
-        // and leak checks reflect the spoofed location — which also fires the
-        // activation heartbeat. Note: iOS has no public API to force Safari
-        // specifically; this opens the user's default browser, which is Safari
-        // for the vast majority.
+        // The activation page, not /verify.
         //
-        // Shares verifyURL(campaign:) with the home-screen link so both follow the
-        // app's language. This previously hardcoded a bare `geospoof.com` host,
-        // which cost a redirect hop on every open.
-        UIApplication.shared.open(verifyURL(campaign: "verify-setup"))
+        // This used to open /verify, on the reasoning that enabling GeoSpoof there produces
+        // a check-in and visible proof in one go. True, but it lands the wrong user on the
+        // wrong page: the cards that offer this button are for someone whose extension has
+        // never run, or has gone quiet — so /verify greets them with a column of failed
+        // checks, which reads as a broken product rather than as setup they haven't done.
+        //
+        // /activate is built for exactly this: it teaches the page-menu route, detects the
+        // extension itself, and confirms with the reported location once it works — so it
+        // keeps the proof and adds the instructions. The "Verify Your Protection" link
+        // further down the screen is still the way to /verify, for people who are already
+        // working and want the detail.
+        //
+        // No `stage`: these cards mean the extension isn't running, so both halves of the
+        // walkthrough apply. The website-access card is the one that passes `grant`.
+        //
+        // iOS has no public API to force Safari specifically; this opens the user's default
+        // browser, which is Safari for the vast majority.
+        UIApplication.shared.open(AppLink.activationPage(campaign: "setup-card"))
     }
 
     /// One line for the two states that don't warrant a card.

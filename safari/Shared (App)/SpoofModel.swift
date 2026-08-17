@@ -3260,6 +3260,46 @@ enum AppLink {
         )!
     }
 
+    #if os(iOS)
+    /// The hosted Safari activation page, with the hints it needs to teach the right thing.
+    ///
+    /// Shared rather than built at each call site, because there are two — onboarding's
+    /// Safari step and Home's setup card — and the parameters are not decorative. Get
+    /// `safari_ui` wrong and the page describes a page-menu button that doesn't look like
+    /// that on the reader's OS; omit it and the page has to guess from a user agent that
+    /// iPadOS deliberately misreports.
+    ///
+    /// - Parameters:
+    ///   - campaign: the surface the click came from, for analytics.
+    ///   - stage: `"grant"` when the extension is already switched on and only website
+    ///     access is outstanding, so the page can drop the half that's already done.
+    ///     `nil` for the full walkthrough.
+    static func activationPage(campaign: String, stage: String? = nil) -> URL {
+        let base = site("/activate", campaign: campaign, localized: true)
+        var components = URLComponents(url: base, resolvingAgainstBaseURL: false)
+
+        // Safari's own chrome differs across these, and the page renders a screenshot and a
+        // gesture description per variant.
+        let safariUI: String
+        if #available(iOS 26.0, *) {
+            safariUI = "26"
+        } else {
+            safariUI = "18"
+        }
+
+        var queryItems = components?.queryItems ?? []
+        queryItems.append(URLQueryItem(name: "safari_ui", value: safariUI))
+        if let stage {
+            queryItems.append(URLQueryItem(name: "stage", value: stage))
+        }
+        components?.queryItems = queryItems
+
+        // `site(_:campaign:localized:)` always yields a valid URL; keep it if component
+        // reconstruction ever fails rather than dropping the link entirely.
+        return components?.url ?? base
+    }
+    #endif
+
     /// Platform segment of a `/go/proton` path. Note these are *not* the same
     /// strings as `source` above — the redirect table uses bare `ios`/`macos`.
     private static let protonPlatform: String = {

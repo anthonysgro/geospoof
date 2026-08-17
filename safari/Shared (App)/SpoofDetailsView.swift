@@ -964,28 +964,12 @@ struct OnboardingView: View {
     }
 
     private func openActivationPage(stage: String?) {
-        let activationURL = AppLink.site(
-            "/activate",
-            campaign: stage == nil ? "onboarding-activate" : "onboarding-grant",
-            localized: true
+        UIApplication.shared.open(
+            AppLink.activationPage(
+                campaign: stage == nil ? "onboarding-activate" : "onboarding-grant",
+                stage: stage
+            )
         )
-        var components = URLComponents(url: activationURL, resolvingAgainstBaseURL: false)
-        let safariUI: String
-        if #available(iOS 26.0, *) {
-            safariUI = "26"
-        } else {
-            safariUI = "18"
-        }
-        var queryItems = components?.queryItems ?? []
-        queryItems.append(URLQueryItem(name: "safari_ui", value: safariUI))
-        if let stage {
-            queryItems.append(URLQueryItem(name: "stage", value: stage))
-        }
-        components?.queryItems = queryItems
-
-        // AppLink always produces a valid URL; preserve that URL if component
-        // reconstruction ever fails rather than interrupting onboarding.
-        UIApplication.shared.open(components?.url ?? activationURL)
     }
     #endif
 }
