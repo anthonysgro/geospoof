@@ -29,6 +29,15 @@ struct SpoofControlPanel: View {
     /// it stays gone once dismissed. (Replaces the old auto-presented pitch
     /// sheet, which interrupted users mid-task — see `proDiscoverySection`.)
     @AppStorage("proCardDismissed") private var proCardDismissed = false
+    /// Whether the user dismissed the website-access card. Persisted for the same reason
+    /// `proCardDismissed` is: once told, stay told.
+    ///
+    /// This card is the one place the app acts on a guess. `ownDomainOnly` is *probably* a
+    /// fumbled prompt, but someone cautious might have granted exactly that to try GeoSpoof
+    /// on /verify without handing over every page they visit — and nothing can tell those
+    /// two users apart. So the heuristic picks the default and this lets the user overrule
+    /// it, which is what keeps a wrong guess from becoming a permanent nag.
+    @AppStorage("websiteAccessCardDismissed") private var websiteAccessCardDismissed = false
     #if os(macOS)
     @State private var showOnboarding = false
     #endif
@@ -272,10 +281,23 @@ struct SpoofControlPanel: View {
     /// someone who completed setup months ago reads as the app losing track.
     @ViewBuilder
     private var setupSection: some View {
-        switch controller.safariSetupState {
-        case .verifiedEnabled:
-            // The OS confirms it's on and it has run. Nothing to ask.
-            EmptyView()
+        // Checked ahead of the toggle states, because the toggle being on is not the same
+        // as GeoSpoof working. Safari asks for website access separately, in a page prompt,
+        // and an extension that is switched on without it changes nothing on any site. The
+        // OS query can't see that second consent — only the extension can, and it reports
+        // it on every check-in.
+        //
+        // Only a confirmed negative shows a card. `.unknown` means the extension hasn't
+        // reported yet, which is the normal state of a fresh install for its first few
+        // seconds, and putting a repair card in front of that user would be inventing a
+        // fault from an absence of evidence.
+        if controller.safariWebsiteAccess.warrantsRepair && !websiteAccessCardDismissed {
+            websiteAccessCard
+        } else {
+            switch controller.safariSetupState {
+            case .verifiedEnabled:
+                // The OS confirms it's on and it has run. Nothing to ask.
+                EmptyView()
 
         case .verifiedDisabled:
             // The one case the app can state as fact rather than infer, so the copy
@@ -290,8 +312,80 @@ struct SpoofControlPanel: View {
                 action: .openSettings
             )
 
-        case .inferred(let activity):
-            inferredSetupCard(activity)
+            case .inferred(let activity):
+                inferredSetupCard(activity)
+            }
+        }
+    }
+
+    /// The extension is on, and Safari isn't letting it touch websites.
+    ///
+    /// Worded for what we actually know. A per-site grant reports identically to no grant
+    /// at all — we confirmed that on device, where answering the prompt with "Always Allow
+    /// on This Website" while standing on geospoof.com granted `*://*.geospoof.com/*` and
+    /// nothing else — so this must not claim the user has no protection anywhere. "Not on
+    /// every website" is true in both cases; "not working" would be false in one of them.
+    ///
+    /// Sends them to Settings rather than trying to bring Safari's prompt back. That prompt
+    /// only appears when a site's permission is unset, so there is no way to summon it on
+    /// demand — but the same choice lives in Settings as a durable control, where GeoSpoof's
+    /// pane has an all-websites permission that can simply be set to Allow. That is the one
+    /// route that works no matter which of the four buttons they originally picked, and
+    /// `.openSettings` already points at it.
+    ///
+    /// No `showsSteps`: the three-step enable tutorial teaches switching the extension on,
+    /// which is already done. Showing it here would send them looking for a toggle they
+    /// already found.
+    /// Routed by OS, because the destination that can fix this differs and one of them
+    /// doesn't exist below 26.2.
+    ///
+    /// `openSafariExtensionSettings()` is a no-op before then — it guards on availability
+    /// and returns false — so offering `.openSettings` there would print a button that
+    /// does nothing. Every other card avoids this by construction: the two `.inferred`
+    /// cards are the pre-26.2 path and both use `.openSafari`, and `.verifiedDisabled`
+    /// can only be reached once the OS answers, which is 26.2+. This card is reachable on
+    /// both, so it has to choose.
+    @ViewBuilder
+    private var websiteAccessCard: some View {
+        if controller.canOpenSafariExtensionSettings {
+            safariCard(
+                header: "Allow GeoSpoof on Websites",
+                message: "GeoSpoof is on in Safari but isn't allowed on every website yet, so most sites still see your real location. In Settings, set its website access to Allow.",
+                lastSeen: nil,
+                showsSteps: false,
+                action: .openSettings
+            )
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                Button(role: .destructive) {
+                    websiteAccessCardDismissed = true
+                } label: {
+                    Label("Dismiss", systemImage: "xmark")
+                }
+            }
+        } else {
+            // Below 26.2 there is no API that opens Safari's extension pane, and the
+            // permission can't be changed from Safari itself on these versions — so the
+            // button gets them into the Settings app and the message carries the rest of
+            // the way. Landing short of the destination is worth it to save them finding
+            // Settings from the Home screen, as long as the label doesn't overpromise.
+            //
+            // The path names the "Apps" level, which is correct for every version this
+            // branch runs on: the deployment target is 18.0, and Settings gained that
+            // grouping in 18.
+            safariCard(
+                header: "Allow GeoSpoof on Websites",
+                message: "GeoSpoof is on in Safari but isn't allowed on every website yet, so most sites still see your real location. In Settings, go to Apps › Safari › Extensions › GeoSpoof and set website access to Allow.",
+                lastSeen: nil,
+                showsSteps: false,
+                action: .openAppSettings
+            )
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                Button(role: .destructive) {
+                    websiteAccessCardDismissed = true
+                } label: {
+                    Label("Dismiss", systemImage: "xmark")
+                }
+            }
         }
     }
 
@@ -335,6 +429,15 @@ struct SpoofControlPanel: View {
     private enum SafariCardAction: Equatable {
         /// Settings, straight to GeoSpoof's extension pane (iOS 26.2+).
         case openSettings
+        /// The Settings app, landing on GeoSpoof's own pane.
+        ///
+        /// The fallback for iOS 18–26.1, where no API opens Safari's extension pane. It
+        /// does not arrive at the destination — the user still has to back out and walk to
+        /// Apps › Safari › Extensions, which is why the card spells that path out — but it
+        /// does put them in the right app instead of leaving them to find it from the Home
+        /// screen. The label says "Open Settings" rather than "Open Safari Settings" so it
+        /// promises exactly what it delivers.
+        case openAppSettings
         /// The verify page, where switching GeoSpoof on for the site produces a
         /// check-in and visible proof in one go.
         case openSafari
@@ -348,7 +451,13 @@ struct SpoofControlPanel: View {
         message: LocalizedStringKey,
         lastSeen: Date?,
         showsSteps: Bool,
-        action: SafariCardAction
+        /// `nil` for a card with no primary button.
+        ///
+        /// Exists for the one state the app can describe but cannot navigate to: below iOS
+        /// 26.2 there is no API that opens Safari's extension pane, so a card about website
+        /// access has nowhere legitimate to send the user and says the path instead. Better
+        /// no button than one that lands somewhere it didn't promise.
+        action: SafariCardAction?
     ) -> some View {
         Section {
             VStack(alignment: .leading, spacing: 14) {
@@ -404,6 +513,18 @@ struct SpoofControlPanel: View {
                     }
                     .glassButtonStyle(prominent: true)
                     .controlSize(.large)
+                case .openAppSettings:
+                    Button {
+                        openAppSettings()
+                    } label: {
+                        Label("Open Settings", systemImage: "gearshape")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .glassButtonStyle(prominent: true)
+                    .controlSize(.large)
+                case nil:
+                    // Nowhere to send them. The message carries the path instead.
+                    EmptyView()
                 }
 
                 // An explicit `HStack` rather than a `Label`, for the gap. Inside a
@@ -454,6 +575,18 @@ struct SpoofControlPanel: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// Open the Settings app on GeoSpoof's own pane.
+    ///
+    /// `openSettingsURLString` is the only documented way into Settings, and it always
+    /// lands on the calling app's page — there is no public route to another app's pane, so
+    /// Safari's extension settings can't be reached directly below iOS 26.2. The
+    /// undocumented `prefs:root=` scheme does reach it, and is deliberately not used here:
+    /// apps have been rejected for it, and one setup shortcut is not worth a submission.
+    private func openAppSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
+    }
+
     private func openSafari() {
         // Opens our own verify page so the user can switch GeoSpoof on for the
         // page (via the page menu) and immediately see geolocation, timezone,
@@ -480,6 +613,33 @@ struct SpoofControlPanel: View {
     /// here rather than saying the same thing twice.
     @ViewBuilder
     private var safariStatusLine: some View {
+        switch controller.safariWebsiteAccess {
+        case .none, .ownDomainOnly:
+            // The card above is already asking for this, and it says more than a line can.
+            // Repeating it here would put the same request twice on one screen; claiming
+            // "running in Safari" underneath it would contradict the card outright.
+            //
+            // Still silent when the card has been dismissed. Dismissing it means the user
+            // has told us this is how they want it, and answering that by reinstating the
+            // green claim would be both a nag and a lie.
+            EmptyView()
+        case .chosenSites:
+            // A working setup, scoped on purpose — so it reports rather than warns. Not the
+            // green every-site line, which would claim protection they deliberately didn't
+            // ask for, and not a warning colour either, because nothing is wrong.
+            Label(
+                "GeoSpoof is running in Safari on the sites you've allowed.",
+                systemImage: "checkmark.circle"
+            )
+            .foregroundStyle(.secondary)
+        case .unknown, .everySite:
+            verifiedSafariStatusLine
+        }
+    }
+
+    /// The status line for every case except a confirmed missing website access.
+    @ViewBuilder
+    private var verifiedSafariStatusLine: some View {
         switch controller.safariSetupState {
         case .verifiedEnabled:
             // Now a verified statement rather than an inference from a timestamp, so

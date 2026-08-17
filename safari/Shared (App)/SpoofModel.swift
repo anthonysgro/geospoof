@@ -74,6 +74,7 @@ enum SafariActivity: Equatable {
         return false
     }
 
+
     /// Whether the extension has ever run for this install. False only for `never`,
     /// which is what separates "needs teaching" from "needs re-checking".
     var hasEverRun: Bool { lastSeen != nil }
@@ -159,6 +160,52 @@ enum SafariSetupState: Equatable {
     case inferred(SafariActivity)
 }
 
+/// Whether Safari lets the extension run on every website — the consent the OS gives the
+/// containing app no way to query.
+///
+/// Three cases, and the third is the point. "Denied" and "haven't been told" look the same
+/// to a Bool, and conflating them would have the app report a problem for every install
+/// whose extension simply hasn't checked in yet.
+enum SafariWebsiteAccess: Equatable {
+    /// The extension hasn't reported. Show nothing: this is absence of evidence.
+    case unknown
+
+    /// Every-site access granted. The only state in which "protected everywhere" is true.
+    case everySite
+
+    /// Nothing granted at all. GeoSpoof changes nothing on any page.
+    case none
+
+    /// Granted on specific sites the user chose, and GeoSpoof's own domain is not the only
+    /// one among them.
+    ///
+    /// A deliberate configuration, not a fault. Someone who allowed GeoSpoof on one site
+    /// because they would rather it didn't read every page they visit has a setup that
+    /// works exactly as they asked. The app must not offer to repair it — a card they can
+    /// never satisfy would sit on their Home screen forever, which is the same mistake as
+    /// showing the enable tutorial to an `idle` user.
+    case chosenSites
+
+    /// Granted on GeoSpoof's own domain and nothing else.
+    ///
+    /// Treated as a likely mistake rather than a choice, because of how it comes about:
+    /// onboarding sends the user to geospoof.com, Safari's prompt fires there, and the
+    /// middle button of three grants `*://*.geospoof.com/*`. The result is an install that
+    /// spoofs the vendor's own marketing site and nowhere the user actually browses.
+    ///
+    /// "Likely", not certain — someone cautious might grant exactly this to try GeoSpoof on
+    /// /verify without handing over every page. No inference can separate the two, which is
+    /// why the card this drives is dismissible rather than merely well-guessed.
+    case ownDomainOnly
+
+    /// Whether GeoSpoof is protecting everything the user browses.
+    var isEverywhere: Bool { self == .everySite }
+
+    /// Whether the app should offer to fix this. False for a deliberate choice, and false
+    /// for `unknown` — absence of evidence is not a fault.
+    var warrantsRepair: Bool { self == .none || self == .ownDomainOnly }
+}
+
 enum AppGroup {
     static let suite = "group.com.moonloaf.geospoof"
 
@@ -171,6 +218,16 @@ enum AppGroup {
     // native-handler invocation, so the app can tell whether GeoSpoof is
     // actually running in Safari.
     static let extensionLastSeenAt = "extension_lastSeenAt"
+    // Extension -> App: whether Safari lets GeoSpoof run on every website. Absent until
+    // the extension reports, which is `.unknown` and not `.notGranted`. Sits beside the
+    // heartbeat rather than under `region_*` because it describes the extension's
+    // environment, not the spoofed region.
+    static let extensionWebsiteAccess = "extension_websiteAccess"
+    // Extension -> App: the granted origins verbatim, and whether Private Browsing is
+    // allowed. Reported but not yet consumed by any user-facing copy — they exist so the
+    // debug screen can show what Safari actually answers before anything is built on them.
+    static let extensionWebsiteAccessOrigins = "extension_websiteAccessOrigins"
+    static let extensionPrivateBrowsingAccess = "extension_privateBrowsingAccess"
 
     /// How recently the extension must have checked in before the app or a widget
     /// will say, in the present tense, that GeoSpoof is running in Safari.
@@ -992,6 +1049,25 @@ final class SpoofController: ObservableObject {
     /// OS won't say. Refreshed by `refreshSafariEnablement()`.
     @Published private(set) var safariEnablement: SafariEnablement = .unknown
 
+    /// Whether Safari lets the extension run on every website, as last reported by the
+    /// extension itself.
+    ///
+    /// The second of Safari's two consents, and the one nothing on this side can observe:
+    /// `SFSafariExtensionManager` answers for the toggle only. Without it the app showed
+    /// "GeoSpoof is running in Safari" for an extension that was switched on and unable to
+    /// read a single page — the failure `SafariActivity.unverified` already names as the
+    /// one worth interrupting for.
+    ///
+    /// `.unknown` until the extension reports, and it must stay silent in the UI. A user
+    /// whose extension simply hasn't checked in yet has nothing wrong with their setup,
+    /// and this defaulting to "denied" would accuse every fresh install of being broken.
+    /// Same reason `safariEnablement` keeps `.unknown` apart from `.disabled`.
+    ///
+    /// Only as fresh as `extensionLastSeen`, since both arrive on the same check-in.
+    /// Anything acting on this should consider that stamp too, or a user who revokes
+    /// access and stops browsing keeps whatever answer was true when they last did.
+    @Published private(set) var safariWebsiteAccess: SafariWebsiteAccess = .unknown
+
     /// What the UI should actually say about Safari, from both signals together.
     ///
     /// When the OS answers, inference stops entirely — there is no reason to age a
@@ -1058,10 +1134,35 @@ final class SpoofController: ObservableObject {
         case .inferred: resolved = "inferred (heuristic path)"
         }
 
+        let access: String
+        switch safariWebsiteAccess {
+        case .unknown: access = "unknown (extension hasn't reported)"
+        case .everySite: access = "every website"
+        case .none: access = "NONE — nothing granted"
+        case .chosenSites: access = "chosen sites (deliberate — no card shown)"
+        case .ownDomainOnly: access = "geospoof.com only (likely a fumbled prompt)"
+        }
+
+        // Raw, unsummarised, straight from the extension. These two aren't modelled as
+        // enums yet on purpose: nothing consumes them, and the point of showing them is to
+        // find out what Safari actually answers before deciding what they should mean.
+        let prefs = Self.readSharedPrefs(suite: AppGroup.suite)
+        let origins = prefs?[AppGroup.extensionWebsiteAccessOrigins] as? String
+            ?? "(not reported)"
+        let privateBrowsing: String
+        if let allowed = prefs?[AppGroup.extensionPrivateBrowsingAccess] as? Bool {
+            allowed ? (privateBrowsing = "allowed") : (privateBrowsing = "NOT allowed")
+        } else {
+            privateBrowsing = "(not reported — API may not exist on Safari)"
+        }
+
         return """
         OS toggle: \(enablement)
         Check-in: \(activity)
         Resolved: \(resolved)
+        Website access: \(access)
+        Granted origins: \(origins)
+        Private Browsing: \(privateBrowsing)
         Deep link available: \(canOpenSafariExtensionSettings)
         """
     }
@@ -1952,6 +2053,56 @@ final class SpoofController: ObservableObject {
         }
     }
 
+    /// GeoSpoof's own web origins, as Safari writes them in a granted-origins list.
+    ///
+    /// Kept in step with `ACTIVATION_ORIGINS` in the extension's `activation-responder.ts`,
+    /// which is the reason a grant limited to these exists at all: that responder only runs
+    /// on these hosts, so they are where onboarding puts the user when Safari asks.
+    private static let ownWebOriginPatterns: Set<String> = [
+        "*://*.geospoof.com/*",
+        "*://geospoof.com/*",
+        "*://www.geospoof.com/*",
+        "https://geospoof.com/*",
+        "https://www.geospoof.com/*",
+    ]
+
+    /// Turn the extension's two raw reports into the four states the UI distinguishes.
+    ///
+    /// `static` and dependency-free so the classification can be reasoned about — and
+    /// tested — without a controller or an App Group.
+    ///
+    /// The origins list is what separates a deliberate per-site choice from a fumbled
+    /// prompt, so a report without it can only fall back to the boolean, and then the
+    /// safest reading of "not every site" is the one that asks for nothing.
+    static func classifyWebsiteAccess(
+        allSites: Bool?,
+        originsJSON: String?
+    ) -> SafariWebsiteAccess {
+        // No answer at all. Silence.
+        guard allSites != nil || originsJSON != nil else { return .unknown }
+
+        if allSites == true { return .everySite }
+
+        guard let originsJSON,
+              let data = originsJSON.data(using: .utf8),
+              let origins = try? JSONDecoder().decode([String].self, from: data) else {
+            // Boolean says not-every-site but we can't see which sites. Don't guess a
+            // fault: `chosenSites` is the reading that neither overclaims protection nor
+            // demands the user change anything.
+            return allSites == false ? .chosenSites : .unknown
+        }
+
+        // Safari reports the wildcard here once every-site is granted, which should already
+        // have been caught by the boolean — but the two come from different APIs, and
+        // trusting whichever one says "everything" keeps them from disagreeing.
+        if origins.contains("<all_urls>") || origins.contains("*://*/*") { return .everySite }
+
+        if origins.isEmpty { return .none }
+
+        let beyondOurOwn = origins.contains { !ownWebOriginPatterns.contains($0) }
+        return beyondOurOwn ? .chosenSites : .ownDomainOnly
+    }
+
     /// Re-derive `safariActivity` from the current stamp and the clock.
     private func refreshSafariActivity(now: Date = Date()) {
         let updated = SafariActivity(lastSeen: extensionLastSeen, now: now)
@@ -2409,6 +2560,23 @@ final class SpoofController: ObservableObject {
                 Self.scheduleWidgetReload()
             }
         }
+
+        // Website access, read on the same path as the heartbeat and for the same reason:
+        // it arrives on the same check-in, and it changes without any region state
+        // changing. A missing key stays `.unknown` rather than becoming a fault — the
+        // extension omits what it can't answer, and an older extension sends nothing at
+        // all, so absence is not a denial.
+        let reportedAccess = Self.classifyWebsiteAccess(
+            allSites: prefs?[AppGroup.extensionWebsiteAccess] as? Bool,
+            originsJSON: prefs?[AppGroup.extensionWebsiteAccessOrigins] as? String
+        )
+        if safariWebsiteAccess != reportedAccess {
+            Log.bridge.debug(
+                "Safari website access: \(String(describing: safariWebsiteAccess)) → \(String(describing: reportedAccess))"
+            )
+            safariWebsiteAccess = reportedAccess
+        }
+
         // Re-derive the activity state on every refresh, not just when the stamp
         // moves — otherwise nothing ever ages `recent` into `stale`.
         //

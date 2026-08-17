@@ -27,6 +27,26 @@ enum RegionKey {
     // running in Safari — the one signal iOS otherwise can't surface.
     static let lastSeenAt  = "extension_lastSeenAt"
 
+    // Extension -> App: whether Safari currently lets GeoSpoof run on every website.
+    // Written only when the extension actually reports it, so a missing key means "no
+    // answer yet" and not "denied" — the app has to be able to stay quiet when it
+    // doesn't know.
+    //
+    // Deliberately not a `region_*` key. Those describe the active spoofed region for
+    // display; this describes the extension's own environment, which is what
+    // `extension_lastSeenAt` does, so it belongs beside that instead.
+    static let websiteAccess = "extension_websiteAccess"
+
+    // Extension -> App: the origins Safari has actually granted, verbatim from
+    // `permissions.getAll()`. Distinguishes "allowed nowhere" from "allowed on one site"
+    // from "allowed everywhere", which the boolean above collapses.
+    static let websiteAccessOrigins = "extension_websiteAccessOrigins"
+
+    // Extension -> App: whether the extension may run in Private Browsing. A third
+    // consent, separate from the toggle and from website access, and its own protection
+    // gap — allowed everywhere but not privately means no spoofing in a private tab.
+    static let privateBrowsingAccess = "extension_privateBrowsingAccess"
+
     // Extension -> App: the currently active spoofed region (for display).
     static let enabled     = "region_enabled"
     static let displayName = "region_displayName"
@@ -95,6 +115,10 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         recordExtensionActivity()
 
         let request = context.inputItems.first as? NSExtensionItem
+        // Read before the type switch, because it is envelope rather than payload: the
+        // extension attaches it to whatever message it happened to be sending, the same
+        // way the heartbeat above is recorded for any invocation. Tying it to one message
+        // type would make the freshest signal the app has depend on which call arrived.
 
         let message: Any?
         if #available(iOS 15.0, macOS 11.0, *) {
@@ -104,6 +128,14 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
         }
 
         var responsePayload: [String: Any] = ["ok": true]
+
+        if let dict = message as? [String: Any] {
+            recordAccessReport(
+                allSites: dict["websiteAccess"] as? Bool,
+                origins: dict["websiteAccessOrigins"] as? String,
+                privateBrowsing: dict["privateBrowsingAccess"] as? Bool
+            )
+        }
 
         if let dict = message as? [String: Any], let type = dict["type"] as? String {
             writeDebug(type: type)
@@ -163,6 +195,28 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
     private func recordExtensionActivity() {
         writeSharedPrefs { dict in
             dict[RegionKey.lastSeenAt] = Date().timeIntervalSince1970
+        }
+    }
+
+    /// Record whether Safari lets the extension run on every website.
+    ///
+    /// A `nil` report leaves the stored value alone rather than clearing it. The
+    /// extension omits the field when it cannot answer — an engine without the origins
+    /// permissions API, or a build predating this — and treating that as "denied" would
+    /// have the app announce a problem on the strength of no evidence. Leaving the last
+    /// real answer in place keeps the app on the freshest fact it actually has, and
+    /// `extension_lastSeenAt` is what tells it how old that is.
+    private func recordAccessReport(allSites: Bool?, origins: String?, privateBrowsing: Bool?) {
+        // Nothing reported at all, so nothing to write — don't churn the plist on the
+        // messages that carry no access fields.
+        guard allSites != nil || origins != nil || privateBrowsing != nil else { return }
+        writeSharedPrefs { dict in
+            // Each field written only if present, and never cleared. Per-field rather than
+            // all-or-nothing because they come from three separate APIs and an engine can
+            // answer some and not others.
+            if let allSites { dict[RegionKey.websiteAccess] = allSites }
+            if let origins { dict[RegionKey.websiteAccessOrigins] = origins }
+            if let privateBrowsing { dict[RegionKey.privateBrowsingAccess] = privateBrowsing }
         }
     }
 

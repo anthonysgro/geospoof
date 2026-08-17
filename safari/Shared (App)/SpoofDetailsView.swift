@@ -394,7 +394,13 @@ struct OnboardingView: View {
         // would be a second trip to a page the user is already on. The deep link is a
         // better way to reach the toggle and no way at all to reach the grant, so the
         // route that uses it is the route that has to ask separately.
-        if canDeepLinkToSettings {
+        //
+        // It is also in the flow on the hosted-page route once the extension has
+        // *confirmed* website access is missing. That route sends the user to the page to
+        // do both halves, so on the way through this step would be a second trip to a page
+        // they are already on — but a confirmed negative means the second half didn't
+        // happen, and then it isn't a repeat, it's the correction.
+        if canDeepLinkToSettings || controller.safariWebsiteAccess.warrantsRepair {
             return [.welcome, .location, .enable, .grant, .safariReady]
         }
         return [.welcome, .location, .enable, .safariReady]
@@ -646,6 +652,29 @@ struct OnboardingView: View {
     private func showSafariReady() {
         guard controller.hasLocation else { return }
         guard path.last != .safariReady else { return }
+
+        // The page's word isn't sufficient on its own, and this is the one place both
+        // routes converge, so it is the one place worth checking.
+        //
+        // The activation page confirms only that GeoSpoof is running *on that page*. A
+        // user who answers Safari's prompt with "Always Allow on This Website" while
+        // standing on geospoof.com grants `*://*.geospoof.com/*` and nothing else — so the
+        // page's content script runs, the page reports success, and it deep-links back
+        // here to announce that Safari is ready while every other site on the internet
+        // still sees the real location. That is not a hypothetical: it is what picking the
+        // middle button of a three-button dialog does on the exact page this flow sends
+        // people to, and it is reproducible.
+        //
+        // Only a confirmed negative diverts. `.unknown` has to pass through, or a fresh
+        // install whose extension hasn't reported yet gets held back for lack of evidence
+        // — which is the same overclaim in the other direction.
+        // Diverts for the two states that look like mistakes, and not for `chosenSites` —
+        // a user who scoped GeoSpoof to particular sites on purpose has finished setup, and
+        // holding them on the grant screen would refuse to accept an answer they meant.
+        if controller.safariWebsiteAccess.warrantsRepair {
+            showGrantStep()
+            return
+        }
         // Both entrances funnel through here, which makes this the only place that
         // knows a success haptic is roughly a push-animation away. The engine is
         // reliably cold at this point — the app was backgrounded while the user
@@ -655,6 +684,17 @@ struct OnboardingView: View {
         Haptics.prepare()
         hasReachedSafariReady = true
         path.append(.safariReady)
+    }
+
+    /// Send the user to the website-access step, from wherever they are.
+    ///
+    /// Guarded on the step being in the flow rather than assuming it: on the hosted-page
+    /// route it is only present once a negative has been confirmed, which is exactly when
+    /// this is called, but reading `steps` keeps the two from having to agree by memory.
+    private func showGrantStep() {
+        guard steps.contains(.grant) else { return }
+        guard path.last != .grant else { return }
+        path.append(.grant)
     }
 
     /// Advance on the extension's own check-in, but only on evidence produced

@@ -29,6 +29,7 @@ import {
 import { syncVpnLocation, clearIpGeoCache } from "./vpn-sync";
 import { broadcastSettingsToTabs } from "./tabs";
 import { updateBadge } from "./badge";
+import { collectAccessReport } from "./website-access";
 
 const logger = createLogger("BG");
 
@@ -101,10 +102,30 @@ function round4(v: number): number {
 export async function adoptPendingSettingsFromApp(): Promise<void> {
   if (!__SAFARI__) return;
 
+  // Rides the request this function was already sending, rather than a message of its
+  // own. The native handler stamps its heartbeat from every invocation regardless of
+  // type, and this call already fires on background boot, tab switch, every navigation,
+  // popup open and every content-script boot — so attaching the reading here costs no
+  // extra native round trip and no extra App Group write, and it refreshes at exactly the
+  // moments the answer can have changed.
+  //
+  // Sent as an envelope field, not as settings: it is an observation about the
+  // environment, and the handler treats it that way. Omitted entirely when unknown, so
+  // the app can tell "not granted" from "no answer".
+  const access = await collectAccessReport();
+
   let response: PendingResponse | undefined;
   try {
     response = (await browser.runtime.sendNativeMessage("com.moonloaf.geospoof", {
       type: "GET_PENDING_SETTINGS",
+      // Spread rather than assigned, so a field the engine couldn't answer is absent from
+      // the message entirely. The handler treats absent as "no answer" and leaves the
+      // stored value alone, which is what keeps "unknown" distinct from "denied".
+      ...(access.allSites === undefined ? {} : { websiteAccess: access.allSites }),
+      ...(access.origins === undefined ? {} : { websiteAccessOrigins: access.origins }),
+      ...(access.privateBrowsing === undefined
+        ? {}
+        : { privateBrowsingAccess: access.privateBrowsing }),
     })) as PendingResponse;
   } catch (error) {
     logger.debug("adoptPendingSettingsFromApp: native message failed:", error);
