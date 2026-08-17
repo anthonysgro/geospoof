@@ -21,6 +21,13 @@ const onboarding = readFileSync(
   join(ROOT, "safari", "Shared (App)", "SpoofDetailsView.swift"),
   "utf8"
 );
+/**
+ * The activation URL is assembled in `AppLink`, not in the view that opens it.
+ * Read separately so the `safari_ui` assertion can follow it there — it used to be
+ * built inline in the onboarding view, and asserting against that file kept passing
+ * vacuously right up until the code moved, then failed for the wrong reason.
+ */
+const model = readFileSync(join(ROOT, "safari", "Shared (App)", "SpoofModel.swift"), "utf8");
 const activationPage = readFileSync(
   join(ROOT, "site", "src", "routes", "{-$locale}.activate.tsx"),
   "utf8"
@@ -85,7 +92,13 @@ describe("Safari onboarding return contract", () => {
 
     // Each row says what would move it. The Mac requirement especially: it is
     // what produces refunds when discovered only after purchase.
-    expect(safariReadyView).toContain('detail: "Needs Pro and a Mac"');
+    //
+    // The Device GPS detail is now conditional on ownership — an owner is missing only
+    // the Mac — so both branches are asserted rather than a single literal `detail:`.
+    // The non-owner branch is the one carrying the refund-relevant claim, and the owner
+    // branch has to stay a shared constant so the row and the sheet behind it agree.
+    expect(safariReadyView).toContain('"Needs Pro and a Mac"');
+    expect(safariReadyView).toContain("DeviceGpsPitch.ownedNeedsMac");
     expect(safariReadyView).toContain('detail: "Only a VPN can change this"');
 
     // The section header names a category, never a capability. GeoSpoof does
@@ -103,7 +116,16 @@ describe("Safari onboarding return contract", () => {
   it("opens Device GPS as a sheet, and closes it before the paywall", () => {
     // A sheet, not a push: the close screen hides its navigation bar, so a pushed
     // detail would strand the user with no way back.
-    expect(safariReadyView).toContain("adaptiveModalCover(isPresented: $showDeviceGps)");
+    //
+    // A plain `.sheet` rather than `adaptiveModalCover`, which is the deliberate
+    // choice recorded beside the call: that presenter sends iPad to a fullscreen
+    // cover, and this content is a header, three lines and a button, so the cover
+    // is mostly empty. `explainerSheetPresentation()` is what sizes it instead, so
+    // it is asserted here — without it the sheet reverts to a full-height card and
+    // the reason for leaving `adaptiveModalCover` is silently undone.
+    expect(safariReadyView).toContain(".sheet(isPresented: $showDeviceGps)");
+    expect(safariReadyView).toContain("explainerSheetPresentation()");
+    expect(safariReadyCode).not.toContain("adaptiveModalCover");
     expect(safariReadyView).not.toContain("NavigationLink");
 
     // The paywall is presented by RootView, which also hosts this flow, so the
@@ -116,15 +138,36 @@ describe("Safari onboarding return contract", () => {
     // not find two different accounts of what they would be buying.
     expect(onboarding).toContain("struct DeviceGpsPitch");
     expect(onboarding).toContain("struct DeviceGpsSheet");
+
+    // The GPS tab embeds the whole pitch view rather than reassembling it from
+    // parts. That is what makes divergence structurally impossible, and it is why
+    // the old assertion on a `DeviceGpsPitch.point(text)` call site no longer holds:
+    // the per-line helper became `PitchPoint` and is now used *inside* the pitch,
+    // so the tab has nothing left to get wrong.
     expect(sceneDelegate).toContain("DeviceGpsPitch { router.showPaywall = true }");
-    expect(sceneDelegate).toContain("DeviceGpsPitch.point(text)");
+    expect(sceneDelegate).toContain("Text(DeviceGpsPitch.compatibilityCaveat)");
+    expect(onboarding).toContain("struct PitchPoint");
+    expect(onboarding).toMatch(/PitchPoint\("/);
   });
 
   it("passes the native Safari UI generation to the activation page", () => {
-    expect(onboarding).toContain("if #available(iOS 26.0, *)");
-    expect(onboarding).toContain('URLQueryItem(name: "safari_ui", value: safariUI)');
+    // Built in `AppLink`, not in the view — see the `model` read above.
+    expect(model).toContain("if #available(iOS 26.0, *)");
+    expect(model).toContain('URLQueryItem(name: "safari_ui", value: safariUI)');
     expect(activationPage).toContain("resolveSafariSetupVariant");
     expect(activationPage).toContain("safari_ui");
+  });
+
+  it("names the same page control in the app as the page it hands off to", () => {
+    // The app used to say "page menu" on every OS while the page it opens branched
+    // on `safari_ui`, so anyone below iOS 26 read one control name in the app and a
+    // different one on the page. Both sides now gate on the same availability check.
+    //
+    // Asserted as a pair deliberately: either name alone is correct for one cohort
+    // and wrong for the other, and the pre-26.2 route spans both.
+    expect(onboarding).toContain('return "Tap the page menu"');
+    expect(onboarding).toContain('return "Tap Page Settings"');
+    expect(activationPage).toContain("waiting.pageSettings");
   });
 
   it("ships the shared Apple page-control glyph used by both variants", () => {

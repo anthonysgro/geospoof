@@ -163,13 +163,22 @@ describe("verify link locale mapping", () => {
 });
 
 describe("verify link construction", () => {
-  it("builds both verify URLs through the shared locale-aware helper", () => {
-    // Two entry points (home link, setup card). Both must go through
-    // verifyURL(campaign:) or one of them silently stops following the language.
+  it("builds every verify URL through the shared locale-aware helper", () => {
+    // One entry point now: the "Verify Your Protection" link. Whatever calls
+    // verifyURL(campaign:) must go through it, or that link stops following the
+    // language.
+    //
+    // This asserted two campaigns until the setup card stopped opening /verify.
+    // That was deliberate: the card is shown to someone whose extension has never
+    // run or has gone quiet, and /verify greets that person with a column of failed
+    // checks, so it now opens the activation page — which keeps the proof and adds
+    // the instructions. Asserted below rather than dropped, so the card can't drift
+    // back to a hardcoded URL and lose the locale prefix on the way.
     const calls = [...controlPanel.matchAll(/verifyURL\(campaign:\s*"([^"]+)"\)/g)].map(
       (m) => m[1]
     );
-    expect(calls.sort()).toEqual(["verify", "verify-setup"]);
+    expect(calls.sort()).toEqual(["verify"]);
+    expect(controlPanel).toContain('AppLink.activationPage(campaign: "setup-card")');
   });
 
   it("has no hardcoded verify URL left behind", () => {
@@ -189,11 +198,19 @@ describe("verify link construction", () => {
   });
 
   it("routes activation through the same locale-aware site helper", () => {
-    const start = details.indexOf("private func openSafariActivationPage()");
-    const body = details.slice(start, details.indexOf("\n    }", start));
-    expect(body).toMatch(
-      /AppLink\.site\(\s*"\/activate",\s*campaign:\s*"onboarding-activate",\s*localized:\s*true\s*\)/
-    );
+    // The URL is assembled once, in `AppLink.activationPage`, because it now carries
+    // query hints (`safari_ui`, `stage`) that every caller needs and none should
+    // rebuild. So the locale guarantee lives there rather than at the call site,
+    // which is where this used to assert it.
+    const start = model.indexOf("static func activationPage(");
+    const body = model.slice(start, model.indexOf("\n    }", start));
+    expect(body).toMatch(/site\(\s*"\/activate",\s*campaign:\s*campaign,\s*localized:\s*true\s*\)/);
+
+    // And every caller goes through it, so none can bypass the locale prefix.
+    const callers = [...details.matchAll(/AppLink\.activationPage\(/g)];
+    expect(callers.length).toBeGreaterThan(0);
+    expect(details).toContain("private func openSafariActivationPage()");
+    expect(details).toContain('openActivationPage(stage: "grant")');
   });
 
   it("reads the language from the bundle, not the raw system preference", () => {
