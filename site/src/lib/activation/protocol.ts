@@ -36,6 +36,21 @@ export type ActivationBrowser =
   | "unknown"
 export type SafariSetupVariant = "ios18" | "ios26"
 
+/**
+ * How much of Safari setup is still outstanding when the user arrives.
+ *
+ * `enable` is the historical assumption and stays the default: the extension is off,
+ * so the page teaches finding it in the page menu, switching it on, and allowing site
+ * access.
+ *
+ * `grant` is the iOS 26.2+ route, where the app sent the user to Settings via
+ * `SFSafariSettings.openExtensionsSettings` and the toggle is already on. Only website
+ * access is left. Re-teaching the toggle there sends people hunting for a switch they
+ * already flipped, and an instruction that doesn't match what you're looking at is how
+ * a setup page loses credibility.
+ */
+export type ActivationStage = "enable" | "grant"
+
 export function createActivationNonce(): string {
   return globalThis.crypto.randomUUID()
 }
@@ -118,4 +133,19 @@ export function resolveSafariSetupVariant(
   }
 
   return "ios26"
+}
+
+/**
+ * Select which half of Safari setup the page should teach.
+ *
+ * Only the app can know this — it is the thing that either deep-linked to Settings or
+ * sent the user here to do everything — so there is no user-agent fallback. Anything
+ * unrecognised, including a direct visit with no hint, falls back to `enable`: teaching
+ * a step the user has already done wastes their time, whereas omitting one they haven't
+ * leaves them stuck.
+ */
+export function resolveActivationStage(
+  hint: string | null | undefined
+): ActivationStage {
+  return hint === "grant" ? "grant" : "enable"
 }

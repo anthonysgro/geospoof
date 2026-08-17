@@ -11,6 +11,7 @@ import {
 
 import type {
   ActivationBrowser,
+  ActivationStage,
   SafariSetupVariant,
 } from "@/lib/activation/protocol"
 import type { Dictionary, Locale } from "@/lib/i18n"
@@ -37,6 +38,7 @@ import {
   detectActivationBrowser,
   isActivationReadyMessage,
   makeActivationPing,
+  resolveActivationStage,
   resolveSafariSetupVariant,
 } from "@/lib/activation/protocol"
 
@@ -115,6 +117,24 @@ function useSafariSetupVariant(): SafariSetupVariant {
   }, [])
 
   return variant
+}
+
+/**
+ * Which half of setup is outstanding, from the app's `stage` parameter.
+ *
+ * Defaults to `enable` and resolves in an effect for the same reason as the variant
+ * above: the query string isn't readable during SSR, and guessing wrong in the initial
+ * render would flash the wrong instructions.
+ */
+function useActivationStage(): ActivationStage {
+  const [stage, setStage] = React.useState<ActivationStage>("enable")
+
+  React.useEffect(() => {
+    const hint = new URLSearchParams(window.location.search).get("stage")
+    setStage(resolveActivationStage(hint))
+  }, [])
+
+  return stage
 }
 
 function useExtensionHandshake(browser: ActivationBrowser) {
@@ -347,6 +367,7 @@ export function ActivatePage() {
   const copy = t.activate
   const browser = useActivationBrowser()
   const safariSetupVariant = useSafariSetupVariant()
+  const activationStage = useActivationStage()
   const { detected, showTroubleshooting, rechecking, checkNow } =
     useExtensionHandshake(browser)
   const [location, setLocation] = React.useState<LocationCheck>({
@@ -430,6 +451,7 @@ export function ActivatePage() {
             copy={copy}
             locale={locale}
             safariSetupVariant={safariSetupVariant}
+            activationStage={activationStage}
             headingRef={headingRef}
           />
         )}
@@ -516,6 +538,7 @@ function WaitingState({
   copy,
   locale,
   safariSetupVariant,
+  activationStage,
   headingRef,
 }: {
   showTroubleshooting: boolean
@@ -524,9 +547,17 @@ function WaitingState({
   copy: ActivationCopy
   locale: Locale
   safariSetupVariant: SafariSetupVariant
+  activationStage: ActivationStage
   headingRef: HeadingRef
 }) {
   const waiting = copy.waiting
+  // The heading ("Finish setting up Safari") is true of both stages, so it stays.
+  // `waiting.body` is not: it says to turn GeoSpoof on, which the `grant` visitor did
+  // in Settings before arriving. `steps[2].body` is the sentence for what's actually
+  // left, and it is already translated in every locale — so this reads correctly in all
+  // of them without adding a string that would sit untranslated until the next pass.
+  const body =
+    activationStage === "grant" ? waiting.steps[2].body : waiting.body
   return (
     <section
       className="mx-auto w-full max-w-md"
@@ -548,7 +579,7 @@ function WaitingState({
         {waiting.heading}
       </h1>
       <p className="mt-3 max-w-sm text-sm leading-6 text-(--color-canvas-muted) sm:text-base">
-        {waiting.body}
+        {body}
       </p>
 
       <Alert
@@ -575,6 +606,7 @@ function WaitingState({
       <SafariSetupVisual
         waiting={waiting}
         safariSetupVariant={safariSetupVariant}
+        activationStage={activationStage}
       />
 
       <PermissionPrompts waiting={waiting} />
@@ -731,12 +763,24 @@ function PermissionPrompts({
 function SafariSetupVisual({
   waiting,
   safariSetupVariant,
+  activationStage,
 }: {
   waiting: ActivationCopy["waiting"]
   safariSetupVariant: SafariSetupVariant
+  activationStage: ActivationStage
 }) {
   const pageControl =
     safariSetupVariant === "ios18" ? waiting.pageSettings : waiting.steps[0]
+
+  // On the `grant` stage the first two actions are already done — the app deep-linked
+  // the user to Settings and they flipped the toggle there. Site access is all that's
+  // left, so it becomes step 1 and the list stops being a list.
+  //
+  // Numbering is derived rather than written twice: the access step is the third action
+  // in one stage and the only action in the other, and hard-coding "3" is what made
+  // `steps[2].title` invisible before.
+  const teachesToggle = activationStage === "enable"
+  const accessStepNumber = teachesToggle ? 3 : 1
 
   return (
     <Card
@@ -747,70 +791,77 @@ function SafariSetupVisual({
         className="w-full divide-y divide-(--color-canvas-border)"
         aria-label={waiting.inSafari}
       >
-        <li className="grid grid-cols-[1.5rem_minmax(0,1fr)] items-start gap-3 px-4 py-3.5">
-          <span className="flex size-6 items-center justify-center rounded-full bg-(--color-brand) text-xs font-bold text-white">
-            1
-          </span>
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-(--color-canvas-foreground)">
-              <img
-                src="/images/support/page-menu-ios.png"
-                alt=""
-                width={12}
-                height={16}
-                className="mr-2 inline-block h-4 w-auto align-[-0.2em] opacity-80 dark:invert"
-              />
-              {pageControl.title}
-            </p>
-            <p className="mt-0.5 text-xs leading-5 text-(--color-canvas-muted)">
-              {pageControl.body}
-            </p>
-          </div>
-        </li>
-
-        <li className="grid grid-cols-[1.5rem_minmax(0,1fr)] items-start gap-3 px-4 py-4">
-          <span className="flex size-6 items-center justify-center rounded-full bg-(--color-brand) text-xs font-bold text-white">
-            2
-          </span>
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-(--color-canvas-foreground)">
-              {waiting.steps[1].title}
-            </p>
-            <p className="mt-0.5 text-xs leading-5 text-(--color-canvas-muted)">
-              {waiting.steps[1].body}
-            </p>
-
-            <div className="mt-3 flex items-center gap-2.5 rounded-xl border border-(--color-canvas-border) bg-(--color-canvas-border)/15 px-3 py-2.5">
-              <img
-                src={navLogo}
-                alt=""
-                width={28}
-                height={28}
-                className="size-7 shrink-0"
-              />
-              <span className="min-w-0 flex-1 text-sm font-bold text-(--color-canvas-foreground)">
-                GeoSpoof
-              </span>
-              <span className="text-xs font-bold text-(--color-brand)">
-                {waiting.onLabel}
-              </span>
-              <span
-                className="flex h-7 w-12 shrink-0 items-center justify-end rounded-full bg-(--color-brand) p-0.5 shadow-inner"
-                aria-hidden="true"
-              >
-                <span className="size-6 rounded-full bg-white shadow-sm" />
-              </span>
+        {teachesToggle ? (
+          <li className="grid grid-cols-[1.5rem_minmax(0,1fr)] items-start gap-3 px-4 py-3.5">
+            <span className="flex size-6 items-center justify-center rounded-full bg-(--color-brand) text-xs font-bold text-white">
+              1
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-(--color-canvas-foreground)">
+                <img
+                  src="/images/support/page-menu-ios.png"
+                  alt=""
+                  width={12}
+                  height={16}
+                  className="mr-2 inline-block h-4 w-auto align-[-0.2em] opacity-80 dark:invert"
+                />
+                {pageControl.title}
+              </p>
+              <p className="mt-0.5 text-xs leading-5 text-(--color-canvas-muted)">
+                {pageControl.body}
+              </p>
             </div>
-          </div>
-        </li>
+          </li>
+        ) : null}
+
+        {teachesToggle ? (
+          <li className="grid grid-cols-[1.5rem_minmax(0,1fr)] items-start gap-3 px-4 py-4">
+            <span className="flex size-6 items-center justify-center rounded-full bg-(--color-brand) text-xs font-bold text-white">
+              2
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-(--color-canvas-foreground)">
+                {waiting.steps[1].title}
+              </p>
+              <p className="mt-0.5 text-xs leading-5 text-(--color-canvas-muted)">
+                {waiting.steps[1].body}
+              </p>
+
+              <div className="mt-3 flex items-center gap-2.5 rounded-xl border border-(--color-canvas-border) bg-(--color-canvas-border)/15 px-3 py-2.5">
+                <img
+                  src={navLogo}
+                  alt=""
+                  width={28}
+                  height={28}
+                  className="size-7 shrink-0"
+                />
+                <span className="min-w-0 flex-1 text-sm font-bold text-(--color-canvas-foreground)">
+                  GeoSpoof
+                </span>
+                <span className="text-xs font-bold text-(--color-brand)">
+                  {waiting.onLabel}
+                </span>
+                <span
+                  className="flex h-7 w-12 shrink-0 items-center justify-end rounded-full bg-(--color-brand) p-0.5 shadow-inner"
+                  aria-hidden="true"
+                >
+                  <span className="size-6 rounded-full bg-white shadow-sm" />
+                </span>
+              </div>
+            </div>
+          </li>
+        ) : null}
 
         {/* Granting site access is its own action, not a footnote to turning the
             extension on — and it is the step people most often miss. It was
             previously rendered as an unlabelled paragraph inside step 2, which
-            left `steps[2].title` translated into nine languages and never shown. */}
+            left `steps[2].title` translated into nine languages and never shown.
+
+            The only action shown on the `grant` stage, where it is also the only one
+            the user has left to take. */}
         <li className="grid grid-cols-[1.5rem_minmax(0,1fr)] items-start gap-3 px-4 py-3.5">
           <span className="flex size-6 items-center justify-center rounded-full bg-(--color-brand) text-xs font-bold text-white">
-            3
+            {accessStepNumber}
           </span>
           <div className="min-w-0">
             <p className="text-sm font-bold text-(--color-canvas-foreground)">
