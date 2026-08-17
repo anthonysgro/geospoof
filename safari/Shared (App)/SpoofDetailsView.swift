@@ -1550,12 +1550,17 @@ private struct OnboardingSafariHandoffView: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
 
-                    // No per-profile line here. Enablement is per Safari profile, and the
-                    // app can't see which profile someone browses in — but the screenshot
-                    // below shows the real "Allow Extension In" list with a switch per
-                    // profile, which states it better than a sentence about it could.
+                    // No per-profile line here. Enablement is per Safari profile and the
+                    // app can't see which profile someone browses in, but the screenshot
+                    // below shows whichever version of that screen the reader is about to
+                    // see: an "Allow Extension In" list with a switch per profile on iPad,
+                    // a single "Allow Extension" on iPhone, because Safari only splits it
+                    // out once profiles exist. Either way the picture matches the screen
+                    // they land on, which a sentence covering both cases could not.
+                    //
                     // Home's Setup card still carries the sentence, because that card has
-                    // no screenshot to do the work.
+                    // no screenshot to do the work — and because a user who got that far
+                    // without it working is exactly who a forgotten profile applies to.
                 }
                 // One announcement ("Last step. Turn GeoSpoof on …") instead of two
                 // fragments, since the label only means anything attached to it.
@@ -1566,11 +1571,14 @@ private struct OnboardingSafariHandoffView: View {
                 // and how to get there by hand; the hosted-page branch shows the
                 // page-menu gesture, since that flow has one.
                 if canDeepLinkToSettings {
-                    // Compact lets it span the card. Regular caps it, because a
-                    // screenshot blown up to the full width of a 13" display stops
-                    // reading as a screenshot.
+                    // Regular caps the width, because a screenshot blown up to the full
+                    // width of a 13" display stops reading as a screenshot. Compact caps
+                    // the height instead — see `maxImageHeight`.
                     SafariSettingsDestinationView(
-                        maxImageWidth: hSizeClass == .regular ? 560 : .infinity
+                        maxImageWidth: hSizeClass == .regular ? 560 : .infinity,
+                        // Portrait capture on compact, so the height is the binding cap
+                        // there; the landscape one is capped by width instead.
+                        maxImageHeight: hSizeClass == .regular ? .infinity : 340
                     )
                     .padding(.bottom, 24)
                 } else {
@@ -1874,8 +1882,26 @@ private struct OnboardingSafariReadyView: View {
     /// as state and fed to `sensoryFeedback` rather than firing imperatively from
     /// `onAppear`, so the feedback is declared as a consequence of arriving rather
     /// than as a side effect that runs on every appearance callback.
+    ///
+    /// Now also drives the checkmark's bounce, so the haptic and the thing it is about
+    /// happen on the same frame. One flag rather than two: a haptic arriving ahead of the
+    /// visual it belongs to is the specific thing that makes a moment feel cheap, and two
+    /// flags is how they drift apart.
     @State private var hasArrived = false
     @Environment(\.horizontalSizeClass) private var hSizeClass
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Beat between the push beginning and the reveal firing.
+    ///
+    /// `.task` runs as the destination appears, which is when the push *starts* — so
+    /// firing immediately put the haptic a third of a second ahead of the screen it
+    /// belongs to. Waiting out the push means the map and the haptic land as it settles,
+    /// and the whole thing reads as one arrival rather than two events.
+    ///
+    /// Matched to UIKit's push by eye, because there is no public API for that duration,
+    /// and deliberately a little short of it: landing inside the tail feels connected,
+    /// landing after it feels like a response to something.
+    private static let revealDelay: Duration = .milliseconds(280)
 
     /// Compact matches `LocationMapPane`, so the two places the app shows a location map
     /// agree on iPhone.
@@ -1915,6 +1941,40 @@ private struct OnboardingSafariReadyView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
+                // The app's existing mark for "this is working", at the one place it has
+                // most earned it. `checkmark.circle.fill` in green is already the
+                // vocabulary — Home's status footer, the WebRTC row, the enable step on
+                // both platforms, and macOS's own completion step all use it — so the
+                // iOS success screen not having one was the inconsistency.
+                //
+                // Above the title rather than inline with it: a symbol set in largeTitle
+                // beside largeTitle text competes with the words instead of introducing
+                // them.
+                //
+                // Hidden from VoiceOver because the heading immediately below says the
+                // same thing in words, and "checkmark, Safari is ready" is the mark being
+                // read out as though it were content.
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 44, weight: .semibold))
+                    .foregroundStyle(.green)
+                    .symbolRenderingMode(.hierarchical)
+                    // Apple's own success gesture, and the reason this replaced a fade:
+                    // the fade was 10pt over half a second underneath a push animation,
+                    // which is to say invisible. A moment nobody notices isn't restraint,
+                    // it's dead code.
+                    //
+                    // Feeding `false` under Reduce Motion means the trigger never changes,
+                    // so the effect never runs — the mark still appears, it just doesn't
+                    // gesture. The haptic is untouched either way; it answers to the
+                    // system's own haptics setting.
+                    .symbolEffect(
+                        .bounce,
+                        options: .nonRepeating,
+                        value: reduceMotion ? false : hasArrived
+                    )
+                    .accessibilityHidden(true)
+                    .padding(.bottom, 14)
+
                 Text("Safari is ready")
                     .font(.largeTitle.bold())
                     .accessibilityAddTraits(.isHeader)
@@ -2057,7 +2117,17 @@ private struct OnboardingSafariReadyView: View {
         // a change while ignoring the initial value; `showSafariReady()` has
         // already warmed the engine by the time the push lands.
         .sensoryFeedback(.success, trigger: hasArrived)
-        .task { hasArrived = true }
+        .task {
+            // Cancellation leaves `hasArrived` false, which would leave the reveal
+            // hidden — acceptable, because `.task` is only cancelled when this screen is
+            // going away, and this is a terminal screen with no way back to it.
+            try? await Task.sleep(for: Self.revealDelay)
+            guard !Task.isCancelled else { return }
+            // No `withAnimation`: the mark's bounce is a symbol effect driven by this
+            // value changing, and it carries its own timing. Wrapping it would animate
+            // nothing and imply otherwise.
+            hasArrived = true
+        }
         // Both detail sheets undim their backdrop so their frost has something to
         // sample, and iOS treats undimmed as interactive — so this screen stands
         // down while one is open. Without it a tap near the sheet's edge lands on
@@ -2981,28 +3051,49 @@ private extension View {
 /// routes to the same switch, and a setup screen offering two routes is how people end up
 /// unsure which one they were meant to take.
 struct SafariSettingsDestinationView: View {
-    /// Widest the screenshot gets. `.infinity` lets it span the card, which is what
-    /// compact width wants.
+    /// Widest the screenshot gets. `.infinity` lets it span the card.
     ///
-    /// Width rather than the height knob `PermissionPromptsView` takes, because this is
-    /// one near-square screenshot in a full-width card rather than two side by side.
-    /// Capping the height instead leaves it stranded in the middle of a wide card with
-    /// more empty card than screenshot either side of it.
+    /// The artwork is idiom-specific (see the `SafariExtensionEnabled` image set), and
+    /// the two shots have opposite proportions: the iPad capture is near-square
+    /// landscape, the iPhone one is tall portrait. So neither knob alone can size both —
+    /// hence a cap in each axis, with the call site supplying whichever one binds.
     var maxImageWidth: CGFloat = .infinity
 
-    var body: some View {
-        VStack(spacing: 12) {
-            Text("The screen you're looking for")
-                .font(.subheadline.weight(.semibold))
-                .multilineTextAlignment(.center)
-                // The screenshot below is a single combined element, so this is the label
-                // that makes sense of it when skimming by heading.
-                .accessibilityAddTraits(.isHeader)
+    /// Tallest the screenshot gets.
+    ///
+    /// This is the one that matters on iPhone, where the capture is the taller of the
+    /// two. Left uncapped it spans the page at 429pt, which is most of a phone display
+    /// for a screenshot that is supporting evidence rather than the subject — and it
+    /// pushes the "Settings › Apps › Safari …" fallback path below the fold, which is
+    /// the part that helps anyone the button didn't land correctly for.
+    ///
+    /// Kept as a separate knob rather than folded into a single measurement because the
+    /// captures get retaken, and their proportions have already changed more than once.
+    /// A cap per axis holds regardless of which way the next one leans.
+    ///
+    /// Both caps are always applied, so no combination can overflow: `.aspectRatio(.fit)`
+    /// inside a bounded frame fits whichever constraint binds first. That matters because
+    /// the image is chosen by device idiom while the caps are chosen by size class, and
+    /// an iPad in a narrow window reads as compact while still getting the landscape
+    /// capture.
+    var maxImageHeight: CGFloat = .infinity
 
+    var body: some View {
+        // No title above the screenshot. The caption below it already says what it is and
+        // carries the manual path with it, so labelling the same picture from both sides
+        // was framing it twice. What the picture is for is established before the reader
+        // reaches it anyway — the navigation title, the instruction above, and the button
+        // all say this is something still to do, so an already-enabled pane can't be
+        // misread here as a claim that it's done.
+        VStack(spacing: 12) {
+            // Resolves per device from the image set: the iPhone capture on iPhone, the
+            // iPad one on iPad. Handled by the asset catalog's `iphone`/`ipad` idioms
+            // rather than by branching here, so there is nothing in code that can pick a
+            // different device's screenshot than the catalog does.
             Image("SafariExtensionEnabled")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(maxWidth: maxImageWidth)
+                .frame(maxWidth: maxImageWidth, maxHeight: maxImageHeight)
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -3011,7 +3102,15 @@ struct SafariSettingsDestinationView: View {
                 .shadow(color: .black.opacity(0.18), radius: 6, y: 2)
                 // Described rather than hidden: the switches are the information, and a
                 // VoiceOver user gets none of it from the surrounding copy alone.
-                .accessibilityLabel("Safari's GeoSpoof extension settings, with a switch for each Safari profile and a separate one for Private Browsing, all switched on.")
+                //
+                // Worded for what both captures have in common, because they are not the
+                // same screen. Safari only shows a per-profile list once profiles exist,
+                // so the iPad shot has a switch per profile while the iPhone one has a
+                // single "Allow Extension" — both correct for the device they were taken
+                // on. Enumerating either set here would describe a screen half the users
+                // aren't looking at, and the point that survives both is that everything
+                // on it is on.
+                .accessibilityLabel("Safari's GeoSpoof extension settings, with every switch turned on.")
 
             VStack(spacing: 3) {
                 Text("Not where you landed? In Settings, go to:")

@@ -1,8 +1,12 @@
 {
   "images" : [
     {
-      "idiom" : "universal",
-      "filename" : "geospoof-ext-enabled.png"
+      "idiom" : "iphone",
+      "filename" : "geospoof-ext-enabled-iphone.png"
+    },
+    {
+      "idiom" : "ipad",
+      "filename" : "geospoof-ext-enabled-ipad.png"
     }
   ],
   "info" : {

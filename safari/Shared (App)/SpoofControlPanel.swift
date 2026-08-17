@@ -406,12 +406,26 @@ struct SpoofControlPanel: View {
                     .controlSize(.large)
                 }
 
+                // An explicit `HStack` rather than a `Label`, for the gap. Inside a
+                // `Form`, `Label` adopts list-row icon metrics — a fixed icon column with
+                // a generous gap before the title, which is exactly right for a Settings
+                // row where icons align down the whole list, and wrong for a centred
+                // inline link, where it reads as the glyph having come loose from its
+                // text. `lastSeenLine` above already sets its own spacing for the same
+                // reason.
                 Button {
                     showTrustInfo = true
                 } label: {
-                    Label("Is GeoSpoof safe?", systemImage: "checkmark.shield")
-                        .font(.subheadline)
-                        .frame(maxWidth: .infinity)
+                    HStack(spacing: 6) {
+                        // `Label` marks its icon decorative for free; an explicit `Image`
+                        // has to say so, or VoiceOver can announce the glyph alongside the
+                        // question.
+                        Image(systemName: "checkmark.shield")
+                            .accessibilityHidden(true)
+                        Text("Is GeoSpoof safe?")
+                    }
+                    .font(.subheadline)
+                    .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(Color.brand)

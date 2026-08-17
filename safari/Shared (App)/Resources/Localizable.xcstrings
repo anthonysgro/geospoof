@@ -22541,7 +22541,7 @@
         }
       }
     },
-    "Safari's GeoSpoof extension settings, with a switch for each Safari profile and a separate one for Private Browsing, all switched on." : {
+    "Safari's GeoSpoof extension settings, with every switch turned on." : {
 
     },
     "Safari's permission warning sounds broad, but GeoSpoof uses that access narrowly — and you don't have to take our word for it." : {
@@ -27312,9 +27312,6 @@
           }
         }
       }
-    },
-    "The screen you're looking for" : {
-
     },
     "The site and all its subdomains" : {
       "localizations" : {
