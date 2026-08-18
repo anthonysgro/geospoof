@@ -1200,20 +1200,46 @@ final class SpoofController: ObservableObject {
         #endif
     }
 
+    /// Whether the last attempt to open the extension pane was refused by the OS.
+    ///
+    /// Exists because the return value of `openSafariExtensionSettings()` cannot carry
+    /// this: the API is asynchronous, so the function has returned long before the OS
+    /// says whether it worked. Anything that offers the deep link should read this and
+    /// fall back — see `safariCard` in `SpoofControlPanel`.
+    ///
+    /// Reset at the start of each attempt rather than on foreground, so it describes the
+    /// most recent tap and not a stale one. A successful attempt simply never sets it.
+    @Published private(set) var safariSettingsRouteFailed = false
+
     /// Open Settings directly on GeoSpoof's Safari extension pane.
     ///
-    /// Returns false when the route isn't available, so callers can fall back to the
-    /// hosted activation page rather than offering a button that does nothing. Must
-    /// be called with the app foregrounded — the API errors otherwise.
+    /// Returns whether the route exists on this OS — *not* whether it worked. Those are
+    /// different questions and only the first one is answerable synchronously, which is
+    /// the trap this comment used to set: it claimed callers could fall back on `false`,
+    /// while `false` was only ever returned for a wrong OS version or platform. Every
+    /// real failure resolved through the completion handler after the `return true` had
+    /// already gone out, so a refused request looked identical to a granted one and the
+    /// button did nothing at all.
+    ///
+    /// The documented way to fail is being called while the app isn't foregrounded, and
+    /// it is also reported to do nothing when Settings is already open on another screen
+    /// — which is exactly the intermittency that makes this look like a fluke rather than
+    /// a bug. `safariSettingsRouteFailed` is what makes it observable.
     @discardableResult
     func openSafariExtensionSettings() -> Bool {
         #if os(iOS)
         guard #available(iOS 26.2, *) else { return false }
+        // Clear before asking, so the flag always describes this attempt.
+        safariSettingsRouteFailed = false
         SFSafariSettings.openExtensionsSettings(
             forIdentifiers: [AppGroup.extensionBundleIdentifier]
-        ) { error in
-            if let error {
-                Log.app.error("Couldn't open Safari extension settings: \(error.localizedDescription)")
+        ) { [weak self] error in
+            guard let error else { return }
+            Log.app.error("Couldn't open Safari extension settings: \(error.localizedDescription)")
+            // Hopped explicitly: the handler carries no actor guarantee, and this type is
+            // `@MainActor`, so publishing from wherever it lands would be a data race.
+            Task { @MainActor [weak self] in
+                self?.safariSettingsRouteFailed = true
             }
         }
         return true

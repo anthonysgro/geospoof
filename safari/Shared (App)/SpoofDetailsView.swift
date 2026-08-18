@@ -2387,17 +2387,25 @@ struct DeviceGpsPitch: View {
                 // the tabs only once it finishes, so there is nothing in-app to
                 // route to yet. `glassButtonStyle` is a `buttonStyle`, which
                 // `Link` honours, so this matches the button it replaces.
+                //
+                // Both buttons in this view use `ProminentButtonLabel` rather than
+                // `Label`, which is easy to mistake for over-engineering here because
+                // this file shows the pitch in a sheet. The GPS tab shows the same view
+                // inside a `Form` section (`proPitchSection` in SceneDelegate), and there
+                // `Label` tints the glyph with the row accent — green on the green fill.
+                // One spelling for both hosts, since the view cannot see which it is in.
                 Link(destination: Self.macAppURL) {
-                    Label("Get GeoSpoof GPS for Mac", systemImage: "arrow.down.circle")
-                        .frame(maxWidth: .infinity)
+                    ProminentButtonLabel(
+                        title: "Get GeoSpoof GPS for Mac",
+                        symbol: "arrow.down.circle"
+                    )
                 }
                 .glassButtonStyle(prominent: true)
                 .controlSize(.large)
                 .padding(.top, 2)
             } else {
                 Button(action: onUpgrade) {
-                    Label("Upgrade to Pro", systemImage: "sparkles")
-                        .frame(maxWidth: .infinity)
+                    ProminentButtonLabel(title: "Upgrade to Pro", symbol: "sparkles")
                 }
                 .glassButtonStyle(prominent: true)
                 .controlSize(.large)
@@ -2661,6 +2669,45 @@ struct VpnSheet: View {
 ///
 /// Always decorative: both hosts speak the number as part of a label they set on
 /// the whole row, so a VoiceOver user never hears a bare digit.
+/// Title plus a leading glyph, for a filled full-width button.
+///
+/// Deliberately not a `Label`, and only because of where these buttons sit. Inside a
+/// `Form` or `List`, `Label` switches to list-row icon treatment: the glyph moves into a
+/// fixed leading column and takes the row's accent colour instead of the button's own
+/// foreground. On a `.glassProminent` / `.borderedProminent` button filled with
+/// `Color.brand` that renders a green glyph on a green fill — invisible — next to a white
+/// title, and adds a wide icon gutter that a centred label was never laid out for.
+///
+/// A bare `Image` inherits the button style's foreground the same way the text does, so
+/// both halves stay legible whatever the fill is. That is why this doesn't just force
+/// `.foregroundStyle(.white)`: white is right for today's brand fill but wrong the moment
+/// the tint changes, and wrong for a glass variant that renders a light background.
+///
+/// `SpoofControlPanel.safariCard` already spells out the metrics half of this reasoning
+/// for its "Is GeoSpoof safe?" link, which is an `HStack` for exactly the same cause.
+///
+/// Only for buttons that can appear in a `Form`. Onboarding's action bar is not a list, so
+/// its buttons keep `Label` — it is the correct spelling there, and it carries the icon
+/// accessibility behaviour for free.
+struct ProminentButtonLabel: View {
+    let title: LocalizedStringKey
+    let symbol: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            // `Label` marks its icon decorative automatically; an explicit `Image` has to
+            // say so, or VoiceOver reads the glyph name alongside the title.
+            Image(systemName: symbol)
+                .accessibilityHidden(true)
+            Text(title)
+        }
+        // Every caller wants a full-width centred label, so it lives here rather than
+        // being repeated — and being inside the label is what makes the whole button
+        // tappable rather than just the text.
+        .frame(maxWidth: .infinity)
+    }
+}
+
 struct StepBadge: View {
     let number: Int
 

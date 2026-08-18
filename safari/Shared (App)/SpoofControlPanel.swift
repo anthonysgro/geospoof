@@ -181,6 +181,14 @@ struct SpoofControlPanel: View {
                     } label: {
                         Label("Dismiss", systemImage: "xmark")
                     }
+                    // `.destructive` alone does not make a swipe action red here. The
+                    // role sets a *default* tint, and this screen's root applies
+                    // `.tint(.brand)`, which the button inherits and which wins — so the
+                    // action rendered brand green behind a delete-shaped gesture. Every
+                    // other destructive swipe in this file already overrides it; these
+                    // dismiss actions were the ones that had been missed, which is why
+                    // some swipes were red and some green.
+                    .tint(.red)
                 }
                 #else
                 // macOS Form rows have no swipe gesture, so the card keeps an
@@ -361,6 +369,9 @@ struct SpoofControlPanel: View {
                 } label: {
                     Label("Dismiss", systemImage: "xmark")
                 }
+                // Overrides the inherited `.tint(.brand)`; see the pro card's swipe
+                // action for why the destructive role isn't enough on its own.
+                .tint(.red)
             }
         } else {
             // Below 26.2 there is no API that opens Safari's extension pane, and the
@@ -385,6 +396,10 @@ struct SpoofControlPanel: View {
                 } label: {
                     Label("Dismiss", systemImage: "xmark")
                 }
+                // Same override as the branch above — the two cards differ only in
+                // destination, so a red swipe on one and green on the other would be a
+                // difference the user can see but not explain.
+                .tint(.red)
             }
         }
     }
@@ -489,18 +504,55 @@ struct SpoofControlPanel: View {
                     SafariActivationAnimation()
                 }
 
+                // The deep link is asynchronous and the OS can refuse it — documented when
+                // the app isn't foregrounded, and reported when Settings is already open
+                // on another screen. Neither is rare enough to ignore, and both used to
+                // leave this card as a dead end: the button did nothing, and on 26.2+
+                // neither of the two messages that offer it carries the manual path.
+                //
+                // So a refused route degrades to the same presentation the pre-26.2 branch
+                // uses — a button into the Settings app plus the path in words. Handled
+                // here rather than per card because both `.openSettings` callers (website
+                // access, and the verified-off card) have the same gap.
+                //
+                // `.openAppSettings` lands short of the extension pane, which is only
+                // acceptable because its label says "Open Settings" rather than promising
+                // Safari's — the same trade, and the same rule about not overpromising,
+                // that the pre-26.2 branch already documents.
+                let routeRefused = action == .openSettings && controller.safariSettingsRouteFailed
+                let effectiveAction: SafariCardAction? = routeRefused ? .openAppSettings : action
+
+                if routeRefused {
+                    // Reuses the two strings the onboarding Settings card already shows for
+                    // the same purpose, so the path is worded identically in both places
+                    // and neither needs a new translation.
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Not where you landed? In Settings, go to:")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text("Settings › Apps › Safari › Extensions › GeoSpoof")
+                            .font(.caption.weight(.semibold))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityElement(children: .combine)
+                }
+
                 // Either destination is self-resolving: flipping the toggle in
                 // Settings is picked up when the app foregrounds, and loading the
                 // verify page makes the extension check in within a second. Both make
                 // this card remove itself without the user coming back to press
                 // anything.
-                switch action {
+                switch effectiveAction {
+                // `ProminentButtonLabel`, not `Label`: these buttons live in a `Form`
+                // section, where `Label` tints its glyph with the row accent instead of
+                // the button's foreground — a green glyph on the green fill, so the icon
+                // simply wasn't there. See that type for the full reasoning.
                 case .openSettings:
                     Button {
                         controller.openSafariExtensionSettings()
                     } label: {
-                        Label("Open Safari Settings", systemImage: "gearshape")
-                            .frame(maxWidth: .infinity)
+                        ProminentButtonLabel(title: "Open Safari Settings", symbol: "gearshape")
                     }
                     .glassButtonStyle(prominent: true)
                     .controlSize(.large)
@@ -508,8 +560,7 @@ struct SpoofControlPanel: View {
                     Button {
                         openSafari()
                     } label: {
-                        Label("Open Safari", systemImage: "safari")
-                            .frame(maxWidth: .infinity)
+                        ProminentButtonLabel(title: "Open Safari", symbol: "safari")
                     }
                     .glassButtonStyle(prominent: true)
                     .controlSize(.large)
@@ -517,8 +568,7 @@ struct SpoofControlPanel: View {
                     Button {
                         openAppSettings()
                     } label: {
-                        Label("Open Settings", systemImage: "gearshape")
-                            .frame(maxWidth: .infinity)
+                        ProminentButtonLabel(title: "Open Settings", symbol: "gearshape")
                     }
                     .glassButtonStyle(prominent: true)
                     .controlSize(.large)
