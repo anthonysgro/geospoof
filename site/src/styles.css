@@ -7,6 +7,33 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* `tall:` — the viewport has vertical room for full-size hero art.
+   The hero phone art is 1070x2185 (2.04:1), so its WIDTH drives its height hard:
+   360px wide renders ~753px tall. Width-only rules can't express that. Measured
+   at 1366x768 (the #3 desktop resolution worldwide, ~660px of usable viewport),
+   full-size art makes the hero 861px and pushes both CTAs below the fold.
+   52rem = 832px of viewport height: excludes 1366x768 (~660px) and 1440x900
+   (~790px), includes 1920x1080 (~950px) and up. */
+/* Hero art sizing is driven by viewport HEIGHT, in three bands.
+   The art is 1070x2185 (2.04:1), so its width drives its height hard and a
+   single cutoff can't serve the whole range. Measured share of the hero box that
+   the art occupies, which is the number that decides whether it reads as
+   balanced or overwhelming:
+
+     art 468px (w-56)   at  790px vp -> 66%
+     art 502px (w-60)   at  832px vp -> 67%     <- `mid`
+     art 669px (w-80)   at 1056px vp -> 69%     <- `tall`
+     art 669px (w-80)   at 1137px vp -> 63%
+
+   Nothing exceeds ~70% in any band. A single 832px cutoff put the 669px art at
+   87% of the hero the moment the viewport crossed it, and raising that cutoff to
+   1056px instead left the small art at 48% between 1000-1055px — too small.
+
+   The bands are mutually exclusive (`mid` is bounded above) so only one ever
+   matches, which keeps the result independent of variant ordering. */
+@custom-variant mid (@media (min-height: 52rem) and (max-height: 65.99rem));
+@custom-variant tall (@media (min-height: 66rem));
+
 /* ============================================================
    Breakpoint scale — coupled to the global zoom
    ============================================================
@@ -21,18 +48,41 @@
 
    If you change the zoom factor below, scale these by the same factor
    (default rem × factor): sm 40, md 48, lg 64, xl 80, 2xl 96. */
+/* ============================================================
+   Breakpoint scale — Tailwind defaults, deliberately
+   ============================================================
+   DO NOT scale these. An earlier revision multiplied all five by 1.125 to
+   compensate for a 112.5% root font-size (see the `html` rule below). Because
+   media-query `rem` always resolves against 16px, that scaling moved the
+   switches off the device grid and onto the worst possible widths:
+
+     - `xl` landed on 1440px, exactly the 13" MacBook width, and the hero was
+       the only component that switched there. 1366x768 (the #3 desktop
+       resolution worldwide) and every non-maximized window fell to the stacked
+       side and never saw the product art.
+     - `2xl` landed on 1728px, above nearly every laptop, so it went unused.
+
+   These are the standard values, which correspond to real device classes. */
 @theme {
-  --breakpoint-sm: 45rem;
-  --breakpoint-md: 54rem;
-  --breakpoint-lg: 72rem;
-  --breakpoint-xl: 90rem;
-  --breakpoint-2xl: 108rem;
+  --breakpoint-sm: 40rem; /*  640px */
+  --breakpoint-md: 48rem; /*  768px */
+  --breakpoint-lg: 64rem; /* 1024px */
+  --breakpoint-xl: 80rem; /* 1280px */
+  --breakpoint-2xl: 96rem; /* 1536px */
+  --breakpoint-3xl: 128rem; /* 2048px — large-display tier.
+                               Deliberately above 1920x1080 (the #1 desktop
+                               resolution) so the whole 1280-1920 range, which is
+                               calibrated against the 100% root, is untouched by
+                               it. Its only job is to let the hero grow on 2048px+
+                               canvases, where a 1200px container otherwise leaves
+                               ~450px of gutter per side. */
 }
 
 @theme inline {
   /* Typography */
   --font-sans:
-    "Nunito Variable", "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    "Nunito Variable", "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, sans-serif;
   --font-heading: var(--font-sans);
 
   /* Shadcn token mappings */
@@ -187,24 +237,33 @@
   }
   html {
     @apply font-sans;
-    /* Phones stay at 100% — 112.5% is too large at ~390px. The global "zoom"
-       turns on from 640px up (see media query below), which covers small
-       tablets, resized desktop windows, and larger, where it reads well. */
+    /* 100% at every width — the browser's own default, which also honours the
+       user's font-size preference.
+
+       There used to be a `@media (min-width: 40rem) { font-size: 112.5% }` here,
+       a global "zoom" that scaled every rem-based size up by 12.5% above 640px.
+       It was removed because it calibrated the site to one specific display
+       density and misbehaved everywhere else:
+
+         - Media-query `rem` always resolves against 16px, never the html
+           font-size, so scaling content decoupled it from the breakpoints. The
+           compensation was to multiply all five breakpoints by 1.125, which put
+           `xl` at 1440px — exactly the 13" MacBook width — and `2xl` at 1728px,
+           above nearly every laptop.
+         - It only scaled `rem`. px values (borders, shadows, `--radius-brand`,
+           `text-[11px]`, fixed media heights) stayed put, so two parallel size
+           systems drifted apart above 640px.
+         - The rem container widths were converted from px on the assumption of
+           this zoom: `max-w-300` and `max-w-400` are 1200px and 1600px at a 100%
+           root, which are exactly the `max-w-[1200px]` / `max-w-[1600px]` values
+           they replaced. At 100% they are back to their intended widths.
+
+       If the site ever needs to read larger, scale the type and spacing tokens
+       deliberately — do not reintroduce a root multiplier. */
     font-size: 100%;
     /* Smooth in-page anchor scrolling; the reduced-motion block below forces
        this back to `auto` for users who prefer reduced motion. */
     scroll-behavior: smooth;
-  }
-  /* Global "zoom": scales every rem-based size (text, spacing, images, and the
-     rem-based container widths) proportionally. The breakpoint scale at the top
-     of this file is multiplied by the SAME factor so the responsive switches
-     move in lockstep — together they reproduce a true browser zoom (larger
-     content + earlier breakpoint switches). Gated at 640px so phones opt out.
-     Tune the factor here, then scale the breakpoints to match. */
-  @media (min-width: 40rem) {
-    html {
-      font-size: 112.5%;
-    }
   }
 }
 

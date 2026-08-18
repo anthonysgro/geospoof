@@ -26,3 +26,6 @@ public/geo-tz/
 
 # Local dev HTTPS certs (mkcert-generated, per-machine)
 certs/
+
+# Responsive screenshot harness output (scripts/shoot.mjs)
+.shots/

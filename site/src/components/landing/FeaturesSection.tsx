@@ -317,7 +317,6 @@ function getFeatures(t: Dictionary): Array<Feature> {
 
 export function FeaturesSection({ className }: { className?: string }) {
   const prefersReducedMotion = useReducedMotion()
-  const MotionDiv = prefersReducedMotion ? "div" : motion.div
   const { t } = useTranslations()
   const features = getFeatures(t)
 
@@ -335,21 +334,25 @@ export function FeaturesSection({ className }: { className?: string }) {
         </p>
       </div>
 
-      <MotionDiv
-        {...(!prefersReducedMotion && {
-          initial: "hidden",
-          whileInView: "visible",
-          viewport: { once: true, margin: "-50px" },
-          variants: gridContainerVariants,
-        })}
+      {/* Always motion components, even under reduced motion.
+          Swapping in plain divs left this whole grid — the container plus all six
+          cards — permanently at opacity 0. SSR can't read the media query, so it
+          renders the `hidden` variant and bakes `style="opacity:0"` into the HTML;
+          a plain `div` passes no style prop, and React hydration won't strip a
+          server-rendered attribute the client doesn't set.
+          Pointing the container's `initial` at "visible" fixes the children too:
+          variant names propagate down, so each card resolves "visible" from the
+          parent and no stagger runs. */}
+      <motion.div
+        initial={prefersReducedMotion ? "visible" : "hidden"}
+        whileInView="visible"
+        viewport={{ once: true, margin: "-50px" }}
+        variants={gridContainerVariants}
       >
         <BentoGrid columns={3}>
           {features.map((feature) => (
             <BentoGridItem key={feature.id} colSpan={feature.colSpan ?? 1}>
-              <MotionDiv
-                className="h-full"
-                {...(!prefersReducedMotion && { variants: gridItemVariants })}
-              >
+              <motion.div className="h-full" variants={gridItemVariants}>
                 <Card
                   className={cn(
                     "h-full border border-(--color-canvas-border) bg-(--color-canvas) shadow-none",
@@ -371,11 +374,11 @@ export function FeaturesSection({ className }: { className?: string }) {
                     <CardContent>{feature.visual}</CardContent>
                   )}
                 </Card>
-              </MotionDiv>
+              </motion.div>
             </BentoGridItem>
           ))}
         </BentoGrid>
-      </MotionDiv>
+      </motion.div>
     </Section>
   )
 }

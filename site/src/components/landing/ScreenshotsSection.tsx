@@ -7,7 +7,6 @@ import { useTranslations } from "@/hooks/use-i18n"
 
 export function ScreenshotsSection({ className }: { className?: string }) {
   const prefersReducedMotion = useReducedMotion()
-  const MotionDiv = prefersReducedMotion ? "div" : motion.div
   const { resolvedTheme } = useTheme()
   const isDark = resolvedTheme === "dark"
   const { t } = useTranslations()
@@ -35,14 +34,18 @@ export function ScreenshotsSection({ className }: { className?: string }) {
       </div>
 
       {/* Full-bleed image with subtle frame */}
-      <MotionDiv
+      {/* Always a motion component — a plain `div` under reduced motion inherited
+          the SSR-rendered `style="opacity:0"` with nothing left to clear it, so
+          this section never appeared. `initial` points at the final state instead,
+          which animates nothing but keeps motion in charge of the style. */}
+      <motion.div
         className="mx-auto w-full max-w-400 px-4 md:px-6"
-        {...(!prefersReducedMotion && {
-          initial: { opacity: 0, y: 32 },
-          whileInView: { opacity: 1, y: 0 },
-          viewport: { once: true, margin: "-80px" },
-          transition: { duration: 0.6, ease: [0.25, 0.1, 0.25, 1] },
-        })}
+        initial={
+          prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 32 }
+        }
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-80px" }}
+        transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
       >
         <div className="rounded-2xl p-[2px]">
           <picture>
@@ -61,7 +64,7 @@ export function ScreenshotsSection({ className }: { className?: string }) {
             />
           </picture>
         </div>
-      </MotionDiv>
+      </motion.div>
 
       {/* Mobile counterpart — same "in action" story, native on iOS/iPadOS. */}
       <PhoneCarouselSection embedded />

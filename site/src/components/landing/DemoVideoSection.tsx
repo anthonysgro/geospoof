@@ -22,7 +22,6 @@ import { useTranslations } from "@/hooks/use-i18n"
  */
 export function DemoVideoSection({ className }: { className?: string }) {
   const prefersReducedMotion = useReducedMotion()
-  const MotionDiv = prefersReducedMotion ? "div" : motion.div
   const { t } = useTranslations()
 
   return (
@@ -36,14 +35,20 @@ export function DemoVideoSection({ className }: { className?: string }) {
         </h2>
       </div>
 
-      <MotionDiv
+      {/* Always a motion component. Swapping in a plain `div` under reduced
+          motion left this section permanently at opacity 0: SSR can't read the
+          media query, so it renders `initial` and bakes `style="opacity:0"` into
+          the HTML, and a plain `div` has no style prop for React to overwrite on
+          hydration. Pointing `initial` at the final state instead means motion
+          keeps ownership of the style while animating nothing. */}
+      <motion.div
         className="mx-auto w-full max-w-275 px-4 md:px-6"
-        {...(!prefersReducedMotion && {
-          initial: { opacity: 0, y: 32 },
-          whileInView: { opacity: 1, y: 0 },
-          viewport: { once: true, margin: "-80px" },
-          transition: { duration: 0.6, ease: [0.25, 0.1, 0.25, 1] },
-        })}
+        initial={
+          prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 32 }
+        }
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-80px" }}
+        transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
       >
         <video
           controls
@@ -65,7 +70,7 @@ export function DemoVideoSection({ className }: { className?: string }) {
           </a>{" "}
           {t.demo.insteadSuffix}
         </video>
-      </MotionDiv>
+      </motion.div>
     </section>
   )
 }
