@@ -1,5 +1,3 @@
-Hallo GeoSpoofer! Dieses Update ist eine kleine Wartungsaktualisierung.
-
-Kleinere Fehlerbehebungen sowie überarbeitete Übersetzungen in allen unterstützten Sprachen.
-
+Hallo GeoSpoofer! Dieses Update bringt eine neue Einrichtung.
+GeoSpoof in Safari zu aktivieren ist jetzt kürzer und klarer erklärt. Dazu Fehlerbehebungen an vielen Stellen.
 Kein Konto. Kein Tracking. Open Source.

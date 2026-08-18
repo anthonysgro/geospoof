@@ -1,5 +1,3 @@
-Hallo GeoSpoofers! Deze update is klein onderhoud.
-
-Lichte bugfixes en een controle van de vertalingen in alle ondersteunde talen.
-
+Hallo GeoSpoofers! Deze update brengt een nieuwe configuratie.
+GeoSpoof aanzetten in Safari gaat nu korter en duidelijker. Plus bugfixes.
 Geen account. Geen tracking. Open source.

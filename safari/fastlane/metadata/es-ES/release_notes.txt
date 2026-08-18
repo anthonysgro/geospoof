@@ -1,5 +1,3 @@
-¡Hola, GeoSpoofers! Esta actualización es de mantenimiento.
-
-Correcciones menores y una revisión de las traducciones en todos los idiomas disponibles.
-
+¡Hola, GeoSpoofers! Esta actualización trae una nueva configuración inicial.
+Activar GeoSpoof en Safari ahora es un proceso más corto y claro. Además, correcciones de errores.
 Sin cuenta. Sin seguimiento. Código abierto.

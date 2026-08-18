@@ -1,5 +1,3 @@
-Halo, GeoSpoofers! Pembaruan ini bersifat pemeliharaan kecil.
-
-Perbaikan bug ringan serta penyempurnaan terjemahan di semua bahasa yang didukung.
-
+Halo, GeoSpoofers! Pembaruan ini menghadirkan penyiapan yang baru.
+Mengaktifkan GeoSpoof di Safari kini lebih singkat dan lebih jelas. Ditambah perbaikan bug.
 Tanpa akun. Tanpa pelacakan. Sumber terbuka.

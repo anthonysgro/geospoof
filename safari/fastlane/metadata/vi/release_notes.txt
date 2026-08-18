@@ -1,5 +1,3 @@
-Xin chào các GeoSpoofer! Đây là bản cập nhật bảo trì nhỏ.
-
-Sửa một số lỗi nhỏ cùng với việc rà soát bản dịch cho tất cả ngôn ngữ được hỗ trợ.
-
+Xin chào các GeoSpoofer! Bản cập nhật này mang đến phần thiết lập mới.
+Bật GeoSpoof trong Safari giờ đây ngắn gọn và rõ ràng hơn. Kèm theo các bản sửa lỗi.
 Không cần tài khoản. Không theo dõi. Nguồn mở.

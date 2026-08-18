@@ -1,5 +1,3 @@
-Bonjour les GeoSpoofers ! Cette mise à jour est une simple maintenance.
-
-Corrections mineures et relecture des traductions dans toutes les langues prises en charge.
-
+Bonjour les GeoSpoofers ! Cette mise à jour apporte une nouvelle configuration.
+Activer GeoSpoof dans Safari est désormais plus court et plus clair. Avec des corrections de bugs.
 Aucun compte. Aucun suivi. Open source.

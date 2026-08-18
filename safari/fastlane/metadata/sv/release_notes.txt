@@ -1,5 +1,3 @@
-Hej GeoSpoofers! Den här uppdateringen är ett litet underhåll.
-
-Mindre buggfixar och en genomgång av översättningarna i alla språk som stöds.
-
+Hej GeoSpoofers! Den här uppdateringen har en ny konfiguration.
+Att slå på GeoSpoof i Safari går nu snabbare och tydligare. Dessutom buggfixar.
 Inget konto. Ingen spårning. Öppen källkod.

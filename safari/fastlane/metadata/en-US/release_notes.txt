@@ -1,5 +1,3 @@
-Hello GeoSpoofers! This one is a small maintenance update.
-
-Light bug fixes throughout, plus a pass over the translations in every supported language.
-
+Hello GeoSpoofers! This update brings a new setup experience.
+Turning GeoSpoof on in Safari is now a shorter, clearer walkthrough. Plus bug fixes throughout.
 No account. No tracking. Open source.
