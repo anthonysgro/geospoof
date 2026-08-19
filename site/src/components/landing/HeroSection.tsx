@@ -57,7 +57,7 @@ export function HeroSection({ className }: { className?: string }) {
       <>
         {before}
         <span className="font-semibold text-(--color-canvas-foreground)">
-          7,000+
+          25,000+
         </span>
         {after}
       </>
@@ -267,7 +267,7 @@ export function HeroSection({ className }: { className?: string }) {
           {/* Social proof */}
           <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 xl:justify-start">
             <span className="text-sm text-(--color-canvas-muted)">
-              {/* xs: bare count ("7,000+ users"). sm+: full "trusted by" line. */}
+              {/* xs: bare count ("25,000+ users"). sm+: full "trusted by" line. */}
               <span className="sm:hidden">
                 {renderUsers(t.hero.usersShort)}
               </span>
