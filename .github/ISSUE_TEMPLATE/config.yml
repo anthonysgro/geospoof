@@ -1,4 +1,6 @@
-blank_issues_enabled: false
+# Kept true on purpose: if a form template ever fails validation, contributors
+# without write access lose every path to the issue tracker. This is the fallback.
+blank_issues_enabled: true
 
 contact_links:
   - name: Get help in GitHub Discussions
