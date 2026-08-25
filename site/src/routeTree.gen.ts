@@ -24,6 +24,7 @@ import { Route as Char123LocaleChar125FeedbackRouteImport } from './routes/{-$lo
 import { Route as Char123LocaleChar125EngineLevelSpoofingRouteImport } from './routes/{-$locale}.engine-level-spoofing'
 import { Route as Char123LocaleChar125ActivateRouteImport } from './routes/{-$locale}.activate'
 import { Route as Char123LocaleChar125AboutRouteImport } from './routes/{-$locale}.about'
+import { Route as ApiAppleNotificationsRouteImport } from './routes/api.apple-notifications'
 import { Route as Char123LocaleChar125SpoofLocationIndexRouteImport } from './routes/{-$locale}.spoof-location.index'
 import { Route as Char123LocaleChar125BlogIndexRouteImport } from './routes/{-$locale}.blog.index'
 import { Route as Char123LocaleChar125SpoofLocationSafariRouteImport } from './routes/{-$locale}.spoof-location.safari'
@@ -117,6 +118,11 @@ const Char123LocaleChar125AboutRoute =
     path: '/about',
     getParentRoute: () => Char123LocaleChar125Route,
   } as any)
+const ApiAppleNotificationsRoute = ApiAppleNotificationsRouteImport.update({
+  id: '/api/apple-notifications',
+  path: '/api/apple-notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const Char123LocaleChar125SpoofLocationIndexRoute =
   Char123LocaleChar125SpoofLocationIndexRouteImport.update({
     id: '/spoof-location/',
@@ -163,6 +169,7 @@ const Char123LocaleChar125BlogSlugRoute =
 export interface FileRoutesByFullPath {
   '/test': typeof TestRoute
   '/{-$locale}': typeof Char123LocaleChar125RouteWithChildren
+  '/api/apple-notifications': typeof ApiAppleNotificationsRoute
   '/{-$locale}/about': typeof Char123LocaleChar125AboutRoute
   '/{-$locale}/activate': typeof Char123LocaleChar125ActivateRoute
   '/{-$locale}/engine-level-spoofing': typeof Char123LocaleChar125EngineLevelSpoofingRoute
@@ -186,6 +193,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/test': typeof TestRoute
+  '/api/apple-notifications': typeof ApiAppleNotificationsRoute
   '/{-$locale}/about': typeof Char123LocaleChar125AboutRoute
   '/{-$locale}/activate': typeof Char123LocaleChar125ActivateRoute
   '/{-$locale}/engine-level-spoofing': typeof Char123LocaleChar125EngineLevelSpoofingRoute
@@ -211,6 +219,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/test': typeof TestRoute
   '/{-$locale}': typeof Char123LocaleChar125RouteWithChildren
+  '/api/apple-notifications': typeof ApiAppleNotificationsRoute
   '/{-$locale}/about': typeof Char123LocaleChar125AboutRoute
   '/{-$locale}/activate': typeof Char123LocaleChar125ActivateRoute
   '/{-$locale}/engine-level-spoofing': typeof Char123LocaleChar125EngineLevelSpoofingRoute
@@ -237,6 +246,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/test'
     | '/{-$locale}'
+    | '/api/apple-notifications'
     | '/{-$locale}/about'
     | '/{-$locale}/activate'
     | '/{-$locale}/engine-level-spoofing'
@@ -260,6 +270,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/test'
+    | '/api/apple-notifications'
     | '/{-$locale}/about'
     | '/{-$locale}/activate'
     | '/{-$locale}/engine-level-spoofing'
@@ -284,6 +295,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/test'
     | '/{-$locale}'
+    | '/api/apple-notifications'
     | '/{-$locale}/about'
     | '/{-$locale}/activate'
     | '/{-$locale}/engine-level-spoofing'
@@ -309,6 +321,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   TestRoute: typeof TestRoute
   Char123LocaleChar125Route: typeof Char123LocaleChar125RouteWithChildren
+  ApiAppleNotificationsRoute: typeof ApiAppleNotificationsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -417,6 +430,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/{-$locale}/about'
       preLoaderRoute: typeof Char123LocaleChar125AboutRouteImport
       parentRoute: typeof Char123LocaleChar125Route
+    }
+    '/api/apple-notifications': {
+      id: '/api/apple-notifications'
+      path: '/api/apple-notifications'
+      fullPath: '/api/apple-notifications'
+      preLoaderRoute: typeof ApiAppleNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/{-$locale}/spoof-location/': {
       id: '/{-$locale}/spoof-location/'
@@ -529,6 +549,7 @@ const Char123LocaleChar125RouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   TestRoute: TestRoute,
   Char123LocaleChar125Route: Char123LocaleChar125RouteWithChildren,
+  ApiAppleNotificationsRoute: ApiAppleNotificationsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
