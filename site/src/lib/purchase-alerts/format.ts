@@ -4,8 +4,14 @@
  * any Apple credentials or network.
  *
  * Written to be read as an operational feed — a day's worth of these should be
- * scannable in one pass on a phone. That drove four rules:
+ * scannable in one pass on a phone. That drove five rules:
  *
+ *  0. **Only money gets a message.** The feed carries revenue events and nothing
+ *     else: a charge, a renewal, or a refund. Trial starts, cancellations,
+ *     expirations, billing failures and Family Sharing grants are all real
+ *     events that Apple reports and this module still classifies — they're just
+ *     not delivered, because a feed you learn to ignore is worse than no feed.
+ *     See `REVENUE_KINDS`.
  *  1. **Line one answers "what and how much".** Product and money go together,
  *     because those are the two facts worth scrolling for. Context (country,
  *     dates, ids) drops to line two.
@@ -65,6 +71,20 @@ const LABELS: Record<AlertKind, string> = {
   refund: "REFUND",
   info: "INFO",
 }
+
+/**
+ * The kinds that actually move money, and therefore the only ones delivered.
+ *
+ * The non-revenue kinds are deliberately still produced by `verdictFor` rather
+ * than deleted: they document what Apple sends, they're covered by tests, and
+ * re-enabling churn tracking later is a one-line change here instead of a
+ * rewrite. Nothing outside this set reaches the webhook.
+ */
+const REVENUE_KINDS: ReadonlySet<AlertKind> = new Set<AlertKind>([
+  "sale",
+  "renewal",
+  "refund",
+])
 
 /**
  * Friendly names for the six SKUs (see `ProStore.ProductID` and `TipStore`).
@@ -256,9 +276,12 @@ function verdictFor(
         details: ["refunded by Apple"],
       }
 
+    // Money coming back to you after a disputed refund, so it belongs in a
+    // revenue feed. Labelled SALE because the direction is what matters; the
+    // headline says what actually happened.
     case NotificationTypeV2.REFUND_REVERSED:
       return {
-        kind: "info",
+        kind: "sale",
         headline: `${product} — refund reversed, ${paid ?? "amount unknown"} restored`,
       }
 
@@ -365,10 +388,15 @@ function verdictFor(
 }
 
 /**
- * Build the alert for a verified notification, or null when this event type is
- * intentionally not reported.
+ * Classify a notification into a fully-rendered alert, WITHOUT applying the
+ * revenue filter.
+ *
+ * Separated from `describeNotification` so the non-revenue classifications stay
+ * exercised by tests rather than rotting as unreachable code, and so a future
+ * feed that wants churn or trial signals has a supported entry point. The
+ * webhook path deliberately does not call this.
  */
-export function describeNotification(
+export function classifyNotification(
   payload: ResponseBodyV2DecodedPayload,
   transaction: JWSTransactionDecodedPayload | undefined
 ): PurchaseAlert | null {
@@ -397,6 +425,35 @@ export function describeNotification(
     details,
     environment: payload.data?.environment,
   }
+}
+
+/**
+ * The alert to actually deliver, or null when this event shouldn't be reported.
+ *
+ * Null covers three cases: a notification type we never report (plumbing), a
+ * classified event that doesn't move money, and a charge of exactly zero.
+ */
+export function describeNotification(
+  payload: ResponseBodyV2DecodedPayload,
+  transaction: JWSTransactionDecodedPayload | undefined
+): PurchaseAlert | null {
+  const alert = classifyNotification(payload, transaction)
+  if (!alert) return null
+
+  // TEST is the one non-revenue event worth delivering: Apple only sends it
+  // because you asked, so it can't be noise, and dropping it would break the
+  // one check that proves this endpoint works end to end.
+  if (payload.notificationType === NotificationTypeV2.TEST) return alert
+
+  if (!REVENUE_KINDS.has(alert.kind)) return null
+
+  // A charge of exactly zero moved no money, so it isn't revenue either — this
+  // catches a free promotional offer redeemed on an existing plan. An ABSENT
+  // price is left alone: Apple omits it on some transactions, and a real sale
+  // must never be dropped just because the amount didn't come through.
+  if (alert.kind !== "refund" && transaction?.price === 0) return null
+
+  return alert
 }
 
 /**

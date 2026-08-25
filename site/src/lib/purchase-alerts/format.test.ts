@@ -9,6 +9,7 @@ import {
   Type,
 } from "@apple/app-store-server-library"
 import {
+  classifyNotification,
   describeNotification,
   formatAlertMarkdown,
   formatAlertText,
@@ -117,7 +118,7 @@ describe("describeNotification", () => {
   // Both Pro plans ship a free introductory offer, so INITIAL_BUY is a trial
   // start, not revenue. Rendering "$0.00" here would be worse than useless.
   it("reports a trial start as a trial, with no zero amount anywhere", () => {
-    const alert = describeNotification(
+    const alert = classifyNotification(
       notification({
         notificationType: NotificationTypeV2.SUBSCRIBED,
         subtype: Subtype.INITIAL_BUY,
@@ -195,7 +196,7 @@ describe("describeNotification", () => {
   // message that prompted the redesign, which read "Pro Monthly expired /
   // €0.00 (NLD)" and buried the fact that nobody had ever paid.
   it("distinguishes a lapsed trial from a paying subscriber leaving", () => {
-    const lapsedTrial = describeNotification(
+    const lapsedTrial = classifyNotification(
       notification({
         notificationType: NotificationTypeV2.EXPIRED,
         subtype: Subtype.VOLUNTARY,
@@ -216,7 +217,7 @@ describe("describeNotification", () => {
     expect(lapsedTrial?.details).toContain("cancelled during trial")
     expect(formatAlertText(lapsedTrial!)).not.toContain("0.00")
 
-    const payerLeft = describeNotification(
+    const payerLeft = classifyNotification(
       notification({
         notificationType: NotificationTypeV2.EXPIRED,
         subtype: Subtype.VOLUNTARY,
@@ -229,7 +230,7 @@ describe("describeNotification", () => {
   })
 
   it("explains why a subscription expired when Apple says", () => {
-    const billing = describeNotification(
+    const billing = classifyNotification(
       notification({
         notificationType: NotificationTypeV2.EXPIRED,
         subtype: Subtype.BILLING_RETRY,
@@ -238,7 +239,7 @@ describe("describeNotification", () => {
     )
     expect(billing?.details).toContain("billing failed")
 
-    const priceIncrease = describeNotification(
+    const priceIncrease = classifyNotification(
       notification({
         notificationType: NotificationTypeV2.EXPIRED,
         subtype: Subtype.PRICE_INCREASE,
@@ -249,7 +250,7 @@ describe("describeNotification", () => {
   })
 
   it("shows what is at stake when auto-renew is turned off", () => {
-    const alert = describeNotification(
+    const alert = classifyNotification(
       notification({
         notificationType: NotificationTypeV2.DID_CHANGE_RENEWAL_STATUS,
         subtype: Subtype.AUTO_RENEW_DISABLED,
@@ -268,7 +269,7 @@ describe("describeNotification", () => {
   })
 
   it("says when a cancelled subscriber was still on a trial", () => {
-    const alert = describeNotification(
+    const alert = classifyNotification(
       notification({
         notificationType: NotificationTypeV2.DID_CHANGE_RENEWAL_STATUS,
         subtype: Subtype.AUTO_RENEW_DISABLED,
@@ -290,7 +291,7 @@ describe("describeNotification", () => {
   })
 
   it("flags a failed payment with the amount at risk", () => {
-    const alert = describeNotification(
+    const alert = classifyNotification(
       notification({
         notificationType: NotificationTypeV2.DID_FAIL_TO_RENEW,
         subtype: Subtype.GRACE_PERIOD,
@@ -306,7 +307,7 @@ describe("describeNotification", () => {
   // Family Sharing produces the same notification type as a purchase but no
   // charge, so it must never be counted as a sale.
   it("separates Family Sharing access from a purchase", () => {
-    const alert = describeNotification(
+    const alert = classifyNotification(
       notification({ notificationType: NotificationTypeV2.ONE_TIME_CHARGE }),
       transaction({ inAppOwnershipType: InAppOwnershipType.FAMILY_SHARED })
     )
@@ -400,5 +401,135 @@ describe("formatAlertMarkdown", () => {
     expect(formatAlertMarkdown(alert!)).toBe(
       "**[SALE] Pro Lifetime — $24.99**\nUSA · one-time · txn 2000000900000001"
     )
+  })
+})
+
+// The feed carries revenue only. These events are all real, all classified
+// above, and all deliberately not delivered — a feed you learn to ignore is
+// worse than no feed.
+describe("the revenue-only filter", () => {
+  const nonRevenue: Array<
+    [string, ResponseBodyV2DecodedPayload, JWSTransactionDecodedPayload]
+  > = [
+    [
+      "trial start",
+      notification({
+        notificationType: NotificationTypeV2.SUBSCRIBED,
+        subtype: Subtype.INITIAL_BUY,
+      }),
+      transaction({
+        productId: MONTHLY,
+        price: 0,
+        offerType: OfferType.INTRODUCTORY_OFFER,
+      }),
+    ],
+    [
+      "trial lapsed",
+      notification({
+        notificationType: NotificationTypeV2.EXPIRED,
+        subtype: Subtype.VOLUNTARY,
+      }),
+      transaction({ productId: MONTHLY, price: 0 }),
+    ],
+    [
+      "paying subscriber lapsed",
+      notification({ notificationType: NotificationTypeV2.EXPIRED }),
+      transaction({ productId: MONTHLY, price: 2_990 }),
+    ],
+    [
+      "auto-renew turned off",
+      notification({
+        notificationType: NotificationTypeV2.DID_CHANGE_RENEWAL_STATUS,
+        subtype: Subtype.AUTO_RENEW_DISABLED,
+      }),
+      transaction({ productId: MONTHLY, price: 2_990 }),
+    ],
+    [
+      "billing failure",
+      notification({ notificationType: NotificationTypeV2.DID_FAIL_TO_RENEW }),
+      transaction({ productId: MONTHLY, price: 2_990 }),
+    ],
+    [
+      "grace period ended",
+      notification({
+        notificationType: NotificationTypeV2.GRACE_PERIOD_EXPIRED,
+      }),
+      transaction({ productId: MONTHLY, price: 2_990 }),
+    ],
+    [
+      "Family Sharing grant",
+      notification({ notificationType: NotificationTypeV2.ONE_TIME_CHARGE }),
+      transaction({ inAppOwnershipType: InAppOwnershipType.FAMILY_SHARED }),
+    ],
+    [
+      "downgrade scheduled",
+      notification({
+        notificationType: NotificationTypeV2.DID_CHANGE_RENEWAL_PREF,
+        subtype: Subtype.DOWNGRADE,
+      }),
+      transaction({ productId: MONTHLY, price: 2_990 }),
+    ],
+  ]
+
+  it.each(nonRevenue)("suppresses %s", (_name, payload, txn) => {
+    // Still classified — just not delivered.
+    expect(classifyNotification(payload, txn)).not.toBeNull()
+    expect(describeNotification(payload, txn)).toBeNull()
+  })
+
+  it.each([
+    ["a one-time charge", NotificationTypeV2.ONE_TIME_CHARGE, "sale"],
+    ["a renewal", NotificationTypeV2.DID_RENEW, "renewal"],
+    ["a refund", NotificationTypeV2.REFUND, "refund"],
+  ])("delivers %s", (_name, notificationType, kind) => {
+    const alert = describeNotification(
+      notification({ notificationType }),
+      transaction()
+    )
+    expect(alert?.kind).toBe(kind)
+  })
+
+  // Money coming back after a dispute is revenue, so it stays in the feed.
+  it("delivers a reversed refund", () => {
+    const alert = describeNotification(
+      notification({ notificationType: NotificationTypeV2.REFUND_REVERSED }),
+      transaction()
+    )
+
+    expect(alert?.kind).toBe("sale")
+    expect(alert?.headline).toContain("refund reversed")
+  })
+
+  // A free promotional offer redeemed on an existing plan charges nothing.
+  it("suppresses a zero-amount sale", () => {
+    expect(
+      describeNotification(
+        notification({ notificationType: NotificationTypeV2.OFFER_REDEEMED }),
+        transaction({ productId: MONTHLY, price: 0 })
+      )
+    ).toBeNull()
+  })
+
+  // Apple omits price on some transactions; a real sale must not vanish because
+  // the amount didn't come through.
+  it("still delivers a sale whose price Apple omitted", () => {
+    const alert = describeNotification(
+      notification({ notificationType: NotificationTypeV2.ONE_TIME_CHARGE }),
+      transaction({ price: undefined, currency: undefined })
+    )
+
+    expect(alert?.kind).toBe("sale")
+    expect(alert?.headline).toBe("Pro Lifetime — amount unknown")
+  })
+
+  // Sent only when explicitly requested, so it can't be noise — and it's the
+  // only way to verify the endpoint without waiting for a sale.
+  it("still delivers a requested TEST notification", () => {
+    expect(
+      describeNotification(
+        notification({ notificationType: NotificationTypeV2.TEST }),
+        undefined
+      )?.kind
+    ).toBe("info")
   })
 })

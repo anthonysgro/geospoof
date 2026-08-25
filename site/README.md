@@ -32,9 +32,15 @@ mkcert -cert-file certs/dev-cert.pem -key-file certs/dev-key.pem localhost 127.0
 ## Purchase alerts (App Store Server Notifications)
 
 `POST /api/apple-notifications` receives App Store Server Notifications V2 and
-forwards purchases, renewals, refunds and cancellations to a chat webhook. It is
-alerting only — Pro entitlement is still resolved on-device by StoreKit, so this
-route never grants or revokes access.
+forwards **revenue events only** to a chat webhook: a charge (`SALE`), a renewal
+(`RENEWAL`), or a refund (`REFUND`). It is alerting only — Pro entitlement is
+still resolved on-device by StoreKit, so this route never grants or revokes
+access.
+
+Trial starts, cancellations, expirations, billing failures and Family Sharing
+grants are classified but deliberately **not** delivered — see `REVENUE_KINDS`
+in `src/lib/purchase-alerts/format.ts`. To put them back, add the kind to that
+set; `classifyNotification` already produces them and they're covered by tests.
 
 ### Vercel env vars
 
