@@ -1,17 +1,29 @@
 /**
- * Turns a verified App Store notification into the one-line alert that lands in
- * chat. Pure and side-effect free so it can be unit tested against fixtures
- * without any Apple credentials or network.
+ * Turns a verified App Store notification into the line that lands in chat.
+ * Pure and side-effect free so it can be unit tested against fixtures without
+ * any Apple credentials or network.
  *
- * Two deliberate editorial choices:
+ * Written to be read as an operational feed — a day's worth of these should be
+ * scannable in one pass on a phone. That drove four rules:
  *
- *  1. A subscription "purchase" is usually not money yet. Both Pro plans ship a
- *     free introductory offer, so `SUBSCRIBED / INITIAL_BUY` fires at trial
- *     start with `price: 0`. Reporting that as a sale would overstate revenue,
- *     so trials get their own label and the conversion date.
- *  2. Family Sharing access produces the same `ONE_TIME_CHARGE` /`SUBSCRIBED`
- *     types as a real purchase, with `inAppOwnershipType: FAMILY_SHARED` and no
- *     new charge. It's labelled separately for the same reason.
+ *  1. **Line one answers "what and how much".** Product and money go together,
+ *     because those are the two facts worth scrolling for. Context (country,
+ *     dates, ids) drops to line two.
+ *  2. **Never print a bare zero.** A subscription "purchase" is usually not
+ *     money yet: both Pro plans ship a free introductory offer, so
+ *     `SUBSCRIBED/INITIAL_BUY` fires at trial start with `price: 0`. And on a
+ *     churn event, `price: 0` means a trial lapsed rather than a payer leaving —
+ *     the single most important distinction in the whole feed. Both say so in
+ *     words instead of rendering "$0.00".
+ *  3. **New money, recurring money and lost money are different labels.** SALE,
+ *     RENEWAL and CHURN are separate so the feed can be skimmed for the one you
+ *     care about, and a refund shows a negative amount.
+ *  4. **An untagged line always means real money.** Anything not explicitly
+ *     Production is tagged, including a missing environment, so silence is never
+ *     ambiguous.
+ *
+ * Family Sharing gets its own label for the same reason as trials: it produces
+ * the same notification types as a purchase, with no charge attached.
  */
 
 import {
@@ -25,22 +37,29 @@ import type {
   ResponseBodyV2DecodedPayload,
 } from "@apple/app-store-server-library"
 
-export type AlertKind = "sale" | "trial" | "churn" | "refund" | "info"
+export type AlertKind =
+  | "sale"
+  | "renewal"
+  | "trial"
+  | "churn"
+  | "refund"
+  | "info"
 
 export interface PurchaseAlert {
   readonly kind: AlertKind
   /** Short scannable prefix, e.g. "SALE". */
   readonly label: string
-  /** The headline, e.g. "Pro Lifetime bought". */
+  /** Line one: product plus the money or its absence, e.g. "Pro Lifetime — $24.99". */
   readonly headline: string
-  /** Supporting lines: money, storefront, plan dates, ids. */
+  /** Line two: country, dates, transaction id. */
   readonly details: ReadonlyArray<string>
-  /** "Production" | "Sandbox" — sandbox alerts are tagged so they can't be mistaken for revenue. */
+  /** "Production" | "Sandbox" | undefined when Apple didn't say. */
   readonly environment: string | undefined
 }
 
 const LABELS: Record<AlertKind, string> = {
   sale: "SALE",
+  renewal: "RENEWAL",
   trial: "TRIAL",
   churn: "CHURN",
   refund: "REFUND",
@@ -68,8 +87,8 @@ export function productLabel(productId: string | undefined): string {
 
 /**
  * Apple reports `price` in milliunits of `currency` (24990 = 24.99). Returns
- * undefined when either half is missing, so callers can omit the line entirely
- * instead of printing a misleading "0".
+ * undefined when either half is missing, so callers can omit the amount rather
+ * than print something misleading.
  */
 export function formatMoney(
   priceMilliunits: number | undefined,
@@ -81,17 +100,17 @@ export function formatMoney(
   ) {
     return undefined
   }
-  const amount = priceMilliunits / 1000
-  if (!currency) return amount.toFixed(2)
+  const units = priceMilliunits / 1000
+  if (!currency) return units.toFixed(2)
   try {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency,
       currencyDisplay: "narrowSymbol",
-    }).format(amount)
+    }).format(units)
   } catch {
     // Unknown/invalid ISO 4217 code — still report the number.
-    return `${amount.toFixed(2)} ${currency}`
+    return `${units.toFixed(2)} ${currency}`
   }
 }
 
@@ -109,35 +128,49 @@ function isFamilyShared(
   return transaction?.inAppOwnershipType === InAppOwnershipType.FAMILY_SHARED
 }
 
+/** True when Apple charged nothing for this transaction. */
+function isFree(
+  transaction: JWSTransactionDecodedPayload | undefined
+): boolean {
+  return transaction?.price === 0
+}
+
 /** A free introductory offer, i.e. a trial rather than a charge. */
 function isFreeTrial(
   transaction: JWSTransactionDecodedPayload | undefined
 ): boolean {
   if (!transaction) return false
-  if (transaction.offerType === OfferType.INTRODUCTORY_OFFER) return true
-  return transaction.price === 0
+  return (
+    transaction.offerType === OfferType.INTRODUCTORY_OFFER ||
+    isFree(transaction)
+  )
 }
 
-function moneyDetail(
-  transaction: JWSTransactionDecodedPayload | undefined
+/**
+ * The amount, with quantity when someone bought several of a consumable.
+ * `negative` renders money leaving the account, which is what makes a refund
+ * readable at a glance.
+ */
+function amount(
+  transaction: JWSTransactionDecodedPayload | undefined,
+  { negative = false }: { negative?: boolean } = {}
 ): string | undefined {
   const money = formatMoney(transaction?.price, transaction?.currency)
   if (!money) return undefined
-  const storefront = transaction?.storefront
   const quantity =
     typeof transaction?.quantity === "number" && transaction.quantity > 1
       ? ` x${transaction.quantity}`
       : ""
-  return storefront
-    ? `${money}${quantity} (${storefront})`
-    : `${money}${quantity}`
+  // U+2212 minus, not a hyphen: unambiguous next to a currency symbol.
+  return `${negative ? "\u2212" : ""}${money}${quantity}`
 }
 
 interface Verdict {
   kind: AlertKind
+  /** Product plus money/no-money, rendered as line one. */
   headline: string
-  /** Extra lines specific to this verdict, appended after the money line. */
-  extra?: ReadonlyArray<string | undefined>
+  /** Context for line two, in reading order. Falsy entries are dropped. */
+  details?: ReadonlyArray<string | undefined>
 }
 
 /**
@@ -152,115 +185,178 @@ function verdictFor(
   transaction: JWSTransactionDecodedPayload | undefined
 ): Verdict | null {
   const product = productLabel(transaction?.productId)
-  const renews = formatDate(transaction?.expiresDate)
+  const paid = amount(transaction)
+  const expires = formatDate(transaction?.expiresDate)
 
   switch (payload.notificationType) {
     case NotificationTypeV2.SUBSCRIBED: {
       if (isFamilyShared(transaction)) {
         return {
           kind: "info",
-          headline: `${product} shared via Family Sharing`,
+          headline: `${product} — Family Sharing, no charge`,
         }
       }
-      const first =
-        payload.subtype === Subtype.RESUBSCRIBE
-          ? "Resubscribed to"
-          : "New subscriber:"
+      const returning = payload.subtype === Subtype.RESUBSCRIBE
       if (isFreeTrial(transaction)) {
         return {
           kind: "trial",
-          headline: `${first} ${product} (free trial)`,
-          extra: [renews ? `Converts ${renews}` : undefined],
+          headline: `${product} — free trial started`,
+          details: [
+            returning ? "returning subscriber" : "new subscriber",
+            expires ? `converts ${expires}` : undefined,
+          ],
         }
       }
       return {
         kind: "sale",
-        headline: `${first} ${product}`,
-        extra: [renews ? `Renews ${renews}` : undefined],
+        headline: `${product} — ${paid ?? "amount unknown"}`,
+        details: [
+          returning ? "resubscribed" : "new subscriber",
+          expires ? `renews ${expires}` : undefined,
+        ],
       }
     }
 
     case NotificationTypeV2.DID_RENEW:
       return {
-        kind: "sale",
-        headline:
+        kind: "renewal",
+        headline: `${product} — ${paid ?? "amount unknown"}`,
+        details: [
           payload.subtype === Subtype.BILLING_RECOVERY
-            ? `${product} renewed (billing recovered)`
-            : `${product} renewed`,
-        extra: [renews ? `Next renewal ${renews}` : undefined],
+            ? "recovered after a billing failure"
+            : undefined,
+          expires ? `next renewal ${expires}` : undefined,
+        ],
       }
 
     case NotificationTypeV2.ONE_TIME_CHARGE:
       if (isFamilyShared(transaction)) {
         return {
           kind: "info",
-          headline: `${product} shared via Family Sharing`,
+          headline: `${product} — Family Sharing, no charge`,
         }
       }
-      return { kind: "sale", headline: `${product} bought` }
+      return {
+        kind: "sale",
+        headline: `${product} — ${paid ?? "amount unknown"}`,
+        details: ["one-time"],
+      }
 
     case NotificationTypeV2.OFFER_REDEEMED:
-      return { kind: "sale", headline: `Offer redeemed on ${product}` }
+      return {
+        kind: "sale",
+        headline: `${product} — ${paid ?? "offer redeemed"}`,
+        details: ["offer redeemed", expires ? `renews ${expires}` : undefined],
+      }
 
     case NotificationTypeV2.REFUND:
-      return { kind: "refund", headline: `${product} refunded` }
+      return {
+        kind: "refund",
+        headline: `${product} — ${amount(transaction, { negative: true }) ?? "refunded"}`,
+        details: ["refunded by Apple"],
+      }
 
     case NotificationTypeV2.REFUND_REVERSED:
-      return { kind: "info", headline: `Refund reversed on ${product}` }
+      return {
+        kind: "info",
+        headline: `${product} — refund reversed, ${paid ?? "amount unknown"} restored`,
+      }
 
     case NotificationTypeV2.REVOKE:
       return {
         kind: "churn",
-        headline: `${product} access revoked (Family Sharing ended)`,
+        headline: `${product} — Family Sharing access revoked`,
       }
 
     case NotificationTypeV2.DID_CHANGE_RENEWAL_STATUS:
       if (payload.subtype === Subtype.AUTO_RENEW_DISABLED) {
         return {
           kind: "churn",
-          headline: `Auto-renew turned off for ${product}`,
-          extra: [renews ? `Access until ${renews}` : undefined],
+          headline: `${product} — auto-renew turned off`,
+          details: [
+            expires ? `access until ${expires}` : undefined,
+            // What you stand to lose at that date, which is the actionable part.
+            isFree(transaction)
+              ? "was on a free trial"
+              : paid
+                ? `was ${paid}`
+                : undefined,
+          ],
         }
       }
       return {
         kind: "info",
-        headline: `Auto-renew turned back on for ${product}`,
+        headline: `${product} — auto-renew turned back on`,
+        details: [expires ? `renews ${expires}` : undefined],
       }
 
     case NotificationTypeV2.DID_CHANGE_RENEWAL_PREF: {
       if (payload.subtype === Subtype.UPGRADE) {
-        return { kind: "sale", headline: `Upgraded to ${product}` }
+        return {
+          kind: "sale",
+          headline: `${product} — upgraded, ${paid ?? "amount unknown"}`,
+        }
       }
       if (payload.subtype === Subtype.DOWNGRADE) {
-        return { kind: "info", headline: `Downgrade scheduled to ${product}` }
+        return {
+          kind: "info",
+          headline: `${product} — downgrade scheduled`,
+          details: [expires ? `takes effect ${expires}` : undefined],
+        }
       }
-      return { kind: "info", headline: `Plan change cancelled on ${product}` }
+      return { kind: "info", headline: `${product} — plan change cancelled` }
     }
 
-    case NotificationTypeV2.EXPIRED:
+    case NotificationTypeV2.EXPIRED: {
+      // The distinction that matters: a payer leaving vs a trial that never
+      // converted. Same notification type, completely different news.
+      if (isFree(transaction)) {
+        return {
+          kind: "churn",
+          headline: `${product} — trial ended, never charged`,
+          details: [
+            payload.subtype === Subtype.VOLUNTARY
+              ? "cancelled during trial"
+              : undefined,
+          ],
+        }
+      }
       return {
         kind: "churn",
-        headline:
+        headline: `${product} — lapsed${paid ? `, was ${paid}` : ""}`,
+        details: [
           payload.subtype === Subtype.BILLING_RETRY
-            ? `${product} expired (billing failed)`
-            : `${product} expired`,
+            ? "billing failed"
+            : payload.subtype === Subtype.VOLUNTARY
+              ? "cancelled"
+              : payload.subtype === Subtype.PRICE_INCREASE
+                ? "declined a price increase"
+                : undefined,
+        ],
       }
+    }
 
     case NotificationTypeV2.DID_FAIL_TO_RENEW:
       return {
         kind: "churn",
-        headline: `${product} failed to renew (billing retry${
-          payload.subtype === Subtype.GRACE_PERIOD ? ", in grace period" : ""
-        })`,
+        headline: `${product} — payment failed${paid ? `, ${paid} at risk` : ""}`,
+        details: [
+          payload.subtype === Subtype.GRACE_PERIOD
+            ? "in grace period, still has access"
+            : "in billing retry",
+        ],
       }
 
     case NotificationTypeV2.GRACE_PERIOD_EXPIRED:
-      return { kind: "churn", headline: `${product} grace period ended` }
+      return {
+        kind: "churn",
+        headline: `${product} — grace period ended, access cut off`,
+      }
 
     case NotificationTypeV2.TEST:
       return {
         kind: "info",
-        headline: "Test notification received — the webhook works",
+        headline: "Test notification — the webhook works",
       }
 
     default:
@@ -280,15 +376,16 @@ export function describeNotification(
   if (!verdict) return null
 
   const details: Array<string> = []
-  const money = moneyDetail(transaction)
-  // A trial's "$0.00" line adds nothing the headline doesn't already say.
-  if (money && verdict.kind !== "trial") details.push(money)
-  for (const line of verdict.extra ?? []) {
+  // Country first: it frames everything after it, and it's the field that makes
+  // a feed feel like a map of where the product is landing.
+  if (transaction?.storefront) details.push(transaction.storefront)
+  for (const line of verdict.details ?? []) {
     if (line) details.push(line)
   }
-  // Opaque, Apple-issued id. No customer identity is available here (GeoSpoof
-  // sets no appAccountToken), and none should be added — it's the one field that
-  // makes an alert traceable back to a specific transaction in App Store Connect.
+  // Opaque, Apple-issued id, last because it's for lookups rather than reading.
+  // No customer identity is available here (GeoSpoof sets no appAccountToken),
+  // and none should be added — this is the field that ties an alert back to a
+  // specific transaction in App Store Connect.
   if (transaction?.originalTransactionId) {
     details.push(`txn ${transaction.originalTransactionId}`)
   }
@@ -302,11 +399,31 @@ export function describeNotification(
   }
 }
 
-/** Render an alert as the plain-text line posted to chat. */
+/**
+ * Tag for anything that isn't confirmed real money. A missing environment is
+ * tagged too, so an untagged line can always be trusted as production.
+ */
+function environmentTag(environment: string | undefined): string {
+  if (environment === "Production") return ""
+  if (!environment) return " [env?]"
+  return ` [${environment}]`
+}
+
+/** Render an alert as the plain-text lines posted to chat. */
 export function formatAlertText(alert: PurchaseAlert): string {
-  const sandboxTag =
-    alert.environment && alert.environment !== "Production" ? " [Sandbox]" : ""
-  const head = `[${alert.label}]${sandboxTag} ${alert.headline}`
+  const head = `[${alert.label}]${environmentTag(alert.environment)} ${alert.headline}`
+  return alert.details.length > 0
+    ? `${head}\n${alert.details.join(" · ")}`
+    : head
+}
+
+/**
+ * Discord variant: same content, with the label and headline bolded so a day's
+ * events can be skimmed by eye. Kept out of `formatAlertText` because Slack uses
+ * different markup and a generic consumer wants none.
+ */
+export function formatAlertMarkdown(alert: PurchaseAlert): string {
+  const head = `**[${alert.label}]${environmentTag(alert.environment)} ${alert.headline}**`
   return alert.details.length > 0
     ? `${head}\n${alert.details.join(" · ")}`
     : head

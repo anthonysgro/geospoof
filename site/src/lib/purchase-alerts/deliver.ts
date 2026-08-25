@@ -13,7 +13,7 @@
  * added here — worth keeping that way given the product's privacy stance.
  */
 
-import { formatAlertText } from "./format"
+import { formatAlertMarkdown, formatAlertText } from "./format"
 import type { PurchaseAlert } from "./format"
 
 /** Discord rejects `content` over 2000 characters; stay clear of the edge. */
@@ -55,9 +55,12 @@ export function webhookBody(
 ): unknown {
   const text = truncate(formatAlertText(alert))
   switch (flavor) {
-    case "discord":
+    case "discord": {
+      // Bold headline so a scrollback of these is skimmable; the mention goes
+      // first so the ping is visible in the notification preview.
+      const rich = truncate(formatAlertMarkdown(alert))
       return {
-        content: mentionUserId ? `<@${mentionUserId}> ${text}` : text,
+        content: mentionUserId ? `<@${mentionUserId}> ${rich}` : rich,
         // Explicitly scope what a webhook post is allowed to ping. `parse: []`
         // disables @everyone/@here/role pings outright, and only the configured
         // user id can be mentioned — so no alert text can ever notify a whole
@@ -66,6 +69,7 @@ export function webhookBody(
           ? { parse: [], users: [mentionUserId] }
           : { parse: [] },
       }
+    }
     case "slack":
       return { text }
     case "generic":

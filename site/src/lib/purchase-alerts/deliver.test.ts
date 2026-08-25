@@ -6,10 +6,15 @@ import type { PurchaseAlert } from "./format"
 const ALERT: PurchaseAlert = {
   kind: "sale",
   label: "SALE",
-  headline: "Pro Lifetime bought",
-  details: ["$24.99 (USA)"],
+  headline: "Pro Lifetime — $24.99",
+  details: ["USA", "one-time"],
   environment: "Production",
 }
+
+/** Plain rendering, used by Slack and generic targets. */
+const PLAIN = "[SALE] Pro Lifetime — $24.99\nUSA · one-time"
+/** Discord gets the headline bolded so a day of events is skimmable. */
+const RICH = "**[SALE] Pro Lifetime — $24.99**\nUSA · one-time"
 
 describe("webhookFlavor", () => {
   it("recognizes Discord and Slack incoming webhooks", () => {
@@ -37,21 +42,20 @@ describe("webhookFlavor", () => {
 })
 
 describe("webhookBody", () => {
-  it("uses `content` for Discord and `text` for Slack", () => {
+  it("bolds for Discord's `content` and stays plain for Slack's `text`", () => {
     expect(webhookBody(ALERT, "discord")).toEqual({
-      content: "[SALE] Pro Lifetime bought\n$24.99 (USA)",
+      content: RICH,
       allowed_mentions: { parse: [] },
     })
-    expect(webhookBody(ALERT, "slack")).toEqual({
-      text: "[SALE] Pro Lifetime bought\n$24.99 (USA)",
-    })
+    // Slack uses different markup and would render `**` literally.
+    expect(webhookBody(ALERT, "slack")).toEqual({ text: PLAIN })
   })
 
   // A webhook post pings nobody, and a Discord server defaults to "Only
   // @mentions" — so without a mention the alert never reaches your phone.
   it("prefixes a Discord mention when one is configured", () => {
     expect(webhookBody(ALERT, "discord", "1234567890")).toEqual({
-      content: "<@1234567890> [SALE] Pro Lifetime bought\n$24.99 (USA)",
+      content: `<@1234567890> ${RICH}`,
       allowed_mentions: { parse: [], users: ["1234567890"] },
     })
   })
@@ -70,13 +74,13 @@ describe("webhookBody", () => {
 
   it("ignores a mention for non-Discord targets", () => {
     expect(webhookBody(ALERT, "slack", "1234567890")).toEqual({
-      text: "[SALE] Pro Lifetime bought\n$24.99 (USA)",
+      text: PLAIN,
     })
   })
 
   it("includes the structured alert for a generic endpoint", () => {
     expect(webhookBody(ALERT, "generic")).toEqual({
-      text: "[SALE] Pro Lifetime bought\n$24.99 (USA)",
+      text: PLAIN,
       alert: ALERT,
     })
   })
@@ -116,7 +120,7 @@ describe("deliverAlert", () => {
     expect(calls).toHaveLength(1)
     expect(calls[0].init?.method).toBe("POST")
     expect(JSON.parse(String(calls[0].init?.body))).toEqual({
-      content: "[SALE] Pro Lifetime bought\n$24.99 (USA)",
+      content: RICH,
       allowed_mentions: { parse: [] },
     })
   })
