@@ -680,7 +680,7 @@ export const id: Dictionary = {
         {
           title: "Perbarui ke versi terbaru",
           featured: false,
-          body: "Banyak masalah sudah diperbaiki di rilis yang lebih baru. Di popup, buka Detail → Lanjutan untuk melihat versi Anda, lalu bandingkan dengan rilis terbaru di bawah dan perbarui melalui pengelola ekstensi browser Anda jika Anda tertinggal.",
+          body: "Banyak masalah sudah diperbaiki di rilis yang lebih baru. Di popup, buka Pengaturan (ikon roda gigi di header) untuk melihat versi Anda, lalu bandingkan dengan rilis terbaru di bawah dan perbarui melalui pengelola ekstensi browser Anda jika Anda tertinggal.",
           details: [],
           note: "",
           action: "latestRelease",

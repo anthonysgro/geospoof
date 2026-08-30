@@ -688,7 +688,7 @@ export const es: Dictionary = {
         {
           title: "Actualiza a la última versión",
           featured: false,
-          body: "Muchos problemas ya están resueltos en una versión más reciente. En el popup, abre Detalles → Avanzado para ver tu versión, luego compárala con la última versión de abajo y actualiza a través del gestor de extensiones de tu navegador si vas por detrás.",
+          body: "Muchos problemas ya están resueltos en una versión más reciente. En el popup, abre Ajustes (el icono de engranaje en la cabecera) para ver tu versión, luego compárala con la última versión de abajo y actualiza a través del gestor de extensiones de tu navegador si vas por detrás.",
           details: [],
           note: "",
           action: "latestRelease",

@@ -690,7 +690,7 @@ export const fr: Dictionary = {
         {
           title: "Mettez à jour vers la dernière version",
           featured: false,
-          body: "De nombreux problèmes sont déjà corrigés dans une version plus récente. Dans la fenêtre, ouvrez Détails → Avancé pour voir votre version, puis comparez-la à la dernière version ci-dessous et mettez à jour via le gestionnaire d’extensions de votre navigateur si vous êtes en retard.",
+          body: "De nombreux problèmes sont déjà corrigés dans une version plus récente. Dans la fenêtre, ouvrez Paramètres (l’icône d’engrenage dans l’en-tête) pour voir votre version, puis comparez-la à la dernière version ci-dessous et mettez à jour via le gestionnaire d’extensions de votre navigateur si vous êtes en retard.",
           details: [],
           note: "",
           action: "latestRelease",

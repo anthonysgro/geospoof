@@ -684,7 +684,7 @@ export const en = {
         {
           title: "Update to the latest version",
           featured: false,
-          body: "Many issues are already fixed in a newer release. In the popup, open Details → Advanced to see your version, then compare it to the latest release below and update through your browser's extension manager if you're behind.",
+          body: "Many issues are already fixed in a newer release. In the popup, open Settings (the gear icon in the header) to see your version, then compare it to the latest release below and update through your browser's extension manager if you're behind.",
           details: [],
           note: "",
           action: "latestRelease",

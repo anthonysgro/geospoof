@@ -692,7 +692,7 @@ export const de: Dictionary = {
         {
           title: "Auf die neueste Version aktualisieren",
           featured: false,
-          body: "Viele Probleme sind in einer neueren Version bereits behoben. Öffne im Popup Details → Erweitert, um deine Version zu sehen, vergleiche sie dann mit der neuesten Version unten und aktualisiere über die Erweiterungsverwaltung deines Browsers, falls du hinterherhinkst.",
+          body: "Viele Probleme sind in einer neueren Version bereits behoben. Öffne im Popup die Einstellungen (das Zahnrad-Symbol in der Kopfzeile), um deine Version zu sehen, vergleiche sie dann mit der neuesten Version unten und aktualisiere über die Erweiterungsverwaltung deines Browsers, falls du hinterherhinkst.",
           details: [],
           note: "",
           action: "latestRelease",

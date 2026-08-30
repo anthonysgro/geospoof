@@ -93,7 +93,7 @@ Use the built-in test links at the bottom of the extension:
 
 ⚠️ **VPN Recommended**: This extension spoofs browser data only. For full privacy, use a VPN that matches your spoofed location.
 
-⚠️ **Language/Locale Spoofing Is Opt-In**: By default GeoSpoof leaves your language alone, so a site can still notice that your browser reports `en-US` while your location says Paris. **Reported Language** closes that gap — turn it on in **Details → Advanced → Reported Language** and pick either "Match my location" or a specific language. It moves `navigator.language`, every `Intl` format, and the `Accept-Language` header together, so they can't contradict each other.
+⚠️ **Language/Locale Spoofing Is Opt-In**: By default GeoSpoof leaves your language alone, so a site can still notice that your browser reports `en-US` while your location says Paris. **Reported Language** closes that gap — turn it on in **Settings (the ⚙ gear in the popup header) → Reported Language** and pick either "Match my location" or a specific language. It moves `navigator.language`, every `Intl` format, and the `Accept-Language` header together, so they can't contradict each other.
 
 It stays off unless you turn it on, because it visibly changes browsing: many sites will switch language outright, and the language you pick is sent with every request. Free on Firefox and Chrome; part of GeoSpoof Pro on Safari. This is separate from the **Language** setting, which only changes GeoSpoof's own interface and is never sent to websites. See [Reported Language](../README.md#reported-language-opt-in) for the full list of what it covers and what it can't.
 
@@ -112,7 +112,7 @@ Both the browser extension popup and the Safari app for iPhone, iPad, and Mac ar
 
 There is deliberately no language picker inside the app. iOS and macOS already provide a per-app one, and using the system setting means GeoSpoof behaves like every other app on your device.
 
-**To change the language of the extension popup**, use the picker in the popup's Advanced section. Browsers don't offer a per-extension language setting, which is why the popup has its own.
+**To change the language of the extension popup**, use the picker in the popup's Settings view (the ⚙ gear in the popup header). Browsers don't offer a per-extension language setting, which is why the popup has its own.
 
 Two things are worth keeping separate:
 

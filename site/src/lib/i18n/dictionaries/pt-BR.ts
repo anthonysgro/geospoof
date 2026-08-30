@@ -690,7 +690,7 @@ export const ptBR: Dictionary = {
         {
           title: "Atualize para a versão mais recente",
           featured: false,
-          body: "Muitos problemas já estão corrigidos em uma versão mais nova. No popup, abra Detalhes → Avançado para ver a sua versão, depois compare com a versão mais recente abaixo e atualize pelo gerenciador de extensões do seu navegador se estiver atrasado.",
+          body: "Muitos problemas já estão corrigidos em uma versão mais nova. No popup, abra Configurações (o ícone de engrenagem no cabeçalho) para ver a sua versão, depois compare com a versão mais recente abaixo e atualize pelo gerenciador de extensões do seu navegador se estiver atrasado.",
           details: [],
           note: "",
           action: "latestRelease",

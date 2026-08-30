@@ -116,7 +116,7 @@ GeoSpoof is designed to work alongside a VPN, not replace one.
 
 Your VPN and your spoofed location can say Paris while your browser still says `navigator.language === "en-US"` and sends `Accept-Language: en-US` with every request. **Reported Language** closes that gap.
 
-Turn it on in **Details → Advanced → Reported Language** and pick either:
+Turn it on in **Settings (the ⚙ gear in the popup header) → Reported Language** and pick either:
 
 - **Match my location** — use the dominant language of the place you're already spoofing, resolved offline from your spoofed timezone.
 - **Choose language…** — name any language tag your browser supports, like `fr-FR`, `ja`, or `pt-BR`. The field suggests common ones as you type but accepts any valid tag.
