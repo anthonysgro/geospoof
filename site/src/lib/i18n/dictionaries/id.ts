@@ -40,10 +40,10 @@ export const id: Dictionary = {
     secondaryPhoneAlt: "Aplikasi GeoSpoof — tampilan kedua",
   },
   products: {
-    eyebrow: "Produk",
-    heading: "Dua produk, satu cerita lokasi",
+    eyebrow: "Gratis & Pro",
+    heading: "Mulai di browser Anda. Lebih dalam di iPhone Anda.",
     subhead:
-      "Mulai gratis di browser Anda. Turun ke tingkat perangkat di iPhone Anda saat GPS asli Anda perlu ikut menyesuaikan.",
+      "Ekstensinya gratis di semua browser utama. Pro menambahkan GeoSpoof GPS untuk lokasi sistem asli iPhone Anda, plus sinkronisasi VPN otomatis, filter per situs, dan widget.",
     free: {
       badge: "Gratis",
       title: "GeoSpoof untuk browser Anda",
@@ -52,10 +52,10 @@ export const id: Dictionary = {
     },
     pro: {
       badge: "Pro",
-      title: "GeoSpoof GPS",
+      title: "GeoSpoof Pro",
       description:
-        "Atur GPS asli tingkat sistem iPhone Anda agar cocok dengan lokasi palsu Anda — dikendalikan dari aplikasi pendamping Mac.",
-      cta: "Jelajahi GeoSpoof GPS",
+        "GeoSpoof GPS mengatur lokasi asli tingkat sistem iPhone Anda dari aplikasi pendamping Mac. Ditambah sinkronisasi VPN otomatis, filter per situs, widget, pemilih peta, dan lainnya.",
+      cta: "Lihat isi Pro",
       priceNote: "Mulai $1.99/bln — atau $24.99 seumur hidup",
     },
   },

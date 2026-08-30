@@ -40,10 +40,10 @@ export const ptBR: Dictionary = {
     secondaryPhoneAlt: "Aplicativo GeoSpoof — tela secundária",
   },
   products: {
-    eyebrow: "Produtos",
-    heading: "Dois produtos, uma só história de localização",
+    eyebrow: "Grátis e Pro",
+    heading: "Comece no seu navegador. Vá mais fundo no seu iPhone.",
     subhead:
-      "Comece de graça no seu navegador. Vá ao nível do dispositivo no seu iPhone quando precisar que o seu GPS real acompanhe.",
+      "A extensão é grátis em todos os navegadores principais. O Pro adiciona o GeoSpoof GPS para a localização real de sistema do seu iPhone, além de sincronização automática com VPN, filtros por site e widgets.",
     free: {
       badge: "Grátis",
       title: "GeoSpoof para o seu navegador",
@@ -52,10 +52,10 @@ export const ptBR: Dictionary = {
     },
     pro: {
       badge: "Pro",
-      title: "GeoSpoof GPS",
+      title: "GeoSpoof Pro",
       description:
-        "Ajuste o GPS real, de nível de sistema, do seu iPhone para corresponder à sua localização falsificada — controlado por um app complementar para Mac.",
-      cta: "Conheça o GeoSpoof GPS",
+        "O GeoSpoof GPS define a localização real, de nível de sistema, do seu iPhone a partir de um app complementar para Mac. Além disso, sincronização automática com VPN, filtros por site, widgets, seletor de mapa e mais.",
+      cta: "Veja o que vem no Pro",
       priceNote: "A partir de $1.99/mês — ou $24.99 vitalício",
     },
   },

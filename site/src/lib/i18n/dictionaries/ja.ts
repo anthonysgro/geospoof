@@ -40,10 +40,10 @@ export const ja: Dictionary = {
     secondaryPhoneAlt: "GeoSpoof アプリ — サブ画面",
   },
   products: {
-    eyebrow: "製品",
-    heading: "2 つの製品、ひとつの位置情報",
+    eyebrow: "無料と Pro",
+    heading: "まずはブラウザで。次は iPhone でもっと深く。",
     subhead:
-      "まずはブラウザで無料で。iPhone の本当の GPS まで合わせたくなったら、デバイスレベルへ進みましょう。",
+      "拡張機能は主要ブラウザすべてで無料。Pro では iPhone の実際のシステム位置情報を変える GeoSpoof GPS に加えて、VPN 自動同期、サイトごとのフィルター、ウィジェットが使えます。",
     free: {
       badge: "無料",
       title: "ブラウザ向け GeoSpoof",
@@ -52,10 +52,10 @@ export const ja: Dictionary = {
     },
     pro: {
       badge: "Pro",
-      title: "GeoSpoof GPS",
+      title: "GeoSpoof Pro",
       description:
-        "Mac のコンパニオンアプリから、iPhone の実際のシステム GPS を偽装した位置に合わせます。",
-      cta: "GeoSpoof GPS を見る",
+        "GeoSpoof GPS は Mac のコンパニオンアプリから iPhone の実際のシステム位置情報を設定します。さらに VPN 自動同期、サイトごとのフィルター、ウィジェット、地図ピッカーなど。",
+      cta: "Pro の内容を見る",
       priceNote: "月額 $1.99 〜 — または買い切り $24.99",
     },
   },

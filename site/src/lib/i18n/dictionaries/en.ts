@@ -42,10 +42,10 @@ export const en = {
     secondaryPhoneAlt: "GeoSpoof app — secondary view",
   },
   products: {
-    eyebrow: "Products",
-    heading: "Two products, one location story",
+    eyebrow: "Free & Pro",
+    heading: "Start in your browser. Go deeper on your iPhone.",
     subhead:
-      "Start free in your browser. Go device-deep on your iPhone when you need your real GPS to match.",
+      "The extension is free on every major browser. Pro adds GeoSpoof GPS for your iPhone's real system location, plus automatic VPN sync, per-site filters, and widgets.",
     free: {
       badge: "Free",
       title: "GeoSpoof for your browser",
@@ -54,10 +54,10 @@ export const en = {
     },
     pro: {
       badge: "Pro",
-      title: "GeoSpoof GPS",
+      title: "GeoSpoof Pro",
       description:
-        "Move your iPhone's real, system-level GPS to match your spoofed location — driven from a Mac companion app.",
-      cta: "Explore GeoSpoof GPS",
+        "GeoSpoof GPS sets your iPhone's real, system-level location from a Mac companion app. Plus automatic VPN sync, per-site filters, widgets, map picker, and more.",
+      cta: "See what's in Pro",
       priceNote: "From $1.99/mo — or $24.99 lifetime",
     },
   },

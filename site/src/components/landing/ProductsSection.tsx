@@ -27,10 +27,19 @@ const arrowClass =
   "size-4 shrink-0 transition-transform group-hover:translate-x-0.5"
 
 /**
+/**
  * Homepage products section — the "branded house" moment. Sits right after the
- * hero to answer "what does GeoSpoof make?" before the deeper feature sections:
- * the free browser extension (top of funnel) and GeoSpoof GPS (the Pro,
- * device-level flagship). Each card routes to its own surface.
+ * hero to answer "what does GeoSpoof make?" before the deeper feature sections.
+ *
+ * The two cards are the two rungs of the ladder, not two separate products:
+ * the free browser extension (top of funnel) and GeoSpoof Pro (the paid tier).
+ * Pro is deliberately the card's subject rather than GeoSpoof GPS, even though
+ * GPS is the most differentiated feature: GPS is one of eight things Pro
+ * unlocks, it's still flagged experimental, and it needs a Mac. Titling the
+ * card "GeoSpoof GPS" made the whole subscription read as Mac-gated to the
+ * (larger) audience without one, and hid Pro's other benefits. GPS leads the
+ * card *body* because it's the strongest hook; it keeps its own front doors via
+ * the nav, the hero's gpsHint, and the footer.
  */
 export function ProductsSection({ className }: { className?: string }) {
   const { t } = useTranslations()
@@ -123,7 +132,7 @@ export function ProductsSection({ className }: { className?: string }) {
             {p.pro.priceNote}
           </LocaleLink>
           <LocaleLink
-            to="/gps"
+            to="/pro"
             className={cn(
               ctaClass,
               "mt-3 bg-(--color-brand) text-white shadow-md",

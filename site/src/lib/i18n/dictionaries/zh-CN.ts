@@ -53,10 +53,10 @@ export const zhCN: Dictionary = {
     secondaryPhoneAlt: "GeoSpoof 应用——次要界面",
   },
   products: {
-    eyebrow: "产品",
-    heading: "两款产品，一个位置故事",
+    eyebrow: "免费与 Pro",
+    heading: "先在浏览器开始，再深入到 iPhone。",
     subhead:
-      "先在浏览器里免费开始。当你需要连真实 GPS 也保持一致时，就深入到设备层面。",
+      "扩展在所有主流浏览器上免费。Pro 增加了 GeoSpoof GPS，可设置 iPhone 的真实系统位置，还有 VPN 自动同步、按站点过滤和小组件。",
     free: {
       badge: "免费",
       title: "浏览器版 GeoSpoof",
@@ -65,10 +65,10 @@ export const zhCN: Dictionary = {
     },
     pro: {
       badge: "Pro",
-      title: "GeoSpoof GPS",
+      title: "GeoSpoof Pro",
       description:
-        "通过 Mac 伴侣应用，把你 iPhone 的真实系统级 GPS 设置为与你伪造的位置一致。",
-      cta: "了解 GeoSpoof GPS",
+        "GeoSpoof GPS 通过 Mac 伴侣应用设置你 iPhone 的真实系统级位置。另有 VPN 自动同步、按站点过滤、小组件、地图选点等。",
+      cta: "查看 Pro 包含什么",
       priceNote: "$1.99/月起 — 或 $24.99 永久",
     },
   },
