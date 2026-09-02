@@ -157,7 +157,7 @@ export const ru: Dictionary = {
       github: "GitHub",
     },
     footerNavAria: "Навигация в подвале",
-    copyright: "© {year} GeoSpoof. Все права защищены.",
+    copyright: "© {year} GeoSpoof LLC. Все права защищены.",
   },
   languageSwitcher: {
     label: "Язык",
@@ -178,14 +178,14 @@ export const ru: Dictionary = {
       metaDescription:
         "Политика конфиденциальности GeoSpoof — как мы защищаем ваши данные и уважаем вашу приватность.",
       heading: "Политика конфиденциальности",
-      lastUpdated: "Последнее обновление: 3 июля 2026 г.",
+      lastUpdated: "Последнее обновление: 1 сентября 2026 г.",
     },
     terms: {
       metaTitle: "Условия использования | GeoSpoof",
       metaDescription:
         "Условия использования GeoSpoof — правила, регулирующие использование расширения.",
       heading: "Условия использования",
-      lastUpdated: "Последнее обновление: 10 июля 2026 г.",
+      lastUpdated: "Последнее обновление: 1 сентября 2026 г.",
     },
   },
   testimonials: {

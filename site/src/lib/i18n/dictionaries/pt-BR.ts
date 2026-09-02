@@ -146,7 +146,7 @@ export const ptBR: Dictionary = {
       github: "GitHub",
     },
     footerNavAria: "Navegação do rodapé",
-    copyright: "© {year} GeoSpoof. Todos os direitos reservados.",
+    copyright: "© {year} GeoSpoof LLC. Todos os direitos reservados.",
   },
   languageSwitcher: {
     label: "Idioma",
@@ -167,14 +167,14 @@ export const ptBR: Dictionary = {
       metaDescription:
         "Política de Privacidade do GeoSpoof — saiba como protegemos os seus dados e respeitamos a sua privacidade.",
       heading: "Política de Privacidade",
-      lastUpdated: "Última atualização: 3 de julho de 2026",
+      lastUpdated: "Última atualização: 1º de setembro de 2026",
     },
     terms: {
       metaTitle: "Termos de Serviço | GeoSpoof",
       metaDescription:
         "Termos de Serviço do GeoSpoof — entenda os termos que regem o uso da extensão.",
       heading: "Termos de Serviço",
-      lastUpdated: "Última atualização: 10 de julho de 2026",
+      lastUpdated: "Última atualização: 1º de setembro de 2026",
     },
   },
   testimonials: {

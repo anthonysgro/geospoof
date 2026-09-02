@@ -190,6 +190,11 @@ function StructuredData() {
     operatingSystem: "macOS 13+",
     downloadUrl: GPS_LATEST_DMG,
     author: { "@type": "Person", name: "Anthony Sgro" },
+    publisher: {
+      "@type": "Organization",
+      name: "GeoSpoof",
+      legalName: "GeoSpoof LLC",
+    },
   }
 
   const breadcrumbSchema = {

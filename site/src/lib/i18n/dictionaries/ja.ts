@@ -144,7 +144,7 @@ export const ja: Dictionary = {
       github: "GitHub",
     },
     footerNavAria: "フッターナビゲーション",
-    copyright: "© {year} GeoSpoof. 無断転載を禁じます。",
+    copyright: "© {year} GeoSpoof LLC. 無断転載を禁じます。",
   },
   languageSwitcher: {
     label: "言語",
@@ -164,14 +164,14 @@ export const ja: Dictionary = {
       metaDescription:
         "GeoSpoof のプライバシーポリシー — 私たちがどのようにあなたのデータを保護し、プライバシーを尊重するかをご確認ください。",
       heading: "プライバシーポリシー",
-      lastUpdated: "最終更新日：2026年7月3日",
+      lastUpdated: "最終更新日：2026年9月1日",
     },
     terms: {
       metaTitle: "利用規約 | GeoSpoof",
       metaDescription:
         "GeoSpoof の利用規約 — 拡張機能の利用を規定する条件をご確認ください。",
       heading: "利用規約",
-      lastUpdated: "最終更新日：2026年7月10日",
+      lastUpdated: "最終更新日：2026年9月1日",
     },
   },
   testimonials: {

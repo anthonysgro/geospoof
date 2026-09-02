@@ -100,8 +100,8 @@ export function TermsPage() {
             <TermsSection title="1. Agreement to Terms">
               <p>
                 These Terms of Service (the "Terms") are a binding agreement
-                between you and Anthony Sgro, an individual developer based in
-                the United States ("we," "us," or "the developer"). By
+                between you and GeoSpoof LLC, a New York limited liability
+                company ("GeoSpoof," "we," "us," or "the developer"). By
                 installing or using the GeoSpoof browser extension (the
                 "Extension"), you agree to be bound by these Terms. If you do
                 not agree, do not install or use the Extension.
@@ -126,16 +126,20 @@ export function TermsPage() {
                 anonymity or circumvent server-side detection methods.
               </p>
               <p>
-                GeoSpoof is free to use. On iOS and iPadOS, the app also offers{" "}
-                <strong>GeoSpoof Pro</strong>, which unlocks additional features
-                such as automatic background VPN sync, per-site rules, widgets,
-                custom accuracy, and the on-map location picker. Pro is
-                available either as an optional auto-renewable subscription
-                (monthly or annual) or as a one-time "lifetime" purchase that
-                unlocks the same features permanently and does not renew; a free
-                tier remains fully functional without either. On macOS these
-                features are included at no charge, so there is no macOS
-                subscription. The iOS, iPadOS, and macOS app may also offer
+                GeoSpoof is free to use. On iOS, iPadOS, and macOS, the app also
+                offers <strong>GeoSpoof Pro</strong>, which unlocks additional
+                features such as automatic background VPN sync, per-site rules,
+                widgets and controls, custom accuracy, the on-map location
+                picker, and device-level GPS. Pro is available either as an
+                optional auto-renewable subscription (monthly or annual) or as a
+                one-time "lifetime" purchase that unlocks the same features
+                permanently and does not renew; a free tier remains fully
+                functional without either. Pro is a Universal Purchase, so a
+                single purchase covers your iPhone, iPad, and Mac at no
+                additional cost. Device-level GPS is the one Pro feature limited
+                by platform: it sets the real system location of an iPhone or
+                iPad, and is driven from the Mac app rather than applying to the
+                Mac itself. The iOS, iPadOS, and macOS app may also offer
                 optional one-time "tips" that let you support development and
                 unlock no features.
               </p>
@@ -253,7 +257,7 @@ export function TermsPage() {
               <p>
                 The GeoSpoof name, logo, and associated branding are the
                 property of the developer.{" "}
-                <strong>GeoSpoof™ is a trademark of Anthony Sgro.</strong> The
+                <strong>GeoSpoof™ is a trademark of GeoSpoof LLC.</strong> The
                 underlying source code is available under the MIT License, but
                 that license covers the code only and does not grant any rights
                 in the GeoSpoof name, logo, or marks. Nothing in these Terms
@@ -325,20 +329,19 @@ export function TermsPage() {
 
             <TermsSection title="10. Export Controls and Sanctions">
               <p>
-                GeoSpoof is developed and made available from the United
-                States. The Extension and the companion applications
-                (together, the "Software"), and your access to and use of
-                them, are subject to United States export control laws and
-                regulations — including the Export Administration Regulations
-                (the "EAR") administered by the U.S. Department of Commerce,
-                Bureau of Industry and Security ("BIS") — and to the economic
-                sanctions and trade embargo programs administered by the U.S.
-                Department of the Treasury, Office of Foreign Assets Control
-                ("OFAC"), as well as any comparable export, sanctions, or
-                import laws of other jurisdictions applicable to you
-                (collectively, "Trade Control Laws"). You are responsible for
-                complying with all Trade Control Laws that apply to your use of
-                the Software.
+                GeoSpoof is developed and made available from the United States.
+                The Extension and the companion applications (together, the
+                "Software"), and your access to and use of them, are subject to
+                United States export control laws and regulations — including
+                the Export Administration Regulations (the "EAR") administered
+                by the U.S. Department of Commerce, Bureau of Industry and
+                Security ("BIS") — and to the economic sanctions and trade
+                embargo programs administered by the U.S. Department of the
+                Treasury, Office of Foreign Assets Control ("OFAC"), as well as
+                any comparable export, sanctions, or import laws of other
+                jurisdictions applicable to you (collectively, "Trade Control
+                Laws"). You are responsible for complying with all Trade Control
+                Laws that apply to your use of the Software.
               </p>
               <p>
                 <strong>Representations.</strong> By installing, accessing, or
@@ -425,10 +428,10 @@ export function TermsPage() {
                 Trade Control Laws.
               </p>
               <p>
-                The representations and obligations in this Section are made each
-                time you access or use the Software and survive termination of
-                these Terms. Any breach of this Section is a material breach of
-                these Terms.
+                The representations and obligations in this Section are made
+                each time you access or use the Software and survive termination
+                of these Terms. Any breach of this Section is a material breach
+                of these Terms.
               </p>
             </TermsSection>
 
@@ -482,7 +485,18 @@ export function TermsPage() {
               </p>
             </TermsSection>
 
-            <TermsSection title="15. Changes to Terms">
+            <TermsSection title="15. Assignment">
+              <p>
+                You may not assign or transfer these Terms, or any rights under
+                them, without our prior written consent. We may assign these
+                Terms, in whole or in part, to an affiliate or to a successor in
+                connection with a merger, acquisition, reorganization, or sale
+                of assets. Your rights under these Terms are not affected by
+                such an assignment.
+              </p>
+            </TermsSection>
+
+            <TermsSection title="16. Changes to Terms">
               <p>
                 We reserve the right to modify these Terms at any time. Changes
                 will be posted on this page with an updated date, and material
@@ -492,7 +506,7 @@ export function TermsPage() {
               </p>
             </TermsSection>
 
-            <TermsSection title="16. Contact and Notices">
+            <TermsSection title="17. Contact and Notices">
               <p>
                 For questions about these Terms, or to send legal notices,
                 contact us at{" "}

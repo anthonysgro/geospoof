@@ -155,7 +155,7 @@ export const zhCN: Dictionary = {
       github: "GitHub",
     },
     footerNavAria: "页脚导航",
-    copyright: "© {year} GeoSpoof。保留所有权利。",
+    copyright: "© {year} GeoSpoof LLC。保留所有权利。",
   },
   languageSwitcher: {
     label: "语言",
@@ -175,13 +175,13 @@ export const zhCN: Dictionary = {
       metaDescription:
         "GeoSpoof 隐私政策——了解我们如何保护你的数据并尊重你的隐私。",
       heading: "隐私政策",
-      lastUpdated: "最后更新：2026 年 7 月 3 日",
+      lastUpdated: "最后更新：2026 年 9 月 1 日",
     },
     terms: {
       metaTitle: "服务条款 | GeoSpoof",
       metaDescription: "GeoSpoof 服务条款——了解规范你使用本扩展的相关条款。",
       heading: "服务条款",
-      lastUpdated: "最后更新：2026 年 7 月 10 日",
+      lastUpdated: "最后更新：2026 年 9 月 1 日",
     },
   },
   testimonials: {

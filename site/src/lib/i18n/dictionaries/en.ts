@@ -147,7 +147,7 @@ export const en = {
     },
     footerNavAria: "Footer navigation",
     // `{year}` is replaced at render time.
-    copyright: "© {year} GeoSpoof. All rights reserved.",
+    copyright: "© {year} GeoSpoof LLC. All rights reserved.",
   },
   languageSwitcher: {
     label: "Language",
@@ -173,14 +173,14 @@ export const en = {
       metaDescription:
         "Privacy Policy for GeoSpoof — learn how we protect your data and respect your privacy.",
       heading: "Privacy Policy",
-      lastUpdated: "Last Updated: July 3, 2026",
+      lastUpdated: "Last Updated: September 1, 2026",
     },
     terms: {
       metaTitle: "Terms of Service | GeoSpoof",
       metaDescription:
         "Terms of Service for GeoSpoof — understand the terms governing your use of the extension.",
       heading: "Terms of Service",
-      lastUpdated: "Last Updated: July 10, 2026",
+      lastUpdated: "Last Updated: September 1, 2026",
     },
   },
   testimonials: {

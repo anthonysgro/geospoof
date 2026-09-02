@@ -44,7 +44,7 @@ export function generateManifest(target: BrowserTarget, version: string): Record
     name: "__MSG_extensionName__",
     description: "__MSG_extensionDescription__",
     default_locale: "en",
-    author: "Anthony Sgro",
+    author: "GeoSpoof LLC",
     homepage_url: "https://github.com/anthonysgro/geospoof",
     incognito: "spanning",
     version,

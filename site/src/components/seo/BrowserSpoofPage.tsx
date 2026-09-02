@@ -360,6 +360,11 @@ export function BrowserSpoofPage({ slug }: { slug: BrowserSlug }) {
               isAccessibleForFree: true,
               offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
               author: { "@type": "Person", name: "Anthony Sgro" },
+              publisher: {
+                "@type": "Organization",
+                name: "GeoSpoof",
+                legalName: "GeoSpoof LLC",
+              },
             },
             {
               "@context": "https://schema.org",

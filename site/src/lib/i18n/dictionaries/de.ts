@@ -145,7 +145,7 @@ export const de: Dictionary = {
       github: "GitHub",
     },
     footerNavAria: "Fußzeilennavigation",
-    copyright: "© {year} GeoSpoof. Alle Rechte vorbehalten.",
+    copyright: "© {year} GeoSpoof LLC. Alle Rechte vorbehalten.",
   },
   languageSwitcher: {
     label: "Sprache",
@@ -166,14 +166,14 @@ export const de: Dictionary = {
       metaDescription:
         "Datenschutzerklärung von GeoSpoof — erfahre, wie wir deine Daten schützen und deine Privatsphäre respektieren.",
       heading: "Datenschutzerklärung",
-      lastUpdated: "Zuletzt aktualisiert: 3. Juli 2026",
+      lastUpdated: "Zuletzt aktualisiert: 1. September 2026",
     },
     terms: {
       metaTitle: "Nutzungsbedingungen | GeoSpoof",
       metaDescription:
         "Nutzungsbedingungen von GeoSpoof — verstehe die Bedingungen für die Nutzung der Erweiterung.",
       heading: "Nutzungsbedingungen",
-      lastUpdated: "Zuletzt aktualisiert: 10. Juli 2026",
+      lastUpdated: "Zuletzt aktualisiert: 1. September 2026",
     },
   },
   testimonials: {

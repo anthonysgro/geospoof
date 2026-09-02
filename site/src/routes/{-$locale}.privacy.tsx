@@ -372,19 +372,18 @@ export function PrivacyPage() {
               </p>
               <ul>
                 <li>
-                  <strong>GeoSpoof Pro</strong> (iOS and iPadOS only) — an
-                  auto-renewable subscription (monthly or annual) that unlocks
-                  Pro features such as automatic background VPN sync, per-site
-                  allowlist/denylist rules, Home Screen and Control Center
-                  widgets, custom accuracy, and the on-map location picker. The
-                  subscription renews automatically until cancelled; you can
-                  manage or cancel it anytime in your Apple Account settings. A
-                  free, fully functional tier remains available without any
-                  purchase.{" "}
-                  <strong>
-                    On macOS, all of these features are included at no charge —
-                    there is no macOS subscription.
-                  </strong>
+                  <strong>GeoSpoof Pro</strong> (iOS, iPadOS, and macOS) —
+                  available either as an auto-renewable subscription (monthly or
+                  annual) or as a one-time "lifetime" purchase, unlocking Pro
+                  features such as automatic background VPN sync, per-site
+                  allowlist/denylist rules, widgets and controls, custom
+                  accuracy, the on-map location picker, and device-level GPS.
+                  The subscription renews automatically until cancelled; you can
+                  manage or cancel it anytime in your Apple Account settings.
+                  The lifetime purchase is a one-time charge that does not
+                  renew. Pro is a Universal Purchase, so one purchase covers
+                  your iPhone, iPad, and Mac. A free, fully functional tier
+                  remains available without any purchase.
                 </li>
                 <li>
                   <strong>Tips</strong> (iOS, iPadOS, and macOS) — optional
@@ -739,8 +738,8 @@ export function PrivacyPage() {
                 applies to you in addition to the rest of this policy.
               </p>
               <p>
-                <strong>Controller:</strong> Anthony Sgro, an individual
-                developer based in the United States, acts as the data
+                <strong>Controller:</strong> GeoSpoof LLC, a New York limited
+                liability company based in the United States, acts as the data
                 controller for any personal data processed by this extension.
                 You can contact the controller at{" "}
                 <a href="mailto:support@geospoof.com">support@geospoof.com</a>.

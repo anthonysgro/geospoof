@@ -145,7 +145,7 @@ export function Footer({ className, ...props }: FooterProps) {
           USPTO registration issues.
         */}
         <p className="text-small mt-2 text-(--color-canvas-muted)">
-          GeoSpoof™ is a trademark of Anthony Sgro.
+          GeoSpoof™ is a trademark of GeoSpoof LLC.
         </p>
       </div>
     </footer>

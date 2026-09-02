@@ -144,7 +144,7 @@ export const id: Dictionary = {
       github: "GitHub",
     },
     footerNavAria: "Navigasi footer",
-    copyright: "© {year} GeoSpoof. Semua hak dilindungi.",
+    copyright: "© {year} GeoSpoof LLC. Semua hak dilindungi.",
   },
   languageSwitcher: {
     label: "Bahasa",
@@ -165,14 +165,14 @@ export const id: Dictionary = {
       metaDescription:
         "Kebijakan Privasi GeoSpoof — pelajari cara kami melindungi data Anda dan menghormati privasi Anda.",
       heading: "Kebijakan Privasi",
-      lastUpdated: "Terakhir Diperbarui: 3 Juli 2026",
+      lastUpdated: "Terakhir Diperbarui: 1 September 2026",
     },
     terms: {
       metaTitle: "Ketentuan Layanan | GeoSpoof",
       metaDescription:
         "Ketentuan Layanan GeoSpoof — pahami ketentuan yang mengatur penggunaan ekstensi.",
       heading: "Ketentuan Layanan",
-      lastUpdated: "Terakhir Diperbarui: 10 Juli 2026",
+      lastUpdated: "Terakhir Diperbarui: 1 September 2026",
     },
   },
   testimonials: {

@@ -174,6 +174,7 @@ const softwareApplicationSchema = {
   publisher: {
     "@type": "Organization",
     name: "GeoSpoof",
+    legalName: "GeoSpoof LLC",
     logo: { "@type": "ImageObject", url: `${SITE_URL}/icon.png` },
   },
   sameAs: ["https://github.com/anthonysgro/geospoof"],
@@ -233,6 +234,7 @@ const iosAppSchema = {
   publisher: {
     "@type": "Organization",
     name: "GeoSpoof",
+    legalName: "GeoSpoof LLC",
     logo: { "@type": "ImageObject", url: `${SITE_URL}/icon.png` },
   },
   sameAs: [APP_STORE_URL],
@@ -244,6 +246,7 @@ const organizationSchema = {
   "@context": "https://schema.org",
   "@type": "Organization",
   name: "GeoSpoof",
+  legalName: "GeoSpoof LLC",
   url: SITE_URL,
   logo: `${SITE_URL}/icon.png`,
   sameAs: ["https://github.com/anthonysgro/geospoof", APP_STORE_URL],

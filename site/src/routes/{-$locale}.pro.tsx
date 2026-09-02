@@ -122,6 +122,11 @@ function ProPage() {
       },
     ],
     author: { "@type": "Person", name: "Anthony Sgro" },
+    publisher: {
+      "@type": "Organization",
+      name: "GeoSpoof",
+      legalName: "GeoSpoof LLC",
+    },
   }
 
   const breadcrumbSchema = {
