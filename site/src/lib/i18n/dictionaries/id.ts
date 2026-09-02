@@ -1284,7 +1284,7 @@ export const id: Dictionary = {
     },
     tether: {
       label: "Memerlukan Mac",
-      body: "iPhone Anda harus terhubung ke Mac Anda — lewat USB, jaringan Wi-Fi yang sama, atau hotspot — setiap kali Anda menyetel atau mengganti lokasi. GeoSpoof GPS adalah aplikasi Mac; tidak ada mode khusus iPhone.",
+      body: "iPhone Anda harus terhubung ke Mac Anda setiap kali Anda menyetel atau mengganti lokasi. Koneksinya bisa lewat USB, jaringan Wi-Fi yang sama, atau hotspot. GeoSpoof GPS adalah aplikasi Mac, jadi tidak ada mode khusus iPhone.",
       link: "Cara kerja koneksinya",
     },
     experimental: {
@@ -1368,10 +1368,10 @@ export const id: Dictionary = {
         },
         {
           name: "Pilih lokasi di GeoSpoof",
-          text: "Setel lokasi Anda seperti biasa di GeoSpoof. GPS tingkat sistem iPhone Anda mengikutinya dan tetap selaras selama masih bisa menjangkau Mac Anda — lewat kabel, jaringan Wi-Fi yang sama, atau hotspot.",
+          text: "Setel lokasi Anda seperti biasa di GeoSpoof. GPS tingkat sistem iPhone Anda mengikutinya dan tetap selaras selama masih bisa menjangkau Mac Anda lewat kabel, jaringan Wi-Fi yang sama, atau hotspot.",
           bullets: [
-            "Anda boleh mencabut kabelnya, tapi koneksinya sendiri harus tetap ada: aplikasi Mac-lah yang menggerakkan GPS.",
-            "Pergi tanpa Mac Anda? Matikan Mode Pengembang saat lokasi sedang aktif, maka lokasi itu bertahan. Menggantinya nanti berarti memulai ulang iPhone dan menghubungkannya kembali.",
+            "Anda boleh mencabut kabelnya, tapi koneksinya harus tetap ada. Yang menyetel GPS adalah aplikasi di Mac.",
+            "Pergi tanpa Mac Anda? Matikan Mode Pengembang saat lokasi sedang aktif, maka lokasi itu bertahan. Untuk menggantinya nanti, mulai ulang iPhone dan hubungkan kembali.",
           ],
           link: { label: "Dapatkan GeoSpoof untuk iPhone" },
         },
@@ -1385,7 +1385,7 @@ export const id: Dictionary = {
       appPost:
         " dengan GeoSpoof Pro. Aplikasi ini adalah pusat kendali Anda yang menyetel lokasi, dan memindahkan GPS asli perangkat adalah fitur Pro.",
       iphone:
-        "iPhone dengan Mode Pengembang aktif, terhubung lewat kabel USB untuk penyiapan pertama. Setelah itu ia perlu menjangkau Mac Anda — kabel, jaringan Wi-Fi yang sama, atau hotspot — setiap kali Anda menyetel atau mengganti lokasi.",
+        "iPhone dengan Mode Pengembang aktif, terhubung lewat kabel USB untuk penyiapan pertama. Setelah itu ia perlu menjangkau Mac Anda lewat kabel, jaringan Wi-Fi yang sama, atau hotspot setiap kali Anda menyetel atau mengganti lokasi.",
       xcodePre: "Xcode, aplikasi pengembang gratis dari Apple, di ",
       xcodeLink: "Mac App Store",
       xcodePost:
@@ -1406,7 +1406,7 @@ export const id: Dictionary = {
         },
         {
           title: "Kabel sekali, lalu lewat jaringan",
-          body: "Penyiapan pertama kali dilakukan lewat kabel USB. Setelah itu Mac Anda menggerakkan GPS melalui jaringan lokal — Wi-Fi yang sama atau hotspot — dan menyambung kembali dengan sendirinya saat ponsel Anda keluar dari jaringan lalu bergabung lagi. Mac Anda tetap bagian dari rantai ini; ia yang menyetel lokasinya.",
+          body: "Penyiapan pertama kali dilakukan lewat kabel USB. Setelah itu Mac Anda menyetel GPS melalui jaringan lokal, baik Wi-Fi yang sama maupun hotspot, dan menyambung kembali dengan sendirinya saat ponsel Anda keluar dari jaringan lalu bergabung lagi. Yang mengerjakannya tetap Mac Anda, jadi Mac harus tetap terhubung.",
         },
         {
           title: "Tetap stabil, kembali bersih",
@@ -1420,7 +1420,7 @@ export const id: Dictionary = {
     connection: {
       title: "Koneksi ke Mac Anda",
       intro:
-        "Mac Anda-lah yang menggerakkan GPS, jadi menyetel atau mengganti lokasi memerlukan koneksi aktif antara kedua perangkat. Salah satu dari ini sudah cukup:",
+        "Mac Anda-lah yang menyetel GPS, jadi kedua perangkat perlu terhubung saat Anda menyetel atau mengganti lokasi. Salah satu dari cara ini sudah cukup:",
       links: [
         {
           title: "Kabel USB",
@@ -1428,7 +1428,7 @@ export const id: Dictionary = {
         },
         {
           title: "Jaringan Wi-Fi yang sama",
-          body: "Setelah penyandingan pertama, Mac Anda menemukan ponsel lewat jaringan lokal — tanpa kabel. Kedua perangkat harus berada di jaringan yang sama.",
+          body: "Setelah penyandingan pertama, Mac Anda bisa menemukan ponsel lewat jaringan lokal, tanpa perlu kabel. Kedua perangkat harus berada di jaringan yang sama.",
         },
         {
           title: "Hotspot",
@@ -1437,12 +1437,12 @@ export const id: Dictionary = {
       ],
       offlineTitle: "Pergi tanpa Mac Anda",
       offlineBody:
-        "Sebuah lokasi bisa bertahan lebih lama daripada koneksinya. Saat lokasi palsu Anda aktif, matikan Mode Pengembang di iPhone (Pengaturan ▸ Privasi & Keamanan ▸ Mode Pengembang). Lokasi itu bertahan sejak saat itu, termasuk setelah Anda menjauh dari Mac.",
+        "Sebuah lokasi bisa tetap bertahan setelah koneksinya berakhir. Saat lokasi palsu Anda aktif, matikan Mode Pengembang di iPhone (Pengaturan ▸ Privasi & Keamanan ▸ Mode Pengembang). Sejak saat itu lokasinya bertahan, termasuk setelah Anda menjauh dari Mac.",
       offlineCaveat:
-        "Konsekuensinya: lokasi itu terkunci. Untuk memilih lokasi lain, mulai ulang iPhone Anda dan setel yang baru saat Mac Anda kembali terjangkau.",
+        "Konsekuensinya, lokasi itu jadi terkunci. Untuk memilih lokasi lain, mulai ulang iPhone Anda dan setel lokasi baru saat Mac Anda kembali berada di dekat Anda.",
       limitTitle: "Yang tidak bisa dilakukan",
       limitBody:
-        "Tidak ada yang melewati server kami, jadi Mac Anda tidak bisa menjangkau iPhone lewat internet. Begitu keduanya terpisah, ponsel berhenti menerima lokasi baru — langkah Mode Pengembang di atas itulah yang menahan lokasi saat ini.",
+        "Tidak ada yang melewati server kami, jadi Mac Anda tidak bisa menjangkau iPhone lewat internet. Begitu keduanya terpisah, ponsel berhenti menerima lokasi baru. Langkah Mode Pengembang di atas itulah yang menahan lokasi saat ini.",
     },
     menuShotAlt: "Aplikasi bilah menu GeoSpoof GPS di macOS",
     screenshotAlt: "GeoSpoof GPS di iPhone, tangkapan layar {n}",

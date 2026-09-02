@@ -332,17 +332,17 @@ function HowItWorks() {
 }
 
 /**
- * "The link to your Mac" — the formal statement of the tethering requirement.
+ * The full statement of the connection requirement, which is the most misread
+ * thing about the product. "Cable once, then wireless" was being read as
+ * "unplug and go, Mac not required". The Mac app is what sets the GPS, so the
+ * connection is needed to change a location and not just to set one up;
+ * dropping the cable only swaps USB for the local network.
  *
- * This exists because the requirement is the single most misread thing about
- * the product: "cable once, then wireless" was being read as "unplug and go,
- * Mac not required". The Mac app is what drives the GPS, so a live link is
- * needed to set *or change* a location; dropping the cable only swaps USB for
- * the local network. The one genuine untethered path (Developer Mode off to
- * freeze the current location) is spelled out with its cost, rather than
- * implied by the marketing.
+ * The one supported way to keep a location without the Mac (turning Developer
+ * Mode off) is stated here with its cost attached, so it can't be mistaken for
+ * general untethered operation.
  *
- * Anchored as #connection so the hero caveat and support pages can deep-link.
+ * Anchored as #connection so the hero card and support pages can deep-link.
  */
 const CONNECTION_ICONS = [Usb, Wifi, RadioTower] as const
 
@@ -379,8 +379,7 @@ function ConnectionRequirements() {
         })}
       </ul>
 
-      {/* The one supported way to keep a location without the Mac, stated with
-          its trade-off attached so it can't be read as "works untethered". */}
+      {/* Keeping a location without the Mac, and what it costs you. */}
       <div className="mt-6 flex items-start gap-3 rounded-2xl border border-(--color-canvas-border) bg-brand/5 p-6 md:p-8">
         <Unplug
           className="mt-0.5 size-6 shrink-0 text-(--color-brand)"
@@ -567,14 +566,15 @@ function PreflightItem({
 
 /**
  * The two things people have bought GeoSpoof GPS on a wrong assumption about:
- * the Mac requirement (it isn't a standalone iPhone app, and the link is needed
- * to *change* a location, not just to set one up) and AR-game compatibility.
+ * the Mac requirement (it isn't a standalone iPhone app, and the connection is
+ * needed to change a location, not just to set one up) and AR-game
+ * compatibility.
  *
- * Both belong above the fold, but they were originally two loose amber notes
- * stacked under the download button, which read as noise — a second warning
- * next to the first gets both of them skipped. One framed card with a heading
- * reads as deliberate, keeps a single warning glyph, and gives each fact a
- * scannable label.
+ * Both belong above the fold. They started out as two loose amber notes stacked
+ * under the download button, which read as noise, since a second warning next
+ * to the first gets both of them skipped. One framed card with a heading looks
+ * deliberate, keeps a single warning glyph, and gives each fact a label people
+ * can scan.
  */
 function PreflightNotes() {
   const { t } = useTranslations()

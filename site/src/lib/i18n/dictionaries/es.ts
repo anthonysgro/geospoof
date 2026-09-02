@@ -1294,7 +1294,7 @@ export const es: Dictionary = {
     },
     tether: {
       label: "Necesita un Mac",
-      body: "Tu iPhone tiene que estar conectado a tu Mac —por USB, la misma red Wi-Fi o un punto de acceso— siempre que fijes o cambies una ubicación. GeoSpoof GPS es una app de Mac; no existe un modo solo para iPhone.",
+      body: "Tu iPhone tiene que estar conectado a tu Mac siempre que fijes o cambies una ubicación. Puede ser por USB, por la misma red Wi-Fi o por un punto de acceso. GeoSpoof GPS es una app de Mac, así que no existe un modo solo para iPhone.",
       link: "Cómo funciona la conexión",
     },
     experimental: {
@@ -1378,10 +1378,10 @@ export const es: Dictionary = {
         },
         {
           name: "Elige una ubicación en GeoSpoof",
-          text: "Fija tu ubicación como siempre en GeoSpoof. El GPS de nivel de sistema de tu iPhone la sigue y se mantiene alineado mientras pueda alcanzar tu Mac: por el cable, la misma red Wi-Fi o un punto de acceso.",
+          text: "Fija tu ubicación como siempre en GeoSpoof. El GPS de nivel de sistema de tu iPhone la sigue y se mantiene alineado mientras pueda alcanzar tu Mac por el cable, por la misma red Wi-Fi o por un punto de acceso.",
           bullets: [
-            "Puedes desconectar el cable, pero el enlace en sí tiene que seguir ahí: la app de Mac es la que mueve el GPS.",
-            "¿Sales sin tu Mac? Desactiva el Modo de desarrollador mientras la ubicación está activa y se mantendrá. Cambiarla más tarde exige reiniciar el iPhone y volver a conectarlo.",
+            "Puedes desconectar el cable, pero la conexión tiene que seguir ahí. La app de Mac es la que fija el GPS.",
+            "¿Sales sin tu Mac? Desactiva el Modo de desarrollador mientras la ubicación está activa y se mantendrá. Para cambiarla más tarde, reinicia el iPhone y vuelve a conectarlo.",
           ],
           link: { label: "Obtener GeoSpoof para iPhone" },
         },
@@ -1395,7 +1395,7 @@ export const es: Dictionary = {
       appPost:
         " con GeoSpoof Pro. La app es tu panel de control que fija la ubicación, y mover el GPS real del dispositivo es una función Pro.",
       iphone:
-        "Un iPhone con el Modo de desarrollador activado, conectado por cable USB para la primera configuración. Después necesita alcanzar tu Mac —cable, la misma red Wi-Fi o un punto de acceso— siempre que fijes o cambies una ubicación.",
+        "Un iPhone con el Modo de desarrollador activado, conectado por cable USB para la primera configuración. Después necesita alcanzar tu Mac por cable, por la misma red Wi-Fi o por un punto de acceso siempre que fijes o cambies una ubicación.",
       xcodePre: "Xcode, la app gratuita de desarrollo de Apple, en la ",
       xcodeLink: "Mac App Store",
       xcodePost:
@@ -1416,7 +1416,7 @@ export const es: Dictionary = {
         },
         {
           title: "Cable una vez, luego por la red",
-          body: "La configuración inicial se hace con un cable USB. Después tu Mac mueve el GPS por la red local —la misma Wi-Fi o un punto de acceso— y se reconecta solo cuando tu teléfono sale de la red y vuelve a ella. Tu Mac sigue en la cadena: es lo que fija la ubicación.",
+          body: "La configuración inicial se hace con un cable USB. Después tu Mac fija el GPS por la red local, ya sea la misma Wi-Fi o un punto de acceso, y se reconecta solo cuando tu teléfono sale de la red y vuelve a ella. El trabajo lo sigue haciendo tu Mac, así que tiene que seguir conectado.",
         },
         {
           title: "Se mantiene firme, revierte limpio",
@@ -1430,7 +1430,7 @@ export const es: Dictionary = {
     connection: {
       title: "El enlace con tu Mac",
       intro:
-        "Tu Mac es lo que mueve el GPS, así que fijar o cambiar una ubicación necesita un enlace activo entre los dos dispositivos. Cualquiera de estos lo sostiene:",
+        "Tu Mac es lo que fija el GPS, así que los dos dispositivos tienen que estar conectados cuando fijas o cambias una ubicación. Cualquiera de estas opciones funciona:",
       links: [
         {
           title: "Cable USB",
@@ -1438,7 +1438,7 @@ export const es: Dictionary = {
         },
         {
           title: "La misma red Wi-Fi",
-          body: "Tras el primer emparejamiento, tu Mac encuentra el teléfono por la red local, sin cable. Los dos dispositivos tienen que estar en la misma red.",
+          body: "Tras el primer emparejamiento, tu Mac puede encontrar el teléfono por la red local, sin necesidad de cable. Los dos dispositivos tienen que estar en la misma red.",
         },
         {
           title: "Un punto de acceso",
@@ -1447,12 +1447,12 @@ export const es: Dictionary = {
       ],
       offlineTitle: "Salir sin tu Mac",
       offlineBody:
-        "Una ubicación puede sobrevivir al enlace. Con tu ubicación falseada activa, desactiva el Modo de desarrollador en el iPhone (Ajustes ▸ Privacidad y seguridad ▸ Modo de desarrollador). La ubicación se mantiene a partir de ahí, incluso cuando te alejas de tu Mac.",
+        "Una ubicación puede mantenerse después de que termine la conexión. Con tu ubicación falseada activa, desactiva el Modo de desarrollador en el iPhone (Ajustes ▸ Privacidad y seguridad ▸ Modo de desarrollador). A partir de ese momento la ubicación se mantiene, incluso cuando te alejas de tu Mac.",
       offlineCaveat:
-        "La contrapartida es que queda congelada. Para elegir otra ubicación, reinicia tu iPhone y fija la nueva con tu Mac de nuevo a tu alcance.",
+        "La contrapartida es que la ubicación queda fija. Para elegir otra, reinicia tu iPhone y fija la nueva con tu Mac cerca otra vez.",
       limitTitle: "Lo que no puede hacer",
       limitBody:
-        "Nada pasa por nuestros servidores, así que tu Mac no puede alcanzar tu iPhone a través de internet. Una vez separados, el teléfono deja de aceptar ubicaciones nuevas: el paso del Modo de desarrollador de arriba es lo que mantiene la actual en su sitio.",
+        "Nada pasa por nuestros servidores, así que tu Mac no puede alcanzar tu iPhone a través de internet. Una vez separados, el teléfono deja de aceptar ubicaciones nuevas. El paso del Modo de desarrollador de arriba es lo que mantiene la actual en su sitio.",
     },
     menuShotAlt: "App de barra de menús GeoSpoof GPS en macOS",
     screenshotAlt: "GeoSpoof GPS en iPhone, captura {n}",

@@ -1300,7 +1300,7 @@ export const fr: Dictionary = {
     },
     tether: {
       label: "Un Mac est nécessaire",
-      body: "Votre iPhone doit être relié à votre Mac — en USB, sur le même réseau Wi-Fi ou via un partage de connexion — chaque fois que vous définissez ou changez une position. GeoSpoof GPS est une app Mac ; il n'existe pas de mode iPhone seul.",
+      body: "Votre iPhone doit être connecté à votre Mac chaque fois que vous définissez ou changez une position. Ce peut être en USB, sur le même réseau Wi-Fi ou via un partage de connexion. GeoSpoof GPS est une app Mac, il n'existe donc pas de mode iPhone seul.",
       link: "Comment fonctionne la liaison",
     },
     experimental: {
@@ -1384,10 +1384,10 @@ export const fr: Dictionary = {
         },
         {
           name: "Choisissez un lieu dans GeoSpoof",
-          text: "Définissez votre position comme d'habitude dans GeoSpoof. Le GPS système de votre iPhone la suit et reste aligné tant qu'il peut joindre votre Mac : par le câble, sur le même réseau Wi-Fi ou via un partage de connexion.",
+          text: "Définissez votre position comme d'habitude dans GeoSpoof. Le GPS système de votre iPhone la suit et reste aligné tant qu'il peut joindre votre Mac par le câble, sur le même réseau Wi-Fi ou via un partage de connexion.",
           bullets: [
-            "Vous pouvez débrancher le câble, mais la liaison doit rester : c'est l'app Mac qui pilote le GPS.",
-            "Vous sortez sans votre Mac ? Désactivez le mode développeur pendant que la position est active et elle se maintient. La changer ensuite demande de redémarrer l'iPhone et de le reconnecter.",
+            "Vous pouvez débrancher le câble, mais la connexion doit rester. C'est l'app Mac qui définit le GPS.",
+            "Vous sortez sans votre Mac ? Désactivez le mode développeur pendant que la position est active et elle se maintient. Pour la changer ensuite, redémarrez l'iPhone et reconnectez-le.",
           ],
           link: { label: "Obtenir GeoSpoof pour iPhone" },
         },
@@ -1401,7 +1401,7 @@ export const fr: Dictionary = {
       appPost:
         " avec GeoSpoof Pro. L'app est votre poste de commande qui définit la position, et déplacer le vrai GPS de l'appareil est une fonctionnalité Pro.",
       iphone:
-        "Un iPhone avec le mode développeur activé, connecté par câble USB pour la première configuration. Ensuite, il doit pouvoir joindre votre Mac — câble, même réseau Wi-Fi ou partage de connexion — chaque fois que vous définissez ou changez une position.",
+        "Un iPhone avec le mode développeur activé, connecté par câble USB pour la première configuration. Ensuite, il doit pouvoir joindre votre Mac par câble, sur le même réseau Wi-Fi ou via un partage de connexion chaque fois que vous définissez ou changez une position.",
       xcodePre: "Xcode, l'app de développement gratuite d'Apple, sur le ",
       xcodeLink: "Mac App Store",
       xcodePost:
@@ -1422,7 +1422,7 @@ export const fr: Dictionary = {
         },
         {
           title: "Le câble une fois, puis via le réseau",
-          body: "La configuration initiale passe par un câble USB. Ensuite, votre Mac pilote le GPS via le réseau local — même Wi-Fi ou partage de connexion — et se reconnecte tout seul lorsque votre téléphone quitte le réseau puis le rejoint. Votre Mac reste dans la boucle : c'est lui qui définit la position.",
+          body: "La configuration initiale passe par un câble USB. Ensuite, votre Mac définit le GPS via le réseau local, soit le même Wi-Fi, soit un partage de connexion, et se reconnecte tout seul lorsque votre téléphone quitte le réseau puis le rejoint. C'est toujours votre Mac qui fait le travail, il doit donc rester connecté.",
         },
         {
           title: "Reste stable, revient proprement",
@@ -1436,7 +1436,7 @@ export const fr: Dictionary = {
     connection: {
       title: "La liaison avec votre Mac",
       intro:
-        "C'est votre Mac qui déplace le GPS : définir ou changer une position exige donc une liaison active entre les deux appareils. N'importe laquelle de ces options la porte :",
+        "C'est votre Mac qui définit le GPS, donc les deux appareils doivent être connectés quand vous définissez ou changez une position. N'importe laquelle de ces options fonctionne :",
       links: [
         {
           title: "Câble USB",
@@ -1444,7 +1444,7 @@ export const fr: Dictionary = {
         },
         {
           title: "Le même réseau Wi-Fi",
-          body: "Après le premier jumelage, votre Mac trouve le téléphone via le réseau local, sans câble. Les deux appareils doivent être sur le même réseau.",
+          body: "Après le premier jumelage, votre Mac peut trouver le téléphone via le réseau local, sans avoir besoin de câble. Les deux appareils doivent être sur le même réseau.",
         },
         {
           title: "Un partage de connexion",
@@ -1453,12 +1453,12 @@ export const fr: Dictionary = {
       ],
       offlineTitle: "Partir sans votre Mac",
       offlineBody:
-        "Une position peut survivre à la liaison. Avec votre position simulée active, désactivez le mode développeur sur l'iPhone (Réglages ▸ Confidentialité et sécurité ▸ Mode développeur). La position tient à partir de là, y compris une fois loin de votre Mac.",
+        "Une position peut se maintenir après la fin de la liaison. Avec votre position simulée active, désactivez le mode développeur sur l'iPhone (Réglages ▸ Confidentialité et sécurité ▸ Mode développeur). À partir de là, la position se maintient, y compris une fois loin de votre Mac.",
       offlineCaveat:
-        "La contrepartie : elle est figée. Pour en choisir une autre, redémarrez votre iPhone et définissez la nouvelle avec votre Mac de nouveau à portée.",
+        "La contrepartie est que la position est désormais fixe. Pour en choisir une autre, redémarrez votre iPhone et définissez la nouvelle avec votre Mac à nouveau à proximité.",
       limitTitle: "Ce qui n'est pas possible",
       limitBody:
-        "Rien ne passe par nos serveurs : votre Mac ne peut donc pas joindre votre iPhone à travers internet. Une fois les deux séparés, le téléphone n'accepte plus de nouvelle position — l'étape du mode développeur ci-dessus est ce qui maintient l'actuelle en place.",
+        "Rien ne passe par nos serveurs, donc votre Mac ne peut pas joindre votre iPhone par internet. Une fois les deux séparés, le téléphone n'accepte plus de nouvelle position. L'étape du mode développeur ci-dessus est ce qui maintient l'actuelle en place.",
     },
     menuShotAlt: "App GeoSpoof GPS dans la barre de menus sur macOS",
     screenshotAlt: "GeoSpoof GPS sur iPhone, capture {n}",

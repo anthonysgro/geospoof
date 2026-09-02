@@ -1248,7 +1248,7 @@ export const zhCN: Dictionary = {
     },
     tether: {
       label: "需要一台 Mac",
-      body: "每次设置或更改位置时，iPhone 都必须与 Mac 保持连接——通过 USB、同一 Wi-Fi 网络或个人热点。GeoSpoof GPS 是一款 Mac 应用，没有仅用 iPhone 的模式。",
+      body: "每次设置或更改位置时，iPhone 都需要与 Mac 保持连接。可以通过 USB、同一 Wi-Fi 网络或个人热点。GeoSpoof GPS 是一款 Mac 应用，所以没有仅用 iPhone 的模式。",
       link: "连接方式说明",
     },
     experimental: {
@@ -1332,10 +1332,10 @@ export const zhCN: Dictionary = {
         },
         {
           name: "在 GeoSpoof 中选择位置",
-          text: "像往常一样在 GeoSpoof 中设置位置。只要 iPhone 还能连上你的 Mac——通过数据线、同一 Wi-Fi 网络或个人热点——它的系统级 GPS 就会随之跟随并保持一致。",
+          text: "像往常一样在 GeoSpoof 中设置位置。只要 iPhone 还能通过数据线、同一 Wi-Fi 网络或个人热点连上你的 Mac，它的系统级 GPS 就会随之跟随并保持一致。",
           bullets: [
-            "数据线可以拔掉，但连接本身必须保持：驱动 GPS 的是 Mac 上的应用。",
-            "要带着手机出门、不带 Mac？在位置生效时关闭开发者模式，该位置就会保留下来。之后若要更改，需要重启 iPhone 并重新连接。",
+            "数据线可以拔掉，但连接必须保持。设置 GPS 的是 Mac 上的应用。",
+            "要出门但不带 Mac？在位置生效时关闭开发者模式，该位置就会保留下来。之后若要更改，请重启 iPhone 并重新连接。",
           ],
           link: { label: "获取 iPhone 版 GeoSpoof" },
         },
@@ -1349,7 +1349,7 @@ export const zhCN: Dictionary = {
       appPost:
         "，以及 GeoSpoof Pro。这个应用是你的控制中心，由它来设置位置，而更改设备的真实 GPS 是 Pro 功能。",
       iphone:
-        "一部已开启开发者模式的 iPhone，首次设置时通过 USB 数据线连接。之后每次设置或更改位置时，它都需要能连上你的 Mac——数据线、同一 Wi-Fi 网络或个人热点。",
+        "一部已开启开发者模式的 iPhone，首次设置时通过 USB 数据线连接。之后每次设置或更改位置时，它都需要能通过数据线、同一 Wi-Fi 网络或个人热点连上你的 Mac。",
       xcodePre: "Xcode，Apple 免费的开发者应用，来自 ",
       xcodeLink: "Mac App Store",
       xcodePost:
@@ -1370,7 +1370,7 @@ export const zhCN: Dictionary = {
         },
         {
           title: "首次用线，之后走网络",
-          body: "首次设置需要 USB 数据线。之后 Mac 会通过本地网络驱动 GPS——同一 Wi-Fi 或个人热点——并在手机离开网络又重新加入时自动重连。Mac 始终在这条链路上，因为位置是由它来设置的。",
+          body: "首次设置需要 USB 数据线。之后 Mac 会通过本地网络设置 GPS，可以是同一 Wi-Fi，也可以是个人热点，并在手机离开网络又重新加入时自动重连。工作仍然由 Mac 来完成，所以它需要保持连接。",
         },
         {
           title: "稳稳保持，干净还原",
@@ -1384,7 +1384,7 @@ export const zhCN: Dictionary = {
     connection: {
       title: "与 Mac 之间的连接",
       intro:
-        "驱动 GPS 的是你的 Mac，所以设置或更改位置需要两台设备之间保持连接。以下任意一种方式都可以：",
+        "设置 GPS 的是你的 Mac，所以在设置或更改位置时，两台设备需要保持连接。以下任意一种方式都可以：",
       links: [
         {
           title: "USB 数据线",
@@ -1401,12 +1401,12 @@ export const zhCN: Dictionary = {
       ],
       offlineTitle: "不带 Mac 出门",
       offlineBody:
-        "位置可以比连接活得更久。在伪装位置生效时，前往 iPhone 的 设置 ▸ 隐私与安全性 ▸ 开发者模式 将其关闭。从此该位置便会保留下来，即使你离开了 Mac。",
+        "连接结束之后，位置仍然可以保留下来。在伪装位置生效时，前往 iPhone 的 设置 ▸ 隐私与安全性 ▸ 开发者模式 将其关闭。从这一刻起，该位置便会保留下来，即使你离开了 Mac 也一样。",
       offlineCaveat:
-        "代价是它被固定住了。要换成另一个位置，需要重启 iPhone，并在 Mac 重新可达时设置新位置。",
+        "代价是这个位置已经固定下来。要换成另一个位置，需要重启 iPhone，并在 Mac 重新回到身边时设置新位置。",
       limitTitle: "做不到的事",
       limitBody:
-        "没有任何数据经过我们的服务器，所以 Mac 无法通过互联网连上你的 iPhone。两台设备一旦分开，手机就不再接收新位置——上面那步关闭开发者模式，正是用来保住当前位置的。",
+        "没有任何数据经过我们的服务器，所以 Mac 无法通过互联网连上你的 iPhone。两台设备一旦分开，手机就不再接收新位置。上面那步关闭开发者模式，正是用来保住当前位置的。",
     },
     menuShotAlt: "macOS 上的 GeoSpoof GPS 菜单栏应用",
     screenshotAlt: "iPhone 上的 GeoSpoof GPS，截图 {n}",

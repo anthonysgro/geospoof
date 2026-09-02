@@ -1296,7 +1296,7 @@ export const ptBR: Dictionary = {
     },
     tether: {
       label: "Precisa de um Mac",
-      body: "Seu iPhone precisa estar ligado ao seu Mac — por USB, na mesma rede Wi-Fi ou por um ponto de acesso — sempre que você definir ou trocar uma localização. O GeoSpoof GPS é um app de Mac; não existe um modo só para iPhone.",
+      body: "Seu iPhone precisa estar conectado ao seu Mac sempre que você definir ou trocar uma localização. Pode ser por USB, pela mesma rede Wi-Fi ou por um ponto de acesso. O GeoSpoof GPS é um app de Mac, então não existe um modo só para iPhone.",
       link: "Como funciona a conexão",
     },
     experimental: {
@@ -1380,10 +1380,10 @@ export const ptBR: Dictionary = {
         },
         {
           name: "Escolha um local no GeoSpoof",
-          text: "Defina sua localização como sempre no GeoSpoof. O GPS no nível do sistema do iPhone a acompanha e se mantém alinhado enquanto conseguir alcançar o seu Mac — pelo cabo, pela mesma rede Wi-Fi ou por um ponto de acesso.",
+          text: "Defina sua localização como sempre no GeoSpoof. O GPS no nível do sistema do iPhone a acompanha e se mantém alinhado enquanto conseguir alcançar o seu Mac pelo cabo, pela mesma rede Wi-Fi ou por um ponto de acesso.",
           bullets: [
-            "Você pode desconectar o cabo, mas a ligação em si precisa continuar: é o app de Mac que move o GPS.",
-            "Vai sair sem o seu Mac? Desative o Modo de Desenvolvedor enquanto a localização está ativa e ela se mantém. Trocá-la depois exige reiniciar o iPhone e conectá-lo novamente.",
+            "Você pode desconectar o cabo, mas a conexão precisa continuar. É o app de Mac que define o GPS.",
+            "Vai sair sem o seu Mac? Desative o Modo de Desenvolvedor enquanto a localização está ativa e ela se mantém. Para trocá-la depois, reinicie o iPhone e conecte-o novamente.",
           ],
           link: { label: "Baixar o GeoSpoof para iPhone" },
         },
@@ -1397,7 +1397,7 @@ export const ptBR: Dictionary = {
       appPost:
         " com o GeoSpoof Pro. O app é o seu painel de controle que define a localização, e mover o GPS real do dispositivo é um recurso Pro.",
       iphone:
-        "Um iPhone com o Modo de Desenvolvedor ativado, conectado por cabo USB na primeira configuração. Depois disso, ele precisa alcançar o seu Mac — cabo, mesma rede Wi-Fi ou ponto de acesso — sempre que você definir ou trocar uma localização.",
+        "Um iPhone com o Modo de Desenvolvedor ativado, conectado por cabo USB na primeira configuração. Depois disso, ele precisa alcançar o seu Mac por cabo, pela mesma rede Wi-Fi ou por um ponto de acesso sempre que você definir ou trocar uma localização.",
       xcodePre: "Xcode, o app de desenvolvedor gratuito da Apple, na ",
       xcodeLink: "Mac App Store",
       xcodePost:
@@ -1418,7 +1418,7 @@ export const ptBR: Dictionary = {
         },
         {
           title: "Cabo uma vez, depois pela rede",
-          body: "A configuração inicial é feita por cabo USB. Depois disso, o seu Mac move o GPS pela rede local — mesma Wi-Fi ou ponto de acesso — e se reconecta sozinho quando o telefone sai da rede e entra novamente. O Mac continua no caminho: é ele que define a localização.",
+          body: "A configuração inicial é feita por cabo USB. Depois disso, o seu Mac define o GPS pela rede local, seja pela mesma Wi-Fi ou por um ponto de acesso, e se reconecta sozinho quando o telefone sai da rede e entra novamente. Quem faz o trabalho continua sendo o seu Mac, então ele precisa ficar conectado.",
         },
         {
           title: "Mantém firme, reverte limpo",
@@ -1432,7 +1432,7 @@ export const ptBR: Dictionary = {
     connection: {
       title: "A ligação com o seu Mac",
       intro:
-        "É o seu Mac que move o GPS, então definir ou trocar uma localização exige uma ligação ativa entre os dois dispositivos. Qualquer uma destas dá conta:",
+        "É o seu Mac que define o GPS, então os dois dispositivos precisam estar conectados quando você define ou troca uma localização. Qualquer uma destas opções funciona:",
       links: [
         {
           title: "Cabo USB",
@@ -1440,7 +1440,7 @@ export const ptBR: Dictionary = {
         },
         {
           title: "A mesma rede Wi-Fi",
-          body: "Depois do primeiro pareamento, o seu Mac encontra o telefone pela rede local, sem cabo. Os dois dispositivos precisam estar na mesma rede.",
+          body: "Depois do primeiro pareamento, o seu Mac consegue encontrar o telefone pela rede local, sem precisar de cabo. Os dois dispositivos precisam estar na mesma rede.",
         },
         {
           title: "Um ponto de acesso",
@@ -1449,12 +1449,12 @@ export const ptBR: Dictionary = {
       ],
       offlineTitle: "Sair sem o seu Mac",
       offlineBody:
-        "Uma localização pode sobreviver à ligação. Com a sua localização falsificada ativa, desative o Modo de Desenvolvedor no iPhone (Ajustes ▸ Privacidade e Segurança ▸ Modo de Desenvolvedor). A localização se mantém dali em diante, inclusive depois de você se afastar do Mac.",
+        "Uma localização pode continuar valendo depois que a conexão termina. Com a sua localização falsificada ativa, desative o Modo de Desenvolvedor no iPhone (Ajustes ▸ Privacidade e Segurança ▸ Modo de Desenvolvedor). Dali em diante a localização se mantém, inclusive depois de você se afastar do Mac.",
       offlineCaveat:
-        "O custo é que ela fica congelada. Para escolher outra, reinicie o iPhone e defina a nova com o seu Mac ao alcance de novo.",
+        "A contrapartida é que a localização fica fixa. Para escolher outra, reinicie o iPhone e defina a nova com o seu Mac perto de você outra vez.",
       limitTitle: "O que não dá para fazer",
       limitBody:
-        "Nada passa pelos nossos servidores, então o seu Mac não consegue alcançar o iPhone pela internet. Uma vez separados, o telefone para de aceitar novas localizações — o passo do Modo de Desenvolvedor acima é o que mantém a atual no lugar.",
+        "Nada passa pelos nossos servidores, então o seu Mac não consegue alcançar o iPhone pela internet. Uma vez separados, o telefone para de aceitar novas localizações. O passo do Modo de Desenvolvedor acima é o que mantém a atual no lugar.",
     },
     menuShotAlt: "App da barra de menus GeoSpoof GPS no macOS",
     screenshotAlt: "GeoSpoof GPS no iPhone, captura {n}",
