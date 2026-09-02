@@ -1269,9 +1269,15 @@ export const ja: Dictionary = {
         "GeoSpoof GPS は、接続した iPhone の実際の GPS 位置を、あなたの偽装した位置に合わせる macOS メニューバーアプリです。署名・公証済みの DMG をダウンロードしてください。",
       ogTitle: "Mac 用 GeoSpoof GPS をダウンロード",
     },
+    preflightTitle: "ダウンロードの前に",
     compat: {
-      label: "ご注意",
+      label: "AR ゲームには非対応",
       body: "GeoSpoof GPS は、プライバシー保護、ウェブ閲覧、開発のみを目的として設計されています。Pokémon GO のような AR モバイルゲームには対応しておらず、そうした用途向けにも作られていません。",
+    },
+    tether: {
+      label: "Mac が必要です",
+      body: "位置を設定・変更するたびに、iPhone を Mac とつないでおく必要があります（USB、同じ Wi-Fi ネットワーク、またはテザリング）。GeoSpoof GPS は Mac アプリで、iPhone 単体で動作するモードはありません。",
+      link: "接続のしくみ",
     },
     experimental: {
       label: "実験的機能",
@@ -1287,7 +1293,7 @@ export const ja: Dictionary = {
       headingEmphasis: "実際の GPS",
       headingPost: "を偽装した位置に合わせる",
       intro:
-        "GeoSpoof GPS は、接続した iPhone のシステムレベルの位置情報を、GeoSpoof で選んだ場所に設定する macOS のメニューバー用コンパニオンです。ブラウザと端末の実際の GPS が同じ位置を示すようになります。",
+        "GeoSpoof GPS は、iPhone のシステムレベルの位置情報を、GeoSpoof で選んだ場所に設定する macOS のメニューバー用コンパニオンです。iPhone が Mac とつながっている間は、ブラウザと端末の実際の GPS が同じ位置を示します。",
     },
     download: {
       cta: "Mac 用をダウンロード",
@@ -1300,7 +1306,7 @@ export const ja: Dictionary = {
     setup: {
       title: "GeoSpoof GPS をセットアップ",
       intro:
-        "メニューバーのアイコンから「セットアップ…」を選ぶと、ウィザードが各手順を進むごとにチェックしていきます。セットアップを終えるには iPhone をケーブルで接続してください。完了後は Wi-Fi 経由で動作し続けます。",
+        "メニューバーのアイコンから「セットアップ…」を選ぶと、ウィザードが各手順を進むごとにチェックしていきます。セットアップを終えるには iPhone をケーブルで接続してください。完了後は、両方の端末が互いに到達できる限り、Wi-Fi やテザリング経由で Mac が GPS を操作できます。",
       steps: [
         {
           name: "アプリをインストール",
@@ -1354,7 +1360,11 @@ export const ja: Dictionary = {
         },
         {
           name: "GeoSpoof で場所を選ぶ",
-          text: "いつも通り GeoSpoof で位置を設定します。iPhone のシステムレベルの GPS がそれに追従し、ケーブルを抜いて Wi-Fi に切り替えた後も同期を保ちます。",
+          text: "いつも通り GeoSpoof で位置を設定します。iPhone のシステムレベルの GPS がそれに追従し、Mac に到達できる間は同期を保ちます（ケーブル、同じ Wi-Fi ネットワーク、またはテザリング）。",
+          bullets: [
+            "ケーブルは抜いてかまいませんが、接続そのものは維持する必要があります。GPS を動かしているのは Mac アプリです。",
+            "Mac を持たずに外出しますか？位置が有効なうちにデベロッパモードをオフにすると、その位置が維持されます。後で変更するには iPhone を再起動して、あらためて接続してください。",
+          ],
           link: { label: "iPhone 用 GeoSpoof を入手" },
         },
       ],
@@ -1367,7 +1377,7 @@ export const ja: Dictionary = {
       appPost:
         "と GeoSpoof Pro。アプリが操作の中心で（位置を設定します）、端末の実際の GPS を変更する機能は Pro 機能です。",
       iphone:
-        "デベロッパモードを有効にした iPhone。初回セットアップでは USB ケーブルで接続します。",
+        "デベロッパモードを有効にした iPhone。初回セットアップでは USB ケーブルで接続します。その後も、位置を設定・変更するたびに Mac に到達できる状態（ケーブル、同じ Wi-Fi ネットワーク、またはテザリング）が必要です。",
       xcodePre: "Xcode（Apple の無料の開発者向けアプリ、",
       xcodeLink: "Mac App Store",
       xcodePost:
@@ -1387,8 +1397,8 @@ export const ja: Dictionary = {
           body: "安全な一度きりのペアリングを通じて、メニューバーアプリがApple純正の開発者向け位置シミュレーションを使い、iPhoneのシステムレベルの位置を設定します。脱獄不要、ビルド不要——開発者がXcodeで使っているのと同じ仕組みです。",
         },
         {
-          title: "最初だけケーブル、あとはワイヤレス",
-          body: "初回設定はUSBケーブルで行います。以降はWi-Fiで動作し、iPhoneがネットワークを離れて再び接続したときも自動的に再接続します。",
+          title: "最初だけケーブル、あとはネットワーク経由",
+          body: "初回設定は USB ケーブルで行います。以降は Mac がローカルネットワーク（同じ Wi-Fi またはテザリング）経由で GPS を操作し、iPhone がネットワークを離れて再び接続したときも自動的に再接続します。位置を設定しているのは Mac なので、Mac は経路の一部として残ります。",
         },
         {
           title: "しっかり保持し、きれいに復帰",
@@ -1398,6 +1408,33 @@ export const ja: Dictionary = {
       privacyTitle: "あなただけのもの",
       privacyBody:
         "すべてはMacとiPhoneの間で直接行われるため、あなたの位置情報が当社のサーバーに触れることはありません。ProはAppleが署名したレシートで検証され、すべてのアップデートはAppleによる公証を受け、インストール前に署名が確認されます。",
+    },
+    connection: {
+      title: "Mac との接続について",
+      intro:
+        "GPS を動かしているのは Mac です。そのため、位置を設定したり変更したりするには、2 台の端末がつながっている必要があります。次のいずれかで接続できます。",
+      links: [
+        {
+          title: "USB ケーブル",
+          body: "最も確実な方法で、初回セットアップもこれで行います。データ通信に対応したケーブルを使い、iPhone のロックは解除しておいてください。",
+        },
+        {
+          title: "同じ Wi-Fi ネットワーク",
+          body: "最初のペアリング後は、Mac がローカルネットワーク経由で iPhone を見つけます。ケーブルは不要ですが、両方の端末が同じネットワークにある必要があります。",
+        },
+        {
+          title: "テザリング",
+          body: "共有できる Wi-Fi がない場合は、iPhone のインターネット共有をオンにして Mac を接続します。逆に、Mac の接続を iPhone に共有する方法でも動作します。",
+        },
+      ],
+      offlineTitle: "Mac を持たずに外出する",
+      offlineBody:
+        "設定した位置は、接続が切れた後も維持できます。偽装した位置が有効な状態で、iPhone のデベロッパモードをオフにしてください（設定 ▸ プライバシーとセキュリティ ▸ デベロッパモード）。以降はその位置が維持され、Mac から離れても保たれます。",
+      offlineCaveat:
+        "ただしその位置は固定されます。別の位置を選ぶには、iPhone を再起動し、Mac に再び届く場所で新しい位置を設定してください。",
+      limitTitle: "できないこと",
+      limitBody:
+        "当社のサーバーを経由する処理はないため、Mac がインターネット越しに iPhone へ到達することはできません。2 台が離れると iPhone は新しい位置を受け取らなくなります。現在の位置を保つのが、上記のデベロッパモードの手順です。",
     },
     menuShotAlt: "macOS の GeoSpoof GPS メニューバーアプリ",
     screenshotAlt: "iPhone 上の GeoSpoof GPS、スクリーンショット {n}",

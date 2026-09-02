@@ -1273,9 +1273,15 @@ export const en = {
         "GeoSpoof GPS is a macOS menu-bar app that sets your connected iPhone's real GPS location to match your spoofed location. Download the signed, notarized DMG.",
       ogTitle: "Download GeoSpoof GPS for Mac",
     },
+    preflightTitle: "Before you download",
     compat: {
-      label: "Note",
+      label: "Not for AR games",
       body: "GeoSpoof GPS is designed purely for privacy, web browsing, and development. It is not compatible with, nor designed for, AR mobile games like Pokémon GO.",
+    },
+    tether: {
+      label: "Requires a Mac",
+      body: "Your iPhone has to be linked to your Mac — over USB, the same Wi-Fi network, or a hotspot — whenever you set or change a location. GeoSpoof GPS is a Mac app; there is no iPhone-only mode.",
+      link: "How the connection works",
     },
     experimental: {
       label: "Experimental",
@@ -1291,7 +1297,7 @@ export const en = {
       headingEmphasis: "real GPS",
       headingPost: " to your spoofed location",
       intro:
-        "GeoSpoof GPS is a macOS menu-bar companion that sets a connected iPhone's system-level location to the place you pick in GeoSpoof. Your browser and your phone's real GPS tell the same story.",
+        "GeoSpoof GPS is a macOS menu-bar companion that sets your iPhone's system-level location to the place you pick in GeoSpoof. Your browser and your phone's real GPS tell the same story, for as long as the phone stays linked to your Mac.",
     },
     download: {
       cta: "Download for Mac",
@@ -1304,7 +1310,7 @@ export const en = {
     setup: {
       title: "Set up GeoSpoof GPS",
       intro:
-        "Open the menu-bar icon and choose “Set Up…”. The wizard checks each step off as you go. Connect your iPhone with a cable to finish setup, then it keeps working over Wi-Fi.",
+        "Open the menu-bar icon and choose “Set Up…”. The wizard checks each step off as you go. Connect your iPhone with a cable to finish setup; after that your Mac can drive the GPS over Wi-Fi or a hotspot, as long as the two stay in reach of each other.",
       steps: [
         {
           name: "Install the app",
@@ -1358,7 +1364,11 @@ export const en = {
         },
         {
           name: "Pick a location in GeoSpoof",
-          text: "Set your location as usual in GeoSpoof. Your iPhone's system-level GPS follows it and stays aligned, even after you unplug and switch to Wi-Fi.",
+          text: "Set your location as usual in GeoSpoof. Your iPhone's system-level GPS follows it and stays aligned for as long as it can reach your Mac — over the cable, the same Wi-Fi network, or a hotspot.",
+          bullets: [
+            "You can unplug the cable, but the link itself has to stay: the Mac app is what drives the GPS.",
+            "Heading out without your Mac? Turn Developer Mode off while the location is active and it holds. Changing it later means restarting your iPhone and reconnecting.",
+          ],
           link: { label: "Get GeoSpoof for iPhone" },
         },
       ],
@@ -1371,7 +1381,7 @@ export const en = {
       appPost:
         " with GeoSpoof Pro. The app is your control surface that sets the location, and moving the device's real GPS is a Pro feature.",
       iphone:
-        "An iPhone with Developer Mode enabled, connected by USB cable for first-time setup.",
+        "An iPhone with Developer Mode enabled, connected by USB cable for first-time setup. After that it needs to reach your Mac — cable, same Wi-Fi network, or a hotspot — whenever you set or change a location.",
       xcodePre: "Xcode, Apple's free developer app from the ",
       xcodeLink: "Mac App Store",
       xcodePost:
@@ -1391,8 +1401,8 @@ export const en = {
           body: "Over a secure, one-time pairing, the menu-bar app uses Apple's own developer location simulation to set your iPhone's system-level location. No jailbreak, nothing to build — the same mechanism developers already use in Xcode.",
         },
         {
-          title: "Cable once, then wireless",
-          body: "First-time setup runs over a USB cable. After that it works over Wi-Fi, and quietly reconnects on its own when your phone roams off the network and back again.",
+          title: "Cable once, then over the network",
+          body: "First-time setup runs over a USB cable. After that your Mac drives the GPS over the local network — same Wi-Fi or a hotspot — and quietly reconnects when your phone roams off and back again. The Mac stays in the loop; it's the thing setting the location.",
         },
         {
           title: "Holds steady, reverts clean",
@@ -1402,6 +1412,33 @@ export const en = {
       privacyTitle: "Yours alone",
       privacyBody:
         "It all happens directly between your Mac and your iPhone, so your location never touches our servers. Pro is verified with Apple-signed receipts, and every update is notarized by Apple and signature-checked before it installs.",
+    },
+    connection: {
+      title: "The link to your Mac",
+      intro:
+        "Your Mac is what moves the GPS, so setting or changing a location needs a live link between the two devices. Any one of these carries it:",
+      links: [
+        {
+          title: "USB cable",
+          body: "The most reliable option, and the one first-time setup runs over. Use a data-capable cable and keep the phone unlocked.",
+        },
+        {
+          title: "The same Wi-Fi network",
+          body: "After the first pairing, your Mac finds the phone over the local network — no cable needed. Both devices have to be on the same network.",
+        },
+        {
+          title: "A hotspot",
+          body: "No shared Wi-Fi? Turn on your iPhone's Personal Hotspot and join your Mac to it. Your Mac sharing its connection with the phone works too.",
+        },
+      ],
+      offlineTitle: "Leaving your Mac behind",
+      offlineBody:
+        "A location can outlive the link. With your spoofed location active, turn Developer Mode off on the iPhone (Settings ▸ Privacy & Security ▸ Developer Mode). The location holds from there, including once you're away from your Mac.",
+      offlineCaveat:
+        "The trade-off is that it's frozen. To pick a different location, restart your iPhone and set the new one with your Mac in reach again.",
+      limitTitle: "What it can't do",
+      limitBody:
+        "Nothing routes through our servers, so your Mac can't reach your iPhone across the internet. Once the two are apart, the phone stops taking new locations — the Developer Mode step above is what holds the current one in place.",
     },
     menuShotAlt: "GeoSpoof GPS menu-bar app on macOS",
     screenshotAlt: "GeoSpoof GPS on iPhone, screenshot {n}",

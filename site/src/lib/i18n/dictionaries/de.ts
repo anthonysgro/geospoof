@@ -1290,9 +1290,15 @@ export const de: Dictionary = {
         "GeoSpoof GPS ist eine macOS-Menüleisten-App, die den echten GPS-Standort deines verbundenen iPhones an deinen gefälschten Standort anpasst. Lade das signierte, notarisierte DMG herunter.",
       ogTitle: "GeoSpoof GPS für Mac herunterladen",
     },
+    preflightTitle: "Vor dem Herunterladen",
     compat: {
-      label: "Hinweis",
+      label: "Nicht für AR-Spiele",
       body: "GeoSpoof GPS ist ausschließlich für Datenschutz, das Surfen im Web und die Entwicklung gedacht. Es ist nicht mit AR-Handyspielen wie Pokémon GO kompatibel und auch nicht dafür vorgesehen.",
+    },
+    tether: {
+      label: "Ein Mac ist nötig",
+      body: "Dein iPhone muss mit deinem Mac verbunden sein – über USB, dasselbe WLAN oder einen Hotspot – immer wenn du einen Standort festlegst oder änderst. GeoSpoof GPS ist eine Mac-App; einen Modus nur fürs iPhone gibt es nicht.",
+      link: "So funktioniert die Verbindung",
     },
     experimental: {
       label: "Experimentell",
@@ -1309,7 +1315,7 @@ export const de: Dictionary = {
       headingPost:
         " deines iPhones mit deinem gefälschten Standort in Einklang",
       intro:
-        "GeoSpoof GPS ist ein macOS-Menüleisten-Begleiter, der den systemweiten Standort eines verbundenen iPhones auf den Ort setzt, den du in GeoSpoof wählst. So erzählen dein Browser und das echte GPS deines Telefons dieselbe Geschichte.",
+        "GeoSpoof GPS ist ein macOS-Menüleisten-Begleiter, der den systemweiten Standort deines iPhones auf den Ort setzt, den du in GeoSpoof wählst. So erzählen dein Browser und das echte GPS deines Telefons dieselbe Geschichte – solange das Telefon mit deinem Mac verbunden bleibt.",
     },
     download: {
       cta: "Für Mac herunterladen",
@@ -1322,7 +1328,7 @@ export const de: Dictionary = {
     setup: {
       title: "GeoSpoof GPS einrichten",
       intro:
-        "Öffne das Menüleisten-Symbol und wähle „Einrichten…“. Der Assistent hakt jeden Schritt ab, während du vorgehst. Verbinde dein iPhone per Kabel, um die Einrichtung abzuschließen. Danach arbeitet GeoSpoof GPS über WLAN weiter.",
+        "Öffne das Menüleisten-Symbol und wähle „Einrichten…“. Der Assistent hakt jeden Schritt ab, während du vorgehst. Verbinde dein iPhone per Kabel, um die Einrichtung abzuschließen. Danach kann dein Mac das GPS über WLAN oder einen Hotspot steuern, solange die beiden einander erreichen.",
       steps: [
         {
           name: "App installieren",
@@ -1376,7 +1382,11 @@ export const de: Dictionary = {
         },
         {
           name: "Standort in GeoSpoof wählen",
-          text: "Lege deinen Standort wie gewohnt in GeoSpoof fest. Das systemweite GPS deines iPhones folgt ihm und bleibt abgeglichen, auch nachdem du das Kabel abziehst und zu WLAN wechselst.",
+          text: "Lege deinen Standort wie gewohnt in GeoSpoof fest. Das systemweite GPS deines iPhones folgt ihm und bleibt abgeglichen, solange es deinen Mac erreichen kann – über das Kabel, dasselbe WLAN oder einen Hotspot.",
+          bullets: [
+            "Du kannst das Kabel abziehen, aber die Verbindung selbst muss bestehen bleiben: Die Mac-App ist es, die das GPS steuert.",
+            "Ohne deinen Mac unterwegs? Schalte den Entwicklermodus aus, während der Standort aktiv ist, dann bleibt er erhalten. Ihn später zu ändern erfordert einen Neustart des iPhones und eine erneute Verbindung.",
+          ],
           link: { label: "GeoSpoof fürs iPhone holen" },
         },
       ],
@@ -1389,7 +1399,7 @@ export const de: Dictionary = {
       appPost:
         " mit GeoSpoof Pro. Die App ist deine Steuerzentrale, die den Standort festlegt, und das Ändern des echten Geräte-GPS ist eine Pro-Funktion.",
       iphone:
-        "Ein iPhone mit aktiviertem Entwicklermodus, für die Ersteinrichtung per USB-Kabel verbunden.",
+        "Ein iPhone mit aktiviertem Entwicklermodus, für die Ersteinrichtung per USB-Kabel verbunden. Danach muss es deinen Mac erreichen können – Kabel, dasselbe WLAN oder ein Hotspot – immer wenn du einen Standort festlegst oder änderst.",
       xcodePre: "Xcode, Apples kostenlose Entwickler-App aus dem ",
       xcodeLink: "Mac App Store",
       xcodePost:
@@ -1409,8 +1419,8 @@ export const de: Dictionary = {
           body: "Über eine sichere, einmalige Kopplung nutzt die Menüleisten-App Apples eigene Entwickler-Standortsimulation, um den systemweiten Standort deines iPhones zu setzen. Kein Jailbreak, nichts zu kompilieren – dasselbe Verfahren, das Entwickler bereits in Xcode verwenden.",
         },
         {
-          title: "Einmal per Kabel, dann drahtlos",
-          body: "Die Ersteinrichtung läuft über ein USB-Kabel. Danach funktioniert es über WLAN und verbindet sich von selbst wieder, wenn dein Handy das Netzwerk verlässt und erneut beitritt.",
+          title: "Einmal per Kabel, dann übers Netzwerk",
+          body: "Die Ersteinrichtung läuft über ein USB-Kabel. Danach steuert dein Mac das GPS über das lokale Netzwerk – dasselbe WLAN oder einen Hotspot – und verbindet sich von selbst wieder, wenn dein Handy das Netzwerk verlässt und erneut beitritt. Dein Mac bleibt Teil der Kette; er ist es, der den Standort setzt.",
         },
         {
           title: "Bleibt stabil, setzt sauber zurück",
@@ -1420,6 +1430,33 @@ export const de: Dictionary = {
       privacyTitle: "Nur für dich",
       privacyBody:
         "Alles läuft direkt zwischen deinem Mac und deinem iPhone ab, dein Standort erreicht also nie unsere Server. Pro wird mit von Apple signierten Belegen überprüft, und jedes Update wird von Apple notariell beglaubigt und vor der Installation signaturgeprüft.",
+    },
+    connection: {
+      title: "Die Verbindung zu deinem Mac",
+      intro:
+        "Dein Mac ist es, der das GPS bewegt. Einen Standort festzulegen oder zu ändern braucht daher eine bestehende Verbindung zwischen den beiden Geräten. Jede dieser Varianten trägt sie:",
+      links: [
+        {
+          title: "USB-Kabel",
+          body: "Die zuverlässigste Variante und die, über die die Ersteinrichtung läuft. Verwende ein datenfähiges Kabel und halte das Telefon entsperrt.",
+        },
+        {
+          title: "Dasselbe WLAN",
+          body: "Nach der ersten Kopplung findet dein Mac das Telefon über das lokale Netzwerk – ohne Kabel. Beide Geräte müssen im selben Netzwerk sein.",
+        },
+        {
+          title: "Ein Hotspot",
+          body: "Kein gemeinsames WLAN? Aktiviere den persönlichen Hotspot deines iPhones und verbinde deinen Mac damit. Umgekehrt klappt es auch, wenn dein Mac seine Verbindung mit dem Telefon teilt.",
+        },
+      ],
+      offlineTitle: "Ohne deinen Mac unterwegs",
+      offlineBody:
+        "Ein Standort kann die Verbindung überdauern. Schalte bei aktivem gefälschtem Standort auf dem iPhone den Entwicklermodus aus (Einstellungen ▸ Datenschutz & Sicherheit ▸ Entwicklermodus). Der Standort bleibt dann erhalten, auch wenn du dich von deinem Mac entfernst.",
+      offlineCaveat:
+        "Der Haken: Er ist eingefroren. Um einen anderen Standort zu wählen, starte dein iPhone neu und lege den neuen fest, während dein Mac wieder in Reichweite ist.",
+      limitTitle: "Was nicht geht",
+      limitBody:
+        "Nichts läuft über unsere Server, dein Mac kann dein iPhone also nicht über das Internet erreichen. Sind die beiden getrennt, nimmt das Telefon keine neuen Standorte mehr an – der Schritt mit dem Entwicklermodus oben hält den aktuellen fest.",
     },
     menuShotAlt: "GeoSpoof GPS Menüleisten-App unter macOS",
     screenshotAlt: "GeoSpoof GPS auf dem iPhone, Screenshot {n}",

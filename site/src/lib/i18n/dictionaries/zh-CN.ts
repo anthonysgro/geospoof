@@ -1241,9 +1241,15 @@ export const zhCN: Dictionary = {
         "GeoSpoof GPS 是一款 macOS 菜单栏应用，可将已连接 iPhone 的真实 GPS 位置设置为与你的伪装位置一致。下载已签名并公证的 DMG。",
       ogTitle: "为 Mac 下载 GeoSpoof GPS",
     },
+    preflightTitle: "下载之前",
     compat: {
-      label: "注意",
+      label: "不适用于 AR 游戏",
       body: "GeoSpoof GPS 仅为隐私保护、网页浏览和开发而设计。它不兼容也并非为 Pokémon GO 等 AR 手机游戏而设计。",
+    },
+    tether: {
+      label: "需要一台 Mac",
+      body: "每次设置或更改位置时，iPhone 都必须与 Mac 保持连接——通过 USB、同一 Wi-Fi 网络或个人热点。GeoSpoof GPS 是一款 Mac 应用，没有仅用 iPhone 的模式。",
+      link: "连接方式说明",
     },
     experimental: {
       label: "实验性功能",
@@ -1259,7 +1265,7 @@ export const zhCN: Dictionary = {
       headingEmphasis: "真实 GPS",
       headingPost: "与你的伪装位置一致",
       intro:
-        "GeoSpoof GPS 是一款 macOS 菜单栏伴侣应用，可将已连接 iPhone 的系统级位置设置为你在 GeoSpoof 中选择的地点。浏览器和手机的真实 GPS 会呈现一致的位置。",
+        "GeoSpoof GPS 是一款 macOS 菜单栏伴侣应用，可将 iPhone 的系统级位置设置为你在 GeoSpoof 中选择的地点。只要手机与 Mac 保持连接，浏览器和手机的真实 GPS 就会呈现一致的位置。",
     },
     download: {
       cta: "下载 Mac 版",
@@ -1272,7 +1278,7 @@ export const zhCN: Dictionary = {
     setup: {
       title: "设置 GeoSpoof GPS",
       intro:
-        "点按菜单栏图标并选择“设置…”。向导会随着你的操作逐项打勾。用数据线连接 iPhone 以完成设置。完成后，GeoSpoof GPS 会继续通过 Wi-Fi 工作。",
+        "点按菜单栏图标并选择“设置…”。向导会随着你的操作逐项打勾。用数据线连接 iPhone 以完成设置；完成后，只要两台设备仍能互相连通，Mac 就能通过 Wi-Fi 或个人热点驱动 GPS。",
       steps: [
         {
           name: "安装应用",
@@ -1326,7 +1332,11 @@ export const zhCN: Dictionary = {
         },
         {
           name: "在 GeoSpoof 中选择位置",
-          text: "像往常一样在 GeoSpoof 中设置位置。iPhone 的系统级 GPS 会随之跟随并保持一致，即使你拔掉数据线切换到 Wi-Fi 也是如此。",
+          text: "像往常一样在 GeoSpoof 中设置位置。只要 iPhone 还能连上你的 Mac——通过数据线、同一 Wi-Fi 网络或个人热点——它的系统级 GPS 就会随之跟随并保持一致。",
+          bullets: [
+            "数据线可以拔掉，但连接本身必须保持：驱动 GPS 的是 Mac 上的应用。",
+            "要带着手机出门、不带 Mac？在位置生效时关闭开发者模式，该位置就会保留下来。之后若要更改，需要重启 iPhone 并重新连接。",
+          ],
           link: { label: "获取 iPhone 版 GeoSpoof" },
         },
       ],
@@ -1338,7 +1348,8 @@ export const zhCN: Dictionary = {
       appLink: "GeoSpoof 应用",
       appPost:
         "，以及 GeoSpoof Pro。这个应用是你的控制中心，由它来设置位置，而更改设备的真实 GPS 是 Pro 功能。",
-      iphone: "一部已开启开发者模式的 iPhone，首次设置时通过 USB 数据线连接。",
+      iphone:
+        "一部已开启开发者模式的 iPhone，首次设置时通过 USB 数据线连接。之后每次设置或更改位置时，它都需要能连上你的 Mac——数据线、同一 Wi-Fi 网络或个人热点。",
       xcodePre: "Xcode，Apple 免费的开发者应用，来自 ",
       xcodeLink: "Mac App Store",
       xcodePost:
@@ -1358,8 +1369,8 @@ export const zhCN: Dictionary = {
           body: "通过一次性的安全配对，菜单栏应用使用 Apple 自带的开发者位置模拟来设置 iPhone 的系统级位置。无需越狱，无需编译任何东西——正是开发者在 Xcode 中已经使用的机制。",
         },
         {
-          title: "首次用线，之后无线",
-          body: "首次设置需要 USB 数据线。之后便可通过 Wi-Fi 工作，并在手机离开网络又重新加入时自动重连。",
+          title: "首次用线，之后走网络",
+          body: "首次设置需要 USB 数据线。之后 Mac 会通过本地网络驱动 GPS——同一 Wi-Fi 或个人热点——并在手机离开网络又重新加入时自动重连。Mac 始终在这条链路上，因为位置是由它来设置的。",
         },
         {
           title: "稳稳保持，干净还原",
@@ -1369,6 +1380,33 @@ export const zhCN: Dictionary = {
       privacyTitle: "只属于你",
       privacyBody:
         "一切都在你的 Mac 与 iPhone 之间直接完成，你的位置绝不会经过我们的服务器。Pro 通过 Apple 签名的收据进行验证，每次更新都经过 Apple 公证，并在安装前校验签名。",
+    },
+    connection: {
+      title: "与 Mac 之间的连接",
+      intro:
+        "驱动 GPS 的是你的 Mac，所以设置或更改位置需要两台设备之间保持连接。以下任意一种方式都可以：",
+      links: [
+        {
+          title: "USB 数据线",
+          body: "最可靠的方式，首次设置也走这条路。请使用支持数据传输的数据线，并让手机保持解锁。",
+        },
+        {
+          title: "同一 Wi-Fi 网络",
+          body: "首次配对之后，Mac 会通过本地网络找到手机，无需数据线。两台设备需要处于同一网络中。",
+        },
+        {
+          title: "个人热点",
+          body: "没有共用的 Wi-Fi？打开 iPhone 的个人热点，让 Mac 连上它。反过来也行，让 Mac 把网络共享给手机。",
+        },
+      ],
+      offlineTitle: "不带 Mac 出门",
+      offlineBody:
+        "位置可以比连接活得更久。在伪装位置生效时，前往 iPhone 的 设置 ▸ 隐私与安全性 ▸ 开发者模式 将其关闭。从此该位置便会保留下来，即使你离开了 Mac。",
+      offlineCaveat:
+        "代价是它被固定住了。要换成另一个位置，需要重启 iPhone，并在 Mac 重新可达时设置新位置。",
+      limitTitle: "做不到的事",
+      limitBody:
+        "没有任何数据经过我们的服务器，所以 Mac 无法通过互联网连上你的 iPhone。两台设备一旦分开，手机就不再接收新位置——上面那步关闭开发者模式，正是用来保住当前位置的。",
     },
     menuShotAlt: "macOS 上的 GeoSpoof GPS 菜单栏应用",
     screenshotAlt: "iPhone 上的 GeoSpoof GPS，截图 {n}",

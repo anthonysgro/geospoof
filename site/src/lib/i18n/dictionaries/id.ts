@@ -1277,9 +1277,15 @@ export const id: Dictionary = {
         "GeoSpoof GPS adalah aplikasi bilah menu macOS yang menyetel lokasi GPS asli iPhone yang terhubung agar sesuai dengan lokasi palsu Anda. Unduh DMG yang ditandatangani dan dinotarisasi.",
       ogTitle: "Unduh GeoSpoof GPS untuk Mac",
     },
+    preflightTitle: "Sebelum Anda mengunduh",
     compat: {
-      label: "Catatan",
+      label: "Bukan untuk gim AR",
       body: "GeoSpoof GPS dirancang khusus untuk privasi, penjelajahan web, dan pengembangan. Aplikasi ini tidak kompatibel dengan, dan tidak dirancang untuk, gim seluler AR seperti Pokémon GO.",
+    },
+    tether: {
+      label: "Memerlukan Mac",
+      body: "iPhone Anda harus terhubung ke Mac Anda — lewat USB, jaringan Wi-Fi yang sama, atau hotspot — setiap kali Anda menyetel atau mengganti lokasi. GeoSpoof GPS adalah aplikasi Mac; tidak ada mode khusus iPhone.",
+      link: "Cara kerja koneksinya",
     },
     experimental: {
       label: "Eksperimental",
@@ -1295,7 +1301,7 @@ export const id: Dictionary = {
       headingEmphasis: "GPS asli",
       headingPost: " iPhone Anda dengan lokasi palsu Anda",
       intro:
-        "GeoSpoof GPS adalah pendamping bilah menu macOS yang menyetel lokasi tingkat sistem iPhone yang terhubung ke tempat yang Anda pilih di GeoSpoof. Browser dan GPS asli ponsel Anda menyampaikan cerita yang sama.",
+        "GeoSpoof GPS adalah pendamping bilah menu macOS yang menyetel lokasi tingkat sistem iPhone Anda ke tempat yang Anda pilih di GeoSpoof. Browser dan GPS asli ponsel Anda menyampaikan cerita yang sama, selama ponsel tetap terhubung ke Mac Anda.",
     },
     download: {
       cta: "Unduh untuk Mac",
@@ -1308,7 +1314,7 @@ export const id: Dictionary = {
     setup: {
       title: "Siapkan GeoSpoof GPS",
       intro:
-        "Buka ikon bilah menu dan pilih “Siapkan…”. Panduan akan menandai setiap langkah saat Anda mengerjakannya. Hubungkan iPhone dengan kabel untuk menyelesaikan penyiapan. Setelah itu, GeoSpoof GPS tetap bekerja melalui Wi-Fi.",
+        "Buka ikon bilah menu dan pilih “Siapkan…”. Panduan akan menandai setiap langkah saat Anda mengerjakannya. Hubungkan iPhone dengan kabel untuk menyelesaikan penyiapan; setelah itu Mac Anda bisa menggerakkan GPS melalui Wi-Fi atau hotspot, selama keduanya tetap saling terjangkau.",
       steps: [
         {
           name: "Pasang aplikasinya",
@@ -1362,7 +1368,11 @@ export const id: Dictionary = {
         },
         {
           name: "Pilih lokasi di GeoSpoof",
-          text: "Setel lokasi Anda seperti biasa di GeoSpoof. GPS tingkat sistem iPhone Anda mengikutinya dan tetap selaras, bahkan setelah Anda mencabut kabel dan beralih ke Wi-Fi.",
+          text: "Setel lokasi Anda seperti biasa di GeoSpoof. GPS tingkat sistem iPhone Anda mengikutinya dan tetap selaras selama masih bisa menjangkau Mac Anda — lewat kabel, jaringan Wi-Fi yang sama, atau hotspot.",
+          bullets: [
+            "Anda boleh mencabut kabelnya, tapi koneksinya sendiri harus tetap ada: aplikasi Mac-lah yang menggerakkan GPS.",
+            "Pergi tanpa Mac Anda? Matikan Mode Pengembang saat lokasi sedang aktif, maka lokasi itu bertahan. Menggantinya nanti berarti memulai ulang iPhone dan menghubungkannya kembali.",
+          ],
           link: { label: "Dapatkan GeoSpoof untuk iPhone" },
         },
       ],
@@ -1375,7 +1385,7 @@ export const id: Dictionary = {
       appPost:
         " dengan GeoSpoof Pro. Aplikasi ini adalah pusat kendali Anda yang menyetel lokasi, dan memindahkan GPS asli perangkat adalah fitur Pro.",
       iphone:
-        "iPhone dengan Mode Pengembang aktif, terhubung lewat kabel USB untuk penyiapan pertama.",
+        "iPhone dengan Mode Pengembang aktif, terhubung lewat kabel USB untuk penyiapan pertama. Setelah itu ia perlu menjangkau Mac Anda — kabel, jaringan Wi-Fi yang sama, atau hotspot — setiap kali Anda menyetel atau mengganti lokasi.",
       xcodePre: "Xcode, aplikasi pengembang gratis dari Apple, di ",
       xcodeLink: "Mac App Store",
       xcodePost:
@@ -1395,8 +1405,8 @@ export const id: Dictionary = {
           body: "Melalui pemasangan yang aman dan sekali saja, aplikasi bilah menu memakai simulasi lokasi developer milik Apple untuk mengatur lokasi tingkat sistem iPhone Anda. Tanpa jailbreak, tanpa membangun apa pun — mekanisme yang sama yang sudah dipakai developer di Xcode.",
         },
         {
-          title: "Kabel sekali, lalu nirkabel",
-          body: "Penyiapan pertama kali dilakukan lewat kabel USB. Setelah itu ia bekerja melalui Wi-Fi, dan menyambung kembali dengan sendirinya saat ponsel Anda keluar dari jaringan lalu bergabung lagi.",
+          title: "Kabel sekali, lalu lewat jaringan",
+          body: "Penyiapan pertama kali dilakukan lewat kabel USB. Setelah itu Mac Anda menggerakkan GPS melalui jaringan lokal — Wi-Fi yang sama atau hotspot — dan menyambung kembali dengan sendirinya saat ponsel Anda keluar dari jaringan lalu bergabung lagi. Mac Anda tetap bagian dari rantai ini; ia yang menyetel lokasinya.",
         },
         {
           title: "Tetap stabil, kembali bersih",
@@ -1406,6 +1416,33 @@ export const id: Dictionary = {
       privacyTitle: "Hanya milik Anda",
       privacyBody:
         "Semuanya terjadi langsung antara Mac dan iPhone Anda, jadi lokasi Anda tidak pernah menyentuh server kami. Pro diverifikasi dengan tanda terima bertanda tangan Apple, dan setiap pembaruan dinotarisasi oleh Apple serta diperiksa tanda tangannya sebelum dipasang.",
+    },
+    connection: {
+      title: "Koneksi ke Mac Anda",
+      intro:
+        "Mac Anda-lah yang menggerakkan GPS, jadi menyetel atau mengganti lokasi memerlukan koneksi aktif antara kedua perangkat. Salah satu dari ini sudah cukup:",
+      links: [
+        {
+          title: "Kabel USB",
+          body: "Pilihan paling andal, dan yang dipakai penyiapan pertama. Gunakan kabel yang mendukung data dan biarkan ponsel tidak terkunci.",
+        },
+        {
+          title: "Jaringan Wi-Fi yang sama",
+          body: "Setelah penyandingan pertama, Mac Anda menemukan ponsel lewat jaringan lokal — tanpa kabel. Kedua perangkat harus berada di jaringan yang sama.",
+        },
+        {
+          title: "Hotspot",
+          body: "Tidak ada Wi-Fi bersama? Nyalakan Hotspot Pribadi iPhone Anda dan sambungkan Mac ke sana. Sebaliknya juga bisa, dengan Mac Anda membagikan koneksinya ke ponsel.",
+        },
+      ],
+      offlineTitle: "Pergi tanpa Mac Anda",
+      offlineBody:
+        "Sebuah lokasi bisa bertahan lebih lama daripada koneksinya. Saat lokasi palsu Anda aktif, matikan Mode Pengembang di iPhone (Pengaturan ▸ Privasi & Keamanan ▸ Mode Pengembang). Lokasi itu bertahan sejak saat itu, termasuk setelah Anda menjauh dari Mac.",
+      offlineCaveat:
+        "Konsekuensinya: lokasi itu terkunci. Untuk memilih lokasi lain, mulai ulang iPhone Anda dan setel yang baru saat Mac Anda kembali terjangkau.",
+      limitTitle: "Yang tidak bisa dilakukan",
+      limitBody:
+        "Tidak ada yang melewati server kami, jadi Mac Anda tidak bisa menjangkau iPhone lewat internet. Begitu keduanya terpisah, ponsel berhenti menerima lokasi baru — langkah Mode Pengembang di atas itulah yang menahan lokasi saat ini.",
     },
     menuShotAlt: "Aplikasi bilah menu GeoSpoof GPS di macOS",
     screenshotAlt: "GeoSpoof GPS di iPhone, tangkapan layar {n}",

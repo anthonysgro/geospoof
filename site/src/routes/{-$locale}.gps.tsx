@@ -5,9 +5,12 @@ import {
   ArrowRight,
   Check,
   MapPin,
+  RadioTower,
   RotateCcw,
   ShieldCheck,
   TriangleAlert,
+  Unplug,
+  Usb,
   Waypoints,
   Wifi,
 } from "lucide-react"
@@ -329,6 +332,93 @@ function HowItWorks() {
 }
 
 /**
+ * "The link to your Mac" — the formal statement of the tethering requirement.
+ *
+ * This exists because the requirement is the single most misread thing about
+ * the product: "cable once, then wireless" was being read as "unplug and go,
+ * Mac not required". The Mac app is what drives the GPS, so a live link is
+ * needed to set *or change* a location; dropping the cable only swaps USB for
+ * the local network. The one genuine untethered path (Developer Mode off to
+ * freeze the current location) is spelled out with its cost, rather than
+ * implied by the marketing.
+ *
+ * Anchored as #connection so the hero caveat and support pages can deep-link.
+ */
+const CONNECTION_ICONS = [Usb, Wifi, RadioTower] as const
+
+function ConnectionRequirements() {
+  const { t } = useTranslations()
+  const c = t.gps.connection
+
+  return (
+    <Section narrow id="connection" className="scroll-mt-24 py-12! md:py-16!">
+      <h2 className="mb-3 text-2xl font-bold text-(--color-canvas-foreground) md:text-3xl">
+        {c.title}
+      </h2>
+      <p className="mb-8 max-w-2xl text-(--color-canvas-muted)">{c.intro}</p>
+
+      <ul className="grid gap-5 sm:grid-cols-3">
+        {c.links.map((link, i) => {
+          const Icon = CONNECTION_ICONS[i] ?? Usb
+          return (
+            <li
+              key={link.title}
+              className="rounded-2xl border border-(--color-canvas-border) bg-(--color-canvas) p-6"
+            >
+              <div className="mb-4 flex size-10 items-center justify-center rounded-xl bg-brand/10 text-(--color-brand)">
+                <Icon className="size-5" aria-hidden="true" />
+              </div>
+              <h3 className="font-semibold text-(--color-canvas-foreground)">
+                {link.title}
+              </h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-(--color-canvas-muted)">
+                {link.body}
+              </p>
+            </li>
+          )
+        })}
+      </ul>
+
+      {/* The one supported way to keep a location without the Mac, stated with
+          its trade-off attached so it can't be read as "works untethered". */}
+      <div className="mt-6 flex items-start gap-3 rounded-2xl border border-(--color-canvas-border) bg-brand/5 p-6 md:p-8">
+        <Unplug
+          className="mt-0.5 size-6 shrink-0 text-(--color-brand)"
+          aria-hidden="true"
+        />
+        <div>
+          <h3 className="text-lg font-bold text-(--color-canvas-foreground)">
+            {c.offlineTitle}
+          </h3>
+          <p className="mt-2 text-sm leading-relaxed text-(--color-canvas-muted)">
+            {c.offlineBody}
+          </p>
+          <p className="mt-2 text-sm leading-relaxed font-medium text-(--color-canvas-foreground)">
+            {c.offlineCaveat}
+          </p>
+        </div>
+      </div>
+
+      {/* Hard limits, stated plainly (claims guardrail: no remote/standalone). */}
+      <div className="mt-4 flex items-start gap-3 rounded-2xl border border-(--color-canvas-border) p-6 md:p-8">
+        <TriangleAlert
+          className="mt-0.5 size-6 shrink-0 text-amber-600 dark:text-amber-400"
+          aria-hidden="true"
+        />
+        <div>
+          <h3 className="text-lg font-bold text-(--color-canvas-foreground)">
+            {c.limitTitle}
+          </h3>
+          <p className="mt-2 text-sm leading-relaxed text-(--color-canvas-muted)">
+            {c.limitBody}
+          </p>
+        </div>
+      </div>
+    </Section>
+  )
+}
+
+/**
  * The IP-address / VPN honesty callout, reused verbatim from the verify page
  * (`t.verify.vpnCard` + `t.vpn.whyProton`, shared copy so there's nothing new
  * to translate). GeoSpoof GPS aligns the device's location, but the IP is still
@@ -445,6 +535,77 @@ function HeroIcon() {
   )
 }
 
+/**
+ * One expectation-setting item inside the pre-download card: bolded label,
+ * body, and an optional trailing link to the section that explains it in full.
+ */
+function PreflightItem({
+  label,
+  body,
+  children,
+}: {
+  label: string
+  body: string
+  children?: React.ReactNode
+}) {
+  return (
+    <li className="flex gap-2.5 text-xs leading-relaxed text-(--color-canvas-muted)">
+      <span
+        className="mt-1.5 size-1.5 shrink-0 rounded-full bg-amber-600 dark:bg-amber-400"
+        aria-hidden="true"
+      />
+      <span>
+        <strong className="font-semibold text-(--color-canvas-foreground)">
+          {label}:
+        </strong>{" "}
+        {body}
+        {children ? <> {children}</> : null}
+      </span>
+    </li>
+  )
+}
+
+/**
+ * The two things people have bought GeoSpoof GPS on a wrong assumption about:
+ * the Mac requirement (it isn't a standalone iPhone app, and the link is needed
+ * to *change* a location, not just to set one up) and AR-game compatibility.
+ *
+ * Both belong above the fold, but they were originally two loose amber notes
+ * stacked under the download button, which read as noise — a second warning
+ * next to the first gets both of them skipped. One framed card with a heading
+ * reads as deliberate, keeps a single warning glyph, and gives each fact a
+ * scannable label.
+ */
+function PreflightNotes() {
+  const { t } = useTranslations()
+  const g = t.gps
+
+  return (
+    <div className="mx-auto mt-8 max-w-xl rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5 text-left">
+      <div className="mb-3 flex items-center gap-2">
+        <TriangleAlert
+          className="size-4 shrink-0 text-amber-600 dark:text-amber-400"
+          aria-hidden="true"
+        />
+        <h2 className="text-sm font-semibold text-(--color-canvas-foreground)">
+          {g.preflightTitle}
+        </h2>
+      </div>
+      <ul className="space-y-2.5">
+        <PreflightItem label={g.tether.label} body={g.tether.body}>
+          <a
+            href="#connection"
+            className="font-medium text-(--color-brand) hover:underline"
+          >
+            {g.tether.link}
+          </a>
+        </PreflightItem>
+        <PreflightItem label={g.compat.label} body={g.compat.body} />
+      </ul>
+    </div>
+  )
+}
+
 export function GpsPage() {
   const { t } = useTranslations()
   const g = t.gps
@@ -484,21 +645,8 @@ export function GpsPage() {
 
             <DownloadCard />
 
-            {/* Compatibility caveat — sets expectations for AR-game seekers up
-                front (before they download): device GPS is for privacy,
-                browsing and development, not games like Pokémon GO. */}
-            <p className="mx-auto mt-6 flex max-w-xl items-start justify-center gap-2 text-left text-xs text-(--color-canvas-muted)">
-              <TriangleAlert
-                className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400"
-                aria-hidden="true"
-              />
-              <span>
-                <strong className="font-semibold text-(--color-canvas-foreground)">
-                  {g.compat.label}:
-                </strong>{" "}
-                {g.compat.body}
-              </span>
-            </p>
+            {/* Set expectations before the download, not after. */}
+            <PreflightNotes />
           </div>
         </Section>
 
@@ -508,6 +656,10 @@ export function GpsPage() {
         {/* How it works — the customer-facing explainer. The full step-by-step
             setup guide lives on /support (the app ships in-app onboarding). */}
         <HowItWorks />
+
+        {/* The tethering requirement, in full — the formal version of the
+            "Cable once, then over the network" card above it. */}
+        <ConnectionRequirements />
 
         {/* Quiet setup-help link to the full guide on /support, for anyone who
             hits a snag during first-time setup. */}
