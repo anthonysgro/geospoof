@@ -17,7 +17,7 @@ FITUR
 
 GPS PERANGKAT (PRO · EKSPERIMENTAL)
 
-Lebih dari sekadar peramban: selaraskan lokasi sistem iPhone Anda dengan tempat yang Anda pilih, sehingga aplikasi berbasis lokasi — bukan hanya Safari — juga melihatnya. Fitur Pro opsional ini memerlukan aplikasi pendamping gratis GeoSpoof GPS untuk Mac: satu kali penyiapan melalui kabel, lalu berjalan melalui Wi-Fi. Fitur ini memakai alat lokasi standar Apple untuk pengembang dan tidak pernah mengubah iOS.
+Lebih dari sekadar peramban: selaraskan lokasi sistem iPhone Anda dengan tempat yang Anda pilih, sehingga aplikasi berbasis lokasi — bukan hanya Safari — juga melihatnya. Fitur Pro opsional ini memerlukan aplikasi pendamping gratis GeoSpoof GPS untuk Mac atau Windows: satu kali penyiapan melalui kabel, lalu berjalan melalui Wi-Fi. Fitur ini memakai alat lokasi standar Apple untuk pengembang dan tidak pernah mengubah iOS.
 
 YANG TIDAK DILAKUKAN GEOSPOOF
 

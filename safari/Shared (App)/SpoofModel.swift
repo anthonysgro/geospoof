@@ -1739,7 +1739,7 @@ final class SpoofController: ObservableObject {
     /// mirrored into `desired.json` as `owner_id`. No-op if unchanged.
     func setSelectedController(_ id: String?) {
         guard selectedControllerId != id else { return }
-        Log.location.info("GPS controlling Mac → \(id ?? "auto")")
+        Log.location.info("GPS controlling computer → \(id ?? "auto")")
         selectedControllerId = id
         setSharedPrefsValue("gps_ownerId", id)
         writePending()

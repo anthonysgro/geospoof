@@ -17,7 +17,7 @@ FUNCTIES
 
 GPS VAN APPARAAT (PRO · EXPERIMENTEEL)
 
-Verder dan de browser: breng de systeemlocatie van je iPhone naar de plek die je kiest, zodat locatiegebonden apps — niet alleen Safari — die ook zien. Deze optionele Pro-functie vereist de gratis Mac-companionapp GeoSpoof GPS: eenmalig instellen via een kabel, daarna werkt het via wifi. Hij gebruikt Apple's gebruikelijke ontwikkelaarstools voor locatie en wijzigt iOS nooit.
+Verder dan de browser: breng de systeemlocatie van je iPhone naar de plek die je kiest, zodat locatiegebonden apps — niet alleen Safari — die ook zien. Deze optionele Pro-functie vereist de gratis companionapp GeoSpoof GPS voor Mac of Windows: eenmalig instellen via een kabel, daarna werkt het via wifi. Hij gebruikt Apple's gebruikelijke ontwikkelaarstools voor locatie en wijzigt iOS nooit.
 
 WAT GEOSPOOF NIET DOET
 

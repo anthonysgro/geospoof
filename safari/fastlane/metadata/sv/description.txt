@@ -17,7 +17,7 @@ FUNKTIONER
 
 ENHETENS GPS (PRO · EXPERIMENTELLT)
 
-Gå längre än webbläsaren: ställ in iPhones systemplats på den plats du väljer, så att platsbaserade appar — inte bara Safari — också ser den. Den här valfria Pro-funktionen kräver den kostnadsfria följeappen GeoSpoof GPS för Mac: en engångsinställning via kabel, sedan fungerar det över Wi-Fi. Den använder Apples vanliga utvecklarverktyg för plats och ändrar aldrig iOS.
+Gå längre än webbläsaren: ställ in iPhones systemplats på den plats du väljer, så att platsbaserade appar — inte bara Safari — också ser den. Den här valfria Pro-funktionen kräver den kostnadsfria följeappen GeoSpoof GPS för Mac eller Windows: en engångsinställning via kabel, sedan fungerar det över Wi-Fi. Den använder Apples vanliga utvecklarverktyg för plats och ändrar aldrig iOS.
 
 VAD GEOSPOOF INTE GÖR
 

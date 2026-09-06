@@ -17,7 +17,7 @@ FUNCIONES
 
 GPS DEL DISPOSITIVO (PRO · EXPERIMENTAL)
 
-Ve más allá del navegador: alinea la ubicación del sistema de tu iPhone con el lugar que elijas, para que las apps que usan tu ubicación — no solo Safari — también la vean. Esta función Pro opcional requiere la app complementaria gratuita GeoSpoof GPS para Mac: una configuración única por cable y después funciona por Wi-Fi. Usa las herramientas de ubicación estándar de Apple para desarrolladores y nunca modifica iOS.
+Ve más allá del navegador: alinea la ubicación del sistema de tu iPhone con el lugar que elijas, para que las apps que usan tu ubicación — no solo Safari — también la vean. Esta función Pro opcional requiere la app complementaria gratuita GeoSpoof GPS para Mac o Windows: una configuración única por cable y después funciona por Wi-Fi. Usa las herramientas de ubicación estándar de Apple para desarrolladores y nunca modifica iOS.
 
 LO QUE GEOSPOOF NO HACE
 

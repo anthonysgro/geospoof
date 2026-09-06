@@ -17,7 +17,7 @@
 
 设备 GPS（PRO · 实验性）
 
-不止于浏览器：把 iPhone 的系统位置对齐到您选择的地点，让使用位置的应用（不只是 Safari）也能看到。此可选 Pro 功能需要免费的 Mac 伴侣应用 GeoSpoof GPS：用数据线完成一次性设置，之后通过 Wi-Fi 工作。它使用 Apple 标准的开发者位置工具，绝不修改 iOS。
+不止于浏览器：把 iPhone 的系统位置对齐到您选择的地点，让使用位置的应用（不只是 Safari）也能看到。此可选 Pro 功能需要免费的 Mac 或 Windows 伴侣应用 GeoSpoof GPS：用数据线完成一次性设置，之后通过 Wi-Fi 工作。它使用 Apple 标准的开发者位置工具，绝不修改 iOS。
 
 GeoSpoof 不做什么
 

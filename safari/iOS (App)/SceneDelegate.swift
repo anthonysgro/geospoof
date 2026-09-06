@@ -267,10 +267,10 @@ nonisolated struct GpsDeviceSummary: Codable, Equatable {
     }
 }
 
-/// The per-Mac status the GeoSpoof GPS desktop agent writes back into this app's Documents,
-/// as `controllers/<id>.json` over AFC — one self-file per Mac (controller-arbitration),
+/// The per-computer status the GeoSpoof GPS desktop agent writes back into this app's Documents,
+/// as `controllers/<id>.json` over AFC — one self-file per computer (controller-arbitration),
 /// not a single `status.json`. Mirrors the agent's `StatusReport`; the flat
-/// `ControllerReport` wraps it with the writing Mac's identity (see `GpsController`).
+/// `ControllerReport` wraps it with the writing computer's identity (see `GpsController`).
 nonisolated struct GpsStatus: Codable, Equatable {
     var version: Int
     var agentVersion: String
@@ -292,7 +292,7 @@ nonisolated struct GpsStatus: Codable, Equatable {
     }
 }
 
-/// One controller (Mac) entry from the agent roster under
+/// One controller (computer) entry from the agent roster under
 /// `Documents/controllers/<id>.json` (controller-arbitration). Mirrors the agent's
 /// `ControllerReport`: identity (`id`, `name`) plus a flattened `StatusReport` — the same
 /// flat JSON decodes into both the identity fields here and a `GpsStatus`.
@@ -321,25 +321,25 @@ nonisolated struct GpsController: Identifiable, Equatable {
     }
 }
 
-/// Reads the agent roster from this app's `Documents/controllers/` (each Mac writes one
+/// Reads the agent roster from this app's `Documents/controllers/` (each computer writes one
 /// `<id>.json` self-file over AFC — controller-arbitration). Exposes the fresh roster plus
 /// a single display `status`: the user-selected controller's, or the sole controller's when
-/// only one is present. If it goes stale/empty the Mac agent isn't running, so the feature
-/// reads as "waiting for your Mac".
+/// only one is present. If it goes stale/empty the desktop agent isn't running, so the
+/// feature reads as "waiting for your computer".
 @MainActor
 final class GpsStatusStore: ObservableObject {
     /// The display status: the selected (owner) controller's, or the sole controller's.
     @Published private(set) var status: GpsStatus?
-    /// The fresh roster of Macs currently able to drive this phone.
+    /// The fresh roster of computers currently able to drive this phone.
     @Published private(set) var controllers: [GpsController] = []
     /// True when there's no fresh display status (no owner/sole controller present).
     @Published private(set) var isStale = true
 
-    /// The agent refreshes each self-file well within this window; older ⇒ that Mac is gone.
+    /// The agent refreshes each self-file well within this window; older ⇒ that computer is gone.
     nonisolated static let freshWindow: TimeInterval = 20
 
     /// Reload the roster and resolve the display status for `selectedId` (the user's chosen
-    /// controlling Mac, or nil for auto/sole).
+    /// controlling computer, or nil for auto/sole).
     ///
     /// The disk enumeration + JSON decode in `readRoster` can block for a noticeable time
     /// (many files, slow/contended storage, iCloud-backed container), so it runs off the
@@ -371,7 +371,7 @@ final class GpsStatusStore: ObservableObject {
     }
 
     /// Read + freshness-filter every `controllers/<id>.json`. Empty if the directory is
-    /// absent (no Mac has announced yet). The `.json` filter also skips the agent's
+    /// absent (no computer has announced yet). The `.json` filter also skips the agent's
     /// hidden `.<id>.json.tmp` atomic-write scratch files.
     ///
     /// `nonisolated` so `reload` can run it off the main actor (via `Task.detached`); it
@@ -399,9 +399,9 @@ final class GpsStatusStore: ObservableObject {
 /// Coarse UI phase derived from Pro state + the agent status.
 private enum GpsPhase: Equatable {
     case notPro
-    case waitingForMac
-    /// Two or more Macs can drive this phone and none is chosen (or the chosen one left):
-    /// the user must pick which Mac controls it (controller-arbitration).
+    case waitingForComputer
+    /// Two or more computers can drive this phone and none is chosen (or the chosen one
+    /// left): the user must pick which computer controls it (controller-arbitration).
     case chooseController
     case setupNeeded(String)
     case ready
@@ -441,7 +441,7 @@ struct GpsView: View {
                 case .notPro:
                     proPitchSection
                     compatibilitySection
-                case .waitingForMac:
+                case .waitingForComputer:
                     aboutSection
                     waitingSection
                     compatibilitySection
@@ -449,19 +449,19 @@ struct GpsView: View {
                     chooseControllerSection
                 case .setupNeeded(let message):
                     setupNeededSection(message)
-                    controllingMacSection
+                    controllingComputerSection
                     syncToggleSection
                 case .ready:
                     connectedSection(active: false)
-                    controllingMacSection
+                    controllingComputerSection
                     syncToggleSection
                 case .spoofing:
                     connectedSection(active: true)
-                    controllingMacSection
+                    controllingComputerSection
                     syncToggleSection
                 case .lost:
                     lostSection
-                    controllingMacSection
+                    controllingComputerSection
                     syncToggleSection
                 }
             }
@@ -476,7 +476,7 @@ struct GpsView: View {
             }
             .onReceive(refreshTimer) { _ in
                 // Only poll while the app is in the foreground. This status read is purely
-                // for display — the device-GPS spoof itself is driven by the Mac agent
+                // for display — the device-GPS spoof itself is driven by the desktop agent
                 // reading `desired.json` (written on user actions via writePending(), not
                 // here), so pausing the poll in the background never drops the active spoof.
                 // It just avoids needless main-work + re-renders that can trip the
@@ -488,7 +488,7 @@ struct GpsView: View {
     }
 
     /// Reload the roster for the current selection, then keep the selection sensible as the
-    /// roster changes (auto-drive a sole Mac; drop a selection whose Mac has left).
+    /// roster changes (auto-drive a sole computer; drop a selection whose computer has left).
     private func refreshStatus() {
         Task { @MainActor in
             // `reload` reads + decodes the roster off the main thread, then publishes on the
@@ -498,16 +498,16 @@ struct GpsView: View {
         }
     }
 
-    /// Keep the controlling-Mac selection consistent with who's actually present:
-    ///   * exactly one Mac ⇒ it drives automatically (clear any explicit pick, so the
-    ///     agent's sole-controller path applies and a departed Mac fails over cleanly);
-    ///   * two+ Macs ⇒ drop a selection that names a Mac no longer present (the UI then
+    /// Keep the controlling-computer selection consistent with who's actually present:
+    ///   * exactly one computer ⇒ it drives automatically (clear any explicit pick, so the
+    ///     agent's sole-controller path applies and a departed computer fails over cleanly);
+    ///   * two+ computers ⇒ drop a selection naming a computer no longer present (the UI then
     ///     re-prompts); a valid selection is kept.
     private func reconcileSelection() {
         let present = statusStore.controllers
         switch present.count {
         case 0:
-            break // waiting for a Mac; keep the selection for when one returns
+            break // waiting for a computer; keep the selection for when one returns
         case 1:
             if controller.selectedControllerId != nil { controller.setSelectedController(nil) }
         default:
@@ -518,7 +518,7 @@ struct GpsView: View {
         }
     }
 
-    /// Two+ Macs present and no valid choice ⇒ the user must pick which one controls.
+    /// Two+ computers present and no valid choice ⇒ the user must pick which one controls.
     private var needsControllerChoice: Bool {
         let present = statusStore.controllers
         guard present.count >= 2 else { return false }
@@ -531,9 +531,9 @@ struct GpsView: View {
 
     private var phase: GpsPhase {
         if !pro.isPro { return .notPro }
-        // Resolve the "which Mac" ambiguity before reading a single status.
+        // Resolve the "which computer" ambiguity before reading a single status.
         if needsControllerChoice { return .chooseController }
-        guard let s = statusStore.status, !statusStore.isStale else { return .waitingForMac }
+        guard let s = statusStore.status, !statusStore.isStale else { return .waitingForComputer }
         if s.session == "lost" { return .lost }
         if !s.connected {
             // Pass the agent's remediation through even when empty. Substituting
@@ -549,7 +549,7 @@ struct GpsView: View {
 
     // MARK: Sections
 
-    /// Always-visible banner: device GPS needs a Mac + a one-time pairing and rides Apple's
+    /// Always-visible banner: device GPS needs a computer + a one-time pairing and rides Apple's
     /// developer tooling, so we set the expectation up front that it's still experimental.
     private var experimentalSection: some View {
         Section {
@@ -596,7 +596,7 @@ struct GpsView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Device GPS")
                         .font(.headline)
-                    Text("Move your iPhone’s real system GPS to the location you pick, driven from the GeoSpoof GPS app on your Mac.")
+                    Text("Move your iPhone’s real system GPS to the location you pick, driven from the GeoSpoof GPS app on your computer.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -612,7 +612,7 @@ struct GpsView: View {
     /// primary button and gets a full 44pt tap target. Restore lives in Settings
     /// and on the paywall itself, so it's intentionally not duplicated here.
     ///
-    /// `DeviceGpsPitch` now carries the "Learn about GeoSpoof GPS for Mac" link
+    /// `DeviceGpsPitch` now carries the "Learn about GeoSpoof GPS" link
     /// itself, so the standalone section this tab used to add below it is gone —
     /// otherwise the same link would appear twice on this screen.
     private var proPitchSection: some View {
@@ -622,24 +622,30 @@ struct GpsView: View {
         }
     }
 
+    /// The install step, and the one place in this tab that names the desktop platforms
+    /// outright. Everywhere else says "computer": the agent runs on macOS and Windows, so a
+    /// Mac-specific noun would read as "not supported" to the Windows half of the audience.
+    /// Here the user is about to go and fetch a build, and "your computer" leaves a PC owner
+    /// guessing whether one exists for them — which is precisely the question this footer
+    /// answers. The `Link` label stays platform-free because /gps resolves the download.
     private var waitingSection: some View {
         Section {
             HStack(spacing: 10) {
                 ProgressView()
-                Text("Waiting for your Mac…")
+                Text("Waiting for your computer…")
                     .foregroundColor(.secondary)
             }
             Link(destination: downloadURL) {
-                Label("Get GeoSpoof GPS for Mac", systemImage: "arrow.down.circle")
+                Label("Get GeoSpoof GPS", systemImage: "arrow.down.circle")
             }
         } header: {
             Text("Set up")
         } footer: {
-            Text("Install GeoSpoof GPS on your Mac and open it — it walks you through the one-time setup. Your chosen location then syncs to this iPhone automatically, over Wi-Fi.")
+            Text("Install GeoSpoof GPS on your Mac or Windows PC and open it — it walks you through the one-time setup. Your chosen location then syncs to this iPhone automatically, over Wi-Fi.")
         }
     }
 
-    /// Compatibility caveat, shown beneath the "Waiting for your Mac" setup
+    /// Compatibility caveat, shown beneath the "Waiting for your computer" setup
     /// section: device GPS is for privacy/browsing/development, not AR games.
     /// A single small, muted row so it sets expectations without dominating.
     ///
@@ -664,7 +670,7 @@ struct GpsView: View {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundColor(.orange)
                 // Two sources, two treatments. Remediation text is authored by
-                // the Mac agent and read from its status report, so it is
+                // the desktop agent and read from its status report, so it is
                 // runtime data and must be verbatim. The empty case is our own
                 // copy and is looked up. Renders exactly as before, when the
                 // fallback was substituted upstream as a plain `String`.
@@ -683,13 +689,13 @@ struct GpsView: View {
         } header: {
             Text("Action needed")
         } footer: {
-            Text("Complete this step on your iPhone or in the GeoSpoof GPS app on your Mac.")
+            Text("Complete this step on your iPhone or in the GeoSpoof GPS app on your computer.")
         }
     }
 
-    /// Picker shown when two or more Macs can drive this phone and none is chosen yet
-    /// (controller-arbitration). Tapping one records it as the owner; every other Mac then
-    /// stands down. A single-Mac user never sees this.
+    /// Picker shown when two or more computers can drive this phone and none is chosen yet
+    /// (controller-arbitration). Tapping one records it as the owner; every other computer
+    /// then stands down. A single-computer user never sees this.
     private var chooseControllerSection: some View {
         Section {
             ForEach(statusStore.controllers) { c in
@@ -699,7 +705,7 @@ struct GpsView: View {
                     HStack {
                         Image(systemName: "desktopcomputer")
                             .foregroundColor(.brand)
-                        // The Mac's own name, reported by the agent — user data.
+                        // The computer's own name, reported by the agent — user data.
                         Text(verbatim: c.name)
                             .foregroundColor(.primary)
                         Spacer()
@@ -711,16 +717,16 @@ struct GpsView: View {
                 }
             }
         } header: {
-            Text("Choose your Mac")
+            Text("Choose your computer")
         } footer: {
-            Text("More than one Mac can control this iPhone. Pick which one drives your GPS — the others stand by.")
+            Text("More than one computer can control this iPhone. Pick which one drives your GPS — the others stand by.")
         }
     }
 
-    /// When two+ Macs are present, a compact picker so the user can switch which one is in
-    /// charge. Hidden in the common single-Mac case.
+    /// When two+ computers are present, a compact picker so the user can switch which one is
+    /// in charge. Hidden in the common single-computer case.
     @ViewBuilder
-    private var controllingMacSection: some View {
+    private var controllingComputerSection: some View {
         if statusStore.controllers.count >= 2 {
             Section {
                 Picker(selection: Binding(
@@ -728,14 +734,14 @@ struct GpsView: View {
                     set: { controller.setSelectedController($0.isEmpty ? nil : $0) }
                 )) {
                     ForEach(statusStore.controllers) { c in
-                        // The Mac's own name, reported by the agent — user data.
+                        // The computer's own name, reported by the agent — user data.
                         Text(verbatim: c.name).tag(c.id)
                     }
                 } label: {
-                    Label("Controlling Mac", systemImage: "desktopcomputer")
+                    Label("Controlling computer", systemImage: "desktopcomputer")
                 }
             } footer: {
-                Text("Only this Mac drives your iPhone’s GPS. The others stand by.")
+                Text("Only this computer drives your iPhone’s GPS. The others stand by.")
             }
         }
     }
@@ -786,12 +792,12 @@ struct GpsView: View {
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: "wifi.exclamationmark")
                     .foregroundColor(.orange)
-                Text("Lost the connection to your Mac. Your real GPS may have returned.")
+                Text("Lost the connection to your computer. Your real GPS may have returned.")
             }
         } header: {
             Text("Status")
         } footer: {
-            Text("Make sure the GeoSpoof GPS app is running and your Mac is awake and online.")
+            Text("Make sure the GeoSpoof GPS app is running and your computer is awake and online.")
         }
     }
 

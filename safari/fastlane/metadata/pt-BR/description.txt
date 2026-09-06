@@ -17,7 +17,7 @@ RECURSOS
 
 GPS DO DISPOSITIVO (PRO · EXPERIMENTAL)
 
-Vá além do navegador: alinhe a localização de sistema do seu iPhone com o lugar que você escolher, para que os apps que usam localização — não só o Safari — também a vejam. Esse recurso Pro opcional exige o app complementar gratuito GeoSpoof GPS para Mac: uma configuração única por cabo e depois tudo funciona por Wi-Fi. Ele usa as ferramentas de localização padrão da Apple para desenvolvedores e nunca modifica o iOS.
+Vá além do navegador: alinhe a localização de sistema do seu iPhone com o lugar que você escolher, para que os apps que usam localização — não só o Safari — também a vejam. Esse recurso Pro opcional exige o app complementar gratuito GeoSpoof GPS para Mac ou Windows: uma configuração única por cabo e depois tudo funciona por Wi-Fi. Ele usa as ferramentas de localização padrão da Apple para desenvolvedores e nunca modifica o iOS.
 
 O QUE O GEOSPOOF NÃO FAZ
 

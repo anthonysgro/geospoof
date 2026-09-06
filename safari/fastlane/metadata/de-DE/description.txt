@@ -17,7 +17,7 @@ FUNKTIONEN
 
 GERÄTE-GPS (PRO · EXPERIMENTELL)
 
-Mehr als nur der Browser: Bring den Systemstandort deines iPhones auf den Ort, den du wählst, damit auch standortbezogene Apps — nicht nur Safari — ihn sehen. Diese optionale Pro-Funktion benötigt die kostenlose Mac-Begleit-App GeoSpoof GPS: eine einmalige Einrichtung per Kabel, danach funktioniert es über Wi-Fi. Sie nutzt Apples übliche Entwickler-Werkzeuge für Standorte und verändert iOS nicht.
+Mehr als nur der Browser: Bring den Systemstandort deines iPhones auf den Ort, den du wählst, damit auch standortbezogene Apps — nicht nur Safari — ihn sehen. Diese optionale Pro-Funktion benötigt die kostenlose Begleit-App GeoSpoof GPS für Mac oder Windows: eine einmalige Einrichtung per Kabel, danach funktioniert es über Wi-Fi. Sie nutzt Apples übliche Entwickler-Werkzeuge für Standorte und verändert iOS nicht.
 
 WAS GEOSPOOF NICHT TUT
 

@@ -17,7 +17,7 @@ FEATURES
 
 DEVICE GPS (PRO · EXPERIMENTAL)
 
-Go beyond the browser: align your iPhone's system location to the place you choose, so location-aware apps — not just Safari — see it too. This optional Pro feature requires the free GeoSpoof GPS companion app for Mac: a one-time setup over a cable, then it works over Wi-Fi. It uses Apple's standard developer location tools and never modifies iOS.
+Go beyond the browser: align your iPhone's system location to the place you choose, so location-aware apps — not just Safari — see it too. This optional Pro feature requires the free GeoSpoof GPS companion app for Mac or Windows: a one-time setup over a cable, then it works over Wi-Fi. It uses Apple's standard developer location tools and never modifies iOS.
 
 WHAT GEOSPOOF DOES NOT DO
 

@@ -17,7 +17,7 @@ TÍNH NĂNG
 
 GPS THIẾT BỊ (PRO · THỬ NGHIỆM)
 
-Vượt ra ngoài trình duyệt: đưa vị trí hệ thống của iPhone về nơi bạn chọn, để các ứng dụng dùng vị trí — không chỉ Safari — cũng thấy như vậy. Tính năng Pro tùy chọn này cần ứng dụng đồng hành miễn phí GeoSpoof GPS cho Mac: thiết lập một lần qua cáp, sau đó hoạt động qua Wi-Fi. Nó dùng công cụ vị trí chuẩn của Apple dành cho nhà phát triển và không bao giờ sửa đổi iOS.
+Vượt ra ngoài trình duyệt: đưa vị trí hệ thống của iPhone về nơi bạn chọn, để các ứng dụng dùng vị trí — không chỉ Safari — cũng thấy như vậy. Tính năng Pro tùy chọn này cần ứng dụng đồng hành miễn phí GeoSpoof GPS cho Mac hoặc Windows: thiết lập một lần qua cáp, sau đó hoạt động qua Wi-Fi. Nó dùng công cụ vị trí chuẩn của Apple dành cho nhà phát triển và không bao giờ sửa đổi iOS.
 
 GEOSPOOF KHÔNG LÀM GÌ
 

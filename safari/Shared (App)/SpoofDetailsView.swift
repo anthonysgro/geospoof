@@ -2115,7 +2115,7 @@ private struct OnboardingSafariReadyView: View {
                 }
 
                 // Category, not capability. GeoSpoof *does* change device GPS — with
-                // Pro and a Mac — so any header phrased as "GeoSpoof doesn't change
+                // Pro and a computer — so any header phrased as "GeoSpoof doesn't change
                 // these" denies the product to the customer who bought it for that.
                 //
                 // "Signal" is the vocabulary the rest of the product already uses
@@ -2142,12 +2142,12 @@ private struct OnboardingSafariReadyView: View {
                             symbol: "location.circle.fill",
                             title: "Device GPS",
                             // What is outstanding *for this user*. An owner is
-                            // missing only the Mac, and the sheet behind this row
+                            // missing only the computer, and the sheet behind this row
                             // agrees — both read `isPro`, so the row can never
                             // promise an upsell the sheet no longer shows.
                             detail: pro.isPro
-                                ? DeviceGpsPitch.ownedNeedsMac
-                                : "Needs Pro and a Mac",
+                                ? DeviceGpsPitch.ownedNeedsComputer
+                                : "Needs Pro and a computer",
                             showsChevron: true
                         )
                     }
@@ -2313,7 +2313,7 @@ private struct OnboardingSafariReadyView: View {
 /// at two moments — and a customer who reads one then the other must not find two
 /// different accounts of what they'd be buying.
 ///
-/// The Mac requirement is stated in the body rather than the fine print. It is the
+/// The computer requirement is stated in the body rather than the fine print. It is the
 /// fact most likely to produce a refund when discovered after purchase, and the
 /// store listing's "fake your GPS location" gives people every reason to assume
 /// the phone can do it alone.
@@ -2353,7 +2353,7 @@ struct DeviceGpsPitch: View {
             }
             .accessibilityElement(children: .combine)
 
-            Text("Use your Mac to control the GPS location your iPhone reports.")
+            Text("Use your computer to control the GPS location your iPhone reports.")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -2361,7 +2361,11 @@ struct DeviceGpsPitch: View {
             VStack(alignment: .leading, spacing: 8) {
                 PitchPoint("Location simulation for privacy and app testing")
                 PitchPoint("Choose any location or match your VPN")
-                PitchPoint("Secure Mac pairing with no jailbreak")
+                // Names both platforms rather than saying "computer" a second time.
+                // This is the pitch a purchase is decided on, and "a computer" leaves
+                // a Windows owner unsure whether they are in scope — the agent runs on
+                // macOS and Windows, so say so where it changes the buying decision.
+                PitchPoint("Secure pairing with your Mac or Windows PC, no jailbreak")
             }
 
             if pro.isPro {
@@ -2371,7 +2375,7 @@ struct DeviceGpsPitch: View {
                 // sealed check is the mark the Pro screens already use for an
                 // active entitlement.
                 Label {
-                    Text(Self.ownedNeedsMac)
+                    Text(Self.ownedNeedsComputer)
                 } icon: {
                     Image(systemName: "checkmark.seal.fill")
                 }
@@ -2380,8 +2384,8 @@ struct DeviceGpsPitch: View {
                 .fixedSize(horizontal: false, vertical: true)
 
                 // The remaining step, in the place the ask used to occupy. Same
-                // destination and campaign as the GPS tab's two Mac links, so
-                // "went to get the Mac app" stays one number.
+                // destination and campaign as the GPS tab's download link, so
+                // "went to get the desktop app" stays one number.
                 //
                 // A web link rather than a jump to the GPS tab: onboarding builds
                 // the tabs only once it finishes, so there is nothing in-app to
@@ -2394,9 +2398,9 @@ struct DeviceGpsPitch: View {
                 // inside a `Form` section (`proPitchSection` in SceneDelegate), and there
                 // `Label` tints the glyph with the row accent — green on the green fill.
                 // One spelling for both hosts, since the view cannot see which it is in.
-                Link(destination: Self.macAppURL) {
+                Link(destination: Self.desktopAppURL) {
                     ProminentButtonLabel(
-                        title: "Get GeoSpoof GPS for Mac",
+                        title: "Get GeoSpoof GPS",
                         symbol: "arrow.down.circle"
                     )
                 }
@@ -2422,8 +2426,8 @@ struct DeviceGpsPitch: View {
                 //
                 // Quiet on purpose: secondary weight, no button chrome. The screen
                 // keeps one primary action and this isn't it.
-                Link(destination: Self.macAppURL) {
-                    Label("Learn about GeoSpoof GPS for Mac", systemImage: "arrow.up.right")
+                Link(destination: Self.desktopAppURL) {
+                    Label("Learn about GeoSpoof GPS", systemImage: "arrow.up.right")
                         .font(.subheadline.weight(.medium))
                         .frame(maxWidth: .infinity)
                 }
@@ -2438,13 +2442,13 @@ struct DeviceGpsPitch: View {
     static let compatibilityCaveat: LocalizedStringKey =
         "Not for AR games like Pokémon GO — device GPS is for privacy, browsing, and development."
 
-    /// Where the Mac companion is explained and downloaded. One definition for both
+    /// Where the desktop companion is explained and downloaded. One definition for both
     /// branches, and the same `gps-download` campaign the GPS tab's setup link uses,
-    /// so "went to get the Mac app" stays a single number regardless of which
+    /// so "went to get the desktop app" stays a single number regardless of which
     /// surface sent them.
-    private static var macAppURL: URL { AppLink.site("/gps", campaign: "gps-download") }
+    private static var desktopAppURL: URL { AppLink.site("/gps", campaign: "gps-download") }
 
-    /// Shown to a user who already owns Pro, in place of "Needs Pro and a Mac"
+    /// Shown to a user who already owns Pro, in place of "Needs Pro and a computer"
     /// and in place of the upgrade ask.
     ///
     /// One key for both, on purpose: the onboarding row and the sheet it opens are
@@ -2452,7 +2456,7 @@ struct DeviceGpsPitch: View {
     /// sentences is what this file has been burned by before. "Pro" rather than
     /// "GeoSpoof Pro" because the row's other state says "Needs Pro", and the
     /// sheet names the product in its header two lines up.
-    static let ownedNeedsMac: LocalizedStringKey = "You have Pro — you just need a Mac"
+    static let ownedNeedsComputer: LocalizedStringKey = "You have Pro — you just need a computer"
 }
 
 /// A checked line in a pitch — a quiet brand check plus a short claim. Shared by
@@ -2492,7 +2496,7 @@ struct PitchPoint: View {
 /// GPS tab is where someone goes when they've decided to act. So it answers the
 /// question and stops: the same pitch the tab shows, plus the scope caveat, in a
 /// medium sheet. An earlier version filled the height with setup steps, a
-/// requirements list and a Mac-to-iPhone diagram, which turned a one-tap
+/// requirements list and a computer-to-iPhone diagram, which turned a one-tap
 /// curiosity into a page of homework.
 struct DeviceGpsSheet: View {
     @Environment(\.dismiss) private var dismiss

@@ -6035,72 +6035,72 @@
         }
       }
     },
-    "Choose your Mac" : {
+    "Choose your computer" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Mac auswählen"
+            "value" : "Computer auswählen"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Elige tu Mac"
+            "value" : "Elige tu ordenador"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Choisissez votre Mac"
+            "value" : "Choisissez votre ordinateur"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Pilih Mac Anda"
+            "value" : "Pilih komputer Anda"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Macを選択"
+            "value" : "コンピュータを選択"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Kies je Mac"
+            "value" : "Kies je computer"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Escolha seu Mac"
+            "value" : "Escolha seu computador"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Выберите свой Mac"
+            "value" : "Выберите свой компьютер"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Välj din Mac"
+            "value" : "Välj din dator"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Chọn máy Mac của bạn"
+            "value" : "Chọn máy tính của bạn"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "选择你的 Mac"
+            "value" : "选择你的电脑"
           }
         }
       }
@@ -6595,72 +6595,72 @@
         }
       }
     },
-    "Complete this step on your iPhone or in the GeoSpoof GPS app on your Mac." : {
+    "Complete this step on your iPhone or in the GeoSpoof GPS app on your computer." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Führe diesen Schritt auf deinem iPhone oder in der GeoSpoof GPS-App auf deinem Mac aus."
+            "value" : "Führe diesen Schritt auf deinem iPhone oder in der GeoSpoof GPS-App auf deinem Computer aus."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Completa este paso en tu iPhone o en la app GeoSpoof GPS de tu Mac."
+            "value" : "Completa este paso en tu iPhone o en la app GeoSpoof GPS de tu ordenador."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Effectuez cette étape sur votre iPhone ou dans l’app GeoSpoof GPS de votre Mac."
+            "value" : "Effectuez cette étape sur votre iPhone ou dans l’app GeoSpoof GPS de votre ordinateur."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Selesaikan langkah ini di iPhone Anda atau di app GeoSpoof GPS pada Mac Anda."
+            "value" : "Selesaikan langkah ini di iPhone Anda atau di app GeoSpoof GPS pada komputer Anda."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "この手順はiPhone、またはMacのGeoSpoof GPSアプリで完了してください。"
+            "value" : "この手順はiPhone、またはコンピュータのGeoSpoof GPSアプリで完了してください。"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Voltooi deze stap op je iPhone of in de GeoSpoof GPS-app op je Mac."
+            "value" : "Voltooi deze stap op je iPhone of in de GeoSpoof GPS-app op je computer."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Conclua esta etapa no seu iPhone ou no app GeoSpoof GPS do seu Mac."
+            "value" : "Conclua esta etapa no seu iPhone ou no app GeoSpoof GPS do seu computador."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Выполните этот шаг на iPhone или в приложении GeoSpoof GPS на Mac."
+            "value" : "Выполните этот шаг на iPhone или в приложении GeoSpoof GPS на компьютере."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Slutför det här steget på din iPhone eller i appen GeoSpoof GPS på din Mac."
+            "value" : "Slutför det här steget på din iPhone eller i appen GeoSpoof GPS på din dator."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Hãy hoàn tất bước này trên iPhone của bạn hoặc trong ứng dụng GeoSpoof GPS trên máy Mac."
+            "value" : "Hãy hoàn tất bước này trên iPhone của bạn hoặc trong ứng dụng GeoSpoof GPS trên máy tính."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "请在 iPhone 上，或在 Mac 的 GeoSpoof GPS 应用中完成此步骤。"
+            "value" : "请在 iPhone 上，或在电脑的 GeoSpoof GPS 应用中完成此步骤。"
           }
         }
       }
@@ -7155,72 +7155,72 @@
         }
       }
     },
-    "Controlling Mac" : {
+    "Controlling computer" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Steuernder Mac"
+            "value" : "Steuernder Computer"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Mac que controla"
+            "value" : "Ordenador que controla"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Mac de contrôle"
+            "value" : "Ordinateur de contrôle"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Mac pengendali"
+            "value" : "Komputer pengendali"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "操作中のMac"
+            "value" : "操作中のコンピュータ"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Besturende Mac"
+            "value" : "Besturende computer"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Mac que controla"
+            "value" : "Computador que controla"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Управляющий Mac"
+            "value" : "Управляющий компьютер"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Styrande Mac"
+            "value" : "Styrande dator"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Máy Mac điều khiển"
+            "value" : "Máy tính điều khiển"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "控制中的 Mac"
+            "value" : "控制中的电脑"
           }
         }
       }
@@ -12271,72 +12271,72 @@
         }
       }
     },
-    "Get GeoSpoof GPS for Mac" : {
+    "Get GeoSpoof GPS" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "GeoSpoof GPS für Mac holen"
+            "value" : "GeoSpoof GPS holen"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Consigue GeoSpoof GPS para Mac"
+            "value" : "Consigue GeoSpoof GPS"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Obtenir GeoSpoof GPS pour Mac"
+            "value" : "Obtenir GeoSpoof GPS"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Dapatkan GeoSpoof GPS untuk Mac"
+            "value" : "Dapatkan GeoSpoof GPS"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Mac用GeoSpoof GPSを入手"
+            "value" : "GeoSpoof GPSを入手"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "GeoSpoof GPS voor Mac downloaden"
+            "value" : "GeoSpoof GPS downloaden"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Baixar o GeoSpoof GPS para Mac"
+            "value" : "Baixar o GeoSpoof GPS"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Получить GeoSpoof GPS для Mac"
+            "value" : "Получить GeoSpoof GPS"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Hämta GeoSpoof GPS för Mac"
+            "value" : "Hämta GeoSpoof GPS"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Tải GeoSpoof GPS cho Mac"
+            "value" : "Tải GeoSpoof GPS"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "获取 Mac 版 GeoSpoof GPS"
+            "value" : "获取 GeoSpoof GPS"
           }
         }
       }
@@ -13811,72 +13811,72 @@
         }
       }
     },
-    "Install GeoSpoof GPS on your Mac and open it — it walks you through the one-time setup. Your chosen location then syncs to this iPhone automatically, over Wi-Fi." : {
+    "Install GeoSpoof GPS on your Mac or Windows PC and open it — it walks you through the one-time setup. Your chosen location then syncs to this iPhone automatically, over Wi-Fi." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Installiere GeoSpoof GPS auf deinem Mac und öffne es — es führt dich durch die einmalige Einrichtung. Dein gewählter Standort wird danach automatisch über Wi-Fi auf dieses iPhone übertragen."
+            "value" : "Installiere GeoSpoof GPS auf deinem Mac oder Windows-PC und öffne es — es führt dich durch die einmalige Einrichtung. Dein gewählter Standort wird danach automatisch über Wi-Fi auf dieses iPhone übertragen."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Instala GeoSpoof GPS en tu Mac y ábrelo: te guiará en la configuración inicial. Después, la ubicación que elijas se sincronizará automáticamente con este iPhone por Wi-Fi."
+            "value" : "Instala GeoSpoof GPS en tu Mac o PC con Windows y ábrelo: te guiará en la configuración inicial. Después, la ubicación que elijas se sincronizará automáticamente con este iPhone por Wi-Fi."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Installez GeoSpoof GPS sur votre Mac et ouvrez-le : il vous guide dans la configuration initiale. La position choisie est ensuite synchronisée automatiquement avec cet iPhone, via Wi-Fi."
+            "value" : "Installez GeoSpoof GPS sur votre Mac ou PC Windows et ouvrez-le : il vous guide dans la configuration initiale. La position choisie est ensuite synchronisée automatiquement avec cet iPhone, via Wi-Fi."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Pasang GeoSpoof GPS di Mac Anda lalu buka — app itu akan memandu penyiapan sekali jalan. Setelah itu, lokasi yang Anda pilih akan disinkronkan otomatis ke iPhone ini melalui Wi-Fi."
+            "value" : "Pasang GeoSpoof GPS di Mac atau PC Windows Anda lalu buka — app itu akan memandu penyiapan sekali jalan. Setelah itu, lokasi yang Anda pilih akan disinkronkan otomatis ke iPhone ini melalui Wi-Fi."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "MacにGeoSpoof GPSをインストールして開いてください。初回の設定を案内します。その後、選択した位置がWi-Fi経由でこのiPhoneに自動で同期されます。"
+            "value" : "MacまたはWindows PCにGeoSpoof GPSをインストールして開いてください。初回の設定を案内します。その後、選択した位置がWi-Fi経由でこのiPhoneに自動で同期されます。"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Installeer GeoSpoof GPS op je Mac en open het — het leidt je door de eenmalige configuratie. Daarna wordt de locatie die je kiest automatisch via Wi-Fi met deze iPhone gesynchroniseerd."
+            "value" : "Installeer GeoSpoof GPS op je Mac of Windows-pc en open het — het leidt je door de eenmalige configuratie. Daarna wordt de locatie die je kiest automatisch via Wi-Fi met deze iPhone gesynchroniseerd."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Instale o GeoSpoof GPS no seu Mac e abra-o — ele orienta você na configuração inicial. Depois, a localização escolhida é sincronizada automaticamente com este iPhone por Wi-Fi."
+            "value" : "Instale o GeoSpoof GPS no seu Mac ou PC com Windows e abra-o — ele orienta você na configuração inicial. Depois, a localização escolhida é sincronizada automaticamente com este iPhone por Wi-Fi."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Установите GeoSpoof GPS на Mac и откройте — приложение проведёт вас через первоначальную настройку. После этого выбранное местоположение будет автоматически синхронизироваться с этим iPhone по Wi-Fi."
+            "value" : "Установите GeoSpoof GPS на Mac или ПК с Windows и откройте — приложение проведёт вас через первоначальную настройку. После этого выбранное местоположение будет автоматически синхронизироваться с этим iPhone по Wi-Fi."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Installera GeoSpoof GPS på din Mac och öppna det – det guidar dig genom den engångsvisa konfigurationen. Därefter synkas den plats du valt automatiskt till den här iPhonen via Wi-Fi."
+            "value" : "Installera GeoSpoof GPS på din Mac eller Windows-PC och öppna det – det guidar dig genom den engångsvisa konfigurationen. Därefter synkas den plats du valt automatiskt till den här iPhonen via Wi-Fi."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Hãy cài GeoSpoof GPS trên máy Mac và mở nó — ứng dụng sẽ hướng dẫn bạn thiết lập một lần. Sau đó, vị trí bạn chọn sẽ tự động đồng bộ sang iPhone này qua Wi-Fi."
+            "value" : "Hãy cài GeoSpoof GPS trên máy Mac hoặc PC Windows và mở nó — ứng dụng sẽ hướng dẫn bạn thiết lập một lần. Sau đó, vị trí bạn chọn sẽ tự động đồng bộ sang iPhone này qua Wi-Fi."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "在 Mac 上安装并打开 GeoSpoof GPS，它会引导你完成一次性设置。之后，你所选的位置会通过 Wi-Fi 自动同步到这台 iPhone。"
+            "value" : "在 Mac 或 Windows 电脑上安装并打开 GeoSpoof GPS，它会引导你完成一次性设置。之后，你所选的位置会通过 Wi-Fi 自动同步到这台 iPhone。"
           }
         }
       }
@@ -14863,72 +14863,72 @@
         }
       }
     },
-    "Learn about GeoSpoof GPS for Mac" : {
+    "Learn about GeoSpoof GPS" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Mehr über GeoSpoof GPS für Mac erfahren"
+            "value" : "Mehr über GeoSpoof GPS erfahren"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Más información sobre GeoSpoof GPS para Mac"
+            "value" : "Más información sobre GeoSpoof GPS"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "En savoir plus sur GeoSpoof GPS pour Mac"
+            "value" : "En savoir plus sur GeoSpoof GPS"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Pelajari GeoSpoof GPS untuk Mac"
+            "value" : "Pelajari GeoSpoof GPS"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Mac用GeoSpoof GPSについて"
+            "value" : "GeoSpoof GPSについて"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Meer over GeoSpoof GPS voor Mac"
+            "value" : "Meer over GeoSpoof GPS"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Saiba mais sobre o GeoSpoof GPS para Mac"
+            "value" : "Saiba mais sobre o GeoSpoof GPS"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Подробнее о GeoSpoof GPS для Mac"
+            "value" : "Подробнее о GeoSpoof GPS"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Läs mer om GeoSpoof GPS för Mac"
+            "value" : "Läs mer om GeoSpoof GPS"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Tìm hiểu về GeoSpoof GPS cho Mac"
+            "value" : "Tìm hiểu về GeoSpoof GPS"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "了解 Mac 版 GeoSpoof GPS"
+            "value" : "了解 GeoSpoof GPS"
           }
         }
       }
@@ -16053,142 +16053,142 @@
         }
       }
     },
-    "Lost the connection to your Mac. Your real GPS may have returned." : {
+    "Lost the connection to your computer. Your real GPS may have returned." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Die Verbindung zu deinem Mac wurde unterbrochen. Dein echtes GPS ist möglicherweise wieder aktiv."
+            "value" : "Die Verbindung zu deinem Computer wurde unterbrochen. Dein echtes GPS ist möglicherweise wieder aktiv."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Se ha perdido la conexión con tu Mac. Puede que haya vuelto tu GPS real."
+            "value" : "Se ha perdido la conexión con tu ordenador. Puede que haya vuelto tu GPS real."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Connexion à votre Mac perdue. Votre GPS réel est peut-être revenu."
+            "value" : "Connexion à votre ordinateur perdue. Votre GPS réel est peut-être revenu."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Sambungan ke Mac Anda terputus. GPS asli Anda mungkin sudah kembali aktif."
+            "value" : "Sambungan ke komputer Anda terputus. GPS asli Anda mungkin sudah kembali aktif."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Macとの接続が切断されました。実際のGPSに戻っている可能性があります。"
+            "value" : "コンピュータとの接続が切断されました。実際のGPSに戻っている可能性があります。"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "De verbinding met je Mac is verbroken. Je echte GPS is mogelijk terug."
+            "value" : "De verbinding met je computer is verbroken. Je echte GPS is mogelijk terug."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "A conexão com o seu Mac foi perdida. Seu GPS real pode ter voltado."
+            "value" : "A conexão com o seu computador foi perdida. Seu GPS real pode ter voltado."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Связь с Mac потеряна. Возможно, вернулся ваш настоящий GPS."
+            "value" : "Связь с компьютером потеряна. Возможно, вернулся ваш настоящий GPS."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Anslutningen till din Mac bröts. Din riktiga GPS kan ha återvänt."
+            "value" : "Anslutningen till din dator bröts. Din riktiga GPS kan ha återvänt."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Đã mất kết nối tới máy Mac của bạn. GPS thật của bạn có thể đã hoạt động trở lại."
+            "value" : "Đã mất kết nối tới máy tính của bạn. GPS thật của bạn có thể đã hoạt động trỡ lại."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "与 Mac 的连接已断开。你的真实 GPS 可能已恢复。"
+            "value" : "与电脑的连接已断开。你的真实 GPS 可能已恢复。"
           }
         }
       }
     },
-    "Make sure the GeoSpoof GPS app is running and your Mac is awake and online." : {
+    "Make sure the GeoSpoof GPS app is running and your computer is awake and online." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Stelle sicher, dass die GeoSpoof GPS-App läuft und dein Mac aktiv und online ist."
+            "value" : "Stelle sicher, dass die GeoSpoof GPS-App läuft und dein Computer aktiv und online ist."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Asegúrate de que la app GeoSpoof GPS esté abierta y de que tu Mac esté encendido y conectado."
+            "value" : "Asegúrate de que la app GeoSpoof GPS esté abierta y de que tu ordenador esté encendido y conectado."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Assurez-vous que l’app GeoSpoof GPS est ouverte et que votre Mac est allumé et connecté."
+            "value" : "Assurez-vous que l’app GeoSpoof GPS est ouverte et que votre ordinateur est allumé et connecté."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Pastikan app GeoSpoof GPS berjalan dan Mac Anda tidak tertidur serta tersambung ke internet."
+            "value" : "Pastikan app GeoSpoof GPS berjalan dan komputer Anda tidak tertidur serta tersambung ke internet."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "GeoSpoof GPSアプリが起動しており、Macがスリープ解除されオンラインであることを確認してください。"
+            "value" : "GeoSpoof GPSアプリが起動しており、コンピュータがスリープ解除されオンラインであることを確認してください。"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Zorg dat de GeoSpoof GPS-app draait en dat je Mac aan staat en online is."
+            "value" : "Zorg dat de GeoSpoof GPS-app draait en dat je computer aan staat en online is."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Verifique se o app GeoSpoof GPS está em execução e se o seu Mac está ligado e online."
+            "value" : "Verifique se o app GeoSpoof GPS está em execução e se o seu computador está ligado e online."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Убедитесь, что приложение GeoSpoof GPS запущено, а ваш Mac включён и подключён к сети."
+            "value" : "Убедитесь, что приложение GeoSpoof GPS запущено, а ваш компьютер включён и подключён к сети."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Se till att appen GeoSpoof GPS körs och att din Mac är påslagen och ansluten."
+            "value" : "Se till att appen GeoSpoof GPS körs och att din dator är påslagen och ansluten."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Hãy đảm bảo ứng dụng GeoSpoof GPS đang chạy và máy Mac của bạn đang bật cùng có kết nối mạng."
+            "value" : "Hãy đảm bảo ứng dụng GeoSpoof GPS đang chạy và máy tính của bạn đang bật cùng có kết nối mạng."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "请确认 GeoSpoof GPS 应用正在运行，且你的 Mac 已唤醒并联网。"
+            "value" : "请确认 GeoSpoof GPS 应用正在运行，且你的电脑已唤醒并联网。"
           }
         }
       }
@@ -17103,72 +17103,72 @@
         }
       }
     },
-    "More than one Mac can control this iPhone. Pick which one drives your GPS — the others stand by." : {
+    "More than one computer can control this iPhone. Pick which one drives your GPS — the others stand by." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Mehr als ein Mac kann dieses iPhone steuern. Wähle, welcher dein GPS steuert — die anderen warten."
+            "value" : "Mehr als ein Computer kann dieses iPhone steuern. Wähle, welcher dein GPS steuert — die anderen warten."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Más de un Mac puede controlar este iPhone. Elige cuál gobierna tu GPS; los demás quedarán en espera."
+            "value" : "Más de un ordenador puede controlar este iPhone. Elige cuál gobierna tu GPS; los demás quedarán en espera."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Plusieurs Mac peuvent contrôler cet iPhone. Choisissez celui qui pilote votre GPS : les autres restent en attente."
+            "value" : "Plusieurs ordinateurs peuvent contrôler cet iPhone. Choisissez celui qui pilote votre GPS : les autres restent en attente."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Lebih dari satu Mac dapat mengendalikan iPhone ini. Pilih Mac yang mengatur GPS Anda — yang lain akan bersiaga."
+            "value" : "Lebih dari satu komputer dapat mengendalikan iPhone ini. Pilih komputer yang mengatur GPS Anda — yang lain akan bersiaga."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "このiPhoneを操作できるMacが複数あります。GPSを制御するMacを選んでください。ほかのMacは待機します。"
+            "value" : "このiPhoneを操作できるコンピュータが複数あります。GPSを制御するコンピュータを選んでください。ほかは待機します。"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Meer dan één Mac kan deze iPhone besturen. Kies welke je GPS bestuurt — de andere staan stand-by."
+            "value" : "Meer dan één computer kan deze iPhone besturen. Kies welke je GPS bestuurt — de andere staan stand-by."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Mais de um Mac pode controlar este iPhone. Escolha qual deles comanda seu GPS — os outros ficam em espera."
+            "value" : "Mais de um computador pode controlar este iPhone. Escolha qual deles comanda seu GPS — os outros ficam em espera."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Этим iPhone может управлять несколько Mac. Выберите тот, который будет задавать GPS, — остальные останутся в режиме ожидания."
+            "value" : "Этим iPhone может управлять несколько компьютеров. Выберите тот, который будет задавать GPS, — остальные останутся в режиме ожидания."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Fler än en Mac kan styra den här iPhonen. Välj vilken som styr din GPS – de övriga står i beredskap."
+            "value" : "Fler än en dator kan styra den här iPhonen. Välj vilken som styr din GPS – de övriga står i beredskap."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Có nhiều máy Mac có thể điều khiển iPhone này. Hãy chọn máy sẽ điều khiển GPS của bạn — những máy còn lại sẽ chờ."
+            "value" : "Có nhiều máy tính có thể điều khiển iPhone này. Hãy chọn máy sẽ điều khiển GPS của bạn — những máy còn lại sẽ chờ."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "有多台 Mac 可以控制这台 iPhone。请选择由哪一台驱动你的 GPS，其余将处于待机状态。"
+            "value" : "有多台电脑可以控制这台 iPhone。请选择由哪一台驱动你的 GPS，其余将处于待机状态。"
           }
         }
       }
@@ -17523,72 +17523,72 @@
         }
       }
     },
-    "Move your iPhone’s real system GPS to the location you pick, driven from the GeoSpoof GPS app on your Mac." : {
+    "Move your iPhone’s real system GPS to the location you pick, driven from the GeoSpoof GPS app on your computer." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Verschiebe das echte System-GPS deines iPhone an den von dir gewählten Standort, gesteuert über die GeoSpoof GPS-App auf deinem Mac."
+            "value" : "Verschiebe das echte System-GPS deines iPhone an den von dir gewählten Standort, gesteuert über die GeoSpoof GPS-App auf deinem Computer."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Desplaza el GPS real del sistema de tu iPhone a la ubicación que elijas, controlado desde la app GeoSpoof GPS de tu Mac."
+            "value" : "Desplaza el GPS real del sistema de tu iPhone a la ubicación que elijas, controlado desde la app GeoSpoof GPS de tu ordenador."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Déplacez le GPS système réel de votre iPhone vers la position de votre choix, piloté depuis l’app GeoSpoof GPS de votre Mac."
+            "value" : "Déplacez le GPS système réel de votre iPhone vers la position de votre choix, piloté depuis l’app GeoSpoof GPS de votre ordinateur."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Geser GPS sistem asli iPhone Anda ke lokasi yang Anda pilih, dikendalikan dari app GeoSpoof GPS di Mac Anda."
+            "value" : "Geser GPS sistem asli iPhone Anda ke lokasi yang Anda pilih, dikendalikan dari app GeoSpoof GPS di komputer Anda."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "MacのGeoSpoof GPSアプリから操作して、iPhoneの実際のシステムGPSを選んだ位置に移動します。"
+            "value" : "コンピュータのGeoSpoof GPSアプリから操作して、iPhoneの実際のシステムGPSを選んだ位置に移動します。"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Verplaats het echte systeem-GPS van je iPhone naar de locatie die je kiest, bestuurd vanuit de GeoSpoof GPS-app op je Mac."
+            "value" : "Verplaats het echte systeem-GPS van je iPhone naar de locatie die je kiest, bestuurd vanuit de GeoSpoof GPS-app op je computer."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Desloque o GPS real do sistema do seu iPhone para a localização que você escolher, comandado pelo app GeoSpoof GPS do seu Mac."
+            "value" : "Desloque o GPS real do sistema do seu iPhone para a localização que você escolher, comandado pelo app GeoSpoof GPS do seu computador."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Переместите настоящий системный GPS вашего iPhone в выбранное место — управление из приложения GeoSpoof GPS на Mac."
+            "value" : "Переместите настоящий системный GPS вашего iPhone в выбранное место — управление из приложения GeoSpoof GPS на компьютере."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Flytta din iPhones riktiga system-GPS till den plats du väljer, styrt från appen GeoSpoof GPS på din Mac."
+            "value" : "Flytta din iPhones riktiga system-GPS till den plats du väljer, styrt från appen GeoSpoof GPS på din dator."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Dịch GPS hệ thống thật của iPhone đến vị trí bạn chọn, điều khiển từ ứng dụng GeoSpoof GPS trên máy Mac."
+            "value" : "Dịch GPS hệ thống thật của iPhone đến vị trí bạn chọn, điều khiển từ ứng dụng GeoSpoof GPS trên máy tính."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "通过 Mac 上的 GeoSpoof GPS 应用，将 iPhone 的真实系统 GPS 移动到你选定的位置。"
+            "value" : "通过电脑上的 GeoSpoof GPS 应用，将 iPhone 的真实系统 GPS 移动到你选定的位置。"
           }
         }
       }
@@ -17733,72 +17733,72 @@
         }
       }
     },
-    "Needs Pro and a Mac" : {
+    "Needs Pro and a computer" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Erfordert Pro und einen Mac"
+            "value" : "Erfordert Pro und einen Computer"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Requiere Pro y un Mac"
+            "value" : "Requiere Pro y un ordenador"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Nécessite Pro et un Mac"
+            "value" : "Nécessite Pro et un ordinateur"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Perlu Pro dan sebuah Mac"
+            "value" : "Perlu Pro dan sebuah komputer"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "ProとMacが必要です"
+            "value" : "Proとコンピュータが必要です"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Vereist Pro en een Mac"
+            "value" : "Vereist Pro en een computer"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Requer Pro e um Mac"
+            "value" : "Requer Pro e um computador"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Нужны Pro и Mac"
+            "value" : "Нужны Pro и компьютер"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Kräver Pro och en Mac"
+            "value" : "Kräver Pro och en dator"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Cần Pro và một máy Mac"
+            "value" : "Cần Pro và một máy tính"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "需要 Pro 和一台 Mac"
+            "value" : "需要 Pro 和一台电脑"
           }
         }
       }
@@ -19556,72 +19556,72 @@
         }
       }
     },
-    "Only this Mac drives your iPhone’s GPS. The others stand by." : {
+    "Only this computer drives your iPhone’s GPS. The others stand by." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Nur dieser Mac steuert das GPS deines iPhone. Die anderen warten."
+            "value" : "Nur dieser Computer steuert das GPS deines iPhone. Die anderen warten."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Solo este Mac gobierna el GPS de tu iPhone. Los demás quedan en espera."
+            "value" : "Solo este ordenador gobierna el GPS de tu iPhone. Los demás quedan en espera."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Seul ce Mac pilote le GPS de votre iPhone. Les autres restent en attente."
+            "value" : "Seul cet ordinateur pilote le GPS de votre iPhone. Les autres restent en attente."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Hanya Mac ini yang mengatur GPS iPhone Anda. Yang lain bersiaga."
+            "value" : "Hanya komputer ini yang mengatur GPS iPhone Anda. Yang lain bersiaga."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "このMacだけがiPhoneのGPSを制御します。ほかのMacは待機します。"
+            "value" : "このコンピュータだけがiPhoneのGPSを制御します。ほかは待機します。"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Alleen deze Mac bestuurt het GPS van je iPhone. De andere staan stand-by."
+            "value" : "Alleen deze computer bestuurt het GPS van je iPhone. De andere staan stand-by."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Somente este Mac comanda o GPS do seu iPhone. Os outros ficam em espera."
+            "value" : "Somente este computador comanda o GPS do seu iPhone. Os outros ficam em espera."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Только этот Mac задаёт GPS вашего iPhone. Остальные в режиме ожидания."
+            "value" : "Только этот компьютер задаёт GPS вашего iPhone. Остальные в режиме ожидания."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Bara den här Macen styr din iPhones GPS. De övriga står i beredskap."
+            "value" : "Bara den här datorn styr din iPhones GPS. De övriga står i beredskap."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Chỉ máy Mac này điều khiển GPS của iPhone bạn. Những máy khác sẽ chờ."
+            "value" : "Chỉ máy tính này điều khiển GPS của iPhone bạn. Những máy khác sẽ chờ."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "只有这台 Mac 驱动你 iPhone 的 GPS，其余处于待机状态。"
+            "value" : "只有这台电脑驱动你 iPhone 的 GPS，其余处于待机状态。"
           }
         }
       }
@@ -24876,72 +24876,72 @@
         }
       }
     },
-    "Secure Mac pairing with no jailbreak" : {
+    "Secure pairing with your Mac or Windows PC, no jailbreak" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Sichere Mac-Kopplung ohne Jailbreak"
+            "value" : "Sichere Kopplung mit deinem Mac oder Windows-PC, ohne Jailbreak"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Emparejamiento seguro con el Mac, sin jailbreak"
+            "value" : "Emparejamiento seguro con tu Mac o PC con Windows, sin jailbreak"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Jumelage Mac sécurisé, sans jailbreak"
+            "value" : "Jumelage sécurisé avec votre Mac ou PC Windows, sans jailbreak"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Penyandingan Mac yang aman tanpa jailbreak"
+            "value" : "Penyandingan aman dengan Mac atau PC Windows Anda, tanpa jailbreak"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "脱獄不要の安全なMacペアリング"
+            "value" : "MacまたはWindows PCと安全にペアリング、脱獄不要"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Veilige Mac-koppeling zonder jailbreak"
+            "value" : "Veilige koppeling met je Mac of Windows-pc, zonder jailbreak"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Pareamento seguro com o Mac, sem jailbreak"
+            "value" : "Pareamento seguro com seu Mac ou PC com Windows, sem jailbreak"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Безопасное сопряжение с Mac без джейлбрейка"
+            "value" : "Безопасное сопряжение с Mac или ПК с Windows, без джейлбрейка"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Säker parkoppling med Mac utan jailbreak"
+            "value" : "Säker parkoppling med din Mac eller Windows-PC, utan jailbreak"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Ghép nối an toàn với Mac, không cần jailbreak"
+            "value" : "Ghép nối an toàn với máy Mac hoặc PC Windows, không cần jailbreak"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "与 Mac 安全配对，无需越狱"
+            "value" : "与 Mac 或 Windows 电脑安全配对，无需越狄"
           }
         }
       }
@@ -30616,72 +30616,72 @@
         }
       }
     },
-    "Use your Mac to control the GPS location your iPhone reports." : {
+    "Use your computer to control the GPS location your iPhone reports." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Steuere mit deinem Mac den GPS-Standort, den dein iPhone meldet."
+            "value" : "Steuere mit deinem Computer den GPS-Standort, den dein iPhone meldet."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Usa tu Mac para controlar la ubicación GPS que comunica tu iPhone."
+            "value" : "Usa tu ordenador para controlar la ubicación GPS que comunica tu iPhone."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Utilisez votre Mac pour contrôler la position GPS indiquée par votre iPhone."
+            "value" : "Utilisez votre ordinateur pour contrôler la position GPS indiquée par votre iPhone."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Gunakan Mac untuk mengontrol lokasi GPS yang dilaporkan iPhone Anda."
+            "value" : "Gunakan komputer untuk mengontrol lokasi GPS yang dilaporkan iPhone Anda."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "MacからiPhoneが報告するGPS位置を操作できます。"
+            "value" : "コンピュータからiPhoneが報告するGPS位置を操作できます。"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Bepaal vanaf je Mac welke gps-locatie je iPhone doorgeeft."
+            "value" : "Bepaal vanaf je computer welke gps-locatie je iPhone doorgeeft."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Use o Mac para controlar a localização GPS informada pelo iPhone."
+            "value" : "Use o computador para controlar a localização GPS informada pelo iPhone."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Управляйте с Mac местоположением GPS, которое сообщает ваш iPhone."
+            "value" : "Управляйте с компьютера местоположением GPS, которое сообщает ваш iPhone."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Styr GPS-platsen som din iPhone rapporterar från din Mac."
+            "value" : "Styr GPS-platsen som din iPhone rapporterar från din dator."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Dùng máy Mac để kiểm soát vị trí GPS mà iPhone báo cáo."
+            "value" : "Dùng máy tính để kiểm soát vị trí GPS mà iPhone báo cáo."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "使用 Mac 控制 iPhone 报告的 GPS 位置。"
+            "value" : "使用电脑控制 iPhone 报告的 GPS 位置。"
           }
         }
       }
@@ -31176,72 +31176,72 @@
         }
       }
     },
-    "Waiting for your Mac…" : {
+    "Waiting for your computer…" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Warten auf deinen Mac…"
+            "value" : "Warten auf deinen Computer…"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Esperando a tu Mac…"
+            "value" : "Esperando a tu ordenador…"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "En attente de votre Mac…"
+            "value" : "En attente de votre ordinateur…"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Menunggu Mac Anda…"
+            "value" : "Menunggu komputer Anda…"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Macを待っています…"
+            "value" : "コンピュータを待っています…"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Wachten op je Mac…"
+            "value" : "Wachten op je computer…"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Aguardando seu Mac…"
+            "value" : "Aguardando seu computador…"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Ожидание вашего Mac…"
+            "value" : "Ожидание вашего компьютера…"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Väntar på din Mac…"
+            "value" : "Väntar på din dator…"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Đang chờ máy Mac của bạn…"
+            "value" : "Đang chờ máy tính của bạn…"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "正在等待你的 Mac…"
+            "value" : "正在等待你的电脑…"
           }
         }
       }
@@ -32857,72 +32857,72 @@
         }
       }
     },
-    "You have Pro — you just need a Mac" : {
+    "You have Pro — you just need a computer" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Du hast Pro — dir fehlt nur ein Mac"
+            "value" : "Du hast Pro — dir fehlt nur ein Computer"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Ya tienes Pro: solo necesitas un Mac"
+            "value" : "Ya tienes Pro: solo necesitas un ordenador"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Vous avez Pro : il ne vous manque qu’un Mac"
+            "value" : "Vous avez Pro : il ne vous manque qu’un ordinateur"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Anda sudah memiliki Pro — hanya perlu sebuah Mac"
+            "value" : "Anda sudah memiliki Pro — hanya perlu sebuah komputer"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Proをお持ちです。あとはMacだけです"
+            "value" : "Proをお持ちです。あとはコンピュータだけです"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Je hebt Pro — je hebt alleen nog een Mac nodig"
+            "value" : "Je hebt Pro — je hebt alleen nog een computer nodig"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Você já tem o Pro — só falta um Mac"
+            "value" : "Você já tem o Pro — só falta um computador"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "У вас есть Pro — нужен только Mac"
+            "value" : "У вас есть Pro — нужен только компьютер"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Du har Pro – du behöver bara en Mac"
+            "value" : "Du har Pro – du behöver bara en dator"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "Bạn đã có Pro — chỉ cần một máy Mac"
+            "value" : "Bạn đã có Pro — chỉ cần một máy tính"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "你已拥有 Pro，只需一台 Mac"
+            "value" : "你已拥有 Pro，只需一台电脑"
           }
         }
       }

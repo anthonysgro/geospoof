@@ -90,19 +90,25 @@ describe("Safari onboarding return contract", () => {
     expect(safariReadyView).toContain('title: "Device GPS"');
     expect(safariReadyView).toContain('title: "IP address"');
 
-    // Each row says what would move it. The Mac requirement especially: it is
+    // Each row says what would move it. The computer requirement especially: it is
     // what produces refunds when discovered only after purchase.
     //
     // The Device GPS detail is now conditional on ownership — an owner is missing only
-    // the Mac — so both branches are asserted rather than a single literal `detail:`.
-    // The non-owner branch is the one carrying the refund-relevant claim, and the owner
-    // branch has to stay a shared constant so the row and the sheet behind it agree.
-    expect(safariReadyView).toContain('"Needs Pro and a Mac"');
-    expect(safariReadyView).toContain("DeviceGpsPitch.ownedNeedsMac");
+    // the computer — so both branches are asserted rather than a single literal
+    // `detail:`. The non-owner branch is the one carrying the refund-relevant claim, and
+    // the owner branch has to stay a shared constant so the row and the sheet behind it
+    // agree.
+    //
+    // "a computer", not "a Mac": the GeoSpoof GPS agent runs on macOS and Windows, so
+    // naming one platform understates what the requirement actually is. The assertion
+    // exists to catch the requirement going missing, not to pin the noun — but it does
+    // have to keep saying that a second machine is needed at all.
+    expect(safariReadyView).toContain('"Needs Pro and a computer"');
+    expect(safariReadyView).toContain("DeviceGpsPitch.ownedNeedsComputer");
     expect(safariReadyView).toContain('detail: "Only a VPN can change this"');
 
     // The section header names a category, never a capability. GeoSpoof does
-    // change device GPS with Pro and a Mac, so any header phrased as "GeoSpoof
+    // change device GPS with Pro and a computer, so any header phrased as "GeoSpoof
     // doesn't change these" contradicts the product to the customer who bought it
     // for exactly that.
     expect(safariReadyView).toContain('Text("Other location signals")');
