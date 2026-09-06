@@ -1,3 +1,3 @@
-GeoSpoofer 们，你们好！本次更新带来了新的设置流程。
-在 Safari 中开启 GeoSpoof 的步骤更简短、更清晰。同时修复了一些问题。
+GeoSpoofer 们，你们好！设备 GPS 现在支持 Windows 了。
+GeoSpoof GPS 是用于设置 iPhone 真实 GPS 的免费伴侣应用，现在可在 Windows 和 Mac 上运行。同时修复了一些问题。
 无需账户。无跟踪。开源。

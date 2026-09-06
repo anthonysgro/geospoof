@@ -1,3 +1,3 @@
-Hej GeoSpoofers! Den här uppdateringen har en ny konfiguration.
-Att slå på GeoSpoof i Safari går nu snabbare och tydligare. Dessutom buggfixar.
+Hej GeoSpoofers! Enhetens GPS fungerar nu med Windows.
+GeoSpoof GPS, den kostnadsfria följeappen som ställer in din iPhones riktiga GPS, fungerar nu på både Windows och Mac. Dessutom buggfixar.
 Inget konto. Ingen spårning. Öppen källkod.

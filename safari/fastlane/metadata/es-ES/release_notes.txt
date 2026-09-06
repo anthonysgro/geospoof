@@ -1,3 +1,3 @@
-¡Hola, GeoSpoofers! Esta actualización trae una nueva configuración inicial.
-Activar GeoSpoof en Safari ahora es un proceso más corto y claro. Además, correcciones de errores.
+¡Hola, GeoSpoofers! El GPS del dispositivo ya funciona con Windows.
+GeoSpoof GPS, la app complementaria gratuita que fija el GPS real de tu iPhone, ahora funciona en Windows y en Mac. Además, correcciones de errores.
 Sin cuenta. Sin seguimiento. Código abierto.

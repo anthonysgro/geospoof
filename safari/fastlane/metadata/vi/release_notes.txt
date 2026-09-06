@@ -1,3 +1,3 @@
-Xin chào các GeoSpoofer! Bản cập nhật này mang đến phần thiết lập mới.
-Bật GeoSpoof trong Safari giờ đây ngắn gọn và rõ ràng hơn. Kèm theo các bản sửa lỗi.
+Xin chào các GeoSpoofer! GPS thiết bị giờ đã hoạt động với Windows.
+GeoSpoof GPS, ứng dụng đồng hành miễn phí giúp đặt GPS thật của iPhone, giờ chạy trên cả Windows và Mac. Kèm theo các bản sửa lỗi.
 Không cần tài khoản. Không theo dõi. Nguồn mở.
