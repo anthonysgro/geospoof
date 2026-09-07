@@ -418,7 +418,20 @@ struct GpsView: View {
     @ObservedObject private var pro = ProStore.shared
     @ObservedObject private var router = AppRouter.shared
     @StateObject private var statusStore = GpsStatusStore()
-    @Environment(\.scenePhase) private var scenePhase
+
+    /// Whether the app is frontmost, tracked from `UIApplication` notifications rather
+    /// than `@Environment(\.scenePhase)`.
+    ///
+    /// Not a style preference: this app is UIKit-hosted — `AppDelegate` is `@main` and the
+    /// SwiftUI tree hangs off a `UIHostingController` in `SceneDelegate` — so there is no
+    /// SwiftUI `Scene` to publish `scenePhase`, and it never reports `.active`. Gating the
+    /// poll below on it therefore disabled the poll outright: every tick returned early and
+    /// the tab only ever refreshed through `onAppear`, i.e. when the user switched tabs, so
+    /// a desktop agent connecting or dropping went unnoticed until they left and came back.
+    ///
+    /// `SpoofModel.startForegroundObserver()` and `RootView` already take the notification
+    /// route for exactly this reason — see the note on the former.
+    @State private var isForeground = true
 
     /// Where to send users to get the desktop app. TODO: confirm final URL.
     private let downloadURL = AppLink.site("/gps", campaign: "gps-download")
@@ -431,7 +444,14 @@ struct GpsView: View {
     private let gpsSupportURL = AppLink.site("/support", campaign: "gps-support")
     /// Feedback for this (experimental) feature.
     private let feedbackURL = AppLink.site("/feedback", campaign: "gps-feedback")
-    private let refreshTimer = Timer.publish(every: 3, on: .main, in: .common).autoconnect()
+    /// `@State` rather than `let`, because `Timer.publish` hands back a *new* publisher on
+    /// every `init` and this struct is rebuilt whenever `RootView` re-renders — which any of
+    /// `SpoofController`'s 27 `@Published` properties can cause. `onReceive` resubscribes
+    /// when the publisher instance changes, and resubscribing restarts the 3s countdown, so
+    /// a busy controller could hold the poll off indefinitely. `@State` keeps one publisher
+    /// for the life of the view's identity. (Throwaway publishers from the discarded `init`s
+    /// cost nothing: `autoconnect()` only starts the timer once something subscribes.)
+    @State private var refreshTimer = Timer.publish(every: 3, on: .main, in: .common).autoconnect()
 
     var body: some View {
         AdaptiveNavigationStack {
@@ -469,10 +489,18 @@ struct GpsView: View {
             .tint(.brand)
             .navigationTitle("GPS")
             .onAppear { refreshStatus() }
-            .onChange(of: scenePhase) { _, phase in
-                // Resume the status poll immediately when the app returns to the foreground,
-                // rather than waiting up to 3s for the next tick.
-                if phase == .active { refreshStatus() }
+            .onReceive(NotificationCenter.default.publisher(
+                for: UIApplication.didBecomeActiveNotification
+            )) { _ in
+                isForeground = true
+                // Refresh at once rather than waiting up to 3s for the next tick: coming
+                // back to the app is precisely when what's on screen is most likely stale.
+                refreshStatus()
+            }
+            .onReceive(NotificationCenter.default.publisher(
+                for: UIApplication.didEnterBackgroundNotification
+            )) { _ in
+                isForeground = false
             }
             .onReceive(refreshTimer) { _ in
                 // Only poll while the app is in the foreground. This status read is purely
@@ -481,7 +509,7 @@ struct GpsView: View {
                 // here), so pausing the poll in the background never drops the active spoof.
                 // It just avoids needless main-work + re-renders that can trip the
                 // scene-update watchdog while backgrounded.
-                guard scenePhase == .active else { return }
+                guard isForeground else { return }
                 refreshStatus()
             }
         }

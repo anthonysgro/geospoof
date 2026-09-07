@@ -138,10 +138,10 @@ export function TermsPage() {
                 single purchase covers your iPhone, iPad, and Mac at no
                 additional cost. Device-level GPS is the one Pro feature limited
                 by platform: it sets the real system location of an iPhone or
-                iPad, and is driven from the Mac app rather than applying to the
-                Mac itself. The iOS, iPadOS, and macOS app may also offer
-                optional one-time "tips" that let you support development and
-                unlock no features.
+                iPad, and is driven from the GeoSpoof GPS desktop app for Mac or
+                Windows rather than applying to that computer itself. The iOS,
+                iPadOS, and macOS app may also offer optional one-time "tips"
+                that let you support development and unlock no features.
               </p>
               <p>
                 All in-app purchases and subscriptions are processed by Apple

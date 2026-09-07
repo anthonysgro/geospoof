@@ -67,7 +67,7 @@ export const zhCN: Dictionary = {
       badge: "Pro",
       title: "GeoSpoof Pro",
       description:
-        "GeoSpoof GPS 通过 Mac 伴侣应用设置你 iPhone 的真实系统级位置。另有 VPN 自动同步、按站点过滤、小组件、地图选点等。",
+        "GeoSpoof GPS 通过 Mac 或 Windows 伴侣应用设置你 iPhone 的真实系统级位置。另有 VPN 自动同步、按站点过滤、小组件、地图选点等。",
       cta: "查看 Pro 包含什么",
       priceNote: "$1.99/月起 — 或 $24.99 永久",
     },
@@ -118,7 +118,7 @@ export const zhCN: Dictionary = {
       items: {
         everythingFree:
           "免费版 GeoSpoof 扩展的全部功能——位置和时区伪造、WebRTC 保护，支持所有主流浏览器",
-        gps: "GeoSpoof GPS——设置 iPhone 的真实系统级 GPS（配合 Mac 伴侣应用）",
+        gps: "GeoSpoof GPS——设置 iPhone 的真实系统级 GPS（配合 Mac 或 Windows 应用）",
         vpnSync: "自动 VPN 同步——你的位置在后台跟随 VPN 出口区域",
         widgets: "主屏幕小组件和控制中心控件",
         mapkit: "MapKit 位置选择器——在地图上任意位置放置图钉",
@@ -141,7 +141,7 @@ export const zhCN: Dictionary = {
       spoofEdge: "在 Edge 中伪造位置",
       spoofSafari: "在 Safari 中伪造位置",
       spoofTimezone: "伪造时区",
-      gps: "Mac 版 GeoSpoof GPS",
+      gps: "GeoSpoof GPS",
       pro: "GeoSpoof Pro",
       needVpn: "你需要 VPN 吗？",
       testProtection: "测试你的防护",
@@ -1236,10 +1236,10 @@ export const zhCN: Dictionary = {
   },
   gps: {
     meta: {
-      title: "为 Mac 下载 GeoSpoof GPS | GeoSpoof",
+      title: "为 Mac 和 Windows 下载 GeoSpoof GPS | GeoSpoof",
       description:
-        "GeoSpoof GPS 是一款 macOS 菜单栏应用，可将已连接 iPhone 的真实 GPS 位置设置为与你的伪装位置一致。下载已签名并公证的 DMG。",
-      ogTitle: "为 Mac 下载 GeoSpoof GPS",
+        "GeoSpoof GPS 是一款 Mac 和 Windows 应用，可将已连接 iPhone 的真实 GPS 位置设置为与你的伪装位置一致。免费下载，无需账号。",
+      ogTitle: "为 Mac 和 Windows 下载 GeoSpoof GPS",
     },
     preflightTitle: "下载之前",
     compat: {
@@ -1247,8 +1247,8 @@ export const zhCN: Dictionary = {
       body: "GeoSpoof GPS 仅为隐私保护、网页浏览和开发而设计。它不兼容也并非为 Pokémon GO 等 AR 手机游戏而设计。",
     },
     tether: {
-      label: "需要一台 Mac",
-      body: "每次设置或更改位置时，iPhone 都需要与 Mac 保持连接。可以通过 USB、同一 Wi-Fi 网络或个人热点。GeoSpoof GPS 是一款 Mac 应用，所以没有仅用 iPhone 的模式。",
+      label: "需要一台电脑",
+      body: "每次设置或更改位置时，iPhone 都需要与电脑保持连接。可以通过 USB、同一 Wi-Fi 网络或个人热点。GeoSpoof GPS 是一款 Mac 和 Windows 桌面应用，所以没有仅用 iPhone 的模式。",
       link: "连接方式说明",
     },
     experimental: {
@@ -1260,20 +1260,34 @@ export const zhCN: Dictionary = {
       breadcrumbHome: "首页",
       breadcrumb: "GeoSpoof GPS",
       iconAlt: "GeoSpoof GPS 应用图标",
-      badge: "macOS · 菜单栏应用",
+      badge: "Mac 和 Windows",
       headingPre: "让 iPhone 的",
       headingEmphasis: "真实 GPS",
       headingPost: "与你的伪装位置一致",
       intro:
-        "GeoSpoof GPS 是一款 macOS 菜单栏伴侣应用，可将 iPhone 的系统级位置设置为你在 GeoSpoof 中选择的地点。只要手机与 Mac 保持连接，浏览器和手机的真实 GPS 就会呈现一致的位置。",
+        "GeoSpoof GPS 是一款适用于 Mac 和 Windows 的桌面伴侣应用，可将 iPhone 的系统级位置设置为你在 GeoSpoof 中选择的地点。只要手机与电脑保持连接，浏览器和手机的真实 GPS 就会呈现一致的位置。",
     },
     download: {
-      cta: "下载 Mac 版",
+      ctaMac: "下载 Mac 版",
+      ctaWindows: "下载 Windows 版",
+      allPlatforms: "全部下载与系统要求",
       setupCta: "设置指南",
       resolving: "正在获取最新版本…",
       versionLabel: "最新版本",
       iosNote: "你还需要 GeoSpoof 的 iPhone 应用（Pro）。",
       iosCta: "获取 iPhone 版 GeoSpoof",
+    },
+    downloads: {
+      title: "下载",
+      intro:
+        "GeoSpoof GPS 可在 Mac 和 Windows 上运行。两个版本都免费，功能相同，并且都由你 iPhone 上的同一个 GeoSpoof 应用来驱动。",
+      recommended: "你的电脑",
+      macName: "macOS",
+      macRequirement: "macOS 13 (Ventura) 或更高版本。Apple 芯片或 Intel。",
+      windowsName: "Windows",
+      windowsRequirement: "Windows 10 或更高版本，64 位。",
+      proNote:
+        "两个版本都可免费下载。设备级 GPS 属于 Pro 功能，而 Pro 在你 iPhone 上的 GeoSpoof 应用内购买，位置也是在那里选择的。",
     },
     setup: {
       title: "设置 GeoSpoof GPS",
@@ -1362,15 +1376,15 @@ export const zhCN: Dictionary = {
       steps: [
         {
           title: "你来选，它跟随",
-          body: "像往常一样在 GeoSpoof 应用里选择位置。这个选择就是唯一的事实来源，Mac 上的 GeoSpoof GPS 会把它同步到你的 iPhone——让浏览器的伪装和设备真实的 GPS 终于说法一致。",
+          body: "像往常一样在 GeoSpoof 应用里选择位置。这个选择就是唯一的事实来源，电脑上的 GeoSpoof GPS 会把它同步到你的 iPhone——让浏览器的伪装和设备真实的 GPS 终于说法一致。",
         },
         {
-          title: "你的 Mac 来移动 GPS",
-          body: "通过一次性的安全配对，菜单栏应用使用 Apple 自带的开发者位置模拟来设置 iPhone 的系统级位置。无需越狱，无需编译任何东西——正是开发者在 Xcode 中已经使用的机制。",
+          title: "你的电脑来移动 GPS",
+          body: "通过一次性的安全配对，桌面应用使用 Apple 自带的开发者位置模拟来设置 iPhone 的系统级位置。无需越狱，无需编译任何东西——正是开发者在 Xcode 中已经使用的机制。",
         },
         {
           title: "首次用线，之后走网络",
-          body: "首次设置需要 USB 数据线。之后 Mac 会通过本地网络设置 GPS，可以是同一 Wi-Fi，也可以是个人热点，并在手机离开网络又重新加入时自动重连。工作仍然由 Mac 来完成，所以它需要保持连接。",
+          body: "首次设置需要 USB 数据线。之后电脑会通过本地网络设置 GPS，可以是同一 Wi-Fi，也可以是个人热点，并在手机离开网络又重新加入时自动重连。工作仍然由电脑来完成，所以它需要保持连接。",
         },
         {
           title: "稳稳保持，干净还原",
@@ -1379,12 +1393,12 @@ export const zhCN: Dictionary = {
       ],
       privacyTitle: "只属于你",
       privacyBody:
-        "一切都在你的 Mac 与 iPhone 之间直接完成，你的位置绝不会经过我们的服务器。Pro 通过 Apple 签名的收据进行验证，每次更新都经过 Apple 公证，并在安装前校验签名。",
+        "一切都在你的电脑与 iPhone 之间直接完成，你的位置绝不会经过我们的服务器。Pro 通过 Apple 签名的收据进行验证，Mac 版经过 Apple 公证，并在每次更新安装前校验签名。",
     },
     connection: {
-      title: "与 Mac 之间的连接",
+      title: "与电脑之间的连接",
       intro:
-        "设置 GPS 的是你的 Mac，所以在设置或更改位置时，两台设备需要保持连接。以下任意一种方式都可以：",
+        "设置 GPS 的是你的电脑，所以在设置或更改位置时，两台设备需要保持连接。以下任意一种方式都可以：",
       links: [
         {
           title: "USB 数据线",
@@ -1392,23 +1406,28 @@ export const zhCN: Dictionary = {
         },
         {
           title: "同一 Wi-Fi 网络",
-          body: "首次配对之后，Mac 会通过本地网络找到手机，无需数据线。两台设备需要处于同一网络中。",
+          body: "首次配对之后，电脑会通过本地网络找到手机，无需数据线。两台设备需要处于同一网络中。",
         },
         {
           title: "个人热点",
-          body: "没有共用的 Wi-Fi？打开 iPhone 的个人热点，让 Mac 连上它。反过来也行，让 Mac 把网络共享给手机。",
+          body: "没有共用的 Wi-Fi？打开 iPhone 的个人热点，让电脑连上它。反过来也行，让电脑把网络共享给手机。",
         },
       ],
-      offlineTitle: "不带 Mac 出门",
+      offlineTitle: "不带电脑出门",
       offlineBody:
-        "连接结束之后，位置仍然可以保留下来。在伪装位置生效时，前往 iPhone 的 设置 ▸ 隐私与安全性 ▸ 开发者模式 将其关闭。从这一刻起，该位置便会保留下来，即使你离开了 Mac 也一样。",
+        "连接结束之后，位置仍然可以保留下来。在伪装位置生效时，前往 iPhone 的 设置 ▸ 隐私与安全性 ▸ 开发者模式 将其关闭。从这一刻起，该位置便会保留下来，即使你离开了电脑也一样。",
       offlineCaveat:
-        "代价是这个位置已经固定下来。要换成另一个位置，需要重启 iPhone，并在 Mac 重新回到身边时设置新位置。",
+        "代价是这个位置已经固定下来。要换成另一个位置，需要重启 iPhone，并在电脑重新回到身边时设置新位置。",
       limitTitle: "做不到的事",
       limitBody:
-        "没有任何数据经过我们的服务器，所以 Mac 无法通过互联网连上你的 iPhone。两台设备一旦分开，手机就不再接收新位置。上面那步关闭开发者模式，正是用来保住当前位置的。",
+        "没有任何数据经过我们的服务器，所以电脑无法通过互联网连上你的 iPhone。两台设备一旦分开，手机就不再接收新位置。上面那步关闭开发者模式，正是用来保住当前位置的。",
     },
-    menuShotAlt: "macOS 上的 GeoSpoof GPS 菜单栏应用",
+    menuShotAlt: "macOS 上的 GeoSpoof GPS 应用",
+    trayShotAlt: "Windows 通知区域中的 GeoSpoof GPS，面板已打开",
+    trayHintMac:
+      "GeoSpoof GPS 没有窗口。它常驻在菜单栏——点按时钟旁的图钉图标即可打开面板。",
+    trayHintWindows:
+      "GeoSpoof GPS 没有窗口。它常驻在通知区域——如果看不到图钉图标，请点击任务栏上的箭头以显示隐藏的图标。",
     screenshotAlt: "iPhone 上的 GeoSpoof GPS，截图 {n}",
     help: {
       title: "仍然卡住了？",

@@ -54,7 +54,7 @@ export const ja: Dictionary = {
       badge: "Pro",
       title: "GeoSpoof Pro",
       description:
-        "GeoSpoof GPS は Mac のコンパニオンアプリから iPhone の実際のシステム位置情報を設定します。さらに VPN 自動同期、サイトごとのフィルター、ウィジェット、地図ピッカーなど。",
+        "GeoSpoof GPS は Mac / Windows のコンパニオンアプリから iPhone の実際のシステム位置情報を設定します。さらに VPN 自動同期、サイトごとのフィルター、ウィジェット、地図ピッカーなど。",
       cta: "Pro の内容を見る",
       priceNote: "月額 $1.99 〜 — または買い切り $24.99",
     },
@@ -106,7 +106,7 @@ export const ja: Dictionary = {
       items: {
         everythingFree:
           "無料の GeoSpoof 拡張機能のすべて — 位置情報・タイムゾーンの偽装、WebRTC 保護、主要ブラウザすべてで",
-        gps: "GeoSpoof GPS — iPhone の実際のシステム GPS を設定（Mac のコンパニオンアプリと併用）",
+        gps: "GeoSpoof GPS — iPhone の実際のシステム GPS を設定（Mac / Windows 用アプリと併用）",
         vpnSync:
           "自動 VPN 同期 — 位置情報がバックグラウンドで VPN の出口リージョンに追従",
         widgets: "ホーム画面ウィジェットとコントロールセンターのコントロール",
@@ -130,7 +130,7 @@ export const ja: Dictionary = {
       spoofEdge: "Edge で位置情報を偽装",
       spoofSafari: "Safari で位置情報を偽装",
       spoofTimezone: "タイムゾーンを偽装",
-      gps: "Mac 用 GeoSpoof GPS",
+      gps: "GeoSpoof GPS",
       pro: "GeoSpoof Pro",
       needVpn: "VPN は必要ですか？",
       testProtection: "保護状況をテスト",
@@ -1264,10 +1264,10 @@ export const ja: Dictionary = {
   },
   gps: {
     meta: {
-      title: "Mac 用 GeoSpoof GPS をダウンロード | GeoSpoof",
+      title: "Mac / Windows 用 GeoSpoof GPS をダウンロード | GeoSpoof",
       description:
-        "GeoSpoof GPS は、接続した iPhone の実際の GPS 位置を、あなたの偽装した位置に合わせる macOS メニューバーアプリです。署名・公証済みの DMG をダウンロードしてください。",
-      ogTitle: "Mac 用 GeoSpoof GPS をダウンロード",
+        "GeoSpoof GPS は、接続した iPhone の実際の GPS 位置を、あなたの偽装した位置に合わせる Mac / Windows 用アプリです。無料でダウンロードでき、アカウント登録は不要です。",
+      ogTitle: "Mac / Windows 用 GeoSpoof GPS をダウンロード",
     },
     preflightTitle: "ダウンロードの前に",
     compat: {
@@ -1275,8 +1275,8 @@ export const ja: Dictionary = {
       body: "GeoSpoof GPS は、プライバシー保護、ウェブ閲覧、開発のみを目的として設計されています。Pokémon GO のような AR モバイルゲームには対応しておらず、そうした用途向けにも作られていません。",
     },
     tether: {
-      label: "Mac が必要です",
-      body: "位置を設定したり変更したりするときは、iPhone を Mac につないでおく必要があります。接続方法は USB、同じ Wi-Fi ネットワーク、テザリングのいずれかです。GeoSpoof GPS は Mac アプリなので、iPhone だけで使えるモードはありません。",
+      label: "パソコンが必要です",
+      body: "位置を設定したり変更したりするときは、iPhone をパソコンにつないでおく必要があります。接続方法は USB、同じ Wi-Fi ネットワーク、テザリングのいずれかです。GeoSpoof GPS は Mac / Windows 用のデスクトップアプリなので、iPhone だけで使えるモードはありません。",
       link: "接続のしくみ",
     },
     experimental: {
@@ -1288,20 +1288,34 @@ export const ja: Dictionary = {
       breadcrumbHome: "ホーム",
       breadcrumb: "GeoSpoof GPS",
       iconAlt: "GeoSpoof GPS アプリのアイコン",
-      badge: "macOS · メニューバーアプリ",
+      badge: "Mac と Windows",
       headingPre: "iPhone の",
       headingEmphasis: "実際の GPS",
       headingPost: "を偽装した位置に合わせる",
       intro:
-        "GeoSpoof GPS は、iPhone のシステムレベルの位置情報を、GeoSpoof で選んだ場所に設定する macOS のメニューバー用コンパニオンです。iPhone が Mac とつながっている間は、ブラウザと端末の実際の GPS が同じ位置を示します。",
+        "GeoSpoof GPS は、iPhone のシステムレベルの位置情報を、GeoSpoof で選んだ場所に設定する Mac / Windows 用のデスクトップコンパニオンです。iPhone がパソコンとつながっている間は、ブラウザと端末の実際の GPS が同じ位置を示します。",
     },
     download: {
-      cta: "Mac 用をダウンロード",
+      ctaMac: "Mac 用をダウンロード",
+      ctaWindows: "Windows 用をダウンロード",
+      allPlatforms: "すべてのダウンロードと動作環境",
       setupCta: "セットアップガイド",
       resolving: "最新バージョンを取得しています…",
       versionLabel: "最新バージョン",
       iosNote: "GeoSpoof の iPhone アプリ（Pro）も必要です。",
       iosCta: "iPhone 版 GeoSpoof を入手",
+    },
+    downloads: {
+      title: "ダウンロード",
+      intro:
+        "GeoSpoof GPS は Mac と Windows で動作します。どちらも無料で、機能は同じです。操作はどちらも iPhone の同じ GeoSpoof アプリから行います。",
+      recommended: "お使いのパソコン",
+      macName: "macOS",
+      macRequirement: "macOS 13 (Ventura) 以降。Apple シリコンまたは Intel。",
+      windowsName: "Windows",
+      windowsRequirement: "Windows 10 以降、64 ビット。",
+      proNote:
+        "どちらもダウンロードは無料です。端末レベルの GPS は Pro の機能で、Pro は iPhone の GeoSpoof アプリで購入します。位置を選ぶのも同じアプリです。",
     },
     setup: {
       title: "GeoSpoof GPS をセットアップ",
@@ -1390,15 +1404,15 @@ export const ja: Dictionary = {
       steps: [
         {
           title: "あなたが選び、あとは追従",
-          body: "いつもどおりGeoSpoofアプリで場所を選ぶだけ。その選択が唯一の基準となり、Mac上のGeoSpoof GPSがそれをiPhoneに反映します。こうしてブラウザのスプーフと端末の実際のGPSがようやく一致します。",
+          body: "いつもどおりGeoSpoofアプリで場所を選ぶだけ。その選択が唯一の基準となり、パソコン上のGeoSpoof GPSがそれをiPhoneに反映します。こうしてブラウザのスプーフと端末の実際のGPSがようやく一致します。",
         },
         {
-          title: "MacがGPSを動かす",
-          body: "安全な一度きりのペアリングを通じて、メニューバーアプリがApple純正の開発者向け位置シミュレーションを使い、iPhoneのシステムレベルの位置を設定します。脱獄不要、ビルド不要——開発者がXcodeで使っているのと同じ仕組みです。",
+          title: "パソコンがGPSを動かす",
+          body: "安全な一度きりのペアリングを通じて、デスクトップアプリがApple純正の開発者向け位置シミュレーションを使い、iPhoneのシステムレベルの位置を設定します。脱獄不要、ビルド不要——開発者がXcodeで使っているのと同じ仕組みです。",
         },
         {
           title: "最初だけケーブル、あとはネットワーク経由",
-          body: "初回設定は USB ケーブルで行います。以降は Mac がローカルネットワーク（同じ Wi-Fi またはテザリング）経由で GPS を設定し、iPhone がネットワークを離れて再び接続したときも自動的に再接続します。作業をしているのは引き続き Mac なので、Mac は接続したままにしておく必要があります。",
+          body: "初回設定は USB ケーブルで行います。以降はパソコンがローカルネットワーク（同じ Wi-Fi またはテザリング）経由で GPS を設定し、iPhone がネットワークを離れて再び接続したときも自動的に再接続します。作業をしているのは引き続きパソコンなので、パソコンは接続したままにしておく必要があります。",
         },
         {
           title: "しっかり保持し、きれいに復帰",
@@ -1407,12 +1421,12 @@ export const ja: Dictionary = {
       ],
       privacyTitle: "あなただけのもの",
       privacyBody:
-        "すべてはMacとiPhoneの間で直接行われるため、あなたの位置情報が当社のサーバーに触れることはありません。ProはAppleが署名したレシートで検証され、すべてのアップデートはAppleによる公証を受け、インストール前に署名が確認されます。",
+        "すべてはパソコンとiPhoneの間で直接行われるため、あなたの位置情報が当社のサーバーに触れることはありません。ProはAppleが署名したレシートで検証され、Mac 版はAppleによる公証を受けたうえで、アップデートごとに署名が確認されます。",
     },
     connection: {
-      title: "Mac との接続について",
+      title: "パソコンとの接続について",
       intro:
-        "GPS を設定しているのは Mac です。そのため、位置を設定したり変更したりするときは、2 台の端末がつながっている必要があります。次のいずれかの方法で接続できます。",
+        "GPS を設定しているのはパソコンです。そのため、位置を設定したり変更したりするときは、2 台の端末がつながっている必要があります。次のいずれかの方法で接続できます。",
       links: [
         {
           title: "USB ケーブル",
@@ -1420,23 +1434,28 @@ export const ja: Dictionary = {
         },
         {
           title: "同じ Wi-Fi ネットワーク",
-          body: "最初のペアリング後は、Mac がローカルネットワーク経由で iPhone を見つけます。ケーブルは不要ですが、両方の端末が同じネットワークにある必要があります。",
+          body: "最初のペアリング後は、パソコンがローカルネットワーク経由で iPhone を見つけます。ケーブルは不要ですが、両方の端末が同じネットワークにある必要があります。",
         },
         {
           title: "テザリング",
-          body: "共有できる Wi-Fi がない場合は、iPhone のインターネット共有をオンにして Mac を接続します。逆に、Mac の接続を iPhone に共有する方法でも動作します。",
+          body: "共有できる Wi-Fi がない場合は、iPhone のインターネット共有をオンにしてパソコンを接続します。逆に、パソコンの接続を iPhone に共有する方法でも動作します。",
         },
       ],
-      offlineTitle: "Mac を持たずに外出する",
+      offlineTitle: "パソコンを持たずに外出する",
       offlineBody:
-        "設定した位置は、接続が終わった後も維持できます。偽装した位置が有効な状態で、iPhone のデベロッパモードをオフにしてください（設定 ▸ プライバシーとセキュリティ ▸ デベロッパモード）。それ以降はその位置が維持され、Mac から離れても保たれます。",
+        "設定した位置は、接続が終わった後も維持できます。偽装した位置が有効な状態で、iPhone のデベロッパモードをオフにしてください（設定 ▸ プライバシーとセキュリティ ▸ デベロッパモード）。それ以降はその位置が維持され、パソコンから離れても保たれます。",
       offlineCaveat:
-        "ただし、その位置は固定されます。別の位置を選ぶには、iPhone を再起動し、Mac が近くにある状態で新しい位置を設定してください。",
+        "ただし、その位置は固定されます。別の位置を選ぶには、iPhone を再起動し、パソコンが近くにある状態で新しい位置を設定してください。",
       limitTitle: "できないこと",
       limitBody:
-        "当社のサーバーを経由する処理はないため、Mac がインターネット越しに iPhone へ接続することはできません。2 台が離れると、iPhone は新しい位置を受け取らなくなります。現在の位置を保っているのが、上記のデベロッパモードの手順です。",
+        "当社のサーバーを経由する処理はないため、パソコンがインターネット越しに iPhone へ接続することはできません。2 台が離れると、iPhone は新しい位置を受け取らなくなります。現在の位置を保っているのが、上記のデベロッパモードの手順です。",
     },
-    menuShotAlt: "macOS の GeoSpoof GPS メニューバーアプリ",
+    menuShotAlt: "macOS の GeoSpoof GPS アプリ",
+    trayShotAlt: "Windows の通知領域に表示された GeoSpoof GPS とそのパネル",
+    trayHintMac:
+      "GeoSpoof GPS にウインドウはありません。メニューバーに常駐します。時計の近くにあるピンのアイコンをクリックするとパネルが開きます。",
+    trayHintWindows:
+      "GeoSpoof GPS にウインドウはありません。通知領域に常駐します。ピンのアイコンが見つからない場合は、タスクバーの上向き矢印（隠れているインジケーターを表示）をクリックしてください。",
     screenshotAlt: "iPhone 上の GeoSpoof GPS、スクリーンショット {n}",
     help: {
       title: "解決しませんか？",

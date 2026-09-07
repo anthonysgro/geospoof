@@ -54,7 +54,7 @@ export const ptBR: Dictionary = {
       badge: "Pro",
       title: "GeoSpoof Pro",
       description:
-        "O GeoSpoof GPS define a localização real, de nível de sistema, do seu iPhone a partir de um app complementar para Mac. Além disso, sincronização automática com VPN, filtros por site, widgets, seletor de mapa e mais.",
+        "O GeoSpoof GPS define a localização real, de nível de sistema, do seu iPhone a partir de um app complementar no seu Mac ou PC com Windows. Além disso, sincronização automática com VPN, filtros por site, widgets, seletor de mapa e mais.",
       cta: "Veja o que vem no Pro",
       priceNote: "A partir de $1.99/mês — ou $24.99 vitalício",
     },
@@ -106,7 +106,7 @@ export const ptBR: Dictionary = {
       items: {
         everythingFree:
           "Tudo o que há na extensão gratuita do GeoSpoof — falsificação de localização e fuso horário, proteção WebRTC, em todos os principais navegadores",
-        gps: "GeoSpoof GPS — defina o GPS real, de nível de sistema, do seu iPhone (com o app complementar para Mac)",
+        gps: "GeoSpoof GPS — defina o GPS real, de nível de sistema, do seu iPhone (com o app para Mac ou Windows)",
         vpnSync:
           "Sincronização automática com VPN — sua localização segue a região de saída do seu VPN em segundo plano",
         widgets: "Widgets da Tela de Início e controles da Central de Controle",
@@ -132,7 +132,7 @@ export const ptBR: Dictionary = {
       spoofEdge: "Falsificar a localização no Edge",
       spoofSafari: "Falsificar a localização no Safari",
       spoofTimezone: "Falsificar o fuso horário",
-      gps: "GeoSpoof GPS para Mac",
+      gps: "GeoSpoof GPS",
       pro: "GeoSpoof Pro",
       needVpn: "Você precisa de um VPN?",
       testProtection: "Teste a sua proteção",
@@ -1284,10 +1284,10 @@ export const ptBR: Dictionary = {
   },
   gps: {
     meta: {
-      title: "Baixar o GeoSpoof GPS para Mac | GeoSpoof",
+      title: "Baixar o GeoSpoof GPS para Mac e Windows | GeoSpoof",
       description:
-        "O GeoSpoof GPS é um app da barra de menus do macOS que ajusta a localização GPS real do iPhone conectado para corresponder à sua localização falsificada. Baixe o DMG assinado e notarizado.",
-      ogTitle: "Baixar o GeoSpoof GPS para Mac",
+        "O GeoSpoof GPS é um app para Mac e Windows que ajusta a localização GPS real do iPhone conectado para corresponder à sua localização falsificada. Download gratuito, sem precisar de conta.",
+      ogTitle: "Baixar o GeoSpoof GPS para Mac e Windows",
     },
     preflightTitle: "Antes de baixar",
     compat: {
@@ -1295,8 +1295,8 @@ export const ptBR: Dictionary = {
       body: "O GeoSpoof GPS foi projetado exclusivamente para privacidade, navegação na web e desenvolvimento. Ele não é compatível com jogos móveis de realidade aumentada como Pokémon GO, nem foi projetado para eles.",
     },
     tether: {
-      label: "Precisa de um Mac",
-      body: "Seu iPhone precisa estar conectado ao seu Mac sempre que você definir ou trocar uma localização. Pode ser por USB, pela mesma rede Wi-Fi ou por um ponto de acesso. O GeoSpoof GPS é um app de Mac, então não existe um modo só para iPhone.",
+      label: "Precisa de um computador",
+      body: "Seu iPhone precisa estar conectado ao seu computador sempre que você definir ou trocar uma localização. Pode ser por USB, pela mesma rede Wi-Fi ou por um ponto de acesso. O GeoSpoof GPS é um app de computador para Mac e Windows, então não existe um modo só para iPhone.",
       link: "Como funciona a conexão",
     },
     experimental: {
@@ -1308,20 +1308,35 @@ export const ptBR: Dictionary = {
       breadcrumbHome: "Início",
       breadcrumb: "GeoSpoof GPS",
       iconAlt: "Ícone do app GeoSpoof GPS",
-      badge: "macOS · App da barra de menus",
+      badge: "Mac e Windows",
       headingPre: "Alinhe o ",
       headingEmphasis: "GPS real",
       headingPost: " do seu iPhone com sua localização falsificada",
       intro:
-        "O GeoSpoof GPS é um companheiro da barra de menus do macOS que ajusta a localização no nível do sistema do seu iPhone para o lugar que você escolhe no GeoSpoof. Seu navegador e o GPS real do celular contam a mesma história, enquanto o celular continuar ligado ao seu Mac.",
+        "O GeoSpoof GPS é um companheiro de computador para Mac e Windows que ajusta a localização no nível do sistema do seu iPhone para o lugar que você escolhe no GeoSpoof. Seu navegador e o GPS real do celular contam a mesma história, enquanto o celular continuar ligado ao seu computador.",
     },
     download: {
-      cta: "Baixar para Mac",
+      ctaMac: "Baixar para Mac",
+      ctaWindows: "Baixar para Windows",
+      allPlatforms: "Todos os downloads e requisitos de sistema",
       setupCta: "Guia de configuração",
       resolving: "Buscando a versão mais recente…",
       versionLabel: "Versão mais recente",
       iosNote: "Você também vai precisar do app GeoSpoof para iPhone (Pro).",
       iosCta: "Baixar o GeoSpoof para iPhone",
+    },
+    downloads: {
+      title: "Downloads",
+      intro:
+        "O GeoSpoof GPS roda no Mac e no Windows. As duas versões são gratuitas, fazem a mesma coisa e são controladas pelo mesmo app GeoSpoof no seu iPhone.",
+      recommended: "Seu computador",
+      macName: "macOS",
+      macRequirement:
+        "macOS 13 (Ventura) ou mais recente. Apple silicon ou Intel.",
+      windowsName: "Windows",
+      windowsRequirement: "Windows 10 ou mais recente, 64 bits.",
+      proNote:
+        "O download é gratuito nos dois casos. O GPS no nível do dispositivo é um recurso Pro, e o Pro é comprado no app GeoSpoof do seu iPhone, que é também onde você escolhe a localização.",
     },
     setup: {
       title: "Configure o GeoSpoof GPS",
@@ -1410,15 +1425,15 @@ export const ptBR: Dictionary = {
       steps: [
         {
           title: "Você escolhe, ele segue",
-          body: "Escolha uma localização no app GeoSpoof como sempre. Essa escolha é a única fonte da verdade, e o GeoSpoof GPS no seu Mac a espelha para o seu iPhone — para que o spoof do navegador e o GPS real do dispositivo finalmente contem a mesma história.",
+          body: "Escolha uma localização no app GeoSpoof como sempre. Essa escolha é a única fonte da verdade, e o GeoSpoof GPS no seu computador a espelha para o seu iPhone — para que o spoof do navegador e o GPS real do dispositivo finalmente contem a mesma história.",
         },
         {
-          title: "Seu Mac move o GPS",
-          body: "Por meio de um pareamento seguro e único, o app da barra de menus usa a própria simulação de localização para desenvolvedores da Apple para definir a localização em nível de sistema do seu iPhone. Sem jailbreak, sem nada para compilar — o mesmo mecanismo que os desenvolvedores já usam no Xcode.",
+          title: "Seu computador move o GPS",
+          body: "Por meio de um pareamento seguro e único, o app de computador usa a própria simulação de localização para desenvolvedores da Apple para definir a localização em nível de sistema do seu iPhone. Sem jailbreak, sem nada para compilar — o mesmo mecanismo que os desenvolvedores já usam no Xcode.",
         },
         {
           title: "Cabo uma vez, depois pela rede",
-          body: "A configuração inicial é feita por cabo USB. Depois disso, o seu Mac define o GPS pela rede local, seja pela mesma Wi-Fi ou por um ponto de acesso, e se reconecta sozinho quando o telefone sai da rede e entra novamente. Quem faz o trabalho continua sendo o seu Mac, então ele precisa ficar conectado.",
+          body: "A configuração inicial é feita por cabo USB. Depois disso, o seu computador define o GPS pela rede local, seja pela mesma Wi-Fi ou por um ponto de acesso, e se reconecta sozinho quando o telefone sai da rede e entra novamente. Quem faz o trabalho continua sendo o seu computador, então ele precisa ficar conectado.",
         },
         {
           title: "Mantém firme, reverte limpo",
@@ -1427,12 +1442,12 @@ export const ptBR: Dictionary = {
       ],
       privacyTitle: "Só seu",
       privacyBody:
-        "Tudo acontece diretamente entre o seu Mac e o seu iPhone, então sua localização nunca passa pelos nossos servidores. O Pro é verificado com recibos assinados pela Apple, e cada atualização é autenticada pela Apple e tem a assinatura conferida antes de instalar.",
+        "Tudo acontece diretamente entre o seu computador e o seu iPhone, então sua localização nunca passa pelos nossos servidores. O Pro é verificado com recibos assinados pela Apple, e a versão para Mac é autenticada pela Apple e tem a assinatura conferida em cada atualização.",
     },
     connection: {
-      title: "A ligação com o seu Mac",
+      title: "A ligação com o seu computador",
       intro:
-        "É o seu Mac que define o GPS, então os dois dispositivos precisam estar conectados quando você define ou troca uma localização. Qualquer uma destas opções funciona:",
+        "É o seu computador que define o GPS, então os dois dispositivos precisam estar conectados quando você define ou troca uma localização. Qualquer uma destas opções funciona:",
       links: [
         {
           title: "Cabo USB",
@@ -1440,23 +1455,29 @@ export const ptBR: Dictionary = {
         },
         {
           title: "A mesma rede Wi-Fi",
-          body: "Depois do primeiro pareamento, o seu Mac consegue encontrar o telefone pela rede local, sem precisar de cabo. Os dois dispositivos precisam estar na mesma rede.",
+          body: "Depois do primeiro pareamento, o seu computador consegue encontrar o telefone pela rede local, sem precisar de cabo. Os dois dispositivos precisam estar na mesma rede.",
         },
         {
           title: "Um ponto de acesso",
-          body: "Sem Wi-Fi em comum? Ligue o Acesso Pessoal do seu iPhone e conecte o Mac a ele. O contrário também funciona, com o Mac compartilhando a conexão com o telefone.",
+          body: "Sem Wi-Fi em comum? Ligue o Acesso Pessoal do seu iPhone e conecte o computador a ele. O contrário também funciona, com o computador compartilhando a conexão com o telefone.",
         },
       ],
-      offlineTitle: "Sair sem o seu Mac",
+      offlineTitle: "Sair sem o seu computador",
       offlineBody:
-        "Uma localização pode continuar valendo depois que a conexão termina. Com a sua localização falsificada ativa, desative o Modo de Desenvolvedor no iPhone (Ajustes ▸ Privacidade e Segurança ▸ Modo de Desenvolvedor). Dali em diante a localização se mantém, inclusive depois de você se afastar do Mac.",
+        "Uma localização pode continuar valendo depois que a conexão termina. Com a sua localização falsificada ativa, desative o Modo de Desenvolvedor no iPhone (Ajustes ▸ Privacidade e Segurança ▸ Modo de Desenvolvedor). Dali em diante a localização se mantém, inclusive depois de você se afastar do computador.",
       offlineCaveat:
-        "A contrapartida é que a localização fica fixa. Para escolher outra, reinicie o iPhone e defina a nova com o seu Mac perto de você outra vez.",
+        "A contrapartida é que a localização fica fixa. Para escolher outra, reinicie o iPhone e defina a nova com o seu computador perto de você outra vez.",
       limitTitle: "O que não dá para fazer",
       limitBody:
-        "Nada passa pelos nossos servidores, então o seu Mac não consegue alcançar o iPhone pela internet. Uma vez separados, o telefone para de aceitar novas localizações. O passo do Modo de Desenvolvedor acima é o que mantém a atual no lugar.",
+        "Nada passa pelos nossos servidores, então o seu computador não consegue alcançar o iPhone pela internet. Uma vez separados, o telefone para de aceitar novas localizações. O passo do Modo de Desenvolvedor acima é o que mantém a atual no lugar.",
     },
-    menuShotAlt: "App da barra de menus GeoSpoof GPS no macOS",
+    menuShotAlt: "App GeoSpoof GPS no macOS",
+    trayShotAlt:
+      "GeoSpoof GPS na área de notificação do Windows, com o painel aberto",
+    trayHintMac:
+      "O GeoSpoof GPS não tem janela. Ele fica na barra de menus — clique no alfinete perto do relógio para abrir o painel.",
+    trayHintWindows:
+      "O GeoSpoof GPS não tem janela. Ele fica na área de notificação — se você não vê o alfinete, clique na seta da barra de tarefas para mostrar os ícones ocultos.",
     screenshotAlt: "GeoSpoof GPS no iPhone, captura {n}",
     help: {
       title: "Ainda travado?",

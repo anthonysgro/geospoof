@@ -4,7 +4,9 @@ import {
   Apple,
   ArrowRight,
   Check,
+  Download,
   MapPin,
+  Monitor,
   RadioTower,
   RotateCcw,
   ShieldCheck,
@@ -14,7 +16,9 @@ import {
   Waypoints,
   Wifi,
 } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 import type { Locale } from "@/lib/i18n"
+import type { DesktopOS } from "@/hooks/use-desktop-os"
 import {
   buildAlternateLinks,
   buildOgLocaleMeta,
@@ -40,6 +44,7 @@ import { PROTON_DISCOUNT } from "@/lib/affiliate"
 import { SITE_URL } from "@/lib/blog"
 import { useTranslations } from "@/hooks/use-i18n"
 import { useTheme } from "@/hooks/use-theme"
+import { useDesktopOS } from "@/hooks/use-desktop-os"
 import { LocaleLink } from "@/components/LocaleLink"
 
 /**
@@ -49,8 +54,10 @@ import { LocaleLink } from "@/components/LocaleLink"
  * during SSR/prerender with no JS, and reads a small pointer for the version.
  */
 const GPS_CDN_BASE = "https://cdn.geospoof.com/gps"
-/** Stable download alias — always the latest build. Safe as an SSR href. */
+/** Stable macOS download alias — always the latest build. Safe as an SSR href. */
 const GPS_LATEST_DMG = `${GPS_CDN_BASE}/latest.dmg`
+/** Stable Windows download alias — always the latest build. Safe as an SSR href. */
+const GPS_LATEST_EXE = `${GPS_CDN_BASE}/windows/latest-Setup.exe`
 /** Version pointer the UI fetches to display the current version number. */
 const GPS_LATEST_JSON = `${GPS_CDN_BASE}/latest.json`
 /** GeoSpoof iOS app — the control surface for GeoSpoof GPS (Pro unlocks device GPS). */
@@ -89,23 +96,40 @@ export const Route = createFileRoute("/{-$locale}/gps")({
   head: ({ params }) => buildGpsHead(toLocale(params.locale)),
 })
 
-/** Shape of the CDN `gps/latest.json` pointer written by the release workflow. */
+/**
+ * Shape of the CDN `gps/latest.json` pointer written by the release workflow.
+ *
+ * As published today the pointer is macOS-only — `{ version, dmg, date }`, with
+ * no Windows entry (verified against the live CDN). So `dmg` stays required and
+ * `exe` is optional: when it's absent the Windows button keeps the stable
+ * `windows/latest-Setup.exe` alias, which is always the newest build. Do not
+ * make `exe` required — a missing field would bail out of the whole resolver
+ * and take the version label down with it.
+ *
+ * Caveat worth knowing: because the pointer is written by the macOS pipeline,
+ * `version` describes the Mac build. It's displayed as the product version
+ * under either button, which is only strictly accurate while the two platforms
+ * release in lockstep. If they diverge, add a per-platform version to the
+ * manifest rather than labelling the Windows download with this one.
+ */
 interface LatestGpsManifest {
   version: string
   dmg: string
+  exe?: string
   date?: string
 }
 
 interface ResolvedRelease {
   version: string
   dmgUrl: string
+  exeUrl: string
 }
 
 /**
  * Resolve the latest GeoSpoof GPS version at runtime from the CDN pointer
  * (`gps/latest.json`). Returns `null` until resolved (and if the request
- * fails), in which case the UI keeps the stable `latest.dmg` download link,
- * which works during SSR/prerender and offline.
+ * fails), in which case the UI keeps the stable `latest.*` download links,
+ * which work during SSR/prerender and offline.
  */
 function useLatestGpsRelease(): ResolvedRelease | null {
   const [release, setRelease] = React.useState<ResolvedRelease | null>(null)
@@ -121,10 +145,14 @@ function useLatestGpsRelease(): ResolvedRelease | null {
       )
       .then((data) => {
         if (!data || !data.version || !data.dmg) return
-        setRelease({ version: data.version, dmgUrl: data.dmg })
+        setRelease({
+          version: data.version,
+          dmgUrl: data.dmg,
+          exeUrl: data.exe ?? GPS_LATEST_EXE,
+        })
       })
       .catch(() => {
-        /* leave the stable latest.dmg link in place */
+        /* leave the stable latest.dmg / latest-Setup.exe links in place */
       })
     return () => controller.abort()
   }, [])
@@ -132,36 +160,131 @@ function useLatestGpsRelease(): ResolvedRelease | null {
   return release
 }
 
-function DownloadCard() {
+/** One downloadable desktop build. */
+interface GpsBuild {
+  os: Exclude<DesktopOS, "unknown">
+  /** Button label, e.g. "Download for Windows". */
+  cta: string
+  /** Platform name for the downloads-section card heading. */
+  name: string
+  /** One-line system requirement shown on the card. */
+  requirement: string
+  href: string
+  Icon: LucideIcon
+}
+
+/**
+ * The desktop builds, in their authored order (macOS first, the older build).
+ * Both are always rendered: the prerendered HTML then links every installer, so
+ * the page is complete for crawlers and for anyone with JavaScript off, and
+ * detection only ever changes emphasis and order — never availability.
+ */
+function useGpsBuilds(
+  release: ResolvedRelease | null
+): ReadonlyArray<GpsBuild> {
   const { t } = useTranslations()
   const d = t.gps.download
-  const release = useLatestGpsRelease()
+  const s = t.gps.downloads
+
+  return [
+    {
+      os: "macos",
+      cta: d.ctaMac,
+      name: s.macName,
+      requirement: s.macRequirement,
+      href: release ? release.dmgUrl : GPS_LATEST_DMG,
+      Icon: Apple,
+    },
+    {
+      os: "windows",
+      cta: d.ctaWindows,
+      name: s.windowsName,
+      requirement: s.windowsRequirement,
+      href: release ? release.exeUrl : GPS_LATEST_EXE,
+      Icon: Monitor,
+    },
+  ]
+}
+
+/**
+ * The build to offer as the single hero CTA.
+ *
+ * Falls back to macOS when detection hasn't resolved or the visitor is on
+ * neither desktop OS (phone, tablet, Linux). macOS is the deliberate default:
+ * it's what the prerendered HTML ships with, so it's also what a visitor with
+ * JavaScript disabled keeps, and it was the platform GPS launched on. A Windows
+ * visitor gets the right button as soon as the detection effect runs; until
+ * then the "all platforms" link below the button is their way through.
+ */
+function primaryBuild(
+  builds: ReadonlyArray<GpsBuild>,
+  os: DesktopOS
+): GpsBuild {
+  const target = os === "unknown" ? "macos" : os
+  return builds.find((b) => b.os === target) ?? builds[0]
+}
+
+/**
+ * The hero download control: one auto-detected primary button, the resolved
+ * version, and a permanent link to the full downloads list.
+ *
+ * One button, not one per platform. Two equally-weighted CTAs is the pattern
+ * every design system warns about (one primary per section) and it makes the
+ * visitor answer a question the page can usually answer for them. The same
+ * shape is what cross-platform desktop apps converge on — a detected primary
+ * plus an exhaustive per-platform list further down the page.
+ *
+ * The cost of one button is that /gps is prerendered (see `vite.config.ts`), so
+ * the static HTML has to commit to a platform and a Windows visitor sees "Mac"
+ * until the detection effect runs. That's why `d.allPlatforms` below is
+ * unconditional: the escape hatch ships in the HTML, so the guess being wrong
+ * (or JavaScript being off) is never a dead end.
+ */
+function DownloadCard({ release }: { release: ResolvedRelease | null }) {
+  const { t } = useTranslations()
+  const d = t.gps.download
+  const os = useDesktopOS()
+  const { cta, href, Icon } = primaryBuild(useGpsBuilds(release), os)
 
   return (
     <div className="mx-auto flex max-w-xl flex-col items-center">
-      <div className="flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row">
-        <a
-          href={release ? release.dmgUrl : GPS_LATEST_DMG}
-          className={cn(
-            "inline-flex min-h-14 w-full items-center justify-center gap-2 sm:w-auto",
-            "rounded-brand bg-(--color-brand) px-8 text-lg font-semibold text-white",
-            "shadow-md transition-all hover:bg-(--color-brand-dark) hover:shadow-lg",
-            "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
-          )}
-        >
-          <Apple className="size-5" aria-hidden="true" />
-          {d.cta}
-        </a>
-      </div>
+      {/* A link, not a button: it navigates to a file. The label carries the
+          word "Download", so no extra role or aria-label is needed. */}
+      <a
+        href={href}
+        aria-describedby="gps-download-version"
+        className={cn(
+          "inline-flex min-h-14 w-full items-center justify-center gap-2 sm:w-auto",
+          "rounded-brand bg-(--color-brand) px-8 text-lg font-semibold text-white",
+          "shadow-md transition-all hover:bg-(--color-brand-dark) hover:shadow-lg",
+          "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand)"
+        )}
+      >
+        <Icon className="size-5" aria-hidden="true" />
+        {cta}
+      </a>
 
+      {/* `min-h-5` reserves the line so resolving the version doesn't shift the
+          links below it. Announced politely because it arrives after paint. */}
       <p
+        id="gps-download-version"
         className="mt-3 min-h-5 text-sm text-(--color-canvas-muted)"
         aria-live="polite"
       >
         {release ? `${d.versionLabel}: v${release.version}` : d.resolving}
       </p>
 
-      <p className="mt-1 max-w-md text-center text-xs text-(--color-canvas-muted)">
+      {/* Always present, never conditional on detection: the escape hatch for
+          anyone the guess is wrong for, and for people downloading for a
+          machine they aren't sitting at. */}
+      <a
+        href="#downloads"
+        className="mt-1 text-sm font-medium text-(--color-brand) hover:underline"
+      >
+        {d.allPlatforms}
+      </a>
+
+      <p className="mt-3 max-w-md text-center text-xs text-(--color-canvas-muted)">
         {d.iosNote}{" "}
         <a
           href={APP_STORE_URL}
@@ -171,6 +294,103 @@ function DownloadCard() {
         </a>
       </p>
     </div>
+  )
+}
+
+/**
+ * The full downloads list: every build, its system requirement, and the version
+ * it resolves to. The hero promotes one build; this section is where someone
+ * downloading for a machine they aren't sitting at (or checking requirements
+ * before they commit) finds the other one stated plainly.
+ *
+ * Anchored as #downloads so the hero, /support and release notes can deep-link.
+ */
+function Downloads({ release }: { release: ResolvedRelease | null }) {
+  const { t } = useTranslations()
+  const s = t.gps.downloads
+  const d = t.gps.download
+  const os = useDesktopOS()
+  const builds = useGpsBuilds(release)
+
+  return (
+    <Section
+      narrow
+      id="downloads"
+      className="scroll-mt-24 py-12! md:py-16!"
+      aria-labelledby="gps-downloads-heading"
+    >
+      <h2
+        id="gps-downloads-heading"
+        className="mb-3 text-2xl font-bold text-(--color-canvas-foreground) md:text-3xl"
+      >
+        {s.title}
+      </h2>
+      <p className="mb-8 max-w-2xl text-(--color-canvas-muted)">{s.intro}</p>
+
+      <ul className="grid gap-5 sm:grid-cols-2">
+        {builds.map(({ os: buildOS, cta, name, requirement, href, Icon }) => (
+          <li
+            key={buildOS}
+            className={cn(
+              "flex flex-col rounded-2xl border bg-(--color-canvas) p-6",
+              os === buildOS
+                ? "border-brand/40 ring-1 ring-brand/20"
+                : "border-(--color-canvas-border)"
+            )}
+          >
+            <div className="mb-4 flex items-center gap-3">
+              <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-(--color-brand)">
+                <Icon className="size-5" aria-hidden="true" />
+              </span>
+              <h3 className="font-semibold text-(--color-canvas-foreground)">
+                {name}
+              </h3>
+              {/* Only ever additive: appears after detection, never replaces copy. */}
+              {os === buildOS ? (
+                <span className="ml-auto rounded-full bg-brand/10 px-2.5 py-1 text-xs font-medium text-(--color-brand)">
+                  {s.recommended}
+                </span>
+              ) : null}
+            </div>
+
+            <p className="mb-5 text-sm leading-relaxed text-(--color-canvas-muted)">
+              {requirement}
+            </p>
+
+            {/* w-full so both cards' buttons are identical regardless of how
+                long the translated label is. */}
+            <a
+              href={href}
+              className={cn(
+                "mt-auto inline-flex min-h-11 w-full items-center justify-center gap-2",
+                "rounded-brand bg-(--color-brand) px-5 text-sm font-semibold text-white",
+                "shadow-sm transition-all hover:bg-(--color-brand-dark) hover:shadow-md",
+                "focus:outline-none focus-visible:ring-2 focus-visible:ring-(--color-brand) focus-visible:ring-offset-2"
+              )}
+            >
+              <Download className="size-4" aria-hidden="true" />
+              {cta}
+            </a>
+          </li>
+        ))}
+      </ul>
+
+      {/* Not a live region: the hero already announces the resolved version, and
+          a second polite region would announce the same string twice. */}
+      <p className="mt-6 min-h-5 text-sm text-(--color-canvas-muted)">
+        {release ? `${d.versionLabel}: v${release.version}` : d.resolving}
+      </p>
+
+      <p className="mt-4 text-sm leading-relaxed text-(--color-canvas-muted)">
+        {s.proNote}{" "}
+        <a
+          href={APP_STORE_URL}
+          className="font-medium text-(--color-brand) hover:underline"
+        >
+          {d.iosCta}
+        </a>
+      </p>
+    </Section>
   )
 }
 
@@ -186,9 +406,26 @@ function StructuredData() {
     description: g.meta.description,
     url: pageUrl,
     image: `${SITE_URL}/icon.png`,
+    screenshot: [
+      `${SITE_URL}/images/gps/geospoof-gps-app-preview-1-light.png`,
+      `${SITE_URL}/images/gps/gps-windows-tray-hint.png`,
+    ],
     applicationCategory: "UtilitiesApplication",
-    operatingSystem: "macOS 13+",
-    downloadUrl: GPS_LATEST_DMG,
+    operatingSystem: "macOS 13+, Windows 10+",
+    // The app itself is a free download; device GPS needs Pro, which is bought
+    // in the iOS app. Declaring price 0 is what makes the free download
+    // explicit — omitting `offers` entirely reads as "price unknown". No
+    // `aggregateRating`: we have no review data for this product and inventing
+    // one would be both dishonest and a structured-data violation.
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+    },
+    // Both installers. `downloadUrl` accepts repeated values, and listing the
+    // stable aliases (not the version-pinned URLs) keeps the schema valid
+    // between releases.
+    downloadUrl: [GPS_LATEST_DMG, GPS_LATEST_EXE],
     author: { "@type": "Person", name: "Anthony Sgro" },
     publisher: {
       "@type": "Organization",
@@ -283,13 +520,20 @@ function HowItWorks() {
   const h = t.gps.howItWorks
 
   return (
-    <Section narrow className="py-12! md:py-16!">
-      <h2 className="mb-3 text-2xl font-bold text-(--color-canvas-foreground) md:text-3xl">
+    <Section
+      narrow
+      className="py-12! md:py-16!"
+      aria-labelledby="gps-how-it-works-heading"
+    >
+      <h2
+        id="gps-how-it-works-heading"
+        className="mb-3 text-2xl font-bold text-(--color-canvas-foreground) md:text-3xl"
+      >
         {h.title}
       </h2>
       <p className="mb-8 max-w-2xl text-(--color-canvas-muted)">{h.intro}</p>
 
-      {/* Menu-bar app shot — the UI everything below refers to. */}
+      {/* Desktop app shot — the UI everything below refers to. */}
       <GpsMenuShot />
 
       <ol className="grid gap-5 sm:grid-cols-2">
@@ -339,13 +583,13 @@ function HowItWorks() {
 /**
  * The full statement of the connection requirement, which is the most misread
  * thing about the product. "Cable once, then wireless" was being read as
- * "unplug and go, Mac not required". The Mac app is what sets the GPS, so the
- * connection is needed to change a location and not just to set one up;
+ * "unplug and go, computer not required". The desktop app is what sets the GPS,
+ * so the connection is needed to change a location and not just to set one up;
  * dropping the cable only swaps USB for the local network.
  *
- * The one supported way to keep a location without the Mac (turning Developer
- * Mode off) is stated here with its cost attached, so it can't be mistaken for
- * general untethered operation.
+ * The one supported way to keep a location without the computer (turning
+ * Developer Mode off) is stated here with its cost attached, so it can't be
+ * mistaken for general untethered operation.
  *
  * Anchored as #connection so the hero card and support pages can deep-link.
  */
@@ -356,8 +600,16 @@ function ConnectionRequirements() {
   const c = t.gps.connection
 
   return (
-    <Section narrow id="connection" className="scroll-mt-24 py-12! md:py-16!">
-      <h2 className="mb-3 text-2xl font-bold text-(--color-canvas-foreground) md:text-3xl">
+    <Section
+      narrow
+      id="connection"
+      className="scroll-mt-24 py-12! md:py-16!"
+      aria-labelledby="gps-connection-heading"
+    >
+      <h2
+        id="gps-connection-heading"
+        className="mb-3 text-2xl font-bold text-(--color-canvas-foreground) md:text-3xl"
+      >
         {c.title}
       </h2>
       <p className="mb-8 max-w-2xl text-(--color-canvas-muted)">{c.intro}</p>
@@ -384,7 +636,7 @@ function ConnectionRequirements() {
         })}
       </ul>
 
-      {/* Keeping a location without the Mac, and what it costs you. */}
+      {/* Keeping a location without the computer, and what it costs you. */}
       <div className="mt-6 flex items-start gap-3 rounded-2xl border border-(--color-canvas-border) bg-brand/5 p-6 md:p-8">
         <Unplug
           className="mt-0.5 size-6 shrink-0 text-(--color-brand)"
@@ -491,28 +743,64 @@ function IpVpnCallout() {
 }
 
 /**
- * Preview of the GeoSpoof GPS macOS app, shown in the "How it works" section so
- * people recognise the UI the steps refer to. Theme-aware PNGs carry their own
+ * Preview of the GeoSpoof GPS desktop app, shown in the "How it works" section
+ * so people recognise the UI the steps refer to. The PNGs carry their own
  * window chrome, so we render as-is with a soft drop-shadow.
+ *
+ * Platform-aware, and the Windows variant is doing real work rather than just
+ * matching the visitor's chrome: it frames the tray-overflow flyout, which is
+ * the answer to "I installed it and nothing opened". The app has no window on
+ * either OS, and on Windows it can start out hidden behind the taskbar's
+ * show-hidden-icons chevron. The caption states where to look either way, so
+ * the information isn't only carried by the image.
+ *
+ * macOS is the fallback for "unknown" (and the prerendered default), matching
+ * the hero button. Only the macOS shot is theme-aware; the Windows capture is a
+ * single asset, which is fine — it reads on both themes against its own chrome.
  */
 function GpsMenuShot() {
   const { resolvedTheme } = useTheme()
   const { t } = useTranslations()
-  const src =
-    resolvedTheme === "dark"
-      ? "/images/gps/geospoof-gps-app-preview-1-dark.png"
-      : "/images/gps/geospoof-gps-app-preview-1-light.png"
+  const os = useDesktopOS()
+
+  if (os === "windows") {
+    return (
+      <figure className="mb-10">
+        <img
+          src="/images/gps/gps-windows-tray-hint.png"
+          alt={t.gps.trayShotAlt}
+          width={472}
+          height={616}
+          loading="lazy"
+          decoding="async"
+          className="mx-auto h-auto w-full max-w-sm rounded-xl drop-shadow-2xl"
+        />
+        <figcaption className="mx-auto mt-4 max-w-md text-center text-sm text-(--color-canvas-muted)">
+          {t.gps.trayHintWindows}
+        </figcaption>
+      </figure>
+    )
+  }
 
   return (
-    <img
-      src={src}
-      alt={t.gps.menuShotAlt}
-      width={744}
-      height={868}
-      loading="lazy"
-      decoding="async"
-      className="mx-auto mb-10 h-auto w-full max-w-md drop-shadow-2xl"
-    />
+    <figure className="mb-10">
+      <img
+        src={
+          resolvedTheme === "dark"
+            ? "/images/gps/geospoof-gps-app-preview-1-dark.png"
+            : "/images/gps/geospoof-gps-app-preview-1-light.png"
+        }
+        alt={t.gps.menuShotAlt}
+        width={744}
+        height={868}
+        loading="lazy"
+        decoding="async"
+        className="mx-auto h-auto w-full max-w-md drop-shadow-2xl"
+      />
+      <figcaption className="mx-auto mt-4 max-w-md text-center text-sm text-(--color-canvas-muted)">
+        {t.gps.trayHintMac}
+      </figcaption>
+    </figure>
   )
 }
 
@@ -571,9 +859,9 @@ function PreflightItem({
 
 /**
  * The two things people have bought GeoSpoof GPS on a wrong assumption about:
- * the Mac requirement (it isn't a standalone iPhone app, and the connection is
- * needed to change a location, not just to set one up) and AR-game
- * compatibility.
+ * the computer requirement (it isn't a standalone iPhone app, and the
+ * connection is needed to change a location, not just to set one up) and
+ * AR-game compatibility.
  *
  * Both belong above the fold. They started out as two loose amber notes stacked
  * under the download button, which read as noise, since a second warning next
@@ -614,6 +902,11 @@ function PreflightNotes() {
 export function GpsPage() {
   const { t } = useTranslations()
   const g = t.gps
+  // Resolved once here and passed down: both the hero and the downloads list
+  // need it, and two `useLatestGpsRelease()` calls would fire two concurrent
+  // requests for the same pointer (in-flight requests don't share an HTTP cache
+  // hit).
+  const release = useLatestGpsRelease()
 
   return (
     <div className="min-h-screen bg-(--color-canvas)">
@@ -621,7 +914,10 @@ export function GpsPage() {
       <Navigation />
       <main id="main-content">
         {/* Hero + download */}
-        <Section className="pt-12! pb-8! md:pt-20! md:pb-12!">
+        <Section
+          className="pt-12! pb-8! md:pt-20! md:pb-12!"
+          aria-labelledby="gps-hero-heading"
+        >
           <Breadcrumb className="mx-auto mb-8 max-w-3xl">
             <BreadcrumbList>
               <BreadcrumbItem>
@@ -637,7 +933,10 @@ export function GpsPage() {
           </Breadcrumb>
           <div className="mx-auto max-w-3xl text-center">
             <HeroIcon />
-            <h1 className="mb-5 text-4xl leading-tight font-bold text-(--color-canvas-foreground) md:text-5xl">
+            <h1
+              id="gps-hero-heading"
+              className="mb-5 text-4xl leading-tight font-bold text-(--color-canvas-foreground) md:text-5xl"
+            >
               {g.hero.headingPre}
               <span className="text-(--color-brand)">
                 {g.hero.headingEmphasis}
@@ -648,7 +947,7 @@ export function GpsPage() {
               {g.hero.intro}
             </p>
 
-            <DownloadCard />
+            <DownloadCard release={release} />
 
             {/* Set expectations before the download, not after. */}
             <PreflightNotes />
@@ -665,6 +964,10 @@ export function GpsPage() {
         {/* The tethering requirement, in full — the formal version of the
             "Cable once, then over the network" card above it. */}
         <ConnectionRequirements />
+
+        {/* Every build with its requirements, for anyone downloading for a
+            machine they aren't sitting at. The hero only promotes one. */}
+        <Downloads release={release} />
 
         {/* Quiet setup-help link to the full guide on /support, for anyone who
             hits a snag during first-time setup. */}
