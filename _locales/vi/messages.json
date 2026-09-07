@@ -354,11 +354,19 @@
     "description": "Footer link that opens a short modal asking the user to leave a store review."
   },
   "iosPromo_text": {
-    "message": "Mới: GeoSpoof GPS cho iPhone & Mac",
+    "message": "Mới: GeoSpoof GPS cho iPhone, Mac & Windows",
     "description": "Footer cross-link label announcing the GeoSpoof app is now available across Apple platforms, linking to the App Store."
   },
+  "iosPromo_textMac": {
+    "message": "Mới: GeoSpoof GPS cho iPhone & Mac",
+    "description": "Variant of iosPromo_text swapped in at runtime for users on macOS, naming only the desktop platform they have."
+  },
+  "iosPromo_textWindows": {
+    "message": "Mới: GeoSpoof GPS cho iPhone & Windows",
+    "description": "Variant of iosPromo_text swapped in at runtime for users on Windows, naming only the desktop platform they have."
+  },
   "iosPromo_ariaLabel": {
-    "message": "Mới — GeoSpoof GPS: vị trí cấp thiết bị trên iPhone và Mac",
+    "message": "Mới — GeoSpoof GPS: vị trí cấp thiết bị trên iPhone, Mac và Windows",
     "description": "Accessible label for the footer cross-link to the GeoSpoof Apple app (the visible text sits next to an Apple logo glyph)."
   },
   "vpnPromo_text": {

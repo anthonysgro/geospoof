@@ -354,12 +354,20 @@
     "description": "Footer link that opens a short modal asking the user to leave a store review."
   },
   "iosPromo_text": {
+    "message": "New: GeoSpoof GPS for iPhone, Mac & Windows",
+    "description": "Footer cross-link label announcing GeoSpoof GPS, linking to the App Store. Names every platform; shown before the host OS is known and to users on an OS with no desktop build (Linux, ChromeOS, Android, iOS)."
+  },
+  "iosPromo_textMac": {
     "message": "New: GeoSpoof GPS for iPhone & Mac",
-    "description": "Footer cross-link label announcing the GeoSpoof app is now available across Apple platforms, linking to the App Store."
+    "description": "Variant of iosPromo_text swapped in at runtime for users on macOS, naming only the desktop platform they have."
+  },
+  "iosPromo_textWindows": {
+    "message": "New: GeoSpoof GPS for iPhone & Windows",
+    "description": "Variant of iosPromo_text swapped in at runtime for users on Windows, naming only the desktop platform they have."
   },
   "iosPromo_ariaLabel": {
-    "message": "New — GeoSpoof GPS: device-level location on iPhone and Mac",
-    "description": "Accessible label for the footer cross-link to the GeoSpoof Apple app (the visible text sits next to an Apple logo glyph)."
+    "message": "New — GeoSpoof GPS: device-level location on iPhone, Mac and Windows",
+    "description": "Accessible label for the footer cross-link to the GeoSpoof app. Matches the all-platforms default text; the runtime swap replaces it with the platform-specific label."
   },
   "vpnPromo_text": {
     "message": "Pair with Proton VPN",

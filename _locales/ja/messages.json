@@ -354,11 +354,19 @@
     "description": "Footer link that opens a short modal asking the user to leave a store review."
   },
   "iosPromo_text": {
-    "message": "新機能：GeoSpoof GPS（iPhone・Mac 対応）",
+    "message": "新機能：GeoSpoof GPS（iPhone・Mac・Windows 対応）",
     "description": "Footer cross-link label announcing the GeoSpoof app is now available across Apple platforms, linking to the App Store."
   },
+  "iosPromo_textMac": {
+    "message": "新機能：GeoSpoof GPS（iPhone・Mac 対応）",
+    "description": "Variant of iosPromo_text swapped in at runtime for users on macOS, naming only the desktop platform they have."
+  },
+  "iosPromo_textWindows": {
+    "message": "新機能：GeoSpoof GPS（iPhone・Windows 対応）",
+    "description": "Variant of iosPromo_text swapped in at runtime for users on Windows, naming only the desktop platform they have."
+  },
   "iosPromo_ariaLabel": {
-    "message": "新機能 — GeoSpoof GPS：iPhone と Mac でデバイスレベルの位置情報",
+    "message": "新機能 — GeoSpoof GPS：iPhone・Mac・Windows でデバイスレベルの位置情報",
     "description": "Accessible label for the footer cross-link to the GeoSpoof Apple app (the visible text sits next to an Apple logo glyph)."
   },
   "vpnPromo_text": {

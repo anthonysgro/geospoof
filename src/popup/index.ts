@@ -725,15 +725,54 @@ document.addEventListener("DOMContentLoaded", () => {
     if (body1 && iosCopy) body1.textContent = iosCopy;
   }
 
-  // Footer ecosystem cross-link. Every platform keeps the App Store
-  // cross-link ("Now on iPhone, iPad & Mac"), which ships as the static
-  // default in popup.html. We deliberately show it regardless of the host OS:
-  // iOS is our growth priority, and non-Apple users (Windows/Linux/Android/
-  // ChromeOS) still commonly own an iPhone or iPad, so the App Store link is
-  // relevant to them too. The Proton VPN affiliate slot (vpnPromoLink) stays
-  // hidden.
+  // Footer ecosystem cross-link. Shown on every platform: the App Store is
+  // where GeoSpoof Pro is bought, and Pro is what unlocks device GPS no matter
+  // which desktop build drives it, so the link is relevant even to someone on
+  // Windows or Linux. The Proton VPN affiliate slot (vpnPromoLink) stays hidden.
+  void refineEcosystemPromo();
   void initPopupSettings();
 });
+
+/**
+ * Narrow the footer promo to the desktop OS the user is actually on, so a
+ * Windows user reads "iPhone & Windows" rather than being told about a Mac they
+ * may not own. GeoSpoof GPS ships on both desktop platforms, so naming the
+ * wrong one is a reason not to click.
+ *
+ * The static markup in popup.html names every platform ("iPhone, Mac &
+ * Windows"), which is accurate for everyone. That matters because
+ * `getPlatformInfo` is async: the pre-resolution label is never wrong, and
+ * detection only ever makes it more specific. Anything we can't place — Linux,
+ * ChromeOS, Android, iOS, or a failed call — keeps the full list.
+ *
+ * `runtime.getPlatformInfo` rather than user-agent sniffing: it's the API built
+ * for this, it reports the host OS instead of the rendering engine, and it
+ * behaves the same on Chromium and Firefox.
+ */
+async function refineEcosystemPromo(): Promise<void> {
+  const link = document.getElementById("iosPromoLink");
+  const label = link?.querySelector<HTMLElement>('[data-i18n="iosPromo_text"]');
+  if (!link || !label) return;
+
+  let os: string;
+  try {
+    ({ os } = await browser.runtime.getPlatformInfo());
+  } catch {
+    return; // Keep the all-platforms default.
+  }
+
+  const key = os === "win" ? "iosPromo_textWindows" : os === "mac" ? "iosPromo_textMac" : "";
+  if (!key) return;
+
+  // t() returns "" for a key missing from every catalog; don't blank the label.
+  const copy = t(key);
+  if (!copy) return;
+
+  label.textContent = copy;
+  // Keep the accessible name equal to the visible text (WCAG 2.5.3, Label in
+  // Name) now that the visible text is more specific than the static default.
+  link.setAttribute("aria-label", copy);
+}
 
 /**
  * Fetch settings once, apply any stored UI-language override (re-translating

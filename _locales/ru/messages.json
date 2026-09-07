@@ -354,11 +354,19 @@
     "description": "Footer link that opens a short modal asking the user to leave a store review."
   },
   "iosPromo_text": {
-    "message": "Новое: GeoSpoof GPS для iPhone и Mac",
+    "message": "Новое: GeoSpoof GPS для iPhone, Mac и Windows",
     "description": "Footer cross-link label announcing the GeoSpoof app is now available across Apple platforms, linking to the App Store."
   },
+  "iosPromo_textMac": {
+    "message": "Новое: GeoSpoof GPS для iPhone и Mac",
+    "description": "Variant of iosPromo_text swapped in at runtime for users on macOS, naming only the desktop platform they have."
+  },
+  "iosPromo_textWindows": {
+    "message": "Новое: GeoSpoof GPS для iPhone и Windows",
+    "description": "Variant of iosPromo_text swapped in at runtime for users on Windows, naming only the desktop platform they have."
+  },
   "iosPromo_ariaLabel": {
-    "message": "Новое — GeoSpoof GPS: геолокация на уровне устройства на iPhone и Mac",
+    "message": "Новое — GeoSpoof GPS: геолокация на уровне устройства на iPhone, Mac и Windows",
     "description": "Accessible label for the footer cross-link to the GeoSpoof Apple app (the visible text sits next to an Apple logo glyph)."
   },
   "vpnPromo_text": {
