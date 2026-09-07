@@ -977,10 +977,11 @@ final class SpoofController: ObservableObject {
     /// location. Default off — moving the real device location is consequential
     /// (Find My, every app), so it's an explicit opt-in, never automatic.
     @Published var deviceGpsEnabled = false
-    /// The controller (Mac) the user chose to drive THIS phone's GPS, by stable controller
-    /// id (controller-arbitration). `nil` in the common single-Mac case — the agent's sole
-    /// present controller drives with no prompt; set only when two+ Macs are present and the
-    /// user picks one. Mirrored into `desired.json` as `owner_id`.
+    /// The controller (a Mac or Windows PC running GeoSpoof GPS) the user chose to drive
+    /// THIS phone's GPS, by stable controller id (controller-arbitration). `nil` in the
+    /// common single-computer case — the agent's sole present controller drives with no
+    /// prompt; set only when two+ computers are present and the user picks one. Mirrored
+    /// into `desired.json` as `owner_id`.
     @Published var selectedControllerId: String?
     /// Site-scoping state. Mutated via the explicit setters below (which write
     /// the pending bridge record) and by adoption in refreshFromExtension /
@@ -1310,7 +1311,7 @@ final class SpoofController: ObservableObject {
         Log.app.info("SpoofController init")
         loadFavorites()
         // Restore the device-GPS opt-in (§13) so the toggle survives relaunch, and the
-        // chosen controlling Mac (controller-arbitration) if any. Read straight from the
+        // chosen controlling computer (controller-arbitration) if any. Read straight from the
         // App Group plist rather than through `UserDefaults(suiteName:)` — see
         // `setSharedPrefsValue`. These two ran on every launch, which is why the
         // cfprefsd detach warning showed up before anything else in the log.
@@ -1734,7 +1735,7 @@ final class SpoofController: ObservableObject {
         writePending()
     }
 
-    /// Choose which Mac (by controller id) drives this phone's GPS, or `nil` to let the
+    /// Choose which computer (by controller id) drives this phone's GPS, or `nil` to let the
     /// sole present controller drive automatically (controller-arbitration). Persisted and
     /// mirrored into `desired.json` as `owner_id`. No-op if unchanged.
     func setSelectedController(_ id: String?) {
@@ -2461,9 +2462,10 @@ final class SpoofController: ObservableObject {
         if !entitlement.isEmpty {
             obj["entitlement"] = entitlement
         }
-        // The chosen controlling Mac (controller-arbitration). Omitted in the single-Mac
-        // case so the agent's sole-controller drives automatically; set only when the user
-        // picked among multiple Macs. The agent stands down on any Mac not named here.
+        // The chosen controlling computer (controller-arbitration). Omitted in the
+        // single-computer case so the agent's sole-controller drives automatically; set only
+        // when the user picked among several. The agent stands down on any computer not
+        // named here.
         if let ownerId = selectedControllerId, !ownerId.isEmpty {
             obj["owner_id"] = ownerId
         }
@@ -2695,7 +2697,7 @@ final class SpoofController: ObservableObject {
 
     /// Merge a single key into the App Group plist, or remove it when `value` is nil.
     ///
-    /// Exists so the GPS opt-in and controlling-Mac id can be persisted the same way
+    /// Exists so the GPS opt-in and controlling-computer id can be persisted the same way
     /// everything else in this container is. They previously went through
     /// `UserDefaults(suiteName:)`, which is the one thing every other writer here
     /// deliberately avoids: against an app-group container cfprefsd uses

@@ -24941,7 +24941,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "needs_review",
-            "value" : "与 Mac 或 Windows 电脑安全配对，无需越狄"
+            "value" : "与 Mac 或 Windows 电脑安全配对，无需越狱"
           }
         }
       }
@@ -31312,77 +31312,6 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "不只想要 Safari？GeoSpoof Pro 可直接从这台 Mac 设置已连接 iPhone 的真实 GPS，用于隐私保护和应用测试，无需越狱。这是可选功能；浏览器伪造始终免费。"
-          }
-        }
-      }
-    },
-    "Want more than Safari? GeoSpoof Pro can set your iPhone's real GPS for privacy and app testing, driven from a companion Mac app -- no jailbreak. It's optional; browser spoofing is free." : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Mehr als Safari gewünscht? GeoSpoof Pro kann das echte GPS deines iPhone für Privatsphäre und App-Tests setzen, gesteuert über eine begleitende Mac-App — ohne Jailbreak. Das ist optional; die Browser-Fälschung ist kostenlos."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "¿Quieres más que Safari? GeoSpoof Pro puede fijar el GPS real de tu iPhone para privacidad y pruebas de apps, controlado desde una app complementaria para Mac y sin jailbreak. Es opcional; la falsificación en el navegador es gratis."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Vous voulez aller au-delà de Safari ? GeoSpoof Pro peut définir le GPS réel de votre iPhone pour la confidentialité et les tests d’apps, piloté depuis une app Mac compagnon et sans jailbreak. C’est facultatif ; la simulation dans le navigateur est gratuite."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Ingin lebih dari Safari? GeoSpoof Pro dapat menetapkan GPS asli iPhone Anda untuk privasi dan pengujian app, dikendalikan dari app pendamping di Mac — tanpa jailbreak. Fitur ini opsional; pemalsuan di peramban tetap gratis."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Safariだけでは足りませんか？GeoSpoof Proなら、Mac用のコンパニオンアプリからiPhoneの実際のGPSを設定できます。プライバシーやアプリのテストに便利で、脱獄も不要です。任意の機能で、ブラウザの偽装は無料です。"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Wil je meer dan Safari? GeoSpoof Pro kan het echte GPS van je iPhone instellen voor privacy en het testen van apps, bestuurd vanuit een bijbehorende Mac-app — zonder jailbreak. Het is optioneel; spoofing in de browser is gratis."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Quer mais do que o Safari? O GeoSpoof Pro pode definir o GPS real do seu iPhone para privacidade e testes de apps, comandado por um app complementar para Mac — sem jailbreak. É opcional; a falsificação no navegador é gratuita."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Нужно больше, чем Safari? GeoSpoof Pro может задать настоящий GPS вашего iPhone для приватности и тестирования приложений — управление из приложения-компаньона на Mac, без джейлбрейка. Это необязательно; подмена в браузере бесплатна."
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Vill du ha mer än Safari? GeoSpoof Pro kan ställa in din iPhones riktiga GPS för integritet och apptestning, styrt från en Mac-app – ingen jailbreak. Det är valfritt; förfalskning i webbläsaren är gratis."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Bạn muốn nhiều hơn Safari? GeoSpoof Pro có thể đặt GPS thật của iPhone để phục vụ quyền riêng tư và kiểm thử ứng dụng, điều khiển từ ứng dụng đồng hành trên Mac — không cần jailbreak. Đây là tính năng tuỳ chọn; giả mạo trong trình duyệt vẫn miễn phí."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "不只想要 Safari？GeoSpoof Pro 可通过配套的 Mac 应用设置你 iPhone 的真实 GPS，用于隐私保护和应用测试，无需越狱。这是可选功能；浏览器伪造始终免费。"
           }
         }
       }
