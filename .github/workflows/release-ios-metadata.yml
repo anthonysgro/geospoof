@@ -60,7 +60,7 @@ jobs:
 
       - uses: actions/checkout@v7
 
-      - uses: ruby/setup-ruby@v1.317.0
+      - uses: ruby/setup-ruby@v1.321.0
         with:
           ruby-version: "3.3"
           bundler-cache: true
@@ -110,7 +110,7 @@ jobs:
 
       - name: Upload the downloaded copy as an artifact
         if: ${{ inputs.mode == 'download' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: appstore-metadata-live
           path: safari/fastlane/metadata/
