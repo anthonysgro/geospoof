@@ -17,12 +17,11 @@ import Testing
 /// is identical IEEE-754 on both platforms, so this only absorbs any float
 /// formatting differences, not real disagreement.
 ///
-/// ── One-time wiring (this repo has no Swift test target yet) ──────────────
-///   1. In Xcode: File ▸ New ▸ Target… ▸ Unit Testing Bundle, hosted by
-///      "GeoSpoof (iOS)" and/or "GeoSpoof (macOS)". Xcode 16+ scaffolds a Swift
-///      Testing bundle.
-///   2. Add this file (and Coordinates.swift) to the target's "Compile Sources".
-///   3. If the app module is not named `GeoSpoof`, update the `@testable import`.
+/// Runs in the `GeoSpoofTests` target, hosted by "GeoSpoof (iOS)". See
+/// `CONTRIBUTING.md` ▸ Swift tests for the command and for the one manual step a
+/// *new* test file needs (target membership — the target uses explicit file
+/// references, so a file merely present in this directory never runs).
+///
 /// The fixture JSON is read straight from the source tree via `#filePath`, so no
 /// bundle-resource copying is required.
 struct CoordinateParserParityTests {

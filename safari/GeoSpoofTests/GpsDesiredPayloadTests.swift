@@ -24,13 +24,16 @@ import Testing
 /// A user reports that as "it randomly jumped". It is silent, intermittent, and untraceable
 /// from the outside, which is exactly the class of defect worth spending a test on.
 ///
-/// ── One-time wiring (this repo has no Swift test target yet) ──────────────────
-///   1. In Xcode: File ▸ New ▸ Target… ▸ Unit Testing Bundle, hosted by "GeoSpoof (iOS)".
-///   2. Add this file and `Shared (App)/SpoofModel.swift` to the target's "Compile Sources".
-///   3. If the app module is not named `GeoSpoof`, update the `@testable import`.
+/// ── Running these ─────────────────────────────────────────────────────────────
+/// Target `GeoSpoofTests`, hosted by "GeoSpoof (iOS)", on the `GeoSpoof-iOS` scheme.
+/// `CONTRIBUTING.md` ▸ Swift tests has the command.
 ///
-/// Until that exists these assertions do not run in CI. See task 9.1 of
-/// `.kiro/specs/device-gps-motion/tasks.md`.
+/// **A new test file must be added to the target explicitly.** The target uses explicit file
+/// references rather than a synchronized folder, so a file merely sitting in this directory
+/// compiles nowhere and runs nowhere, silently.
+///
+/// Not yet part of CI — `xcodebuild test` needs a simulator. Task 9.1a of
+/// `.kiro/specs/device-gps-motion/tasks.md`. So these guard whoever runs them locally.
 @Suite("GPS desired.json payload")
 struct GpsDesiredPayloadTests {
 
@@ -40,13 +43,15 @@ struct GpsDesiredPayloadTests {
     private static func playingRoute(
         id: String = "morning-run",
         startedAt: Double = 1_789_300_000,
-        paused: Bool = false
+        paused: Bool = false,
+        repeats: Bool = false
     ) -> GpsMotionState {
         GpsMotionState(
             mode: .route,
             routeId: id,
             routeStartedAt: startedAt,
             routePaused: paused,
+            routeRepeats: repeats,
             steering: nil,
             lastConfirmedLatitude: nil,
             lastConfirmedLongitude: nil,
@@ -67,6 +72,7 @@ struct GpsDesiredPayloadTests {
             routeId: nil,
             routeStartedAt: nil,
             routePaused: false,
+            routeRepeats: false,
             steering: GpsSteeringVector(
                 seq: seq, headingDeg: heading, speedMps: speed, ttlSecs: ttl
             ),

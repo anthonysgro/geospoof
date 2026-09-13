@@ -1591,6 +1591,7 @@ struct GpsView: View {
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "questionmark.circle")
                         .foregroundColor(.secondary)
+                        .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 4) {
                         Text(controller.motionState.steering != nil
                             ? "You asked for steering."
@@ -1600,6 +1601,7 @@ struct GpsView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+                .accessibilityElement(children: .combine)
                 // Available here specifically *because* the report is stale. Withdrawing a request
                 // needs no knowledge of where the device is and no computer to be reachable, so it
                 // is safe when the pause and stop controls — which live in a section only rendered
@@ -1611,6 +1613,7 @@ struct GpsView: View {
                     Label("Cancel Request", systemImage: "xmark.circle")
                 }
                 .tint(.red)
+                .accessibilityHint("Takes effect when your computer next connects")
             } header: {
                 Text("Last request")
             } footer: {
@@ -1771,19 +1774,25 @@ struct GpsView: View {
                     ? "flag.checkered"
                     : (p.paused ? "pause.circle.fill" : "figure.walk.motion"))
                     .foregroundColor(p.finished ? .secondary : (p.paused ? .orange : .green))
+                    // Decorative: the state is already in the text beside it, and the colour is a
+                    // second encoding of the same thing for sighted users.
+                    .accessibilityHidden(true)
                 // "Finished", never "Stopped". The agent deliberately doesn't clear a completed
                 // route — the device holds the final point — so calling it stopped would suggest
                 // the location had reverted when it hasn't.
                 Text(p.finished ? "Route finished" : (p.paused ? "Route paused" : "Following route"))
                 Spacer()
             }
+            .accessibilityElement(children: .combine)
             if let name = p.name, !name.isEmpty {
                 infoRow("Route", Text(verbatim: name))
             }
             ProgressView(value: p.fraction)
                 .tint(.brand)
                 .accessibilityLabel(Text("Route progress"))
-                .accessibilityValue(Text(verbatim: distanceText(p.travelledM, of: p.totalM)))
+                // Leads with the duration, matching what the visible layout leads with — a bar read
+                // out as a bare percentage is the least useful form of the same information.
+                .accessibilityValue(Text(verbatim: progressAccessibilityValue(p)))
             infoRow("Travelled", Text(verbatim: distanceText(p.travelledM, of: p.totalM)))
             // Duration is what people actually decide on, so it leads over the distance pair.
             // Passed through from the agent, never derived: an as-recorded route's pace varies
@@ -1826,11 +1835,13 @@ struct GpsView: View {
                     ? "clock.badge.exclamationmark"
                     : (d.held ? "pause.circle.fill" : "dot.arrowtriangles.up.right.down.left.circle"))
                     .foregroundColor(d.expired ? .orange : (d.held ? .orange : .green))
+                    .accessibilityHidden(true)
                 // Three distinct states, deliberately worded apart: expiry is the deadline
                 // lapsing with no interaction, which is not the same as the user choosing to wait.
                 Text(d.expired ? "Steering timed out" : (d.held ? "Holding position" : "Steering"))
                 Spacer()
             }
+            .accessibilityElement(children: .combine)
             if let speed = d.speedMps, !d.held {
                 infoRow("Speed", Text(verbatim: speedText(speed)))
             }
@@ -1858,6 +1869,7 @@ struct GpsView: View {
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: "arrow.up.circle")
                     .foregroundColor(.orange)
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(asked == .route
                         ? "This computer isn't following your route."
@@ -1867,6 +1879,7 @@ struct GpsView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .accessibilityElement(children: .combine)
             if let version = statusStore.status?.agentVersion, !version.isEmpty {
                 infoRow("Computer app", Text(verbatim: version))
             }
@@ -1886,6 +1899,7 @@ struct GpsView: View {
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: "lock.circle")
                     .foregroundColor(.orange)
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Your computer couldn't confirm GeoSpoof Pro.")
                     Text("It checks your purchase directly with Apple, so this can differ from what this app shows. Restoring your purchase usually fixes it.")
@@ -1893,6 +1907,7 @@ struct GpsView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .accessibilityElement(children: .combine)
             Button {
                 router.showPaywall = true
             } label: {
@@ -1929,24 +1944,31 @@ struct GpsView: View {
                 // keeps spoofing; stopping ends playback. Neither reverts to the phone's real
                 // GPS — that's the Sync toggle below, and conflating the three is the mistake the
                 // agent contract warns about.
+                // Hints rather than longer labels. VoiceOver reads these three buttons in sequence
+                // with no visual context, and "Pause" / "Stop Route" alone don't say what they leave
+                // behind — which is the whole distinction between them and the Sync toggle. The hint
+                // carries that without making the visible labels wordy.
                 if playing.finished {
                     Button {
                         controller.restartGpsRoute()
                     } label: {
                         Label("Play Again", systemImage: "arrow.counterclockwise")
                     }
+                    .accessibilityHint("Plays this route again from its start")
                 } else if playing.paused {
                     Button {
                         controller.resumeGpsRoute()
                     } label: {
                         Label("Resume", systemImage: "play.fill")
                     }
+                    .accessibilityHint("Continues from where the route paused")
                 } else {
                     Button {
                         controller.pauseGpsRoute()
                     } label: {
                         Label("Pause", systemImage: "pause.fill")
                     }
+                    .accessibilityHint("Waits here. Your phone's location stays spoofed")
                 }
                 Button(role: .destructive) {
                     controller.stopGpsRoute()
@@ -1954,6 +1976,7 @@ struct GpsView: View {
                     Label("Stop Route", systemImage: "stop.fill")
                 }
                 .tint(.red)
+                .accessibilityHint("Ends the route. Your phone stays where the route left it")
             }
         } header: {
             Text("Route")
@@ -2037,6 +2060,18 @@ struct GpsView: View {
         }
     }
 
+    /// What VoiceOver reads for the progress bar.
+    ///
+    /// Duration first, then distance, mirroring the visible layout — and for the same reason: "about
+    /// nine minutes left" answers the question a bare "37 percent" doesn't. Distance alone for a
+    /// repeating route, which has no remaining time to state, and for a finished one, where a
+    /// countdown of zero would be noise.
+    private func progressAccessibilityValue(_ p: GpsRouteProgress) -> String {
+        let distance = distanceText(p.travelledM, of: p.totalM)
+        guard let remaining = p.remainingSecs, !p.finished else { return distance }
+        return "\(durationText(remaining)) left, \(distance)"
+    }
+
     private static func paceLabel(_ pace: GpsRoutePace) -> String {
         switch pace {
         case .asRecorded: return String(localized: "As recorded")
@@ -2086,6 +2121,22 @@ struct GpsView: View {
 
     /// One import path for every source, so a file behaves identically however it arrived.
     private func importRoute(from url: URL, deleteAfterReading: Bool) {
+        // Checked here rather than by hiding the button, because the button is not the only entrance.
+        // A GPX handed in from AirDrop, Mail or a share sheet reaches this method regardless of which
+        // phase the GPS tab is showing — so gating the UI alone left the worst possible outcome for a
+        // customer without Pro: the file was read, **deleted from our Inbox**, reported as loaded, and
+        // then nothing moved, with no copy left to retry from.
+        //
+        // Returning before the read is what makes it recoverable. The file stays where it is, so once
+        // they have Pro the same file opens again and works.
+        guard pro.isPro else {
+            routeImportMessage = String(
+                localized: "Routes need GeoSpoof Pro. Your file hasn't been changed — open it again once you upgrade."
+            )
+            showRouteImportAlert = true
+            router.showPaywall = true
+            return
+        }
         Task { @MainActor in
             let outcome = await Task.detached(priority: .userInitiated) {
                 // A URL from outside the container needs access taken explicitly and given back.
@@ -2111,7 +2162,9 @@ struct GpsView: View {
                 if let failure = controller.startGpsRoute(route) {
                     routeImportMessage = Self.message(for: failure)
                 } else {
-                    routeImportMessage = Self.startedMessage(for: route)
+                    routeImportMessage = Self.startedMessage(
+                        for: route, deviceGpsOff: !controller.deviceGpsEnabled
+                    )
                 }
             case .failure(let failure):
                 routeImportMessage = Self.message(for: failure)
@@ -2121,58 +2174,98 @@ struct GpsView: View {
         }
     }
 
-    private static func startedMessage(for route: GpsRoute) -> String {
+    // MARK: Import messages
+    //
+    // Every message below goes through `String(localized:)`, NOT a bare string literal.
+    //
+    // These are shown through `Text(routeImportMessage)`, and `Text` given a `String` uses the
+    // **non-localising** initialiser — so a plain `return "..."` here ships English to all eleven
+    // other languages, and does it at the exact moment something has gone wrong for the customer.
+    // The failure is invisible in English testing and invisible in the catalog, because a bare
+    // literal returned as a `String` is never extracted as a key at all.
+    //
+    // `String(localized:)` both registers the key for extraction and resolves it at runtime.
+    // Interpolating into it is correct and produces `%@`-style specifiers a translator can reorder.
+
+    private static func startedMessage(for route: GpsRoute, deviceGpsOff: Bool) -> String {
         let distance = Measurement(value: route.lengthMeters, unit: UnitLength.meters)
             .formatted(.measurement(width: .abbreviated, usage: .road))
-        let name = route.name?.isEmpty == false ? route.name! : "Route"
+        let name = route.name?.isEmpty == false ? route.name! : String(localized: "Route")
         // Names the pace when we had to choose one, so nobody is surprised by a walking-speed
         // replay of a cycling track.
+        let loaded: String
         switch route.speed {
         case .asRecorded:
-            return "\(name) loaded — \(distance), replaying at its recorded pace."
+            loaded = String(localized: "\(name) loaded — \(distance), replaying at its recorded pace.")
         case .fixed:
-            return "\(name) loaded — \(distance). This file had no timings, so it plays at walking pace."
+            loaded = String(localized: "\(name) loaded — \(distance). This file had no timings, so it plays at walking pace.")
         }
+        // Without this, importing a route with Device GPS switched off reports plain success and
+        // then nothing moves — the worst kind of failure, because it looks like it worked and the
+        // toggle that would fix it is one the customer may never have seen.
+        guard deviceGpsOff else { return loaded }
+        return joinSentences(loaded, String(localized: "Turn on Sync below to start moving your iPhone."))
+    }
+
+    /// Joins two already-localised sentences.
+    ///
+    /// Deliberately not a `"\(a) \(b)"` interpolation. Japanese and Simplified Chinese close a
+    /// sentence with `。` and put nothing after it, so an ASCII space leaves a visible gap that
+    /// reads as machine translation — small, but it is the kind of tell a customer notices before
+    /// they can say why.
+    ///
+    /// Keys off the terminator the translation actually used rather than the current locale, so it
+    /// stays correct if a translation mixes scripts, and needs no revisit when a language is added.
+    private static func joinSentences(_ first: String, _ second: String) -> String {
+        guard !first.isEmpty else { return second }
+        guard !second.isEmpty else { return first }
+        // Ideographic sentence-final punctuation. These are already full-width and carry their own
+        // trailing whitespace in the glyph.
+        let ideographicTerminators: Set<Character> = ["。", "！", "？", "、", "．"]
+        guard let last = first.last, ideographicTerminators.contains(last) else {
+            return first + " " + second
+        }
+        return first + second
     }
 
     private static func message(for failure: GpsGpxImportFailure) -> String {
         switch failure {
         case .unreadable:
-            return "That file couldn't be read."
+            return String(localized: "That file couldn't be read.")
         case .tooLarge(let bytes):
             let size = Measurement(value: Double(bytes), unit: UnitInformationStorage.bytes)
                 .formatted(.byteCount(style: .file))
-            return "That file is \(size), which is too large to use."
+            return String(localized: "That file is \(size), which is too large to use.")
         case .noTrack:
-            return "No route found in that file. GPX files exported from tracking apps should work."
+            return String(localized: "No route found in that file. GPX files exported from tracking apps should work.")
         case .notGpx(let root):
             // Names what the file actually is where we can. "Not a GPX file" alone invites a second
             // attempt with the same file.
             if let root, !root.isEmpty {
-                return "That isn't a GPX file — it starts with <\(root)>. Export a GPX from your tracking app."
+                return String(localized: "That isn't a GPX file — it starts with <\(root)>. Export a GPX from your tracking app.")
             }
-            return "That isn't a GPX file. Export a GPX from your tracking app."
+            return String(localized: "That isn't a GPX file. Export a GPX from your tracking app.")
         case .tooManyPoints(let count):
             // Names the number and refuses. Truncating would look like it worked.
-            return "That route has \(count.formatted()) points, which is more than \(GpsRoute.maxPoints.formatted()). Try exporting it at a lower detail."
+            return String(localized: "That route has \(count) points, which is more than \(GpsRoute.maxPoints). Try exporting it at a lower detail.")
         case .invalidCoordinate:
-            return "That route contains coordinates that aren't valid."
+            return String(localized: "That route contains coordinates that aren't valid.")
         }
     }
 
     private static func message(for failure: GpsRouteValidationFailure) -> String {
         switch failure {
         case .noPoints:
-            return "That route has no points."
+            return String(localized: "That route has no points.")
         case .tooManyPoints(let count):
-            return "That route has \(count.formatted()) points, which is more than \(GpsRoute.maxPoints.formatted())."
+            return String(localized: "That route has \(count) points, which is more than \(GpsRoute.maxPoints).")
         case .invalidCoordinate:
-            return "That route contains coordinates that aren't valid."
+            return String(localized: "That route contains coordinates that aren't valid.")
         case .invalidSpeed:
-            return "That route's pace isn't usable."
+            return String(localized: "That route's pace isn't usable.")
         case .writeFailed:
             // Nothing the user can act on, so it doesn't pretend to offer advice.
-            return "Couldn't save that route on this device."
+            return String(localized: "Couldn't save that route on this device.")
         }
     }
 
@@ -2246,6 +2339,11 @@ struct GpsView: View {
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.trailing)
         }
+        // Read as one element: "Travelled, 400 m of 1.1 km" rather than two stops that VoiceOver
+        // announces separately, where the value arrives detached from what it measures. Safe to
+        // combine because the value is always a `Text` — there is never an interactive child here
+        // whose own action would be swallowed.
+        .accessibilityElement(children: .combine)
     }
 
     /// Returns a built `Text` rather than a key: the first two branches are data

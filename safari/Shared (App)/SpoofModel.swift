@@ -3514,6 +3514,15 @@ final class SpoofController: ObservableObject {
         // out a window that began before this route existed.
         lastMotionBridgePush = nil
         startMotionSync()
+        // The widget shows the currently spoofed place, and `adoptMotionSample` deliberately
+        // suppresses reloads during playback — one per step would exhaust WidgetKit's budget and
+        // then the widget stops updating at all, which is worse than being briefly stale.
+        //
+        // But suppressing *every* reload left the widget showing wherever the route began for its
+        // entire duration, with no way to catch up. Reloading at the two edges — a route starting
+        // and stopping — costs two pushes per journey and removes the lasting inconsistency. The
+        // widget is a snapshot by nature; it can't track a moving position and shouldn't pretend to.
+        Self.scheduleWidgetReload()
         Log.bridge.info("GPS route started id=\(route.id) points=\(route.points.count)")
         return nil
     }
@@ -3599,6 +3608,7 @@ final class SpoofController: ObservableObject {
         state.steering = nil
         updateMotionState(state)
         stopMotionSync()
+        Self.scheduleWidgetReload()
         Log.bridge.info("GPS motion request cleared")
     }
 
@@ -3619,6 +3629,9 @@ final class SpoofController: ObservableObject {
         // Nothing left to follow. The coordinate stands where playback left it, which is what
         // keeps the device from snapping back to its real location on stop.
         stopMotionSync()
+        // The other edge — see `startGpsRoute`. Without it the widget keeps showing a position from
+        // partway through a route that has since ended.
+        Self.scheduleWidgetReload()
         Log.bridge.info("GPS route stopped")
     }
 

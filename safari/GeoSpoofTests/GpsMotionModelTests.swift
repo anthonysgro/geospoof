@@ -18,9 +18,8 @@ import Testing
 /// Neither failure throws. Both just quietly show the wrong thing, which is why they are worth
 /// pinning.
 ///
-/// ── One-time wiring (this repo has no Swift test target yet) ──────────────────
-/// See the header of `GpsDesiredPayloadTests.swift`. Until a target exists these do not run in
-/// CI; see task 9.1 of `.kiro/specs/device-gps-motion/tasks.md`.
+/// ── Running these ─────────────────────────────────────────────────────────────
+/// See the header of `GpsDesiredPayloadTests.swift`, or `CONTRIBUTING.md` ▸ Swift tests.
 @Suite("GPS motion model")
 struct GpsMotionModelTests {
 
@@ -65,9 +64,13 @@ struct GpsMotionModelTests {
         )
     }
 
-    private static func askedRoute(startedAt: Double = 1_789_300_000) -> GpsMotionState {
+    private static func askedRoute(
+        startedAt: Double = 1_789_300_000,
+        repeats: Bool = false
+    ) -> GpsMotionState {
         GpsMotionState(
             mode: .route, routeId: "l-shaped", routeStartedAt: startedAt, routePaused: false,
+            routeRepeats: repeats,
             steering: nil, lastConfirmedLatitude: nil, lastConfirmedLongitude: nil,
             lastConfirmedAt: nil
         )
@@ -76,6 +79,7 @@ struct GpsMotionModelTests {
     private static func askedSteering(seq: Double = 7) -> GpsMotionState {
         GpsMotionState(
             mode: .steering, routeId: nil, routeStartedAt: nil, routePaused: false,
+            routeRepeats: false,
             steering: GpsSteeringVector(seq: seq, headingDeg: 90, speedMps: 3, ttlSecs: 900),
             lastConfirmedLatitude: nil, lastConfirmedLongitude: nil, lastConfirmedAt: nil
         )

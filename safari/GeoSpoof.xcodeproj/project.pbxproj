@@ -79,6 +79,12 @@
 		C0DE000000000000000000E5 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D5 /* Localizable.xcstrings */; };
 		C0DE000000000000000000F5 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D5 /* Localizable.xcstrings */; };
 		C0DE000000000000000000A6 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D5 /* Localizable.xcstrings */; };
+		92FE7E202FE9A00100C77A70 /* CoordinateParserParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92FE7E102FE9A00100C77A70 /* CoordinateParserParityTests.swift */; };
+		92FE7E212FE9A00100C77A70 /* GpsDesiredPayloadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92FE7E112FE9A00100C77A70 /* GpsDesiredPayloadTests.swift */; };
+		92FE7E222FE9A00100C77A70 /* GpsMotionModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92FE7E122FE9A00100C77A70 /* GpsMotionModelTests.swift */; };
+		92FE7E232FE9A00100C77A70 /* LocaleSpoofingParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92FE7E132FE9A00100C77A70 /* LocaleSpoofingParityTests.swift */; };
+		92FE7E242FE9A00100C77A70 /* PatternParserParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92FE7E142FE9A00100C77A70 /* PatternParserParityTests.swift */; };
+		92FE7E252FE9A00100C77A70 /* RouteIdFixtureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92FE7E152FE9A00100C77A70 /* RouteIdFixtureTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -102,6 +108,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 9281AAB22FA50690007C77A7;
 			remoteInfo = "GeoSpoof Extension (macOS)";
+		};
+		92FE7E0A2FE9A00100C77A70 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9281AA782FA50690007C77A7 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9281AA8A2FA50690007C77A7;
+			remoteInfo = "GeoSpoof (iOS)";
 		};
 /* End PBXContainerItemProxy section */
 
@@ -188,6 +201,13 @@
 		C0DE000000000000000000D5 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		C0DE000000000000000000D6 /* Nunito-Variable.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Nunito-Variable.ttf"; sourceTree = "<group>"; };
 		C0DE000000000000000000D7 /* Nunito-OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Nunito-OFL.txt"; sourceTree = "<group>"; };
+		92FE7E102FE9A00100C77A70 /* CoordinateParserParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoordinateParserParityTests.swift; sourceTree = "<group>"; };
+		92FE7E112FE9A00100C77A70 /* GpsDesiredPayloadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GpsDesiredPayloadTests.swift; sourceTree = "<group>"; };
+		92FE7E122FE9A00100C77A70 /* GpsMotionModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GpsMotionModelTests.swift; sourceTree = "<group>"; };
+		92FE7E132FE9A00100C77A70 /* LocaleSpoofingParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocaleSpoofingParityTests.swift; sourceTree = "<group>"; };
+		92FE7E142FE9A00100C77A70 /* PatternParserParityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternParserParityTests.swift; sourceTree = "<group>"; };
+		92FE7E152FE9A00100C77A70 /* RouteIdFixtureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteIdFixtureTests.swift; sourceTree = "<group>"; };
+		92FE7E072FE9A00100C77A70 /* GeoSpoofTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GeoSpoofTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -253,6 +273,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		92FE7E052FE9A00100C77A70 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -285,6 +312,7 @@
 				928E35922FA665B700A67B9A /* GeoSpoof (macOS) copy-Info.plist */,
 				923A6B122FD78C6100D06B19 /* GeoSpoof Widget */,
 				923A6B0D2FD78C6100D06B19 /* Frameworks */,
+				92FE7E082FE9A00100C77A70 /* GeoSpoofTests */,
 				9281AA8C2FA50690007C77A7 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -342,6 +370,7 @@
 				9281AA9D2FA50690007C77A7 /* GeoSpoof.app */,
 				9281AAA92FA50690007C77A7 /* GeoSpoof Extension.appex */,
 				9281AAB32FA50690007C77A7 /* GeoSpoof Extension.appex */,
+				92FE7E072FE9A00100C77A70 /* GeoSpoofTests.xctest */,
 				923A6B0C2FD78C6100D06B19 /* GeoSpoof WidgetExtension.appex */,
 			);
 			name = Products;
@@ -399,6 +428,19 @@
 			name = Resources;
 			path = "Shared (Extension)";
 			sourceTree = SOURCE_ROOT;
+		};
+		92FE7E082FE9A00100C77A70 /* GeoSpoofTests */ = {
+			isa = PBXGroup;
+			children = (
+				92FE7E102FE9A00100C77A70 /* CoordinateParserParityTests.swift */,
+				92FE7E112FE9A00100C77A70 /* GpsDesiredPayloadTests.swift */,
+				92FE7E122FE9A00100C77A70 /* GpsMotionModelTests.swift */,
+				92FE7E132FE9A00100C77A70 /* LocaleSpoofingParityTests.swift */,
+				92FE7E142FE9A00100C77A70 /* PatternParserParityTests.swift */,
+				92FE7E152FE9A00100C77A70 /* RouteIdFixtureTests.swift */,
+			);
+			path = GeoSpoofTests;
+			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
@@ -495,6 +537,24 @@
 			productReference = 9281AAB32FA50690007C77A7 /* GeoSpoof Extension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		92FE7E002FE9A00100C77A70 /* GeoSpoofTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 92FE7E012FE9A00100C77A70 /* Build configuration list for PBXNativeTarget "GeoSpoofTests" */;
+			buildPhases = (
+				92FE7E042FE9A00100C77A70 /* Sources */,
+				92FE7E052FE9A00100C77A70 /* Frameworks */,
+				92FE7E062FE9A00100C77A70 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				92FE7E092FE9A00100C77A70 /* PBXTargetDependency */,
+			);
+			name = GeoSpoofTests;
+			productName = GeoSpoofTests;
+			productReference = 92FE7E072FE9A00100C77A70 /* GeoSpoofTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -507,6 +567,10 @@
 				TargetAttributes = {
 					923A6B0B2FD78C6100D06B19 = {
 						CreatedOnToolsVersion = 26.5;
+					};
+					92FE7E002FE9A00100C77A70 = {
+						CreatedOnToolsVersion = 26.5;
+						TestTargetID = 9281AA8A2FA50690007C77A7;
 					};
 					9281AA8A2FA50690007C77A7 = {
 						CreatedOnToolsVersion = 26.4.1;
@@ -551,6 +615,7 @@
 				9281AA9C2FA50690007C77A7 /* GeoSpoof (macOS) */,
 				9281AAA82FA50690007C77A7 /* GeoSpoof Extension (iOS) */,
 				9281AAB22FA50690007C77A7 /* GeoSpoof Extension (macOS) */,
+				92FE7E002FE9A00100C77A70 /* GeoSpoofTests */,
 				923A6B0B2FD78C6100D06B19 /* GeoSpoof WidgetExtension */,
 			);
 		};
@@ -629,6 +694,13 @@
 				9281AAE22FA50691007C77A7 /* icons in Resources */,
 				9281AAE32FA50691007C77A7 /* manifest.json in Resources */,
 				9281AADF2FA50691007C77A7 /* popup in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		92FE7E062FE9A00100C77A70 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -738,6 +810,19 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		92FE7E042FE9A00100C77A70 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				92FE7E202FE9A00100C77A70 /* CoordinateParserParityTests.swift in Sources */,
+				92FE7E212FE9A00100C77A70 /* GpsDesiredPayloadTests.swift in Sources */,
+				92FE7E222FE9A00100C77A70 /* GpsMotionModelTests.swift in Sources */,
+				92FE7E232FE9A00100C77A70 /* LocaleSpoofingParityTests.swift in Sources */,
+				92FE7E242FE9A00100C77A70 /* PatternParserParityTests.swift in Sources */,
+				92FE7E252FE9A00100C77A70 /* RouteIdFixtureTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -755,6 +840,11 @@
 			isa = PBXTargetDependency;
 			target = 9281AAB22FA50690007C77A7 /* GeoSpoof Extension (macOS) */;
 			targetProxy = 9281AAB52FA50690007C77A7 /* PBXContainerItemProxy */;
+		};
+		92FE7E092FE9A00100C77A70 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9281AA8A2FA50690007C77A7 /* GeoSpoof (iOS) */;
+			targetProxy = 92FE7E0A2FE9A00100C77A70 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -1311,6 +1401,54 @@
 			};
 			name = Release;
 		};
+		92FE7E022FE9A00100C77A70 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 71;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 2.1.6;
+				PRODUCT_BUNDLE_IDENTIFIER = com.moonloaf.geospoof.GeoSpoofTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/GeoSpoof.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/GeoSpoof";
+				TEST_TARGET_NAME = "GeoSpoof (iOS)";
+			};
+			name = Debug;
+		};
+		92FE7E032FE9A00100C77A70 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 71;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 2.1.6;
+				PRODUCT_BUNDLE_IDENTIFIER = com.moonloaf.geospoof.GeoSpoofTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/GeoSpoof.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/GeoSpoof";
+				TEST_TARGET_NAME = "GeoSpoof (iOS)";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1364,6 +1502,15 @@
 			buildConfigurations = (
 				9281AAD52FA50690007C77A7 /* Debug */,
 				9281AAD62FA50690007C77A7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		92FE7E012FE9A00100C77A70 /* Build configuration list for PBXNativeTarget "GeoSpoofTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				92FE7E022FE9A00100C77A70 /* Debug */,
+				92FE7E032FE9A00100C77A70 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

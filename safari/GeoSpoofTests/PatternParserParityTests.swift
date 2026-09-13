@@ -14,13 +14,8 @@ import Testing
 /// which matters because scope lists round-trip across the App Group bridge and
 /// are deduped against each other's canonical form.
 ///
-/// ── One-time wiring (this repo has no Swift test target yet) ──────────────
-///   1. In Xcode: File ▸ New ▸ Target… ▸ Unit Testing Bundle. Set the host
-///      application to "GeoSpoof (iOS)" (and/or add a second bundle hosted by
-///      "GeoSpoof (macOS)"). Xcode 16+ scaffolds a Swift Testing bundle.
-///   2. Add this file to that test target's "Compile Sources".
-///   3. If the app module is not named `GeoSpoof`, update the `@testable import`
-///      above to match PRODUCT_MODULE_NAME.
+/// ── Running these ─────────────────────────────────────────────────────────────
+/// See the header of `GpsDesiredPayloadTests.swift`, or `CONTRIBUTING.md` ▸ Swift tests.
 /// The fixture JSON is read straight from the source tree via `#filePath`, so no
 /// bundle-resource copying is required.
 struct PatternParserParityTests {

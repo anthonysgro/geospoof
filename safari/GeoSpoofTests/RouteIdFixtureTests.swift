@@ -38,9 +38,8 @@ import Testing
 /// value is a decision someone made deliberately; a red assertion may mean the decision was reverted
 /// rather than that the fixture is stale.
 ///
-/// ── One-time wiring (this repo has no Swift test target yet) ──────────────────
-/// See the header of `GpsDesiredPayloadTests.swift`. Until a target exists these do not run in CI;
-/// see task 9.1 of `.kiro/specs/device-gps-motion/tasks.md`.
+/// ── Running these ─────────────────────────────────────────────────────────────
+/// See the header of `GpsDesiredPayloadTests.swift`, or `CONTRIBUTING.md` ▸ Swift tests.
 @Suite("Route id shared fixture")
 struct RouteIdFixtureTests {
 
@@ -137,10 +136,13 @@ struct RouteIdFixtureTests {
         for group in Self.fixture.mustShareAnID {
             let ids = group.map { Self.route(named: $0).derivedID }
             let distinct = Set(ids)
+            // One interpolated literal, not `String + String`. `#expect`'s second argument is a
+            // `Comment`, which is expressible by string *literal* — a concatenation is a plain
+            // `String` and will not convert.
+            let detail = zip(group, ids).map { "\($0) -> \($1)" }.joined(separator: ", ")
             #expect(
                 distinct.count == 1,
-                "these must share an id but produced \(distinct.count): "
-                    + zip(group, ids).map { "\($0) -> \($1)" }.joined(separator: ", ")
+                "these must share an id but produced \(distinct.count): \(detail)"
             )
         }
     }
@@ -180,7 +182,7 @@ struct RouteIdFixtureTests {
     func normalisationIsIdempotent() {
         for c in Self.fixture.cases {
             let once = c.route.normalisedForImport()
-            #expect(once.derivedID == once.normalisedForImport().derivedID, c.name)
+            #expect(once.derivedID == once.normalisedForImport().derivedID, "\(c.name)")
         }
     }
 

@@ -223,6 +223,45 @@ Notes on that:
   no translation may be empty. Untranslated and stale keys warn rather than fail,
   since a missing translation falls back to the source text.
 
+### Swift tests
+
+`npm test` does not cover the Swift app. Those live in `safari/GeoSpoofTests/` and
+run through the `GeoSpoofTests` target on the `GeoSpoof-iOS` scheme:
+
+```bash
+cd safari
+xcodebuild -project GeoSpoof.xcodeproj -scheme GeoSpoof-iOS \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+  -configuration Debug test CODE_SIGNING_ALLOWED=NO
+```
+
+A simulator destination is required — `generic/platform=iOS` builds but cannot run
+tests. Debug is required too: `@testable import GeoSpoof` needs
+`ENABLE_TESTABILITY`, which is only set for Debug.
+
+To read the result as numbers rather than scrolling the log:
+
+```bash
+RESULT=$(ls -td ~/Library/Developer/Xcode/DerivedData/GeoSpoof-*/Logs/Test/*.xcresult | head -1)
+xcrun xcresulttool get test-results summary --path "$RESULT"
+```
+
+Two things to know before adding a test file:
+
+- **Add it to the `GeoSpoofTests` target.** The target uses explicit file
+  references, not a synchronized folder, so a new file in the directory is not
+  picked up automatically. It will simply never run, with nothing to indicate it.
+  In Xcode: select the file, File Inspector, tick `GeoSpoofTests` under Target
+  Membership.
+- **`#expect`'s second argument is a `Comment`, not a `String`.** It is expressible
+  by string literal, so `"saw \(value)"` works, but a `String` variable or a
+  `a + b` concatenation will not compile. Build the message into one interpolated
+  literal.
+
+Fixtures shared with the agent (`tests/fixtures/*.json`) are read from the source
+tree via `#filePath`, not from the test bundle, so they need no resource phase and
+stay byte-identical with the copy `geospoof-gps` checks.
+
 ## Project Configuration
 
 ### Path Aliases

@@ -1,4 +1,8 @@
 import Foundation
+import SwiftUI  // `rowLabel` is a `LocalizedStringKey`; comparing one to a string literal
+                // needs its `ExpressibleByStringLiteral` conformance in scope, and
+                // `SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY` means an indirect
+                // import through the app module does not supply it.
 import Testing
 @testable import GeoSpoof
 
@@ -26,12 +30,8 @@ import Testing
 /// to `off`, so an unsupported tag cannot take effect. These tests pin the part
 /// Swift *is* responsible for: structural validity and the fail-closed default.
 ///
-/// ── One-time wiring (this repo has no Swift test target yet) ──────────────
-///   1. In Xcode: File ▸ New ▸ Target… ▸ Unit Testing Bundle, hosted by
-///      "GeoSpoof (iOS)" and/or "GeoSpoof (macOS)".
-///   2. Add this file to the target's "Compile Sources" (SpoofModel.swift and
-///      LocaleCatalog.swift already build as part of the app targets).
-///   3. If the app module is not named `GeoSpoof`, update the `@testable import`.
+/// ── Running these ─────────────────────────────────────────────────────────────
+/// See the header of `GpsDesiredPayloadTests.swift`, or `CONTRIBUTING.md` ▸ Swift tests.
 struct LocaleSpoofingParityTests {
 
     // MARK: - Decoding
@@ -207,6 +207,9 @@ struct LocaleSpoofingParityTests {
         #expect(SpoofLocaleSpoofing.match.rowLabel == "Match Location")
         // Resolves through the catalog rather than showing the bare tag.
         #expect(SpoofLocaleSpoofing.custom(locale: "fr-FR").rowLabel != "fr-FR")
-        #expect(!SpoofLocaleSpoofing.custom(locale: "fr-FR").rowLabel.isEmpty)
+        // `LocalizedStringKey` has no `isEmpty` — it is an opaque key, not a string. Comparing
+        // against the empty key is the assertion that was intended: a blank row is the failure
+        // mode worth guarding, because it renders as an invisible tappable row.
+        #expect(SpoofLocaleSpoofing.custom(locale: "fr-FR").rowLabel != LocalizedStringKey(""))
     }
 }
