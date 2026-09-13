@@ -1,0 +1,246 @@
+{
+  "version": 1,
+  "algorithm": "r1",
+  "note": [
+    "Golden fixture for the route id scheme defined in ROUTE_ID_AGREEMENT.md and APP_CONTRACT.md.",
+    "This file is COPIED BYTE-FOR-BYTE into the GeoSpoof iOS/macOS app repository, and a CI check in",
+    "each repo compares the two copies. It is the only thing standing between one algorithm described",
+    "in two places and two algorithms that agree until someone touches either.",
+    "",
+    "Each case gives a route and the id it must produce. 'why' says what the case is for; a case whose",
+    "expected id changes should be investigated, not regenerated.",
+    "",
+    "'normalise_first' means the route is given as a source file would supply it, and the importer",
+    "normalisation (round coordinates, drop partial offsets) must be applied before hashing. Where it is",
+    "absent the route is already normalised, and normalising it again must not change its id -- the test",
+    "asserts that, so a case cannot quietly stop being realistic."
+  ],
+  "cases": [
+    {
+      "name": "fixed-speed",
+      "why": "The baseline: two points, a chosen pace, no recorded timings, no looping.",
+      "route": {
+        "version": 1,
+        "id": "input-ids-are-ignored",
+        "name": "Baseline",
+        "points": [
+          { "lat": 35.681236, "lon": 139.767125 },
+          { "lat": 35.682, "lon": 139.768 }
+        ],
+        "speed": { "kind": "fixed", "mps": 1.4 },
+        "repeat": false
+      },
+      "id": "r1-48c2a2c41638c6914b0eb29afede7bb7"
+    },
+    {
+      "name": "as-recorded",
+      "why": "Same geometry as fixed-speed, different pace. A geometry-only hash would have collided these two, and the agent serves a cached route on an id match alone -- so the collision would have played one route at another's pace, not merely mis-deduplicated a library.",
+      "route": {
+        "version": 1,
+        "id": "whatever-the-source-said",
+        "name": "Recorded pace",
+        "points": [
+          { "lat": 35.681236, "lon": 139.767125 },
+          { "lat": 35.682, "lon": 139.768 }
+        ],
+        "speed": { "kind": "as-recorded" },
+        "repeat": false
+      },
+      "id": "r1-ff83d8a452ee97cb1880039e805879a8"
+    },
+    {
+      "name": "repeat",
+      "why": "Same geometry and pace as fixed-speed, looping. A route that restarts forever is not the same route as one that stops.",
+      "route": {
+        "version": 1,
+        "id": "input-ids-are-ignored",
+        "name": "Circuit",
+        "points": [
+          { "lat": 35.681236, "lon": 139.767125 },
+          { "lat": 35.682, "lon": 139.768 }
+        ],
+        "speed": { "kind": "fixed", "mps": 1.4 },
+        "repeat": true
+      },
+      "id": "r1-8f8f1302e7037a3d7d55ce14d380e6f9"
+    },
+    {
+      "name": "recorded-offsets",
+      "why": "Same geometry and pace policy as as-recorded, but with recorded timings. Identical geometry walked to a different clock is a different route, which is why offsets are in the encoding and why an offset's presence has its own byte.",
+      "route": {
+        "version": 1,
+        "id": "input-ids-are-ignored",
+        "name": "Timed track",
+        "points": [
+          { "lat": 35.681236, "lon": 139.767125, "offset_secs": 0.0 },
+          { "lat": 35.682, "lon": 139.768, "offset_secs": 30.0 }
+        ],
+        "speed": { "kind": "as-recorded" },
+        "repeat": false
+      },
+      "id": "r1-b2b3c4eebcac1c38283304bc5b79a704"
+    },
+    {
+      "name": "rounding-boundary",
+      "why": "Coordinates sitting on a rounding boundary at the seventh decimal, in both directions from zero. Half away from zero and half to even disagree here, and that is the split between f64::round / Double.rounded and format!(\"{:.6}\") / String(format:). A text-based encoding would have diverged exactly here and nowhere else, which is the hardest kind of bug to find.",
+      "route": {
+        "version": 1,
+        "id": "input-ids-are-ignored",
+        "name": "Rounding",
+        "points": [
+          { "lat": 0.0000005, "lon": -0.0000005 },
+          { "lat": 35.6812365, "lon": 139.7671255 }
+        ],
+        "speed": { "kind": "as-recorded" },
+        "repeat": false
+      },
+      "id": "r1-02ebe2966829ba5d3664b2b3d827fe2b"
+    },
+    {
+      "name": "negative-and-antimeridian",
+      "why": "Southern hemisphere, and a leg crossing the antimeridian so longitude jumps from just under +180 to just over -180. Nothing in the encoding should care, and this is here to prove it: a sign-magnitude or unsigned encoding would fail, and so would anything normalising longitude into a single range.",
+      "route": {
+        "version": 1,
+        "id": "input-ids-are-ignored",
+        "name": "Antimeridian",
+        "points": [
+          { "lat": -33.8688, "lon": 179.999999 },
+          { "lat": -33.869, "lon": -179.999999 }
+        ],
+        "speed": { "kind": "as-recorded" },
+        "repeat": false
+      },
+      "id": "r1-01e871c15a4ec8957685b5f9fb59ab21"
+    },
+    {
+      "name": "single-point",
+      "why": "A one-point route. Valid, and it must not hash like the two-point route that repeats the same point -- see duplicated-point.",
+      "route": {
+        "version": 1,
+        "id": "input-ids-are-ignored",
+        "name": "One point",
+        "points": [{ "lat": 35.681236, "lon": 139.767125 }],
+        "speed": { "kind": "as-recorded" },
+        "repeat": false
+      },
+      "id": "r1-aac1ff5a57e285385ad9531aba274881"
+    },
+    {
+      "name": "duplicated-point",
+      "why": "The same point twice: a zero-length route. Must differ from single-point, which is what fixed-width per-point framing guarantees and what a 'compress consecutive duplicates' optimisation would break.",
+      "route": {
+        "version": 1,
+        "id": "input-ids-are-ignored",
+        "name": "Stationary",
+        "points": [
+          { "lat": 35.681236, "lon": 139.767125 },
+          { "lat": 35.681236, "lon": 139.767125 }
+        ],
+        "speed": { "kind": "as-recorded" },
+        "repeat": false
+      },
+      "id": "r1-1951b111b7fcda733d1dbc67423bff2e"
+    },
+    {
+      "name": "zero-coordinates",
+      "why": "Null island, once as +0.0 and once as -0.0. The two encode identically because the units are integers -- a formatted-decimal encoding would write '-0.000000' for one of them and give one route two ids. Also the all-zero byte string, which a 'treat empty as absent' shortcut would mishandle.",
+      "route": {
+        "version": 1,
+        "id": "input-ids-are-ignored",
+        "name": "Null island",
+        "points": [
+          { "lat": 0.0, "lon": 0.0 },
+          { "lat": -0.0, "lon": -0.0 }
+        ],
+        "speed": { "kind": "as-recorded" },
+        "repeat": false
+      },
+      "id": "r1-d95d13dd8c06cc2b9b23aabbfe4391ad"
+    },
+    {
+      "name": "unknown-speed-kind",
+      "why": "A pace policy from a newer producer. MUST share as-recorded's id: both sides normalise an unrecognised kind to as-recorded before anything plays, so the two files play identically and the id describes a route as it will play. This case exists because the two implementations disagreed here -- one encoded a third 'unknown' speed kind -- and it would have given the same file two ids across the two repositories. The 'mps' value is present and deliberately ignored. Note the differing name, input id and version: those are excluded from the encoding, and sharing an id with as-recorded proves it.",
+      "route": {
+        "version": 99,
+        "id": "a-different-input-id",
+        "name": "A newer producer wrote this",
+        "points": [
+          { "lat": 35.681236, "lon": 139.767125 },
+          { "lat": 35.682, "lon": 139.768 }
+        ],
+        "speed": { "kind": "warp", "mps": 9.0 },
+        "repeat": false
+      },
+      "id": "r1-ff83d8a452ee97cb1880039e805879a8"
+    },
+    {
+      "name": "mixed-offsets",
+      "why": "A source file where only some points carry a timestamp. Both importers discard the offsets from ALL points, so this MUST share as-recorded's id. A partially timed route replays at neither the recorded pace nor a chosen one, and no status field can describe that state -- so it is normalised away rather than stored. Without the shared rule the same file would become two different routes before hashing even started, and no id scheme could rescue it. This is the one case where the route as given is NOT what gets stored: normalise_first says so.",
+      "route": {
+        "version": 1,
+        "id": "a-third-input-id",
+        "name": "Half-timed export",
+        "points": [
+          { "lat": 35.681236, "lon": 139.767125, "offset_secs": 0.0 },
+          { "lat": 35.682, "lon": 139.768 }
+        ],
+        "speed": { "kind": "as-recorded" },
+        "repeat": false
+      },
+      "normalise_first": true,
+      "id": "r1-ff83d8a452ee97cb1880039e805879a8"
+    },
+    {
+      "name": "non-monotonic-offsets",
+      "why": "Offsets that go backwards. Timestamps that decrease are not a pace, so the importer drops them from EVERY point and this MUST share as-recorded's id. Found on hardware with fells_loop.gpx, a topografix <rte> sample whose 46 route points carry waypoint CREATION dates spanning five months with 14 of 45 steps going backwards; read as a pace it crawls the first 136 m leg over 159 days. The rule is detect, never repair: no clamping, sorting or interpolating. The iOS importer clamped a negative offset to zero, and the clamp destroyed the only evidence the timeline was unusable, leaving a plausible-looking offset list that played confidently and wrongly.",
+      "route": {
+        "version": 1,
+        "id": "a-fourth-input-id",
+        "name": "Backwards clock",
+        "points": [
+          { "lat": 35.681236, "lon": 139.767125, "offset_secs": 10.0 },
+          { "lat": 35.682, "lon": 139.768, "offset_secs": 5.0 }
+        ],
+        "speed": { "kind": "as-recorded" },
+        "repeat": false
+      },
+      "normalise_first": true,
+      "id": "r1-ff83d8a452ee97cb1880039e805879a8"
+    },
+    {
+      "name": "repeated-timestamps",
+      "why": "Two consecutive points sharing an offset: a stationary pause, which is a real recording rather than a corrupt one. The rule is NON-DECREASING, not strictly increasing, so these offsets are KEPT -- and because this case is not marked normalise_first, the reader asserts normalising it is a no-op, which is what pins the distinction. Refusing equal timestamps would throw away a good track's pace over a moment of standing still.",
+      "route": {
+        "version": 1,
+        "id": "a-fifth-input-id",
+        "name": "Paused midway",
+        "points": [
+          { "lat": 35.681236, "lon": 139.767125, "offset_secs": 0.0 },
+          { "lat": 35.682, "lon": 139.768, "offset_secs": 30.0 },
+          { "lat": 35.683, "lon": 139.769, "offset_secs": 30.0 },
+          { "lat": 35.684, "lon": 139.77, "offset_secs": 60.0 }
+        ],
+        "speed": { "kind": "as-recorded" },
+        "repeat": false
+      },
+      "id": "r1-3d90dc753e7471a4b8d16eb38c57ce21"
+    }
+  ],
+  "must_share_an_id": [
+    ["as-recorded", "unknown-speed-kind", "mixed-offsets", "non-monotonic-offsets"]
+  ],
+  "must_all_differ": [
+    [
+      "fixed-speed",
+      "as-recorded",
+      "repeat",
+      "recorded-offsets",
+      "rounding-boundary",
+      "negative-and-antimeridian",
+      "single-point",
+      "duplicated-point",
+      "zero-coordinates",
+      "repeated-timestamps"
+    ]
+  ]
+}

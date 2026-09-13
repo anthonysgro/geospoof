@@ -280,6 +280,73 @@ struct GpsMotionModelTests {
         #expect(obj?["repeats"] == nil)
     }
 
+    // MARK: The delivery grace — a request needs time to arrive
+
+    @Test("a report predating the request does not read as a refusal")
+    func youngRequestIsNotARefusal() {
+        // The bug this pins, reported from hardware: "this computer isn't following your route"
+        // flashed up for about a second every time a route started. The freshest report at that
+        // moment was written *before* the request existed, so it said `still` — and the echo rule
+        // was applied instantly, turning a report about an older question into an accusation.
+        let justAsked = Self.askedRoute(startedAt: Date().timeIntervalSince1970)
+        let gate = GpsEchoGate(status: Self.status(motion: "still"), asked: justAsked)
+        #expect(gate.requestTooYoungToJudge())
+    }
+
+    @Test("once the grace window is up, silence does mean something")
+    func oldRequestIsJudged() {
+        // The other half: the grace must expire, or a genuinely outdated agent would never be
+        // reported and the user would wait forever for a route that is never going to play.
+        let longAgo = Date().timeIntervalSince1970 - (GpsEchoGate.deliveryGrace + 5)
+        let gate = GpsEchoGate(
+            status: Self.status(motion: "still"), asked: Self.askedRoute(startedAt: longAgo)
+        )
+        #expect(gate.requestTooYoungToJudge() == false)
+    }
+
+    @Test("the grace sits inside the agent's own cadence bracket")
+    func graceIsBracketed() {
+        // Not a chosen number. Above the agent's worst-case publish interval — POLL_INTERVAL (1s)
+        // plus PASS_HARVEST_BUDGET (5s) — so a legitimately slow acknowledgement isn't called a
+        // refusal. Below the 20s freshness window, or a report would go stale before we were ever
+        // willing to judge it, and the message could never appear at all.
+        #expect(GpsEchoGate.deliveryGrace > 6)
+        #expect(GpsEchoGate.deliveryGrace < GpsStatusStore.freshWindow)
+    }
+
+    @Test("steering requests are aged from seq, which is a millisecond timestamp")
+    func steeringRequestAge() {
+        let now = Date(timeIntervalSince1970: 2_000_000)
+        // `seq` is stamped in milliseconds on our own clock, so it doubles as "when we asked" —
+        // deliberately not compared against the report's `updatedAt`, which is the computer's clock.
+        var asked = Self.askedSteering(seq: (now.timeIntervalSince1970 - 3) * 1000)
+        asked.mode = .steering
+        let gate = GpsEchoGate(status: Self.status(motion: "steering"), asked: asked)
+        let age = gate.requestAge(now: now)
+        #expect(age != nil)
+        #expect(abs((age ?? 0) - 3) < 0.001)
+    }
+
+    @Test("a still request has no age, so it is never suppressed")
+    func stillRequestHasNoAge() {
+        // Nothing was asked for, so there is nothing awaiting delivery and no window to wait out.
+        let gate = GpsEchoGate(status: Self.status(motion: "still"), asked: .idle)
+        #expect(gate.requestAge() == nil)
+        #expect(gate.requestTooYoungToJudge() == false)
+    }
+
+    @Test("a clock that moved backwards suppresses rather than accuses")
+    func negativeAgeSuppresses() {
+        // A future timestamp yields a negative age. Suppressing is the recoverable direction: the
+        // next report resolves it either way, whereas a wrong accusation sends someone to update
+        // software that is already current.
+        let future = Date().timeIntervalSince1970 + 3600
+        let gate = GpsEchoGate(
+            status: Self.status(motion: "still"), asked: Self.askedRoute(startedAt: future)
+        )
+        #expect(gate.requestTooYoungToJudge())
+    }
+
     // MARK: Echo gate — steering
 
     @Test("timing is withheld until seq matches, and the position never is")

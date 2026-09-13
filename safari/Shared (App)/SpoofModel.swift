@@ -17,6 +17,8 @@ import Combine
 import SwiftUI
 import Foundation
 import CoreLocation
+// For the shared route-id hash — see `GpsRoute.derivedID`.
+import CryptoKit
 import Network
 import os
 import WidgetKit
@@ -773,6 +775,16 @@ nonisolated struct GpsMotionState: Codable, Equatable {
     /// Freeze playback in place, still spoofing. Not the same as `enabled: false`, which
     /// reverts to the phone's real GPS.
     var routePaused: Bool
+    /// Whether the loaded route loops.
+    ///
+    /// Recorded here so the UI never has to *infer* it from the agent's report. An absent
+    /// `remaining_secs` means "a looping route has no finish time" — but it will also come to mean
+    /// "this route's recorded timeline is unusable", and those need different sentences. Inferring
+    /// from absence would state the wrong one with total confidence.
+    ///
+    /// Kept in this record rather than read back from `route.json` because the UI asks on every
+    /// render, and a file read per render to learn something we authored is the wrong trade.
+    var routeRepeats: Bool
 
     var steering: GpsSteeringVector?
 
@@ -791,11 +803,56 @@ nonisolated struct GpsMotionState: Codable, Equatable {
         routeId: nil,
         routeStartedAt: nil,
         routePaused: false,
+        routeRepeats: false,
         steering: nil,
         lastConfirmedLatitude: nil,
         lastConfirmedLongitude: nil,
         lastConfirmedAt: nil
     )
+
+    /// Decoded field by field with every key optional, rather than by the synthesized decoder.
+    ///
+    /// Swift's synthesized `Codable` requires every non-optional key to be present — a default value
+    /// does *not* make it tolerant, which is a common and expensive surprise. And
+    /// `GpsMotionStateStore.load` deliberately falls back to `.idle` on any decode error, so a
+    /// single added field would silently discard a live route on first launch after an update: the
+    /// user's phone keeps walking while the app forgets it asked.
+    ///
+    /// So every field defaults. Adding one later can never reset somebody's session.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        mode = try c.decodeIfPresent(GpsMotionMode.self, forKey: .mode) ?? .still
+        routeId = try c.decodeIfPresent(String.self, forKey: .routeId)
+        routeStartedAt = try c.decodeIfPresent(Double.self, forKey: .routeStartedAt)
+        routePaused = try c.decodeIfPresent(Bool.self, forKey: .routePaused) ?? false
+        routeRepeats = try c.decodeIfPresent(Bool.self, forKey: .routeRepeats) ?? false
+        steering = try c.decodeIfPresent(GpsSteeringVector.self, forKey: .steering)
+        lastConfirmedLatitude = try c.decodeIfPresent(Double.self, forKey: .lastConfirmedLatitude)
+        lastConfirmedLongitude = try c.decodeIfPresent(Double.self, forKey: .lastConfirmedLongitude)
+        lastConfirmedAt = try c.decodeIfPresent(Double.self, forKey: .lastConfirmedAt)
+    }
+
+    init(
+        mode: GpsMotionMode,
+        routeId: String?,
+        routeStartedAt: Double?,
+        routePaused: Bool,
+        routeRepeats: Bool,
+        steering: GpsSteeringVector?,
+        lastConfirmedLatitude: Double?,
+        lastConfirmedLongitude: Double?,
+        lastConfirmedAt: Double?
+    ) {
+        self.mode = mode
+        self.routeId = routeId
+        self.routeStartedAt = routeStartedAt
+        self.routePaused = routePaused
+        self.routeRepeats = routeRepeats
+        self.steering = steering
+        self.lastConfirmedLatitude = lastConfirmedLatitude
+        self.lastConfirmedLongitude = lastConfirmedLongitude
+        self.lastConfirmedAt = lastConfirmedAt
+    }
 
     /// A `seq` for a fresh gesture.
     ///
@@ -858,6 +915,14 @@ nonisolated enum GpsRouteSpeed: Codable, Equatable {
     /// what a defaulted route will actually do.
     static let walkingMps: Double = 1.4
 
+    /// The pace this represents, for a picker's selection.
+    var pace: GpsRoutePace {
+        switch self {
+        case .asRecorded: return .asRecorded
+        case .fixed(let mps): return GpsRoutePace.nearest(toMps: mps)
+        }
+    }
+
     var wireValue: [String: Any] {
         switch self {
         case .fixed(let mps):
@@ -919,6 +984,54 @@ nonisolated enum GpsRouteSpeed: Codable, Equatable {
         case .asRecorded:
             try c.encode("as-recorded", forKey: .kind)
         }
+    }
+}
+
+/// A pace a user can choose for a route.
+///
+/// Exists because a GPX carries no useful pace far more often than you'd expect: a planned route has
+/// none at all, and a recorded track's timings are dropped whenever they aren't a usable timeline.
+/// Both cases land on the walking fallback, and without a picker someone who imported a cycling
+/// route is told their route plays at walking pace and can do nothing about it.
+///
+/// Every value is far below the agent's `MAX_SPEED_MPS` (100 m/s), so its clamp never fires for
+/// anything offered here — the clamp is a safety net against a malformed file, not a design
+/// constraint on this list.
+nonisolated enum GpsRoutePace: String, CaseIterable, Identifiable, Equatable {
+    /// Replay at the pace recorded in the file. Only offered when the route actually has a usable
+    /// timeline — offering it otherwise would let someone pick a pace that silently becomes walking.
+    case asRecorded
+    case walk
+    case jog
+    case run
+    case cycle
+    case drive
+
+    var id: String { rawValue }
+
+    /// Metres per second, or `nil` for `asRecorded`, whose pace comes from the file.
+    var mps: Double? {
+        switch self {
+        case .asRecorded: return nil
+        case .walk: return GpsRouteSpeed.walkingMps
+        case .jog: return 2.5
+        case .run: return 3.5
+        case .cycle: return 6
+        case .drive: return 13.9
+        }
+    }
+
+    var speed: GpsRouteSpeed {
+        mps.map { GpsRouteSpeed.fixed(mps: $0) } ?? .asRecorded
+    }
+
+    /// The choice whose pace is closest to `mps`, so a route imported with a fixed speed selects
+    /// something rather than showing an empty picker.
+    static func nearest(toMps mps: Double) -> GpsRoutePace {
+        let fixed = allCases.compactMap { pace -> (GpsRoutePace, Double)? in
+            pace.mps.map { (pace, abs($0 - mps)) }
+        }
+        return fixed.min { $0.1 < $1.1 }?.0 ?? .walk
     }
 }
 
@@ -1030,6 +1143,107 @@ nonisolated struct GpsRoute: Codable, Equatable {
     /// Finer than playback can express — the agent advances at roughly one-second ticks — which is
     /// the safe side: a lossier offset would let two files that play differently share an id.
     static let offsetResolution: Double = 0.001
+
+    /// This route as an importer must store it, before its id is computed.
+    ///
+    /// Mirrors the agent's `route::normalise_for_import`. It exists as one function, on the route
+    /// rather than inside the GPX parser, for the reason the agent gives: **none of these rules are
+    /// GPX-specific**, and the shared fixture supplies routes as JSON rather than as source files.
+    /// A rule that lived in a parser could not be exercised by the fixture, which is precisely the
+    /// gap that lets two importers drift.
+    ///
+    /// Three obligations, in order. Rounding runs first, so the checks judge the values that will
+    /// actually be stored:
+    ///
+    /// 1. **Round what you store, not just what you hash** — coordinates to 6 decimals, offsets to
+    ///    milliseconds. See `coordinateDecimals` for why the artefact must not disagree with its
+    ///    own id.
+    /// 2. **Offsets are all-or-nothing.** Any point missing a finite offset drops the pace from the
+    ///    whole route.
+    /// 3. **Offsets must be non-decreasing.** Any backwards step drops the pace from the whole
+    ///    route. **Do not repair** — no clamping, no sorting, no interpolating. Timestamps that go
+    ///    backwards are not a pace with a flaw in it; they are not a pace, and a repaired one plays
+    ///    confidently and wrongly.
+    ///
+    /// Speed needs no normalising here: an unrecognised `kind` already becomes `asRecorded` when
+    /// decoded, and an invalid `fixed` speed is refused by `validationFailure` rather than
+    /// substituted.
+    ///
+    /// See `.kiro/specs/device-gps-motion/route-id-agreement.md`.
+    func normalisedForImport() -> GpsRoute {
+        var copy = roundedForStorage()
+        let offsets = copy.points.map(\.offsetSecs)
+        let usable = offsets.allSatisfy { $0?.isFinite == true }
+            && zip(offsets, offsets.dropFirst()).allSatisfy { ($0 ?? 0) <= ($1 ?? 0) }
+        if !usable {
+            copy.points = copy.points.map {
+                GpsRoutePoint(lat: $0.lat, lon: $0.lon, offsetSecs: nil)
+            }
+        }
+        return copy
+    }
+
+    /// The bytes the shared route id is hashed over. **This is the cross-repo contract** — the hash
+    /// itself is incidental, the layout is the part that diverges.
+    ///
+    /// Fixed-width big-endian with no separators, so no two routes can produce identical bytes by
+    /// having a field boundary fall in a different place. Integer micro/milli units rather than
+    /// formatted decimals, which removes locale, float formatting and rounding *mode* from the
+    /// picture: `String(format: "%.6f")` is half-to-even while `Double.rounded()` is half-away-from
+    /// -zero, and they disagree only on an exact half at the seventh decimal, in whichever
+    /// direction nobody tested. Integers also make `-0.0` and `0.0` the same bytes.
+    ///
+    /// `version`, `id` and `name` are excluded — bookkeeping and display. Renaming a route must not
+    /// restart playback.
+    ///
+    /// Assumes an already-normalised route; call `normalisedForImport()` first.
+    var canonicalBytes: Data {
+        var data = Data()
+        func appendBigEndian(_ value: Int64) {
+            var be = value.bigEndian
+            withUnsafeBytes(of: &be) { data.append(contentsOf: $0) }
+        }
+        func scaled(_ value: Double, by factor: Double) -> Int64 {
+            Int64((value * factor).rounded())
+        }
+        for point in points {
+            appendBigEndian(scaled(point.lat, by: 1_000_000))
+            appendBigEndian(scaled(point.lon, by: 1_000_000))
+            // "Present" means *a finite offset is here*, not `offsetSecs != nil`. A non-finite
+            // offset encodes as absent, because playback takes the same branch for it as for a
+            // missing one — so encoding it as present would describe a pace no consumer would play.
+            //
+            // The natural Swift spelling `if let offset = point.offsetSecs` writes 1 for a NaN and
+            // yields different bytes for the same route. Unreachable through JSON, which has no NaN
+            // literal, but reachable in memory — which is where the id is computed, and an importer
+            // subtracting two dates can produce one from a single bad timestamp.
+            if let offset = point.offsetSecs, offset.isFinite {
+                data.append(1)
+                appendBigEndian(scaled(offset, by: 1000))
+            } else {
+                data.append(0)
+                appendBigEndian(0)
+            }
+        }
+        switch speed {
+        case .fixed(let mps):
+            data.append(0)
+            appendBigEndian(scaled(mps, by: 1000))
+        case .asRecorded:
+            data.append(1)
+            appendBigEndian(0)
+        }
+        data.append(repeats ? 1 : 0)
+        return data
+    }
+
+    /// The content-derived id, shared byte-for-byte with the agent.
+    ///
+    /// Assumes an already-normalised route; call `normalisedForImport()` first.
+    var derivedID: String {
+        let digest = SHA256.hash(data: canonicalBytes)
+        return "r1-" + digest.prefix(16).map { String(format: "%02x", $0) }.joined()
+    }
 
     /// This route with its values rounded to the resolution the shared id is computed at.
     ///
@@ -3293,6 +3507,7 @@ final class SpoofController: ObservableObject {
         // the first point rather than resume where a previous run left off.
         state.routeStartedAt = Date().timeIntervalSince1970.rounded()
         state.routePaused = false
+        state.routeRepeats = route.repeats
         updateMotionState(state)
         // Playback has its own position from here on, so start following it — and reset the
         // throttle so the first observation pushes to the bridge immediately rather than waiting
@@ -3301,6 +3516,30 @@ final class SpoofController: ObservableObject {
         startMotionSync()
         Log.bridge.info("GPS route started id=\(route.id) points=\(route.points.count)")
         return nil
+    }
+
+    /// Replay the loaded route at a different pace.
+    ///
+    /// **This restarts the route from its first point**, and that is intended rather than a
+    /// limitation. Pace is part of the route's content and therefore part of its id, so a new pace is
+    /// a new route — and resuming mid-way would be meaningless anyway, because elapsed time maps to
+    /// distance differently under a new pace, so the device would jump to wherever the old elapsed
+    /// happens to land on the new timeline.
+    ///
+    /// See `.kiro/specs/device-gps-motion/route-id-agreement.md`, amendment #4.
+    ///
+    /// Returns the reason it was refused, or `nil` on success. Refused when the loaded route can't be
+    /// read back — which shouldn't happen since we wrote it, but a picker that silently does nothing
+    /// is worse than one that says so.
+    @discardableResult
+    func changeGpsRoutePace(to pace: GpsRoutePace) -> GpsRouteValidationFailure? {
+        guard var route = loadGpsRoute() else { return .writeFailed }
+        guard route.speed.pace != pace else { return nil }
+        route.speed = pace.speed
+        // Re-derived, because pace is in the id. Without this the agent would match the cached route
+        // on its unchanged id and never read the new file — serving the old pace forever.
+        route.id = route.normalisedForImport().derivedID
+        return startGpsRoute(route)
     }
 
     /// Freeze playback in place, still spoofing.
@@ -3335,6 +3574,34 @@ final class SpoofController: ObservableObject {
         updateMotionState(state)
     }
 
+    /// Withdraw every motion request, whatever kind, and hold the current coordinate.
+    ///
+    /// The escape hatch, and it must work when nothing else does. Two properties make that possible:
+    /// it needs no knowledge of where the device actually is, and it needs no computer to be
+    /// reachable — so it stays available while a report is stale, when the more specific controls
+    /// cannot be.
+    ///
+    /// Without it a route requested just before a computer went away is unreachable: the controls
+    /// that could stop it are only rendered while a computer is reporting, so losing one strands
+    /// the request with no way to withdraw it.
+    ///
+    /// Takes effect on the device whenever a computer next reads `desired.json`. It does **not**
+    /// disable spoofing — the device holds where it is rather than snapping back to its real
+    /// location, the same reasoning as the agent not clearing a finished route.
+    func clearGpsMotion() {
+        guard hasActiveMotion || motionState.mode != .still else { return }
+        var state = motionState
+        state.mode = .still
+        state.routeId = nil
+        state.routeStartedAt = nil
+        state.routePaused = false
+        state.routeRepeats = false
+        state.steering = nil
+        updateMotionState(state)
+        stopMotionSync()
+        Log.bridge.info("GPS motion request cleared")
+    }
+
     /// Stop playback and hold the current coordinate.
     ///
     /// Note what this does *not* do: it does not disable spoofing. The device stays where it is
@@ -3347,6 +3614,7 @@ final class SpoofController: ObservableObject {
         state.routeId = nil
         state.routeStartedAt = nil
         state.routePaused = false
+        state.routeRepeats = false
         updateMotionState(state)
         // Nothing left to follow. The coordinate stands where playback left it, which is what
         // keeps the device from snapping back to its real location on stop.

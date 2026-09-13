@@ -15,3 +15,8 @@
 *.woff  binary
 *.woff2 binary
 *.pdf   binary
+
+# The shared route-id golden fixture, byte-identical with the copy in the geospoof-gps
+# repository. Pinned to LF so a Windows checkout with core.autocrlf=true can't rewrite it and
+# break a comparison for a reason unrelated to its contents. Mirrors the same pin on that side.
+tests/fixtures/route-id-fixture.json text eol=lf

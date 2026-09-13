@@ -180,11 +180,22 @@ xcodebuild -project GeoSpoof.xcodeproj -scheme GeoSpoof-macOS \
 
 # Merge the discovered strings into the catalog. Pass all three app targets in
 # one invocation, or strings present on only one platform get marked stale.
-xcstringstool sync "Shared (App)/Resources/Localizable.xcstrings" \
-  $(find /tmp/dd-ios /tmp/dd-mac -name '*.stringsdata' \
-     \( -path '*GeoSpoof (iOS).build*' -o -path '*GeoSpoof (macOS).build*' \
-        -o -path '*GeoSpoof WidgetExtension.build*' \) \
-     -exec printf -- '--stringsdata %s ' {} +)
+#
+# Null-delimited, and run under bash: the target directories are named
+# "GeoSpoof (iOS).build" and friends, so a `$(find ... -exec printf '%s ')`
+# pipeline splits every path on its space. That failure is quiet and
+# convincing — xcstringstool prints "Couldn't read stringsdata file at ..."
+# for each mangled path, then exits 0 having merged nothing at all.
+bash -c '
+args=()
+while IFS= read -r -d "" f; do args+=(--stringsdata "$f"); done < <(
+  find /tmp/dd-ios /tmp/dd-mac -name "*.stringsdata" \
+    \( -path "*GeoSpoof (iOS).build*" -o -path "*GeoSpoof (macOS).build*" \
+       -o -path "*GeoSpoof WidgetExtension.build*" \) -print0
+)
+echo "stringsdata files: $(( ${#args[@]} / 2 ))"   # expect ~60, never 0
+xcrun xcstringstool sync "Shared (App)/Resources/Localizable.xcstrings" "${args[@]}"
+'
 ```
 
 Notes on that:
@@ -194,6 +205,10 @@ Notes on that:
 - `xcodebuild` alone does **not** write the catalog — it emits `.stringsdata` and
   leaves the file untouched. Either run `xcstringstool sync` as above, or build
   once in the Xcode IDE, which does the merge for you.
+- **Check the catalog actually changed.** `xcstringstool sync` exits 0 whether it
+  merged 60 files or none, so the only reliable confirmation is
+  `git diff --stat` on the catalog, or grepping for a string you know is new.
+- `xcstringstool` is not on `PATH` by default; invoke it via `xcrun`.
 - Always pass `-derivedDataPath`; the shared DerivedData is locked whenever the
   project is open in Xcode.
 

@@ -605,6 +605,45 @@ nonisolated struct GpsEchoGate {
         return (travelled, total, route.remainingSecs)
     }
 
+    /// How long a request is given to reach a computer before its silence means anything.
+    ///
+    /// Bracketed by the agent's own documented cadence rather than picked: its worst-case publish
+    /// interval is `POLL_INTERVAL` (1 s) plus `PASS_HARVEST_BUDGET` (5 s), so a request can legitimately
+    /// go unacknowledged for ~6 s. It must also stay **below** the 20 s freshness window, or a report
+    /// would go stale before we were ever willing to judge it. 10 s sits inside that bracket.
+    static let deliveryGrace: TimeInterval = 10
+
+    /// Seconds since we last changed what we asked for, or `nil` when we asked for nothing.
+    ///
+    /// Measured on **our own clock** on both ends — `routeStartedAt` and `seq` are both stamped here —
+    /// so this deliberately avoids comparing against the report's `updatedAt`, which comes from the
+    /// computer's clock. A skewed clock there would either suppress the message forever or fire it
+    /// immediately, and neither failure would be visible.
+    func requestAge(now: Date = Date()) -> TimeInterval? {
+        let askedAt: Double?
+        switch asked.mode {
+        case .route: askedAt = asked.routeStartedAt
+        // `seq` is a millisecond timestamp, by the same convention.
+        case .steering: askedAt = asked.steering.map { $0.seq / 1000 }
+        case .still, .unknown: askedAt = nil
+        }
+        return askedAt.map { now.timeIntervalSince1970 - $0 }
+    }
+
+    /// Whether a report that doesn't echo our request is simply too early to mean anything.
+    ///
+    /// This is what stops "this computer isn't following your route" flashing up for a second every
+    /// time a route starts. The freshest report at that moment was written *before* the request
+    /// existed, so it describes a computer holding a coordinate — which is true — rather than one
+    /// declining a route it has not yet read.
+    ///
+    /// A negative age (a clock that moved backwards) also counts as too young: suppressing the
+    /// message is the recoverable direction, since the next report resolves it either way.
+    func requestTooYoungToJudge(now: Date = Date()) -> Bool {
+        guard let age = requestAge(now: now) else { return false }
+        return age < GpsEchoGate.deliveryGrace
+    }
+
     /// The agent's integrated position while steering. Never echo-gated — see the type comment.
     var steeringPosition: (latitude: Double, longitude: Double)? {
         guard let lat = status.steering?.latitude, let lon = status.steering?.longitude else {
@@ -772,6 +811,9 @@ private struct GpsRouteProgress: Equatable {
     /// The requested pace wasn't honoured. Must be surfaced — someone who picked a cycling route
     /// and silently got walking pace has been misled, and it taints every other figure shown.
     var speedDefaulted: Bool
+    /// Whether the route loops, taken from what **we** asked for rather than inferred from the
+    /// report. See the footer in `routeSection` for the false statement this avoids.
+    var repeats: Bool
 
     var fraction: Double {
         guard totalM > 0 else { return 0 }
@@ -897,6 +939,9 @@ nonisolated enum GpsGpxImportFailure: Error, Equatable {
     case tooLarge(bytes: Int)
     /// Parsed, but there was no track, route, or waypoint list in it.
     case noTrack
+    /// The root element wasn't `<gpx>`, so this isn't a GPX file at all. Carries what the root
+    /// actually was, so the message can name it rather than being vaguely unhelpful.
+    case notGpx(root: String?)
     /// **Refused, not truncated.** Playing the first fraction of someone's route is worse than
     /// declining it, because a truncated route looks like it worked.
     case tooManyPoints(Int)
@@ -945,6 +990,17 @@ nonisolated enum GpsGpxImporter {
         // nothing usable.
         parser.parse()
 
+        // The root must actually be `<gpx>`.
+        //
+        // Without this the parser matches element names wherever they appear, so an unrelated
+        // document that happens to contain a `<trkpt>` — an inventory export, a config file — yields
+        // a cheerful two-point route instead of an error. Found on the agent side while evaluating a
+        // GPX library, and this importer had the identical hole. It only shows up when someone picks
+        // the wrong file, which is exactly when a clear refusal is worth most.
+        guard delegate.rootWasGpx else {
+            return .failure(.notGpx(root: delegate.rootElement))
+        }
+
         let points = delegate.bestPoints
         guard !points.isEmpty else { return .failure(.noTrack) }
         guard points.count <= GpsRoute.maxPoints else {
@@ -957,25 +1013,32 @@ nonisolated enum GpsGpxImporter {
         // explicit walking default rather than `as-recorded`, so the agent never has to apply its
         // own fallback and set `speed_defaulted` for a file we could see was untimed.
         let timed = points.allSatisfy { $0.offsetSecs != nil } && points.count > 1
-        return .success(
-            // Stored at the resolution the shared route id is computed at, not at whatever
-            // precision the file happened to carry — see `roundedForStorage()` for why hashing
-            // rounded values while storing unrounded ones would break the id's whole purpose.
-            GpsRoute(
-                // Hashed from the file's own bytes, and **not** from Swift's `hashValue`, which is
-                // seeded per process — the same file would then get a different id every launch,
-                // and the agent caches a route by id and only re-reads it when the id changes.
-                //
-                // Stability costs nothing behaviourally, because `startGpsRoute` always writes a
-                // fresh `route_started_at`: re-importing the same file replays it from the top
-                // rather than silently resuming a previous run.
-                id: "gpx-\(Self.contentID(of: data))",
-                name: name,
-                points: points,
-                speed: timed ? .asRecorded : .fixed(mps: GpsRouteSpeed.walkingMps),
-                repeats: false
-            ).roundedForStorage()
-        )
+        // Normalised first, then identified from the normalised content. The order is the whole
+        // point: the id must describe the route as it will be stored and played, so the two can
+        // never disagree.
+        //
+        // `timed` is only a hint about which speed policy to request — `normalisedForImport` makes
+        // the real decision about whether the offsets survive, and an `asRecorded` route whose
+        // offsets it discards falls back to walking pace with `speed_defaulted` set.
+        let normalised = GpsRoute(
+            // Placeholder: replaced below by the content-derived id. Not left empty, because an
+            // empty id reads as "no route" everywhere else in this file.
+            id: "pending",
+            name: name,
+            points: points,
+            speed: timed ? .asRecorded : .fixed(mps: GpsRouteSpeed.walkingMps),
+            repeats: false
+        ).normalisedForImport()
+
+        var route = normalised
+        // The shared, content-derived id — computed byte-for-byte identically on the agent side, so
+        // the same track imported on either gets one id. Replaces an earlier SHA-256 of the raw file
+        // bytes, which agreed across importers but forked on a re-export of the same activity: the
+        // geometry was unchanged and only the metadata differed.
+        //
+        // `id` is excluded from the hash, so the placeholder above doesn't affect the result.
+        route.id = normalised.derivedID
+        return .success(route)
     }
 
     /// A short, stable identifier for a file's contents.
@@ -1003,6 +1066,9 @@ nonisolated enum GpsGpxImporter {
         private var inMetadata = false
         private(set) var trackName: String?
         private(set) var metadataName: String?
+        /// The document's root element, whatever it was. Recorded so a refusal can name it.
+        private(set) var rootElement: String?
+        var rootWasGpx: Bool { rootElement == "gpx" }
 
         /// Points in priority order: a recorded track, else a planned route, else bare waypoints.
         var bestPoints: [GpsRoutePoint] {
@@ -1017,21 +1083,47 @@ nonisolated enum GpsGpxImporter {
             return Self.withOffsets(raw)
         }
 
-        /// Convert absolute times to offsets from the first point, or drop them entirely.
+        /// Convert absolute times to offsets from the first point, **reporting only**.
+        ///
+        /// Deliberately makes no judgement about whether the result is a usable pace — it passes
+        /// differences through unmodified, including negative ones, and
+        /// `GpsRoute.normalisedForImport()` decides. That split mirrors the agent's, and it exists
+        /// because a parser that quietly repairs its input destroys the evidence a shared rule needs.
+        ///
+        /// The lesson behind it: an earlier version clamped a backwards step to zero, reasoning that
+        /// a negative offset is meaningless to the agent. It is — but clamping turned
+        /// `topografix`'s `fells_loop.gpx` (a planned `<rte>` whose 46 `<rtept>` carry *waypoint
+        /// creation dates* spanning five months, 14 of 45 going backwards) into a plausible-looking
+        /// offset list. Playback then walked a 7-mile loop over a five-month timeline: about a
+        /// millimetre every hundred seconds, indistinguishable from frozen.
+        ///
+        /// ## Milliseconds as integers, not seconds as doubles
+        ///
+        /// Differences are taken in **integer milliseconds** rather than by subtracting two
+        /// `Double` seconds. `Date` is a `Double` counting from 2001 while the agent's counts from
+        /// 1970, so the same pair of timestamps loses precision by *different* amounts on the two
+        /// sides — around 5e-7 s near 2026. Rounding the result to milliseconds does not rescue
+        /// that: it only shrinks the window in which the two land on opposite sides of a
+        /// half-millisecond boundary. It doesn't close it.
+        ///
+        /// Rounding each absolute time to whole milliseconds *before* subtracting does close it.
+        /// A millisecond count near 2026 is ~1.8e12, far inside the 9e15 an integer-valued `Double`
+        /// represents exactly, so the subtraction is exact and both sides land on the same integer
+        /// whatever their epoch.
         private static func withOffsets(_ points: [GpsRoutePoint]) -> [GpsRoutePoint] {
             let times = points.map(\.absoluteTime)
             guard let first = times.first ?? nil, times.allSatisfy({ $0 != nil }) else {
-                return points.map {
-                    GpsRoutePoint(lat: $0.lat, lon: $0.lon, offsetSecs: nil)
-                }
+                // Nothing to report. `normalisedForImport` will drop the rest.
+                return points.map { GpsRoutePoint(lat: $0.lat, lon: $0.lon, offsetSecs: nil) }
             }
+            let baseMillis = (first.timeIntervalSince1970 * 1000).rounded()
             return zip(points, times).map { point, time in
-                GpsRoutePoint(
+                let millis = (time!.timeIntervalSince1970 * 1000).rounded()
+                return GpsRoutePoint(
                     lat: point.lat,
                     lon: point.lon,
-                    // Clamped at zero: a track whose timestamps go backwards would otherwise
-                    // produce a negative offset the agent has no meaning for.
-                    offsetSecs: max(0, time!.timeIntervalSince(first))
+                    // Negative differences are passed through on purpose — see above.
+                    offsetSecs: (millis - baseMillis) / 1000
                 )
             }
         }
@@ -1050,6 +1142,11 @@ nonisolated enum GpsGpxImporter {
             qualifiedName qName: String?,
             attributes attributeDict: [String: String] = [:]
         ) {
+            if rootElement == nil {
+                // Namespace prefixes stripped, so `<gpx:gpx>` reads the same as `<gpx>`. Real
+                // exports use both forms.
+                rootElement = elementName.components(separatedBy: ":").last
+            }
             switch elementName {
             case "trk":
                 tracks.append([])
@@ -1173,6 +1270,13 @@ struct GpsView: View {
     @State private var showRouteImportAlert = false
     @State private var routeImportMessage = ""
     @ObservedObject private var pendingImport = GpsPendingRouteImport.shared
+    /// The loaded route, cached.
+    ///
+    /// Read from `route.json`, which the pace picker needs for its current selection and its length.
+    /// Cached rather than read inside the view body, because the body re-evaluates on any of
+    /// `SpoofController`'s published properties and a file read per render to learn something we
+    /// authored is the wrong trade. Refreshed when the route identity changes.
+    @State private var loadedRoute: GpsRoute?
 
     var body: some View {
         AdaptiveNavigationStack {
@@ -1185,6 +1289,11 @@ struct GpsView: View {
                     aboutSection
                     lastKnownMotionSection
                     waitingSection
+                    // Reachable here on purpose. Turning device GPS off is the one action that
+                    // returns the real location, and leaving it out of this phase meant a user who
+                    // enabled it and then lost their computer had no way to switch it off — the
+                    // toggle was only rendered once a computer was reporting again.
+                    syncToggleSection
                     compatibilitySection
                 case .chooseController:
                     chooseControllerSection
@@ -1217,8 +1326,12 @@ struct GpsView: View {
             .navigationTitle("GPS")
             .onAppear {
                 refreshStatus()
+                refreshLoadedRoute()
                 claimPendingRouteImport()
             }
+            // Keyed on the route identity rather than on a timer: the file only changes when the
+            // route does, and the id is derived from its content so any change moves it.
+            .onChange(of: controller.motionState.routeId) { _, _ in refreshLoadedRoute() }
             // A file handed to the app while this tab is already open. `onAppear` covers the cold
             // launch and a tab switch; this covers the case where neither fires.
             .onChange(of: pendingImport.url) { _, url in
@@ -1333,12 +1446,21 @@ struct GpsView: View {
             Log.bridge.error("GPS steering vector refused by the agent: \(rejected)")
         }
 
+        // A request needs time to reach the computer. Until the grace window is up, a report that
+        // doesn't mention it is describing the state *before* we asked — not refusing us.
+        //
+        // Rendering `.still` during that window is honest rather than a placeholder: the computer
+        // genuinely is holding a coordinate, which is what `still` means. It also draws no section,
+        // so a route appears once rather than being preceded by a flash of alarming copy.
+        let tooEarly = gate.requestTooYoungToJudge()
+
         switch s.deliveredMotion {
         case .route:
             guard let progress = gate.confirmedRouteProgress, let route = s.route else {
-                // Delivering a route, but describing a run other than the one we asked for. Hold
-                // the previous figures rather than rendering someone else's progress.
-                return .notDelivered(asked: asked)
+                // Delivering a route, but describing a run other than the one we asked for — a
+                // replay the computer hasn't picked up yet. Hold rather than render the previous
+                // run's progress as this one's.
+                return tooEarly ? .still : .notDelivered(asked: asked)
             }
             return .route(
                 GpsRouteProgress(
@@ -1348,7 +1470,8 @@ struct GpsView: View {
                     remainingSecs: progress.remainingSecs,
                     paused: route.paused ?? false,
                     finished: route.finished ?? false,
-                    speedDefaulted: route.speedDefaulted ?? false
+                    speedDefaulted: route.speedDefaulted ?? false,
+                    repeats: controller.motionState.routeRepeats
                 )
             )
         case .steering:
@@ -1363,12 +1486,15 @@ struct GpsView: View {
                 )
             )
         case .still:
-            // Asking for motion and being told `still` means this computer declined it.
-            return asked == .still ? .still : .notDelivered(asked: asked)
+            // Asking for motion and being told `still` means this computer declined it — but only
+            // once it has had time to see the request. This is the branch that produced the flash:
+            // it is the *normal* state for the second or so between writing a route and the agent
+            // reading it.
+            return (asked == .still || tooEarly) ? .still : .notDelivered(asked: asked)
         case .unknown, nil:
-            // A mode this build can't name, or an agent old enough not to report one. Either way
-            // it isn't doing what we asked, and we don't need to know which to say so.
-            return asked == .still ? .still : .notDelivered(asked: asked)
+            // A mode this build can't name, or an agent old enough not to report one. Either way it
+            // isn't doing what we asked, and we don't need to know which to say so.
+            return (asked == .still || tooEarly) ? .still : .notDelivered(asked: asked)
         }
     }
 
@@ -1474,8 +1600,23 @@ struct GpsView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+                // Available here specifically *because* the report is stale. Withdrawing a request
+                // needs no knowledge of where the device is and no computer to be reachable, so it
+                // is safe when the pause and stop controls — which live in a section only rendered
+                // while a computer is reporting — are not. Without it, a route requested just
+                // before a computer went away has no way out at all.
+                Button(role: .destructive) {
+                    controller.clearGpsMotion()
+                } label: {
+                    Label("Cancel Request", systemImage: "xmark.circle")
+                }
+                .tint(.red)
             } header: {
                 Text("Last request")
+            } footer: {
+                // Says when it takes effect rather than implying it stops anything now. It can't:
+                // the change reaches the device only when a computer next reads it.
+                Text("Cancelling takes effect the next time your computer connects. To return your real location now, turn off Sync below.")
             }
         }
     }
@@ -1660,9 +1801,20 @@ struct GpsView: View {
                 )
                 .foregroundStyle(.orange)
             } else if p.remainingSecs == nil && !p.finished {
-                // A repeating route has no end, so there is no total to count down. Say that
-                // rather than leaving an empty row where a duration should be.
-                Text("This route repeats, so it has no finish time.")
+                // Two different reasons a duration can be missing, and they need different
+                // sentences. This branch used to assume the first, which was a false statement
+                // waiting for the second to exist:
+                //
+                //   • the route loops, so there is genuinely no finish to count down to
+                //   • the route's recorded timeline is unusable, so no honest estimate exists
+                //
+                // The loop case is answered from what *we* asked for, never inferred from the
+                // absence of the number — absence tells you a value is missing, not why.
+                if p.repeats {
+                    Text("This route repeats, so it has no finish time.")
+                } else {
+                    Text("This route's recorded timings aren't usable, so there's no time estimate.")
+                }
             }
         }
     }
@@ -1769,6 +1921,9 @@ struct GpsView: View {
                 Label(playing == nil ? "Import Route (GPX)" : "Import a Different Route",
                       systemImage: "square.and.arrow.down")
             }
+            if let route = loadedRoute, controller.motionState.routeId != nil {
+                pacePicker(route)
+            }
             if let playing {
                 // Pause and stop are separate controls on purpose. Pausing waits in place and
                 // keeps spoofing; stopping ends playback. Neither reverts to the phone's real
@@ -1806,7 +1961,12 @@ struct GpsView: View {
             if playing == nil {
                 Text("Export a GPX from Strava, Garmin, or any tracking app, then bring it here with AirDrop, Files, or iCloud Drive.")
             } else {
-                Text("Pausing waits where you are and keeps your phone's GPS spoofed. Turning off Sync below is what returns your real location.")
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Pausing waits where you are and keeps your phone's GPS spoofed. Turning off Sync below is what returns your real location.")
+                    // Said up front rather than left to be discovered. Changing pace makes it a
+                    // different route, so it starts again — see `changeGpsRoutePace`.
+                    Text("Changing the pace starts the route again from the beginning.")
+                }
             }
         }
         .fileImporter(
@@ -1826,6 +1986,71 @@ struct GpsView: View {
         } message: {
             Text(routeImportMessage)
         }
+    }
+
+    /// Choose how fast to walk the loaded route, with the resulting duration shown.
+    ///
+    /// The duration is the number people actually decide on — "about 40 min" answers the question a
+    /// pace in metres per second doesn't. Computed locally from the route's own length rather than
+    /// waiting for the agent's `remaining_secs`, because it has to be visible *before* you commit to
+    /// a pace, and at that moment no report describes the new one.
+    ///
+    /// `asRecorded` is offered only when the file has a usable timeline. Offering it otherwise would
+    /// let someone pick a pace that silently becomes walking, which is the same misleading outcome
+    /// `speed_defaulted` exists to warn about.
+    @ViewBuilder
+    private func pacePicker(_ route: GpsRoute) -> some View {
+        let hasTimings = route.points.count > 1
+            && route.points.allSatisfy { $0.offsetSecs != nil }
+        let options = GpsRoutePace.allCases.filter { $0 != .asRecorded || hasTimings }
+        Picker(selection: Binding(
+            get: { route.speed.pace },
+            set: { newPace in
+                if let failure = controller.changeGpsRoutePace(to: newPace) {
+                    routeImportMessage = Self.message(for: failure)
+                    showRouteImportAlert = true
+                }
+                refreshLoadedRoute()
+            }
+        )) {
+            ForEach(options) { pace in
+                if let mps = pace.mps {
+                    // Names the pace and what it means for this route, so the choice is made on the
+                    // duration rather than on a guess about what "Jog" implies.
+                    //
+                    // Concatenated `Text` values, not `Text("\(a) — \(b)")`. Interpolating derives
+                    // the context-free catalog key `%@ — %@`, which is unusable for a translator and
+                    // would collide with every other two-part label in the app. Both parts are
+                    // already localised or formatted, so `verbatim` is correct here — see
+                    // CONTRIBUTING's note on interpolating into a `LocalizedStringKey`.
+                    (
+                        Text(verbatim: Self.paceLabel(pace))
+                            + Text(verbatim: " — ")
+                            + Text(verbatim: durationText(route.lengthMeters / mps))
+                    ).tag(pace)
+                } else {
+                    Text(verbatim: Self.paceLabel(pace)).tag(pace)
+                }
+            }
+        } label: {
+            Label("Pace", systemImage: "speedometer")
+        }
+    }
+
+    private static func paceLabel(_ pace: GpsRoutePace) -> String {
+        switch pace {
+        case .asRecorded: return String(localized: "As recorded")
+        case .walk: return String(localized: "Walk")
+        case .jog: return String(localized: "Jog")
+        case .run: return String(localized: "Run")
+        case .cycle: return String(localized: "Cycle")
+        case .drive: return String(localized: "Drive")
+        }
+    }
+
+    /// Re-read `route.json` into the cache. Called when the route identity changes.
+    private func refreshLoadedRoute() {
+        loadedRoute = controller.motionState.routeId == nil ? nil : controller.loadGpsRoute()
     }
 
     /// Read the picked file and start playback, or explain why not.
@@ -1920,6 +2145,13 @@ struct GpsView: View {
             return "That file is \(size), which is too large to use."
         case .noTrack:
             return "No route found in that file. GPX files exported from tracking apps should work."
+        case .notGpx(let root):
+            // Names what the file actually is where we can. "Not a GPX file" alone invites a second
+            // attempt with the same file.
+            if let root, !root.isEmpty {
+                return "That isn't a GPX file — it starts with <\(root)>. Export a GPX from your tracking app."
+            }
+            return "That isn't a GPX file. Export a GPX from your tracking app."
         case .tooManyPoints(let count):
             // Names the number and refuses. Truncating would look like it worked.
             return "That route has \(count.formatted()) points, which is more than \(GpsRoute.maxPoints.formatted()). Try exporting it at a lower detail."
