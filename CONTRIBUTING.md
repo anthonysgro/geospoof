@@ -326,11 +326,11 @@ git log --oneline --decorate # see commits with tags
 
 ## License & Contribution Terms
 
-GeoSpoof (the browser extension, site, docs, and assets in this repository) is licensed under [MIT](LICENSE).
+GeoSpoof (the browser extension, site, docs, and assets in this repository) is licensed under [MIT](LICENSE). The `safari/` directory — the native iOS and macOS apps — is an exception: it is source-available but proprietary, under [safari/LICENSE](safari/LICENSE). Contributions are welcome in both scopes; the terms below cover both.
 
 By submitting a contribution (a pull request, patch, or any code, docs, or other material), you agree that:
 
-1. Your contribution is licensed under the [MIT License](LICENSE).
+1. Your contribution is licensed under the [MIT License](LICENSE) if it targets an MIT-licensed part of the repository, or under [safari/LICENSE](safari/LICENSE) if it targets `safari/`.
 2. You have the right to submit the work under that license, and you grant the maintainer the rights described below.
 3. You sign off on the [Developer Certificate of Origin](https://developercertificate.org/) for each commit (add a `Signed-off-by:` line with `git commit -s`), certifying you authored the contribution or otherwise have the right to submit it under these terms.
 

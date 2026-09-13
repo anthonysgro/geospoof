@@ -192,7 +192,14 @@ Using location spoofing may violate terms of service of streaming, financial, or
 
 ## License
 
-The GeoSpoof browser extension and everything in this repository is **open source (MIT)** — see [LICENSE](LICENSE). Use, modify, and redistribute freely, including commercially.
+This repository is split-licensed:
+
+| Scope                                                                        | License                                                                  | What you can do                                                                                                 |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| The browser extension, site, docs, and assets — everything outside `safari/` | **MIT** — see [LICENSE](LICENSE)                                         | Use, modify, and redistribute freely, including commercially                                                    |
+| `safari/` — the native iOS and macOS apps                                    | **Proprietary, source-available** — see [safari/LICENSE](safari/LICENSE) | Read, study, audit, and contribute back. No copying into other products, no redistribution, no derivative works |
+
+The `safari/` source stays public so the app can be audited, but it isn't open source. The MIT terms above applied to that directory before 2026-09-13, and copies obtained under MIT before then keep those rights.
 
 The native GeoSpoof GPS desktop core (the Rust/Swift device product) is developed separately as a closed-source product and is not part of this repository.
 

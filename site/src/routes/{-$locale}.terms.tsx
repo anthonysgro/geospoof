@@ -229,27 +229,45 @@ export function TermsPage() {
               </p>
             </TermsSection>
 
-            <TermsSection title="5. Open Source">
+            <TermsSection title="5. Source Code and Licensing">
               <p>
-                GeoSpoof is open source software licensed under the MIT License.
-                The source code is available at{" "}
+                The complete source code is published at{" "}
                 <a
                   href="https://github.com/anthonysgro/geospoof"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
                   github.com/anthonysgro/geospoof
-                </a>
-                . The{" "}
+                </a>{" "}
+                so that anyone can audit it. The repository is split-licensed.
+              </p>
+              <p>
+                The browser extension, website, and documentation are open
+                source under the{" "}
                 <a
                   href="https://github.com/anthonysgro/geospoof/blob/main/LICENSE"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
                   MIT License
+                </a>
+                , which governs your rights to use, copy, modify, and distribute
+                that code.
+              </p>
+              <p>
+                The native iOS and macOS applications (the{" "}
+                <code>safari/</code> directory) are source-available but
+                proprietary — all rights reserved by GeoSpoof LLC. You may read,
+                study, and audit that code, but it is not licensed for copying,
+                redistribution, or derivative works. See{" "}
+                <a
+                  href="https://github.com/anthonysgro/geospoof/blob/main/safari/LICENSE"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  safari/LICENSE
                 </a>{" "}
-                governs your rights to use, copy, modify, and distribute the
-                source code.
+                for the full terms.
               </p>
             </TermsSection>
 
@@ -257,8 +275,8 @@ export function TermsPage() {
               <p>
                 The GeoSpoof name, logo, and associated branding are the
                 property of the developer.{" "}
-                <strong>GeoSpoof™ is a trademark of GeoSpoof LLC.</strong> The
-                underlying source code is available under the MIT License, but
+                <strong>GeoSpoof™ is a trademark of GeoSpoof LLC.</strong> Where
+                the underlying source code is available under the MIT License,
                 that license covers the code only and does not grant any rights
                 in the GeoSpoof name, logo, or marks. Nothing in these Terms
                 grants you rights to use the GeoSpoof name or branding beyond
