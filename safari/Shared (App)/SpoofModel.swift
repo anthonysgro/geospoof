@@ -667,6 +667,551 @@ enum SpoofLocaleSpoofing: Equatable {
 
 }
 
+// MARK: - Device GPS motion (routes and steering)
+
+/// What is driving the device's location, as opposed to who chose it (`Provenance`).
+///
+/// Two axes that read alike and are not the same. `provenance` answers "who picked this
+/// place" — VPN sync, a map tap, the app. This answers "what is moving it". A steered
+/// position and a tapped place are both `from-app`; only the mechanism differs. Keeping them
+/// apart is what lets us say "the user picked this on a map **and** a route is walking it"
+/// without one field having to mean two things.
+///
+/// Lives here rather than beside the report-decoding types because it is a domain concept
+/// shared by the writer (this file, which compiles into the widget and macOS targets too) and
+/// the iOS status reader.
+nonisolated enum GpsMotionMode: String, Codable, Equatable {
+    /// Actively holding one coordinate. Not the same as "doing nothing".
+    case still
+    /// Walking a path from `route.json`.
+    case route
+    /// Following a velocity vector the agent integrates.
+    case steering
+    /// A mode this build doesn't recognise — the forward-compatible catch-all.
+    case unknown
+
+    /// Total, never throws: an unrecognised string reads as `unknown` rather than failing a
+    /// whole report's decode. A newer agent must never break an older app.
+    init(reported: String) {
+        self = GpsMotionMode(rawValue: reported) ?? .unknown
+    }
+
+    /// The value to write into `desired.json`.
+    ///
+    /// `unknown` is a *read* state — it exists to absorb a future agent's vocabulary — so it
+    /// can never be a thing we ask for. Writing it would be asking the agent for a mode we
+    /// ourselves can't name; falling back to `still` asks it to hold the coordinate, which is
+    /// the safe answer and the one that matches the "never invent motion" rule.
+    var wireValue: String {
+        self == .unknown ? GpsMotionMode.still.rawValue : rawValue
+    }
+}
+
+/// The steering vector as **we last wrote it**, kept so a later reader can tell which gesture
+/// is outstanding.
+///
+/// Distinct from `GpsSteeringStatus`, which is what the agent reports back. The pair is the
+/// whole point: comparing our `seq` against the reported one is how we know a report describes
+/// our latest write rather than the one before it.
+nonisolated struct GpsSteeringVector: Codable, Equatable {
+    /// Identifies this gesture. Any *change* re-anchors the agent from wherever the device
+    /// actually is; unchanged means "still holding the same dial".
+    var seq: Double
+    /// Degrees clockwise from true north, matching `CLLocationDirection`.
+    var headingDeg: Double
+    /// Metres per second. Zero is valid and means "wait here" — vector live, position held.
+    var speedMps: Double
+    /// How long the vector stays live without further interaction.
+    ///
+    /// Always written explicitly. The agent's default for an absent value is deliberately
+    /// short — right for a forgetful writer, wrong for a dial someone holds while gaming,
+    /// where it would read as an unexplained stop.
+    var ttlSecs: Double
+}
+
+/// The app's record of what motion it has asked the agent for.
+///
+/// ## Why this exists at all
+///
+/// `desired.json` has **two writers**: this app, and an App Intent launched in a brief
+/// background pass by a Live Activity control. Neither may hold a partial view of that file,
+/// because a write that merely *omits* the `steering` object does not fail to update — it ends
+/// the session, and the agent falls back to the coordinate in the file, which during steering
+/// is the stale seed from where the session began. The device snaps backwards.
+///
+/// The same hazard exists for routes with a quieter symptom: `writePending()` has many callers
+/// (enable, `setLocation`, timezone resolve, entitlement refresh, favorites, scope changes),
+/// and any of them rewriting `desired.json` from foreground state would silently stop or
+/// restart playback.
+///
+/// So this record is the single input from which the motion half of `desired.json` is
+/// serialized, it is shared between the two processes, and no caller needs to know it exists
+/// in order not to damage it.
+///
+/// ## What is deliberately NOT here
+///
+/// **The route polyline.** It is written to `Documents/route.json` and read back from there
+/// when a position needs interpolating. Keeping it out means this record stays small enough to
+/// rewrite on every gesture, and there is never a second copy of a 20,000-point array to keep
+/// in step.
+///
+/// **Playback position.** Elapsed time is persisted by the agent. Tracking a position here and
+/// writing it back is explicitly not our job, and doing it would make pause impossible.
+nonisolated struct GpsMotionState: Codable, Equatable {
+    var mode: GpsMotionMode
+
+    /// Which route is loaded, matching `route.json`'s `id`. Non-nil does NOT mean playing —
+    /// a loaded-but-unstarted route sits here with `mode == .still`, which is exactly the
+    /// state that inference cannot express and explicit `motion` can.
+    var routeId: String?
+    /// Identifies **this playback run**. Bumped on every press of play or restart; left alone
+    /// on resume, which is what separates the two for the agent.
+    ///
+    /// Persisted rather than derived, because deriving it from the clock at serialization time
+    /// would restart the route on every incidental `writePending()`.
+    var routeStartedAt: Double?
+    /// Freeze playback in place, still spoofing. Not the same as `enabled: false`, which
+    /// reverts to the phone's real GPS.
+    var routePaused: Bool
+
+    var steering: GpsSteeringVector?
+
+    /// The last position a fresh report confirmed, and when.
+    ///
+    /// Kept so a cold launch during motion has something honest to show while it resolves the
+    /// current position — the last confirmed place, labelled as such — rather than either
+    /// nothing or the stale seed. Refreshed by the App Intent as well as the app, because
+    /// during a Dynamic Island session the intent is the only moment a process of ours runs.
+    var lastConfirmedLatitude: Double?
+    var lastConfirmedLongitude: Double?
+    var lastConfirmedAt: Double?
+
+    static let idle = GpsMotionState(
+        mode: .still,
+        routeId: nil,
+        routeStartedAt: nil,
+        routePaused: false,
+        steering: nil,
+        lastConfirmedLatitude: nil,
+        lastConfirmedLongitude: nil,
+        lastConfirmedAt: nil
+    )
+
+    /// A `seq` for a fresh gesture.
+    ///
+    /// A millisecond timestamp rather than an incremented counter: the app and an App Intent
+    /// are separate processes, a shared counter can race between read and write, and the
+    /// contract only requires the value to *change* in order to re-anchor. A timestamp is
+    /// monotonic enough in practice and needs no coordination at all.
+    static func newSeq(now: Date = Date()) -> Double {
+        (now.timeIntervalSince1970 * 1000).rounded()
+    }
+
+    /// The coordinate to write as `latitude`/`longitude`, given the app's chosen location.
+    ///
+    /// While a vector runs the agent ignores this and uses its own integrated position, so the
+    /// last confirmed position is preferable to the session's original seed: it is the better
+    /// answer in the one case the seed is consulted, and it can never be worse.
+    func fallbackCoordinate(chosen: SpoofLocation?) -> (latitude: Double, longitude: Double)? {
+        if steering != nil,
+           let lat = lastConfirmedLatitude,
+           let lon = lastConfirmedLongitude {
+            return (lat, lon)
+        }
+        guard let chosen else { return nil }
+        return (chosen.latitude, chosen.longitude)
+    }
+}
+
+/// One point on a route. `offsetSecs` is seconds from route start, and is only meaningful for an
+/// `asRecorded` pace — a `fixed` pace ignores it.
+nonisolated struct GpsRoutePoint: Codable, Equatable, Hashable {
+    var lat: Double
+    var lon: Double
+    var offsetSecs: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case lat, lon
+        case offsetSecs = "offset_secs"
+    }
+
+    /// Whether both coordinates are finite and in range. Validated before writing, because the
+    /// agent rejects out-of-range coordinates at its door and a route refused there plays
+    /// nothing with no explanation on this side.
+    var isValid: Bool {
+        lat.isFinite && lon.isFinite && abs(lat) <= 90 && abs(lon) <= 180
+    }
+}
+
+/// How fast to walk a route.
+nonisolated enum GpsRouteSpeed: Codable, Equatable {
+    /// Constant ground speed in metres per second. Ignores every point's `offsetSecs`.
+    case fixed(mps: Double)
+    /// Replay at the pace recorded in the points' `offsetSecs`.
+    ///
+    /// On a route whose points carry no timings there is no pace to follow, so the agent falls
+    /// back to walking speed and sets `speed_defaulted` in its report. That flag must be
+    /// surfaced: silently giving someone walking pace for a cycling route has misled them.
+    case asRecorded
+
+    /// Walking pace, and the agent's documented fallback. Mirrored here so a picker can show
+    /// what a defaulted route will actually do.
+    static let walkingMps: Double = 1.4
+
+    var wireValue: [String: Any] {
+        switch self {
+        case .fixed(let mps):
+            return ["kind": "fixed", "mps": mps]
+        case .asRecorded:
+            return ["kind": "as-recorded"]
+        }
+    }
+
+    /// Whether this pace is one the agent will honour rather than reject.
+    ///
+    /// A zero, negative, or non-finite fixed speed is refused the same way a missing pace is —
+    /// zero in particular would park the user on the start line forever.
+    var isValid: Bool {
+        switch self {
+        case .fixed(let mps): return mps.isFinite && mps > 0
+        case .asRecorded: return true
+        }
+    }
+
+    // Hand-written rather than synthesized, because the wire form is a tagged object
+    // (`{"kind":"fixed","mps":8.0}` / `{"kind":"as-recorded"}`) and Swift's synthesized
+    // representation for an enum with associated values is not that shape.
+    private enum CodingKeys: String, CodingKey { case kind, mps }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let kind = try c.decodeIfPresent(String.self, forKey: .kind) ?? ""
+        switch kind {
+        case "fixed":
+            let mps = try c.decodeIfPresent(Double.self, forKey: .mps) ?? 0
+            self = .fixed(mps: mps)
+        case "as-recorded":
+            self = .asRecorded
+        default:
+            // Unknown kinds degrade rather than fail — a future `speed.kind` an older reader
+            // doesn't recognise falls back to a default pace instead of refusing the route.
+            //
+            // `asRecorded` specifically, and this is a cross-repo agreement rather than a local
+            // choice (see `.kiro/specs/device-gps-motion/route-id-agreement.md`). A newer producer
+            // inventing a `kind` had *something* in mind, and honouring the timings it shipped
+            // stays closer to the source data than forcing the track to a walking pace. Where
+            // there are no usable offsets this lands on walking pace anyway.
+            //
+            // The agent normalised the same value to a fixed 1.4 m/s until this was settled, so
+            // the two sides produced different routes for one file. That is why it matters that
+            // this stays `asRecorded`: it is now load-bearing for route-id agreement, not just a
+            // reasonable default.
+            self = .asRecorded
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .fixed(let mps):
+            try c.encode("fixed", forKey: .kind)
+            try c.encode(mps, forKey: .mps)
+        case .asRecorded:
+            try c.encode("as-recorded", forKey: .kind)
+        }
+    }
+}
+
+/// A route the app authored, mirroring `route.json` in the agent contract.
+///
+/// Written to `Documents/route.json` and read by the agent **once per `id` change**, then cached
+/// on the computer's disk — which is why `id` must change whenever the content does, and why the
+/// points never go inline in `desired.json` (that file is re-read every second, and a
+/// 5,000-point track is ~100 KB).
+nonisolated struct GpsRoute: Codable, Equatable {
+    var id: String
+    var name: String?
+    var points: [GpsRoutePoint]
+    var speed: GpsRouteSpeed
+    /// Restart from the first point on reaching the last.
+    ///
+    /// Note what this does to progress reporting: the agent resets `travelled_m` each lap and
+    /// reports `total_m` as one lap, never sets `finished`, and omits `remaining_secs` entirely
+    /// because a route with no end has no time remaining. So a repeating route needs a per-lap
+    /// presentation rather than the one-shot layout with blanks in it.
+    var repeats: Bool
+
+    /// The cap the app must enforce, because **nothing downstream will.** The agent's own
+    /// `MAX_POINTS` lives in a GPX importer that only its dev CLI touches; a route written to
+    /// Documents is parsed with no limit applied.
+    ///
+    /// Not a security boundary — the file comes from the user's own device running this app. It
+    /// is a cost boundary: an unbounded AFC read (already the slowest operation in the agent's
+    /// reconcile pass), unbounded memory on the computer, and an O(n)-in-points calculation on
+    /// every playback beat.
+    static let maxPoints = 20_000
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, points, speed
+        case repeats = "repeat"
+    }
+
+    /// Total ground distance along the path, in metres.
+    ///
+    /// Used for local presentation only. The agent's `total_m` is authoritative for progress —
+    /// this is for showing a route's length *before* it is playing, when there is no report yet.
+    var lengthMeters: Double {
+        guard points.count > 1 else { return 0 }
+        return zip(points, points.dropFirst()).reduce(0) { total, pair in
+            total + GpsRoute.metersBetween(pair.0, pair.1)
+        }
+    }
+
+    /// Great-circle distance between two route points, in metres.
+    ///
+    /// Haversine on a spherical earth. Deliberately not `CLLocation.distance(from:)`: this needs
+    /// to be callable from the widget target and from a test with no CoreLocation host, and at
+    /// route scale the difference between a sphere and WGS-84 is far below the precision anyone
+    /// can perceive on a map.
+    static func metersBetween(_ a: GpsRoutePoint, _ b: GpsRoutePoint) -> Double {
+        let earthRadius = 6_371_000.0
+        let lat1 = a.lat * .pi / 180
+        let lat2 = b.lat * .pi / 180
+        let dLat = lat2 - lat1
+        let dLon = (b.lon - a.lon) * .pi / 180
+        let h = sin(dLat / 2) * sin(dLat / 2)
+            + cos(lat1) * cos(lat2) * sin(dLon / 2) * sin(dLon / 2)
+        return 2 * earthRadius * asin(min(1, sqrt(h)))
+    }
+
+    /// The point `travelledM` metres along this route.
+    ///
+    /// **This is how the app stays in agreement with the agent during playback**, and the choice
+    /// of input is the whole trick. `travelled_m` is a quantity both sides share, so walking our
+    /// own polyline to it reproduces the agent's position by construction — no duplicated speed
+    /// policy, no second clock, and therefore no drift to reconcile. Re-implementing the
+    /// agent's integrator instead would give two subtly different answers and a marker that
+    /// snaps.
+    ///
+    /// Returns `nil` only for an empty route. Clamps at both ends: a negative or zero distance
+    /// gives the first point, a distance past the end gives the last — which is also the honest
+    /// answer for a finished route, where the device is holding the final point.
+    func position(atTravelled travelledM: Double) -> GpsRoutePoint? {
+        guard let first = points.first else { return nil }
+        guard travelledM > 0, points.count > 1 else { return first }
+
+        var remaining = travelledM
+        for (from, to) in zip(points, points.dropFirst()) {
+            let leg = GpsRoute.metersBetween(from, to)
+            if leg <= 0 { continue }
+            if remaining <= leg {
+                let t = remaining / leg
+                // Linear interpolation in degrees. Over a single leg of a walkable route this is
+                // indistinguishable from a great-circle interpolation, and it cannot produce a
+                // point off the path the way an arc between distant points would.
+                return GpsRoutePoint(
+                    lat: from.lat + (to.lat - from.lat) * t,
+                    lon: from.lon + (to.lon - from.lon) * t,
+                    offsetSecs: nil
+                )
+            }
+            remaining -= leg
+        }
+        return points.last
+    }
+
+    /// Coordinate resolution every producer must round to before storing, in decimal places.
+    ///
+    /// ~11 cm, well below anything this product can express, and the resolution the shared route-id
+    /// hash is computed at.
+    static let coordinateDecimals = 6
+    /// Offset resolution every producer must round to before storing, in seconds.
+    ///
+    /// Finer than playback can express — the agent advances at roughly one-second ticks — which is
+    /// the safe side: a lossier offset would let two files that play differently share an id.
+    static let offsetResolution: Double = 0.001
+
+    /// This route with its values rounded to the resolution the shared id is computed at.
+    ///
+    /// **Every importer must store the rounded form, not merely hash it.** The route id exists so
+    /// that `id` equality implies identical playback — the agent serves a cached route whenever the
+    /// id matches and never reads the incoming one. If the stored route kept full-precision values
+    /// while the id hashed rounded ones, two routes with one id could still play differently, which
+    /// is exactly the property the cache relies on being false.
+    ///
+    /// Rounding is half-away-from-zero (`Double.rounded()`, `.toNearestOrAwayFromZero`) to match the
+    /// agent's `f64::round()`. Deliberately not `String(format:)`, which goes through half-to-even
+    /// and would disagree on a value landing exactly on a boundary — silently, and only sometimes.
+    ///
+    /// See `.kiro/specs/device-gps-motion/route-id-agreement.md`.
+    func roundedForStorage() -> GpsRoute {
+        let scale = pow(10.0, Double(GpsRoute.coordinateDecimals))
+        var copy = self
+        copy.points = points.map { point in
+            GpsRoutePoint(
+                // `+ 0.0` normalises a negative zero, so a coordinate of `-0.0000001` and one of
+                // `0.0` can't produce two ids for one place.
+                lat: (point.lat * scale).rounded() / scale + 0.0,
+                lon: (point.lon * scale).rounded() / scale + 0.0,
+                offsetSecs: point.offsetSecs.map {
+                    ($0 / GpsRoute.offsetResolution).rounded() * GpsRoute.offsetResolution
+                }
+            )
+        }
+        return copy
+    }
+
+    /// Whether this route is safe to write: at least one point, every coordinate valid, a pace
+    /// the agent will honour, and inside the point cap.
+    var validationFailure: GpsRouteValidationFailure? {
+        if points.isEmpty { return .noPoints }
+        if points.count > GpsRoute.maxPoints { return .tooManyPoints(points.count) }
+        if points.contains(where: { !$0.isValid }) { return .invalidCoordinate }
+        if !speed.isValid { return .invalidSpeed }
+        return nil
+    }
+}
+
+/// Why a route cannot be written.
+///
+/// Typed rather than a bare `Bool` because these need different sentences: "too many points" is
+/// actionable and names a number, an invalid coordinate is a defect on our side, and the
+/// distinction decides whether the user can do anything about it.
+nonisolated enum GpsRouteValidationFailure: Equatable {
+    case noPoints
+    /// Carries the actual count so the message can be specific. **Refuse, never truncate** —
+    /// playing the first fraction of someone's route is worse than declining it, because a
+    /// truncated route looks like it worked.
+    case tooManyPoints(Int)
+    case invalidCoordinate
+    case invalidSpeed
+    /// The file couldn't be written to our own container.
+    ///
+    /// Grouped with the validation failures because every caller has to handle it the same way —
+    /// don't start playback — but it is the one case the user can do nothing about, so it earns a
+    /// different sentence.
+    case writeFailed
+
+    /// Whether the user could plausibly fix this by choosing a different route.
+    var isUserFixable: Bool { self != .writeFailed }
+}
+
+#if DEBUG
+extension GpsRoute {
+    /// A short synthetic route for proving the pipe against a real agent before any authoring
+    /// UI exists.
+    ///
+    /// Deliberately synthetic rather than an imported GPX: this is verifying the *transport* —
+    /// that our `route.json` and `desired.json` are shaped the way the agent expects and that
+    /// the device actually moves. Testing that together with a brand-new GPX parser would leave
+    /// a failure ambiguous between the two halves.
+    ///
+    /// Tokyo, roughly 1 km due north then 1 km east, at a jog. Long enough to watch progress
+    /// advance in Find My and short enough to finish while you're still looking at it — about
+    /// eight minutes at this pace.
+    static var debugWalk: GpsRoute {
+        GpsRoute(
+            id: "debug-walk-\(Int(Date().timeIntervalSince1970))",
+            name: "Debug walk",
+            points: [
+                GpsRoutePoint(lat: 35.6762, lon: 139.6503, offsetSecs: nil),
+                GpsRoutePoint(lat: 35.6852, lon: 139.6503, offsetSecs: nil),
+                GpsRoutePoint(lat: 35.6852, lon: 139.6613, offsetSecs: nil),
+            ],
+            // A fixed pace, so `offsetSecs` is irrelevant and `speed_defaulted` should come back
+            // false. If it comes back true, the agent didn't understand our speed policy — which
+            // is exactly the kind of thing this run exists to catch.
+            speed: .fixed(mps: 4),
+            repeats: false
+        )
+    }
+}
+#endif
+
+/// One observation of where the device actually is, from a desktop agent's report.
+///
+/// Exists to keep a layering boundary honest. Reading the agent roster and applying the echo
+/// rules is iOS-only code (the reports live beside the iOS GPS surface), while the writer and
+/// the app's location state are shared with the widget and macOS targets. Rather than drag the
+/// report types into shared code so they can be re-read there, the iOS layer hands over this
+/// summary and the shared layer decides what to do with it.
+nonisolated struct GpsMotionSample {
+    /// The device's position per a report we trust, or `nil` when there is nothing trustworthy.
+    ///
+    /// Absent is a real answer and must not be substituted with a guess: the only coordinate the
+    /// app has to hand during motion is the stale seed, and writing that back is exactly how the
+    /// device gets dragged to where a session started.
+    var latitude: Double?
+    var longitude: Double?
+    /// Whether the roster was actually read this pass, regardless of what it said.
+    ///
+    /// This — not the presence of a position — is what releases the write gate. A user whose
+    /// computer is switched off has a roster that reads empty every time, and gating on a
+    /// position would queue their writes forever.
+    var rosterWasRead: Bool
+
+    static let unread = GpsMotionSample(latitude: nil, longitude: nil, rosterWasRead: false)
+
+    var coordinate: (latitude: Double, longitude: Double)? {
+        guard let latitude, let longitude else { return nil }
+        return (latitude, longitude)
+    }
+}
+
+/// Reads and writes `GpsMotionState` in the App Group container, shared by the app and any
+/// App Intent.
+///
+/// ## Why a JSON file rather than keys in the shared plist
+///
+/// Every other shared value here is a key in `Library/Preferences/<suite>.plist`, merged via
+/// `setSharedPrefsValue`. That helper does a read-whole-dictionary, mutate, write-whole-file
+/// cycle — which is safe while one process writes, and a clobber risk the moment two do. An
+/// App Intent rewriting that file to record a gesture could drop a `pending_*` or `region_*`
+/// key written concurrently by the app, silently breaking the extension bridge.
+///
+/// A separate file makes the write a genuine atomic replace of only this record, so the two
+/// writers cannot damage each other's state. Same shared container, so it is reachable from
+/// both processes exactly as the plist is.
+nonisolated enum GpsMotionStateStore {
+    static let filename = "gps-motion-state.json"
+
+    private static func url(suite: String) -> URL? {
+        FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: suite)?
+            .appendingPathComponent(filename)
+    }
+
+    /// The persisted record, or `.idle` when nothing has been written or the file is
+    /// unreadable.
+    ///
+    /// Failing to `.idle` rather than throwing is deliberate: a corrupt record must not be able
+    /// to stop the app launching, and `.idle` claims no motion, which is the safe direction —
+    /// it can cost motion the user wanted, never invent motion they didn't ask for.
+    static func load(suite: String) -> GpsMotionState {
+        guard let url = url(suite: suite),
+              let data = try? Data(contentsOf: url),
+              let state = try? JSONDecoder().decode(GpsMotionState.self, from: data) else {
+            return .idle
+        }
+        return state
+    }
+
+    /// Persist `state`, atomically. Returns whether the write landed.
+    @discardableResult
+    static func save(_ state: GpsMotionState, suite: String) -> Bool {
+        guard let url = url(suite: suite),
+              let data = try? JSONEncoder().encode(state) else {
+            return false
+        }
+        do {
+            try data.write(to: url, options: .atomic)
+            return true
+        } catch {
+            return false
+        }
+    }
+}
+
 enum AppLogLevel: Int, CaseIterable, Identifiable {
     case error = 0
     case warn = 1
@@ -983,6 +1528,22 @@ final class SpoofController: ObservableObject {
     /// prompt; set only when two+ computers are present and the user picks one. Mirrored
     /// into `desired.json` as `owner_id`.
     @Published var selectedControllerId: String?
+    /// What motion we have asked the desktop agent for — route identity, playback run marker,
+    /// pause flag, steering vector, last confirmed position.
+    ///
+    /// **This, not view state, is what `writeGpsDesiredState()` serializes the motion half of
+    /// `desired.json` from.** The reason is that `writePending()` has many callers — enable,
+    /// `setLocation`, timezone resolve, entitlement refresh, favorites, scope changes — and any
+    /// of them rewriting `desired.json` from foreground memory would silently stop or restart a
+    /// route, or drop a steering vector. Dropping a vector is the worst of the three: the agent
+    /// falls back to the coordinate in the file, which during steering is the stale seed from
+    /// where the session began, and the device snaps backwards.
+    ///
+    /// Loaded from the App Group at init and re-read on activation, because an App Intent
+    /// launched by a Live Activity control writes it from a *different process* while this one
+    /// is suspended. Never assume the in-memory copy is current after a period in the
+    /// background — see `reloadMotionState()`.
+    @Published var motionState: GpsMotionState = .idle
     /// Site-scoping state. Mutated via the explicit setters below (which write
     /// the pending bridge record) and by adoption in refreshFromExtension /
     /// restoreLocalPending (which set them directly, no echo). No didSet, so
@@ -1318,6 +1879,19 @@ final class SpoofController: ObservableObject {
         let gpsPrefs = Self.readSharedPrefs(suite: suite)
         deviceGpsEnabled = (gpsPrefs?["gps_deviceEnabled"] as? Bool) ?? false
         selectedControllerId = gpsPrefs?["gps_ownerId"] as? String
+        // Restore what motion we last asked the desktop agent for. Must happen before any
+        // `writePending()` can run, or the first write of the session would serialize
+        // `.idle` over a live route or steering vector — which for steering means the agent
+        // stops integrating and falls back to the coordinate in the file, snapping the device
+        // back to wherever the session began.
+        //
+        // Read from a file in the App Group rather than the shared plist because an App Intent
+        // in a *different process* is also a writer; see `GpsMotionStateStore`.
+        motionState = GpsMotionStateStore.load(suite: suite)
+        // Hold `desired.json` writes until a report has been read, if there is motion whose
+        // position we don't yet know. Must be armed before `restoreLocalPending()` below, which
+        // is what puts the session's stale seed back into memory.
+        armMotionWriteGate()
         // Restore our own last-written desired state BEFORE reconciling with the
         // extension. The app keeps no other durable copy of its toggle/location
         // state, so on a cold launch (iOS terminating the backgrounded app, or
@@ -1354,6 +1928,20 @@ final class SpoofController: ObservableObject {
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 Log.app.debug("App foregrounded — refreshing from extension + VPN re-check")
+                // FIRST, before anything that can write. While this app was suspended an App
+                // Intent from a Live Activity control may have changed the motion we asked
+                // for, in another process — so the in-memory copy is not authoritative on
+                // return and `refreshFromExtension()` below can reach `writePending()`.
+                //
+                // This is only half of the reconciliation. It restores what we *asked for*;
+                // adopting where the device actually *got to* needs a controller report and
+                // is task 5.2 of the spec, which also holds off the first write until a
+                // report has been read.
+                self.reloadMotionState()
+                // Same reasoning as at launch: what we asked for is restored above, but where
+                // the device actually got to needs a report. Hold writes until one is read.
+                self.armMotionWriteGate()
+                self.startMotionSync()
                 self.refreshFromExtension()
                 // Load-bearing for the whole flow: returning from Settings is exactly
                 // how a user gets here after flipping the extension on or off, and
@@ -2308,7 +2896,11 @@ final class SpoofController: ObservableObject {
     /// Writes directly to the App Group plist file, bypassing UserDefaults
     /// (which uses kCFPreferencesAnyUser against a container, triggering a slow
     /// cfprefsd detach warning every call).
-    func writePending(resync: Bool = false) {
+    /// - Parameter reloadWidgets: whether to poke WidgetKit. Passed `false` by the motion sync,
+    ///   which runs every few seconds during a route — a reload per step would exhaust
+    ///   WidgetKit's budget for the whole journey, and route progress belongs in a Live Activity
+    ///   rather than a widget timeline anyway. Every other caller wants the default.
+    func writePending(resync: Bool = false, reloadWidgets: Bool = true) {
         guard let container = FileManager.default
             .containerURL(forSecurityApplicationGroupIdentifier: suite) else {
             Log.bridge.error("writePending: App Group container unavailable (\(self.suite))")
@@ -2409,7 +3001,9 @@ final class SpoofController: ObservableObject {
         // Reload widgets. Debounced so rapid successive writePending calls
         // (e.g. enable + setLocation + timezone resolve all firing together)
         // coalesce into one reload instead of hammering WidgetKit's rate limit.
-        Self.scheduleWidgetReload()
+        if reloadWidgets {
+            Self.scheduleWidgetReload()
+        }
     }
 
     /// Write the current desired location to `Documents/desired.json` for the
@@ -2421,6 +3015,19 @@ final class SpoofController: ObservableObject {
     /// atomically so the agent never reads a half-written file. Metadata only —
     /// no effect on the extension bridge above.
     private func writeGpsDesiredState() {
+        // The write gate. Held only while motion is running and no report has been read yet —
+        // the window in which the coordinate in memory is the session's stale seed rather than
+        // where the device actually is. Recorded rather than dropped, so whatever the user just
+        // did is replayed the moment a position is adopted.
+        //
+        // Deliberately a precondition here rather than an ordering convention at the call sites:
+        // `writePending()` has many callers and a convention would be re-broken by the next one
+        // added.
+        if motionWriteGateArmed {
+            gatedWritePending = true
+            Log.bridge.debug("GPS desired.json write held by the motion gate")
+            return
+        }
         guard let docs = FileManager.default
             .urls(for: .documentDirectory, in: .userDomainMask).first else {
             Log.bridge.error("GPS desired.json: Documents directory unavailable")
@@ -2429,50 +3036,24 @@ final class SpoofController: ObservableObject {
         let url = docs.appendingPathComponent("desired.json")
 
         // Device GPS is its own opt-in (`deviceGpsEnabled`), decoupled from the
-        // browser spoof: it applies whenever the user enabled the GPS layer AND a
-        // location is chosen. Default off, so the real device location never moves
+        // browser spoof. Default off, so the real device location never moves
         // without explicit consent (Find My, every app is affected).
-        let active = deviceGpsEnabled && location != nil
+        //
+        // A loaded route counts as something to drive even with no chosen coordinate: the
+        // route carries its own points, so gating on `location` alone would write
+        // `enabled: false` and stop playback.
+        let active = deviceGpsEnabled && (location != nil || motionState.routeId != nil)
         let provenance = vpnSyncEnabled ? "vpn-sync" : "manual"
-        // Pass our StoreKit entitlement to the desktop agent as the source of truth for
-        // the GPS Pro gate (design §18) — the phone already knows (founder / lifetime /
-        // active subscription) via ProStore, bridged here as `cachedIsPro`. The agent
-        // reads this over the link instead of relying on a local dev stub, so a real Pro
-        // member is never wrongly told "GeoSpoof Pro required". Refreshed on every
-        // entitlement change (observeProEntitlement → writePending).
-        var obj: [String: Any] = [
-            "version": 1,
-            "enabled": active,
-            "provenance": provenance,
-            // Legacy unsigned flag: the agent treats it as a debug-only fallback and
-            // ignores it in release (it's forgeable). The signed `entitlement` below is
-            // the authority.
-            "pro": cachedIsPro,
-        ]
-        // Apple-signed StoreKit proof the agent verifies OFFLINE (signature + cert chain)
-        // to gate Pro tamper-resistantly. Mirrors the agent's `EntitlementProof`; omit
-        // empty sub-fields so we never imply material we don't have.
-        var entitlement: [String: Any] = [:]
-        if let appTxJWS = cachedAppTransactionJWS {
-            entitlement["app_transaction"] = appTxJWS
-        }
-        if !cachedEntitlementTransactionsJWS.isEmpty {
-            entitlement["transactions"] = cachedEntitlementTransactionsJWS
-        }
-        if !entitlement.isEmpty {
-            obj["entitlement"] = entitlement
-        }
-        // The chosen controlling computer (controller-arbitration). Omitted in the
-        // single-computer case so the agent's sole-controller drives automatically; set only
-        // when the user picked among several. The agent stands down on any computer not
-        // named here.
-        if let ownerId = selectedControllerId, !ownerId.isEmpty {
-            obj["owner_id"] = ownerId
-        }
-        if active, let location {
-            obj["latitude"] = location.latitude
-            obj["longitude"] = location.longitude
-        }
+        let obj = Self.buildGpsDesiredPayload(
+            active: active,
+            provenance: provenance,
+            coordinate: motionState.fallbackCoordinate(chosen: location),
+            motion: motionState,
+            pro: cachedIsPro,
+            appTransactionJWS: cachedAppTransactionJWS,
+            entitlementTransactionsJWS: cachedEntitlementTransactionsJWS,
+            ownerId: selectedControllerId
+        )
 
         guard let data = try? JSONSerialization.data(
             withJSONObject: obj, options: [.prettyPrinted, .sortedKeys]
@@ -2482,10 +3063,432 @@ final class SpoofController: ObservableObject {
         }
         do {
             try data.write(to: url, options: .atomic)
-            Log.bridge.debug("GPS desired.json → enabled=\(active) provenance=\(provenance)")
+            Log.bridge.debug(
+                "GPS desired.json → enabled=\(active) provenance=\(provenance) motion=\(self.motionState.mode.wireValue) route=\(self.motionState.routeId ?? "nil")"
+            )
         } catch {
             Log.bridge.error("GPS desired.json write failed: \(error.localizedDescription)")
         }
+    }
+
+    // MARK: Motion reconciliation
+
+    /// Supplies the device's real position from a desktop agent's report.
+    ///
+    /// Installed by the iOS layer at launch, because reading the roster and applying the echo
+    /// rules lives beside the iOS GPS surface while this type is shared with the widget and
+    /// macOS. `nil` on macOS and in the widget, where nothing reads reports — and where the
+    /// write gate below is therefore never armed.
+    var motionPositionProvider: (@MainActor () async -> GpsMotionSample)?
+
+    /// True while `desired.json` writes must wait for the first roster read of this activation.
+    ///
+    /// ## What this prevents
+    ///
+    /// On a cold launch during motion, `restoreLocalPending()` puts the *seed* coordinate back
+    /// into memory — where the session began, which can be hundreds of metres from where the
+    /// device now is. Anything that then reaches `writePending()` writes that seed. While a
+    /// steering vector is live the agent ignores it, so the damage is a wrong pin; but the same
+    /// path with the vector absent makes the seed authoritative and the device jumps back.
+    ///
+    /// So writes wait until a report has been read and the real position adopted.
+    ///
+    /// ## Why it arms only during motion
+    ///
+    /// With no route and no vector there is no stale-seed hazard — the coordinate in memory *is*
+    /// the intent. Arming anyway would add a startup dependency on a file read for every user
+    /// including the ones who never touch device GPS. So the gate's blast radius is exactly the
+    /// sessions that need it.
+    private var motionWriteGateArmed = false
+    /// A write that was suppressed by the gate, replayed on release. Suppressing and forgetting
+    /// would silently lose whatever the user just did.
+    private var gatedWritePending = false
+    /// When the bridge was last updated from a motion position, for the throttle in
+    /// `adoptMotionSample`.
+    private var lastMotionBridgePush: Date?
+    private var motionSyncTask: Task<Void, Never>?
+
+    /// Whether a mode is running that makes the in-memory coordinate untrustworthy.
+    var hasActiveMotion: Bool {
+        motionState.routeId != nil || motionState.steering != nil
+    }
+
+    /// How often the device's real position is re-read while motion is running.
+    ///
+    /// Matches the agent's own publish cadence; reading faster would just re-read the same file.
+    private static let motionSyncInterval: Double = 3
+    /// Minimum gap between bridge updates during motion.
+    ///
+    /// The browser only adopts `pending_*` on next launch or tab activity, so pushing every few
+    /// seconds buys nothing and churns the plist. At walking pace 15 s of lag is about 20 m,
+    /// which is invisible for geolocation purposes.
+    private static let motionBridgeThrottle: Double = 15
+
+    /// Arm the write gate if there is motion to reconcile. Idempotent.
+    func armMotionWriteGate() {
+        #if os(iOS)
+        guard hasActiveMotion else { return }
+        guard !motionWriteGateArmed else { return }
+        motionWriteGateArmed = true
+        Log.bridge.debug("motion write gate armed — waiting for the first roster read")
+        #endif
+    }
+
+    /// Release the gate, adopting `sample`'s position if it carries one, and replay any write the
+    /// gate suppressed.
+    ///
+    /// Releases on `rosterWasRead` rather than on a position being present, so a user with no
+    /// computer running is not stuck behind it forever.
+    func releaseMotionWriteGate(adopting sample: GpsMotionSample) {
+        if let coordinate = sample.coordinate {
+            adoptMotionCoordinate(coordinate)
+        }
+        guard motionWriteGateArmed else { return }
+        guard sample.rosterWasRead else { return }
+        motionWriteGateArmed = false
+        Log.bridge.debug("motion write gate released (adopted=\(sample.coordinate != nil))")
+        if gatedWritePending {
+            gatedWritePending = false
+            writePending()
+        }
+    }
+
+    /// Take the device's position as reported, without disturbing anything derived from a
+    /// *chosen* location.
+    ///
+    /// Deliberately sets only the coordinate. In particular it does **not** re-resolve the
+    /// timezone: a route's zone is pinned when playback starts, and re-resolving per step would
+    /// spend a boundary lookup every few seconds to learn the same answer. It also leaves
+    /// `locationName` alone, because a place name that changes every few seconds reads as
+    /// precision the position doesn't have.
+    private func adoptMotionCoordinate(_ coordinate: (latitude: Double, longitude: Double)) {
+        let existing = location
+        guard existing?.latitude != coordinate.latitude
+            || existing?.longitude != coordinate.longitude else { return }
+        location = SpoofLocation(
+            latitude: coordinate.latitude,
+            longitude: coordinate.longitude,
+            accuracy: existing?.accuracy ?? 100
+        )
+    }
+
+    /// Fold one motion observation into app state, pushing to the extension bridge on a throttle.
+    ///
+    /// `immediate` forces the bridge push and a widget reload, for the moments that matter —
+    /// motion starting, pausing, finishing. Ordinary steps do neither: at a few seconds per step
+    /// a widget reload would burn WidgetKit's budget for the whole route.
+    func adoptMotionSample(_ sample: GpsMotionSample, immediate: Bool = false) {
+        releaseMotionWriteGate(adopting: sample)
+        guard sample.coordinate != nil else { return }
+        let now = Date()
+        let due = lastMotionBridgePush.map {
+            now.timeIntervalSince($0) >= Self.motionBridgeThrottle
+        } ?? true
+        guard immediate || due else { return }
+        lastMotionBridgePush = now
+        // Keeps browser geolocation in step with the device's real position — the consistency
+        // claim the product rests on. Without this the browser stays pinned wherever the route
+        // began for its whole duration.
+        writePending(reloadWidgets: immediate)
+    }
+
+    /// Start re-reading the device's position while motion runs. No-op when nothing is moving, so
+    /// a user who never touches device GPS pays nothing.
+    func startMotionSync() {
+        #if os(iOS)
+        guard hasActiveMotion, motionSyncTask == nil, motionPositionProvider != nil else { return }
+        motionSyncTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                guard let self, self.hasActiveMotion, let provider = self.motionPositionProvider
+                else { break }
+                self.adoptMotionSample(await provider())
+                try? await Task.sleep(nanoseconds: UInt64(Self.motionSyncInterval * 1_000_000_000))
+            }
+            self?.motionSyncTask = nil
+        }
+        #endif
+    }
+
+    func stopMotionSync() {
+        motionSyncTask?.cancel()
+        motionSyncTask = nil
+    }
+
+    // MARK: Route playback
+
+    /// The route currently loaded, read back from `Documents/route.json`.
+    ///
+    /// `route.json` is the store — it is deliberately not duplicated into `GpsMotionState`,
+    /// which crosses a process boundary on every gesture and has no business carrying a
+    /// possibly-20,000-point array. Position interpolation reads it from here.
+    ///
+    /// `nil` when no route has been written, or when the file is unreadable — in which case
+    /// progress simply cannot be shown, which is better than showing a position derived from a
+    /// route we can't actually see.
+    func loadGpsRoute() -> GpsRoute? {
+        guard let docs = FileManager.default
+            .urls(for: .documentDirectory, in: .userDomainMask).first else { return nil }
+        let url = docs.appendingPathComponent("route.json")
+        guard let data = try? Data(contentsOf: url),
+              let route = try? JSONDecoder().decode(GpsRoute.self, from: data) else { return nil }
+        return route
+    }
+
+    /// Write `route` to `Documents/route.json`, validating first.
+    ///
+    /// Returns the reason it was refused, or `nil` on success. Refusal is deliberate over
+    /// truncation: playing the first fraction of someone's route is worse than declining it,
+    /// because a truncated route looks like it worked.
+    private func writeGpsRouteFile(_ route: GpsRoute) -> GpsRouteValidationFailure? {
+        if let failure = route.validationFailure { return failure }
+        guard let docs = FileManager.default
+            .urls(for: .documentDirectory, in: .userDomainMask).first else {
+            Log.bridge.error("GPS route.json: Documents directory unavailable")
+            return .writeFailed
+        }
+        let url = docs.appendingPathComponent("route.json")
+        guard let data = try? JSONEncoder().encode(route) else {
+            Log.bridge.error("GPS route.json: encode failed")
+            return .writeFailed
+        }
+        do {
+            try data.write(to: url, options: .atomic)
+            Log.bridge.debug("GPS route.json → id=\(route.id) points=\(route.points.count)")
+            return nil
+        } catch {
+            Log.bridge.error("GPS route.json write failed: \(error.localizedDescription)")
+            return .writeFailed
+        }
+    }
+
+    /// Load `route` and begin playback. Returns the reason it was refused, or `nil` on success.
+    ///
+    /// Order is load-bearing: `route.json` is written **before** the `desired.json` that names
+    /// it. Getting it backwards is not fatal — the agent re-checks for the route on every pass
+    /// while a `route_id` is set, so a late file is picked up within about a second — but the
+    /// right order costs nothing and keeps the agent's log clean.
+    ///
+    /// Also sets the chosen location to the route's first point. That is what satisfies the
+    /// agent's rule that spoofing must be enabled independently of any mode, and it gives the
+    /// device a sensible place to sit if playback ever stops.
+    @discardableResult
+    func startGpsRoute(_ route: GpsRoute) -> GpsRouteValidationFailure? {
+        if let failure = writeGpsRouteFile(route) { return failure }
+
+        if let first = route.points.first {
+            // Assigned directly rather than through `setLocation`, which would fire
+            // `writePending()` before the motion state below is armed — writing a
+            // `desired.json` that names no route, only to correct it a moment later.
+            location = SpoofLocation(latitude: first.lat, longitude: first.lon)
+            timezone = Self.resolveTimezone(
+                latitude: first.lat, longitude: first.lon, identifier: nil
+            )
+        }
+        if !enabled { enabled = true }
+
+        var state = motionState
+        state.mode = .route
+        state.routeId = route.id
+        // A fresh marker on every press of play, which is what tells the agent to replay from
+        // the first point rather than resume where a previous run left off.
+        state.routeStartedAt = Date().timeIntervalSince1970.rounded()
+        state.routePaused = false
+        updateMotionState(state)
+        // Playback has its own position from here on, so start following it — and reset the
+        // throttle so the first observation pushes to the bridge immediately rather than waiting
+        // out a window that began before this route existed.
+        lastMotionBridgePush = nil
+        startMotionSync()
+        Log.bridge.info("GPS route started id=\(route.id) points=\(route.points.count)")
+        return nil
+    }
+
+    /// Freeze playback in place, still spoofing.
+    ///
+    /// Distinct from turning device GPS off, which reverts to the phone's real GPS. "Wait here"
+    /// and "stop pretending" are different intents and must never share a control.
+    func pauseGpsRoute() {
+        guard motionState.routeId != nil, !motionState.routePaused else { return }
+        var state = motionState
+        state.routePaused = true
+        updateMotionState(state)
+    }
+
+    /// Resume a paused route from where it left off.
+    ///
+    /// Deliberately leaves `routeStartedAt` alone — an unchanged marker is precisely what
+    /// distinguishes resume from replay, and it survives an agent restart.
+    func resumeGpsRoute() {
+        guard motionState.routeId != nil, motionState.routePaused else { return }
+        var state = motionState
+        state.routePaused = false
+        updateMotionState(state)
+    }
+
+    /// Replay the loaded route from its first point.
+    func restartGpsRoute() {
+        guard motionState.routeId != nil else { return }
+        var state = motionState
+        state.routeStartedAt = Date().timeIntervalSince1970.rounded()
+        state.routePaused = false
+        state.mode = .route
+        updateMotionState(state)
+    }
+
+    /// Stop playback and hold the current coordinate.
+    ///
+    /// Note what this does *not* do: it does not disable spoofing. The device stays where it is
+    /// rather than snapping back to its real location, which is the same reasoning behind the
+    /// agent not clearing a finished route.
+    func stopGpsRoute() {
+        guard motionState.routeId != nil else { return }
+        var state = motionState
+        state.mode = .still
+        state.routeId = nil
+        state.routeStartedAt = nil
+        state.routePaused = false
+        updateMotionState(state)
+        // Nothing left to follow. The coordinate stands where playback left it, which is what
+        // keeps the device from snapping back to its real location on stop.
+        stopMotionSync()
+        Log.bridge.info("GPS route stopped")
+    }
+
+    /// Re-read `GpsMotionState` from the App Group.
+    ///
+    /// Necessary because this app is not its only writer: an App Intent fired by a Live
+    /// Activity control runs in a separate background launch and records its gesture there
+    /// while this process is suspended. On return the in-memory copy can be arbitrarily stale,
+    /// and acting on it would ask the agent to resume a mode the user has since changed.
+    ///
+    /// Assigns only on a real difference, so a foreground pass with nothing to say doesn't
+    /// publish a change to every `@Published` observer.
+    func reloadMotionState() {
+        let stored = GpsMotionStateStore.load(suite: suite)
+        guard stored != motionState else { return }
+        Log.bridge.debug(
+            "motion state reloaded → mode=\(stored.mode.rawValue) route=\(stored.routeId ?? "nil") steering=\(stored.steering != nil)"
+        )
+        motionState = stored
+    }
+
+    /// Persist `state` and mirror it into `desired.json`.
+    ///
+    /// The single mutation path, so persistence and the write can't drift apart: a state
+    /// change the agent never sees is invisible, and a write from state that wasn't persisted
+    /// is lost on the next relaunch. Both failures look like "it randomly forgot".
+    ///
+    /// Deliberately does **not** go through `writePending()`. That writes the extension
+    /// bridge and schedules a widget reload, neither of which a motion change needs — and at
+    /// gesture rates the widget reload would burn WidgetKit's budget. Browser alignment during
+    /// motion is a separate, throttled concern (spec task 6.3).
+    func updateMotionState(_ state: GpsMotionState) {
+        motionState = state
+        GpsMotionStateStore.save(state, suite: suite)
+        writeGpsDesiredState()
+    }
+
+    /// Build the `desired.json` payload. **Pure**, so the contract can be asserted without a
+    /// host app, a container, or a device.
+    ///
+    /// Extracted from `writeGpsDesiredState()` for one reason: the guarantee that matters most
+    /// here is a *negative* one — an unrelated `writePending()` caller must not disturb a route
+    /// or a steering vector — and a negative guarantee is only worth having if something checks
+    /// it. Every input is a parameter, so a test can hold `motion` fixed, vary everything else,
+    /// and assert the motion keys come out unchanged.
+    ///
+    /// Absent keys are omitted rather than written as null, matching the contract's
+    /// "absent means absent" rule so the agent can tell "nothing to say" from
+    /// "explicitly nothing".
+    nonisolated static func buildGpsDesiredPayload(
+        active: Bool,
+        provenance: String,
+        coordinate: (latitude: Double, longitude: Double)?,
+        motion: GpsMotionState,
+        pro: Bool,
+        appTransactionJWS: String?,
+        entitlementTransactionsJWS: [String],
+        ownerId: String?
+    ) -> [String: Any] {
+        var obj: [String: Any] = [
+            "version": 1,
+            "enabled": active,
+            "provenance": provenance,
+            // Legacy unsigned flag: the agent treats it as a debug-only fallback and
+            // ignores it in release (it's forgeable). The signed `entitlement` below is
+            // the authority.
+            "pro": pro,
+            // Always explicit, including `still`.
+            //
+            // The agent infers a mode from what's present when this is omitted, and behaved
+            // that way before the field existed — but inference cannot express "hold this
+            // coordinate while a stale `route_id` is still in the file", which is exactly the
+            // state a loaded-but-not-started route sits in. Stating it also removes any
+            // precedence question when a route and a vector coexist, and it is what makes the
+            // agent's echo-back meaningful: if we never asked for a mode, a report that doesn't
+            // name one tells us nothing.
+            "motion": motion.mode.wireValue,
+        ]
+        // Apple-signed StoreKit proof the agent verifies OFFLINE (signature + cert chain)
+        // to gate Pro tamper-resistantly. Mirrors the agent's `EntitlementProof`; omit
+        // empty sub-fields so we never imply material we don't have.
+        var entitlement: [String: Any] = [:]
+        if let appTransactionJWS {
+            entitlement["app_transaction"] = appTransactionJWS
+        }
+        if !entitlementTransactionsJWS.isEmpty {
+            entitlement["transactions"] = entitlementTransactionsJWS
+        }
+        if !entitlement.isEmpty {
+            obj["entitlement"] = entitlement
+        }
+        // The chosen controlling computer (controller-arbitration). Omitted in the
+        // single-computer case so the agent's sole-controller drives automatically; set only
+        // when the user picked among several. The agent stands down on any computer not
+        // named here.
+        if let ownerId, !ownerId.isEmpty {
+            obj["owner_id"] = ownerId
+        }
+        // The fallback hold, kept in every mode. While a route plays or a vector runs the agent
+        // ignores these for positioning, but they are where the device sits if the motion
+        // payload goes away.
+        if active, let coordinate {
+            obj["latitude"] = coordinate.latitude
+            obj["longitude"] = coordinate.longitude
+        }
+        // Route playback. `route_id` names a route in the sibling `route.json`; omitting it
+        // means "hold the single coordinate".
+        //
+        // Note the asymmetry with the status report, which is easy to get backwards: this is
+        // `route_started_at` at the TOP level, and it comes back as `started_at` NESTED inside
+        // the report's `route` object.
+        if let routeId = motion.routeId, !routeId.isEmpty {
+            obj["route_id"] = routeId
+            obj["route_paused"] = motion.routePaused
+            // Identifies this playback run, and is what separates resume from replay:
+            // unchanged resumes where it left off (surviving an agent restart), a new value
+            // replays from the first point. Read from stored state, never `Date()` here —
+            // deriving it at serialization time would restart the route on every incidental
+            // `writePending()`.
+            if let startedAt = motion.routeStartedAt {
+                obj["route_started_at"] = startedAt
+            }
+        }
+        // Live steering. The agent integrates this and owns the position while it runs, so no
+        // coordinate goes inside it — `latitude`/`longitude` above is a seed for the first
+        // gesture of a session only, and is ignored thereafter.
+        if let steering = motion.steering {
+            obj["steering"] = [
+                "seq": steering.seq,
+                "heading_deg": steering.headingDeg,
+                "speed_mps": steering.speedMps,
+                // Always explicit. The agent's default for an absent value is short — right
+                // for a forgetful writer, wrong for a dial someone holds while gaming, where
+                // it would read as an unexplained stop.
+                "ttl_secs": steering.ttlSecs,
+            ]
+        }
+        return obj
     }
 
     /// Debounce token for widget reloads — ensures at most one reload fires

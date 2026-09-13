@@ -1,0 +1,511 @@
+{
+  "_comment": "Decode contract for the GeoSpoof GPS agent's per-computer status file, Documents/controllers/<id>.json. Consumed by the native Swift decode test (safari/GeoSpoofTests/GpsStatusDecodeTests.swift) against GpsStatus / GpsRouteStatus / GpsSteeringStatus in 'safari/iOS (App)/SceneDelegate.swift'. Every 'report' below is copied from a JSON block in geospoof-gps/APP_CONTRACT.md or constructed to exercise a rule that document states in prose, so the app's model and the documented wire format cannot drift apart silently. The pairing is deliberate: the contract's own doc test asserts its examples stay complete, and this asserts we decode them. There is no TypeScript counterpart — the extension never reads these files.",
+
+  "cases": [
+    {
+      "name": "route playing — the contract's canonical example, all nine route fields",
+      "why": "An implementer builds their decoding struct from the canonical JSON block rather than the prose, so every field the agent emits must be present here. started_at and remaining_secs were once explained below the example but absent from it, which would have silently dropped both.",
+      "report": {
+        "id": "mac-abc123",
+        "name": "Anthony's MacBook Air",
+        "version": 1,
+        "agent_version": "0.2.0",
+        "connected": true,
+        "session": "spoofing",
+        "provenance": "from-app",
+        "motion": "route",
+        "remediation": "",
+        "error": null,
+        "pro": true,
+        "transport": "wireless",
+        "updated_at": 1789300123,
+        "device": { "name": "iPhone", "product_type": "iPhone17,1", "ios_version": "26.5" },
+        "route": {
+          "id": "morning-run-2026-09-13",
+          "started_at": 1789300000,
+          "name": "Morning run",
+          "travelled_m": 412.5,
+          "total_m": 1113.0,
+          "remaining_secs": 234,
+          "paused": false,
+          "finished": false,
+          "speed_defaulted": false
+        }
+      },
+      "expect": {
+        "session": "spoofing",
+        "isSpoofing": true,
+        "deliveredMotion": "route",
+        "transport": "wireless",
+        "deliversRoute": true,
+        "deliversSteering": false,
+        "hasRoute": true,
+        "hasSteering": false,
+        "route": {
+          "id": "morning-run-2026-09-13",
+          "startedAt": 1789300000,
+          "name": "Morning run",
+          "travelledM": 412.5,
+          "totalM": 1113.0,
+          "remainingSecs": 234,
+          "paused": false,
+          "finished": false,
+          "speedDefaulted": false
+        }
+      }
+    },
+
+    {
+      "name": "steering — all eleven fields including the integrated position",
+      "why": "The one place a status report tells us a coordinate. seq is what makes the timing fields trustworthy; expires_in_secs is what a countdown must be built from.",
+      "report": {
+        "id": "mac-abc123",
+        "name": "Anthony's MacBook Air",
+        "version": 1,
+        "agent_version": "0.2.0",
+        "connected": true,
+        "session": "spoofing",
+        "provenance": "from-app",
+        "motion": "steering",
+        "remediation": "",
+        "error": null,
+        "pro": true,
+        "transport": "usb",
+        "updated_at": 1789300123,
+        "device": { "name": "iPhone", "product_type": "iPhone17,1", "ios_version": "26.5" },
+        "steering": {
+          "seq": 7,
+          "heading_deg": 90.0,
+          "speed_mps": 3.0,
+          "latitude": 35.67049,
+          "longitude": 139.70035,
+          "travelled_m": 32.0,
+          "ttl_secs": 600,
+          "expires_in_secs": 540,
+          "held": false,
+          "expired": false,
+          "rejected": null
+        }
+      },
+      "expect": {
+        "isSpoofing": true,
+        "deliveredMotion": "steering",
+        "transport": "usb",
+        "deliversSteering": true,
+        "deliversRoute": false,
+        "hasRoute": false,
+        "hasSteering": true,
+        "steering": {
+          "seq": 7,
+          "headingDeg": 90.0,
+          "speedMps": 3.0,
+          "latitude": 35.67049,
+          "longitude": 139.70035,
+          "travelledM": 32.0,
+          "ttlSecs": 600,
+          "expiresInSecs": 540,
+          "held": false,
+          "expired": false,
+          "rejected": null
+        }
+      }
+    },
+
+    {
+      "name": "still — spoofing one coordinate, neither nested object present",
+      "why": "Absence is meaningful and is the normal state. A missing route or steering key must decode cleanly, not error. 'still' means actively holding one coordinate, NOT doing nothing.",
+      "report": {
+        "id": "mac-abc123",
+        "name": "Anthony's MacBook Air",
+        "version": 1,
+        "agent_version": "0.2.0",
+        "connected": true,
+        "session": "spoofing",
+        "provenance": "vpn-sync",
+        "motion": "still",
+        "remediation": "",
+        "error": null,
+        "pro": true,
+        "transport": "wireless",
+        "updated_at": 1789300123,
+        "device": { "name": "iPhone", "product_type": "iPhone17,1", "ios_version": "26.5" }
+      },
+      "expect": {
+        "isSpoofing": true,
+        "deliveredMotion": "still",
+        "deliversRoute": false,
+        "deliversSteering": false,
+        "hasRoute": false,
+        "hasSteering": false
+      }
+    },
+
+    {
+      "name": "older agent — no motion, no transport, spoofing",
+      "why": "An agent that predates the motion field ignores what it doesn't know, holds the coordinate, and reports no mode. The app must read that as 'this computer is not delivering the mode I asked for' — degraded but visibly so — rather than failing the decode.",
+      "report": {
+        "id": "mac-old",
+        "name": "Old iMac",
+        "version": 1,
+        "agent_version": "0.1.9",
+        "connected": true,
+        "session": "spoofing",
+        "provenance": "from-app",
+        "remediation": "",
+        "error": null,
+        "pro": true,
+        "updated_at": 1789300123,
+        "device": { "name": "iPhone", "product_type": "iPhone17,1", "ios_version": "26.5" }
+      },
+      "expect": {
+        "isSpoofing": true,
+        "deliveredMotion": null,
+        "transport": "unknown",
+        "deliversRoute": false,
+        "deliversSteering": false,
+        "hasRoute": false,
+        "hasSteering": false
+      }
+    },
+
+    {
+      "name": "idle — not spoofing, so the mode question is meaningless",
+      "why": "THE trap. An absent motion here means nothing is driving a location, not that the computer lacks a capability. Telling a user 'this computer can't steer' when spoofing is simply switched off would be wrong, and this exact mistake was already made once against an unreachable iPad. deliveredMotion must be null because session is not 'spoofing'.",
+      "report": {
+        "id": "mac-abc123",
+        "name": "Anthony's MacBook Air",
+        "version": 1,
+        "agent_version": "0.2.0",
+        "connected": true,
+        "session": "idle",
+        "provenance": "unknown",
+        "remediation": "",
+        "error": null,
+        "pro": true,
+        "transport": "usb",
+        "updated_at": 1789300123,
+        "device": { "name": "iPhone", "product_type": "iPhone17,1", "ios_version": "26.5" }
+      },
+      "expect": {
+        "isSpoofing": false,
+        "deliveredMotion": null,
+        "deliversRoute": false,
+        "deliversSteering": false
+      }
+    },
+
+    {
+      "name": "idle but motion present — session still wins",
+      "why": "Guards the guard. Even if a future agent emitted a mode while idle, deliveredMotion is gated on session, so nothing downstream can render a mode for a device nobody is driving.",
+      "report": {
+        "id": "mac-abc123",
+        "name": "Anthony's MacBook Air",
+        "version": 1,
+        "agent_version": "0.3.0",
+        "connected": true,
+        "session": "idle",
+        "provenance": "unknown",
+        "motion": "still",
+        "remediation": "",
+        "error": null,
+        "pro": true,
+        "transport": "usb",
+        "updated_at": 1789300123
+      },
+      "expect": {
+        "isSpoofing": false,
+        "deliveredMotion": null,
+        "deliversRoute": false,
+        "deliversSteering": false
+      }
+    },
+
+    {
+      "name": "unrecognised motion from a newer agent",
+      "why": "Unknown enum values degrade, never fail. A future mode this build has never heard of reads as the catch-all, and crucially does NOT read as any mode we might have asked for — so the echo rule still reports it honestly as not delivered.",
+      "report": {
+        "id": "mac-future",
+        "name": "Future Mac",
+        "version": 1,
+        "agent_version": "9.9.9",
+        "connected": true,
+        "session": "spoofing",
+        "provenance": "from-app",
+        "motion": "orbital-drift",
+        "remediation": "",
+        "error": null,
+        "pro": true,
+        "transport": "starlink",
+        "updated_at": 1789300123
+      },
+      "expect": {
+        "isSpoofing": true,
+        "deliveredMotion": "unknown",
+        "transport": "unknown",
+        "deliversRoute": false,
+        "deliversSteering": false
+      }
+    },
+
+    {
+      "name": "finished route holding the final point",
+      "why": "finished is not cleared, deliberately — reverting the moment a journey completed would undo the feature. remaining_secs reads 0 rather than going absent. The UI must say 'finished', not 'stopped'.",
+      "report": {
+        "id": "mac-abc123",
+        "name": "Anthony's MacBook Air",
+        "version": 1,
+        "agent_version": "0.2.0",
+        "connected": true,
+        "session": "spoofing",
+        "provenance": "from-app",
+        "motion": "route",
+        "remediation": "",
+        "error": null,
+        "pro": true,
+        "transport": "wireless",
+        "updated_at": 1789300123,
+        "route": {
+          "id": "morning-run-2026-09-13",
+          "started_at": 1789300000,
+          "name": "Morning run",
+          "travelled_m": 1113.0,
+          "total_m": 1113.0,
+          "remaining_secs": 0,
+          "paused": false,
+          "finished": true,
+          "speed_defaulted": false
+        }
+      },
+      "expect": {
+        "deliveredMotion": "route",
+        "hasRoute": true,
+        "route": { "finished": true, "remainingSecs": 0, "travelledM": 1113.0, "totalM": 1113.0 }
+      }
+    },
+
+    {
+      "name": "repeating route — no remaining_secs, never finished",
+      "why": "travelled_m resets each lap and total_m is one lap, so a per-lap progress bar is meaningful but there is no total remaining. remaining_secs is absent rather than zero, which is the signal the UI needs to choose its per-lap layout instead of showing a blank duration.",
+      "report": {
+        "id": "mac-abc123",
+        "name": "Anthony's MacBook Air",
+        "version": 1,
+        "agent_version": "0.2.0",
+        "connected": true,
+        "session": "spoofing",
+        "provenance": "from-app",
+        "motion": "route",
+        "remediation": "",
+        "error": null,
+        "pro": true,
+        "transport": "wireless",
+        "updated_at": 1789300123,
+        "route": {
+          "id": "park-loop",
+          "started_at": 1789300000,
+          "name": "Park loop",
+          "travelled_m": 120.0,
+          "total_m": 800.0,
+          "paused": false,
+          "finished": false,
+          "speed_defaulted": false
+        }
+      },
+      "expect": {
+        "hasRoute": true,
+        "route": { "remainingSecs": null, "finished": false, "totalM": 800.0 }
+      }
+    },
+
+    {
+      "name": "speed defaulted — an as-recorded route with no timings",
+      "why": "Must be surfaced. A user who picked a cycling route and silently got walking pace has been misled, and every other number we show loses credibility with it.",
+      "report": {
+        "id": "mac-abc123",
+        "name": "Anthony's MacBook Air",
+        "version": 1,
+        "agent_version": "0.2.0",
+        "connected": true,
+        "session": "spoofing",
+        "provenance": "from-app",
+        "motion": "route",
+        "remediation": "",
+        "error": null,
+        "pro": true,
+        "transport": "usb",
+        "updated_at": 1789300123,
+        "route": {
+          "id": "imported-track",
+          "started_at": 1789300000,
+          "travelled_m": 10.0,
+          "total_m": 5000.0,
+          "remaining_secs": 3564,
+          "paused": false,
+          "finished": false,
+          "speed_defaulted": true
+        }
+      },
+      "expect": {
+        "hasRoute": true,
+        "route": { "speedDefaulted": true, "name": null }
+      }
+    },
+
+    {
+      "name": "steering held at zero speed",
+      "why": "Zero speed is valid and means 'wait here' — the vector is live and the position is held. This is what the Live Activity's hold control writes, because it needs no knowledge of the coordinate and cannot cause a snap-back.",
+      "report": {
+        "id": "mac-abc123",
+        "name": "Anthony's MacBook Air",
+        "version": 1,
+        "agent_version": "0.2.0",
+        "connected": true,
+        "session": "spoofing",
+        "provenance": "from-app",
+        "motion": "steering",
+        "remediation": "",
+        "error": null,
+        "pro": true,
+        "transport": "wireless",
+        "updated_at": 1789300123,
+        "steering": {
+          "seq": 12,
+          "heading_deg": 0.0,
+          "speed_mps": 0.0,
+          "latitude": 35.68,
+          "longitude": 139.71,
+          "travelled_m": 480.0,
+          "ttl_secs": 900,
+          "expires_in_secs": 900,
+          "held": true,
+          "expired": false,
+          "rejected": null
+        }
+      },
+      "expect": {
+        "hasSteering": true,
+        "steering": { "held": true, "speedMps": 0.0, "expired": false, "expiresInSecs": 900 }
+      }
+    },
+
+    {
+      "name": "steering expired — deadline passed with no interaction",
+      "why": "A different message from the user stopping: the device is being held. expires_in_secs reads 0 rather than underflowing negative, which is what lets a countdown be presentation-only while this flag drives the state.",
+      "report": {
+        "id": "mac-abc123",
+        "name": "Anthony's MacBook Air",
+        "version": 1,
+        "agent_version": "0.2.0",
+        "connected": true,
+        "session": "spoofing",
+        "provenance": "from-app",
+        "motion": "steering",
+        "remediation": "",
+        "error": null,
+        "pro": true,
+        "transport": "wireless",
+        "updated_at": 1789300123,
+        "steering": {
+          "seq": 12,
+          "heading_deg": 90.0,
+          "speed_mps": 3.0,
+          "latitude": 35.68,
+          "longitude": 139.71,
+          "travelled_m": 900.0,
+          "ttl_secs": 60,
+          "expires_in_secs": 0,
+          "held": false,
+          "expired": true,
+          "rejected": null
+        }
+      },
+      "expect": {
+        "hasSteering": true,
+        "steering": { "expired": true, "expiresInSecs": 0 }
+      }
+    },
+
+    {
+      "name": "steering rejected — a defect in this app, not a user action",
+      "why": "Every rejection case (NaN, infinite, negative speed) can only be produced by a bug on our side, so this is a bug canary for the debug surface rather than customer-facing copy to translate into a dozen locales. Position is held.",
+      "report": {
+        "id": "mac-abc123",
+        "name": "Anthony's MacBook Air",
+        "version": 1,
+        "agent_version": "0.2.0",
+        "connected": true,
+        "session": "spoofing",
+        "provenance": "from-app",
+        "motion": "still",
+        "remediation": "",
+        "error": null,
+        "pro": true,
+        "transport": "usb",
+        "updated_at": 1789300123,
+        "steering": {
+          "seq": 13,
+          "rejected": "speed_mps was not finite",
+          "held": true
+        }
+      },
+      "expect": {
+        "deliveredMotion": "still",
+        "deliversSteering": false,
+        "hasSteering": true,
+        "steering": { "rejected": "speed_mps was not finite", "latitude": null, "speedMps": null }
+      }
+    },
+
+    {
+      "name": "pairing repair needed",
+      "why": "The one unreachable state with a specific one-step fix — plug it in once. A machine-readable companion to remediation, because a host that can only match on prose has to guess, and this deserves a different affordance from the generic 'we can't find your iPhone'.",
+      "report": {
+        "id": "mac-abc123",
+        "name": "Anthony's MacBook Air",
+        "version": 1,
+        "agent_version": "0.2.0",
+        "connected": false,
+        "session": "lost",
+        "provenance": "unknown",
+        "remediation": "Connect your iPhone with a cable once to repair pairing.",
+        "error": null,
+        "pro": true,
+        "updated_at": 1789300123,
+        "pairing_repair_needed": true
+      },
+      "expect": {
+        "isSpoofing": false,
+        "deliveredMotion": null,
+        "pairingRepairNeeded": true
+      }
+    },
+
+    {
+      "name": "unknown keys are ignored",
+      "why": "Forward compatibility runs both ways. A newer agent adding fields must not break this build's decode.",
+      "report": {
+        "id": "mac-abc123",
+        "name": "Anthony's MacBook Air",
+        "version": 1,
+        "agent_version": "9.9.9",
+        "connected": true,
+        "session": "spoofing",
+        "provenance": "from-app",
+        "motion": "still",
+        "remediation": "",
+        "error": null,
+        "pro": true,
+        "transport": "usb",
+        "updated_at": 1789300123,
+        "thermal_state": "nominal",
+        "route": { "id": "x", "started_at": 1, "elevation_gain_m": 42.0 }
+      },
+      "expect": {
+        "isSpoofing": true,
+        "deliveredMotion": "still",
+        "hasRoute": true,
+        "route": { "id": "x", "startedAt": 1, "travelledM": null }
+      }
+    }
+  ]
+}

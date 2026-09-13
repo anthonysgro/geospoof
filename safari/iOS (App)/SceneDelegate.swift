@@ -6,7 +6,11 @@
 //
 
 import Combine
+// For a stable content hash of an imported GPX file — see `GpsGpxImporter.contentID`.
+import CryptoKit
 import SwiftUI
+// `UTType`, for the GPX file importer's content types.
+import UniformTypeIdentifiers
 import UIKit
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
@@ -34,6 +38,20 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     /// cold and warm opens reliably, including widget links where SwiftUI's
     /// `.onOpenURL` has been inconsistent.
     private func handleDeepLinks(_ contexts: Set<UIOpenURLContext>) {
+        // A GPX file opened from AirDrop, Mail, Files or a share sheet arrives as a `file:` URL
+        // through the same door as our own scheme, so it is claimed here before the scheme checks
+        // below — which would otherwise ignore it.
+        if let gpx = contexts.first(where: { $0.url.isFileURL && $0.url.isGpx }) {
+            GpsPendingRouteImport.offer(gpx.url, options: gpx.options)
+            Task { @MainActor in
+                // Put the user where the file can be imported and its outcome shown. On a cold
+                // launch this is Home, and the GPS tab is the only screen that claims a pending
+                // import — so without this the file is claimed by nobody and opening it appears to
+                // do nothing.
+                AppRouter.shared.selectedTab = .gps
+            }
+        }
+
         let wantsPaywall = contexts.contains { ctx in
             ctx.url.scheme == "geospoof" && ctx.url.host == "paywall"
         }
@@ -108,6 +126,7 @@ struct RootView: View {
             // A locked control (which can't open the app itself) may have left a
             // paywall request; surface it now.
             if WidgetPaywallRequest.consume() { router.showPaywall = true }
+            installMotionPositionProvider()
         }
         .onChange(of: appearance) { _, newValue in applyInterfaceStyle(newValue) }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
@@ -122,6 +141,40 @@ struct RootView: View {
             DeviceGpsSheet {}
         }
         #endif
+    }
+
+    /// Teach the controller how to find out where the device actually is.
+    ///
+    /// Installed here, at the root, rather than from `GpsView`: the browser must keep up with a
+    /// route regardless of which tab is on screen, and a provider owned by one tab's lifecycle
+    /// would stop feeding the moment the user swiped to Home.
+    ///
+    /// The split exists because reading the roster and applying the echo rules is iOS-only code,
+    /// while the controller is shared with the widget and macOS targets. Rather than move the
+    /// report types into shared code so they could be re-read there, the controller asks for a
+    /// summary and decides what to do with it.
+    private func installMotionPositionProvider() {
+        controller.motionPositionProvider = { [controller] in
+            let store = GpsStatusStore()
+            await store.reload(selectedId: controller.selectedControllerId)
+            guard let status = store.status, !store.isStale else {
+                // The roster was read and had nothing fresh to say. That still releases the
+                // write gate — a user whose computer is off must not be stuck behind it — but it
+                // yields no position, and the caller must then leave the last one alone.
+                return GpsMotionSample(latitude: nil, longitude: nil, rosterWasRead: true)
+            }
+            let gate = GpsEchoGate(status: status, asked: controller.motionState)
+            let resolved = gate.resolvedPosition(
+                route: controller.loadGpsRoute(),
+                chosen: controller.location
+            )
+            return GpsMotionSample(
+                latitude: resolved?.latitude,
+                longitude: resolved?.longitude,
+                rosterWasRead: true
+            )
+        }
+        controller.startMotionSync()
     }
 
     /// How setup leaves: a cross-dissolve, with the outgoing screen easing very
@@ -158,35 +211,42 @@ struct RootView: View {
     /// It now fades in rather than appearing instantly, so the first build of the
     /// tabs lands under a dissolve instead of a cut — which also hides any layout
     /// settling on that first frame rather than showing it.
+    /// Bound to `AppRouter.selectedTab` so an incoming file can put the user on the tab that
+    /// handles it — see `AppRouter.RootTab`. Tags are named rather than positional, so reordering
+    /// the tabs can't silently retarget anything that selects one.
     private var mainTabs: some View {
-        TabView {
+        TabView(selection: $router.selectedTab) {
             HomeView(controller: controller)
                 .tabItem {
                     Label("Home", systemImage: "house")
                 }
+                .tag(AppRouter.RootTab.home)
 
             BrowserSettingsView(controller: controller)
                 .tabItem {
                     Label("Browser", systemImage: "globe")
                 }
+                .tag(AppRouter.RootTab.browser)
 
             // GPS sits in the center (5 tabs: Home · Browser · GPS · Details · Settings) and
-            // reuses Home's old location glyph. Placeholder for now — the real device-GPS UI
-            // is the GeoSpoof GPS work.
+            // reuses Home's old location glyph.
             GpsView(controller: controller)
                 .tabItem {
                     Label("GPS", systemImage: "location.circle")
                 }
+                .tag(AppRouter.RootTab.gps)
 
             DetailsTab(controller: controller)
                 .tabItem {
                     Label("Details", systemImage: "list.bullet.rectangle")
                 }
+                .tag(AppRouter.RootTab.details)
 
             SettingsView(controller: controller)
                 .tabItem {
                     Label("Settings", systemImage: "gearshape")
                 }
+                .tag(AppRouter.RootTab.settings)
         }
     }
 }
@@ -267,10 +327,124 @@ nonisolated struct GpsDeviceSummary: Codable, Equatable {
     }
 }
 
+// `GpsMotionMode` lives in `Shared (App)/SpoofModel.swift`: the writer needs it too, and that
+// file compiles into the widget and macOS targets where this one does not.
+
+/// How the agent is reaching the device. Display metadata only — it never changes how a
+/// location is applied.
+nonisolated enum GpsTransport: String, Codable, Equatable {
+    case usb
+    case wireless
+    case unknown
+
+    init(reported: String) {
+        self = GpsTransport(rawValue: reported) ?? .unknown
+    }
+}
+
+/// Route playback progress from the agent's report. Present only while a route really is
+/// playing — absence is meaningful and is the normal state, not an error.
+///
+/// **Naming trap.** The app writes `route_started_at` at the *top level* of `desired.json`
+/// and reads it back as `started_at` *nested inside* `route`. Easy to get backwards; the
+/// contract calls this out explicitly.
+nonisolated struct GpsRouteStatus: Codable, Equatable {
+    /// Which route is playing, echoing the `route_id` we asked for.
+    var id: String?
+    /// **Which run** is playing, echoing the `route_started_at` we sent.
+    ///
+    /// A replay reuses the same `id` with a new marker, so the id alone cannot separate the
+    /// new run from the one it replaced. A report written a beat before the agent noticed a
+    /// replay would otherwise have us render the old run's progress as the new one's: 80%,
+    /// then a snap to 0%. See `GpsEchoGate`.
+    var startedAt: Double?
+    /// Display only. Never load-bearing.
+    var name: String?
+    var travelledM: Double?
+    /// One lap's length. Under `repeat` this does NOT grow — `travelledM` resets each lap.
+    var totalM: Double?
+    /// Seconds left, computed by the side that knows the pace.
+    ///
+    /// This is the number to show. It cannot be derived here: for an `as-recorded` route the
+    /// pace varies along the track, so it is not `(total - travelled) / speed`, and
+    /// `speedDefaulted` says a fallback happened without saying what pace is in force.
+    /// Absent for a repeating route, which never arrives; `0` once finished.
+    var remainingSecs: Double?
+    var paused: Bool?
+    /// The route ended and the device is holding the final point. Deliberately not cleared:
+    /// reverting the moment a journey completed would undo the feature. Say "finished", not
+    /// "stopped".
+    var finished: Bool?
+    /// The requested pace could not be honoured and a fallback is in force. Must be surfaced —
+    /// silently giving someone walking pace for a cycling route has misled them.
+    var speedDefaulted: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, paused, finished
+        case startedAt = "started_at"
+        case travelledM = "travelled_m"
+        case totalM = "total_m"
+        case remainingSecs = "remaining_secs"
+        case speedDefaulted = "speed_defaulted"
+    }
+}
+
+/// Live steering feedback from the agent's report — the one place a status report tells us a
+/// coordinate.
+///
+/// Everywhere else the app already knows the coordinate because it chose it. With the agent
+/// integrating a vector, the agent knows something we cannot derive, including any stretch it
+/// was unable to drive. An app returning from suspension trusts this over its own dead
+/// reckoning.
+nonisolated struct GpsSteeringStatus: Codable, Equatable {
+    /// The gesture the agent is acting on, echoing the `seq` we wrote.
+    ///
+    /// The field that makes the rest trustworthy: heading and speed can coincidentally match
+    /// the previous vector, so without this we cannot tell a report that reflects our latest
+    /// write from one written just before it. See `GpsEchoGate`.
+    var seq: Double?
+    var headingDeg: Double?
+    /// The pace actually in force, which may be a clamp of what we asked for. Use this for
+    /// display rather than echoing our own value back at the user.
+    var speedMps: Double?
+    /// The agent's integrated position — authoritative during steering.
+    var latitude: Double?
+    var longitude: Double?
+    var travelledM: Double?
+    /// The TTL actually in force, so a `9999` we sent shows up clamped.
+    var ttlSecs: Double?
+    /// Remaining seconds measured by the side that owns the deadline — immune to both clock
+    /// skew and clamping, and reads `0` once expired rather than underflowing. Never build a
+    /// countdown from the TTL we sent.
+    var expiresInSecs: Double?
+    /// Speed is zero: the vector is live and the position is held.
+    var held: Bool?
+    /// The deadline passed with no interaction. The device is being held, and that is a
+    /// different message from the user stopping.
+    var expired: Bool?
+    /// Why a vector was refused. Every refusal case (NaN, infinite, negative speed) indicates
+    /// a defect in *this app* rather than a user action, so this is a bug canary for the debug
+    /// surface — not customer-facing copy to translate.
+    var rejected: String?
+
+    enum CodingKeys: String, CodingKey {
+        case seq, latitude, longitude, held, expired, rejected
+        case headingDeg = "heading_deg"
+        case speedMps = "speed_mps"
+        case travelledM = "travelled_m"
+        case ttlSecs = "ttl_secs"
+        case expiresInSecs = "expires_in_secs"
+    }
+}
+
 /// The per-computer status the GeoSpoof GPS desktop agent writes back into this app's Documents,
 /// as `controllers/<id>.json` over AFC — one self-file per computer (controller-arbitration),
 /// not a single `status.json`. Mirrors the agent's `StatusReport`; the flat
 /// `ControllerReport` wraps it with the writing computer's identity (see `GpsController`).
+///
+/// Every field the agent may omit is decoded as an `Optional`, because the contract's rule
+/// runs both ways: a newer writer must never break an older reader, and an older *agent*
+/// must never break this app. Unknown keys are ignored for free by `Codable`.
 nonisolated struct GpsStatus: Codable, Equatable {
     var version: Int
     var agentVersion: String
@@ -284,11 +458,195 @@ nonisolated struct GpsStatus: Codable, Equatable {
     /// Unix seconds the agent produced this report. Used to detect a stale report (the
     /// agent can't publish once it loses the device), so we never show a false "spoofing".
     var updatedAt: Double?
+    /// The mode the agent **delivered**, deliberately allowed to differ from what we asked for.
+    ///
+    /// Kept as the raw `String?` rather than the enum so that *absent* and *unrecognised* stay
+    /// distinguishable, because Requirement 7 treats them differently and the difference is not
+    /// academic. Read it through `deliveredMotion`, never directly.
+    var motionRaw: String?
+    /// USB vs wireless, for display. Absent on an older agent.
+    var transportRaw: String?
+    /// This computer's wireless credential no longer verifies and must be re-minted over a
+    /// cable. A machine-readable companion to `remediation`, because this is the one
+    /// unreachable state with a specific one-step fix and it deserves a different affordance
+    /// from the generic "we can't find your iPhone".
+    var pairingRepairNeeded: Bool?
+    /// Route progress. Absent unless a route is playing.
+    var route: GpsRouteStatus?
+    /// Steering feedback. Absent unless a vector is running.
+    var steering: GpsSteeringStatus?
+
     enum CodingKeys: String, CodingKey {
         case version
         case agentVersion = "agent_version"
         case connected, device, session, provenance, remediation, error, pro
         case updatedAt = "updated_at"
+        case motionRaw = "motion"
+        case transportRaw = "transport"
+        case pairingRepairNeeded = "pairing_repair_needed"
+        case route, steering
+    }
+
+    /// Whether this computer is actively driving a location right now.
+    var isSpoofing: Bool { session == "spoofing" }
+
+    /// The mode the agent is delivering, or `nil` when the question doesn't apply.
+    ///
+    /// **`nil` is not "no mode" — it is "the question is meaningless".** `motion` is populated
+    /// only while spoofing, so an absent value on an idle, disconnected, non-owning, or
+    /// simply older computer means nothing is driving a location there. Telling a user
+    /// "this computer can't steer" when spoofing is switched off would be wrong, and it is a
+    /// mistake that has already been made once in a throwaway check script against an
+    /// unreachable iPad.
+    ///
+    /// So this returns `nil` unless `session` is `spoofing`, and callers that want to report a
+    /// missing capability must go through `delivers(_:)`.
+    var deliveredMotion: GpsMotionMode? {
+        guard isSpoofing else { return nil }
+        guard let motionRaw else { return nil }
+        return GpsMotionMode(reported: motionRaw)
+    }
+
+    var transport: GpsTransport {
+        GpsTransport(reported: transportRaw ?? "")
+    }
+
+    /// Whether this computer is delivering `mode`.
+    ///
+    /// The contract's single rule for every mode, including ones added after an agent shipped:
+    /// *if you asked for something and the report doesn't echo it, that computer isn't doing
+    /// it.* False for an agent that declined, and equally false for one that predates the
+    /// field — we don't need to know which to be honest with the user, and `agentVersion` is
+    /// here if a message wants to name a version.
+    ///
+    /// Only meaningful while spoofing; see `deliveredMotion`.
+    func delivers(_ mode: GpsMotionMode) -> Bool {
+        deliveredMotion == mode
+    }
+}
+
+/// Decides which fields of a report may be believed, given what we last asked for.
+///
+/// ## Why a gate is needed at all
+///
+/// The agent reads `desired.json` about once a second, so for a moment after every write the
+/// freshest report still describes the **previous** intent. Rendering it produces specific,
+/// visible lies:
+///
+///   * **Steering.** `expires_in_secs` is pre-extension, so a countdown built from it runs out
+///     early and says "expired" while the device is still moving. Heading and speed can
+///     coincidentally match the previous vector, so they cannot be used to detect this —
+///     `seq` can, which is why the agent echoes it.
+///   * **Routes.** A replay reuses the same `id` with a new `started_at`, so a report written a
+///     beat too early reports the *old* run's progress. The bar shows 80%, then snaps to 0%.
+///
+/// ## What is deliberately NOT gated
+///
+/// **Position.** `steering.latitude`/`longitude` is the agent's integrated position, and it is
+/// the best answer available whichever vector produced it. Withholding it until the echo matched
+/// would stall the map for a round trip and buy nothing. Only quantities that describe *our
+/// request* — timing, pace, progress — need the echo.
+///
+/// That split is what keeps the gate cheap enough to always apply.
+nonisolated struct GpsEchoGate {
+    let status: GpsStatus
+    /// What we last asked for. The comparison basis for every echo below.
+    let asked: GpsMotionState
+
+    /// Whether the report's steering timing and pace fields describe our latest gesture.
+    var steeringEchoMatches: Bool {
+        guard let sent = asked.steering?.seq, let echoed = status.steering?.seq else { return false }
+        return sent == echoed
+    }
+
+    /// Whether the report's route progress describes the run we last started.
+    var routeEchoMatches: Bool {
+        guard let sent = asked.routeStartedAt, let echoed = status.route?.startedAt else {
+            return false
+        }
+        return sent == echoed
+    }
+
+    /// The pace actually in force, or `nil` until confirmed.
+    ///
+    /// Read from the report rather than echoing back what we sent, because the agent clamps —
+    /// so a picker offering a speed above the cap stays honest instead of displaying a number
+    /// that isn't happening.
+    var confirmedSpeedMps: Double? {
+        steeringEchoMatches ? status.steering?.speedMps : nil
+    }
+
+    /// When the current steering vector lapses, or `nil` until confirmed.
+    ///
+    /// **The single place `expires_in_secs` becomes an absolute date**, so the in-app UI and a
+    /// Live Activity cannot disagree about a deadline. Built from the agent's remaining-seconds
+    /// rather than the TTL we sent, which would be wrong by the clock skew between the two
+    /// machines plus any clamping the agent applied.
+    ///
+    /// `nil` while the echo is unmatched is the signal to keep showing the last known deadline
+    /// rather than a fresh wrong one.
+    func steeringDeadline(now: Date = Date()) -> Date? {
+        guard steeringEchoMatches, let remaining = status.steering?.expiresInSecs else {
+            return nil
+        }
+        return now.addingTimeInterval(max(0, remaining))
+    }
+
+    /// Route progress, or `nil` until the run marker is confirmed.
+    ///
+    /// `remainingSecs` is passed through rather than derived: for an `as-recorded` route the pace
+    /// varies along the track, so it is not `(total - travelled) / speed`, and only the agent
+    /// knows what pace is actually in force.
+    var confirmedRouteProgress: (travelledM: Double, totalM: Double, remainingSecs: Double?)? {
+        guard routeEchoMatches,
+              let route = status.route,
+              let travelled = route.travelledM,
+              let total = route.totalM else { return nil }
+        return (travelled, total, route.remainingSecs)
+    }
+
+    /// The agent's integrated position while steering. Never echo-gated — see the type comment.
+    var steeringPosition: (latitude: Double, longitude: Double)? {
+        guard let lat = status.steering?.latitude, let lon = status.steering?.longitude else {
+            return nil
+        }
+        return (lat, lon)
+    }
+
+    /// Where the device is, per the mode the agent says it is delivering.
+    ///
+    /// This is what keeps browser geolocation in agreement with device GPS during motion, which
+    /// is the product's whole consistency claim. Three branches:
+    ///
+    ///   * `steering` — the agent's integrated position, which we cannot derive
+    ///   * `route` — our own polyline walked to the agent's `travelled_m`, which agrees by
+    ///     construction because `travelled_m` is the shared quantity
+    ///   * `still` — the coordinate we chose, which we already know
+    ///
+    /// `route` is passed in rather than re-read here so this stays pure and testable. Returns
+    /// `nil` when there is nothing trustworthy to report, and the caller must then leave the
+    /// last position alone rather than guessing — a guess here is how a stale seed gets written
+    /// back and drags the device.
+    func resolvedPosition(
+        route: GpsRoute?,
+        chosen: SpoofLocation?
+    ) -> (latitude: Double, longitude: Double)? {
+        switch status.deliveredMotion {
+        case .steering:
+            return steeringPosition
+        case .route:
+            guard let route,
+                  let progress = confirmedRouteProgress,
+                  let point = route.position(atTravelled: progress.travelledM) else { return nil }
+            return (point.lat, point.lon)
+        case .still:
+            guard let chosen else { return nil }
+            return (chosen.latitude, chosen.longitude)
+        case .unknown, nil:
+            // Either a mode this build can't name, or a computer that isn't spoofing at all.
+            // Neither is a position we can claim.
+            return nil
+        }
     }
 }
 
@@ -397,16 +755,379 @@ final class GpsStatusStore: ObservableObject {
 }
 
 /// Coarse UI phase derived from Pro state + the agent status.
+/// Route progress, already through the echo gate.
+///
+/// Only constructible from a confirmed report, which is the point: there is no way to build one
+/// of these from a report describing a previous run, so the 80%-then-snap-to-0% glitch is
+/// unreachable rather than merely avoided.
+private struct GpsRouteProgress: Equatable {
+    var name: String?
+    var travelledM: Double
+    var totalM: Double
+    /// `nil` for a repeating route, which has no end and therefore no time remaining. The view
+    /// reads that as "show a per-lap layout", not as "a number failed to arrive".
+    var remainingSecs: Double?
+    var paused: Bool
+    var finished: Bool
+    /// The requested pace wasn't honoured. Must be surfaced — someone who picked a cycling route
+    /// and silently got walking pace has been misled, and it taints every other figure shown.
+    var speedDefaulted: Bool
+
+    var fraction: Double {
+        guard totalM > 0 else { return 0 }
+        return min(1, max(0, travelledM / totalM))
+    }
+}
+
+/// Live steering detail, already through the echo gate.
+private struct GpsSteeringDetail: Equatable {
+    var headingDeg: Double?
+    /// The pace **in force**, read from the report rather than echoed back from what we sent, so
+    /// an agent-side clamp is visible instead of us displaying a speed that isn't happening.
+    var speedMps: Double?
+    var travelledM: Double?
+    /// When the vector lapses. `nil` while unconfirmed — the view must then keep showing its last
+    /// known deadline rather than a fresh wrong one.
+    var deadline: Date?
+    var held: Bool
+    var expired: Bool
+}
+
+/// What the owning computer is actually driving.
+///
+/// A payload on `GpsPhase.spoofing` rather than a set of flags read independently. That is
+/// deliberate: `spoofing` is only reachable once the report is fresh and its session really is
+/// `spoofing`, so nothing downstream can render motion detail derived from a report that has gone
+/// stale or from a computer that isn't driving anything.
+private enum GpsMotionDetail: Equatable {
+    /// Holding one coordinate. Not the same as doing nothing.
+    case still
+    case route(GpsRouteProgress)
+    case steering(GpsSteeringDetail)
+    /// We asked for a mode and this computer is not delivering it.
+    ///
+    /// True both for an agent that declined and for one that predates the mode entirely, and we
+    /// deliberately don't distinguish them: the report cannot tell us which, and the sentence a
+    /// user needs is the same either way.
+    case notDelivered(asked: GpsMotionMode)
+}
+
 private enum GpsPhase: Equatable {
     case notPro
     case waitingForComputer
     /// Two or more computers can drive this phone and none is chosen (or the chosen one
     /// left): the user must pick which computer controls it (controller-arbitration).
     case chooseController
+    /// The **agent** refused our entitlement, which is a different problem from a broken
+    /// connection and needs a different sentence.
+    ///
+    /// Reachable while this app believes itself Pro: the agent verifies the signed StoreKit
+    /// material independently and offline, so a local debug override or an unverifiable founder
+    /// grant lands here. Folding it into `setupNeeded` sent people to check cables over a
+    /// purchase problem.
+    case entitlementRejected
     case setupNeeded(String)
     case ready
-    case spoofing
+    case spoofing(GpsMotionDetail)
     case lost
+}
+
+extension URL {
+    /// Whether this looks like a GPX file.
+    ///
+    /// Matched on the extension rather than the declared content type: GPX has no
+    /// system-declared UTI, and files arriving from Mail or a web download are routinely tagged
+    /// generically. The parser is the real gate — it refuses anything without a track — so a
+    /// permissive check here costs nothing and a strict one would drop legitimate files.
+    var isGpx: Bool { pathExtension.lowercased() == "gpx" }
+}
+
+/// Holds a GPX file handed to the app from outside until something is ready to import it.
+///
+/// A buffer is needed because of *when* the file arrives. On a cold launch the URL is delivered in
+/// `scene(_:willConnectTo:options:)` — before any SwiftUI view exists to act on it — so consuming
+/// it there is impossible and dropping it means an AirDropped route silently does nothing. On a
+/// warm open the view does exist, but the same path should work either way rather than having two.
+///
+/// So the URL is parked here and claimed by the first view that asks. Read-once, like
+/// `WidgetPaywallRequest`, so a file can't be imported twice by two observers.
+@MainActor
+final class GpsPendingRouteImport: ObservableObject {
+    static let shared = GpsPendingRouteImport()
+
+    /// The waiting file, if any.
+    @Published private(set) var url: URL?
+    /// Whether the sender expects us to take ownership of the file rather than read it in place.
+    ///
+    /// AirDrop and Mail hand over a copy in the app's Inbox that is ours to delete; Files may open
+    /// a document in place, which is not. Getting this backwards either leaves litter in the Inbox
+    /// forever or deletes something out of a user's iCloud Drive.
+    private(set) var openInPlace = false
+
+    private init() {}
+
+    static func offer(_ url: URL, options: UIScene.OpenURLOptions) {
+        Task { @MainActor in
+            shared.url = url
+            shared.openInPlace = options.openInPlace
+        }
+    }
+
+    /// Take the waiting file, if there is one. Clears it, so a second caller gets nothing.
+    func claim() -> (url: URL, openInPlace: Bool)? {
+        guard let url else { return nil }
+        let inPlace = openInPlace
+        self.url = nil
+        openInPlace = false
+        return (url, inPlace)
+    }
+}
+
+// MARK: - GPX import
+
+/// Why a GPX file couldn't become a route.
+///
+/// Every case has to produce a different sentence, which is why this isn't a `Bool`. "Too big"
+/// names a number and is actionable; "no track in it" points at the wrong kind of file; a read
+/// failure is nobody's fault and needs no advice.
+nonisolated enum GpsGpxImportFailure: Error, Equatable {
+    case unreadable
+    /// Refused before parsing. Guards against a file large enough to matter before we allocate
+    /// anything from it.
+    case tooLarge(bytes: Int)
+    /// Parsed, but there was no track, route, or waypoint list in it.
+    case noTrack
+    /// **Refused, not truncated.** Playing the first fraction of someone's route is worse than
+    /// declining it, because a truncated route looks like it worked.
+    case tooManyPoints(Int)
+    case invalidCoordinate
+
+    /// Whether picking a different file could plausibly fix this.
+    var isFileProblem: Bool { self != .unreadable }
+}
+
+/// Turns a GPX file into a `GpsRoute`.
+///
+/// Uses Foundation's `XMLParser` rather than taking a dependency: GPX is a small, stable schema
+/// and we need four elements out of it.
+///
+/// ## What it reads, and what it deliberately ignores
+///
+/// Points come from `<trkpt>` (a recorded track — what Strava and Garmin export), falling back to
+/// `<rtept>` (a planned route) and then `<wpt>` (bare waypoints). Elevation is dropped: the
+/// contract has nowhere to put it and the agent walks a 2D path.
+///
+/// **Only the first `<trk>` is used**, and multiple `<trkseg>` within it are concatenated. A GPX
+/// can legally hold several unrelated tracks, and joining them would splice a teleport into the
+/// middle of the route — worse than quietly using one.
+///
+/// ## Timings
+///
+/// `<time>` becomes `offset_secs` relative to the first point, which is what makes
+/// `as-recorded` replay possible. If *any* point lacks a time, offsets are dropped from the whole
+/// route rather than partially filled: a route with holes in its timing would replay at a pace
+/// that is neither the recorded one nor a chosen one, and the agent's own fallback flag can't
+/// describe that.
+nonisolated enum GpsGpxImporter {
+    /// Refuse before allocating. Well above any real activity file — a 24-hour ride at one point
+    /// per second is a couple of megabytes — and far below anything that would strain the AFC
+    /// read on the far side.
+    static let maxBytes = 16 * 1024 * 1024
+
+    static func route(from data: Data, fallbackName: String?) -> Result<GpsRoute, GpsGpxImportFailure> {
+        guard data.count <= maxBytes else { return .failure(.tooLarge(bytes: data.count)) }
+
+        let delegate = Delegate()
+        let parser = XMLParser(data: data)
+        parser.delegate = delegate
+        // A GPX with a malformed tail is still worth the points it yielded before the break, so a
+        // parse error is not by itself fatal — `noTrack` below covers the case where it yielded
+        // nothing usable.
+        parser.parse()
+
+        let points = delegate.bestPoints
+        guard !points.isEmpty else { return .failure(.noTrack) }
+        guard points.count <= GpsRoute.maxPoints else {
+            return .failure(.tooManyPoints(points.count))
+        }
+        guard points.allSatisfy(\.isValid) else { return .failure(.invalidCoordinate) }
+
+        let name = delegate.trackName ?? delegate.metadataName ?? fallbackName
+        // A recorded track gets replayed at its own pace; anything without timings gets an
+        // explicit walking default rather than `as-recorded`, so the agent never has to apply its
+        // own fallback and set `speed_defaulted` for a file we could see was untimed.
+        let timed = points.allSatisfy { $0.offsetSecs != nil } && points.count > 1
+        return .success(
+            // Stored at the resolution the shared route id is computed at, not at whatever
+            // precision the file happened to carry — see `roundedForStorage()` for why hashing
+            // rounded values while storing unrounded ones would break the id's whole purpose.
+            GpsRoute(
+                // Hashed from the file's own bytes, and **not** from Swift's `hashValue`, which is
+                // seeded per process — the same file would then get a different id every launch,
+                // and the agent caches a route by id and only re-reads it when the id changes.
+                //
+                // Stability costs nothing behaviourally, because `startGpsRoute` always writes a
+                // fresh `route_started_at`: re-importing the same file replays it from the top
+                // rather than silently resuming a previous run.
+                id: "gpx-\(Self.contentID(of: data))",
+                name: name,
+                points: points,
+                speed: timed ? .asRecorded : .fixed(mps: GpsRouteSpeed.walkingMps),
+                repeats: false
+            ).roundedForStorage()
+        )
+    }
+
+    /// A short, stable identifier for a file's contents.
+    ///
+    /// SHA-256 truncated to 16 hex characters. Truncation is fine here: this is a cache key the
+    /// user's own device generates for the user's own device, not a security boundary, and 64 bits
+    /// makes an accidental collision between two routes someone actually owns implausible.
+    private static func contentID(of data: Data) -> String {
+        SHA256.hash(data: data).prefix(8).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private final class Delegate: NSObject, XMLParserDelegate {
+        private var tracks: [[GpsRoutePoint]] = []
+        private var currentSegment: [GpsRoutePoint] = []
+        private var routePoints: [GpsRoutePoint] = []
+        private var waypoints: [GpsRoutePoint] = []
+
+        private enum Container { case none, track, route, waypoint }
+        private var container: Container = .none
+        private var pendingLat: Double?
+        private var pendingLon: Double?
+        private var pendingTime: Date?
+        private var text = ""
+        private var capturingText = false
+        private var inMetadata = false
+        private(set) var trackName: String?
+        private(set) var metadataName: String?
+
+        /// Points in priority order: a recorded track, else a planned route, else bare waypoints.
+        var bestPoints: [GpsRoutePoint] {
+            let raw: [GpsRoutePoint]
+            if let first = tracks.first(where: { !$0.isEmpty }) {
+                raw = first
+            } else if !routePoints.isEmpty {
+                raw = routePoints
+            } else {
+                raw = waypoints
+            }
+            return Self.withOffsets(raw)
+        }
+
+        /// Convert absolute times to offsets from the first point, or drop them entirely.
+        private static func withOffsets(_ points: [GpsRoutePoint]) -> [GpsRoutePoint] {
+            let times = points.map(\.absoluteTime)
+            guard let first = times.first ?? nil, times.allSatisfy({ $0 != nil }) else {
+                return points.map {
+                    GpsRoutePoint(lat: $0.lat, lon: $0.lon, offsetSecs: nil)
+                }
+            }
+            return zip(points, times).map { point, time in
+                GpsRoutePoint(
+                    lat: point.lat,
+                    lon: point.lon,
+                    // Clamped at zero: a track whose timestamps go backwards would otherwise
+                    // produce a negative offset the agent has no meaning for.
+                    offsetSecs: max(0, time!.timeIntervalSince(first))
+                )
+            }
+        }
+
+        private static let isoFractional: ISO8601DateFormatter = {
+            let f = ISO8601DateFormatter()
+            f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            return f
+        }()
+        private static let iso = ISO8601DateFormatter()
+
+        func parser(
+            _ parser: XMLParser,
+            didStartElement elementName: String,
+            namespaceURI: String?,
+            qualifiedName qName: String?,
+            attributes attributeDict: [String: String] = [:]
+        ) {
+            switch elementName {
+            case "trk":
+                tracks.append([])
+                container = .track
+            case "trkseg":
+                currentSegment = []
+            case "rte":
+                container = .route
+            case "metadata":
+                inMetadata = true
+            case "trkpt", "rtept", "wpt":
+                if elementName == "wpt", container == .none { container = .waypoint }
+                pendingLat = attributeDict["lat"].flatMap(Double.init)
+                pendingLon = attributeDict["lon"].flatMap(Double.init)
+                pendingTime = nil
+            case "time", "name":
+                text = ""
+                capturingText = true
+            default:
+                break
+            }
+        }
+
+        func parser(_ parser: XMLParser, foundCharacters string: String) {
+            guard capturingText else { return }
+            text += string
+        }
+
+        func parser(
+            _ parser: XMLParser,
+            didEndElement elementName: String,
+            namespaceURI: String?,
+            qualifiedName qName: String?
+        ) {
+            let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            switch elementName {
+            case "time":
+                capturingText = false
+                pendingTime = Self.isoFractional.date(from: value) ?? Self.iso.date(from: value)
+            case "name":
+                capturingText = false
+                if inMetadata {
+                    if metadataName == nil { metadataName = value }
+                } else if container == .track, trackName == nil, !value.isEmpty {
+                    trackName = value
+                }
+            case "metadata":
+                inMetadata = false
+            case "trkpt", "rtept", "wpt":
+                guard let lat = pendingLat, let lon = pendingLon else { return }
+                let point = GpsRoutePoint(lat: lat, lon: lon, offsetSecs: pendingTime?.timeIntervalSince1970)
+                switch elementName {
+                case "trkpt": currentSegment.append(point)
+                case "rtept": routePoints.append(point)
+                default: waypoints.append(point)
+                }
+                pendingLat = nil
+                pendingLon = nil
+            case "trkseg":
+                // Segments within one track are joined: a GPS pause splits a segment without
+                // meaning the activity stopped being one route.
+                if !tracks.isEmpty { tracks[tracks.count - 1].append(contentsOf: currentSegment) }
+                currentSegment = []
+            case "trk", "rte":
+                container = .none
+            default:
+                break
+            }
+        }
+    }
+}
+
+private extension GpsRoutePoint {
+    /// While importing, `offsetSecs` temporarily carries an **absolute** epoch time, because
+    /// offsets can't be computed until the first point is known. `withOffsets` converts them.
+    var absoluteTime: Date? {
+        offsetSecs.map { Date(timeIntervalSince1970: $0) }
+    }
 }
 
 /// Center tab: device (system) GPS spoofing driven by the GeoSpoof GPS desktop
@@ -436,14 +1157,10 @@ struct GpsView: View {
     /// Where to send users to get the desktop app. TODO: confirm final URL.
     private let downloadURL = AppLink.site("/gps", campaign: "gps-download")
     /// Support contact for founders whose grant can't be auto-verified on this device
-    /// (see `founderSupportLink`). Tagged separately from `gpsSupportURL`: both land
-    /// on /support, but a founder who can't unlock and a user stuck on GPS setup are
-    /// different problems, and lumping them together hides which one is growing.
+    /// (see `founderSupportLink`). Tagged distinctly from the general Settings support
+    /// link because a founder who can't unlock is a different problem from a user with a
+    /// question, and lumping them together hides which one is growing.
     private let founderSupportURL = AppLink.site("/support", campaign: "founder-support")
-    /// Support contact for the GPS feature itself.
-    private let gpsSupportURL = AppLink.site("/support", campaign: "gps-support")
-    /// Feedback for this (experimental) feature.
-    private let feedbackURL = AppLink.site("/feedback", campaign: "gps-feedback")
     /// `@State` rather than `let`, because `Timer.publish` hands back a *new* publisher on
     /// every `init` and this struct is rebuilt whenever `RootView` re-renders — which any of
     /// `SpoofController`'s 27 `@Published` properties can cause. `onReceive` resubscribes
@@ -452,17 +1169,21 @@ struct GpsView: View {
     /// for the life of the view's identity. (Throwaway publishers from the discarded `init`s
     /// cost nothing: `autoconnect()` only starts the timer once something subscribes.)
     @State private var refreshTimer = Timer.publish(every: 3, on: .main, in: .common).autoconnect()
+    @State private var showRouteImporter = false
+    @State private var showRouteImportAlert = false
+    @State private var routeImportMessage = ""
+    @ObservedObject private var pendingImport = GpsPendingRouteImport.shared
 
     var body: some View {
         AdaptiveNavigationStack {
             Form {
-                experimentalSection
                 switch phase {
                 case .notPro:
                     proPitchSection
                     compatibilitySection
                 case .waitingForComputer:
                     aboutSection
+                    lastKnownMotionSection
                     waitingSection
                     compatibilitySection
                 case .chooseController:
@@ -471,12 +1192,18 @@ struct GpsView: View {
                     setupNeededSection(message)
                     controllingComputerSection
                     syncToggleSection
+                case .entitlementRejected:
+                    entitlementRejectedSection
+                    controllingComputerSection
                 case .ready:
                     connectedSection(active: false)
+                    routeControlsSection(nil)
                     controllingComputerSection
                     syncToggleSection
-                case .spoofing:
+                case .spoofing(let motion):
                     connectedSection(active: true)
+                    motionSection(motion)
+                    routeControlsSection(motion)
                     controllingComputerSection
                     syncToggleSection
                 case .lost:
@@ -488,7 +1215,15 @@ struct GpsView: View {
             .groupedFormStyle()
             .tint(.brand)
             .navigationTitle("GPS")
-            .onAppear { refreshStatus() }
+            .onAppear {
+                refreshStatus()
+                claimPendingRouteImport()
+            }
+            // A file handed to the app while this tab is already open. `onAppear` covers the cold
+            // launch and a tab switch; this covers the case where neither fires.
+            .onChange(of: pendingImport.url) { _, url in
+                if url != nil { claimPendingRouteImport() }
+            }
             .onReceive(NotificationCenter.default.publisher(
                 for: UIApplication.didBecomeActiveNotification
             )) { _ in
@@ -496,6 +1231,7 @@ struct GpsView: View {
                 // Refresh at once rather than waiting up to 3s for the next tick: coming
                 // back to the app is precisely when what's on screen is most likely stale.
                 refreshStatus()
+                claimPendingRouteImport()
             }
             .onReceive(NotificationCenter.default.publisher(
                 for: UIApplication.didEnterBackgroundNotification
@@ -563,6 +1299,10 @@ struct GpsView: View {
         if needsControllerChoice { return .chooseController }
         guard let s = statusStore.status, !statusStore.isStale else { return .waitingForComputer }
         if s.session == "lost" { return .lost }
+        // Checked before `connected`, because a computer that reached the phone and refused the
+        // entitlement is connected — reporting it as a setup problem would send the user to look
+        // at cables over a purchase they need to restore.
+        if !s.pro { return .entitlementRejected }
         if !s.connected {
             // Pass the agent's remediation through even when empty. Substituting
             // our own fallback copy here would bake it into a `String` before it
@@ -570,35 +1310,69 @@ struct GpsView: View {
             // fallback instead, where it can be a real key.
             return .setupNeeded(s.remediation)
         }
-        if s.session == "spoofing" { return .spoofing }
+        if s.session == "spoofing" { return .spoofing(motionDetail(s)) }
         if !s.remediation.isEmpty { return .setupNeeded(s.remediation) }
         return .ready
     }
 
-    // MARK: Sections
+    /// What the owning computer is delivering, for a report already known to be fresh and
+    /// spoofing.
+    ///
+    /// Private and only called from that branch of `phase`, which is what enforces the rule that
+    /// `motion` is meaningless outside a spoofing session. Reading it for an idle computer would
+    /// report a missing capability for a device nobody is driving — a mistake already made once
+    /// on the agent side against an unreachable iPad.
+    private func motionDetail(_ s: GpsStatus) -> GpsMotionDetail {
+        let asked = controller.motionState.mode
+        let gate = GpsEchoGate(status: s, asked: controller.motionState)
 
-    /// Always-visible banner: device GPS needs a computer + a one-time pairing and rides Apple's
-    /// developer tooling, so we set the expectation up front that it's still experimental.
-    private var experimentalSection: some View {
-        Section {
-            Label {
-                Text("Experimental feature")
-            } icon: {
-                Image(systemName: "flask.fill")
-            }
-            .font(.subheadline)
-            .foregroundColor(.secondary)
+        // Every rejection case the agent defines — NaN, infinite, negative speed — can only be
+        // produced by a defect in this app. So it goes to the log as a canary rather than into
+        // copy for a dozen locales to translate.
+        if let rejected = s.steering?.rejected {
+            Log.bridge.error("GPS steering vector refused by the agent: \(rejected)")
+        }
 
-            Link(destination: feedbackURL) {
-                Label("Give Feedback", systemImage: "text.bubble")
+        switch s.deliveredMotion {
+        case .route:
+            guard let progress = gate.confirmedRouteProgress, let route = s.route else {
+                // Delivering a route, but describing a run other than the one we asked for. Hold
+                // the previous figures rather than rendering someone else's progress.
+                return .notDelivered(asked: asked)
             }
-            Link(destination: gpsSupportURL) {
-                Label("Contact Support", systemImage: "questionmark.circle")
-            }
-        } footer: {
-            Text("Device GPS is new — tell us what’s working or what isn’t.")
+            return .route(
+                GpsRouteProgress(
+                    name: route.name,
+                    travelledM: progress.travelledM,
+                    totalM: progress.totalM,
+                    remainingSecs: progress.remainingSecs,
+                    paused: route.paused ?? false,
+                    finished: route.finished ?? false,
+                    speedDefaulted: route.speedDefaulted ?? false
+                )
+            )
+        case .steering:
+            return .steering(
+                GpsSteeringDetail(
+                    headingDeg: gate.steeringEchoMatches ? s.steering?.headingDeg : nil,
+                    speedMps: gate.confirmedSpeedMps,
+                    travelledM: s.steering?.travelledM,
+                    deadline: gate.steeringDeadline(),
+                    held: s.steering?.held ?? false,
+                    expired: s.steering?.expired ?? false
+                )
+            )
+        case .still:
+            // Asking for motion and being told `still` means this computer declined it.
+            return asked == .still ? .still : .notDelivered(asked: asked)
+        case .unknown, nil:
+            // A mode this build can't name, or an agent old enough not to report one. Either way
+            // it isn't doing what we asked, and we don't need to know which to say so.
+            return asked == .still ? .still : .notDelivered(asked: asked)
         }
     }
+
+    // MARK: Sections
 
     /// Escape hatch for a founding supporter whose grant can't be auto-verified on this
     /// device — e.g. they became a founder on macOS or via the legacy iOS-15 heuristic, so
@@ -670,6 +1444,39 @@ struct GpsView: View {
             Text("Set up")
         } footer: {
             Text("Install GeoSpoof GPS on your Mac or Windows PC and open it — it walks you through the one-time setup. Your chosen location then syncs to this iPhone automatically, over Wi-Fi.")
+        }
+    }
+
+    /// What we last asked for, while no computer is reporting.
+    ///
+    /// Shown only when something was moving, because that is the case where silence is genuinely
+    /// ambiguous: the route may still be playing — the agent owns elapsed time and reads
+    /// `desired.json` whether this app is running or not — or the computer may have gone away
+    /// entirely. We cannot tell from here, so this says what we asked for and explicitly does
+    /// **not** claim it is happening.
+    ///
+    /// The alternative was showing the last progress figures we saw, and that was rejected: a
+    /// progress bar frozen mid-route is indistinguishable from a live one at a glance, which is
+    /// exactly the false confidence the freshness window exists to prevent.
+    @ViewBuilder
+    private var lastKnownMotionSection: some View {
+        if controller.hasActiveMotion {
+            Section {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "questionmark.circle")
+                        .foregroundColor(.secondary)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(controller.motionState.steering != nil
+                            ? "You asked for steering."
+                            : "You asked for a route.")
+                        Text("It may still be running — your computer drives it, and it doesn't need this app open. We just can't confirm right now.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Text("Last request")
+            }
         }
     }
 
@@ -798,6 +1605,370 @@ struct GpsView: View {
         }
     }
 
+    /// What's driving the location right now.
+    ///
+    /// Nothing for a plain held coordinate: `connectedSection` already says the location and its
+    /// source, and a row reading "not moving" is noise.
+    @ViewBuilder
+    private func motionSection(_ motion: GpsMotionDetail) -> some View {
+        switch motion {
+        case .still:
+            EmptyView()
+        case .route(let progress):
+            routeSection(progress)
+        case .steering(let detail):
+            steeringSection(detail)
+        case .notDelivered(let asked):
+            notDeliveredSection(asked)
+        }
+    }
+
+    private func routeSection(_ p: GpsRouteProgress) -> some View {
+        Section {
+            HStack {
+                Image(systemName: p.finished
+                    ? "flag.checkered"
+                    : (p.paused ? "pause.circle.fill" : "figure.walk.motion"))
+                    .foregroundColor(p.finished ? .secondary : (p.paused ? .orange : .green))
+                // "Finished", never "Stopped". The agent deliberately doesn't clear a completed
+                // route — the device holds the final point — so calling it stopped would suggest
+                // the location had reverted when it hasn't.
+                Text(p.finished ? "Route finished" : (p.paused ? "Route paused" : "Following route"))
+                Spacer()
+            }
+            if let name = p.name, !name.isEmpty {
+                infoRow("Route", Text(verbatim: name))
+            }
+            ProgressView(value: p.fraction)
+                .tint(.brand)
+                .accessibilityLabel(Text("Route progress"))
+                .accessibilityValue(Text(verbatim: distanceText(p.travelledM, of: p.totalM)))
+            infoRow("Travelled", Text(verbatim: distanceText(p.travelledM, of: p.totalM)))
+            // Duration is what people actually decide on, so it leads over the distance pair.
+            // Passed through from the agent, never derived: an as-recorded route's pace varies
+            // along the track, so (total − travelled) / speed would be wrong.
+            if let remaining = p.remainingSecs, !p.finished {
+                infoRow("Time left", Text(verbatim: durationText(remaining)))
+            }
+        } header: {
+            Text("Route")
+        } footer: {
+            if p.speedDefaulted {
+                Label(
+                    "This route had no usable pace, so it's playing at walking speed.",
+                    systemImage: "exclamationmark.triangle.fill"
+                )
+                .foregroundStyle(.orange)
+            } else if p.remainingSecs == nil && !p.finished {
+                // A repeating route has no end, so there is no total to count down. Say that
+                // rather than leaving an empty row where a duration should be.
+                Text("This route repeats, so it has no finish time.")
+            }
+        }
+    }
+
+    private func steeringSection(_ d: GpsSteeringDetail) -> some View {
+        Section {
+            HStack {
+                Image(systemName: d.expired
+                    ? "clock.badge.exclamationmark"
+                    : (d.held ? "pause.circle.fill" : "dot.arrowtriangles.up.right.down.left.circle"))
+                    .foregroundColor(d.expired ? .orange : (d.held ? .orange : .green))
+                // Three distinct states, deliberately worded apart: expiry is the deadline
+                // lapsing with no interaction, which is not the same as the user choosing to wait.
+                Text(d.expired ? "Steering timed out" : (d.held ? "Holding position" : "Steering"))
+                Spacer()
+            }
+            if let speed = d.speedMps, !d.held {
+                infoRow("Speed", Text(verbatim: speedText(speed)))
+            }
+            if let travelled = d.travelledM {
+                // Distance with no denominator: steering has no end, so a progress proportion
+                // would be inventing one.
+                infoRow("Travelled", Text(verbatim: distanceText(travelled)))
+            }
+        } header: {
+            Text("Steering")
+        } footer: {
+            if d.expired {
+                Text("Your phone is being held where steering left it.")
+            }
+        }
+    }
+
+    /// We asked this computer for a mode and it isn't delivering it.
+    ///
+    /// Worded to be actionable without asserting a cause. An agent that declined and one that
+    /// predates the feature are indistinguishable from the report, and "needs updating" is true
+    /// enough in both cases to act on.
+    private func notDeliveredSection(_ asked: GpsMotionMode) -> some View {
+        Section {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "arrow.up.circle")
+                    .foregroundColor(.orange)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(asked == .route
+                        ? "This computer isn't following your route."
+                        : "This computer isn't following your steering.")
+                    Text("Update GeoSpoof GPS on your computer to the latest version.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            if let version = statusStore.status?.agentVersion, !version.isEmpty {
+                infoRow("Computer app", Text(verbatim: version))
+            }
+        } header: {
+            Text("Route")
+        }
+    }
+
+    /// The agent verified our entitlement and said no.
+    ///
+    /// Distinct from a connection fault on purpose: the agent checks the signed StoreKit material
+    /// itself, offline, so this is reachable while the app believes it is Pro — a debug override,
+    /// or a founder grant this device can't prove. Sending those users to check a cable wastes
+    /// their time.
+    private var entitlementRejectedSection: some View {
+        Section {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "lock.circle")
+                    .foregroundColor(.orange)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Your computer couldn't confirm GeoSpoof Pro.")
+                    Text("It checks your purchase directly with Apple, so this can differ from what this app shows. Restoring your purchase usually fixes it.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Button {
+                router.showPaywall = true
+            } label: {
+                Label("Restore Purchase", systemImage: "arrow.clockwise")
+            }
+            founderSupportLink
+        } header: {
+            Text("GeoSpoof Pro")
+        }
+    }
+
+    /// Import a route, and control the one that's loaded.
+    ///
+    /// `motion` is `nil` when connected but not spoofing, where importing is still useful — a user
+    /// can load a route before turning device GPS on.
+    @ViewBuilder
+    private func routeControlsSection(_ motion: GpsMotionDetail?) -> some View {
+        let playing: GpsRouteProgress? = {
+            if case .route(let p) = motion { return p }
+            return nil
+        }()
+        Section {
+            Button {
+                showRouteImporter = true
+            } label: {
+                Label(playing == nil ? "Import Route (GPX)" : "Import a Different Route",
+                      systemImage: "square.and.arrow.down")
+            }
+            if let playing {
+                // Pause and stop are separate controls on purpose. Pausing waits in place and
+                // keeps spoofing; stopping ends playback. Neither reverts to the phone's real
+                // GPS — that's the Sync toggle below, and conflating the three is the mistake the
+                // agent contract warns about.
+                if playing.finished {
+                    Button {
+                        controller.restartGpsRoute()
+                    } label: {
+                        Label("Play Again", systemImage: "arrow.counterclockwise")
+                    }
+                } else if playing.paused {
+                    Button {
+                        controller.resumeGpsRoute()
+                    } label: {
+                        Label("Resume", systemImage: "play.fill")
+                    }
+                } else {
+                    Button {
+                        controller.pauseGpsRoute()
+                    } label: {
+                        Label("Pause", systemImage: "pause.fill")
+                    }
+                }
+                Button(role: .destructive) {
+                    controller.stopGpsRoute()
+                } label: {
+                    Label("Stop Route", systemImage: "stop.fill")
+                }
+                .tint(.red)
+            }
+        } header: {
+            Text("Route")
+        } footer: {
+            if playing == nil {
+                Text("Export a GPX from Strava, Garmin, or any tracking app, then bring it here with AirDrop, Files, or iCloud Drive.")
+            } else {
+                Text("Pausing waits where you are and keeps your phone's GPS spoofed. Turning off Sync below is what returns your real location.")
+            }
+        }
+        .fileImporter(
+            isPresented: $showRouteImporter,
+            // `.gpx` isn't a system-declared type, so it's identified by extension. Falls back to
+            // XML rather than refusing, since some exporters serve GPX with a generic type.
+            allowedContentTypes: [
+                UTType(filenameExtension: "gpx") ?? .xml,
+                .xml,
+            ],
+            allowsMultipleSelection: false
+        ) { result in
+            handleRouteImport(result)
+        }
+        .alert("Route", isPresented: $showRouteImportAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(routeImportMessage)
+        }
+    }
+
+    /// Read the picked file and start playback, or explain why not.
+    ///
+    /// Reads on a background task: a large track is a few megabytes of XML, and parsing it on the
+    /// main actor would drop frames on the very screen showing the result.
+    private func handleRouteImport(_ result: Result<[URL], Error>) {
+        switch result {
+        case .failure:
+            // The user cancelling arrives here too, and needs no alert.
+            return
+        case .success(let urls):
+            guard let url = urls.first else { return }
+            // The picker always hands back a URL outside the container and never transfers
+            // ownership of it, so nothing is deleted afterwards.
+            importRoute(from: url, deleteAfterReading: false)
+        }
+    }
+
+    /// Take a GPX handed to the app from outside — AirDrop, Mail, Files, a share sheet — if one is
+    /// waiting.
+    ///
+    /// Claimed here rather than in `RootView` because this is the screen that can show the result,
+    /// and an import whose outcome appears on a tab the user isn't looking at is indistinguishable
+    /// from nothing happening.
+    private func claimPendingRouteImport() {
+        guard let pending = pendingImport.claim() else { return }
+        // Files can open a document *in place*, in which case the URL points at something we don't
+        // own — an iCloud Drive document, say. AirDrop and Mail instead drop a copy in our Inbox
+        // that is ours to clean up, and left alone it accumulates forever.
+        importRoute(from: pending.url, deleteAfterReading: !pending.openInPlace)
+    }
+
+    /// One import path for every source, so a file behaves identically however it arrived.
+    private func importRoute(from url: URL, deleteAfterReading: Bool) {
+        Task { @MainActor in
+            let outcome = await Task.detached(priority: .userInitiated) {
+                // A URL from outside the container needs access taken explicitly and given back.
+                // Without this the read fails silently on a file from iCloud Drive — silently
+                // being the operative word, which is why it isn't conditional on the source.
+                let scoped = url.startAccessingSecurityScopedResource()
+                defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+                guard let data = try? Data(contentsOf: url) else {
+                    return Result<GpsRoute, GpsGpxImportFailure>.failure(.unreadable)
+                }
+                if deleteAfterReading {
+                    // After reading, so a failed delete can never cost us the import.
+                    try? FileManager.default.removeItem(at: url)
+                }
+                return GpsGpxImporter.route(
+                    from: data,
+                    fallbackName: url.deletingPathExtension().lastPathComponent
+                )
+            }.value
+
+            switch outcome {
+            case .success(let route):
+                if let failure = controller.startGpsRoute(route) {
+                    routeImportMessage = Self.message(for: failure)
+                } else {
+                    routeImportMessage = Self.startedMessage(for: route)
+                }
+            case .failure(let failure):
+                routeImportMessage = Self.message(for: failure)
+            }
+            showRouteImportAlert = true
+            refreshStatus()
+        }
+    }
+
+    private static func startedMessage(for route: GpsRoute) -> String {
+        let distance = Measurement(value: route.lengthMeters, unit: UnitLength.meters)
+            .formatted(.measurement(width: .abbreviated, usage: .road))
+        let name = route.name?.isEmpty == false ? route.name! : "Route"
+        // Names the pace when we had to choose one, so nobody is surprised by a walking-speed
+        // replay of a cycling track.
+        switch route.speed {
+        case .asRecorded:
+            return "\(name) loaded — \(distance), replaying at its recorded pace."
+        case .fixed:
+            return "\(name) loaded — \(distance). This file had no timings, so it plays at walking pace."
+        }
+    }
+
+    private static func message(for failure: GpsGpxImportFailure) -> String {
+        switch failure {
+        case .unreadable:
+            return "That file couldn't be read."
+        case .tooLarge(let bytes):
+            let size = Measurement(value: Double(bytes), unit: UnitInformationStorage.bytes)
+                .formatted(.byteCount(style: .file))
+            return "That file is \(size), which is too large to use."
+        case .noTrack:
+            return "No route found in that file. GPX files exported from tracking apps should work."
+        case .tooManyPoints(let count):
+            // Names the number and refuses. Truncating would look like it worked.
+            return "That route has \(count.formatted()) points, which is more than \(GpsRoute.maxPoints.formatted()). Try exporting it at a lower detail."
+        case .invalidCoordinate:
+            return "That route contains coordinates that aren't valid."
+        }
+    }
+
+    private static func message(for failure: GpsRouteValidationFailure) -> String {
+        switch failure {
+        case .noPoints:
+            return "That route has no points."
+        case .tooManyPoints(let count):
+            return "That route has \(count.formatted()) points, which is more than \(GpsRoute.maxPoints.formatted())."
+        case .invalidCoordinate:
+            return "That route contains coordinates that aren't valid."
+        case .invalidSpeed:
+            return "That route's pace isn't usable."
+        case .writeFailed:
+            // Nothing the user can act on, so it doesn't pretend to offer advice.
+            return "Couldn't save that route on this device."
+        }
+    }
+
+    // MARK: Motion formatting
+
+    /// Locale-aware distance. Miles for a US customer, kilometres elsewhere — a running route
+    /// quoted in metres to an American reads cheap.
+    private func distanceText(_ meters: Double) -> String {
+        Measurement(value: meters, unit: UnitLength.meters)
+            .formatted(.measurement(width: .abbreviated, usage: .road))
+    }
+
+    private func distanceText(_ meters: Double, of total: Double) -> String {
+        "\(distanceText(meters)) / \(distanceText(total))"
+    }
+
+    /// "about 9 min". Rounded deliberately — a second-precise countdown implies precision this
+    /// number doesn't have, since it is recomputed from a report that can be a tick old.
+    private func durationText(_ seconds: Double) -> String {
+        Duration.seconds(max(0, seconds))
+            .formatted(.units(allowed: [.hours, .minutes], width: .abbreviated))
+    }
+
+    private func speedText(_ mps: Double) -> String {
+        Measurement(value: mps, unit: UnitSpeed.metersPerSecond)
+            .formatted(.measurement(width: .abbreviated, usage: .general))
+    }
+
     private var syncToggleSection: some View {
         Section {
             Toggle(isOn: Binding(
@@ -880,6 +2051,8 @@ struct SettingsView: View {
     @State private var showDebugProPitch = false
     @State private var showDebugFounderWelcome = false
     @State private var debugProOverride = ProStore.debugProOverrideSelection()
+    @State private var showTestRouteResult = false
+    @State private var testRouteFailure: GpsRouteValidationFailure?
     @ObservedObject private var router = AppRouter.shared
     @ObservedObject private var review = ReviewPrompt.shared
     #endif
@@ -989,6 +2162,21 @@ struct SettingsView: View {
                     } label: {
                         Label("Show Onboarding", systemImage: "hand.wave")
                     }
+                    // Proves the whole route pipe against a real agent before any authoring UI
+                    // exists: writes `route.json`, arms `desired.json`, and the device should
+                    // start walking within about a second. DEBUG-only — this is a test fixture,
+                    // not a feature.
+                    Button {
+                        testRouteFailure = controller.startGpsRoute(.debugWalk)
+                        showTestRouteResult = true
+                    } label: {
+                        Label("Play Test Route", systemImage: "figure.walk")
+                    }
+                    Button {
+                        controller.stopGpsRoute()
+                    } label: {
+                        Label("Stop Test Route", systemImage: "stop.circle")
+                    }
                     Picker(selection: $debugProOverride) {
                         Text("Auto (real check)").tag(0)
                         Text("Force Founder").tag(1)
@@ -1004,6 +2192,12 @@ struct SettingsView: View {
                     Text("Debug")
                 } footer: {
                     Text("Founder status normally comes from the App Store original-download version, which isn't available on the simulator. Force Founder / Not Pro / Subscription to test each tier. (Overrides the app's local Pro gate only — the GPS agent still needs a real signed purchase.)")
+                }
+                .alert("Test Route", isPresented: $showTestRouteResult) {
+                    Button("OK", role: .cancel) {}
+                } message: {
+                    Text(verbatim: testRouteFailure.map { "Refused: \($0)" }
+                        ?? "Route written. Turn on Device GPS, then watch Find My — the pin should start moving within a second or two.")
                 }
 
                 Section {

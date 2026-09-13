@@ -1086,6 +1086,24 @@ final class AppRouter: ObservableObject {
     /// the debug menu so its preview follows the same path as a real first run.
     @Published var showOnboarding = false
 
+    #if os(iOS)
+    /// Which root tab is showing.
+    ///
+    /// Exists so an incoming file can put the user on the tab that handles it. A GPX arriving by
+    /// AirDrop or Mail launches the app on whatever tab was last shown — Home, on a cold start —
+    /// and the GPS tab is the only screen that can import it or report the result. Without this the
+    /// file is claimed by nobody and opening it appears to do nothing at all, which is worse than
+    /// not registering for the type in the first place.
+    @Published var selectedTab: RootTab = .home
+
+    /// The root tabs, in the order they appear.
+    ///
+    /// Named rather than indexed so a reorder can't silently retarget a deep link.
+    enum RootTab: Hashable {
+        case home, browser, gps, details, settings
+    }
+    #endif
+
     /// One-shot handoff from the hosted Safari activation page back into the
     /// native onboarding flow. A stored Boolean would replay on a later launch;
     /// this request lives only for the current process and is consumed by
