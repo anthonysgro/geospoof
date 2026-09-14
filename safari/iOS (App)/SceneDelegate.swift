@@ -232,11 +232,22 @@ struct RootView: View {
     /// the tabs can't silently retarget anything that selects one.
     private var mainTabs: some View {
         TabView(selection: $router.selectedTab) {
-            HomeView(controller: controller)
+            // Location · Browser · GPS · Settings.
+            //
+            // One setting with two independent consumers, and each consumer owns its own tab.
+            // `controller.location` is the setting; `enabled` gates the browser's copy of it and
+            // `deviceGpsEnabled` gates the device's, and neither switch reads the other. The old
+            // bar put the setting and one of its two consumers together on "Home" and gave the
+            // other its own tab, which is what made GPS feel bolted on — a shape problem rather
+            // than a priority one.
+            //
+            // The pin glyph is the chosen place; GPS keeps `location.circle` so existing muscle
+            // memory still lands on the same tab.
+            LocationView(controller: controller)
                 .tabItem {
-                    Label("Home", systemImage: "house")
+                    Label("Location", systemImage: "mappin.and.ellipse")
                 }
-                .tag(AppRouter.RootTab.home)
+                .tag(AppRouter.RootTab.location)
 
             BrowserSettingsView(controller: controller)
                 .tabItem {
@@ -244,19 +255,11 @@ struct RootView: View {
                 }
                 .tag(AppRouter.RootTab.browser)
 
-            // GPS sits in the center (5 tabs: Home · Browser · GPS · Details · Settings) and
-            // reuses Home's old location glyph.
             GpsView(controller: controller)
                 .tabItem {
                     Label("GPS", systemImage: "location.circle")
                 }
                 .tag(AppRouter.RootTab.gps)
-
-            DetailsTab(controller: controller)
-                .tabItem {
-                    Label("Details", systemImage: "list.bullet.rectangle")
-                }
-                .tag(AppRouter.RootTab.details)
 
             SettingsView(controller: controller)
                 .tabItem {
@@ -312,26 +315,79 @@ enum AppearanceMode: String, CaseIterable, Identifiable {
     }
 }
 
-// MARK: - Home (native control panel — parity with the extension popup)
+// MARK: - Location (native control panel — parity with the extension popup)
 
-struct HomeView: View {
+/// The landing tab: the chosen location and everything that decides it.
+///
+/// Was `HomeView` while it also owned the browser's Protection switch. That switch now lives on
+/// the Browser tab, which is what let this screen take the name of the one thing it is about.
+struct LocationView: View {
     @ObservedObject var controller: SpoofController
     @ObservedObject private var review = ReviewPrompt.shared
+    /// Read here, not just on the GPS tab, so this screen can state whether the device's GPS is
+    /// genuinely being driven rather than merely switched on.
+    ///
+    /// A one-shot read on appear and on each foreground return — deliberately not a timer. The GPS
+    /// tab already polls this every few seconds while it's open, and this screen only has to be
+    /// right at the moment someone looks at it. `readRoster` enumerates and decodes files, which
+    /// the store itself warns can block, so it stays off the main thread there and is awaited here.
+    @StateObject private var gpsStatus = GpsStatusStore()
+    /// Separates "haven't looked yet" from "looked and found nothing", which are the same value of
+    /// `isStale` (it starts `true`). Without this the first frame after launch accuses the setup of
+    /// being broken before the roster has even been read — the app calling itself broken on no
+    /// evidence, which is worse than saying nothing.
+    @State private var rosterWasRead = false
+    @Environment(\.scenePhase) private var scenePhase
+
+    /// Whether a computer is, right now, confirming it is moving this device's GPS.
+    ///
+    /// `nil` while unread, so the summary can hold its tongue instead of guessing. Freshness and
+    /// the report's own claim are both required: `isStale` also covers the two-computers-and-no-pick
+    /// case, since the store resolves no owner for it.
+    private var deviceGpsDelivering: Bool? {
+        guard rosterWasRead else { return nil }
+        return !gpsStatus.isStale && (gpsStatus.status?.isDeliveringSpoof ?? false)
+    }
 
     var body: some View {
         AdaptiveNavigationStack {
-            SpoofControlPanel(controller: controller)
-                .navigationTitle("GeoSpoof")
+            SpoofControlPanel(controller: controller, deviceGpsDelivering: deviceGpsDelivering)
+                // Matches the tab label. It read "GeoSpoof" when the tab was "Home" and the screen
+                // had no single subject to name; the app name is carried by the icon and the
+                // brand tint regardless.
+                .navigationTitle("Location")
         }
         // Outside the navigation stack on purpose — the review action can
         // silently no-op when fired from a view nested inside one.
         .requestReview(on: review.token)
+        .task { await refreshDeviceGpsStatus() }
+        .onChange(of: scenePhase) { _, phase in
+            // A resident process can sit on this tab for days. Without this the summary would keep
+            // reporting a computer that went away while the phone was in a pocket.
+            if phase == .active { Task { await refreshDeviceGpsStatus() } }
+        }
+    }
+
+    private func refreshDeviceGpsStatus() async {
+        await gpsStatus.reload(selectedId: controller.selectedControllerId)
+        rosterWasRead = true
     }
 }
 
 // MARK: - GPS (device / system GPS spoofing via the GeoSpoof GPS desktop agent)
 
 /// Redacted device summary from the agent's status report.
+/// Decoded, and deliberately **not displayed**.
+///
+/// It describes the phone the agent is driving, which — because each computer writes its self-file
+/// into *this* app's container over AFC — is always the phone the customer is holding. A row naming
+/// it told them something they could see by looking down. The Status block names the controlling
+/// computer instead, which is the part they can't see.
+///
+/// Kept decodable rather than deleted: it is part of the agent's payload, and dropping fields from
+/// the wire contract to match what the UI happens to show today is how a later feature discovers the
+/// data was thrown away. `productType` and `iosVersion` have never been shown at all; if diagnostics
+/// ever want them, the Details screen is where they belong.
 nonisolated struct GpsDeviceSummary: Codable, Equatable {
     var name: String
     var productType: String
@@ -552,6 +608,24 @@ nonisolated struct GpsStatus: Codable, Equatable {
     var route: GpsRouteStatus?
     /// Steering feedback. Absent unless a vector is running.
     var steering: GpsSteeringStatus?
+
+    /// Whether this report is a computer stating it is *actually moving this device's GPS right
+    /// now* — as opposed to a switch being on, which is a request and proves nothing.
+    ///
+    /// The single definition of that question, because there are now two screens asking it and
+    /// they must never disagree. `GpsView.phase` reaches its `.spoofing` case through this, and
+    /// the Location summary reads it directly. A second, hand-rolled conjunction on the summary
+    /// side is how one screen ends up claiming a spoof the other knows isn't happening — and the
+    /// app has already shipped that bug once, showing a stale place name while the real GPS had
+    /// gone back to where it started.
+    ///
+    /// Freshness is deliberately **not** part of this. A report is a claim about the moment it was
+    /// written, and whether that moment is recent enough belongs to whoever holds the roster —
+    /// `GpsStatusStore.isStale`. Folding it in here would need a clock inside a `Codable` value and
+    /// would make the property untestable without one. Every caller must check both.
+    var isDeliveringSpoof: Bool {
+        pro && connected && session == "spoofing"
+    }
 
     enum CodingKeys: String, CodingKey {
         case version
@@ -813,6 +887,11 @@ final class GpsStatusStore: ObservableObject {
     @Published private(set) var controllers: [GpsController] = []
     /// True when there's no fresh display status (no owner/sole controller present).
     @Published private(set) var isStale = true
+    /// The owning computer's own name, for the one row that says who is driving this phone.
+    ///
+    /// Published separately because the name lives on `GpsController` while `status` is the
+    /// `GpsStatus` inside it — so a view holding only the status has no way back to the identity.
+    @Published private(set) var ownerName: String?
 
     /// The agent refreshes each self-file well within this window; older ⇒ that computer is gone.
     nonisolated static let freshWindow: TimeInterval = 20
@@ -846,6 +925,7 @@ final class GpsStatusStore: ObservableObject {
             owner = nil
         }
         status = owner?.status
+        ownerName = owner?.name
         isStale = owner == nil
     }
 
@@ -1725,9 +1805,9 @@ struct GpsView: View {
         }
         // Outside the `AdaptiveNavigationStack` on purpose — the review action is reported to silently do
         // nothing when fired from a view nested inside a navigation container, which is the same reason
-        // `HomeView` attaches it at its own root.
+        // `LocationView` attaches it at its own root.
         //
-        // **A second presenter, deliberately.** `HomeView` already has one, and `ReviewPrompt` supports
+        // **A second presenter, deliberately.** `LocationView` already has one, and `ReviewPrompt` supports
         // exactly this: `claimForPresentation(token:)` lets the first presenter to claim a token win and
         // the rest no-op, precisely so more than one can be attached. Without this the fix above would be
         // half a fix — a customer who only ever opens the GPS tab would accrue occasions and then depend on
@@ -1938,7 +2018,10 @@ struct GpsView: View {
             // fallback instead, where it can be a real key.
             return .setupNeeded(s.remediation)
         }
-        if s.session == "spoofing" { return .spoofing(motionDetail(s)) }
+        // Reached only once `pro` and `connected` are known true by the guards above, so this is
+        // exactly the old `s.session == "spoofing"` test — routed through the shared property so
+        // the Location summary and this switch cannot drift apart. See `isDeliveringSpoof`.
+        if s.isDeliveringSpoof { return .spoofing(motionDetail(s)) }
         if !s.remediation.isEmpty { return .setupNeeded(s.remediation) }
         return .ready
     }
@@ -2401,9 +2484,31 @@ struct GpsView: View {
                 Spacer()
             }
             .accessibilityElement(children: .combine)
-            if let device = statusStore.status?.device {
-                // Device name reported by the agent — user/device data, not copy.
-                LabeledRow(label: "Device", value: Text(verbatim: device.name))
+            // Names the *computer*, not this phone.
+            //
+            // This row used to report `status.device.name` — the name of the device you are already
+            // holding. It answered a question nobody asks, and it was the only reader of that field
+            // in the app. Meanwhile the fact a customer does want, which computer is driving, was
+            // visible only when two or more happened to be present, because it lived solely in
+            // `controllingComputerSection`'s picker. So with the ordinary one-computer setup the
+            // screen named the phone and never named the driver.
+            //
+            // Reuses the picker's own label so the status row and the control that changes it are
+            // recognisably about the same thing.
+            if let ownerName = statusStore.ownerName {
+                // "Controller", not "Controlling computer": the label was eating the width that the
+                // thing it labels actually needs. The value here is a machine name someone chose, and
+                // those run long — "Anthony's MacBook Pro" is short as they go.
+                //
+                // The computer's own name, reported by the agent — user data, not copy.
+                LabeledRow(label: "Controller", value: Text(verbatim: ownerName))
+                    // One line, always. A status block whose rows change height as the roster
+                    // changes reads as the layout twitching rather than as information arriving.
+                    .lineLimit(1)
+                    // Middle rather than tail, because both ends of a machine name carry identity:
+                    // the owner at the front and the model at the back. Tail truncation turns
+                    // "Anthony's MacBook Pro" and "Anthony's MacBook Air" into the same string.
+                    .truncationMode(.middle)
             }
             if active {
                 LabeledRow(label: "Location", value: locationText)
@@ -3221,11 +3326,15 @@ struct GpsView: View {
             }
         } footer: {
             if controller.deviceGpsEnabled && controller.location == nil {
-                // On but unable to do anything, which is a warning rather than a note — and it gets the
-                // same treatment as Home's "Protection is on, but no location is set yet." Identical
-                // situation, so identical presentation.
+                // On but unable to do anything, which is a warning rather than a note — and it gets
+                // the same treatment as the browser's "Protection is on, but no location is set yet."
+                // Identical situation, so identical presentation.
+                //
+                // No longer names the tab to go to. It used to say "on the Home tab", which stopped
+                // being true the moment that tab was renamed — the exact way copy describing the
+                // layout rots. The sentence is complete without it.
                 Label(
-                    "Choose a location on the Home tab to start syncing.",
+                    "Choose a location to start syncing.",
                     systemImage: "exclamationmark.triangle.fill"
                 )
                 .foregroundStyle(.orange)
@@ -4298,7 +4407,7 @@ struct SettingsView: View {
         .navigationViewStyle(.stack)
         #if DEBUG
         // Outside the navigation stack, same as the production attachment in
-        // `HomeView`. Debug-only, so release builds keep exactly one presenter.
+        // `LocationView`. Debug-only, so release builds keep exactly one presenter.
         .requestReview(on: review.token)
         #endif
     }

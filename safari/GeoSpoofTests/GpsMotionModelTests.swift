@@ -43,18 +43,20 @@ struct GpsMotionModelTests {
         session: String = "spoofing",
         motion: String? = nil,
         route: GpsRouteStatus? = nil,
-        steering: GpsSteeringStatus? = nil
+        steering: GpsSteeringStatus? = nil,
+        connected: Bool = true,
+        pro: Bool = true
     ) -> GpsStatus {
         GpsStatus(
             version: 1,
             agentVersion: "0.2.0",
-            connected: true,
+            connected: connected,
             device: nil,
             session: session,
             provenanceRaw: "from-app",
             remediation: "",
             error: nil,
-            pro: true,
+            pro: pro,
             updatedAt: 1_789_300_123,
             motionRaw: motion,
             transportRaw: "wireless",
@@ -580,6 +582,40 @@ struct GpsMotionModelTests {
                 route: nil, chosen: SpoofLocation(latitude: 1, longitude: 2)
             ) == nil
         )
+    }
+
+    // MARK: isDeliveringSpoof — the one definition of "the device's GPS is actually moving"
+
+    /// Why this is pinned: two screens now ask this question. The GPS tab asks it to pick a phase,
+    /// and the Location summary asks it to decide whether to tell the customer their device is being
+    /// driven. If they ever disagree, one of them is lying to a paying customer about where their
+    /// phone says it is — and this app has already shipped that once, reporting a stale place name
+    /// after the real GPS had returned home.
+    ///
+    /// The guard that keeps them honest is that both read `GpsStatus.isDeliveringSpoof`. These cases
+    /// pin the conjunction so a future "simplification" to just `session == "spoofing"` fails here
+    /// instead of in someone's Find My.
+    @Test("A fresh, entitled, connected spoofing report is delivering")
+    func deliveringWhenEverythingHolds() {
+        #expect(Self.status().isDeliveringSpoof)
+    }
+
+    @Test("A session that isn't spoofing is not delivering", arguments: ["idle", "lost", ""])
+    func notDeliveringForNonSpoofingSessions(session: String) {
+        #expect(!Self.status(session: session).isDeliveringSpoof)
+    }
+
+    /// The agent verifies entitlement itself, offline, and can refuse ours while still holding the
+    /// device. Reporting that as "delivering" would tell someone their GPS is spoofed while the
+    /// agent has declined to spoof it.
+    @Test("An entitlement the agent refused is not delivering")
+    func notDeliveringWhenAgentRefusedEntitlement() {
+        #expect(!Self.status(pro: false).isDeliveringSpoof)
+    }
+
+    @Test("A computer that isn't connected to the device is not delivering")
+    func notDeliveringWhenDisconnected() {
+        #expect(!Self.status(connected: false).isDeliveringSpoof)
     }
 }
 
@@ -1155,4 +1191,5 @@ struct GpsPendingActionTests {
             repeats: false
         )
     }
+
 }

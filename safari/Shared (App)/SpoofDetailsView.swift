@@ -1799,7 +1799,11 @@ private struct OnboardingSafariHandoffView: View {
                 .foregroundStyle(Color.brand)
                 .padding(.horizontal, 20)
                 .padding(.bottom, 4)
-                .accessibilityHint("Finishes setup without Safari. You can turn GeoSpoof on later from the Home tab.")
+                // Names no tab. The old hint said "from the Home tab", which was wrong twice over
+                // once Protection moved: that tab is called Location now, and the switch it was
+                // pointing at lives on Browser. A hint that promises a destination has to be
+                // re-checked every time the layout moves, so this one states the fact instead.
+                .accessibilityHint("Finishes setup without Safari. You can turn GeoSpoof on later.")
                 }
             }
         }

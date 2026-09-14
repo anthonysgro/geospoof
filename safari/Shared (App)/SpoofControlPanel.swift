@@ -21,6 +21,14 @@ import AppKit
 
 struct SpoofControlPanel: View {
     @ObservedObject var controller: SpoofController
+    /// Whether a computer is confirming, right now, that it is moving this device's GPS. `nil` when
+    /// unknown — either not yet read, or a platform with no device GPS at all.
+    ///
+    /// Passed in rather than read here on purpose. The answer comes from `GpsStatusStore`, which
+    /// lives in the iOS app target, and this file is shared; reaching for it would tie shared code to
+    /// a type that isn't in every target that compiles this file. It defaults to `nil` because on
+    /// macOS the question genuinely doesn't apply — there is no device GPS to drive.
+    var deviceGpsDelivering: Bool? = nil
     @ObservedObject private var pro = ProStore.shared
 
     @AppStorage("spoofOnboardingCompleted") private var onboardingCompleted = false
@@ -53,9 +61,21 @@ struct SpoofControlPanel: View {
     var body: some View {
         Form {
             #if os(iOS)
+            // The headline, above the cards that remediate it. See `statusSummarySection`.
+            statusSummarySection
+            // The setup cards stay here rather than following the Protection toggles to
+            // the Browser tab. They are the app's most consequential failure state — with
+            // the extension off, nothing in the browser works at all — and this is the
+            // screen a launch lands on. Settings move to the subsystem that owns them;
+            // "your app is broken" belongs where the user already is.
             setupSection
             #endif
-            protectionSection
+            #if os(macOS)
+            // iOS renders this on the Browser tab instead. See `BrowserProtectionSection`
+            // for why the platforms differ: macOS has no GPS tab, so the browser is its
+            // only location consumer and there is no asymmetry to correct.
+            BrowserProtectionSection(controller: controller)
+            #endif
             locationSection
             proDiscoverySection
             vpnSyncSection
@@ -238,36 +258,10 @@ struct SpoofControlPanel: View {
     }
 
     // MARK: Protection
-
-    private var protectionSection: some View {
-        Section {
-            Toggle(isOn: Binding(
-                get: { controller.enabled },
-                set: { controller.setEnabled($0) }
-            )) {
-                Label("Location Protection", systemImage: "location.fill.viewfinder")
-            }
-
-            Toggle(isOn: Binding(
-                get: { controller.webrtcProtection },
-                set: { controller.setWebRTCProtection($0) }
-            )) {
-                Label("WebRTC Protection", systemImage: "network.badge.shield.half.filled")
-            }
-        } header: {
-            Text("Protection")
-        } footer: {
-            VStack(alignment: .leading, spacing: 6) {
-                #if os(iOS)
-                safariStatusLine
-                #endif
-                if controller.enabled && !controller.hasLocation {
-                    Label("Protection is on, but no location is set yet.", systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                }
-            }
-        }
-    }
+    //
+    // The section itself now lives in `BrowserProtectionSection` so that iOS can
+    // render it on the Browser tab, where the thing it governs actually lives.
+    // See that type for why the two platforms disagree about where it belongs.
 
     #if os(iOS)
     /// State-driven hand-holding card for the one thing the app can't convey on
@@ -616,13 +610,11 @@ struct SpoofControlPanel: View {
     /// line beside it, which inherits the footer's own size. Forcing a size here made
     /// the two states render at different scales, so crossing between them looked
     /// like a layout glitch rather than a status change.
+    /// Now a shared component, because its two callers ended up on different screens:
+    /// the setup card below stayed on Location while the Protection footer moved to the
+    /// Browser tab. Duplicating it would have let the two drift.
     private func lastSeenLine(_ lastSeen: Date) -> some View {
-        HStack(spacing: 4) {
-            Text("Last seen in Safari")
-            Text(lastSeen, format: .relative(presentation: .named))
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
+        SafariLastSeenLine(lastSeen: lastSeen)
     }
 
     /// Open the Settings app on GeoSpoof's own pane.
@@ -660,73 +652,6 @@ struct SpoofControlPanel: View {
         UIApplication.shared.open(AppLink.activationPage(campaign: "setup-card"))
     }
 
-    /// One line for the two states that don't warrant a card.
-    ///
-    /// `active` is the confident green confirmation. `idle` is the same fact with the
-    /// certainty removed: it names when the extension was last seen and stops there,
-    /// in secondary grey rather than a warning colour, because nothing is wrong — the
-    /// user just hasn't browsed. This is the whole answer to "will skipping Safari for
-    /// a couple of days look like a fault?": it reads as a timestamp, not a problem.
-    ///
-    /// `never` and `unverified` are carried by the card above, so they add nothing
-    /// here rather than saying the same thing twice.
-    @ViewBuilder
-    private var safariStatusLine: some View {
-        switch controller.safariWebsiteAccess {
-        case .none, .ownDomainOnly:
-            // The card above is already asking for this, and it says more than a line can.
-            // Repeating it here would put the same request twice on one screen; claiming
-            // "running in Safari" underneath it would contradict the card outright.
-            //
-            // Still silent when the card has been dismissed. Dismissing it means the user
-            // has told us this is how they want it, and answering that by reinstating the
-            // green claim would be both a nag and a lie.
-            EmptyView()
-        case .chosenSites:
-            // A working setup, scoped on purpose — so it reports rather than warns. Not the
-            // green every-site line, which would claim protection they deliberately didn't
-            // ask for, and not a warning colour either, because nothing is wrong.
-            Label(
-                "GeoSpoof is running in Safari on the sites you've allowed.",
-                systemImage: "checkmark.circle"
-            )
-            .foregroundStyle(.secondary)
-        case .unknown, .everySite:
-            verifiedSafariStatusLine
-        }
-    }
-
-    /// The status line for every case except a confirmed missing website access.
-    @ViewBuilder
-    private var verifiedSafariStatusLine: some View {
-        switch controller.safariSetupState {
-        case .verifiedEnabled:
-            // Now a verified statement rather than an inference from a timestamp, so
-            // it stays green regardless of how long ago the last page load was. There
-            // is no "quiet" variant to fall back to: the OS confirmed the toggle, and
-            // hedging a fact reads as the app not trusting itself.
-            Label("GeoSpoof is running in Safari.", systemImage: "checkmark.circle.fill")
-                .foregroundStyle(.green)
-        case .verifiedDisabled:
-            // Carried by the card above; saying it twice would just crowd the footer.
-            EmptyView()
-        case .inferred(let activity):
-            switch activity {
-            case .active:
-                Label("GeoSpoof is running in Safari.", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-            case .idle(let lastSeen):
-                Label {
-                    lastSeenLine(lastSeen)
-                } icon: {
-                    Image(systemName: "circle.dashed")
-                }
-                .foregroundStyle(.secondary)
-            case .never, .unverified:
-                EmptyView()
-            }
-        }
-    }
     #endif
 
     // MARK: Location (current)
@@ -765,6 +690,233 @@ struct SpoofControlPanel: View {
             }
         }
     }
+
+    // MARK: Status summary — "am I actually appearing where I set?"
+
+    // iOS-only in full, declaration included: `AppRouter.selectedTab` only exists on iOS, and a
+    // body gated at the call site alone still gets type-checked on macOS.
+    #if os(iOS)
+    /// One line per consumer of the chosen location, answering the only question a customer opening
+    /// this app actually has: *is this working right now?*
+    ///
+    /// **Why a summary exists at all.** The location has two independent consumers and each owns its
+    /// own tab, so before this the answer was spread across three screens and had to be assembled by
+    /// the user. Worse, it could only be assembled from switch positions — and a switch is a request,
+    /// not a result. This app has already shipped the consequence of confusing those two: the screen
+    /// reported a place the device's GPS had long since stopped reporting.
+    ///
+    /// **Every state says something, including the boring ones.** An earlier draft rendered nothing
+    /// when a consumer was off or unconfirmed, on the reasoning that a landing screen shouldn't be
+    /// cluttered. That is the wrong trade: silence is indistinguishable from "nobody checked", so it
+    /// buys tidiness with exactly the doubt this screen exists to remove. Off states are stated
+    /// calmly in secondary text — they're the user's own choice, not a fault — and only genuine
+    /// faults take a warning colour.
+    ///
+    /// **Status, never a control.** Each row navigates to the tab that owns the switch. Putting the
+    /// switches here would give the app two places to do one thing, and the summary would then be
+    /// competing with the thing it summarises.
+    ///
+    /// **Not a replacement for the setup cards below.** This is the headline; `setupSection` carries
+    /// the remediation, with the steps and the button into Settings. A one-line "Not on every site"
+    /// and a card explaining how to fix it are not the same sentence twice — and the fault conditions
+    /// are shared expressions (`warrantsRepair`, `safariSetupState`), so the headline cannot claim a
+    /// problem the card below disagrees about.
+    ///
+    /// **Nothing suppresses this, including a dismissed card.** Dismissing `websiteAccessCard` means
+    /// "stop showing me the steps", not "misreport the state" — so a dismissal degrades the nag into
+    /// this one calm word rather than into silence. That is the whole point of having a summary: it is
+    /// the one place guaranteed not to imply everything is fine.
+    @ViewBuilder
+    private var statusSummarySection: some View {
+        Section {
+            // Always present. Every customer has the browser side — it's the free core of the
+            // product — so its state is never irrelevant.
+            statusRow(
+                label: "Browser",
+                systemImage: "globe",
+                status: browserStatus,
+                tab: .browser
+            )
+            // Always present, exactly like the browser row above it.
+            //
+            // This was gated on "has the customer adopted device GPS" to avoid showing a Pro feature
+            // to someone who has never used it. Two things were wrong with that. It made the block
+            // change shape — a row that vanishes when you switch something off reads as the app
+            // losing track, and it's the one moment you most want confirmation that it really is off.
+            // And the gate was broken anyway: it leaned on `selectedControllerId`, which a
+            // one-computer setup may never set, so turning sync off could remove the row outright.
+            //
+            // A single row reading "Off" is not an upsell. It states a fact, in the same shape as
+            // every other row here, and the pitch stays where it belongs in `proDiscoverySection`.
+            statusRow(
+                label: "Device GPS",
+                systemImage: "location.circle",
+                status: deviceGpsStatus,
+                tab: .gps
+            )
+        }
+    }
+
+    /// What a summary row is reporting, separated from the words it uses.
+    ///
+    /// Exists because the first version derived the colour by switching on the row's
+    /// `LocalizedStringKey` against English literals — so rewording "Not protected" would silently
+    /// have turned a warning grey. State decides the colour; copy is chosen from the same state.
+    private enum SummaryState {
+        /// Switched off by the user. Not a fault, and must not be dressed as one.
+        case off
+        /// Switched on, and something is genuinely wrong.
+        case fault
+        /// Switched on and confirmed working.
+        case working
+        /// Switched on, nothing confirmed yet. Says the switch is on and claims nothing more.
+        case unconfirmed
+
+        var tint: Color {
+            switch self {
+            case .off, .unconfirmed: return .secondary
+            case .fault: return .orange
+            case .working: return .brand
+            }
+        }
+
+        /// The glyph is not decoration — it is what stops colour from being the only thing carrying
+        /// the state.
+        ///
+        /// `Color.brand` is #4CAF50 and the fault colour is system orange. Those two are close to
+        /// indistinguishable under the common red-green deficiencies, which would leave the word
+        /// itself as the sole signal — readable, but it makes the row something you have to *parse*
+        /// rather than glance at. The shapes differ before the colours do.
+        ///
+        /// Chosen from vocabulary the app already uses rather than invented: `checkmark.circle.fill`
+        /// is the Safari "running" line, `exclamationmark.triangle.fill` is every warning in the app,
+        /// and `circle.dashed` is already how the Safari status reports "can't confirm right now".
+        var symbol: String {
+            switch self {
+            case .off: return "slash.circle"
+            case .fault: return "exclamationmark.triangle.fill"
+            case .working: return "checkmark.circle.fill"
+            case .unconfirmed: return "circle.dashed"
+            }
+        }
+    }
+
+    private var browserStatus: (state: SummaryState, value: LocalizedStringKey) {
+        guard controller.enabled else { return (.off, "Off") }
+        // Website access first: the extension can be running perfectly and still be shut out of every
+        // page, which leaves the real location visible on most sites. The toggle says nothing about
+        // this — Safari asks for website access separately.
+        //
+        // Worded "not on every site" rather than "not protected", which would be a lie in one of the
+        // two cases folded together here. `websiteAccessCard` documents the on-device finding: a
+        // single per-site grant reports identically to no grant at all, so someone who answered
+        // Safari's prompt with "Always Allow on This Website" lands in this branch while genuinely
+        // being protected somewhere. "Not on every site" is true either way.
+        //
+        // Through `warrantsRepair` so this and the card that offers the fix are the same condition by
+        // construction, not by two lists of cases that agree today.
+        if controller.safariWebsiteAccess.warrantsRepair {
+            return (.fault, "Not on every site")
+        }
+        switch controller.safariSetupState {
+        case .verifiedEnabled:
+            return (.working, "Protected")
+        case .verifiedDisabled:
+            return (.fault, "Not protected")
+        case .inferred(let activity):
+            switch activity {
+            // `idle` is a working setup whose owner simply hasn't browsed lately. The existing design
+            // is explicit that this is a timestamp and not a fault, so it must not turn orange.
+            case .active, .idle:
+                return (.working, "Protected")
+            case .never, .unverified:
+                return (.fault, "Not protected")
+            }
+        }
+    }
+
+    private var deviceGpsStatus: (state: SummaryState, value: LocalizedStringKey) {
+        guard controller.deviceGpsEnabled else { return (.off, "Off") }
+        switch deviceGpsDelivering {
+        case .some(true):
+            return (.working, controller.motionState.routeId != nil ? "Following route" : "On")
+        case .some(false):
+            // The agent's own term for "we asked and the device never confirmed", already used on the
+            // GPS tab. Same fact, same vocabulary.
+            return (.fault, "Not delivered")
+        case .none:
+            // The roster hasn't been read yet. Report the switch and claim nothing — this resolves
+            // within milliseconds of the screen appearing.
+            return (.unconfirmed, "On")
+        }
+    }
+
+    /// A status line that navigates, styled so it can't be mistaken for the switch it reports on.
+    ///
+    /// `.buttonStyle(.plain)` is load-bearing: without it the Form paints the entire label in the
+    /// accent colour, and a row that looks like a control while refusing to act like one is worse
+    /// than either.
+    /// - Parameter systemImage: deliberately the same glyph as the destination tab's own tab-bar
+    ///   item, so the row points at where it goes. Every other persistent row on this screen carries
+    ///   a leading glyph — Sync with VPN, Verify Your Protection, Details, the location itself — so
+    ///   without one these two read as a different kind of thing than their neighbours.
+    ///
+    ///   Left untinted on purpose. It says *which subsystem*, not *how it's doing*, and colouring it
+    ///   too would put two coloured glyphs in one row and blunt the only one that carries state.
+    private func statusRow(
+        label: LocalizedStringKey,
+        systemImage: String,
+        status: (state: SummaryState, value: LocalizedStringKey),
+        tab: AppRouter.RootTab
+    ) -> some View {
+        Button {
+            AppRouter.shared.selectedTab = tab
+        } label: {
+            HStack {
+                Label(label, systemImage: systemImage)
+                Spacer()
+                // Word first, glyph second — the opposite of a `Label`, and the reason this is built
+                // by hand.
+                //
+                // With the glyph leading, its x position is set by the width of the word beside it,
+                // so "Protected" and "On" pushed their checkmarks to different places and the column
+                // looked ragged. Trailing, every glyph sits a fixed gap from the chevron and they
+                // line up down the section no matter what the words are. Matching the word lengths
+                // would have hidden that for exactly two states in one language.
+                HStack(spacing: 5) {
+                    Text(status.value)
+                        // Medium, because the state is the answer the row exists to give. At regular
+                        // weight beside a body-weight label it read as a caption on the label rather
+                        // than as the point.
+                        .fontWeight(.medium)
+                        // Long values ("Not on every site", and most of the translations) need to be
+                        // allowed to wrap toward the label rather than truncate or shove the glyph
+                        // off the row.
+                        .multilineTextAlignment(.trailing)
+                    Image(systemName: status.state.symbol)
+                        // Keeps the glyph subordinate to the word it qualifies. Without it the filled
+                        // symbols sit heavier than the text and the row reads icon-first.
+                        .imageScale(.small)
+                        .symbolRenderingMode(.hierarchical)
+                        // Decorative: the word beside it already says this, and the row is combined
+                        // into one element, so letting VoiceOver name the symbol would append
+                        // "checkmark circle fill" to a sentence that was already complete.
+                        .accessibilityHidden(true)
+                }
+                // One tint for the pair. Applied here rather than on each so the word and its glyph
+                // can never end up different colours.
+                .foregroundStyle(status.state.tint)
+                Image(systemName: "chevron.forward")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .buttonStyle(.plain)
+        // Combined, or VoiceOver reads the label, the value, and the chevron as three stops and the
+        // reader has to hold them together themselves.
+        .accessibilityElement(children: .combine)
+    }
+    #endif
 
     // MARK: Sync with VPN
 
@@ -883,6 +1035,22 @@ struct SpoofControlPanel: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            #if os(iOS)
+            // Details sits with Verify because they answer the same question — "is this actually
+            // working?" — one by asking a live website and one by listing what the extension is
+            // reporting. That is a grouping by what the user wants to know, rather than by which
+            // subsystem produces it, which is why this reads better here than next to the browser
+            // settings even though most of its content is browser-side.
+            //
+            // `SpoofDetailsView` directly, not `DetailsTab`: the wrapper exists to supply a
+            // navigation container for a tab root, and pushing it would nest one stack inside
+            // another. macOS still uses the wrapper for its sidebar pane.
+            NavigationLink {
+                SpoofDetailsView(controller: controller)
+            } label: {
+                Label("Details", systemImage: "list.bullet.rectangle")
+            }
+            #endif
         }
     }
 
@@ -2457,6 +2625,164 @@ private struct ReviewPresentationModifier: ViewModifier {
 /// This replaced an earlier layout that put the location settings, the language
 /// setting, and the whole site-filter UI inline on one tab. Site filters are an
 /// unbounded list, so they pushed everything else further off-screen as the list
+// MARK: - Browser protection (the extension's master switches)
+
+/// The extension's two master switches, and the footer that says whether the
+/// extension is actually running.
+///
+/// Its own type because the two platforms disagree about where this belongs, and the
+/// disagreement is a real difference rather than an inconsistency:
+///
+/// - **iOS** has a GPS tab, so the chosen location has two genuinely independent
+///   consumers. `enabled` gates the browser; `deviceGpsEnabled` gates the device; neither
+///   reads the other. Leaving the browser's switch on the location screen made that screen
+///   mean "the location, and also one of its two consumers" — which is exactly why it
+///   needed a name as vague as "Home". So on iOS this renders inside `BrowserSettingsView`,
+///   above the accuracy and precision settings it is the master switch for.
+/// - **macOS** has no GPS tab (`MacSection` is home/filters/details/settings). The browser
+///   is the only consumer there, so there is no asymmetry to fix and moving it would only
+///   add a click. It stays on `MacHomeView`'s panel.
+struct BrowserProtectionSection: View {
+    @ObservedObject var controller: SpoofController
+    #if os(iOS)
+    /// Read here as well as in `SpoofControlPanel` so a dismissed card also silences the
+    /// line below. Same key, so the two can't disagree.
+    @AppStorage("websiteAccessCardDismissed") private var websiteAccessCardDismissed = false
+    #endif
+
+    var body: some View {
+        Section {
+            Toggle(isOn: Binding(
+                get: { controller.enabled },
+                set: { controller.setEnabled($0) }
+            )) {
+                Label("Location Protection", systemImage: "location.fill.viewfinder")
+            }
+
+            Toggle(isOn: Binding(
+                get: { controller.webrtcProtection },
+                set: { controller.setWebRTCProtection($0) }
+            )) {
+                Label("WebRTC Protection", systemImage: "network.badge.shield.half.filled")
+            }
+        } header: {
+            Text("Protection")
+        } footer: {
+            VStack(alignment: .leading, spacing: 6) {
+                #if os(iOS)
+                safariStatusLine
+                #endif
+                if controller.enabled && !controller.hasLocation {
+                    Label("Protection is on, but no location is set yet.", systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                }
+            }
+        }
+    }
+
+    #if os(iOS)
+    /// One line for the two states that don't warrant a card.
+    ///
+    /// `active` is the confident confirmation. `idle` is the same fact with the
+    /// certainty removed: it names when the extension was last seen and stops there,
+    /// in secondary grey rather than a warning colour, because nothing is wrong — the
+    /// user just hasn't browsed. This is the whole answer to "will skipping Safari for
+    /// a couple of days look like a fault?": it reads as a timestamp, not a problem.
+    ///
+    /// `never` and `unverified` are carried by the setup card, so they add nothing here
+    /// rather than saying the same thing twice.
+    @ViewBuilder
+    private var safariStatusLine: some View {
+        switch controller.safariWebsiteAccess {
+        case .none, .ownDomainOnly:
+            // There is no longer a card above this footer to defer to: on iOS the setup
+            // cards stayed on the Location screen, because that is where a first run lands
+            // and a broken extension has to be visible there. So this states the fact in
+            // one line instead of pointing at something that isn't on this screen — and it
+            // states it without naming a tab, since copy that describes the layout rots the
+            // next time the layout changes.
+            //
+            // Still silent once the card has been dismissed. That dismissal was the user
+            // saying this is how they want it, and a warning that reappears somewhere else
+            // is that promise quietly broken.
+            if !websiteAccessCardDismissed {
+                Label(
+                    "GeoSpoof isn't allowed on every website yet, so most sites still see your real location.",
+                    systemImage: "exclamationmark.triangle.fill"
+                )
+                .foregroundStyle(.orange)
+            }
+        case .chosenSites:
+            // A working setup, scoped on purpose — so it reports rather than warns. Not the
+            // brand-coloured every-site line, which would claim protection they deliberately
+            // didn't ask for, and not a warning colour either, because nothing is wrong.
+            Label(
+                "GeoSpoof is running in Safari on the sites you've allowed.",
+                systemImage: "checkmark.circle"
+            )
+            .foregroundStyle(.secondary)
+        case .unknown, .everySite:
+            verifiedSafariStatusLine
+        }
+    }
+
+    /// The status line for every case except a confirmed missing website access.
+    @ViewBuilder
+    private var verifiedSafariStatusLine: some View {
+        switch controller.safariSetupState {
+        case .verifiedEnabled:
+            // A verified statement rather than an inference from a timestamp, so it holds
+            // regardless of how long ago the last page load was. There is no "quiet" variant
+            // to fall back to: the OS confirmed the toggle, and hedging a fact reads as the
+            // app not trusting itself.
+            Label("GeoSpoof is running in Safari.", systemImage: "checkmark.circle.fill")
+                .foregroundStyle(Color.brand)
+        case .verifiedDisabled:
+            // Carried by the setup card; saying it twice would just crowd the footer.
+            EmptyView()
+        case .inferred(let activity):
+            switch activity {
+            case .active:
+                Label("GeoSpoof is running in Safari.", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(Color.brand)
+            case .idle(let lastSeen):
+                Label {
+                    SafariLastSeenLine(lastSeen: lastSeen)
+                } icon: {
+                    Image(systemName: "circle.dashed")
+                }
+                .foregroundStyle(.secondary)
+            case .never, .unverified:
+                EmptyView()
+            }
+        }
+    }
+    #endif
+}
+
+#if os(iOS)
+/// "Last seen in Safari, 2 days ago" as one element.
+///
+/// A shared component because its two callers ended up on different screens: the setup
+/// card stayed on Location while the Protection footer moved to Browser. It deliberately
+/// sets no font — in the card it's a message, in the footer it has to match the line
+/// beside it, which inherits the footer's size. Forcing a size made the two states render
+/// at different scales, so crossing between them looked like a layout glitch rather than a
+/// status change.
+struct SafariLastSeenLine: View {
+    let lastSeen: Date
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text("Last seen in Safari")
+            Text(lastSeen, format: .relative(presentation: .named))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+    }
+}
+#endif
+
 /// grew; the previous code compensated by ordering the fixed settings above them,
 /// which treated the symptom. Pushing the list fixes the cause, and the trailing
 /// value labels mean you still read the entire configuration without a single tap.
@@ -2470,6 +2796,11 @@ struct BrowserSettingsView: View {
     var body: some View {
         AdaptiveNavigationStack {
             Form {
+                // First, because it is the master switch for everything below it: with
+                // protection off, accuracy and precision describe a location no site is
+                // being given. Moved here from the location screen — see
+                // `BrowserProtectionSection`.
+                BrowserProtectionSection(controller: controller)
                 Section {
                     NavigationLink {
                         AccuracyPickerView(controller: controller)

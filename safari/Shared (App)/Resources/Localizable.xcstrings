@@ -6769,6 +6769,7 @@
       }
     },
     "Choose a location on the Home tab to start syncing." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6834,6 +6835,77 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在「主页」标签中选择一个位置即可开始同步。"
+          }
+        }
+      }
+    },
+    "Choose a location to start syncing." : {
+      "comment" : "Warning shown when device GPS sync is on but no location has been chosen yet.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wähle einen Standort, um die Synchronisierung zu starten."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Elige una ubicación para empezar a sincronizar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Choisissez une position pour lancer la synchronisation."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pilih sebuah lokasi untuk mulai menyinkronkan."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "同期を始めるには、位置を選択してください。"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Kies een locatie om te beginnen met synchroniseren."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Escolha uma localização para começar a sincronizar."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Выберите местоположение, чтобы начать синхронизацию."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Välj en plats för att börja synka."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Chọn một vị trí để bắt đầu đồng bộ."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "选择一个位置即可开始同步。"
           }
         }
       }
@@ -8169,6 +8241,77 @@
           }
         }
       }
+    },
+    "Controller" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Computer"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Controlador"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Contrôleur"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pengendali"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "制御元"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Controller"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Controlador"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Компьютер"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dator"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bộ điều khiển"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "控制端"
+          }
+        }
+      },
+      "comment" : "Row label on the GPS status block. Its value is the name of the computer currently driving this device's GPS."
     },
     "Controlling computer" : {
       "localizations" : {
@@ -10132,6 +10275,7 @@
       }
     },
     "Device" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -12308,6 +12452,7 @@
       }
     },
     "Finishes setup without Safari. You can turn GeoSpoof on later from the Home tab." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -12373,6 +12518,76 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "在不设置 Safari 的情况下完成设置。你可以稍后在「主页」标签中开启 GeoSpoof。"
+          }
+        }
+      }
+    },
+    "Finishes setup without Safari. You can turn GeoSpoof on later." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Schließt die Einrichtung ohne Safari ab. Du kannst GeoSpoof später einschalten."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Finaliza la configuración sin Safari. Puedes activar GeoSpoof más tarde."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Termine la configuration sans Safari. Vous pouvez activer GeoSpoof plus tard."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Menyelesaikan penyiapan tanpa Safari. Anda dapat mengaktifkan GeoSpoof nanti."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Safariを設定せずに完了します。GeoSpoofはあとでオンにできます。"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Rondt de configuratie af zonder Safari. Je kunt GeoSpoof later inschakelen."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Conclui a configuração sem o Safari. Você pode ativar o GeoSpoof mais tarde."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Завершает настройку без Safari. Включить GeoSpoof можно позже."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Slutför konfigurationen utan Safari. Du kan slå på GeoSpoof senare."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Hoàn tất thiết lập mà không cần Safari. Bạn có thể bật GeoSpoof sau."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在不设置 Safari 的情况下完成设置。你可以稍后开启 GeoSpoof。"
           }
         }
       }
@@ -13781,6 +13996,77 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "GeoSpoof 在 Safari 的扩展设置中已关闭。打开后即可开始伪造。"
+          }
+        }
+      }
+    },
+    "GeoSpoof isn't allowed on every website yet, so most sites still see your real location." : {
+      "comment" : "Warning under the browser protection toggles when Safari has not granted access to all websites.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "GeoSpoof ist noch nicht für jede Website erlaubt — die meisten Websites sehen also weiterhin deinen echten Standort."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "GeoSpoof aún no se permite en todos los sitios web, así que la mayoría siguen viendo tu ubicación real."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "GeoSpoof n’est pas encore autorisé sur tous les sites web : la plupart voient donc toujours votre position réelle."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "GeoSpoof belum diizinkan di setiap situs web, sehingga sebagian besar situs masih melihat lokasi Anda yang sebenarnya."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "GeoSpoofはまだすべてのWebサイトで許可されていないため、ほとんどのサイトには実際の位置が見えています。"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "GeoSpoof is nog niet op elke website toegestaan, dus de meeste sites zien nog je echte locatie."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "O GeoSpoof ainda não é permitido em todos os sites, então a maioria ainda vê sua localização real."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "GeoSpoof пока разрешён не на всех веб-сайтах, поэтому большинство сайтов всё ещё видят ваше настоящее местоположение."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "GeoSpoof är ännu inte tillåtet på alla webbplatser, så de flesta webbplatser ser fortfarande din verkliga plats."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "GeoSpoof chưa được cho phép trên mọi trang web, nên phần lớn trang web vẫn thấy vị trí thật của bạn."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "GeoSpoof 尚未获准用于所有网站，因此大多数网站仍会看到你的真实位置。"
           }
         }
       }
@@ -21914,6 +22200,148 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "不适用于 Pokémon GO 等 AR 游戏，设备 GPS 面向的是隐私保护、网页浏览和开发调试。"
+          }
+        }
+      }
+    },
+    "Not on every site" : {
+      "comment" : "Status value on the Location screen: the extension runs, but Safari has not allowed it on every website.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nicht auf jeder Website"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No en todos los sitios"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pas sur tous les sites"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tidak di semua situs"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "一部のサイトのみ"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Niet op elke site"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Não em todos os sites"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Не на всех сайтах"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Inte på alla webbplatser"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Không trên mọi trang"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "并非所有网站"
+          }
+        }
+      }
+    },
+    "Not protected" : {
+      "comment" : "Status value on the Location screen: the browser side is not protecting the location.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nicht geschützt"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "No protegido"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Non protégé"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tidak terlindungi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未保護"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Niet beveiligd"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Não protegido"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Не защищено"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Inte skyddad"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Chưa được bảo vệ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "未保护"
           }
         }
       }

@@ -1090,17 +1090,26 @@ final class AppRouter: ObservableObject {
     /// Which root tab is showing.
     ///
     /// Exists so an incoming file can put the user on the tab that handles it. A GPX arriving by
-    /// AirDrop or Mail launches the app on whatever tab was last shown — Home, on a cold start —
-    /// and the GPS tab is the only screen that can import it or report the result. Without this the
-    /// file is claimed by nobody and opening it appears to do nothing at all, which is worse than
-    /// not registering for the type in the first place.
-    @Published var selectedTab: RootTab = .home
+    /// AirDrop or Mail launches the app on whatever tab was last shown — Location, on a cold
+    /// start — and the GPS tab is the only screen that can import it or report the result. Without
+    /// this the file is claimed by nobody and opening it appears to do nothing at all, which is
+    /// worse than not registering for the type in the first place.
+    @Published var selectedTab: RootTab = .location
 
     /// The root tabs, in the order they appear.
     ///
     /// Named rather than indexed so a reorder can't silently retarget a deep link.
+    ///
+    /// `location` is the landing tab: you establish where you are before deciding which
+    /// consumer — the browser, or the device — is told about it. It was `home` while it also
+    /// owned the browser's master switch, a name that described the position rather than the
+    /// content, which is the usual sign a screen is carrying two jobs.
+    ///
+    /// There is deliberately no `details` case. Details is a read-only diagnostic, so it is a
+    /// push from Location rather than a permanent seat in the bar — which also brings the bar
+    /// back under the HIG's five-tab ceiling with a slot free for whatever comes next.
     enum RootTab: Hashable {
-        case home, browser, gps, details, settings
+        case location, browser, gps, settings
     }
     #endif
 
