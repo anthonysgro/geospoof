@@ -107,11 +107,19 @@ describe("Safari onboarding return contract", () => {
       'continueTitle: isStepSatisfied(.deviceGps) ? "Start using GeoSpoof" : "Continue"'
     );
 
-    // The flow's actual last screen keeps an unconditional way into the app. It names what is
-    // being declined rather than promising the app, for the same reason the line above exists:
-    // on a screen headed "Move this iPhone's real GPS", "Start using GeoSpoof" reads as the
-    // button that starts *that*.
-    expect(onboarding).toContain('Text("Continue without GPS")');
+    // The flow's actual last screen keeps an unconditional way into the app, and while there is
+    // still something to decline it names what that is rather than promising the app — for the
+    // same reason the line above exists: on a screen headed "Move this iPhone's real GPS",
+    // "Start using GeoSpoof" reads as the button that starts *that*.
+    //
+    // Conditional rather than a bare literal, because the argument only holds while the customer
+    // hasn't bought it. This is the only in-app control on that screen which finishes onboarding
+    // (the Pro branch of the primary action is a `Link` out to the web), so left unconditional it
+    // told someone who had just paid for device GPS that their way forward was to continue
+    // without it. Both branches are pinned: dropping either one loses half the rule.
+    expect(onboarding).toContain(
+      'Text(pro.isPro ? "Start using GeoSpoof" : "Continue without GPS")'
+    );
 
     // Customers conflate browser geolocation, device GPS, and IP location —
     // partly because the store listing sells browser spoofing as "fake your GPS
