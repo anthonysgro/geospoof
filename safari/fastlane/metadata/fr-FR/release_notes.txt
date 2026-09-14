@@ -1,3 +1,3 @@
-Bonjour les GeoSpoofers ! Le GPS de l'appareil fonctionne désormais avec Windows.
-GeoSpoof GPS, l'app compagnon gratuite qui définit le vrai GPS de votre iPhone, fonctionne maintenant sur Windows et sur Mac. Avec des corrections de bugs.
+Bonjour les GeoSpoofers ! Votre iPhone peut désormais suivre un itinéraire.
+Importez un GPX depuis Strava, Garmin ou toute autre app de suivi, puis parcourez-le à pied, à vélo ou en voiture — avec un point en direct qui montre où se trouve votre iPhone. Enregistrez des itinéraires, marquez vos favoris et lancez-les quand vous voulez. Avec en plus des cartes plus lisibles, une configuration plus fluide et une nouvelle astuce pour conserver votre position après avoir quitté votre ordinateur.
 Aucun compte. Aucun suivi. Open source.

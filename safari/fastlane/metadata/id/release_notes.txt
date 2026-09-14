@@ -1,3 +1,3 @@
-Halo, GeoSpoofers! GPS perangkat kini bekerja dengan Windows.
-GeoSpoof GPS, aplikasi pendamping gratis yang mengatur GPS asli iPhone Anda, sekarang berjalan di Windows dan Mac. Ditambah perbaikan bug.
+Halo, GeoSpoofers! iPhone Anda kini bisa mengikuti sebuah rute.
+Impor GPX dari Strava, Garmin, atau aplikasi pelacak apa pun, lalu tempuh dengan jalan kaki, sepeda, atau mengemudi — dengan titik langsung yang menunjukkan posisi iPhone Anda. Simpan rute, tandai favorit Anda, dan putar saat Anda siap. Ditambah peta yang lebih bersih, penyiapan yang lebih lancar, dan tip baru untuk mempertahankan lokasi Anda setelah meninggalkan komputer.
 Tanpa akun. Tanpa pelacakan. Sumber terbuka.

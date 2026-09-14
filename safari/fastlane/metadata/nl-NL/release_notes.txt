@@ -1,3 +1,3 @@
-Hallo GeoSpoofers! GPS van apparaat werkt nu ook met Windows.
-GeoSpoof GPS, de gratis companionapp die het echte gps van je iPhone instelt, werkt nu op Windows en Mac. Plus bugfixes.
+Hallo GeoSpoofers! Je iPhone kan nu een route volgen.
+Importeer een GPX uit Strava, Garmin of een andere trackingapp en loop, fiets of rijd hem — met een live stip die laat zien waar je iPhone is. Bewaar routes, markeer je favorieten en start ze wanneer je wilt. Plus overzichtelijkere kaarten, een soepelere configuratie en een nieuwe tip om je locatie te behouden nadat je je computer achterlaat.
 Geen account. Geen tracking. Open source.

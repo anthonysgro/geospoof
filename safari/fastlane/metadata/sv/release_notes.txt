@@ -1,3 +1,3 @@
-Hej GeoSpoofers! Enhetens GPS fungerar nu med Windows.
-GeoSpoof GPS, den kostnadsfria följeappen som ställer in din iPhones riktiga GPS, fungerar nu på både Windows och Mac. Dessutom buggfixar.
+Hej GeoSpoofers! Din iPhone kan nu följa en rutt.
+Importera en GPX från Strava, Garmin eller någon annan träningsapp och gå, cykla eller kör den — med en live-punkt som visar var din iPhone är. Spara rutter, stjärnmärk dina favoriter och starta när du är redo. Dessutom tydligare kartor, smidigare konfiguration och ett nytt tips för att behålla din plats när du lämnar datorn.
 Inget konto. Ingen spårning. Öppen källkod.
