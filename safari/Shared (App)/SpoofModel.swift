@@ -785,6 +785,40 @@ nonisolated struct GpsMotionState: Codable, Equatable {
     /// Kept in this record rather than read back from `route.json` because the UI asks on every
     /// render, and a file read per render to learn something we authored is the wrong trade.
     var routeRepeats: Bool
+    /// Which **library entry** is playing, when the route came from one.
+    ///
+    /// Distinct from `routeId`, and the pair is the point. `routeId` is the shared `r1-` content hash
+    /// the agent caches by, so it changes whenever the pace does. This is the entity id, so it doesn't
+    /// — which is what lets a pace change during playback be written back to the saved route instead
+    /// of silently applying to this run only and reverting the next time it's played.
+    ///
+    /// `nil` for a route that isn't in the library, which today means the DEBUG test route.
+    var savedRouteId: UUID?
+    /// Where this run should **begin**, in metres along the route. `nil` means the first point.
+    ///
+    /// The counterpart to `routeStartedAt`: that field says *which* run this is, this one says where it
+    /// starts. Before it existed the two were welded together, because zero was the only possible
+    /// origin — which is why changing a route's pace threw playback back to the beginning.
+    ///
+    /// The agent reads it **only when a run begins**, i.e. only when `route_id` or `route_started_at`
+    /// changes. A run already in progress resumes from its own persisted elapsed time and ignores this,
+    /// so a stale value cannot re-fire and drag a playing device backwards. That is structural on the
+    /// agent's side rather than a convention it is careful about — resumption is decided by comparing
+    /// the id *and* the marker — but it is also why this must never be rewritten by an incidental
+    /// `writePending()`. See the Requirement 2.6 regression test.
+    ///
+    /// **The rule this field cannot be stopped from breaking**, from `APP_CONTRACT.md`: never send a
+    /// distance representing our belief about where the device is *now*. Only a distance the agent's
+    /// report confirmed, or one the user explicitly chose. A scrub or a tapped map point is a
+    /// destination; an interpolation of our own polyline is an estimate, and writing one back
+    /// reintroduces exactly the drift the "don't track a position" rule exists to prevent. It presents
+    /// as the device snapping backwards.
+    ///
+    /// Helpfully, the type system carries most of that: the pace-change path takes its value from
+    /// `GpsRouteProgress`, which is only constructible from a gate-confirmed report.
+    ///
+    /// See `.kiro/specs/device-gps-motion/route-seek-agreement.md`.
+    var routeStartTravelledM: Double?
 
     var steering: GpsSteeringVector?
 
@@ -826,18 +860,24 @@ nonisolated struct GpsMotionState: Codable, Equatable {
         routeStartedAt = try c.decodeIfPresent(Double.self, forKey: .routeStartedAt)
         routePaused = try c.decodeIfPresent(Bool.self, forKey: .routePaused) ?? false
         routeRepeats = try c.decodeIfPresent(Bool.self, forKey: .routeRepeats) ?? false
+        savedRouteId = try c.decodeIfPresent(UUID.self, forKey: .savedRouteId)
+        routeStartTravelledM = try c.decodeIfPresent(Double.self, forKey: .routeStartTravelledM)
         steering = try c.decodeIfPresent(GpsSteeringVector.self, forKey: .steering)
         lastConfirmedLatitude = try c.decodeIfPresent(Double.self, forKey: .lastConfirmedLatitude)
         lastConfirmedLongitude = try c.decodeIfPresent(Double.self, forKey: .lastConfirmedLongitude)
         lastConfirmedAt = try c.decodeIfPresent(Double.self, forKey: .lastConfirmedAt)
     }
 
+    /// `savedRouteId` defaults so the existing call sites — and any future one that doesn't know the
+    /// library exists — keep compiling and keep meaning "not from the library".
     init(
         mode: GpsMotionMode,
         routeId: String?,
         routeStartedAt: Double?,
         routePaused: Bool,
         routeRepeats: Bool,
+        savedRouteId: UUID? = nil,
+        routeStartTravelledM: Double? = nil,
         steering: GpsSteeringVector?,
         lastConfirmedLatitude: Double?,
         lastConfirmedLongitude: Double?,
@@ -848,6 +888,8 @@ nonisolated struct GpsMotionState: Codable, Equatable {
         self.routeStartedAt = routeStartedAt
         self.routePaused = routePaused
         self.routeRepeats = routeRepeats
+        self.savedRouteId = savedRouteId
+        self.routeStartTravelledM = routeStartTravelledM
         self.steering = steering
         self.lastConfirmedLatitude = lastConfirmedLatitude
         self.lastConfirmedLongitude = lastConfirmedLongitude
@@ -901,7 +943,7 @@ nonisolated struct GpsRoutePoint: Codable, Equatable, Hashable {
 }
 
 /// How fast to walk a route.
-nonisolated enum GpsRouteSpeed: Codable, Equatable {
+nonisolated enum GpsRouteSpeed: Codable, Equatable, Hashable {
     /// Constant ground speed in metres per second. Ignores every point's `offsetSecs`.
     case fixed(mps: Double)
     /// Replay at the pace recorded in the points' `offsetSecs`.
@@ -1310,6 +1352,369 @@ nonisolated enum GpsRouteValidationFailure: Equatable {
     var isUserFixable: Bool { self != .writeFailed }
 }
 
+// MARK: - Route library
+
+/// Where a saved route came from. Display and grouping only — it never changes how one plays.
+nonisolated enum GpsRouteSource: String, Codable, Equatable, Hashable {
+    /// A GPX the user brought in from this phone.
+    case gpxImport = "gpx"
+    /// Dropped into `Documents/imported/` by the desktop app and adopted here.
+    case desktop
+    /// Drawn or authored in the app. Not built yet; the case exists so a stored route from a later
+    /// build decodes in this one rather than being discarded.
+    case builder
+    case unknown
+
+    /// Tolerant by hand rather than by the synthesized decoder, which throws on an unrecognised raw
+    /// value. A route is the user's own data and must survive a value a build doesn't know — the
+    /// synthesized behaviour would fail the whole entry's decode and silently drop it from the
+    /// library.
+    init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = GpsRouteSource(rawValue: raw) ?? .unknown
+    }
+}
+
+/// A route the user has kept.
+///
+/// ## Why this is not just a `GpsRoute`
+///
+/// `GpsRoute.id` is the shared `r1-` content hash, and it covers geometry, timings, **pace** and
+/// **`repeat`**. That is correct for its purpose — it exists so the agent can serve a cached route
+/// whenever the id matches — but it makes it the wrong identity for something a person owns:
+/// switching a saved route from Walk to Cycle derives a new content id, so a library keyed by it
+/// would grow a second entry every time somebody changed the pace.
+///
+/// So identity here is a **UUID minted once at save time** and never derived from content. Rename is
+/// free because `name` is excluded from the hash, and a pace change stays one entry because the hash
+/// isn't the key. The `r1-` id is computed on demand by `playbackRoute()`, which is the only place it
+/// is needed and the only place it is correct.
+///
+/// Deliberately **no stored content id.** A derived value on disk is a value that can go stale
+/// against the fields it was derived from, and this one going stale means the agent serves a cached
+/// route at the old pace forever.
+nonisolated struct GpsSavedRoute: Codable, Equatable, Hashable, Identifiable {
+    /// Stable across rename and pace change. Not the content hash — see the type note.
+    var id: UUID
+    /// The display name, authoritative and user-editable. Copied onto the playback route so the
+    /// agent's report names what the user named it.
+    var name: String
+    /// Unix seconds. Only for ordering the library.
+    var createdAt: Double
+    var source: GpsRouteSource
+    var points: [GpsRoutePoint]
+    var speed: GpsRouteSpeed
+    var repeats: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, source, points, speed
+        case createdAt = "created_at"
+        case repeats = "repeat"
+    }
+
+    /// Every key optional, for the same reason `GpsMotionState` decodes this way: Swift's
+    /// synthesized decoder requires a non-optional key to be *present*, a default value does not
+    /// make it tolerant, and the store falls back rather than throwing — so one added field would
+    /// silently delete somebody's saved routes on the first launch after an update.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        name = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
+        createdAt = try c.decodeIfPresent(Double.self, forKey: .createdAt) ?? 0
+        source = try c.decodeIfPresent(GpsRouteSource.self, forKey: .source) ?? .unknown
+        points = try c.decodeIfPresent([GpsRoutePoint].self, forKey: .points) ?? []
+        speed = try c.decodeIfPresent(GpsRouteSpeed.self, forKey: .speed) ?? .asRecorded
+        repeats = try c.decodeIfPresent(Bool.self, forKey: .repeats) ?? false
+    }
+
+    init(
+        id: UUID = UUID(),
+        name: String,
+        createdAt: Double = Date().timeIntervalSince1970.rounded(),
+        source: GpsRouteSource,
+        points: [GpsRoutePoint],
+        speed: GpsRouteSpeed,
+        repeats: Bool
+    ) {
+        self.id = id
+        self.name = name
+        self.createdAt = createdAt
+        self.source = source
+        self.points = points
+        self.speed = speed
+        self.repeats = repeats
+    }
+
+    /// Adopt an imported `GpsRoute` as a new library entry.
+    ///
+    /// Takes the route's own name when it has one, because a GPX's `<name>` is the best label we have
+    /// and asking the user to name a file they just picked is friction for nothing.
+    init(adopting route: GpsRoute, source: GpsRouteSource, fallbackName: String) {
+        let normalised = route.normalisedForImport()
+        let trimmed = (normalised.name ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        self.init(
+            name: trimmed.isEmpty ? fallbackName : trimmed,
+            source: source,
+            points: normalised.points,
+            speed: normalised.speed,
+            repeats: normalised.repeats
+        )
+    }
+
+    /// The playback artefact for this entry, with its content id derived **now**.
+    ///
+    /// Normalises before hashing, per the shared id contract — the stored form is already normalised,
+    /// so this is idempotent, but calling it unconditionally means a route that reached the library
+    /// by some future path can't skip the step.
+    func playbackRoute() -> GpsRoute {
+        var route = GpsRoute(
+            id: "", name: name, points: points, speed: speed, repeats: repeats
+        ).normalisedForImport()
+        route.id = route.derivedID
+        return route
+    }
+
+    /// Validity, judged on the playback form — which is what will actually be written and played.
+    var validationFailure: GpsRouteValidationFailure? { playbackRoute().validationFailure }
+
+    /// Whether the recorded timeline is usable, and therefore whether `asRecorded` may be offered.
+    ///
+    /// Same test the pace picker uses. `normalisedForImport` has already dropped offsets wholesale if
+    /// any point lacked one or the sequence went backwards, so a single check per point is sufficient
+    /// here rather than re-deriving the monotonic rule.
+    var hasTimings: Bool {
+        points.count > 1 && points.allSatisfy { $0.offsetSecs != nil }
+    }
+
+    /// The list-row metadata, without the points.
+    var summary: GpsRouteSummary {
+        GpsRouteSummary(
+            id: id,
+            name: name,
+            createdAt: createdAt,
+            source: source,
+            pointCount: points.count,
+            lengthMeters: GpsRoute(
+                id: "", name: name, points: points, speed: speed, repeats: repeats
+            ).lengthMeters,
+            speed: speed,
+            repeats: repeats,
+            hasTimings: hasTimings
+        )
+    }
+}
+
+/// What a library row needs, without loading a 20,000-point array to draw it.
+///
+/// The whole reason `index.json` exists: rendering forty rows should cost one small read, not forty
+/// full parses.
+nonisolated struct GpsRouteSummary: Codable, Equatable, Identifiable {
+    var id: UUID
+    var name: String
+    var createdAt: Double
+    var source: GpsRouteSource
+    var pointCount: Int
+    var lengthMeters: Double
+    var speed: GpsRouteSpeed
+    var repeats: Bool
+    var hasTimings: Bool
+}
+
+/// Why a route couldn't be saved to the library.
+nonisolated enum GpsRouteSaveFailure: Equatable {
+    /// **Refused, not evicted.** Deleting a route somebody chose to keep, to make room for one they
+    /// didn't ask to replace it, is the worse outcome — the same reasoning as refusing an over-cap
+    /// route rather than truncating it.
+    case libraryFull(limit: Int)
+    case invalid(GpsRouteValidationFailure)
+    case writeFailed
+}
+
+/// The saved-route library: one file per route, plus a rebuildable index.
+///
+/// ## Why `Library/Application Support` and not `Documents`
+///
+/// `UIFileSharingEnabled` and `LSSupportsOpeningDocumentsInPlace` are both `true` on the iOS app, and
+/// that pair publishes `Documents` into the Files app under On My iPhone. Both keys are load-bearing
+/// and staying — AFC needs the first so the desktop agent can read `desired.json`, and the second is
+/// what lets a GPX open in place without us deleting it out of somebody's iCloud Drive. So the shared
+/// tree is browsable by the customer and readable by any host holding a trust pairing, and that is
+/// fine for what has to live there.
+///
+/// A library of saved routes does not have to. A polyline with timestamps is location history, it
+/// would sit one stray swipe in Files from deletion, and nothing outside this app can consume our
+/// internal JSON — so the exposure carries a real cost and buys nothing. Portability is served
+/// properly by a GPX export behind a share sheet.
+///
+/// Treat this as *not exposed by the supported path* rather than as a security boundary: AFC's
+/// `house_arrest` service also has a container-vending mode, and whether Apple restricts that to
+/// developer-provisioned builds isn't something we can rely on.
+///
+/// ## The index is a cache, and the files are the truth
+///
+/// `index.json` can be deleted at any time with no data loss. Every load checks it against the
+/// directory listing and rebuilds when they disagree, so a route file removed or added out of band
+/// self-corrects instead of producing a phantom row or a hidden route. Same principle as
+/// `GpsMotionStateStore.load` failing to `.idle`: derived state must never be able to break the
+/// feature.
+///
+/// `nonisolated` so a caller can push a rebuild — which reads every route file — off the main actor.
+///
+/// A `struct` holding its own `root` rather than an `enum` of statics, so the storage location is an
+/// injected dependency and a test can point one at a temporary directory. The alternative was a
+/// mutable static override, which is a backdoor with the same power and none of the honesty — and in a
+/// codebase defaulting to `MainActor` isolation, also a concurrency wart.
+nonisolated struct GpsRouteStore {
+    /// Refused past this. A 20,000-point route is roughly 800 KB of JSON, so the ceiling is tens of
+    /// megabytes and typical routes are a fraction of that.
+    static let maxEntries = 50
+
+    static let indexFilename = "index.json"
+
+    /// The library's directory. `nil` when it can't be resolved, which every operation treats as an
+    /// empty, unwritable library rather than a crash.
+    let root: URL?
+
+    /// The app's library, in Application Support.
+    static let shared = GpsRouteStore(root: defaultRoot())
+
+    /// `create:` is not cosmetic. **Application Support is not guaranteed to exist on iOS**, and the
+    /// `urls(for:in:).first` shape used elsewhere in this file for `Documents` returns a path whose
+    /// parent may be absent — so the first write fails with nothing to explain why.
+    static func defaultRoot() -> URL? {
+        guard let base = try? FileManager.default.url(
+            for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true
+        ) else { return nil }
+        return base.appendingPathComponent("GeoSpoof/routes", isDirectory: true)
+    }
+
+    private func directory(create: Bool = false) -> URL? {
+        guard let root else { return nil }
+        if create {
+            try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        }
+        return root
+    }
+
+    private func routeURL(_ id: UUID, create: Bool = false) -> URL? {
+        directory(create: create)?.appendingPathComponent("\(id.uuidString).json")
+    }
+
+    /// Every entry's id, from the directory rather than the index. The authoritative answer to "what
+    /// routes exist".
+    private func storedIDs() -> Set<UUID> {
+        guard let dir = directory() else { return [] }
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []
+        return Set(names.compactMap { name -> UUID? in
+            guard name.hasSuffix(".json"), name != Self.indexFilename else { return nil }
+            return UUID(uuidString: String(name.dropLast(5)))
+        })
+    }
+
+    /// The library, newest first.
+    ///
+    /// Reads the index when it agrees with what is on disk, and rebuilds when it doesn't. The
+    /// agreement check is a directory listing, which is far cheaper than the parse it avoids.
+    func summaries() -> [GpsRouteSummary] {
+        let onDisk = storedIDs()
+        if let cached = readIndex(), Set(cached.map(\.id)) == onDisk {
+            return cached.sorted { $0.createdAt > $1.createdAt }
+        }
+        return rebuildIndex()
+    }
+
+    private func readIndex() -> [GpsRouteSummary]? {
+        guard let url = directory()?.appendingPathComponent(Self.indexFilename),
+              let data = try? Data(contentsOf: url),
+              let index = try? JSONDecoder().decode([GpsRouteSummary].self, from: data) else {
+            return nil
+        }
+        return index
+    }
+
+    /// Re-derive the index from the route files themselves.
+    ///
+    /// The recovery path, and deliberately the expensive one: it parses every entry. Reached only
+    /// when the index is missing, unreadable, or disagrees with the directory, all of which are rare.
+    @discardableResult
+    func rebuildIndex() -> [GpsRouteSummary] {
+        let summaries = storedIDs()
+            .compactMap { load(id: $0)?.summary }
+            .sorted { $0.createdAt > $1.createdAt }
+        writeIndex(summaries)
+        return summaries
+    }
+
+    private func writeIndex(_ summaries: [GpsRouteSummary]) {
+        guard let url = directory(create: true)?.appendingPathComponent(Self.indexFilename),
+              let data = try? JSONEncoder().encode(summaries) else { return }
+        try? data.write(to: url, options: .atomic)
+    }
+
+    /// One saved route, or `nil` when it can't be read **or doesn't validate**.
+    ///
+    /// Validation runs on every load, not only at import. A file here was not necessarily written by
+    /// us: it can arrive from a partially restored backup, from a truncated write, or — once adoption
+    /// exists — from the desktop, whose output has never passed our importer. Checking at the door
+    /// closes that generally rather than at one call site, and an entry that fails is better absent
+    /// from the library than present and unplayable.
+    func load(id: UUID) -> GpsSavedRoute? {
+        guard let url = routeURL(id),
+              let data = try? Data(contentsOf: url),
+              let route = try? JSONDecoder().decode(GpsSavedRoute.self, from: data),
+              route.validationFailure == nil else {
+            return nil
+        }
+        return route
+    }
+
+    /// Add or replace an entry. Returns the reason it was refused, or `nil` on success.
+    ///
+    /// The cap applies to *new* entries only — saving over one that already exists is a rename or a
+    /// pace change and must not start failing because the library is full.
+    @discardableResult
+    func save(_ route: GpsSavedRoute) -> GpsRouteSaveFailure? {
+        if let failure = route.validationFailure { return .invalid(failure) }
+        let existing = storedIDs()
+        if !existing.contains(route.id), existing.count >= Self.maxEntries {
+            return .libraryFull(limit: Self.maxEntries)
+        }
+        guard let url = routeURL(route.id, create: true),
+              let data = try? JSONEncoder().encode(route) else {
+            return .writeFailed
+        }
+        do {
+            try data.write(to: url, options: .atomic)
+        } catch {
+            Log.bridge.error("route library: write failed \(error.localizedDescription)")
+            return .writeFailed
+        }
+        // Index after the file, so a crash between the two leaves a route present but unlisted —
+        // which `summaries()` repairs on the next read. The other order would list a route that
+        // isn't there.
+        rebuildIndex()
+        return nil
+    }
+
+    @discardableResult
+    func delete(id: UUID) -> Bool {
+        guard let url = routeURL(id) else { return false }
+        let removed = (try? FileManager.default.removeItem(at: url)) != nil
+        rebuildIndex()
+        return removed
+    }
+
+    /// Rename an entry, keeping its id — which is the whole point of the id not being content-derived.
+    @discardableResult
+    func rename(id: UUID, to name: String) -> Bool {
+        guard var route = load(id: id) else { return false }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        route.name = trimmed
+        return save(route) == nil
+    }
+}
+
 #if DEBUG
 extension GpsRoute {
     /// A short synthetic route for proving the pipe against a real agent before any authoring
@@ -1357,6 +1762,33 @@ nonisolated struct GpsMotionSample {
     /// device gets dragged to where a session started.
     var latitude: Double?
     var longitude: Double?
+    /// How far along the route the agent says it has travelled, when a report confirmed it.
+    ///
+    /// Carried so a screen without the roster in hand can still preserve position across a pace
+    /// change. Route Detail is pushed from the library and deliberately has no status store — see
+    /// `GpsRouteDetailView` — so before this it could only restart, while the GPS tab preserved.
+    /// Two paths to one action behaving differently is the kind of seam customers find first.
+    ///
+    /// **Only ever a gate-confirmed figure.** `APP_CONTRACT.md`'s rule is that the app must never
+    /// send a distance representing its *belief* about where the device is — only one the report
+    /// confirmed or the user explicitly chose. This is the first: it is quoted from the agent, never
+    /// derived by interpolating our own polyline.
+    var travelledM: Double?
+    /// Whether the computer driving this route can begin a run partway along it.
+    ///
+    /// Read from the **presence** of the report's `start_travelled_m`, which a supporting agent always
+    /// populates while playing — so `false` means an agent predating the field, and only that.
+    ///
+    /// Carried here rather than derived per screen because the alternative was each screen inventing its
+    /// own proxy, and the obvious proxy — "do we have a confirmed distance?" — is true on an agent that
+    /// ignores the seek, which would promise continuity and then restart the route.
+    var seekSupported: Bool
+    /// The run marker the agent echoed, when it echoed the one we asked about.
+    ///
+    /// `nil` until a report confirms the current run. Lets a screen with no status store — Route Detail is
+    /// pushed from the library and deliberately has none — tell "asked" from "actually happening", which is
+    /// the difference between a spinner that means something and one that is decoration.
+    var confirmedRouteStartedAt: Double?
     /// Whether the roster was actually read this pass, regardless of what it said.
     ///
     /// This — not the presence of a position — is what releases the write gate. A user whose
@@ -1364,7 +1796,10 @@ nonisolated struct GpsMotionSample {
     /// position would queue their writes forever.
     var rosterWasRead: Bool
 
-    static let unread = GpsMotionSample(latitude: nil, longitude: nil, rosterWasRead: false)
+    static let unread = GpsMotionSample(
+        latitude: nil, longitude: nil, travelledM: nil, seekSupported: false,
+        confirmedRouteStartedAt: nil, rosterWasRead: false
+    )
 
     var coordinate: (latitude: Double, longitude: Double)? {
         guard let latitude, let longitude else { return nil }
@@ -2475,6 +2910,77 @@ final class SpoofController: ObservableObject {
         return placemarks?.first?.timeZone?.identifier
     }
 
+    /// Apple native reverse-geocode → a place name, or `nil` when there is nothing to say.
+    ///
+    /// The name counterpart to `reverseGeocodeTimezoneID`, using the same geocoder and failing the same
+    /// way: `nil` on offline, throttled, or no placemark, so the caller keeps showing coordinates rather
+    /// than inventing a place.
+    private static func reverseGeocodePlaceName(
+        _ coordinate: CLLocationCoordinate2D
+    ) async -> SpoofLocationName? {
+        let point = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        guard let placemark = try? await CLGeocoder().reverseGeocodeLocation(point).first else {
+            return nil
+        }
+        let city = placemark.locality ?? ""
+        let country = placemark.country ?? ""
+        guard !city.isEmpty || !country.isEmpty else { return nil }
+        return SpoofLocationName(
+            city: city,
+            country: country,
+            displayName: displayName(
+                city: city, country: country,
+                lat: coordinate.latitude, lon: coordinate.longitude
+            )
+        )
+    }
+
+    /// Put a name back on the coordinate once motion has stopped moving it.
+    ///
+    /// ## The bug this closes
+    ///
+    /// Every other path that moves `location` also sets `locationName` — `setLocation`, `syncVPN`,
+    /// `applyVpnGeo`, `clearLocation`. The motion paths were the exception: `startGpsRoute` replaces the
+    /// coordinate with the route's first point and `adoptMotionCoordinate` advances it every few seconds,
+    /// and neither touched the name.
+    ///
+    /// So a customer who picked Dubai and then played a Manhattan route saw **"Dubai" against a Manhattan
+    /// coordinate** — on the Home tab, on the GPS tab's Location row, and in the extension bridge, which
+    /// carries `pendingCity` / `pendingCountry` from this same field. Find My showed Manhattan, because
+    /// Manhattan was the truth. The app was the only thing lying, and it lied for the entire route rather
+    /// than only after it stopped.
+    ///
+    /// ## Why resolve rather than restore
+    ///
+    /// Deliberately **not** putting Dubai back. The agent leaves a finished route where it ended and the
+    /// device holds that point — `stopGpsRoute`'s own hint says the phone stays where the route left it —
+    /// so reverting the coordinate would be a surprise teleport, and reverting only the *name* would
+    /// recreate this bug pointing the other way. The honest answer is a name for where the device actually
+    /// is.
+    ///
+    /// Guarded on the name being absent, so repeat calls cost nothing after the first, and on no request
+    /// already being in flight, so a phase that changes twice in a second doesn't fire two geocodes.
+    func resolveLocationNameIfMissing() {
+        guard locationName == nil, let loc = location, !isResolvingLocationName else { return }
+        isResolvingLocationName = true
+        Task { @MainActor in
+            let resolved = await Self.reverseGeocodePlaceName(
+                CLLocationCoordinate2D(latitude: loc.latitude, longitude: loc.longitude)
+            )
+            isResolvingLocationName = false
+            // Adopt only if the coordinate is still the one we asked about. A route restarted or seeked
+            // while the geocoder was working would otherwise get the previous position's name — the same
+            // class of mistake this whole method exists to fix.
+            guard let current = location,
+                  current.latitude == loc.latitude,
+                  current.longitude == loc.longitude,
+                  let resolved else { return }
+            locationName = resolved
+            Log.location.info("Resolved place name after motion → \(resolved.displayName)")
+            writePending()
+        }
+    }
+
     func setLocation(from place: PlaceResult) {
         setLocation(
             latitude: place.latitude,
@@ -3321,6 +3827,51 @@ final class SpoofController: ObservableObject {
     /// `adoptMotionSample`.
     private var lastMotionBridgePush: Date?
     private var motionSyncTask: Task<Void, Never>?
+    /// Whether a place-name reverse-geocode is already in flight. See `resolveLocationNameIfMissing`.
+    private var isResolvingLocationName = false
+    /// The most recent gate-confirmed distance along the playing route, in metres.
+    ///
+    /// `@Published` so a view can offer a position-preserving pace change without holding a status store
+    /// of its own. Read through `resumableTravelledM`, which is the accessor that enforces the rule about
+    /// when this is safe to act on.
+    @Published private(set) var lastConfirmedTravelledM: Double?
+    /// Whether the computer driving this route applies `route_start_travelled_m`.
+    ///
+    /// Drives whether copy may say a pace change keeps your place. `false` for an agent predating the
+    /// field, which silently restarts instead — and promising continuity to that customer would be a worse
+    /// lie than the warning it replaces.
+    @Published private(set) var agentSupportsSeek = false
+    /// The run marker a report has confirmed, or `nil` while nothing is confirmed.
+    ///
+    /// Compare against `motionState.routeStartedAt` through `currentRunConfirmed`.
+    @Published private(set) var confirmedRouteStartedAt: Double?
+
+    /// Whether the run we most recently asked for is one a report has confirmed.
+    ///
+    /// The honest test for "is it actually playing", as opposed to "did we ask". Keyed on the run marker
+    /// rather than the route id, because a replay reuses the id and only the marker separates the new run
+    /// from the one it replaced.
+    var currentRunConfirmed: Bool {
+        guard let asked = motionState.routeStartedAt, let confirmed = confirmedRouteStartedAt else {
+            return false
+        }
+        return asked == confirmed
+    }
+
+    /// The distance a pace change should resume from, or `nil` to start over.
+    ///
+    /// `nil` whenever resuming would be a guess rather than a fact:
+    ///
+    ///   * no route loaded — there is nothing to resume;
+    ///   * nothing confirmed yet — the run may have only just been asked for, and the honest answer to
+    ///     "where are we" is the first point.
+    ///
+    /// The one caller that must **not** use this is a true replay. `restartGpsRoute` clears the seek
+    /// outright, because Play Again means the beginning even when we know exactly where the device is.
+    var resumableTravelledM: Double? {
+        guard motionState.routeId != nil else { return nil }
+        return lastConfirmedTravelledM
+    }
 
     /// Whether a mode is running that makes the in-memory coordinate untrustworthy.
     var hasActiveMotion: Bool {
@@ -3384,6 +3935,14 @@ final class SpoofController: ObservableObject {
             longitude: coordinate.longitude,
             accuracy: existing?.accuracy ?? 100
         )
+        // **The invariant, enforced at the single funnel motion uses to move the coordinate.**
+        //
+        // `startGpsRoute` also clears the name, because it assigns `location` directly rather than coming
+        // through here. Doing it in both places is not redundancy: this one is what makes the rule hold for
+        // any future mode. Steering (Phase 3/5) will move the coordinate through exactly this method, and
+        // it has no start hook of its own to remember to clear a name in — so without this line the Dubai
+        // bug would return the first time a steering vector ran, in a code path nobody would think to check.
+        locationName = nil
     }
 
     /// Fold one motion observation into app state, pushing to the extension bridge on a throttle.
@@ -3393,6 +3952,11 @@ final class SpoofController: ObservableObject {
     /// a widget reload would burn WidgetKit's budget for the whole route.
     func adoptMotionSample(_ sample: GpsMotionSample, immediate: Bool = false) {
         releaseMotionWriteGate(adopting: sample)
+        rememberConfirmedTravelled(sample.travelledM)
+        rememberSeekSupport(sample.seekSupported)
+        if let confirmed = sample.confirmedRouteStartedAt, confirmed != confirmedRouteStartedAt {
+            confirmedRouteStartedAt = confirmed
+        }
         guard sample.coordinate != nil else { return }
         let now = Date()
         let due = lastMotionBridgePush.map {
@@ -3404,6 +3968,30 @@ final class SpoofController: ObservableObject {
         // claim the product rests on. Without this the browser stays pinned wherever the route
         // began for its whole duration.
         writePending(reloadWidgets: immediate)
+    }
+
+    /// Keep the last confirmed distance along the route, so a pace change from anywhere can resume from
+    /// it rather than restarting.
+    ///
+    /// Deliberately **not** persisted through `updateMotionState`, which writes `desired.json`. This is a
+    /// read-side observation, not an instruction, and pushing it down the wire every few seconds would
+    /// churn the file the agent polls for no benefit — and worse, would make an incidental write carry a
+    /// moving number, which is the hazard the Requirement 2.6 guard exists for. It rides along on the
+    /// next real gesture instead.
+    ///
+    /// Kept in memory only for the same reason: it is a cache of something the agent will tell us again
+    /// within seconds, and a stale value read after a relaunch would be a belief about the device rather
+    /// than a confirmed figure — the exact thing the contract's source rule forbids sending.
+    private func rememberConfirmedTravelled(_ travelledM: Double?) {
+        guard let travelledM, travelledM.isFinite, travelledM >= 0 else { return }
+        lastConfirmedTravelledM = travelledM
+    }
+
+    /// Record whether the driving computer applies seeks, so copy can promise continuity only when it is
+    /// real. Sticky within a run: absence on one pass is a stale report, not a downgrade.
+    private func rememberSeekSupport(_ supported: Bool) {
+        guard supported, !agentSupportsSeek else { return }
+        agentSupportsSeek = true
     }
 
     /// Start re-reading the device's position while motion runs. No-op when nothing is moving, so
@@ -3485,8 +4073,19 @@ final class SpoofController: ObservableObject {
     /// Also sets the chosen location to the route's first point. That is what satisfies the
     /// agent's rule that spoofing must be enabled independently of any mode, and it gives the
     /// device a sensible place to sit if playback ever stops.
+    /// `savedRouteId` names the library entry this playback came from, when it came from one. Recorded
+    /// so a pace change mid-playback can be written back to the saved route rather than applying to
+    /// this run and quietly reverting the next time it's played. `nil` means "not from the library".
+    ///
+    /// `startTravelledM` begins the run partway along the route instead of at the first point. **Only
+    /// ever pass a distance the agent's report confirmed, or one the user explicitly chose** — never one
+    /// derived by interpolating our own polyline. See `GpsMotionState.routeStartTravelledM`.
     @discardableResult
-    func startGpsRoute(_ route: GpsRoute) -> GpsRouteValidationFailure? {
+    func startGpsRoute(
+        _ route: GpsRoute,
+        savedRouteId: UUID? = nil,
+        startTravelledM: Double? = nil
+    ) -> GpsRouteValidationFailure? {
         if let failure = writeGpsRouteFile(route) { return failure }
 
         if let first = route.points.first {
@@ -3494,6 +4093,15 @@ final class SpoofController: ObservableObject {
             // `writePending()` before the motion state below is armed — writing a
             // `desired.json` that names no route, only to correct it a moment later.
             location = SpoofLocation(latitude: first.lat, longitude: first.lon)
+            // **Drop the name with the coordinate it described.** The user may have picked Dubai; the
+            // device is about to be in Manhattan. Keeping the name is what made the app claim Dubai for
+            // the whole route while Find My showed the truth.
+            //
+            // Cleared rather than re-resolved: `adoptMotionCoordinate` moves this coordinate every few
+            // seconds, and a name that chased it would be both a geocode per step and, as its own comment
+            // says, precision the position doesn't have. The UI falls back to coordinates, which are
+            // always true, and a name comes back when motion stops.
+            locationName = nil
             timezone = Self.resolveTimezone(
                 latitude: first.lat, longitude: first.lon, identifier: nil
             )
@@ -3508,6 +4116,14 @@ final class SpoofController: ObservableObject {
         state.routeStartedAt = Date().timeIntervalSince1970.rounded()
         state.routePaused = false
         state.routeRepeats = route.repeats
+        state.savedRouteId = savedRouteId
+        state.routeStartTravelledM = Self.seekOrigin(startTravelledM, in: route)
+        // Belongs to the run that just ended. Seeding it with the origin rather than clearing it means a
+        // pace change immediately after a seek resumes from the seek instead of from the start, which is
+        // what someone who just scrubbed would expect.
+        lastConfirmedTravelledM = state.routeStartTravelledM
+        // Belongs to the previous run. Carrying it would make a fresh play look instantly confirmed.
+        confirmedRouteStartedAt = nil
         updateMotionState(state)
         // Playback has its own position from here on, so start following it — and reset the
         // throttle so the first observation pushes to the bridge immediately rather than waiting
@@ -3527,6 +4143,28 @@ final class SpoofController: ObservableObject {
         return nil
     }
 
+    /// The seek to actually send, or `nil` for "from the first point".
+    ///
+    /// The agent clamps too, so this is belt-and-braces on the one boundary that reads as a silent
+    /// failure: on a **repeating** route a seek of exactly `total_m` wraps to distance zero, which looks
+    /// identical to the seek having been ignored. Holding our own value strictly inside one lap means we
+    /// never send the ambiguous number, rather than relying on a reported `travelled_m` happening never
+    /// to reach it.
+    ///
+    /// Non-positive and non-finite both collapse to `nil`: the agent treats them as absent, and carrying
+    /// a `0` would put a field in the file that says exactly what its absence says.
+    nonisolated static func seekOrigin(_ requested: Double?, in route: GpsRoute) -> Double? {
+        guard let requested, requested.isFinite, requested > 0 else { return nil }
+        let total = route.lengthMeters
+        guard total > 0 else { return nil }
+        if route.repeats {
+            // Strictly inside the lap. One millimetre is far below anything the 6-decimal coordinate
+            // resolution can express, so this cannot land the device somewhere visibly different.
+            return min(requested, total - 0.001)
+        }
+        return min(requested, total)
+    }
+
     /// Replay the loaded route at a different pace.
     ///
     /// **This restarts the route from its first point**, and that is intended rather than a
@@ -3540,15 +4178,41 @@ final class SpoofController: ObservableObject {
     /// Returns the reason it was refused, or `nil` on success. Refused when the loaded route can't be
     /// read back — which shouldn't happen since we wrote it, but a picker that silently does nothing
     /// is worse than one that says so.
+    /// `resumingAt` is the distance to carry over, which is what stops a pace change from throwing
+    /// playback back to the start. Pass the **gate-confirmed** `travelled_m` — `GpsRouteProgress` is only
+    /// constructible from a confirmed report, so taking it from there satisfies the contract's source
+    /// rule by construction rather than by discipline.
+    ///
+    /// `nil` restarts from the first point, which is the right answer when nothing is playing and the
+    /// only answer available from an agent that predates the seek field.
     @discardableResult
-    func changeGpsRoutePace(to pace: GpsRoutePace) -> GpsRouteValidationFailure? {
+    func changeGpsRoutePace(
+        to pace: GpsRoutePace,
+        resumingAt travelledM: Double? = nil
+    ) -> GpsRouteValidationFailure? {
         guard var route = loadGpsRoute() else { return .writeFailed }
         guard route.speed.pace != pace else { return nil }
         route.speed = pace.speed
         // Re-derived, because pace is in the id. Without this the agent would match the cached route
         // on its unchanged id and never read the new file — serving the old pace forever.
         route.id = route.normalisedForImport().derivedID
-        return startGpsRoute(route)
+
+        // Persist the choice against the library entry, so it survives this playback. Without it the
+        // pace would apply to the current run and silently revert on the next play from the library —
+        // the entry's own `speed` being what `playbackRoute()` bakes in. This is the case the entity
+        // id exists for: the content id has just changed, and the entry's identity has not, so there
+        // is still something to write back to.
+        let savedRouteId = motionState.savedRouteId
+        if let savedRouteId, var entry = GpsRouteStore.shared.load(id: savedRouteId) {
+            entry.speed = route.speed
+            if let failure = GpsRouteStore.shared.save(entry) {
+                // Playback is still fine — `route.json` is written below regardless — so this is a
+                // log rather than a refusal. Losing the preference is a smaller harm than refusing a
+                // pace change the user asked for.
+                Log.bridge.warn("route library: couldn't persist pace change \(String(describing: failure))")
+            }
+        }
+        return startGpsRoute(route, savedRouteId: savedRouteId, startTravelledM: travelledM)
     }
 
     /// Freeze playback in place, still spoofing.
@@ -3574,12 +4238,39 @@ final class SpoofController: ObservableObject {
     }
 
     /// Replay the loaded route from its first point.
+    ///
+    /// **Clears any seek**, which is what makes this a true replay. The marker moving is what tells the
+    /// agent to begin a new run, and it reads the seek on exactly that transition — so leaving a stale
+    /// origin in place would make "Play Again" silently resume from wherever the last run started
+    /// instead of from the beginning.
     func restartGpsRoute() {
         guard motionState.routeId != nil else { return }
         var state = motionState
         state.routeStartedAt = Date().timeIntervalSince1970.rounded()
         state.routePaused = false
         state.mode = .route
+        state.routeStartTravelledM = nil
+        lastConfirmedTravelledM = nil
+        confirmedRouteStartedAt = nil
+        updateMotionState(state)
+    }
+
+    /// Begin the loaded route again from a chosen distance along it — the scrub, skip and rewind path.
+    ///
+    /// A new marker plus a seek: "new run, starting here." Same mechanism a pace change uses, different
+    /// reason. `travelledM` must be a confirmed report value or an explicit user choice, never an
+    /// interpolation of our own polyline.
+    ///
+    /// Callers must debounce: one write when a gesture **ends**, never one per frame. Each call mints a
+    /// new run the agent has to read and re-seek, and the same rule already applies to continuous map
+    /// camera changes.
+    func seekGpsRoute(toTravelledM travelledM: Double) {
+        guard motionState.routeId != nil, let route = loadGpsRoute() else { return }
+        var state = motionState
+        state.routeStartedAt = Date().timeIntervalSince1970.rounded()
+        state.routePaused = motionState.routePaused
+        state.mode = .route
+        state.routeStartTravelledM = Self.seekOrigin(travelledM, in: route)
         updateMotionState(state)
     }
 
@@ -3605,9 +4296,12 @@ final class SpoofController: ObservableObject {
         state.routeStartedAt = nil
         state.routePaused = false
         state.routeRepeats = false
+        state.routeStartTravelledM = nil
         state.steering = nil
+        lastConfirmedTravelledM = nil
         updateMotionState(state)
         stopMotionSync()
+        resolveLocationNameIfMissing()
         Self.scheduleWidgetReload()
         Log.bridge.info("GPS motion request cleared")
     }
@@ -3625,10 +4319,14 @@ final class SpoofController: ObservableObject {
         state.routeStartedAt = nil
         state.routePaused = false
         state.routeRepeats = false
+        state.routeStartTravelledM = nil
+        lastConfirmedTravelledM = nil
         updateMotionState(state)
         // Nothing left to follow. The coordinate stands where playback left it, which is what
         // keeps the device from snapping back to its real location on stop.
         stopMotionSync()
+        // And now it has stopped moving, it can have a name again — one for where it actually is.
+        resolveLocationNameIfMissing()
         // The other edge — see `startGpsRoute`. Without it the widget keeps showing a position from
         // partway through a route that has since ended.
         Self.scheduleWidgetReload()
@@ -3753,6 +4451,16 @@ final class SpoofController: ObservableObject {
             // `writePending()`.
             if let startedAt = motion.routeStartedAt {
                 obj["route_started_at"] = startedAt
+            }
+            // Where this run begins, in metres. Omitted for a run starting at the first point, which is
+            // what absence means to the agent — so the common case adds nothing to the file.
+            //
+            // Read from stored state for the same reason `route_started_at` is: a value derived here
+            // would change on every incidental `writePending()`, and the agent reads the seek on any
+            // write that also moves the id or the marker. Non-finite is filtered rather than sent; the
+            // agent treats it as absent anyway, but emitting a NaN into JSON is a defect on our side.
+            if let startM = motion.routeStartTravelledM, startM.isFinite, startM > 0 {
+                obj["route_start_travelled_m"] = startM
             }
         }
         // Live steering. The agent integrates this and owns the position while it runs, so no

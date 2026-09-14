@@ -987,7 +987,7 @@ struct SpoofControlPanel: View {
 ///
 /// Attach last, after the map's own modifiers, so `.mapStyle`, `.onMapCameraChange`
 /// and friends stay bound directly to the `Map` and only the composed result is gated.
-private struct MapRenderSizeGate: ViewModifier {
+struct MapRenderSizeGate: ViewModifier {
     func body(content: Content) -> some View {
         GeometryReader { proxy in
             if proxy.size.width >= 1, proxy.size.height >= 1 {
@@ -1003,7 +1003,11 @@ private struct MapRenderSizeGate: ViewModifier {
 
 extension View {
     /// See `MapRenderSizeGate`. Required on every `Map` in the app.
-    fileprivate func mapRenderSizeGate() -> some View {
+    ///
+    /// Internal rather than `fileprivate`: the GPS tab's route map lives in
+    /// `iOS (App)/SceneDelegate.swift`, and a gate the fourth `Map` in the app cannot reach is a gate
+    /// that silently stops being "required on every `Map`".
+    func mapRenderSizeGate() -> some View {
         modifier(MapRenderSizeGate())
     }
 }
@@ -1886,7 +1890,22 @@ struct LabeledRow: View {
                 .foregroundStyle(.secondary)
                 .monospacedDigit()
                 .textSelection(.enabled)
+                // Long values — a place name, a route name — wrap rather than truncate, and read
+                // right-aligned with the rest of the column.
+                .multilineTextAlignment(.trailing)
         }
+        // Read as one element: "Travelled, 400 m of 1.1 km" rather than two stops that VoiceOver
+        // announces separately, where the value arrives detached from what it measures.
+        //
+        // Safe to combine because `value` is a `Text`, so there is never an interactive child here
+        // whose own action would be swallowed.
+        //
+        // This arrived from `GpsView.infoRow`, a private near-duplicate of this view that had the
+        // accessibility treatment while this one — used by the Details tab and Home — did not. The
+        // duplicate's own note claimed the improvement landed "on every screen in the app"; it could
+        // not, because the helper was private to one view. Folding it in here is what makes that
+        // true.
+        .accessibilityElement(children: .combine)
     }
 }
 

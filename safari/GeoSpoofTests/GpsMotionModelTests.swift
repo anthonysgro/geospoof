@@ -51,7 +51,7 @@ struct GpsMotionModelTests {
             connected: true,
             device: nil,
             session: session,
-            provenance: "from-app",
+            provenanceRaw: "from-app",
             remediation: "",
             error: nil,
             pro: true,
@@ -579,6 +579,580 @@ struct GpsMotionModelTests {
             gate.resolvedPosition(
                 route: nil, chosen: SpoofLocation(latitude: 1, longitude: 2)
             ) == nil
+        )
+    }
+}
+
+/// The two presentation-layer rules that were previously enforced only by which sections a phase
+/// happened to list.
+///
+/// Neither of these is arithmetic, and that is exactly why they are pinned here. Both encode a
+/// decision that reads as obvious once stated and had already been got wrong in code — the kind of
+/// rule that a refactor silently reverts because nothing anywhere says it out loud.
+@Suite("GPS presentation rules")
+struct GpsPresentationRuleTests {
+
+    // MARK: The master switch stays reachable
+
+    /// Every phase except `notPro` must render the four zones, because zone 4 carries the Sync
+    /// toggle — the only control that returns the device's real GPS.
+    ///
+    /// This is the regression test for a real defect: `chooseController` and `entitlementRejected`
+    /// each rendered their own section and no toggle, so a customer with two computers and no pick,
+    /// or one whose entitlement the agent refused, had their real system GPS moved with no in-app way
+    /// to switch it back.
+    @Test("only the non-Pro phase may replace the screen, so the Sync toggle is always reachable")
+    func onlyNotProReplacesTheScreen() {
+        let everyOtherPhase: [GpsPhase] = [
+            .waitingForComputer,
+            .chooseController,
+            .entitlementRejected,
+            .setupNeeded(""),
+            .setupNeeded("Pro required"),
+            .ready,
+            .spoofing(.still),
+            .spoofing(.route(Self.progress)),
+            .spoofing(.steering(Self.steering)),
+            .spoofing(.notDelivered(asked: .route)),
+            .lost,
+        ]
+        #expect(GpsPhase.notPro.replacesScreenWithPitch)
+        for phase in everyOtherPhase {
+            #expect(
+                !phase.replacesScreenWithPitch,
+                "this phase would hide the Sync toggle, leaving the device's real GPS moved with no way back"
+            )
+        }
+    }
+
+    // MARK: Motion supersedes provenance
+
+    /// While a route plays, the route **is** the source.
+    ///
+    /// The coordinate the route started from is not what the device is reporting any more, so naming
+    /// the original pick would be stale. Expressed structurally in `GpsDriver` — `still` is the only
+    /// case carrying a provenance — and asserted here because the structure is easy to widen later.
+    @Test("a playing route supersedes the provenance the coordinate came from")
+    func routeSupersedesProvenance() {
+        let driver = GpsDriver(motion: .route(Self.progress), provenance: .vpnSync)
+        #expect(driver == .route(name: "Morning Run"))
+        #expect(driver.detail == "Morning Run")
+    }
+
+    @Test("a steering vector supersedes provenance too")
+    func steeringSupersedesProvenance() {
+        #expect(GpsDriver(motion: .steering(Self.steering), provenance: .manual) == .steering)
+    }
+
+    /// Holding a coordinate is the one case where provenance is the answer, because nothing is being
+    /// done to the coordinate and where it came from is all there is to say.
+    @Test("a held coordinate reports its provenance")
+    func stillReportsProvenance() {
+        #expect(GpsDriver(motion: .still, provenance: .vpnSync) == .still(.vpnSync))
+        #expect(GpsDriver(motion: .still, provenance: .manual) == .still(.manual))
+        #expect(GpsDriver(motion: .still, provenance: .fromApp) == .still(.fromApp))
+    }
+
+    /// `nil` motion is "no computer is spoofing", which is **not** the same as holding a coordinate.
+    /// Conflating the two would report a held position as nothing happening.
+    @Test("no spoofing computer is not the same as holding a coordinate")
+    func noMotionIsNotStill() {
+        #expect(GpsDriver(motion: nil, provenance: .manual) == .notDriving)
+        #expect(GpsDriver(motion: .still, provenance: .manual) != .notDriving)
+    }
+
+    /// A mode the computer isn't delivering must not read as though it were working.
+    @Test("an undelivered mode is marked a problem rather than a state")
+    func undeliveredIsAProblem() {
+        let driver = GpsDriver(motion: .notDelivered(asked: .route), provenance: .vpnSync)
+        #expect(driver == .undelivered(asked: .route))
+        #expect(driver.isProblem)
+        #expect(!GpsDriver(motion: .still, provenance: .vpnSync).isProblem)
+    }
+
+    // MARK: Provenance decoding
+
+    /// An unrecognised provenance draws **no** source row rather than one reading "unknown" — a word
+    /// that describes our parser, not the customer's device. `title` returning `nil` is the signal.
+    @Test("an unnameable provenance yields no source row")
+    func unknownProvenanceHasNoTitle() {
+        #expect(GpsProvenance(reported: "teleportation") == .unknown)
+        #expect(GpsProvenance(reported: "") == .unknown)
+        #expect(GpsProvenance.unknown.label == nil)
+        #expect(GpsDriver(motion: .still, provenance: .unknown).title == nil)
+    }
+
+    /// The wire values, pinned. These are the agent's spelling and a rename here would silently stop
+    /// matching every report.
+    @Test("provenance wire values match the agent contract")
+    func provenanceWireValues() {
+        #expect(GpsProvenance(reported: "vpn-sync") == .vpnSync)
+        #expect(GpsProvenance(reported: "manual") == .manual)
+        #expect(GpsProvenance(reported: "from-app") == .fromApp)
+    }
+
+    // MARK: Fixtures
+
+    static let progress = GpsRouteProgress(
+        name: "Morning Run",
+        travelledM: 400,
+        totalM: 1_000,
+        remainingSecs: 500,
+        paused: false,
+        finished: false,
+        speedDefaulted: false,
+        repeats: false
+    )
+
+    static let steering = GpsSteeringDetail(
+        headingDeg: 90,
+        speedMps: 1.4,
+        travelledM: 120,
+        deadline: nil,
+        held: false,
+        expired: false
+    )
+}
+
+/// The route library: the identity split it exists to enforce, and the recovery path that keeps a
+/// derived index from being able to lose somebody's routes.
+///
+/// The identity tests need no filesystem and are the load-bearing ones. The store tests get a
+/// temporary directory through `GpsRouteStore(root:)` — the reason that type takes its root as a
+/// property instead of reading Application Support from a static.
+@Suite("GPS route library")
+struct GpsRouteLibraryTests {
+
+    // MARK: Entity id vs content id
+    //
+    // The whole reason `GpsSavedRoute` exists rather than storing a `GpsRoute` directly.
+
+    /// Changing the pace derives a **new** content id — that is required, because the agent caches by
+    /// id and would otherwise keep playing the old pace — while the library entry stays one entry.
+    ///
+    /// A library keyed by the content hash would have grown a duplicate on every pace change.
+    @Test("a pace change moves the content id and keeps the entity id")
+    func paceChangeKeepsEntityID() {
+        var saved = Self.sample(speed: .fixed(mps: 1.4))
+        let entityID = saved.id
+        let contentBefore = saved.playbackRoute().id
+
+        saved.speed = .fixed(mps: 6)
+        let contentAfter = saved.playbackRoute().id
+
+        #expect(contentBefore != contentAfter, "the agent would serve its cached route at the old pace")
+        #expect(saved.id == entityID, "the library would show this as a second, duplicate route")
+    }
+
+    /// `repeat` is in the hash for the same reason pace is, and must behave the same way.
+    @Test("toggling repeat moves the content id and keeps the entity id")
+    func repeatToggleKeepsEntityID() {
+        var saved = Self.sample()
+        let entityID = saved.id
+        let before = saved.playbackRoute().id
+        saved.repeats = true
+        #expect(saved.playbackRoute().id != before)
+        #expect(saved.id == entityID)
+    }
+
+    /// `name` is excluded from the hash, so renaming must not restart playback.
+    @Test("renaming changes neither id")
+    func renameChangesNeitherID() {
+        var saved = Self.sample()
+        let entityID = saved.id
+        let contentID = saved.playbackRoute().id
+        saved.name = "Something else entirely"
+        #expect(saved.playbackRoute().id == contentID, "a rename would restart the route mid-playback")
+        #expect(saved.id == entityID)
+    }
+
+    /// The playback route carries the user's chosen name, so the agent's report names what they named.
+    @Test("the playback route takes the entry's display name")
+    func playbackRouteCarriesName() {
+        #expect(Self.sample().playbackRoute().name == "Morning Run")
+    }
+
+    // MARK: Tolerant decoding
+
+    /// A field added in a later build must not cost somebody their saved routes. The store falls back
+    /// rather than throwing, so a strict decoder would silently drop every entry written by an older
+    /// build — the same hazard `GpsMotionState` was fixed for.
+    @Test("a saved route decodes with fields missing")
+    func decodesWithMissingFields() throws {
+        let json = Data(#"{"name":"Partial","points":[{"lat":1,"lon":2}]}"#.utf8)
+        let saved = try JSONDecoder().decode(GpsSavedRoute.self, from: json)
+        #expect(saved.name == "Partial")
+        #expect(saved.points.count == 1)
+        #expect(saved.speed == .asRecorded)
+        #expect(!saved.repeats)
+        #expect(saved.source == .unknown)
+    }
+
+    /// An unrecognised `source` degrades rather than failing the entry's decode.
+    @Test("an unknown source decodes to unknown rather than throwing")
+    func unknownSourceDecodes() throws {
+        let json = Data(#"{"name":"X","source":"telepathy","points":[{"lat":1,"lon":2}]}"#.utf8)
+        #expect(try JSONDecoder().decode(GpsSavedRoute.self, from: json).source == .unknown)
+    }
+
+    @Test("the wire key for repeat is repeat, not repeats")
+    func repeatWireKey() throws {
+        let json = Data(#"{"name":"X","repeat":true,"points":[{"lat":1,"lon":2}]}"#.utf8)
+        #expect(try JSONDecoder().decode(GpsSavedRoute.self, from: json).repeats)
+    }
+
+    // MARK: Store behaviour
+
+    @Test("a saved route round-trips through the store")
+    func saveAndLoad() throws {
+        let store = try Self.temporaryStore()
+        let saved = Self.sample()
+        #expect(store.save(saved) == nil)
+
+        let loaded = store.load(id: saved.id)
+        #expect(loaded?.id == saved.id)
+        #expect(loaded?.name == "Morning Run")
+        #expect(store.summaries().map(\.id) == [saved.id])
+    }
+
+    /// The index is a cache. Deleting it must cost nothing, because the files are the truth.
+    @Test("a deleted index is rebuilt from the route files")
+    func rebuildsAMissingIndex() throws {
+        let store = try Self.temporaryStore()
+        let a = Self.sample(name: "A")
+        let b = Self.sample(name: "B")
+        #expect(store.save(a) == nil)
+        #expect(store.save(b) == nil)
+
+        let index = try #require(store.root).appendingPathComponent(GpsRouteStore.indexFilename)
+        try FileManager.default.removeItem(at: index)
+
+        #expect(Set(store.summaries().map(\.id)) == Set([a.id, b.id]))
+        #expect(FileManager.default.fileExists(atPath: index.path), "the rebuild should rewrite it")
+    }
+
+    /// A stale index must not produce a phantom row. This is the failure direction that matters: a
+    /// route listed but absent is a tap that goes nowhere.
+    @Test("an index naming a route that no longer exists is corrected")
+    func staleIndexIsCorrected() throws {
+        let store = try Self.temporaryStore()
+        let a = Self.sample(name: "A")
+        let b = Self.sample(name: "B")
+        #expect(store.save(a) == nil)
+        #expect(store.save(b) == nil)
+
+        // Remove a route file behind the store's back, as a partial restore or a user with a file
+        // browser could.
+        let root = try #require(store.root)
+        try FileManager.default.removeItem(
+            at: root.appendingPathComponent("\(b.id.uuidString).json")
+        )
+
+        #expect(store.summaries().map(\.id) == [a.id], "b is gone from disk and must go from the list")
+    }
+
+    /// And the other direction: a route file the index doesn't know about must not stay hidden.
+    @Test("a route file missing from the index is picked up")
+    func unlistedRouteIsPickedUp() throws {
+        let store = try Self.temporaryStore()
+        let a = Self.sample(name: "A")
+        #expect(store.save(a) == nil)
+
+        let b = Self.sample(name: "B")
+        let root = try #require(store.root)
+        try JSONEncoder().encode(b).write(
+            to: root.appendingPathComponent("\(b.id.uuidString).json")
+        )
+
+        #expect(Set(store.summaries().map(\.id)) == Set([a.id, b.id]))
+    }
+
+    /// **Refused, not evicted.** Deleting a route somebody chose to keep, to make room for one they
+    /// didn't ask to replace it, is the worse outcome.
+    @Test("the library refuses a new route past the cap rather than evicting one")
+    func capRefusesRatherThanEvicts() throws {
+        let store = try Self.temporaryStore()
+        var first: GpsSavedRoute?
+        for i in 0..<GpsRouteStore.maxEntries {
+            let route = Self.sample(name: "Route \(i)")
+            if i == 0 { first = route }
+            #expect(store.save(route) == nil)
+        }
+        #expect(store.summaries().count == GpsRouteStore.maxEntries)
+
+        #expect(
+            store.save(Self.sample(name: "One too many"))
+                == .libraryFull(limit: GpsRouteStore.maxEntries)
+        )
+        // Nothing was dropped to make room.
+        #expect(store.summaries().count == GpsRouteStore.maxEntries)
+        #expect(store.load(id: try #require(first).id) != nil)
+    }
+
+    /// The cap must not block editing an entry that already exists, or a rename would start failing
+    /// once the library filled up.
+    @Test("a full library still accepts an edit to an existing entry")
+    func fullLibraryAllowsEdits() throws {
+        let store = try Self.temporaryStore()
+        var routes: [GpsSavedRoute] = []
+        for i in 0..<GpsRouteStore.maxEntries {
+            let route = Self.sample(name: "Route \(i)")
+            routes.append(route)
+            #expect(store.save(route) == nil)
+        }
+        #expect(store.rename(id: routes[3].id, to: "Renamed"))
+        #expect(store.load(id: routes[3].id)?.name == "Renamed")
+        #expect(store.summaries().count == GpsRouteStore.maxEntries)
+    }
+
+    /// Validation runs on **load**, not only at save, because a file here was not necessarily written
+    /// by us — a partial restore, a truncated write, or the desktop's own output.
+    @Test("a route file that doesn't validate is absent from the library rather than unplayable in it")
+    func invalidFileIsNotServed() throws {
+        let store = try Self.temporaryStore()
+        let root = try #require(store.root)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+
+        let id = UUID()
+        // A coordinate the agent would refuse at its door.
+        let json = #"{"id":"\#(id.uuidString)","name":"Broken","points":[{"lat":999,"lon":0}]}"#
+        try Data(json.utf8).write(to: root.appendingPathComponent("\(id.uuidString).json"))
+
+        #expect(store.load(id: id) == nil)
+        #expect(store.summaries().isEmpty, "an unplayable entry is better absent than listed")
+    }
+
+    @Test("saving refuses an invalid route")
+    func saveRefusesInvalid() throws {
+        let store = try Self.temporaryStore()
+        let empty = GpsSavedRoute(
+            name: "Nothing", source: .gpxImport, points: [], speed: .asRecorded, repeats: false
+        )
+        #expect(store.save(empty) == .invalid(.noPoints))
+        #expect(store.summaries().isEmpty)
+    }
+
+    @Test("deleting removes the entry and its index row")
+    func deleteRemoves() throws {
+        let store = try Self.temporaryStore()
+        let saved = Self.sample()
+        #expect(store.save(saved) == nil)
+        #expect(store.delete(id: saved.id))
+        #expect(store.load(id: saved.id) == nil)
+        #expect(store.summaries().isEmpty)
+    }
+
+    @Test("renaming to whitespace is refused rather than blanking the name")
+    func renameRefusesBlank() throws {
+        let store = try Self.temporaryStore()
+        let saved = Self.sample()
+        #expect(store.save(saved) == nil)
+        #expect(!store.rename(id: saved.id, to: "   "))
+        #expect(store.load(id: saved.id)?.name == "Morning Run")
+    }
+
+    /// A store whose directory can't be resolved behaves as an empty, unwritable library rather than
+    /// crashing — the same direction `GpsMotionStateStore.load` fails in.
+    @Test("a store with no resolvable root degrades instead of crashing")
+    func nilRootDegrades() {
+        let store = GpsRouteStore(root: nil)
+        #expect(store.summaries().isEmpty)
+        #expect(store.load(id: UUID()) == nil)
+        #expect(store.save(Self.sample()) == .writeFailed)
+        #expect(!store.delete(id: UUID()))
+    }
+
+    // MARK: Summaries
+
+    @Test("a summary describes the route without carrying its points")
+    func summaryMetadata() {
+        let summary = Self.sample().summary
+        #expect(summary.pointCount == 3)
+        #expect(summary.lengthMeters > 0)
+        #expect(summary.name == "Morning Run")
+        // The sample's points carry no offsets, so `asRecorded` must not be offered for it.
+        #expect(!summary.hasTimings)
+    }
+
+    @Test("a fully timed route reports usable timings")
+    func timedRouteHasTimings() {
+        let timed = GpsSavedRoute(
+            name: "Timed",
+            source: .gpxImport,
+            points: [
+                GpsRoutePoint(lat: 51.5, lon: -0.1, offsetSecs: 0),
+                GpsRoutePoint(lat: 51.501, lon: -0.1, offsetSecs: 60),
+            ],
+            speed: .asRecorded,
+            repeats: false
+        )
+        #expect(timed.hasTimings)
+    }
+
+    // MARK: Adoption
+
+    @Test("adopting a route takes its own name, falling back when it has none")
+    func adoptionNaming() {
+        let route = GpsRoute(
+            id: "ignored", name: "  Coastal Path  ", points: Self.points,
+            speed: .fixed(mps: 1.4), repeats: false
+        )
+        #expect(GpsSavedRoute(adopting: route, source: .desktop, fallbackName: "fb").name == "Coastal Path")
+
+        let unnamed = GpsRoute(
+            id: "ignored", name: nil, points: Self.points, speed: .fixed(mps: 1.4), repeats: false
+        )
+        #expect(GpsSavedRoute(adopting: unnamed, source: .desktop, fallbackName: "fb").name == "fb")
+    }
+
+    /// Adoption normalises, so an entry from the desktop is stored at the resolution its id is
+    /// computed at — the property the agent's cache relies on.
+    @Test("adoption stores the normalised form")
+    func adoptionNormalises() {
+        let route = GpsRoute(
+            id: "ignored",
+            name: "Precise",
+            points: [GpsRoutePoint(lat: 51.50000009, lon: -0.10000004, offsetSecs: nil)],
+            speed: .fixed(mps: 1.4),
+            repeats: false
+        )
+        let adopted = GpsSavedRoute(adopting: route, source: .desktop, fallbackName: "fb")
+        #expect(adopted.points[0].lat == 51.5)
+        #expect(adopted.points[0].lon == -0.1)
+    }
+
+    // MARK: Fixtures
+
+    static let points = [
+        GpsRoutePoint(lat: 51.5007, lon: -0.1246, offsetSecs: nil),
+        GpsRoutePoint(lat: 51.5010, lon: -0.1250, offsetSecs: nil),
+        GpsRoutePoint(lat: 51.5015, lon: -0.1255, offsetSecs: nil),
+    ]
+
+    static func sample(
+        name: String = "Morning Run",
+        speed: GpsRouteSpeed = .fixed(mps: 1.4)
+    ) -> GpsSavedRoute {
+        GpsSavedRoute(name: name, source: .gpxImport, points: points, speed: speed, repeats: false)
+    }
+
+    /// A store rooted in a fresh temporary directory, so tests never touch the real library.
+    static func temporaryStore() throws -> GpsRouteStore {
+        let root = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+            .appendingPathComponent("route-library-tests/\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        return GpsRouteStore(root: root)
+    }
+}
+
+/// When a tapped playback control counts as answered.
+///
+/// This is the logic that decides whether a spinner clears, so getting it wrong either strands the
+/// control forever or clears it on a report that doesn't describe the request. Both were live risks:
+/// `stop` inverts — anything that *isn't* a route confirms it — and reusing the "is it a route?" test
+/// for every kind would have left stop spinning until it timed out.
+@Suite("GPS pending actions")
+struct GpsPendingActionTests {
+
+    @Test("pause is confirmed only once the report says paused")
+    func pauseConfirmation() {
+        let action = Self.action(.pause)
+        #expect(!action.isConfirmed(by: .route(Self.progress(paused: false))))
+        #expect(action.isConfirmed(by: .route(Self.progress(paused: true))))
+    }
+
+    @Test("resume is confirmed only once the report says it's moving again")
+    func resumeConfirmation() {
+        let action = Self.action(.resume)
+        #expect(!action.isConfirmed(by: .route(Self.progress(paused: true))))
+        #expect(action.isConfirmed(by: .route(Self.progress(paused: false))))
+        // A finished route is not a resumed one; treating it as confirmation would clear the spinner
+        // on a route that never restarted.
+        #expect(!action.isConfirmed(by: .route(Self.progress(paused: false, finished: true))))
+    }
+
+    @Test("a replay is confirmed by a run that is neither finished nor paused")
+    func restartConfirmation() {
+        let action = Self.action(.restart)
+        #expect(!action.isConfirmed(by: .route(Self.progress(paused: false, finished: true))))
+        #expect(action.isConfirmed(by: .route(Self.progress(paused: false))))
+    }
+
+    /// **The inverted one.** Stop asks for the route to go away, so a report still describing a route
+    /// is the *unconfirmed* case and everything else is confirmation.
+    @Test("stop is confirmed by the absence of a route, not its presence")
+    func stopConfirmation() {
+        let action = Self.action(.stop)
+        #expect(!action.isConfirmed(by: .route(Self.progress(paused: false))))
+        #expect(action.isConfirmed(by: .still))
+        #expect(action.isConfirmed(by: nil))
+        #expect(action.isConfirmed(by: .steering(GpsPresentationRuleTests.steering)))
+    }
+
+    /// **Regression, found on device.** Right after Start Route is tapped the phase is still `.ready` —
+    /// the agent has not picked the request up yet — so the motion detail is `nil`. That must read as
+    /// "no answer yet", not as "done".
+    ///
+    /// It was not this function that got it wrong: `resolvePendingAction` carried a second copy of the
+    /// decision that cleared every pending kind on a not-spoofing phase, so the spinner was thrown away
+    /// on the first poll and the label snapped back from "Starting…" to "Start Route" within a second.
+    /// The timeout could never fire either, so a start that never happened reported nothing. The caller
+    /// now routes every kind through here, which is why this input is worth naming on its own.
+    @Test("a start is not confirmed merely because nothing is spoofing yet")
+    func startIsNotConfirmedByNotSpoofingYet() {
+        #expect(!Self.action(.start).isConfirmed(by: nil))
+        #expect(!Self.action(.restart).isConfirmed(by: nil))
+        // And the counterpart that makes the shared path correct rather than merely uniform: for stop,
+        // the same input *is* the answer.
+        #expect(Self.action(.stop).isConfirmed(by: nil))
+    }
+
+    /// A computer that stopped spoofing, or one that declined the mode, must not read as confirmation
+    /// for a request that asked for motion — the caller drops those requests explicitly rather than
+    /// letting them resolve as success.
+    @Test("a mode the computer isn't delivering never confirms a motion request")
+    func notDeliveredNeverConfirms() {
+        for kind in [GpsPendingAction.Kind.pause, .resume, .restart, .start] {
+            #expect(!Self.action(kind).isConfirmed(by: .notDelivered(asked: .route)))
+            #expect(!Self.action(kind).isConfirmed(by: .still))
+            #expect(!Self.action(kind).isConfirmed(by: nil))
+        }
+    }
+
+    /// Every kind needs an in-flight label, and it must describe the request rather than the state it
+    /// asks for — "Pausing…", never "Paused". Rendering the destination state is the optimistic lie the
+    /// echo gate exists to prevent.
+    @Test("every kind has a present-continuous progress label")
+    func everyKindHasAProgressLabel() {
+        // Compared as `LocalizedStringKey`, which is `Equatable` — enough to assert each kind resolves
+        // to a distinct, non-placeholder key without pinning the English wording here.
+        let labels = [
+            GpsPendingAction.Kind.pause.progressLabel,
+            GpsPendingAction.Kind.resume.progressLabel,
+            GpsPendingAction.Kind.stop.progressLabel,
+        ]
+        #expect(Set(labels.map { String(describing: $0) }).count == labels.count)
+        // Start and restart deliberately share one label: both begin a route from its first point, and
+        // two words for one outcome is noise for a translator.
+        #expect(GpsPendingAction.Kind.start.progressLabel == GpsPendingAction.Kind.restart.progressLabel)
+    }
+
+    // MARK: Fixtures
+
+    static func action(_ kind: GpsPendingAction.Kind) -> GpsPendingAction {
+        GpsPendingAction(kind: kind, startedAt: Date(timeIntervalSince1970: 1_789_300_000))
+    }
+
+    static func progress(paused: Bool, finished: Bool = false) -> GpsRouteProgress {
+        GpsRouteProgress(
+            name: "Morning Run",
+            travelledM: 400,
+            totalM: 1_000,
+            remainingSecs: 500,
+            paused: paused,
+            finished: finished,
+            speedDefaulted: false,
+            repeats: false
         )
     }
 }

@@ -44,7 +44,8 @@ struct GpsDesiredPayloadTests {
         id: String = "morning-run",
         startedAt: Double = 1_789_300_000,
         paused: Bool = false,
-        repeats: Bool = false
+        repeats: Bool = false,
+        startTravelledM: Double? = nil
     ) -> GpsMotionState {
         GpsMotionState(
             mode: .route,
@@ -52,6 +53,7 @@ struct GpsDesiredPayloadTests {
             routeStartedAt: startedAt,
             routePaused: paused,
             routeRepeats: repeats,
+            routeStartTravelledM: startTravelledM,
             steering: nil,
             lastConfirmedLatitude: nil,
             lastConfirmedLongitude: nil,
@@ -106,7 +108,7 @@ struct GpsDesiredPayloadTests {
 
     /// The keys that carry motion intent. Everything this suite protects is in here.
     private static let motionKeys = [
-        "motion", "route_id", "route_paused", "route_started_at", "steering",
+        "motion", "route_id", "route_paused", "route_started_at", "route_start_travelled_m", "steering",
     ]
 
     private static func motionSlice(_ obj: [String: Any]) -> String {
@@ -355,5 +357,220 @@ struct GpsDesiredPayloadTests {
             let back = try! JSONDecoder().decode(GpsMotionState.self, from: data)
             #expect(back == state)
         }
+    }
+}
+
+/// `route_start_travelled_m` — beginning a run partway along a route.
+///
+/// See `.kiro/specs/device-gps-motion/route-seek-agreement.md`. The agent reads this field only on the
+/// transition into a new run, so the property that matters most is the one asserted last: an incidental
+/// write must never invent or move it. A seek that re-fired would drag a playing device backwards, which
+/// is the snap-back bug the Requirement 2.6 guard exists for.
+@Suite("GPS route seek payload")
+struct GpsRouteSeekPayloadTests {
+
+    @Test("a seek is emitted when a run begins partway along")
+    func seekEmitted() {
+        let obj = Self.payload(motion: Self.route(startTravelledM: 412.5))
+        #expect(obj["route_start_travelled_m"] as? Double == 412.5)
+    }
+
+    /// Absence is how "from the first point" is spelled on the wire, so the common case must add nothing
+    /// to the file. A `0` would occupy a key to say exactly what its own absence says.
+    @Test("no seek means no key, and zero is treated as no seek")
+    func seekOmitted() {
+        #expect(Self.payload(motion: Self.route()).keys.contains("route_start_travelled_m") == false)
+        #expect(
+            Self.payload(motion: Self.route(startTravelledM: 0))
+                .keys.contains("route_start_travelled_m") == false
+        )
+    }
+
+    /// A NaN would serialize into JSON and the agent treats non-finite as absent anyway — but emitting
+    /// one is a defect on our side, so it is filtered at the door.
+    @Test("a non-finite or negative seek is never written")
+    func nonFiniteSeekFiltered() {
+        for bad in [Double.nan, .infinity, -.infinity, -50] {
+            #expect(
+                Self.payload(motion: Self.route(startTravelledM: bad))
+                    .keys.contains("route_start_travelled_m") == false,
+                "a non-finite or negative seek must not reach the file"
+            )
+        }
+    }
+
+    /// The seek belongs to the route payload, so it must not appear without one — the agent would have
+    /// nothing to apply it to.
+    @Test("a seek is not emitted when no route is loaded")
+    func seekRequiresARoute() {
+        var still = GpsMotionState.idle
+        still.routeStartTravelledM = 412.5
+        #expect(Self.payload(motion: still).keys.contains("route_start_travelled_m") == false)
+    }
+
+    /// **The Requirement 2.6 guard, extended to the seek.**
+    ///
+    /// Every unrelated `writePending()` trigger must leave it exactly as it was. This is the assertion
+    /// that would catch a future refactor deriving the seek from live progress at serialization time —
+    /// the same mistake `route_started_at`'s doc comment warns about, with a worse symptom: a route that
+    /// silently rewinds every time anything else in the app writes.
+    @Test("no unrelated write invents, moves, or drops a seek")
+    func unrelatedWritesPreserveTheSeek() {
+        let seeked = Self.route(startTravelledM: 412.5)
+        let baseline = Self.payload(motion: seeked)["route_start_travelled_m"] as? Double
+        #expect(baseline == 412.5)
+
+        for change in Self.unrelatedWrites {
+            let after = change.build(seeked)["route_start_travelled_m"] as? Double
+            #expect(after == baseline, "\(change.what) changed the seek")
+        }
+
+        // And the inverse: an unrelated write must not conjure one onto a run that has none.
+        let plain = Self.route()
+        for change in Self.unrelatedWrites {
+            #expect(
+                change.build(plain).keys.contains("route_start_travelled_m") == false,
+                "\(change.what) invented a seek"
+            )
+        }
+    }
+
+    // MARK: Fixtures
+    //
+    // Local rather than shared with `GpsDesiredPayloadTests`, whose helpers are private to that suite.
+
+    private static func route(
+        startTravelledM: Double? = nil,
+        repeats: Bool = false
+    ) -> GpsMotionState {
+        GpsMotionState(
+            mode: .route,
+            routeId: "morning-run",
+            routeStartedAt: 1_789_300_000,
+            routePaused: false,
+            routeRepeats: repeats,
+            routeStartTravelledM: startTravelledM,
+            steering: nil,
+            lastConfirmedLatitude: nil,
+            lastConfirmedLongitude: nil,
+            lastConfirmedAt: nil
+        )
+    }
+
+    private static func payload(
+        motion: GpsMotionState,
+        active: Bool = true,
+        provenance: String = "manual",
+        coordinate: (latitude: Double, longitude: Double)? = (35.6762, 139.6503),
+        pro: Bool = true,
+        ownerId: String? = nil
+    ) -> [String: Any] {
+        SpoofController.buildGpsDesiredPayload(
+            active: active,
+            provenance: provenance,
+            coordinate: coordinate,
+            motion: motion,
+            pro: pro,
+            appTransactionJWS: nil,
+            entitlementTransactionsJWS: [],
+            ownerId: ownerId
+        )
+    }
+
+    private struct UnrelatedWrite {
+        let what: String
+        let build: (GpsMotionState) -> [String: Any]
+    }
+
+    /// Stand-ins for the real `writePending()` triggers — enable, `setLocation`, timezone resolve,
+    /// entitlement refresh, favorites, scope changes, controller selection.
+    private static let unrelatedWrites: [UnrelatedWrite] = [
+        UnrelatedWrite(what: "provenance flipped to vpn-sync") {
+            Self.payload(motion: $0, provenance: "vpn-sync")
+        },
+        UnrelatedWrite(what: "the chosen coordinate moved") {
+            Self.payload(motion: $0, coordinate: (latitude: 48.8584, longitude: 2.2945))
+        },
+        UnrelatedWrite(what: "the coordinate was cleared") {
+            Self.payload(motion: $0, coordinate: nil)
+        },
+        UnrelatedWrite(what: "the entitlement lapsed") { Self.payload(motion: $0, pro: false) },
+        UnrelatedWrite(what: "a controlling computer was chosen") {
+            Self.payload(motion: $0, ownerId: "mac-studio")
+        },
+        // Device GPS switched off. The motion payload is gated on `motion.routeId`, not on `active`, so
+        // the route keys are still written — only the coordinate drops out. Added after a mutation test
+        // caught this suite passing while the seek was made to vary with `active`: without this case the
+        // guard had a hole in exactly the shape of the bug it exists to catch.
+        UnrelatedWrite(what: "device GPS was switched off") { Self.payload(motion: $0, active: false) },
+    ]
+}
+
+/// `SpoofController.seekOrigin` — the clamp we apply before sending a seek.
+///
+/// The agent clamps too. This is belt-and-braces on the one boundary that reads as a silent failure.
+@Suite("GPS seek origin clamping")
+struct GpsSeekOriginTests {
+
+    /// **The boundary that matters.** On a repeating route the agent computes `target_m % total_m`, so a
+    /// seek of exactly `total_m` wraps to distance zero — indistinguishable, on screen, from the seek
+    /// having been ignored. Holding strictly inside one lap means we never send the ambiguous number.
+    @Test("a repeating route is held strictly inside one lap")
+    func repeatingClampsBelowTotal() {
+        let route = Self.route(repeats: true)
+        let total = route.lengthMeters
+        let clamped = SpoofController.seekOrigin(total, in: route)
+        #expect(clamped != nil)
+        #expect((clamped ?? 0) < total, "exactly one lap would wrap to the start line")
+        #expect((clamped ?? 0) > total - 1, "and it must still be at the end of the lap, not near it")
+    }
+
+    /// A one-shot route has an end, so landing exactly on it is meaningful: the run is finished.
+    @Test("a one-shot route clamps to its full length")
+    func oneShotClampsToTotal() {
+        let route = Self.route(repeats: false)
+        let total = route.lengthMeters
+        #expect(SpoofController.seekOrigin(total * 2, in: route) == total)
+    }
+
+    /// All three collapse to "from the start", which is what absence means on the wire.
+    @Test("nil, zero, negative and non-finite all mean no seek")
+    func noSeekCases() {
+        let route = Self.route()
+        #expect(SpoofController.seekOrigin(nil, in: route) == nil)
+        #expect(SpoofController.seekOrigin(0, in: route) == nil)
+        #expect(SpoofController.seekOrigin(-1, in: route) == nil)
+        #expect(SpoofController.seekOrigin(.nan, in: route) == nil)
+        #expect(SpoofController.seekOrigin(.infinity, in: route) == nil)
+    }
+
+    @Test("a distance inside the route passes through untouched")
+    func insideRoutePassesThrough() {
+        #expect(SpoofController.seekOrigin(50, in: Self.route()) == 50)
+    }
+
+    /// A degenerate route has no distance to seek into, and dividing the lap would be meaningless.
+    @Test("a zero-length route accepts no seek")
+    func zeroLengthRoute() {
+        let degenerate = GpsRoute(
+            id: "r", name: nil,
+            points: [GpsRoutePoint(lat: 51.5, lon: -0.1, offsetSecs: nil)],
+            speed: .fixed(mps: 1.4), repeats: false
+        )
+        #expect(SpoofController.seekOrigin(10, in: degenerate) == nil)
+    }
+
+    private static func route(repeats: Bool = false) -> GpsRoute {
+        GpsRoute(
+            id: "r1-test",
+            name: "Test",
+            points: [
+                GpsRoutePoint(lat: 51.5000, lon: -0.1000, offsetSecs: nil),
+                GpsRoutePoint(lat: 51.5100, lon: -0.1000, offsetSecs: nil),
+                GpsRoutePoint(lat: 51.5200, lon: -0.1000, offsetSecs: nil),
+            ],
+            speed: .fixed(mps: 1.4),
+            repeats: repeats
+        )
     }
 }
