@@ -2346,7 +2346,11 @@ struct GpsView: View {
             // Handled in `body`, which replaces the whole screen. Unreachable here.
             EmptyView()
         case .waitingForComputer:
-            aboutSection
+            // No `aboutSection` any more. It was a card headed "Device GPS" describing what device GPS
+            // does — shown to a customer who has bought device GPS and is waiting for it to connect. The
+            // one thing that reader does not need is the feature explained back to them, and it pushed the
+            // instructions that *would* help further down the screen. `waitingSection` now carries the
+            // whole answer: what is happening, and what to do about it.
             lastKnownMotionSection
             waitingSection
         case .chooseController:
@@ -2533,23 +2537,10 @@ struct GpsView: View {
         }
     }
 
-    private var aboutSection: some View {
-        Section {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: "location.circle.fill")
-                    .font(.title2)
-                    .foregroundColor(.brand)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Device GPS")
-                        .font(.headline)
-                    Text("Move your iPhone’s real system GPS to the location you pick, driven from the GeoSpoof GPS app on your computer.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-            }
-            .padding(.vertical, 4)
-        }
-    }
+    // `aboutSection` is deleted rather than left unreferenced. Its one caller was the
+    // `.waitingForComputer` branch of `statusZone`, and it explained what device GPS does to a customer who
+    // had already bought device GPS — the only reader guaranteed not to need the explanation. `DeviceGpsPitch`
+    // is where that description belongs and already carries it, for the audience that hasn't decided yet.
 
     /// Non-Pro gate for the GPS tab. Leads with the value (what device GPS does +
     /// concrete benefits) before the ask, so a paywalled user understands what
@@ -2568,12 +2559,33 @@ struct GpsView: View {
         }
     }
 
-    /// The install step, and the one place in this tab that names the desktop platforms
-    /// outright. Everywhere else says "computer": the agent runs on macOS and Windows, so a
-    /// Mac-specific noun would read as "not supported" to the Windows half of the audience.
-    /// Here the user is about to go and fetch a build, and "your computer" leaves a PC owner
-    /// guessing whether one exists for them — which is precisely the question this footer
-    /// answers. The `Link` label stays platform-free because /gps resolves the download.
+    /// How to actually get set up, for the customer who has paid and has no computer reporting yet.
+    ///
+    /// **This is where the setup instructions belong, and they were somewhere else.** A numbered path with
+    /// a share button lived on onboarding's device-GPS step — a screen whose only actions are "buy" and
+    /// "skip", read mostly by people who have not bought and are not near the computer step one asks them
+    /// to install on. This section, the one a paying customer is looking at while nothing is connected, had
+    /// a spinner, a link and a paragraph. The instructions were on the screen where nobody could use them
+    /// and missing from the screen where everybody needs them, so they swapped places.
+    ///
+    /// Shape: the spinner stays as the status line, because "what is happening" is this zone's job and it
+    /// has to be answerable while the steps below are still outstanding. Then the two steps that are
+    /// genuinely actions. The old step three is gone from here — "set any location, follow a route" is a
+    /// capability, and it sells rather than instructs, so it stayed behind on the pitch.
+    ///
+    /// The prose footer that used to carry all of this is gone too: it said the install and the Wi-Fi
+    /// handoff in a sentence each, which the steps now say more scannably. What it uniquely carried — that
+    /// the desktop app walks you through the rest — survives as the footer, because it is the reassurance
+    /// that stops a two-device setup feeling like a project.
+    ///
+    /// `OutboundLinkRow` for "Get GeoSpoof GPS" is gone as well. Step one now carries both routes to that
+    /// URL — the address as a live link inside the sentence, and the share action beneath it — and a third
+    /// row to the same place was the redundancy that made this section feel like a list of links.
+    ///
+    /// This is also the one place in the tab that names the desktop platforms outright. Everywhere else
+    /// says "computer", because the agent runs on macOS and Windows and a Mac-specific noun reads as "not
+    /// supported" to the Windows half of the audience. Here the customer is about to go and fetch a build,
+    /// and "your computer" leaves a PC owner guessing whether one exists for them.
     private var waitingSection: some View {
         Section {
             HStack(spacing: 10) {
@@ -2581,18 +2593,18 @@ struct GpsView: View {
                 Text("Waiting for your computer…")
                     .foregroundColor(.secondary)
             }
-            // Two glyphs saying two things: the leading one is what you get, the trailing one is that you
-            // leave to get it. This is a plain `Form` row rather than a prominent button, so it takes the
-            // row treatment like every other outbound row.
-            OutboundLinkRow(
-                title: "Get GeoSpoof GPS",
-                systemImage: "arrow.down.circle",
-                destination: downloadURL
+            .accessibilityElement(children: .combine)
+            SetupStepRow(number: 1, text: DeviceGpsPitch.installStepText) {
+                DesktopHandoffBlock(url: DeviceGpsPitch.desktopAppURL)
+            }
+            SetupStepRow(
+                number: 2,
+                text: Text("Connect this iPhone with a cable once to pair, then it works over Wi-Fi")
             )
         } header: {
             Text("Set up")
         } footer: {
-            Text("Install GeoSpoof GPS on your Mac or Windows PC and open it — it walks you through the one-time setup. Your chosen location then syncs to this iPhone automatically, over Wi-Fi.")
+            Text("GeoSpoof GPS walks you through the rest on your computer.")
         }
     }
 

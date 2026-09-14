@@ -690,11 +690,13 @@ struct OnboardingView: View {
                 onOpenPaywall: { router.showPaywall = true },
                 onFinish: onDone
             )
-            // A page, with a back button, unlike `.safariReady` above it. Behind it is either the
-            // verified-success screen or the Safari step, and returning to either is now harmless —
-            // `showDeviceGpsStep()` records having passed the Safari step, which is what stops the
-            // activation watcher from immediately pushing forward again.
-            .navigationBarHidden(false)
+            // **No back button**, like `.safariReady` above it. This used to be a page you could return
+            // from, on the reasoning that the screens behind it were harmless to revisit. That was true
+            // while this screen explained device GPS; it stopped being true when it became the conversion
+            // screen. A paywall with a back arrow offers "not now" twice — once in the chrome and once in
+            // the action bar — and the chrome version is the one that costs a decision without recording
+            // it. `Continue without GPS` is the deliberate way out and it is always visible.
+            .navigationBarBackButtonHidden(true)
         case .proReady:
             OnboardingProReadyView(onFinish: onDone)
                 // Terminal, like `.safariReady`. Behind it is the pitch that sold them the thing they now
@@ -755,6 +757,24 @@ struct OnboardingView: View {
         // already documents for an already-enabled Safari step.
         guard !isStepSatisfied(.deviceGps) else {
             onDone()
+            return
+        }
+        // **Holds Pro, but no computer is reporting yet — so there is nothing to sell.** This case used to
+        // get the pitch screen with its selling half swapped out: an entitlement confirmation where the offer
+        // had been, and a web link where the buy button had been. That is a sales screen with the sale
+        // removed, and after the rewrite it would be worse — a Free-versus-Pro comparison shown to somebody
+        // who already bought Pro.
+        //
+        // They get the receipt screen instead, which turns out to be exactly the right content: it confirms
+        // the entitlement, names the one step still outstanding, and points at the GPS tab, which is where
+        // the setup instructions now live. Reached by founders, by anyone installing on a second device, and
+        // by a subscriber who reinstalled.
+        //
+        // `hasAdvancedPastEnable` is set on both branches for the same reason — see below.
+        if pro.isPro {
+            guard path.last != .proReady else { return }
+            hasAdvancedPastEnable = true
+            path.append(.proReady)
             return
         }
         guard path.last != .deviceGps else { return }
@@ -1296,7 +1316,13 @@ struct DesktopHandoffBlock: View {
 /// The numeral is hidden from assistive technologies, the same treatment `PitchPoint` gives its
 /// checkmark. VoiceOver reads the steps in order already, so announcing "one, two, three" adds a
 /// token per row and no information.
-private struct OnboardingSetupStep<Detail: View>: View {
+/// One step of a numbered setup sequence, with an optional control belonging to that step.
+///
+/// **Internal, and no longer named for onboarding, because it moved.** It was `private` and called
+/// `OnboardingSetupStep` while the numbered path lived in the onboarding sheet. The path now lives on the
+/// GPS tab's setup section — the surface where a paying customer can act on it — and a type named for
+/// onboarding rendering the GPS tab's instructions would be a lie in the one place a reader checks.
+struct SetupStepRow<Detail: View>: View {
     let number: Int
     /// A built `Text` rather than a `LocalizedStringKey`, so a step can carry a link inside its sentence.
     ///
@@ -1331,7 +1357,7 @@ private struct OnboardingSetupStep<Detail: View>: View {
     }
 }
 
-extension OnboardingSetupStep where Detail == EmptyView {
+extension SetupStepRow where Detail == EmptyView {
     init(number: Int, text: Text) {
         self.init(number: number, text: text) { EmptyView() }
     }
@@ -1404,6 +1430,44 @@ extension OnboardingSetupStep where Detail == EmptyView {
 /// the second most refund-producing surprise after needing a computer at all. Discovering it after
 /// paying is the outcome this screen exists to prevent, so it is stated before the offer even though
 /// it costs conversions.
+/// One row of the Free-vs-Pro comparison on the device-GPS pitch.
+///
+/// **A table, because that is what the evidence supports.** An earlier version of this screen was nine
+/// feature rows, each a bold claim over a line of explanation. Adapty's 2026 subscription report — drawn
+/// from ~$3B of revenue across 16,000+ apps — finds Free/Pro comparison tables among the most consistent
+/// additions in top-performing paywalls, on the grounds that a large share of readers at a paywall still
+/// cannot say what they would be buying, and states plainly that burying features in a long text list asks
+/// users to do work they will not do. Their own audit asks whether the paywall fits one screen without
+/// scrolling; the list version did not come close. The same report puts visual-and-copy-only tests at the
+/// bottom of the win-rate table and structural changes near the top, which is why this was a reshape rather
+/// than another rewrite. https://adapty.io/blog/high-performing-paywall-2026/
+/// Content rephrased for compliance with licensing restrictions.
+///
+/// **It also settles a tension the list could not.** The business plan requires the free-vs-paid line to
+/// read as power and convenience, never as "we crippled your privacy unless you pay". A table makes that
+/// structural instead of rhetorical: the first rows carry a mark in *both* columns, so a reader sees the
+/// core spoofing path is theirs for free before they see what Pro adds.
+///
+/// Deliberately not `ProFeatures.all`. That catalog is a four-item marketing subset for the real paywall,
+/// shown to someone who has already tapped buy; coupling the two would let a paywall trim silently shorten
+/// the argument here.
+private struct GpsPlanRow: Identifiable {
+    let id = UUID()
+    /// SF Symbol name — not display text. Gives each row its own mark so the table reads as a set of
+    /// distinct capabilities rather than a wall of sentences, which is what made the first version dull.
+    let icon: String
+    /// Per-row tint. Varied on purpose: a single accent down the column is tidy and forgettable, and the
+    /// paywall's own feature list already uses a spread of tints for the same reason.
+    let tint: Color
+    let label: LocalizedStringKey
+    /// Whether the free tier includes it. Verified against the gates in `src/` rather than written from
+    /// memory — see `OnboardingDeviceGpsView.comparison`.
+    let free: Bool
+    /// Device-GPS rows, which get a heavier label. This screen's headline is about device GPS, so the rows
+    /// that deliver it should be the ones the eye lands on.
+    let isGps: Bool
+}
+
 private struct OnboardingDeviceGpsView: View {
     let onOpenPaywall: () -> Void
     let onFinish: () -> Void
@@ -1413,21 +1477,38 @@ private struct OnboardingDeviceGpsView: View {
     /// half is the computer, not the purchase.
     @ObservedObject private var pro = ProStore.shared
     @Environment(\.horizontalSizeClass) private var hSizeClass
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Whether the comparison rows have run their entrance. See `proValue`.
+    ///
+    /// Flipped in `onAppear` regardless of Reduce Motion; it is the *animation* that is withheld, not the
+    /// content. `@State` cannot read `@Environment` at initialisation, so gating the initial value on the
+    /// setting is not available — passing `nil` as the animation is, and it lands the rows in their final
+    /// state on the first frame with no transition.
+    @State private var revealed = false
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: 24) {
                 header
-                entitlementLine
-                setupPath
-                // Kept, despite being one more block on a screen this change is shortening. It is
-                // the single most common wrong expectation the store listing creates, and the
-                // product's own honesty guardrail is what the brand is differentiated on. Footnote
-                // weight, last position: present for the person who needs it, skimmable past.
-                Text(DeviceGpsPitch.compatibilityCaveat)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                if pro.isPro {
+                    // **A fallback now, not a path.** `showDeviceGpsStep()` routes an existing owner to
+                    // `.proReady` before this screen is ever pushed, and a purchase made *here* pushes
+                    // `.proReady` on top — so an owner should not be looking at this.
+                    //
+                    // Kept because the routing depends on observation that can miss: if `isPro` flips while
+                    // the app is backgrounded and the `onChange` watcher never fires, this screen is what the
+                    // customer comes back to. Without this branch they would find a Free-versus-Pro table
+                    // selling them something they already own, with no way forward but "Continue without
+                    // GPS". A dead branch is cheaper than that.
+                    ownedNote
+                } else {
+                    proValue
+                }
+                // The AR-games caveat used to be a standalone footnote here. It now sits inside
+                // `freeTierAndRequirements` alongside the computer requirement, because the two are the
+                // same kind of statement — what this feature is and isn't for — and grouping them under one
+                // treatment stops the screen ending in three separate trailing paragraphs.
+                freeTierAndRequirements
             }
             .padding(.horizontal, OnboardingMetrics.pageMargin(hSizeClass))
             .padding(.top, 4)
@@ -1490,55 +1571,81 @@ private struct OnboardingDeviceGpsView: View {
     /// on it. "No jailbreak" earns its place by answering the question this category always raises.
     /// It deliberately does *not* name the Mac or the PC — that is step one's line, and saying it in
     /// both places is how the previous draft ended up stating the requirement twice.
+    /// The hero: what is being sold, in one mark and two lines.
+    ///
+    /// **Re-pointed from the feature to the product.** It used to read "Move this iPhone's real GPS" over a
+    /// sentence about how the computer drives it — a mechanism explanation, which is the right content for
+    /// the GPS tab's setup section and the wrong content for the screen that takes the money. The mechanics
+    /// moved with the instructions; what a reader needs here is what they get and what it costs them to
+    /// find out.
+    ///
+    /// `sparkles` rather than a location glyph, and centred rather than leading. The symbol is the one the
+    /// app already uses for Pro — on the Upgrade button and beside the entitlement line — so the mark, the
+    /// column header in the table below and the button at the bottom are all the same idea in the same
+    /// colour. Centring is what makes it read as a title card instead of the top of a list.
     private var header: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Image(systemName: "location.circle.fill")
-                .font(.system(size: 52))
+        VStack(spacing: 12) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 40))
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(Color.brand)
+                .frame(width: 76, height: 76)
+                // A soft tinted disc behind the mark. Cheap polish, and it stops a lone symbol on a plain
+                // background from looking like a placeholder.
+                .background(Color.brand.opacity(0.12), in: Circle())
                 .accessibilityHidden(true)
-            Text("Move this iPhone’s real GPS")
-                .font(.title2.weight(.semibold))
+            Text("GeoSpoof Pro")
+                .font(.title.weight(.bold))
+                .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
-            Text("Your computer sets the location this iPhone reports. No jailbreak, and nothing extra to install on the phone.")
+            // **The trial, said somewhere other than the button.** I removed a trial line from this screen
+            // earlier on the grounds that "Start Free Trial" plus "7-day free trial" was repetition. The
+            // research disagrees, specifically and for a reason: naming the trial *only* in the call to
+            // action is called out as a critical mistake, because the reassurance has to be present while
+            // someone is still reading rather than only at the moment they commit
+            // (https://www-docs.revenuecat.com/blog/growth/paywall-conversion-boosters/, content rephrased
+            // for compliance with licensing restrictions).
+            //
+            // So it comes back, but not as a caption stacked under the button where the redundancy was
+            // genuinely awkward. As a badge under the title it does the job the article describes — duration
+            // visible, risk framed early — and it reads as a premium detail rather than a repeated label.
+            //
+            // Reuses `%lld-day free trial`, the key the real paywall's plan cards already use, so this costs
+            // nothing to translate and the two screens cannot disagree about the length. `nil` while StoreKit
+            // is still loading or when no free-trial offer exists, in which case the badge is simply absent
+            // and no promise is made.
+            if let days = pro.freeTrialDays {
+                Text("\(days)-day free trial")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.brand)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Color.brand.opacity(0.14), in: Capsule())
+            }
+            Text("Everything in the app unlocked — including your iPhone’s real system GPS.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
         }
+        .frame(maxWidth: .infinity)
     }
 
-    /// What this customer's entitlement means for the feature, stated before the steps.
+    /// Confirmation for a reader who already holds the entitlement, and the half still outstanding.
     ///
-    /// **Both branches, where this slot used to render for owners only.** It existed to answer "have I
-    /// already paid for this?" and answered only when the answer was yes — so the person who most needed
-    /// telling saw nothing, and had to infer the requirement from a button reading "Upgrade to Pro". A
-    /// button is an offer, not a statement that the feature is unavailable without it, and a customer can
-    /// reasonably read past an offer and expect the three steps below to work. That is the gap.
+    /// **The non-Pro branch this used to have is gone.** It read "Needs Pro and a computer" with a
+    /// `sparkles` glyph, and it existed because the screen gave no other signal that the feature was paid —
+    /// the only hint was a button reading "Upgrade to Pro". That is no longer true: the screen is titled
+    /// GeoSpoof Pro, the table has a Pro column, and the button says Start Free Trial. A fourth statement of
+    /// the same fact was the redundancy, and the computer half is still disclosed in
+    /// `freeTierAndRequirements` alongside the AR-games caveat.
     ///
-    /// **No new copy.** Both sentences are the pair the Location tab's Device GPS row already chooses
-    /// between, so three surfaces now agree about entitlement instead of two, and there is nothing extra
-    /// to translate.
-    ///
-    /// Placed above the steps on purpose: this is the precondition, and the steps are what happens once it
-    /// holds. On the overload question — this adds exactly one line for a non-Pro reader, into a slot that
-    /// already existed, and what it replaces is an inference. Nothing else on the screen was cut to make
-    /// room, because the remaining blocks each answer a question this one doesn't: the subhead is the
-    /// mechanism, step one is the platform, and the footnote is the AR-games caveat the honesty guardrail
-    /// requires.
-    ///
-    /// Distinct marks rather than one shared glyph. The sealed check in green is this app's entitlement
-    /// mark and must not appear for somebody holding no entitlement. `sparkles` is the Pro mark and is the
-    /// same symbol carried by the "Upgrade to Pro" button below, which is what visually ties the
-    /// requirement to the action that satisfies it.
-    ///
-    /// Neither branch names a price or a trial length — StoreKit renders those at the paywall. See
-    /// `primaryAction` for why that rule is worth keeping.
+    /// The sealed check in green is this app's entitlement mark, used here exactly as the GPS tab and the
+    /// Location tab's Device GPS row use it, so "you own this" looks the same everywhere it appears.
     @ViewBuilder
-    private var entitlementLine: some View {
+    private var ownedNote: some View {
         if pro.isPro {
-            // Orientation for someone who already paid — a founder grant, or a second device — reading
-            // into the steps: you are paid up, and here is what is left.
             Label {
                 Text(DeviceGpsPitch.ownedNeedsComputer)
             } icon: {
@@ -1547,83 +1654,236 @@ private struct OnboardingDeviceGpsView: View {
             .font(.subheadline)
             .foregroundStyle(.green)
             .fixedSize(horizontal: false, vertical: true)
-        } else {
-            Label {
-                Text("Needs Pro and a computer")
-            } icon: {
-                // Tinted on the glyph alone, so the sentence itself stays primary text.
-                Image(systemName: "sparkles")
-                    .foregroundStyle(Color.brand)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    /// What Pro unlocks, led by the reason this reader is on the screen.
+    ///
+    /// **This replaced a numbered 1‑2‑3 setup path**, which was on the wrong screen: it told someone to
+    /// install software on a computer, and handed them a share button to do it, on a screen whose only two
+    /// actions are "buy" and "skip". The instructions moved to `GpsView.waitingSection`, where a paying
+    /// customer stands when they actually need them.
+    ///
+    /// **Two groups, GPS first.** Device GPS is why someone reached this screen — it is the only feature the
+    /// headline names — so it leads and gets four rows to itself. Everything else Pro unlocks follows,
+    /// because the honest argument for the price is the whole bundle rather than the one feature, and a
+    /// reader who came for routes may convert on per-site rules.
+    ///
+    /// **Bold claim, small explanation.** Each row is a scannable title with one quiet line beneath. Nobody
+    /// reads a paragraph on a paywall; they skim titles and stop at whichever one is their problem, and the
+    /// detail line exists to answer "what does that actually mean" once they have stopped. This is the shape
+    /// `ProFeatures` uses on the paywall — deliberately *not* the same list, because that catalog is a
+    /// four-item marketing subset written for a screen that already has the customer's attention.
+    ///
+    /// **The claims are drawn from the code, not from the paywall.** `proFeaturesBlocked` is what forces
+    /// per-site scope to "all", accuracy to Realistic, precision to exact and locale spoofing off for a free
+    /// user; `autoSyncBlocked` is what stops automatic re-sync. Each row below corresponds to one of those
+    /// gates or to an app-side Pro feature. Writing this list from memory is how a paywall ends up promising
+    /// something the build doesn't do.
+    @ViewBuilder
+    private var proValue: some View {
+        VStack(spacing: 0) {
+            comparisonHeader
+            Divider().padding(.vertical, 8)
+            // **A staggered reveal, which is the one animation on this screen.** Motion on a paywall is
+            // reported to outperform a static equivalent by a meaningful margin when it directs attention
+            // rather than decorating — same source as the trial badge above. A short cascade down the rows
+            // walks the eye through the comparison in the order the argument is made: what you already have,
+            // then what Pro adds.
+            //
+            // Deliberately small and once-only. It runs on appear and never repeats, because a paywall that
+            // keeps moving while someone is trying to read it is working against the decision rather than
+            // toward it.
+            ForEach(Array(Self.comparison.enumerated()), id: \.element.id) { index, row in
+                comparisonRow(row)
+                    .opacity(revealed ? 1 : 0)
+                    .offset(y: revealed ? 0 : 6)
+                    .animation(
+                        // `nil` under Reduce Motion: the rows arrive in their final state on the first frame.
+                        // 0.035 per row otherwise, so nine rows land inside a third of a second and the
+                        // cascade is felt rather than waited through.
+                        reduceMotion
+                            ? nil
+                            : .easeOut(duration: 0.28).delay(Double(index) * 0.035),
+                        value: revealed
+                    )
             }
-            // Primary rather than secondary, and medium rather than regular. The entire defect was this
-            // fact going unnoticed, so a footnote treatment would reproduce it. Not orange either: a
-            // price is not a fault, and spending the warning colour here would leave nothing louder for
-            // the states that are genuinely wrong.
-            .font(.subheadline.weight(.medium))
-            .foregroundStyle(.primary)
-            .fixedSize(horizontal: false, vertical: true)
+        }
+        // Unconditional: Reduce Motion suppresses the transition, never the rows. Withholding content from
+        // that setting would be a bug, not an accommodation.
+        .onAppear { revealed = true }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        // **A card, not a bare list.** Grouping the table on `secondarySystemBackground` gives the column
+        // alignment an edge to sit inside, which is what makes a comparison read as a table rather than as
+        // text that happens to line up. It also resolves correctly in both appearances without a manual
+        // dark-mode branch, which a hand-mixed grey would not.
+        .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    /// The two column labels. No label over the feature column — the rows name themselves.
+    private var comparisonHeader: some View {
+        HStack(spacing: 0) {
+            Spacer(minLength: 0)
+            Text("Free")
+                .foregroundStyle(.secondary)
+                .frame(width: Self.markColumn)
+            Text("Pro")
+                // The column being sold, so it is the one with weight and colour — and it matches the green
+                // of every tick beneath it, so the header and the column read as one block.
+                .fontWeight(.bold)
+                .foregroundStyle(Color.brand)
+                .frame(width: Self.markColumn)
+        }
+        .font(.caption.weight(.medium))
+        // Hidden as a unit: each row already announces its own "Free and Pro" / "Pro only" value, so
+        // reading the column titles aloud would be a header for a table VoiceOver never navigates as one.
+        .accessibilityHidden(true)
+    }
+
+    /// One comparison row: a tinted glyph, what it is, then a mark under each column.
+    private func comparisonRow(_ row: GpsPlanRow) -> some View {
+        HStack(spacing: 0) {
+            Image(systemName: row.icon)
+                .font(.footnote)
+                .foregroundStyle(row.tint)
+                .frame(width: 24, alignment: .leading)
+                .accessibilityHidden(true)
+            Text(row.label)
+                .font(.subheadline)
+                // Device-GPS rows carry the weight. Everything else is supporting argument.
+                .fontWeight(row.isGps ? .semibold : .regular)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            freeMark(row.free)
+            proMark
+        }
+        .padding(.vertical, 7)
+        // Read as one statement. Without this VoiceOver announces the label and two bare glyphs, and the
+        // reader has to infer which column each belonged to — the whole meaning of a table is the pairing.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(row.label))
+        .accessibilityValue(Text(row.free ? "Free and Pro" : "Pro only"))
+    }
+
+    /// The Free column: a quiet tick, or a dash where the tier does not include it.
+    ///
+    /// Deliberately *not* green even when it is a tick. Green is the column being sold, and if both columns
+    /// were green the table would stop making an argument — the eye needs one continuous run of colour to
+    /// land on, and it should be the paid one.
+    private func freeMark(_ included: Bool) -> some View {
+        Image(systemName: included ? "checkmark" : "minus")
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(included ? Color.primary.opacity(0.55) : Color.secondary.opacity(0.35))
+            .frame(width: Self.markColumn)
+            .accessibilityHidden(true)
+    }
+
+    /// The Pro column: always a filled tick, always brand green.
+    ///
+    /// Every row is included with Pro — that is what "Pro" means here — so this needs no parameter, and the
+    /// column renders as an unbroken green run beside a Free column that thins out. That contrast is the
+    /// whole visual argument, and it is why the green is unconditional rather than reserved for the GPS rows
+    /// as an earlier version had it.
+    ///
+    /// `checkmark.circle.fill`, matching the "Included with Pro" list in Settings. A filled disc reads as a
+    /// deliberate mark where a bare glyph reads as text, and pairing it against the Free column's bare tick
+    /// is what gives the two columns a hierarchy without a second colour.
+    private var proMark: some View {
+        Image(systemName: "checkmark.circle.fill")
+            .font(.subheadline)
+            .foregroundStyle(Color.brand)
+            .frame(width: Self.markColumn)
+            .accessibilityHidden(true)
+    }
+
+    /// Fixed so the header labels and every row's marks share one grid without a `Grid` container, which
+    /// would fight `fixedSize` on the wrapping labels. 44 rather than 52 to leave the label column room
+    /// once the leading glyph took 24.
+    private static let markColumn: CGFloat = 44
+
+    /// The comparison, ordered deliberately: what you already have, then what Pro adds, GPS first.
+    ///
+    /// **Free rows lead.** A reader who sees three ticks in the Free column before the first dash reads this
+    /// as an upgrade rather than a hostage note, which is the business plan's rule and also just true.
+    ///
+    /// **Every `free: false` row corresponds to a real gate**, checked in the extension source rather than
+    /// recalled: `proFeaturesBlocked` forces per-site scope to "all", accuracy to Realistic, precision to
+    /// exact and locale spoofing off; `autoSyncBlocked` stops automatic re-sync; device GPS, widgets and the
+    /// map picker are gated app-side. A paywall promising something the build doesn't do is a refund and a
+    /// review problem, so this list is not a place for optimism.
+    private static let comparison: [GpsPlanRow] = [
+        GpsPlanRow(icon: "globe", tint: .blue,
+                   label: "Location spoofing on every site", free: true, isGps: false),
+        GpsPlanRow(icon: "shield.lefthalf.filled", tint: .indigo,
+                   label: "Matching timezone and WebRTC protection", free: true, isGps: false),
+        GpsPlanRow(icon: "mappin.and.ellipse", tint: .cyan,
+                   label: "VPN sync, city search, exact coordinates", free: true, isGps: false),
+        GpsPlanRow(icon: "location.fill.viewfinder", tint: .brand,
+                   label: "Your iPhone’s real system GPS", free: false, isGps: true),
+        GpsPlanRow(icon: "figure.walk", tint: .pink,
+                   label: "Follow GPX routes at a real pace", free: false, isGps: true),
+        // **The strongest row on the screen, and the one easiest to overclaim.** Turning Developer Mode off
+        // while a location is active makes it hold after the link to the computer ends — the thing customers
+        // do not believe is possible, and the reason device GPS is worth paying for rather than being a
+        // browser trick.
+        //
+        // An earlier draft read "Holds your location with Wi-Fi and cellular off". That describes the
+        // *conditions the founder tested under*, not the promise, and it invites a reader to picture a phone
+        // in airplane mode — then wonder what happens to their spoof when cellular comes back on, which is a
+        // question the product never asked them to have. Cellular is irrelevant to the mechanism: Developer
+        // Mode being off is what holds it.
+        //
+        // So the claim is scoped to the thing that is actually being offered — you can leave. Phrased to
+        // match `OfflineHoldSheet`'s own body copy ("once you've left your computer behind") and its title,
+        // because this is a behavioural claim about the product and a claim stated two ways is a claim one of
+        // whose versions is wrong. The sheet carries the sequence and the frozen-location trade-off; this row
+        // only has to make someone want it.
+        GpsPlanRow(icon: "figure.walk.departure", tint: .orange,
+                   label: "Keeps the location after you leave your computer", free: false, isGps: true),
+        GpsPlanRow(icon: "arrow.triangle.2.circlepath", tint: .mint,
+                   label: "Automatic VPN re-sync", free: false, isGps: false),
+        GpsPlanRow(icon: "slider.horizontal.3", tint: .teal,
+                   label: "Per-site rules, accuracy and language", free: false, isGps: false),
+        GpsPlanRow(icon: "square.grid.2x2", tint: .purple,
+                   label: "Widgets and Controls", free: false, isGps: false),
+    ]
+
+    /// What a reader keeps without paying, and the two things the feature needs.
+    ///
+    /// **Stating the free tier on the purchase screen is deliberate, and it costs conversions.** The
+    /// business plan's rule is that the free-vs-paid line must read as power and convenience, *never* as
+    /// "we crippled your privacy unless you pay" — and a feature list with no free column invites exactly
+    /// that reading. It is also simply true: a free user spoofs location on every site, with a matching
+    /// timezone and WebRTC protection, which is the core of the product. Hiding that to make Pro look
+    /// necessary is the move the sketchy competitors make, and this product is differentiated on not
+    /// making it.
+    ///
+    /// The two requirements sit here rather than higher up because they are disclosures, not selling
+    /// points — but they are stated *before* the button, not after, because needing a computer is this
+    /// feature's most refund-producing surprise and the cable is its second.
+    private var freeTierAndRequirements: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // The prose "Free keeps the core…" sentence that used to sit here is gone: the table's first
+            // three rows now carry that argument structurally, and saying it twice was the paragraph the
+            // research says nobody reads.
+            requirementLine("desktopcomputer", "Works with a Mac or Windows PC — paired once with a cable, then over Wi-Fi")
+            requirementLine("exclamationmark.triangle", DeviceGpsPitch.compatibilityCaveat)
         }
     }
 
-    /// The three things that happen, in order.
-    ///
-    /// This replaces four checked claims, and each of them survives inside it: the platform pairing
-    /// is step one and step two, and the location, VPN-matching and route-pacing capabilities are the
-    /// payoff in step three. Read as a sequence they answer "what will I have to do", which is the
-    /// question a benefits list leaves open and the one that decides whether a two-device setup gets
-    /// finished before a 3-day trial runs out.
-    private var setupPath: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            OnboardingSetupStep(number: 1, text: Self.installStepText) {
-                DesktopHandoffBlock(url: DeviceGpsPitch.desktopAppURL)
-            }
-            OnboardingSetupStep(
-                number: 2,
-                text: Text("Connect this iPhone with a cable once to pair, then it works over Wi-Fi")
-            )
-            OnboardingSetupStep(
-                number: 3,
-                text: Text("Set any location, match your VPN, or follow a route at walking, cycling, or driving pace")
-            )
+    private func requirementLine(_ symbol: String, _ text: LocalizedStringKey) -> some View {
+        Label {
+            Text(text)
+                .fixedSize(horizontal: false, vertical: true)
+        } icon: {
+            Image(systemName: symbol)
         }
+        .font(.footnote)
+        .foregroundStyle(.secondary)
     }
 
-    /// The address shown to a reader, without the scheme or the campaign parameters.
-    ///
-    /// Data, not copy — it must never be translated, which is why it is interpolated into the sentence
-    /// rather than typed inside it. The link still carries the full `desktopAppURL`, parameters included,
-    /// so attribution is unaffected by what is displayed.
-    private static let readableAddress = "geospoof.com/gps"
-
-    /// Step one's sentence with the address live inside it.
-    ///
-    /// **Inline, because as its own row it was a third control.** The address previously sat under the
-    /// share button as a standalone tappable line, which is what made step one about 60pt taller than its
-    /// one-line siblings and broke the numbered rhythm. In the prose it costs no height at all and still
-    /// does both jobs: readable for someone who wants to type it on their computer, tappable for someone
-    /// who wants to see the page.
-    ///
-    /// Built as an `AttributedString` rather than written as Markdown in the catalog. A
-    /// `[label](https://…)` literal would put the URL — campaign parameters and all — in front of eleven
-    /// translators, where one broken bracket silently costs the link. Here the translated string contains
-    /// only `%@`, and the link is applied to whatever it expanded to.
-    ///
-    /// Same `desktopAppURL` and campaign as the share action beside it, so "went to get the desktop app"
-    /// stays a single number regardless of which route someone took.
-    private static var installStepText: Text {
-        var sentence = AttributedString(
-            String(localized: "Install GeoSpoof GPS from \(readableAddress) on your Mac or Windows PC")
-        )
-        // `nil` only if a translation dropped the placeholder, in which case the sentence still reads
-        // correctly and simply isn't tappable — the share button beside it remains the primary route.
-        if let range = sentence.range(of: readableAddress) {
-            sentence[range].link = DeviceGpsPitch.desktopAppURL
-            // Stated explicitly rather than relying on the inherited accent colour: this screen is a
-            // `ScrollView`, not a tinted `Form`, so there is no `.tint(.brand)` above it to inherit.
-            sentence[range].foregroundColor = Color.brand
-        }
-        return Text(sentence)
-    }
 
     /// What is actually outstanding for this customer.
     ///
@@ -3168,6 +3428,42 @@ struct DeviceGpsPitch: View {
     static let compatibilityCaveat: LocalizedStringKey =
         "Not for AR games like Pokémon GO — device GPS is for privacy, browsing, and development."
 
+    /// The download address as a reader sees it, without the scheme or the campaign parameters.
+    ///
+    /// Data, not copy — it must never be translated, which is why it is interpolated into the sentence
+    /// below rather than typed inside it. The link still carries the full `desktopAppURL`, parameters
+    /// included, so attribution is unaffected by what is displayed.
+    static let readableAddress = "geospoof.com/gps"
+
+    /// "Install GeoSpoof GPS from geospoof.com/gps on your Mac or Windows PC", with the address live.
+    ///
+    /// **Lives here rather than on a screen because it moved screens.** It was written for onboarding's
+    /// device-GPS step and now belongs to the GPS tab's setup section — the surface where somebody can
+    /// actually act on it. Parked with `compatibilityCaveat` and `desktopAppURL` for the same reason those
+    /// are: this type owns the sentences more than one surface needs.
+    ///
+    /// Built as an `AttributedString` rather than written as Markdown in the catalog. A
+    /// `[label](https://…)` literal would put the URL — campaign parameters and all — in front of eleven
+    /// translators, where one broken bracket silently costs the link. Here the translated string contains
+    /// only `%@`, and the link is applied to whatever it expanded to.
+    ///
+    /// Same `desktopAppURL` and campaign as the share action beside it, so "went to get the desktop app"
+    /// stays a single number regardless of which route someone took.
+    static var installStepText: Text {
+        var sentence = AttributedString(
+            String(localized: "Install GeoSpoof GPS from \(readableAddress) on your Mac or Windows PC")
+        )
+        // `nil` only if a translation dropped the placeholder, in which case the sentence still reads
+        // correctly and simply isn't tappable — the share button beside it remains the primary route.
+        if let range = sentence.range(of: readableAddress) {
+            sentence[range].link = desktopAppURL
+            // Stated explicitly rather than relying on an inherited accent colour, because the two hosts
+            // differ: a tinted `Form` on the GPS tab, a plain `ScrollView` in the sheet.
+            sentence[range].foregroundColor = Color.brand
+        }
+        return Text(sentence)
+    }
+
     /// Where the desktop companion is explained and downloaded. One definition for both
     /// branches, and the same `gps-download` campaign the GPS tab's setup link uses,
     /// so "went to get the desktop app" stays a single number regardless of which
@@ -3358,8 +3654,9 @@ struct OfflineHoldSheet: View {
 
 /// A numbered step in `OfflineHoldSheet`.
 ///
-/// A local shape rather than a reuse of onboarding's `OnboardingSetupStep`: that one is `private` to the
-/// onboarding file and carries a detail slot this has no use for. Same visual family, deliberately.
+/// A local shape rather than a reuse of `SetupStepRow`, which carries a detail slot and a `Text` title this
+/// has no use for — these steps are plain sentences. Same visual family and the same 24pt scaled badge,
+/// deliberately, so the two numbered lists in the app look related. Worth revisiting if a third appears.
 struct OfflineHoldStep: View {
     let number: Int
     let text: LocalizedStringKey
