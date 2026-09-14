@@ -666,6 +666,78 @@ struct GpsPresentationRuleTests {
         }
     }
 
+    // MARK: Route teardown leaves nothing behind
+
+    /// Stopping a route must clear **every** field that named it, `savedRouteId` included.
+    ///
+    /// Regression test for a real defect. `stopGpsRoute` and `clearGpsMotion` each listed the route fields
+    /// by hand and both omitted this one, so `savedRouteId` went on naming the last route ever played.
+    /// Readers guarded by `routeId != nil` were fine, which is why it hid; the ones comparing it directly
+    /// were not. After stopping a route and picking a manual location, the route detail screen still
+    /// offered Pause, Start Over and Stop Route — `isActive` is `savedRouteId == entry.id` — and the
+    /// library list still flagged the entry as the active route.
+    ///
+    /// Asserted field by field rather than against a fresh `GpsMotionState`, so that adding a route field
+    /// and forgetting to clear it fails *here* instead of somewhere downstream.
+    @Test("stopping a route clears every field that belonged to it")
+    func clearRouteLeavesNoRouteIdentity() {
+        var state = GpsMotionState(
+            mode: .route,
+            routeId: "r1-abc",
+            routeStartedAt: 1_700_000_000,
+            routePaused: true,
+            routeRepeats: true,
+            savedRouteId: UUID(),
+            routeStartTravelledM: 420,
+            steering: nil,
+            lastConfirmedLatitude: 40.78,
+            lastConfirmedLongitude: -73.96,
+            lastConfirmedAt: 1_700_000_100
+        )
+
+        state.clearRoute()
+
+        #expect(state.routeId == nil)
+        #expect(state.routeStartedAt == nil)
+        #expect(state.routePaused == false)
+        #expect(state.routeRepeats == false)
+        #expect(state.routeStartTravelledM == nil)
+        #expect(
+            state.savedRouteId == nil,
+            "a surviving savedRouteId makes the detail screen offer Pause/Stop for a run that ended"
+        )
+    }
+
+    /// `clearRoute` owns the route fields and nothing else.
+    ///
+    /// `mode` and `steering` differ between the two callers — stopping a route leaves a steering vector
+    /// alone, withdrawing every request does not — so they belong to the caller. Pinned because folding
+    /// either one in would look like tidying and would silently cancel a steering gesture on route stop.
+    @Test("clearRoute does not touch mode, steering, or the last confirmed position")
+    func clearRouteLeavesNonRouteStateAlone() {
+        var state = GpsMotionState(
+            mode: .route,
+            routeId: "r1-abc",
+            routeStartedAt: 1_700_000_000,
+            routePaused: false,
+            routeRepeats: false,
+            savedRouteId: UUID(),
+            routeStartTravelledM: nil,
+            steering: GpsSteeringVector(seq: 7, headingDeg: 90, speedMps: 3, ttlSecs: 900),
+            lastConfirmedLatitude: 40.78,
+            lastConfirmedLongitude: -73.96,
+            lastConfirmedAt: 1_700_000_100
+        )
+
+        state.clearRoute()
+
+        #expect(state.mode == .route, "mode is the caller's to set — stop and clear disagree about it")
+        #expect(state.steering != nil, "a route stop must not cancel a steering gesture")
+        #expect(state.lastConfirmedLatitude == 40.78)
+        #expect(state.lastConfirmedLongitude == -73.96)
+        #expect(state.lastConfirmedAt == 1_700_000_100)
+    }
+
     // MARK: Motion supersedes provenance
 
     /// While a route plays, the route **is** the source.
@@ -1334,6 +1406,32 @@ struct GpsPendingActionTests {
         #expect(StepKind.iOSFlow(canDeepLinkToSettings: false, websiteAccessWarrantsRepair: true).contains(.grant))
         #expect(!StepKind.iOSFlow(canDeepLinkToSettings: true, websiteAccessWarrantsRepair: true).contains(.grant))
         #expect(!StepKind.iOSFlow(canDeepLinkToSettings: false, websiteAccessWarrantsRepair: false).contains(.grant))
+    }
+
+    /// The purchase receipt is **not** a step in the sequence, and must never become one.
+    ///
+    /// `.proReady` is reached only by `OnboardingView`'s watcher on the `isPro` transition. If it were added
+    /// to the flow array, `advance(from:)` — which walks `steps` for the next unsatisfied entry — would
+    /// route every customer onto it, including the ones who never bought anything and the founders who
+    /// arrived already entitled. A screen reading "Thanks for going Pro" shown to someone who didn't pay is
+    /// the failure this pins.
+    ///
+    /// It is also why `.deviceGps` must stay last: `deviceGpsStepIsLast` above and this case together say
+    /// the linear flow ends at the pitch, and anything after it is conditional.
+    @Test("The purchase receipt is never part of the linear flow")
+    func proReadyIsNotAFlowStep() {
+        for warrantsRepair in [true, false] {
+            for canDeepLink in [true, false] {
+                let flow = StepKind.iOSFlow(
+                    canDeepLinkToSettings: canDeepLink,
+                    websiteAccessWarrantsRepair: warrantsRepair
+                )
+                #expect(
+                    !flow.contains(.proReady),
+                    "a flow containing .proReady would congratulate every customer on a purchase they may not have made"
+                )
+            }
+        }
     }
 
 }

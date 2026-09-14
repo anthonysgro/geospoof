@@ -1716,7 +1716,7 @@ struct GpsView: View {
     /// route for exactly this reason — see the note on the former.
     @State private var isForeground = true
 
-    /// Where to send users to get the desktop app. TODO: confirm final URL.
+    /// Where to send users to get the desktop app.
     private let downloadURL = AppLink.site("/gps", campaign: "gps-download")
     /// The same page as `downloadURL`, reached for a different reason — so it is tagged differently and
     /// localized where that one isn't. Both deliberate:
@@ -4158,6 +4158,17 @@ struct GpsRouteDetailView: View {
     /// Acknowledges a press here too. Starting a route from this screen has the same one-to-four-second
     /// wait before anything visible changes as it does on the GPS tab.
     @State private var tapFeedback = 0
+    /// The *second* half of the haptic pair, and the one this screen was missing.
+    ///
+    /// The GPS tab fires `.selection` on the press and `.success` when a report confirms the run. Here only
+    /// the press buzzed, so the same action felt acknowledged on one screen and answered on the other —
+    /// and this is the screen where the confirmation matters most, because the wait is the whole reason
+    /// `pending` exists.
+    ///
+    /// Bumped only on the confirmed path in `awaitConfirmation(of:)`, never on its timeout. A success
+    /// haptic for a request that was never answered would be the buzz claiming something the screen
+    /// deliberately declines to claim.
+    @State private var confirmFeedback = 0
     /// Whether to ask about turning Sync on before starting. Same question the GPS tab asks, same words —
     /// see `View.syncStartDialog`.
     @State private var confirmSyncStart = false
@@ -4295,7 +4306,11 @@ struct GpsRouteDetailView: View {
         }
         .groupedFormStyle()
         .navigationTitle(Text(verbatim: entry.name))
+        // Same pair, same order, same triggers as the GPS tab. `sensoryFeedback` fires on a change of the
+        // trigger value, so both are plain counters — and both honour the user's System Haptics setting
+        // through `UIFeedbackGenerator`, which is why neither needs a check of its own.
         .sensoryFeedback(.selection, trigger: tapFeedback)
+        .sensoryFeedback(.success, trigger: confirmFeedback)
         .onDisappear {
             // Leaving abandons the watch. The request is already written and the agent will apply it
             // regardless — this only stops polling for an answer nobody is looking at.
@@ -4354,9 +4369,27 @@ struct GpsRouteDetailView: View {
                 rename(to: newName)
             }
         }
-        .confirmationDialog(
-            "Delete this route?", isPresented: $confirmDelete, titleVisibility: .visible
-        ) {
+        // **An `alert`, not a `confirmationDialog`** — and the difference is not cosmetic. A
+        // `confirmationDialog` presents as a *popover* on iPad, anchored to whichever view carries the
+        // modifier. This one is attached at the root of the screen, so it anchored to the whole `Form` and
+        // arrived as a pointered bubble at the top of the display, nowhere near the row that was pressed.
+        // That is the same defect `syncStartDialog` had, fixed there by moving the modifier onto the
+        // button.
+        //
+        // Moving it would have worked here too. An alert is the better answer because it needs no anchor
+        // at all: it presents centred and modal on both iPhone and iPad, so the root attachment becomes
+        // correct rather than merely relocated, and there is no arrangement of this screen that can
+        // mis-place it again.
+        //
+        // It also suits the question. An action sheet offers a choice among actions; this is a yes/no about
+        // one named object, with the destructive verb repeated on the button — the shape Apple uses for
+        // "Delete Note?" and the same shape as the `failureMessage` alert directly below.
+        //
+        // Same four strings as before, so nothing new to translate. `titleVisibility` is gone because an
+        // alert always shows its title.
+        .alert("Delete this route?", isPresented: $confirmDelete) {
+            // Declaration order doesn't set placement — SwiftUI puts `.cancel` in the conventional
+            // position and tints `.destructive` red — but it does set the order VoiceOver reads them.
             Button("Delete Route", role: .destructive) { delete() }
             Button("Cancel", role: .cancel) {}
         } message: {
@@ -4684,6 +4717,8 @@ struct GpsRouteDetailView: View {
             let deadline = Date().addingTimeInterval(10)
             while !Task.isCancelled, Date() < deadline {
                 if isConfirmed(kind) {
+                    // Here and not after the loop: this is the branch where a report actually answered.
+                    confirmFeedback += 1
                     pending = nil
                     return
                 }

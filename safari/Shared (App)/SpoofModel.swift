@@ -896,6 +896,33 @@ nonisolated struct GpsMotionState: Codable, Equatable {
         self.lastConfirmedAt = lastConfirmedAt
     }
 
+    /// Tear down **every** field belonging to a route, so none can outlive the run.
+    ///
+    /// Exists because the two teardown paths — `SpoofController.stopGpsRoute` and `clearGpsMotion` — each
+    /// listed these fields by hand, and both omitted the same one. `savedRouteId` survived a stop, so
+    /// `motionState.savedRouteId` went on naming the last route ever played, forever. Everything reading it
+    /// through a `routeId != nil` guard was unaffected, which is why it went unnoticed; the readers that
+    /// compare it directly were not. The route detail screen's `isActive` is one, so after stopping a route
+    /// and choosing a manual location that screen still offered Pause, Start Over and Stop Route for a run
+    /// that had ended — and the library list still marked the entry as the active route.
+    ///
+    /// A method rather than two more lines in two places: the bug was duplication, so the fix is removing
+    /// it. A field added to the route group in future gets cleared by both callers or neither.
+    ///
+    /// Scope is deliberately the route fields only. `mode` and `steering` differ between the two callers —
+    /// stopping a route leaves a steering vector alone, withdrawing everything does not — so those stay
+    /// with the caller that knows which it means.
+    mutating func clearRoute() {
+        routeId = nil
+        routeStartedAt = nil
+        routePaused = false
+        routeRepeats = false
+        routeStartTravelledM = nil
+        // The one that was missing. Lives and dies with `routeId`: it names the library entry *this run*
+        // came from, so with no run there is no entry to name.
+        savedRouteId = nil
+    }
+
     /// A `seq` for a fresh gesture.
     ///
     /// A millisecond timestamp rather than an incremented counter: the app and an App Intent
@@ -4524,11 +4551,7 @@ final class SpoofController: ObservableObject {
         guard hasActiveMotion || motionState.mode != .still else { return }
         var state = motionState
         state.mode = .still
-        state.routeId = nil
-        state.routeStartedAt = nil
-        state.routePaused = false
-        state.routeRepeats = false
-        state.routeStartTravelledM = nil
+        state.clearRoute()
         state.steering = nil
         lastConfirmedTravelledM = nil
         updateMotionState(state)
@@ -4547,11 +4570,7 @@ final class SpoofController: ObservableObject {
         guard motionState.routeId != nil else { return }
         var state = motionState
         state.mode = .still
-        state.routeId = nil
-        state.routeStartedAt = nil
-        state.routePaused = false
-        state.routeRepeats = false
-        state.routeStartTravelledM = nil
+        state.clearRoute()
         lastConfirmedTravelledM = nil
         // Every confirmed fact belonged to the run that just ended, and `stopMotionSync()` below means no
         // further report will arrive to correct them. Left set, they would describe a finished-and-held

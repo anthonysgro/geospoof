@@ -308,6 +308,54 @@ final class ProStore: ObservableObject {
     var annualProduct: Product? { products.first { $0.id == ProductID.annual } }
     var lifetimeProduct: Product? { products.first { $0.id == ProductID.lifetime } }
 
+    /// The longest free trial any subscription plan currently offers, in days — `nil` when none does.
+    ///
+    /// Exists so a surface *outside* the paywall can mention the trial without hardcoding a number.
+    /// Onboarding's device-GPS screen is the caller: someone who reads "Upgrade to Pro" and leaves has
+    /// priced the feature without ever learning it can be tried first, and that decision happens before
+    /// the paywall gets a chance to say so.
+    ///
+    /// **StoreKit or nothing.** A translated literal is how a stale trial length reaches eleven languages
+    /// at once, and it would keep claiming a trial after the offer was withdrawn — which is a false
+    /// promise on a screen leading to a purchase, not merely out of date. `nil` here removes the claim
+    /// everywhere automatically.
+    ///
+    /// `max` across the plans rather than one fixed product, so pulling the offer from a single plan
+    /// cannot silently zero this while another still carries it. Lifetime is excluded: it has no
+    /// subscription and therefore no introductory offer.
+    ///
+    /// One caveat this deliberately does **not** model: `introductoryOffer` describes the *product*, not
+    /// this customer's eligibility, so somebody who already used a trial can still see it advertised.
+    /// `ProPaywallView` has always behaved that way — its "Start Free Trial" button is chosen on the same
+    /// basis — so this matches the paywall rather than disagreeing with it. Narrowing both to
+    /// `isEligibleForIntroOffer` is a real improvement and belongs in one change that covers the paywall
+    /// too.
+    var freeTrialDays: Int? {
+        [annualProduct, monthlyProduct]
+            .compactMap { $0 }
+            .compactMap(Self.freeTrialDays(in:))
+            .max()
+    }
+
+    /// Free-trial length of `product`'s introductory offer, in days.
+    ///
+    /// StoreKit reports a 7-day trial as "1 week", so the unit has to be converted rather than read off
+    /// `value`. Mirrors `ProPaywallView.trialDays(_:)`, which stays where it is because each plan card
+    /// shows its own plan's trial — that one is per-plan, this is per-app. StoreKit is the shared source,
+    /// so neither is authoritative over the other.
+    private static func freeTrialDays(in product: Product) -> Int? {
+        guard let offer = product.subscription?.introductoryOffer,
+              offer.paymentMode == .freeTrial else { return nil }
+        let period = offer.period
+        switch period.unit {
+        case .day: return period.value
+        case .week: return period.value * 7
+        case .month: return period.value * 30
+        case .year: return period.value * 365
+        @unknown default: return period.value
+        }
+    }
+
     private let cache = UserDefaults.standard
 
     /// iCloud key-value store used to sync the founder bit across the user's own
