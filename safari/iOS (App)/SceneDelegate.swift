@@ -2353,14 +2353,21 @@ struct GpsView: View {
     private var connectionZone: some View {
         controllingComputerSection
         offlineHoldSection
-        // Sets expectations about scope rather than reporting state, so it belongs at the bottom in
-        // the phases where someone is still deciding whether this feature is for them.
-        switch phase {
-        case .waitingForComputer, .setupNeeded:
-            compatibilitySection
-        case .notPro, .chooseController, .entitlementRejected, .ready, .spoofing, .lost:
-            EmptyView()
-        }
+        // **Every phase, where this used to be only the two pre-setup ones.** The old rule was that a
+        // scope caveat belongs where someone is still deciding whether the feature is for them — which
+        // reads well until you notice it means the warning disappears at exactly the moment the feature
+        // starts working. Somebody who set device GPS up for Pokémon GO does not find out during setup;
+        // they find out the first time they open the game, and by then the sentence that would have told
+        // them is gone.
+        //
+        // It costs one muted row at the bottom of the screen and it stays true in every state, which is
+        // the test for whether a caveat should be conditional at all. Last in the zone deliberately: it is
+        // the quietest thing here and it reports nothing, so it sits under both the controller picker and
+        // the offline-hold row.
+        //
+        // `.notPro` never reaches this — `replacesScreenWithPitch` swaps the whole screen for the pitch,
+        // which renders `compatibilitySection` itself — so there is no risk of showing it twice.
+        compatibilitySection
     }
 
     /// How to keep a location after walking away from the computer.
@@ -2626,11 +2633,22 @@ struct GpsView: View {
         }
     }
 
-    /// When two+ computers are present, a compact picker so the user can switch which one is
-    /// in charge. Hidden in the common single-computer case.
+    /// When two+ computers are present **and one has been chosen**, a compact picker so the user can
+    /// switch which is in charge. Hidden in the common single-computer case.
+    ///
+    /// **The second condition is what stops this doubling up with `chooseControllerSection`.** That
+    /// section renders during `.chooseController`, and that phase is *defined* as two-or-more computers
+    /// with no valid pick — the exact state this used to render in as well. So someone with a Mac and a
+    /// PC both running the agent got the arbitration list *and* a switcher for a choice they had not made,
+    /// which is the redundancy that got reported.
+    ///
+    /// The division of labour: arbitration asks the question once, in a list, with a footer explaining why
+    /// it is being asked. This is the aftermath — a one-row control for changing an answer that already
+    /// exists. `needsControllerChoice` is the same expression the phase is derived from, so the two cannot
+    /// both believe they are on duty.
     @ViewBuilder
     private var controllingComputerSection: some View {
-        if statusStore.controllers.count >= 2 {
+        if statusStore.controllers.count >= 2, !needsControllerChoice {
             Section {
                 Picker(selection: Binding(
                     get: { controller.selectedControllerId ?? "" },
