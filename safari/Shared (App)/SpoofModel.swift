@@ -3001,18 +3001,22 @@ final class SpoofController: ObservableObject {
     ///      fallback when the device is offline or the geocoder yields nothing.
     /// The crude longitude estimate set by `resolveTimezone` remains visible
     /// until one of these resolves.
-    private func resolveExactTimezone(latitude: Double, longitude: Double) {
+    private func resolveExactTimezone(latitude: Double, longitude: Double, skipStalenessCheck: Bool = false) {
         Task { @MainActor in
             let resolved = await Self.bestTimezoneID(latitude: latitude, longitude: longitude)
             guard let tzid = resolved else {
                 Log.timezone.warn("Exact timezone unresolved for (\(latitude), \(longitude)); keeping estimate")
                 return
             }
-            // Ignore if the user has since changed/cleared the location.
-            guard let current = location,
-                  current.latitude == latitude, current.longitude == longitude else {
-                Log.timezone.trace("Timezone resolution stale (location changed); discarding \(tzid)")
-                return
+            // Ignore if the user has since changed/cleared the location, unless explicitly told not to
+            // (used when pinning a route's timezone at playback start, where the coordinate will move
+            // but we want to lock in the zone for the route's origin regardless).
+            if !skipStalenessCheck {
+                guard let current = location,
+                      current.latitude == latitude, current.longitude == longitude else {
+                    Log.timezone.trace("Timezone resolution stale (location changed); discarding \(tzid)")
+                    return
+                }
             }
             Log.timezone.info("Timezone refined → \(tzid) for (\(latitude), \(longitude))")
             timezone = Self.resolveTimezone(latitude: latitude, longitude: longitude, identifier: tzid)
@@ -4354,9 +4358,14 @@ final class SpoofController: ObservableObject {
             // says, precision the position doesn't have. The UI falls back to coordinates, which are
             // always true, and a name comes back when motion stops.
             locationName = nil
+            // Set the timezone with a longitude estimate first (immediate, synchronous), then refine it
+            // asynchronously with the real IANA zone. This mirrors the pattern in `setLocation`.
+            // Skip the staleness check because the coordinate will move as the route plays, but we want
+            // the timezone pinned to the route's origin point.
             timezone = Self.resolveTimezone(
                 latitude: first.lat, longitude: first.lon, identifier: nil
             )
+            resolveExactTimezone(latitude: first.lat, longitude: first.lon, skipStalenessCheck: true)
         }
         if !enabled { enabled = true }
 
