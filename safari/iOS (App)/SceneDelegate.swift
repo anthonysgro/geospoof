@@ -1257,6 +1257,14 @@ enum GpsPhase: Equatable {
     /// purchase problem.
     case entitlementRejected
     case setupNeeded(String)
+    /// A chosen computer is taking over and neither machine has reported on it yet. Carries the incoming
+    /// computer's name, which is the only thing worth saying during the wait.
+    ///
+    /// **Transitional and bounded.** It outranks `lost` and `setupNeeded` for `GpsEchoGate.deliveryGrace`
+    /// seconds and then stops, so a handover that genuinely fails still reports itself — with the agent's
+    /// own remediation and its cancel affordance — rather than hiding behind a permanent spinner. See
+    /// `SpoofController.controllerSwitchedAt`.
+    case switchingController(String)
     case ready
     case spoofing(GpsMotionDetail)
     case lost
@@ -1710,6 +1718,19 @@ struct GpsView: View {
 
     /// Where to send users to get the desktop app. TODO: confirm final URL.
     private let downloadURL = AppLink.site("/gps", campaign: "gps-download")
+    /// The same page as `downloadURL`, reached for a different reason — so it is tagged differently and
+    /// localized where that one isn't. Both deliberate:
+    ///
+    /// **A separate campaign** because `gps-download` answers "how many people went to get the desktop
+    /// app", and `DeviceGpsPitch.desktopAppURL` shares that tag precisely so the number stays whole. Someone
+    /// reading up on the feature has not started installing anything, and counting them as if they had would
+    /// quietly inflate the one figure that decides whether setup is working.
+    ///
+    /// **`localized: true`** because this link's whole job is to be read, so it should land on the page in
+    /// the reader's own language — the same reason `/verify` and `/activate` pass it. The download link
+    /// doesn't, and that asymmetry is fine: its job ends at a binary, which is the same file in every
+    /// language.
+    private let learnMoreURL = AppLink.site("/gps", campaign: "gps-learn-more", localized: true)
     /// Support contact for founders whose grant can't be auto-verified on this device
     /// (see `founderSupportLink`). Tagged distinctly from the general Settings support
     /// link because a founder who can't unlock is a different problem from a user with a
@@ -1766,7 +1787,7 @@ struct GpsView: View {
     @State private var confirmFeedback = 0
     /// The accelerated poll that runs while a request is outstanding.
     @State private var burstTask: Task<Void, Never>?
-    /// Whether the "going out without your computer" explainer is up. See `offlineHoldSection`.
+    /// Whether the "going out without your computer" explainer is up. See `goodToKnowSection`.
     @State private var showOfflineHold = false
     /// The route just imported, pushed so the customer lands on it.
     ///
@@ -1881,7 +1902,12 @@ struct GpsView: View {
                     // Visibly broken from the customer's side: their computer vanished mid-session, or
                     // their purchase couldn't be confirmed. Either is a bad moment to ask for five stars.
                     noteReviewTrouble()
-                case .notPro, .waitingForComputer, .chooseController, .setupNeeded, .ready:
+                // `.switchingController` is neither, deliberately. It is not a success — nothing is
+                // confirmed yet — and it is not trouble either: the customer asked for this and it is
+                // proceeding. If the handover does fail, the phase becomes `.setupNeeded` or `.lost` when
+                // the grace window closes, and *that* pass reports the trouble.
+                case .notPro, .waitingForComputer, .chooseController, .setupNeeded, .ready,
+                     .switchingController:
                     break
                 }
             }
@@ -2146,6 +2172,19 @@ struct GpsView: View {
         // Resolve the "which computer" ambiguity before reading a single status.
         if needsControllerChoice { return .chooseController }
         guard let s = statusStore.status, !statusStore.isStale else { return .waitingForComputer }
+        // **Before `lost` and `setupNeeded`, both of which a handover would otherwise trip.** A switch has
+        // to reach two computers before either can report on it, and until then the freshest status from
+        // the one just chosen was written while the other still owned the device — so it reads as not
+        // connected, or as out of session, and its remediation names the other machine. Shown literally,
+        // that turns a deliberate choice into an orange fault offering to cancel a handover that is
+        // proceeding perfectly normally.
+        //
+        // Deliberately *not* placed above the staleness guard: if the incoming computer isn't in the
+        // roster at all there is no name to show and nothing has started, and "Waiting for your computer"
+        // is the honest answer.
+        if isSwitchoverPending(s), let name = statusStore.ownerName {
+            return .switchingController(name)
+        }
         if s.session == "lost" { return .lost }
         // Checked before `connected`, because a computer that reached the phone and refused the
         // entitlement is connected — reporting it as a setup problem would send the user to look
@@ -2164,6 +2203,34 @@ struct GpsView: View {
         if s.isDeliveringSpoof { return .spoofing(motionDetail(s)) }
         if !s.remediation.isEmpty { return .setupNeeded(s.remediation) }
         return .ready
+    }
+
+    /// Whether a controller handover is young enough that `s` cannot speak to it yet.
+    ///
+    /// Three conditions, each load-bearing:
+    ///
+    ///   * **A switch was actually requested.** `controllerSwitchedAt` is `nil` for the automatic
+    ///     single-computer case, so an ordinary setup never enters this state.
+    ///   * **It is inside `GpsEchoGate.deliveryGrace`.** The same 10 s the motion echo gate uses, and for
+    ///     the same reason — it is bracketed by the agent's own worst-case publish interval, so a request
+    ///     can legitimately go unacknowledged that long. Past it, silence means something and the real
+    ///     phase takes over.
+    ///   * **The report doesn't already show a working session.** A handover that lands immediately should
+    ///     show the spoof, not a spinner for a wait that is over. This is also what makes the state
+    ///     self-clearing: no confirmation plumbing, and nothing has to remember to reset the stamp.
+    ///
+    /// A negative age — the system clock moved backwards after the stamp — exits the state rather than
+    /// extending it. That is the safe direction here: showing the truth early is recoverable, whereas a
+    /// clock that jumped back an hour would otherwise pin a spinner over a real fault for an hour. Note
+    /// this is the *opposite* choice from `requestTooYoungToJudge`, which suppresses on a negative age —
+    /// there the suppressed thing was an alarming message, here it is the alarm itself.
+    private func isSwitchoverPending(_ s: GpsStatus) -> Bool {
+        guard let switchedAt = controller.controllerSwitchedAt else { return false }
+        let age = Date().timeIntervalSince(switchedAt)
+        guard age >= 0, age < GpsEchoGate.deliveryGrace else { return false }
+        // `pro` as well as `connected`: an incoming computer that refuses the entitlement is a real
+        // problem and must not be dressed as a handover in progress.
+        return !(s.pro && s.connected)
     }
 
     /// What the owning computer is delivering, for a report already known to be fresh and
@@ -2284,6 +2351,8 @@ struct GpsView: View {
             waitingSection
         case .chooseController:
             chooseControllerSection
+        case .switchingController(let name):
+            switchingControllerSection(name)
         case .setupNeeded(let message):
             setupNeededSection(message)
         case .entitlementRejected:
@@ -2309,11 +2378,15 @@ struct GpsView: View {
         switch phase {
         case .notPro, .chooseController, .entitlementRejected:
             EmptyView()
-        case .waitingForComputer, .lost, .setupNeeded:
+        case .waitingForComputer, .lost, .setupNeeded, .switchingController:
             // No report to describe, but possibly a request to withdraw. `clearGpsMotion()` needs
             // neither a position nor a reachable computer, so it stays available here on purpose —
             // this is precisely the state where the other controls cannot be trusted and this one
             // still can.
+            //
+            // A handover belongs in this group for exactly that reason: mid-switch, no report can be
+            // trusted to describe the running route, and `clearGpsMotion()` is the one control that
+            // works anyway. Withdrawing a route during a handover has to stay possible.
             cancelRequestSection
         case .ready:
             // Connected but not spoofing. A route can already be loaded and waiting here, which is
@@ -2338,55 +2411,60 @@ struct GpsView: View {
         switch phase {
         case .notPro, .chooseController, .entitlementRejected:
             EmptyView()
-        case .waitingForComputer, .setupNeeded, .ready, .spoofing, .lost:
+        // `.switchingController` included so the library doesn't vanish and reappear across a ten-second
+        // handover. A section that disappears while you watch reads as the app losing track, and the
+        // reason it would have disappeared — we're unsure which computer is in charge — has nothing to do
+        // with whether you can browse your saved routes.
+        case .waitingForComputer, .setupNeeded, .ready, .spoofing, .lost, .switchingController:
             routeSourceSection
         }
     }
 
-    /// **Zone 5.** Which computer is in charge.
+    /// **Zone 5.** Which computer is in charge, and the standing facts about the feature.
     ///
     /// The master switch used to live here, and the guarantee that it renders in every phase came with it —
-    /// see `syncZone`, which now carries both. What is left is the plumbing: a picker only a
-    /// multiple-computer setup ever sees, and a scope caveat for someone still deciding whether the feature
-    /// is for them.
+    /// see `syncZone`, which now carries both. What is left is one grouped section: the things that are
+    /// true of device GPS regardless of what it happens to be doing.
     @ViewBuilder
     private var connectionZone: some View {
-        controllingComputerSection
-        offlineHoldSection
-        // **Every phase, where this used to be only the two pre-setup ones.** The old rule was that a
-        // scope caveat belongs where someone is still deciding whether the feature is for them — which
-        // reads well until you notice it means the warning disappears at exactly the moment the feature
-        // starts working. Somebody who set device GPS up for Pokémon GO does not find out during setup;
-        // they find out the first time they open the game, and by then the sentence that would have told
-        // them is gone.
-        //
-        // It costs one muted row at the bottom of the screen and it stays true in every state, which is
-        // the test for whether a caveat should be conditional at all. Last in the zone deliberately: it is
-        // the quietest thing here and it reports nothing, so it sits under both the controller picker and
-        // the offline-hold row.
-        //
-        // `.notPro` never reaches this — `replacesScreenWithPitch` swaps the whole screen for the pitch,
-        // which renders `compatibilitySection` itself — so there is no risk of showing it twice.
-        compatibilitySection
+        goodToKnowSection
     }
 
-    /// How to keep a location after walking away from the computer.
+    /// The two facts about device GPS that aren't state: how to keep a location after leaving your
+    /// computer, and what the feature is not for.
     ///
-    /// **The single most valuable thing about this feature that nobody discovers.** The ordinary running
-    /// state needs the computer reachable, so customers reasonably conclude the location dies when they
-    /// leave — and the whole appeal of moving a device's real GPS is being somewhere else while you are
-    /// out. Turning Developer Mode off before disconnecting keeps it, with the phone fully off-network.
-    /// It was documented on the website and nowhere in the app, which is the wrong way round: the person
-    /// about to leave the house is holding the phone, not reading /gps.
+    /// **One header over both, because they were two headerless sections stacked at the bottom of the
+    /// tab** — which reads as leftovers rather than as a group. Everything above them answers "what is
+    /// happening right now"; these answer "what should I know", and saying so once costs one header and
+    /// removes a section boundary.
     ///
-    /// Lives in zone 5 because it is a fact about the *connection* — specifically about not having one —
-    /// and the zone's own remit is what governs the link between phone and computer.
+    /// **"Good to know", not "Tips".** One of these two is a limitation, and a header calling a limitation
+    /// a tip is exactly the framing this project's honesty rule exists to prevent. The word has to be true
+    /// of both a capability nobody discovers and a caveat nobody wants to read, and this one is.
     ///
-    /// **Shown in every phase, including before setup.** It is the answer to "can I actually use this away
+    /// **The caveat is the footer, not a second row.** It is deliberately the quietest thing on the screen,
+    /// and a full-height row beside a tappable one would give a warning the same visual weight as a
+    /// feature. A `Form` footer is already secondary footnote text, so it needs no font overrides to look
+    /// deliberate rather than shrunken.
+    ///
+    /// On the offline-hold row: **the single most valuable thing about this feature that nobody
+    /// discovers.** The ordinary running state needs the computer reachable, so customers reasonably
+    /// conclude the location dies when they leave — and the whole appeal of moving a device's real GPS is
+    /// being somewhere else while you are out. Turning Developer Mode off before disconnecting keeps it,
+    /// with the phone fully off-network. It was documented on the website and nowhere in the app, which is
+    /// the wrong way round: the person about to leave the house is holding the phone, not reading /gps.
+    ///
+    /// **Both shown in every phase, including before setup.** The row answers "can I actually use this away
     /// from my desk", which is a buying question as much as an operating one, and gating it on a running
     /// spoof would hide it from exactly the person weighing up whether the feature is worth having. The
-    /// sheet is where the sequencing matters, so the sheet is where the sequence is spelled out.
-    private var offlineHoldSection: some View {
+    /// caveat is unconditional for the mirror-image reason: the old rule put it only in the two pre-setup
+    /// phases, which meant it disappeared at the moment the feature started working. Somebody who set
+    /// device GPS up for Pokémon GO does not find out during setup — they find out the first time they open
+    /// the game, and by then the sentence that would have told them is gone.
+    ///
+    /// `.notPro` never reaches this — `replacesScreenWithPitch` swaps the whole screen for the pitch, which
+    /// renders `compatibilitySection` standalone — so the caveat cannot appear twice.
+    private var goodToKnowSection: some View {
         Section {
             Button {
                 showOfflineHold = true
@@ -2411,6 +2489,29 @@ struct GpsView: View {
             .buttonStyle(.plain)
             .accessibilityElement(children: .combine)
             .accessibilityHint("Opens how to keep a location after leaving your computer")
+            // A plain `Link` beside the custom row above, and the difference in appearance is the point:
+            // this one is tinted with no chevron, which is how iOS says "leaves the app", while the
+            // chevron row says "more of this app". Matching them would make one of the two lie about
+            // where it goes.
+            //
+            // Last because it is the most general thing here — the row above and the caveat below are both
+            // specific facts, and someone who wants the whole story is by definition not looking for one.
+            OutboundLinkRow(
+                title: "Learn more about GeoSpoof GPS",
+                systemImage: "info.circle",
+                destination: learnMoreURL
+            )
+        } header: {
+            Text("Good to know")
+        } footer: {
+            // `Label` rather than a bare `Text` so the caveat carries the same warning glyph it has on the
+            // pitch card and in the sheet. No `.font`/`.foregroundColor` overrides: a footer is already
+            // footnote-sized and secondary, and re-stating that here is how the two drift apart.
+            Label {
+                Text(DeviceGpsPitch.compatibilityCaveat)
+            } icon: {
+                Image(systemName: "exclamationmark.triangle")
+            }
         }
         .adaptiveModalCover(isPresented: $showOfflineHold) { OfflineHoldSheet() }
     }
@@ -2480,9 +2581,14 @@ struct GpsView: View {
                 Text("Waiting for your computer…")
                     .foregroundColor(.secondary)
             }
-            Link(destination: downloadURL) {
-                Label("Get GeoSpoof GPS", systemImage: "arrow.down.circle")
-            }
+            // Two glyphs saying two things: the leading one is what you get, the trailing one is that you
+            // leave to get it. This is a plain `Form` row rather than a prominent button, so it takes the
+            // row treatment like every other outbound row.
+            OutboundLinkRow(
+                title: "Get GeoSpoof GPS",
+                systemImage: "arrow.down.circle",
+                destination: downloadURL
+            )
         } header: {
             Text("Set up")
         } footer: {
@@ -2633,39 +2739,16 @@ struct GpsView: View {
         }
     }
 
-    /// When two+ computers are present **and one has been chosen**, a compact picker so the user can
-    /// switch which is in charge. Hidden in the common single-computer case.
-    ///
-    /// **The second condition is what stops this doubling up with `chooseControllerSection`.** That
-    /// section renders during `.chooseController`, and that phase is *defined* as two-or-more computers
-    /// with no valid pick — the exact state this used to render in as well. So someone with a Mac and a
-    /// PC both running the agent got the arbitration list *and* a switcher for a choice they had not made,
-    /// which is the redundancy that got reported.
-    ///
-    /// The division of labour: arbitration asks the question once, in a list, with a footer explaining why
-    /// it is being asked. This is the aftermath — a one-row control for changing an answer that already
-    /// exists. `needsControllerChoice` is the same expression the phase is derived from, so the two cannot
-    /// both believe they are on duty.
-    @ViewBuilder
-    private var controllingComputerSection: some View {
-        if statusStore.controllers.count >= 2, !needsControllerChoice {
-            Section {
-                Picker(selection: Binding(
-                    get: { controller.selectedControllerId ?? "" },
-                    set: { controller.setSelectedController($0.isEmpty ? nil : $0) }
-                )) {
-                    ForEach(statusStore.controllers) { c in
-                        // The computer's own name, reported by the agent — user data.
-                        Text(verbatim: c.name).tag(c.id)
-                    }
-                } label: {
-                    Label("Controlling computer", systemImage: "desktopcomputer")
-                }
-            } footer: {
-                Text("Only this computer drives your iPhone’s GPS. The others stand by.")
-            }
-        }
-    }
+    // No `controllingComputerSection`. It was a second `Section`, headed differently, carrying a picker
+    // for a fact the Status block was already reporting one row above — so the driver's name was read in
+    // one place and changed in another. The Status block's `Controller` row is now the picker, which is
+    // also what lets it appear for a single computer: the old section hid itself below two, so the feature
+    // was invisible until the day it silently wasn't.
+    //
+    // Arbitration is untouched and still separate. `chooseControllerSection` runs during
+    // `.chooseController` — two-or-more computers and no valid pick — where `connectedSection` isn't
+    // rendered at all, so the question gets asked once, as a list, and the Controller row takes over for
+    // changing the answer afterwards.
 
     /// Zone 1's live state: whether a spoof is running, where, and **what is driving it**.
     ///
@@ -2692,29 +2775,50 @@ struct GpsView: View {
             .accessibilityElement(children: .combine)
             // Names the *computer*, not this phone.
             //
-            // This row used to report `status.device.name` — the name of the device you are already
-            // holding. It answered a question nobody asks, and it was the only reader of that field
-            // in the app. Meanwhile the fact a customer does want, which computer is driving, was
-            // visible only when two or more happened to be present, because it lived solely in
-            // `controllingComputerSection`'s picker. So with the ordinary one-computer setup the
-            // screen named the phone and never named the driver.
+            // This row once reported `status.device.name` — the name of the device you are already
+            // holding. It answered a question nobody asks, and it was the only reader of that field in the
+            // app. Meanwhile the fact a customer does want, which computer is driving, was visible only
+            // when two or more happened to be present, because it lived in a separate section that hid
+            // itself below two. So the ordinary one-computer setup named the phone and never named the
+            // driver.
+            // **This row is the switcher.** It was a read-only `LabeledRow` with a whole second
+            // `Section` elsewhere on the screen carrying a picker for the same fact — so a customer with
+            // a Mac and a PC read the driver's name here and changed it thirty points further down,
+            // under a different heading. One row now states it and changes it.
             //
-            // Reuses the picker's own label so the status row and the control that changes it are
-            // recognisably about the same thing.
-            if let ownerName = statusStore.ownerName {
-                // "Controller", not "Controlling computer": the label was eating the width that the
-                // thing it labels actually needs. The value here is a machine name someone chose, and
-                // those run long — "Anthony's MacBook Pro" is short as they go.
-                //
-                // The computer's own name, reported by the agent — user data, not copy.
-                LabeledRow(label: "Controller", value: Text(verbatim: ownerName))
-                    // One line, always. A status block whose rows change height as the roster
-                    // changes reads as the layout twitching rather than as information arriving.
-                    .lineLimit(1)
-                    // Middle rather than tail, because both ends of a machine name carry identity:
-                    // the owner at the front and the model at the back. Tail truncation turns
-                    // "Anthony's MacBook Pro" and "Anthony's MacBook Air" into the same string.
-                    .truncationMode(.middle)
+            // **Shown even with a single computer, as a picker of one.** The old separate section hid
+            // itself below two, which meant the ordinary customer had no way to learn the feature exists
+            // — and then the day they installed the agent on a second machine an unexplained control
+            // appeared. A menu of one option answers "can this be changed?" before it needs to be.
+            if !statusStore.controllers.isEmpty {
+                Picker(selection: Binding(
+                    // `reconcileSelection` deliberately keeps the selection `nil` for a sole computer —
+                    // it drives implicitly, and storing an id would be a preference nobody expressed. So
+                    // the display falls back to the only controller present rather than showing nothing.
+                    get: { controller.selectedControllerId ?? statusStore.controllers.first?.id ?? "" },
+                    // And picking the only option must not write that id back, or this would fight the
+                    // rule above on every render.
+                    set: { controller.setSelectedController(statusStore.controllers.count >= 2 ? $0 : nil) }
+                )) {
+                    ForEach(statusStore.controllers) { c in
+                        // The computer's own name, reported by the agent — user data, not copy.
+                        Text(verbatim: c.name)
+                            // One line, always. A status block whose rows change height as the roster
+                            // changes reads as the layout twitching rather than as information arriving.
+                            .lineLimit(1)
+                            // Middle rather than tail, because both ends of a machine name carry
+                            // identity: the owner at the front and the model at the back. Tail
+                            // truncation turns "Anthony's MacBook Pro" and "Anthony's MacBook Air" into
+                            // the same string.
+                            .truncationMode(.middle)
+                            .tag(c.id)
+                    }
+                } label: {
+                    // "Controller", not "Controlling computer": the longer label ate the width that the
+                    // thing it labels actually needs. Machine names run long — "Anthony's MacBook Pro"
+                    // is short as they go — and a picker has to fit the label, the value and a chevron.
+                    Text("Controller")
+                }
             }
             if active {
                 LabeledRow(label: "Location", value: locationText)
@@ -2722,6 +2826,15 @@ struct GpsView: View {
             }
         } header: {
             Text("Status")
+        } footer: {
+            // Only worth saying once a second computer exists. With one, "the others stand by" describes
+            // nobody — and the picker of one is self-evident without it.
+            //
+            // Same key the deleted `controllingComputerSection` used, so the explanation followed the
+            // control it belongs to rather than being rewritten for its new home.
+            if statusStore.controllers.count >= 2 {
+                Text("Only this computer drives your iPhone’s GPS. The others stand by.")
+            }
         }
     }
 
@@ -3524,6 +3637,35 @@ struct GpsView: View {
             } else {
                 Text("When on, your iPhone’s real system GPS is set to your chosen location. This affects all apps, including Find My.")
             }
+        }
+    }
+
+    /// A controller handover in flight.
+    ///
+    /// **Shaped like `waitingSection`, not like `setupNeededSection`** — which is what this state used to
+    /// render as. Spinner, one calm line, a footer that says how long. The distinction is the whole point:
+    /// a spinner says "your request is on its way", an orange triangle says "something is wrong", and for
+    /// the first few seconds after a switch only the first is true.
+    ///
+    /// Header "Status" rather than a new word, matching `lostSection` and `connectedSection`. Same block,
+    /// same question, and no new key.
+    ///
+    /// No explicit timer drives the exit. The tab already re-reads the roster on a 3 s poll, so the grace
+    /// window is observed within a poll of expiring — and by then the incoming computer has almost
+    /// certainly published anyway, which clears the state through `isSwitchoverPending` instead.
+    private func switchingControllerSection(_ name: String) -> some View {
+        Section {
+            HStack(spacing: 10) {
+                ProgressView()
+                // The computer's own name, reported by the agent — user data interpolated into copy, so
+                // the sentence is looked up and the name is not.
+                Text("Switching to \(name)…")
+                    .foregroundColor(.secondary)
+            }
+        } header: {
+            Text("Status")
+        } footer: {
+            Text("Handing control over. The other computer stands by — this usually takes a few seconds.")
         }
     }
 
@@ -4903,30 +5045,45 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    Link(
+                    // Deep-links to the App Store's own review sheet — the system path, not a prompt of
+                    // ours, and unconditionally available to everyone who finds this screen. See the
+                    // review-prompt rules: nothing here asks how the user feels first.
+                    OutboundLinkRow(
+                        title: "Rate GeoSpoof",
+                        systemImage: "star",
                         destination: URL(
-                            string: "https://apps.apple.com/app/id6765719745?action=write-review&pt=128299974&ct=ios-app-settings")!
-                    ) {
-                        Label("Rate GeoSpoof", systemImage: "star")
-                    }
-                    Link(destination: URL(string: "https://github.com/anthonysgro/geospoof")!) {
-                        Label("View Source on GitHub", systemImage: "chevron.left.forwardslash.chevron.right")
-                    }
+                            string: "https://apps.apple.com/app/id6765719745?action=write-review&pt=128299974&ct=ios-app-settings")!,
+                        // The one row here that doesn't open a web page, and the hint has to say so.
+                        hint: "Opens the App Store"
+                    )
+                    OutboundLinkRow(
+                        title: "View Source on GitHub",
+                        systemImage: "chevron.left.forwardslash.chevron.right",
+                        destination: URL(string: "https://github.com/anthonysgro/geospoof")!
+                    )
                 }
 
                 Section {
-                    Link(destination: URL(string: "https://www.geospoof.com/feedback?utm_source=ios-app&utm_medium=app&utm_campaign=feedback")!) {
-                        Label("Give Feedback", systemImage: "text.bubble")
-                    }
-                    Link(destination: URL(string: "https://www.geospoof.com/support?utm_source=ios-app&utm_medium=app&utm_campaign=support")!) {
-                        Label("Help & Support", systemImage: "questionmark.circle")
-                    }
-                    Link(destination: URL(string: "https://www.geospoof.com/privacy?utm_source=ios-app&utm_medium=app&utm_campaign=privacy")!) {
-                        Label("Privacy Policy", systemImage: "hand.raised")
-                    }
-                    Link(destination: URL(string: "https://www.geospoof.com/terms?utm_source=ios-app&utm_medium=app&utm_campaign=terms")!) {
-                        Label("Terms of Service", systemImage: "doc.text")
-                    }
+                    OutboundLinkRow(
+                        title: "Give Feedback",
+                        systemImage: "text.bubble",
+                        destination: URL(string: "https://www.geospoof.com/feedback?utm_source=ios-app&utm_medium=app&utm_campaign=feedback")!
+                    )
+                    OutboundLinkRow(
+                        title: "Help & Support",
+                        systemImage: "questionmark.circle",
+                        destination: URL(string: "https://www.geospoof.com/support?utm_source=ios-app&utm_medium=app&utm_campaign=support")!
+                    )
+                    OutboundLinkRow(
+                        title: "Privacy Policy",
+                        systemImage: "hand.raised",
+                        destination: URL(string: "https://www.geospoof.com/privacy?utm_source=ios-app&utm_medium=app&utm_campaign=privacy")!
+                    )
+                    OutboundLinkRow(
+                        title: "Terms of Service",
+                        systemImage: "doc.text",
+                        destination: URL(string: "https://www.geospoof.com/terms?utm_source=ios-app&utm_medium=app&utm_campaign=terms")!
+                    )
                 } header: {
                     Text("Help & Legal")
                 } footer: {

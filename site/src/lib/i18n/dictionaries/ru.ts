@@ -52,21 +52,36 @@ export const ru: Dictionary = {
     secondaryPhoneAlt: "Приложение GeoSpoof — второй экран",
   },
   products: {
-    eyebrow: "Бесплатно и Pro",
-    heading: "Начните в браузере. Копайте глубже на iPhone.",
+    eyebrow: "Два приложения",
+    heading: "GeoSpoof и GeoSpoof GPS",
     subhead:
-      "Расширение бесплатно во всех основных браузерах. Pro добавляет GeoSpoof GPS для реального системного местоположения iPhone, а также автоматическую синхронизацию с VPN, фильтры по сайтам и виджеты.",
-    free: {
+      "GeoSpoof — это приложение, которое вы устанавливаете, чтобы управлять тем, что видят сайты. GeoSpoof GPS — бесплатный настольный компаньон, который выводит это за пределы браузера, к реальному GPS вашего iPhone.",
+    availableOn: "Доступно на",
+    requires: "Нужно",
+    app: {
       badge: "Бесплатно",
-      title: "GeoSpoof для браузера",
+      title: "GeoSpoof",
+      tagline: "Расширение для браузера и мобильное приложение",
       description:
-        "Подмена геолокации, часового пояса и WebRTC в Chrome, Firefox, Edge, Brave и Safari. Без аккаунта, без слежки.",
+        "Подмена геолокации, часового пояса и WebRTC: сайты видят выбранное вами место, а не то, где вы находитесь. Без аккаунта, без слежки.",
+      platforms: "Chrome, Firefox, Edge, Brave, Safari, iPhone, iPad, Mac",
+    },
+    gps: {
+      badge: "Бесплатное приложение-компаньон",
+      title: "GeoSpoof GPS",
+      tagline: "Приложение в строке меню для Mac и Windows",
+      description:
+        "Выходит за пределы браузера и задаёт реальный системный GPS вашего iPhone на место, выбранное в GeoSpoof. Живёт в строке меню — никаких окон.",
+      platforms: "macOS, Windows",
+      requirement:
+        "GeoSpoof Pro на вашем iPhone и подключение iPhone к компьютеру в момент, когда вы задаёте местоположение",
+      cta: "Получить GeoSpoof GPS",
     },
     pro: {
       badge: "Pro",
       title: "GeoSpoof Pro",
       description:
-        "GeoSpoof GPS задаёт реальное системное местоположение iPhone из приложения-компаньона на Mac или ПК с Windows. Плюс автоматическая синхронизация с VPN, фильтры по сайтам, виджеты, выбор точки на карте и не только.",
+        "Pro — это улучшение внутри приложения для iPhone, а не третья загрузка. Именно оно открывает GPS на уровне устройства, которым управляет GeoSpoof GPS, плюс автоматическую синхронизацию с VPN, виджеты, выбор точки на карте и фильтры по сайтам.",
       cta: "Что входит в Pro",
       priceNote: "От $1.99/мес. — или $24.99 навсегда",
     },
@@ -132,11 +147,13 @@ export const ru: Dictionary = {
   },
   footer: {
     groups: {
+      products: "Продукты",
       guides: "Руководства",
       learn: "Полезное",
       company: "О проекте",
     },
     links: {
+      geospoofIos: "GeoSpoof для iPhone и iPad",
       spoofAllBrowsers: "Подмена геолокации: все браузеры",
       spoofChrome: "Подмена геолокации в Chrome",
       spoofFirefox: "Подмена геолокации в Firefox",

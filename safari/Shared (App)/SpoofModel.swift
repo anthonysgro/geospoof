@@ -2286,6 +2286,22 @@ final class SpoofController: ObservableObject {
     /// prompt; set only when two+ computers are present and the user picks one. Mirrored
     /// into `desired.json` as `owner_id`.
     @Published var selectedControllerId: String?
+    /// When we last asked a *specific* computer to take over, on **our own clock**.
+    ///
+    /// Exists so the UI can distinguish "the handover is in flight" from "the computer you chose is
+    /// refusing you". Those look identical in a report: for the first few seconds after a switch, the
+    /// freshest status from the newly chosen computer was written while the previous one still owned the
+    /// device, so it says `connected: false` and its remediation names the other machine. Rendered
+    /// literally, a deliberate choice appears as a fault with an offer to cancel it.
+    ///
+    /// **Our clock on purpose.** The alternative — comparing against `GpsStatus.updatedAt` — is more
+    /// precise in principle and unsafe in practice, because that timestamp comes from the computer. A
+    /// skew there would either strand the handover state forever or skip it entirely, and neither failure
+    /// would be visible. `GpsEchoGate.requestAge` avoids the same comparison for the same reason.
+    ///
+    /// In memory only, like `lastMotionReportAt`: after a relaunch this would describe a handover from a
+    /// previous process, and there is no report it could still be qualifying.
+    @Published private(set) var controllerSwitchedAt: Date?
     /// What motion we have asked the desktop agent for — route identity, playback run marker,
     /// pause flag, steering vector, last confirmed position.
     ///
@@ -3159,6 +3175,14 @@ final class SpoofController: ObservableObject {
         guard selectedControllerId != id else { return }
         Log.location.info("GPS controlling computer → \(id ?? "auto")")
         selectedControllerId = id
+        // Stamped for a real choice, cleared when handing back to automatic. `nil` means "whichever sole
+        // computer is present drives", which no specific machine has to acknowledge — so there is no
+        // handover to wait on and a stamp would describe a wait that isn't happening.
+        //
+        // Set on *every* non-nil selection, including the first pick from the arbitration list. That is a
+        // handover too: the chosen computer's last report predates the choice exactly as it does when
+        // switching between two.
+        controllerSwitchedAt = id == nil ? nil : Date()
         setSharedPrefsValue("gps_ownerId", id)
         writePending()
     }
@@ -4031,16 +4055,31 @@ final class SpoofController: ObservableObject {
 
     /// The distance a pace change should resume from, or `nil` to start over.
     ///
-    /// `nil` whenever resuming would be a guess rather than a fact:
+    /// `nil` whenever resuming would be a guess rather than a fact, **or when there is nothing left to
+    /// resume**:
     ///
     ///   * no route loaded — there is nothing to resume;
     ///   * nothing confirmed yet — the run may have only just been asked for, and the honest answer to
-    ///     "where are we" is the first point.
+    ///     "where are we" is the first point;
+    ///   * the run finished — the last confirmed distance is the finish line, which is a position, not a
+    ///     place to carry on from.
+    ///
+    /// **That third case had a visible symptom.** After a completed route `lastConfirmedTravelledM` is the
+    /// end of it, so an edit that re-armed playback from here asked the agent to begin a new run at the
+    /// point the device was already standing on — and `seekOrigin` clamps a repeating route to
+    /// `total - 0.001`, so it began a millimetre short of the end and nothing appeared to happen. The
+    /// re-arm had meanwhile cleared `confirmedRouteFinished`, and a repeating route never reports
+    /// `finished` again, so the transport settled on Pause for a run that was going nowhere. Turning on
+    /// Repeat at the end of a route is precisely how a customer reaches this.
+    ///
+    /// Starting over is also the *correct* answer for looping rather than merely a safe one: under
+    /// `repeat` a lap wraps to zero, so continuing the loop from the finish line means the next lap's
+    /// first point.
     ///
     /// The one caller that must **not** use this is a true replay. `restartGpsRoute` clears the seek
     /// outright, because Play Again means the beginning even when we know exactly where the device is.
     var resumableTravelledM: Double? {
-        guard motionState.routeId != nil else { return nil }
+        guard motionState.routeId != nil, !confirmedRouteFinished else { return nil }
         return lastConfirmedTravelledM
     }
 

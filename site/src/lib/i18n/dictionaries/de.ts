@@ -40,21 +40,36 @@ export const de: Dictionary = {
     secondaryPhoneAlt: "GeoSpoof-App — Nebenansicht",
   },
   products: {
-    eyebrow: "Kostenlos & Pro",
-    heading: "Fang im Browser an. Geh auf dem iPhone tiefer.",
+    eyebrow: "Zwei Apps",
+    heading: "GeoSpoof und GeoSpoof GPS",
     subhead:
-      "Die Erweiterung ist in jedem großen Browser kostenlos. Pro bringt GeoSpoof GPS für den echten Systemstandort deines iPhones, dazu automatische VPN-Synchronisierung, Filter pro Website und Widgets.",
-    free: {
+      "GeoSpoof ist die App, die du installierst, um zu steuern, was Websites sehen. GeoSpoof GPS ist der kostenlose Desktop-Begleiter, der das Ganze aus dem Browser holt und auf das echte GPS deines iPhones bringt.",
+    availableOn: "Verfügbar für",
+    requires: "Benötigt",
+    app: {
       badge: "Kostenlos",
-      title: "GeoSpoof für deinen Browser",
+      title: "GeoSpoof",
+      tagline: "Browser-Erweiterung und Mobil-App",
       description:
-        "Fälsche Geolocation, Zeitzone und WebRTC in Chrome, Firefox, Edge, Brave und Safari. Kein Konto, kein Tracking.",
+        "Fälsche Geolocation, Zeitzone und WebRTC, sodass Websites den Ort sehen, den du wählst, statt deines echten. Kein Konto, kein Tracking.",
+      platforms: "Chrome, Firefox, Edge, Brave, Safari, iPhone, iPad, Mac",
+    },
+    gps: {
+      badge: "Kostenlose Begleit-App",
+      title: "GeoSpoof GPS",
+      tagline: "Menüleisten-App für Mac und Windows",
+      description:
+        "Geht über den Browser hinaus und setzt das echte, systemweite GPS deines iPhones auf den Ort, den du in GeoSpoof wählst. Sie sitzt in der Menüleiste — kein Fenster zu verwalten.",
+      platforms: "macOS, Windows",
+      requirement:
+        "GeoSpoof Pro auf deinem iPhone, und dein iPhone muss mit dem Computer verbunden sein, wenn du einen Ort setzt",
+      cta: "GeoSpoof GPS holen",
     },
     pro: {
       badge: "Pro",
       title: "GeoSpoof Pro",
       description:
-        "GeoSpoof GPS setzt den echten, systemweiten Standort deines iPhones über eine Begleit-App auf deinem Mac oder Windows-PC. Dazu automatische VPN-Synchronisierung, Filter pro Website, Widgets, Kartenauswahl und mehr.",
+        "Pro ist ein Upgrade innerhalb der iPhone-App, kein dritter Download. Es schaltet das geräteweite GPS frei, das GeoSpoof GPS steuert — dazu automatische VPN-Synchronisierung, Widgets, Kartenauswahl und Filter pro Website.",
       cta: "Pro ansehen",
       priceNote: "Ab $1.99/Mon. — oder $24.99 lebenslang",
     },
@@ -120,11 +135,13 @@ export const de: Dictionary = {
   },
   footer: {
     groups: {
+      products: "Produkte",
       guides: "Anleitungen",
       learn: "Wissen",
       company: "Unternehmen",
     },
     links: {
+      geospoofIos: "GeoSpoof für iPhone & iPad",
       spoofAllBrowsers: "Standort fälschen: alle Browser",
       spoofChrome: "Standort in Chrome fälschen",
       spoofFirefox: "Standort in Firefox fälschen",

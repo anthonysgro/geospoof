@@ -645,6 +645,11 @@ struct GpsPresentationRuleTests {
             .entitlementRejected,
             .setupNeeded(""),
             .setupNeeded("Pro required"),
+            // A handover is transitional, but it still renders instead of the status block for up to
+            // `GpsEchoGate.deliveryGrace` seconds — long enough that hiding the Sync toggle behind it would
+            // be the same defect `chooseController` and `entitlementRejected` already caused once.
+            .switchingController(""),
+            .switchingController("Anthony’s MacBook Pro"),
             .ready,
             .spoofing(.still),
             .spoofing(.route(Self.progress)),

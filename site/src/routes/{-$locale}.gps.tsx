@@ -412,6 +412,12 @@ function StructuredData() {
     ],
     applicationCategory: "UtilitiesApplication",
     operatingSystem: "macOS 13+, Windows 10+",
+    // States the dependency the same way the page and the homepage products
+    // card do. GeoSpoof GPS is a companion app, and a lineup entity that
+    // doesn't declare what it companions reads as a standalone alternative to
+    // the extension — the exact confusion we're trying to remove.
+    softwareRequirements:
+      "Requires the GeoSpoof app with GeoSpoof Pro on a connected iPhone or iPad",
     // The app itself is a free download; device GPS needs Pro, which is bought
     // in the iOS app. Declaring price 0 is what makes the free download
     // explicit — omitting `offers` entirely reads as "price unknown". No
@@ -792,7 +798,7 @@ function GpsMenuShot() {
         }
         alt={t.gps.menuShotAlt}
         width={744}
-        height={868}
+        height={894}
         loading="lazy"
         decoding="async"
         className="mx-auto h-auto w-full max-w-md drop-shadow-2xl"

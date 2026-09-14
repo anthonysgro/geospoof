@@ -40,21 +40,36 @@ export const id: Dictionary = {
     secondaryPhoneAlt: "Aplikasi GeoSpoof — tampilan kedua",
   },
   products: {
-    eyebrow: "Gratis & Pro",
-    heading: "Mulai di browser Anda. Lebih dalam di iPhone Anda.",
+    eyebrow: "Dua aplikasi",
+    heading: "GeoSpoof dan GeoSpoof GPS",
     subhead:
-      "Ekstensinya gratis di semua browser utama. Pro menambahkan GeoSpoof GPS untuk lokasi sistem asli iPhone Anda, plus sinkronisasi VPN otomatis, filter per situs, dan widget.",
-    free: {
+      "GeoSpoof adalah aplikasi yang Anda pasang untuk mengatur apa yang dilihat situs. GeoSpoof GPS adalah aplikasi pendamping desktop gratis yang membawanya keluar dari browser ke GPS asli iPhone Anda.",
+    availableOn: "Tersedia di",
+    requires: "Membutuhkan",
+    app: {
       badge: "Gratis",
-      title: "GeoSpoof untuk browser Anda",
+      title: "GeoSpoof",
+      tagline: "Ekstensi browser dan aplikasi seluler",
       description:
-        "Palsukan geolokasi, zona waktu, dan WebRTC di Chrome, Firefox, Edge, Brave, dan Safari. Tanpa akun, tanpa pelacakan.",
+        "Palsukan geolokasi, zona waktu, dan WebRTC sehingga situs melihat lokasi pilihan Anda, bukan lokasi Anda yang sebenarnya. Tanpa akun, tanpa pelacakan.",
+      platforms: "Chrome, Firefox, Edge, Brave, Safari, iPhone, iPad, Mac",
+    },
+    gps: {
+      badge: "Aplikasi pendamping gratis",
+      title: "GeoSpoof GPS",
+      tagline: "Aplikasi bilah menu untuk Mac dan Windows",
+      description:
+        "Melampaui browser dan mengatur GPS asli tingkat sistem iPhone Anda ke lokasi yang Anda pilih di GeoSpoof. Tinggal di bilah menu — tanpa jendela yang perlu diurus.",
+      platforms: "macOS, Windows",
+      requirement:
+        "GeoSpoof Pro di iPhone Anda, dan iPhone Anda terhubung ke komputer saat Anda menetapkan lokasi",
+      cta: "Dapatkan GeoSpoof GPS",
     },
     pro: {
       badge: "Pro",
       title: "GeoSpoof Pro",
       description:
-        "GeoSpoof GPS mengatur lokasi asli tingkat sistem iPhone Anda dari aplikasi pendamping di Mac atau PC Windows Anda. Ditambah sinkronisasi VPN otomatis, filter per situs, widget, pemilih peta, dan lainnya.",
+        "Pro adalah peningkatan di dalam aplikasi iPhone, bukan unduhan ketiga. Inilah yang membuka GPS tingkat perangkat yang dijalankan GeoSpoof GPS — plus sinkronisasi VPN otomatis, widget, pemilih peta, dan filter per situs.",
       cta: "Lihat isi Pro",
       priceNote: "Mulai $1.99/bln — atau $24.99 seumur hidup",
     },
@@ -119,11 +134,13 @@ export const id: Dictionary = {
   },
   footer: {
     groups: {
+      products: "Produk",
       guides: "Panduan",
       learn: "Pelajari",
       company: "Perusahaan",
     },
     links: {
+      geospoofIos: "GeoSpoof untuk iPhone & iPad",
       spoofAllBrowsers: "Palsukan lokasi: semua browser",
       spoofChrome: "Palsukan lokasi di Chrome",
       spoofFirefox: "Palsukan lokasi di Firefox",

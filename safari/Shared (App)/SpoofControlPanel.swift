@@ -783,6 +783,22 @@ struct SpoofControlPanel: View {
                 status: deviceGpsStatus,
                 tab: .gps
             )
+        } header: {
+            // **Named, where it used to be the one headerless block on the screen.** The convention this
+            // was following — Settings leaves its lead section unheaded, as Wi-Fi and Bluetooth do — is
+            // about a section whose first row *is* the master control. This one reports on two other tabs
+            // and controls nothing, so the convention never applied; it just looked like it did because
+            // the block happens to come first.
+            //
+            // "Status" rather than a new word, because the GPS tab's equivalent block is already headed
+            // that way. Two blocks answering "what is happening right now" in the same shape, one named
+            // and one not, is the kind of inconsistency that reads as an oversight — and reusing the term
+            // means no new key to translate.
+            //
+            // It also draws the line this screen needs: everything under this header is the state, and
+            // `setupSection` immediately below is what to do about it. Those were previously one
+            // undifferentiated run of cards.
+            Text("Status")
         }
     }
 
@@ -1092,15 +1108,14 @@ struct SpoofControlPanel: View {
 
     private var verificationSection: some View {
         Section {
-            Link(destination: verifyURL(campaign: "verify")) {
-                HStack {
-                    Label("Verify Your Protection", systemImage: "checkmark.shield")
-                    Spacer()
-                    Image(systemName: "arrow.up.right")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
+            // The row this pattern came from. It now shares `OutboundLinkRow` with every other outbound
+            // row rather than hand-rolling the arrow, which also gained it the VoiceOver hint it was
+            // missing — the bare glyph used to be read out as "arrow up right".
+            OutboundLinkRow(
+                title: "Verify Your Protection",
+                systemImage: "checkmark.shield",
+                destination: verifyURL(campaign: "verify")
+            )
             #if os(iOS)
             // Details sits with Verify because they answer the same question — "is this actually
             // working?" — one by asking a live website and one by listing what the extension is
@@ -1795,6 +1810,44 @@ struct LivePositionDot: View {
 private struct MapPinItem: Identifiable {
     let id = UUID()
     let coordinate: CLLocationCoordinate2D
+}
+
+/// A `Form` row that leaves the app, with the trailing arrow iOS uses to say so.
+///
+/// **One type because the signal only works if it is everywhere.** The arrow started life inline on
+/// "Verify Your Protection" and nowhere else, which teaches the reader that it means something *other*
+/// than "outbound" — a distinction with no meaning behind it is worse than no distinction. Every
+/// row-shaped link in the app now routes through here, so the next one added inherits it instead of
+/// having to remember.
+///
+/// **Rows only.** The prominent calls to action — Get GeoSpoof GPS on the pitch, the Proton link — keep
+/// their button treatment: an arrow inside a filled button reads as decoration, and the button already
+/// looks like a departure. Same for inline text links in footers, where the underline is the signal.
+///
+/// **The glyph is hidden from VoiceOver and stated as a hint instead**, because "arrow up right"
+/// describes our artwork rather than the destination. `"Opens in your browser"` is the string the trust
+/// sheet's link list already used for exactly this, so the default costs no new translation.
+struct OutboundLinkRow: View {
+    let title: LocalizedStringKey
+    let systemImage: String
+    let destination: URL
+    /// Override for a destination that isn't a web page — the App Store, for instance. Web is the
+    /// default because every other outbound row in the app is one.
+    var hint: LocalizedStringKey = "Opens in your browser"
+
+    var body: some View {
+        Link(destination: destination) {
+            HStack {
+                Label(title, systemImage: systemImage)
+                Spacer()
+                Image(systemName: "arrow.up.right")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
+            }
+        }
+        .accessibilityHint(hint)
+    }
 }
 
 /// The unified location card: a map "window" on top with an expand control, and

@@ -8527,6 +8527,7 @@
       }
     },
     "Controlling computer" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -15264,6 +15265,148 @@
         }
       }
     },
+    "Good to know" : {
+      "comment" : "Section header on the GPS tab, above a row about keeping a location away from your computer and a caveat that the feature is not for AR games. Must read naturally as an introduction to BOTH a helpful capability and a limitation, so avoid a word that means only “tips” or only “warnings”.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gut zu wissen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Conviene saber"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bon à savoir"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Perlu diketahui"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "知っておきたいこと"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Goed om te weten"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bom saber"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Полезно знать"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bra att veta"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Điều nên biết"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "须知"
+          }
+        }
+      }
+    },
+    "Handing control over. The other computer stands by — this usually takes a few seconds." : {
+      "comment" : "Footer under the “Switching to …” row. Reassures the user that the wait is normal and short. “Stands by” means the other computer stays available but stops driving — it is not an error.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Die Steuerung wird übergeben. Der andere Computer wartet bereit – das dauert meist nur ein paar Sekunden."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Se está transfiriendo el control. El otro ordenador queda a la espera; suele tardar unos segundos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Transfert du contrôle en cours. L’autre ordinateur reste en attente — cela prend généralement quelques secondes."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mengalihkan kendali. Komputer lainnya bersiaga — biasanya hanya butuh beberapa detik."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "制御を引き継いでいます。もう一方のコンピュータは待機状態になります。通常は数秒で完了します。"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "De besturing wordt overgedragen. De andere computer staat stand-by — dit duurt meestal een paar seconden."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Transferindo o controle. O outro computador fica em espera — isso normalmente leva alguns segundos."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Управление передаётся. Другой компьютер переходит в режим ожидания — обычно это занимает несколько секунд."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Kontrollen överlämnas. Den andra datorn står i beredskap – det tar oftast bara några sekunder."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Đang chuyển quyền điều khiển. Máy tính kia sẽ chờ — việc này thường chỉ mất vài giây."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在移交控制权。另一台电脑将转为待机 — 通常只需几秒钟。"
+          }
+        }
+      }
+    },
     "Handled by a VPN" : {
       "localizations" : {
         "de" : {
@@ -18285,6 +18428,77 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "了解 GeoSpoof GPS"
+          }
+        }
+      }
+    },
+    "Learn more about GeoSpoof GPS" : {
+      "comment" : "Row on the GPS tab that opens geospoof.com/gps in the browser. “GeoSpoof GPS” is the name of the desktop companion app and must not be translated.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mehr über GeoSpoof GPS erfahren"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Más información sobre GeoSpoof GPS"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En savoir plus sur GeoSpoof GPS"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pelajari lebih lanjut tentang GeoSpoof GPS"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "GeoSpoof GPS について詳しく見る"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Meer over GeoSpoof GPS"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Saiba mais sobre o GeoSpoof GPS"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Подробнее о GeoSpoof GPS"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Läs mer om GeoSpoof GPS"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tìm hiểu thêm về GeoSpoof GPS"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "详细了解 GeoSpoof GPS"
           }
         }
       }
@@ -24661,6 +24875,77 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "将在你的浏览器中打开"
+          }
+        }
+      }
+    },
+    "Opens the App Store" : {
+      "comment" : "VoiceOver hint on the “Rate GeoSpoof” row. Describes where the row goes. “App Store” is Apple’s product name — use the official localized form for your language.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Öffnet den App Store"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abre el App Store"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ouvre l’App Store"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Membuka App Store"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "App Store を開きます"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Opent de App Store"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abre a App Store"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Открывает App Store"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Öppnar App Store"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mở App Store"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "打开 App Store"
           }
         }
       }
@@ -34489,6 +34774,77 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "切换到「永久」"
+          }
+        }
+      }
+    },
+    "Switching to %@…" : {
+      "comment" : "Shown with a spinner while a different computer takes over driving this iPhone's GPS. %@ is the computer's own name, chosen by its owner — do not translate it. Keep the ellipsis: this is an action in progress, not a finished one.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wechsel zu %@ …"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cambiando a %@…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Basculement vers %@…"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Beralih ke %@…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "%@ に切り替えています…"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Overschakelen naar %@…"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Alternando para %@…"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Переключение на %@…"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Växlar till %@…"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Đang chuyển sang %@…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在切换到 %@…"
           }
         }
       }

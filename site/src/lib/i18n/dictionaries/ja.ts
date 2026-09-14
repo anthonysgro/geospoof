@@ -40,21 +40,36 @@ export const ja: Dictionary = {
     secondaryPhoneAlt: "GeoSpoof アプリ — サブ画面",
   },
   products: {
-    eyebrow: "無料と Pro",
-    heading: "まずはブラウザで。次は iPhone でもっと深く。",
+    eyebrow: "2 つのアプリ",
+    heading: "GeoSpoof と GeoSpoof GPS",
     subhead:
-      "拡張機能は主要ブラウザすべてで無料。Pro では iPhone の実際のシステム位置情報を変える GeoSpoof GPS に加えて、VPN 自動同期、サイトごとのフィルター、ウィジェットが使えます。",
-    free: {
+      "GeoSpoof は、サイトに見せる情報をコントロールするためにインストールするアプリです。GeoSpoof GPS は、それをブラウザの外に持ち出して iPhone の実際の GPS まで動かす無料のデスクトップ・コンパニオンです。",
+    availableOn: "対応プラットフォーム",
+    requires: "必要なもの",
+    app: {
       badge: "無料",
-      title: "ブラウザ向け GeoSpoof",
+      title: "GeoSpoof",
+      tagline: "ブラウザ拡張機能とモバイルアプリ",
       description:
-        "Chrome、Firefox、Edge、Brave、Safari で位置情報・タイムゾーン・WebRTC を偽装。アカウント不要、トラッキングなし。",
+        "位置情報・タイムゾーン・WebRTC を偽装し、実際の居場所ではなく自分で選んだ場所をサイトに見せます。アカウント不要、トラッキングなし。",
+      platforms: "Chrome、Firefox、Edge、Brave、Safari、iPhone、iPad、Mac",
+    },
+    gps: {
+      badge: "無料コンパニオンアプリ",
+      title: "GeoSpoof GPS",
+      tagline: "Mac / Windows 用メニューバーアプリ",
+      description:
+        "ブラウザの枠を越えて、GeoSpoof で選んだ場所に iPhone の実際のシステムレベル GPS を設定します。メニューバーに常駐し、管理するウィンドウはありません。",
+      platforms: "macOS、Windows",
+      requirement:
+        "iPhone の GeoSpoof Pro、および位置を設定するときに iPhone がコンピュータに接続されていること",
+      cta: "GeoSpoof GPS を入手",
     },
     pro: {
       badge: "Pro",
       title: "GeoSpoof Pro",
       description:
-        "GeoSpoof GPS は Mac / Windows のコンパニオンアプリから iPhone の実際のシステム位置情報を設定します。さらに VPN 自動同期、サイトごとのフィルター、ウィジェット、地図ピッカーなど。",
+        "Pro は 3 つ目のダウンロードではなく、iPhone アプリ内のアップグレードです。GeoSpoof GPS が動かす端末レベルの GPS を解放し、さらに VPN 自動同期、ウィジェット、地図ピッカー、サイトごとのフィルターが使えます。",
       cta: "Pro の内容を見る",
       priceNote: "月額 $1.99 〜 — または買い切り $24.99",
     },
@@ -119,11 +134,13 @@ export const ja: Dictionary = {
   },
   footer: {
     groups: {
+      products: "製品",
       guides: "ガイド",
       learn: "学ぶ",
       company: "会社情報",
     },
     links: {
+      geospoofIos: "iPhone・iPad 向け GeoSpoof",
       spoofAllBrowsers: "位置情報の偽装：全ブラウザ",
       spoofChrome: "Chrome で位置情報を偽装",
       spoofFirefox: "Firefox で位置情報を偽装",

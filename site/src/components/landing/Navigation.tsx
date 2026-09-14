@@ -10,24 +10,35 @@ import { cn } from "@/lib/utils"
 import { useTranslations } from "@/hooks/use-i18n"
 import { localizedHref, localizedPath } from "@/lib/i18n"
 
-/** Build the nav items from the active dictionary (labels are localized). */
+/**
+ * Build the nav items from the active dictionary (labels are localized).
+ *
+ * GPS earns a top-level slot because it's a second product, not a feature of
+ * the first: it's a separate download, on separate platforms, and it's the only
+ * way to drive device-level GPS on iOS. Before this it was reachable from the
+ * hero pill and the footer only, which is thin discovery for the thing people
+ * most often arrive not knowing exists.
+ */
 function getNavItems(t: Dictionary, locale: Locale): Array<NavItem> {
   return [
     { label: t.nav.home, href: "#" },
     { label: t.nav.features, href: "#features" },
+    { label: t.nav.gps, href: localizedHref("/gps", locale) },
     { label: t.nav.blog, href: localizedHref("/blog", locale) },
     { label: t.nav.support, href: localizedHref("/support", locale) },
   ]
 }
 
 /**
- * Primary nav items for the mobile menu: the shared items plus About. About
- * sits at the same hierarchy as Home/Features/Blog/Support here, but stays out
- * of the desktop header (which we keep lean).
+ * Primary nav items for the mobile menu: the shared items plus Pro and About.
+ * Both sit at the same hierarchy as Home/Features/GPS/Blog/Support here but
+ * stay out of the desktop header, which we keep lean — on desktop the Pro path
+ * is the products section and the footer's Products group.
  */
 function getMobileNavItems(t: Dictionary, locale: Locale): Array<NavItem> {
   return [
     ...getNavItems(t, locale),
+    { label: t.nav.pro, href: localizedHref("/pro", locale) },
     { label: t.footer.links.about, href: localizedHref("/about", locale) },
   ]
 }

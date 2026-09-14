@@ -284,24 +284,34 @@ struct MacSettingsView: View {
                     ) {
                         Label("Rate GeoSpoof", systemImage: "star")
                     }
-                    Link(destination: URL(string: "https://github.com/anthonysgro/geospoof")!) {
-                        Label("View Source on GitHub", systemImage: "chevron.left.forwardslash.chevron.right")
-                    }
+                    OutboundLinkRow(
+                        title: "View Source on GitHub",
+                        systemImage: "chevron.left.forwardslash.chevron.right",
+                        destination: URL(string: "https://github.com/anthonysgro/geospoof")!
+                    )
                 }
 
                 Section {
-                    Link(destination: URL(string: "https://www.geospoof.com/feedback?utm_source=macos-app&utm_medium=app&utm_campaign=feedback")!) {
-                        Label("Give Feedback", systemImage: "text.bubble")
-                    }
-                    Link(destination: URL(string: "https://www.geospoof.com/support?utm_source=macos-app&utm_medium=app&utm_campaign=support")!) {
-                        Label("Help & Support", systemImage: "questionmark.circle")
-                    }
-                    Link(destination: URL(string: "https://www.geospoof.com/privacy?utm_source=macos-app&utm_medium=app&utm_campaign=privacy")!) {
-                        Label("Privacy Policy", systemImage: "hand.raised")
-                    }
-                    Link(destination: URL(string: "https://www.geospoof.com/terms?utm_source=macos-app&utm_medium=app&utm_campaign=terms")!) {
-                        Label("Terms of Service", systemImage: "doc.text")
-                    }
+                    OutboundLinkRow(
+                        title: "Give Feedback",
+                        systemImage: "text.bubble",
+                        destination: URL(string: "https://www.geospoof.com/feedback?utm_source=macos-app&utm_medium=app&utm_campaign=feedback")!
+                    )
+                    OutboundLinkRow(
+                        title: "Help & Support",
+                        systemImage: "questionmark.circle",
+                        destination: URL(string: "https://www.geospoof.com/support?utm_source=macos-app&utm_medium=app&utm_campaign=support")!
+                    )
+                    OutboundLinkRow(
+                        title: "Privacy Policy",
+                        systemImage: "hand.raised",
+                        destination: URL(string: "https://www.geospoof.com/privacy?utm_source=macos-app&utm_medium=app&utm_campaign=privacy")!
+                    )
+                    OutboundLinkRow(
+                        title: "Terms of Service",
+                        systemImage: "doc.text",
+                        destination: URL(string: "https://www.geospoof.com/terms?utm_source=macos-app&utm_medium=app&utm_campaign=terms")!
+                    )
                 } header: {
                     Text("Help & Legal")
                 } footer: {

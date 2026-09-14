@@ -53,21 +53,36 @@ export const zhCN: Dictionary = {
     secondaryPhoneAlt: "GeoSpoof 应用——次要界面",
   },
   products: {
-    eyebrow: "免费与 Pro",
-    heading: "先在浏览器开始，再深入到 iPhone。",
+    eyebrow: "两款应用",
+    heading: "GeoSpoof 与 GeoSpoof GPS",
     subhead:
-      "扩展在所有主流浏览器上免费。Pro 增加了 GeoSpoof GPS，可设置 iPhone 的真实系统位置，还有 VPN 自动同步、按站点过滤和小组件。",
-    free: {
+      "GeoSpoof 是你安装的应用，用来控制网站看到什么。GeoSpoof GPS 是免费的桌面伴侣应用，把这件事从浏览器带到你 iPhone 的真实 GPS 上。",
+    availableOn: "支持平台",
+    requires: "需要",
+    app: {
       badge: "免费",
-      title: "浏览器版 GeoSpoof",
+      title: "GeoSpoof",
+      tagline: "浏览器扩展与移动应用",
       description:
-        "在 Chrome、Firefox、Edge、Brave 和 Safari 上伪造地理位置、时区和 WebRTC。无需账户，无跟踪。",
+        "伪造地理位置、时区和 WebRTC，让网站看到你选择的位置，而不是你的真实位置。无需账户，无跟踪。",
+      platforms: "Chrome、Firefox、Edge、Brave、Safari、iPhone、iPad、Mac",
+    },
+    gps: {
+      badge: "免费伴侣应用",
+      title: "GeoSpoof GPS",
+      tagline: "Mac 与 Windows 的菜单栏应用",
+      description:
+        "超越浏览器，把你 iPhone 的真实系统级 GPS 设置到你在 GeoSpoof 中选择的位置。它常驻菜单栏，没有需要管理的窗口。",
+      platforms: "macOS、Windows",
+      requirement:
+        "iPhone 上的 GeoSpoof Pro，以及设置位置时 iPhone 与电脑保持连接",
+      cta: "获取 GeoSpoof GPS",
     },
     pro: {
       badge: "Pro",
       title: "GeoSpoof Pro",
       description:
-        "GeoSpoof GPS 通过 Mac 或 Windows 伴侣应用设置你 iPhone 的真实系统级位置。另有 VPN 自动同步、按站点过滤、小组件、地图选点等。",
+        "Pro 是 iPhone 应用内的升级，不是第三个下载项。它解锁 GeoSpoof GPS 所驱动的设备级 GPS，另有 VPN 自动同步、小组件、地图选点和按站点过滤。",
       cta: "查看 Pro 包含什么",
       priceNote: "$1.99/月起 — 或 $24.99 永久",
     },
@@ -130,11 +145,13 @@ export const zhCN: Dictionary = {
   },
   footer: {
     groups: {
+      products: "产品",
       guides: "指南",
       learn: "了解",
       company: "关于",
     },
     links: {
+      geospoofIos: "iPhone 和 iPad 版 GeoSpoof",
       spoofAllBrowsers: "伪造位置：所有浏览器",
       spoofChrome: "在 Chrome 中伪造位置",
       spoofFirefox: "在 Firefox 中伪造位置",

@@ -25,8 +25,29 @@ interface FooterGroup {
 //
 // Labels come from the active dictionary; hrefs stay on the (English) canonical
 // pages until those routes are localized too.
+//
+// Products is its own group rather than two more rows under Guides. GeoSpoof GPS
+// and Pro aren't guides — one is a separate app on separate platforms, the other
+// is the paid tier — and filing them with the how-to pages was the main reason
+// GPS read as a footnote of the extension instead of a product in its own right.
+//
+// The free browser extension isn't listed here on purpose: it's the subject of
+// the whole homepage, the header's Download CTA, and the Guides group below, so a
+// fourth link to it would just duplicate a destination within one footer.
 function getFooterGroups(t: Dictionary): Array<FooterGroup> {
   return [
+    {
+      title: t.footer.groups.products,
+      links: [
+        { label: t.footer.links.gps, href: "/gps" },
+        {
+          label: t.footer.links.geospoofIos,
+          href: "https://apps.apple.com/app/apple-store/id6765719745?pt=128299974&ct=footer&mt=8",
+          external: true,
+        },
+        { label: t.footer.links.pro, href: "/pro" },
+      ],
+    },
     {
       title: t.footer.groups.guides,
       links: [
@@ -36,8 +57,6 @@ function getFooterGroups(t: Dictionary): Array<FooterGroup> {
         { label: t.footer.links.spoofEdge, href: "/spoof-location/edge" },
         { label: t.footer.links.spoofSafari, href: "/spoof-location/safari" },
         { label: t.footer.links.spoofTimezone, href: "/spoof-timezone" },
-        { label: t.footer.links.gps, href: "/gps" },
-        { label: t.footer.links.pro, href: "/pro" },
       ],
     },
     {
@@ -103,7 +122,7 @@ export function Footer({ className, ...props }: FooterProps) {
       <div className="mx-auto max-w-300">
         <nav
           aria-label={t.footer.footerNavAria}
-          className="grid grid-cols-2 gap-8 md:grid-cols-3"
+          className="grid grid-cols-2 gap-8 md:grid-cols-4"
         >
           {footerGroups.map((group) => (
             <div key={group.title}>

@@ -42,21 +42,37 @@ export const en = {
     secondaryPhoneAlt: "GeoSpoof app — secondary view",
   },
   products: {
-    eyebrow: "Free & Pro",
-    heading: "Start in your browser. Go deeper on your iPhone.",
+    eyebrow: "Two apps",
+    heading: "GeoSpoof and GeoSpoof GPS",
     subhead:
-      "The extension is free on every major browser. Pro adds GeoSpoof GPS for your iPhone's real system location, plus automatic VPN sync, per-site filters, and widgets.",
-    free: {
+      "GeoSpoof is the app you install to control what sites see. GeoSpoof GPS is the free desktop companion that takes it off the browser and onto your iPhone's real GPS.",
+    // Shared labels for the small spec rows at the bottom of each card.
+    availableOn: "Available on",
+    requires: "Needs",
+    app: {
       badge: "Free",
-      title: "GeoSpoof for your browser",
+      title: "GeoSpoof",
+      tagline: "Browser extension and mobile app",
       description:
-        "Spoof your geolocation, timezone, and WebRTC across Chrome, Firefox, Edge, Brave, and Safari. No account, no tracking.",
+        "Spoof your geolocation, timezone, and WebRTC so sites see the place you pick instead of where you are. No account, no tracking.",
+      platforms: "Chrome, Firefox, Edge, Brave, Safari, iPhone, iPad, Mac",
+    },
+    gps: {
+      badge: "Free companion app",
+      title: "GeoSpoof GPS",
+      tagline: "Menu-bar app for Mac and Windows",
+      description:
+        "Goes past the browser and sets your iPhone's real, system-level GPS to the location you pick in GeoSpoof. It sits in your menu bar — no window to manage.",
+      platforms: "macOS, Windows",
+      requirement:
+        "GeoSpoof Pro on your iPhone, and your iPhone connected to the computer when you set a location",
+      cta: "Get GeoSpoof GPS",
     },
     pro: {
       badge: "Pro",
       title: "GeoSpoof Pro",
       description:
-        "GeoSpoof GPS sets your iPhone's real, system-level location from a companion app on your Mac or Windows PC. Plus automatic VPN sync, per-site filters, widgets, map picker, and more.",
+        "Pro is an upgrade inside the iPhone app, not a third download. It's what unlocks the device-level GPS that GeoSpoof GPS drives — plus automatic VPN sync, widgets, the map picker, and per-site filters.",
       cta: "See what's in Pro",
       priceNote: "From $1.99/mo — or $24.99 lifetime",
     },
@@ -121,11 +137,13 @@ export const en = {
   },
   footer: {
     groups: {
+      products: "Products",
       guides: "Guides",
       learn: "Learn",
       company: "Company",
     },
     links: {
+      geospoofIos: "GeoSpoof for iPhone & iPad",
       spoofAllBrowsers: "Spoof location: all browsers",
       spoofChrome: "Spoof location in Chrome",
       spoofFirefox: "Spoof location in Firefox",
