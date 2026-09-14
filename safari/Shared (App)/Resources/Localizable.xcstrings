@@ -358,6 +358,7 @@
       }
     },
     "%@ loaded — %@, replaying at its recorded pace." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -434,6 +435,7 @@
       }
     },
     "%@ loaded — %@. This file had no timings, so it plays at walking pace." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1781,6 +1783,76 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "特定端口上的主机"
+          }
+        }
+      }
+    },
+    "A location can stay in place after the connection ends. While your spoofed location is active, turn off Developer Mode on your iPhone (Settings ▸ Privacy & Security ▸ Developer Mode). The location holds from that point on, including once you've left your computer behind." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ein Standort kann erhalten bleiben, nachdem die Verbindung endet. Schalte bei aktivem gefälschtem Standort auf dem iPhone den Entwicklermodus aus (Einstellungen ▸ Datenschutz & Sicherheit ▸ Entwicklermodus). Ab diesem Punkt bleibt der Standort bestehen, auch wenn du dich von deinem Computer entfernst."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Una ubicación puede mantenerse después de que termine la conexión. Con tu ubicación falseada activa, desactiva el Modo de desarrollador en el iPhone (Ajustes ▸ Privacidad y seguridad ▸ Modo de desarrollador). A partir de ese momento la ubicación se mantiene, incluso cuando te alejas de tu ordenador."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Une position peut se maintenir après la fin de la liaison. Avec votre position simulée active, désactivez le mode développeur sur l'iPhone (Réglages ▸ Confidentialité et sécurité ▸ Mode développeur). À partir de là, la position se maintient, y compris une fois loin de votre ordinateur."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sebuah lokasi bisa tetap bertahan setelah koneksinya berakhir. Saat lokasi palsu Anda aktif, matikan Mode Pengembang di iPhone (Pengaturan ▸ Privasi & Keamanan ▸ Mode Pengembang). Sejak saat itu lokasinya bertahan, termasuk setelah Anda menjauh dari komputer."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "設定した位置は、接続が終わった後も維持できます。偽装した位置が有効な状態で、iPhone のデベロッパモードをオフにしてください（設定 ▸ プライバシーとセキュリティ ▸ デベロッパモード）。それ以降はその位置が維持され、パソコンから離れても保たれます。"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Een locatie kan blijven staan nadat de verbinding is beëindigd. Zet, terwijl je nagebootste locatie actief is, de ontwikkelaarsmodus op je iPhone uit (Instellingen ▸ Privacy en beveiliging ▸ Ontwikkelaarsmodus). Vanaf dat moment blijft de locatie staan, ook als je je computer achterlaat."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Uma localização pode continuar valendo depois que a conexão termina. Com a sua localização falsificada ativa, desative o Modo de Desenvolvedor no iPhone (Ajustes ▸ Privacidade e Segurança ▸ Modo de Desenvolvedor). Dali em diante a localização se mantém, inclusive depois de você se afastar do computador."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Местоположение может сохраниться и после того, как связь закончится. Пока подменённое местоположение активно, выключите на iPhone режим разработчика (Настройки ▸ Конфиденциальность и безопасность ▸ Режим разработчика). С этого момента местоположение сохраняется, в том числе когда вы уходите от компьютера."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En plats kan ligga kvar efter att anslutningen avslutats. Stäng av utvecklarläget på din iPhone medan din falska plats är aktiv (Inställningar ▸ Integritet och säkerhet ▸ Utvecklarläge). Från den stunden ligger platsen kvar, även när du lämnat datorn bakom dig."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Một vị trí có thể được giữ lại sau khi kết nối kết thúc. Trong khi vị trí giả của bạn đang hoạt động, hãy tắt Chế độ nhà phát triển trên iPhone (Cài đặt ▸ Quyền riêng tư & Bảo mật ▸ Chế độ nhà phát triển). Từ lúc đó vị trí sẽ được giữ, kể cả khi bạn đã rời xa máy tính."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "连接结束之后，位置仍然可以保留下来。在伪装位置生效时，前往 iPhone 的 设置 ▸ 隐私与安全性 ▸ 开发者模式 将其关闭。从这一刻起，该位置便会保留下来，即使你离开了电脑也一样。"
           }
         }
       }
@@ -6207,6 +6279,7 @@
       }
     },
     "Changing the pace or repeat keeps your place on the route." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7752,6 +7825,76 @@
         }
       }
     },
+    "Connect this iPhone with a cable once to pair, then it works over Wi-Fi" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Verbinde dieses iPhone einmal per Kabel zum Koppeln — danach läuft es über Wi-Fi"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Conecta este iPhone con un cable una vez para emparejarlo; después funciona por Wi-Fi"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Connectez cet iPhone une fois avec un câble pour le jumeler, puis tout passe par le Wi-Fi"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sambungkan iPhone ini dengan kabel sekali untuk menyandingkan, setelah itu berjalan lewat Wi-Fi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ペアリングのため一度だけケーブルでこのiPhoneを接続。その後はWi-Fiで動作します"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Verbind deze iPhone één keer met een kabel om te koppelen, daarna werkt het via Wi-Fi"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Conecte este iPhone com um cabo uma vez para parear; depois funciona por Wi-Fi"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Подключите этот iPhone кабелем один раз для сопряжения — дальше всё работает по Wi-Fi"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Anslut den här iPhonen med kabel en gång för att parkoppla, sedan fungerar det via Wi-Fi"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Kết nối iPhone này bằng cáp một lần để ghép nối, sau đó nó hoạt động qua Wi-Fi"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "用数据线连接这台 iPhone 一次以完成配对，之后即可通过 Wi-Fi 使用"
+          }
+        }
+      }
+    },
     "Connected" : {
       "localizations" : {
         "de" : {
@@ -8102,6 +8245,76 @@
         }
       }
     },
+    "Continue without GPS" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ohne GPS fortfahren"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Continuar sin GPS"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Continuer sans GPS"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lanjutkan tanpa GPS"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "GPSなしで続ける"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Doorgaan zonder GPS"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Continuar sem GPS"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Продолжить без GPS"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fortsätt utan GPS"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tiếp tục mà không dùng GPS"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "继续，暂不使用 GPS"
+          }
+        }
+      }
+    },
     "Continues from where the route paused" : {
       "localizations" : {
         "de" : {
@@ -8243,6 +8456,7 @@
       }
     },
     "Controller" : {
+      "comment" : "Row label on the GPS status block. Its value is the name of the computer currently driving this device's GPS.",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8310,8 +8524,7 @@
             "value" : "控制端"
           }
         }
-      },
-      "comment" : "Row label on the GPS status block. Its value is the name of the computer currently driving this device's GPS."
+      }
     },
     "Controlling computer" : {
       "localizations" : {
@@ -12732,6 +12945,76 @@
         }
       }
     },
+    "Follow a custom route at walking, cycling, or driving pace" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Einer eigenen Route in Geh-, Rad- oder Fahrtempo folgen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sigue una ruta personalizada a ritmo de caminata, bicicleta o coche"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Suivre un itinéraire personnalisé à pied, à vélo ou en voiture"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ikuti rute khusus dengan kecepatan jalan, sepeda, atau mengemudi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "カスタムルートを徒歩・自転車・運転の速度でたどる"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Volg een eigen route op wandel-, fiets- of rijtempo"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Siga uma rota personalizada a pé, de bicicleta ou de carro"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Двигаться по своему маршруту пешком, на велосипеде или на машине"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Följ en egen rutt i gång-, cykel- eller biltempo"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Đi theo tuyến đường tùy chỉnh với tốc độ đi bộ, đạp xe hoặc lái xe"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "以步行、骑行或驾车速度沿自定义路线移动"
+          }
+        }
+      }
+    },
     "Following route" : {
       "comment" : "A label for a location that shows the user is following a route.",
       "isCommentAutoGenerated" : true,
@@ -14911,6 +15194,76 @@
         }
       }
     },
+    "Going out without your computer" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ohne deinen Computer unterwegs"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Salir sin tu ordenador"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Partir sans votre ordinateur"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pergi tanpa komputer Anda"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "パソコンを持たずに外出する"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Weggaan zonder je computer"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sair sem o seu computador"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Уйти без компьютера"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gå ut utan din dator"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ra ngoài mà không mang máy tính"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "不带电脑出门"
+          }
+        }
+      }
+    },
     "Handled by a VPN" : {
       "localizations" : {
         "de" : {
@@ -16455,6 +16808,76 @@
         }
       }
     },
+    "Install GeoSpoof GPS on your Mac or Windows PC" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Installiere GeoSpoof GPS auf deinem Mac oder Windows-PC"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Instala GeoSpoof GPS en tu Mac o PC con Windows"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Installez GeoSpoof GPS sur votre Mac ou PC Windows"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pasang GeoSpoof GPS di Mac atau PC Windows Anda"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "MacまたはWindows PCにGeoSpoof GPSをインストール"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Installeer GeoSpoof GPS op je Mac of Windows-pc"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Instale o GeoSpoof GPS no seu Mac ou PC com Windows"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Установите GeoSpoof GPS на Mac или ПК с Windows"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Installera GeoSpoof GPS på din Mac eller Windows-PC"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cài GeoSpoof GPS trên máy Mac hoặc PC Windows"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在 Mac 或 Windows 电脑上安装 GeoSpoof GPS"
+          }
+        }
+      }
+    },
     "Install GeoSpoof GPS on your Mac or Windows PC and open it — it walks you through the one-time setup. Your chosen location then syncs to this iPhone automatically, over Wi-Fi." : {
       "localizations" : {
         "de" : {
@@ -16740,6 +17163,7 @@
       }
     },
     "It's playing, but couldn't be saved on this device." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -16810,6 +17234,7 @@
       }
     },
     "It's playing, but couldn't be saved to your library." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -16880,6 +17305,7 @@
       }
     },
     "It's playing, but wasn't saved — your library is full at %lld routes. Delete one to keep this." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -20383,6 +20809,76 @@
         }
       }
     },
+    "Move this iPhone’s real GPS" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Das echte GPS dieses iPhones verschieben"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cambia el GPS real de este iPhone"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Déplacer le GPS réel de cet iPhone"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Pindahkan GPS asli iPhone ini"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このiPhoneの実際のGPSを移動する"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Verplaats de echte GPS van deze iPhone"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mova o GPS real deste iPhone"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Переместить реальный GPS этого iPhone"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Flytta denna iPhones verkliga GPS"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Di chuyển GPS thật của iPhone này"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "移动这台 iPhone 的真实 GPS"
+          }
+        }
+      }
+    },
     "Move your device's real GPS." : {
       "localizations" : {
         "de" : {
@@ -20869,6 +21365,77 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "需要 Pro 和一台电脑"
+          }
+        }
+      }
+    },
+    "Needs a Mac or Windows PC running GeoSpoof GPS." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Erfordert einen Mac oder Windows-PC, auf dem GeoSpoof GPS läuft."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Requiere un Mac o PC con Windows con GeoSpoof GPS en ejecución."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nécessite un Mac ou un PC Windows exécutant GeoSpoof GPS."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Memerlukan Mac atau PC Windows yang menjalankan GeoSpoof GPS."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "GeoSpoof GPSを実行しているMacまたはWindows PCが必要です。"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Vereist een Mac of Windows-pc waarop GeoSpoof GPS draait."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Requer um Mac ou PC com Windows executando o GeoSpoof GPS."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Требуется Mac или ПК с Windows с запущенным GeoSpoof GPS."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Kräver en Mac eller Windows-dator som kör GeoSpoof GPS."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Cần một máy Mac hoặc PC Windows đang chạy GeoSpoof GPS."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "需要一台运行 GeoSpoof GPS 的 Mac 或 Windows 电脑。"
           }
         }
       }
@@ -22488,6 +23055,76 @@
         }
       }
     },
+    "Now disconnect — Wi-Fi, hotspot, cable, all of it" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Jetzt trennen — Wi-Fi, Hotspot, Kabel, alles"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ahora desconecta: Wi-Fi, punto de acceso, cable, todo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Déconnectez maintenant — Wi-Fi, partage de connexion, câble, tout"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Sekarang putuskan semuanya — Wi-Fi, hotspot, kabel"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "あとは接続を切る — Wi-Fi、テザリング、ケーブル、すべて"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Verbreek nu alles — Wi-Fi, hotspot, kabel"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Agora desconecte tudo — Wi-Fi, ponto de acesso, cabo"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Теперь отключите всё — Wi-Fi, точку доступа, кабель"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Koppla nu från allt — Wi-Fi, delad internetanslutning, kabel"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Giờ hãy ngắt kết nối — Wi-Fi, điểm truy cập, cáp, tất cả"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "现在断开全部连接 — Wi-Fi、热点、数据线"
+          }
+        }
+      }
+    },
     "OK" : {
       "localizations" : {
         "de" : {
@@ -23468,6 +24105,76 @@
         }
       }
     },
+    "Opens GeoSpoof Pro pricing and the free trial" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Öffnet Preise und die kostenlose Testphase von GeoSpoof Pro"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abre los precios de GeoSpoof Pro y la prueba gratuita"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ouvre les tarifs de GeoSpoof Pro et l’essai gratuit"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Membuka harga GeoSpoof Pro dan uji coba gratis"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "GeoSpoof Proの料金と無料トライアルを開きます"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Opent de prijzen van GeoSpoof Pro en de gratis proefperiode"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abre os preços do GeoSpoof Pro e o teste gratuito"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Открывает цены GeoSpoof Pro и бесплатный пробный период"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Öppnar priser för GeoSpoof Pro och den kostnadsfria provperioden"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mở giá GeoSpoof Pro và bản dùng thử miễn phí"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "打开 GeoSpoof Pro 价格和免费试用"
+          }
+        }
+      }
+    },
     "Opens GeoSpoof Pro upgrade options" : {
       "localizations" : {
         "de" : {
@@ -23814,6 +24521,76 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "打开有关隐私以及如何查验 GeoSpoof 的说明"
+          }
+        }
+      }
+    },
+    "Opens how to keep a location after leaving your computer" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Öffnet, wie ein Standort erhalten bleibt, nachdem du deinen Computer verlässt"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abre cómo mantener una ubicación después de dejar tu ordenador"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ouvre comment conserver une position après avoir quitté votre ordinateur"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Membuka cara mempertahankan lokasi setelah meninggalkan komputer Anda"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "パソコンから離れても位置を保つ方法を開きます"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Opent hoe je een locatie behoudt nadat je je computer achterlaat"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Abre como manter uma localização depois de deixar o seu computador"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Открывает, как сохранить местоположение, уйдя от компьютера"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Öppnar hur du behåller en plats efter att du lämnat datorn"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mở hướng dẫn giữ vị trí sau khi rời khỏi máy tính"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "打开如何在离开电脑后保留位置"
           }
         }
       }
@@ -25226,6 +26003,7 @@
       }
     },
     "Points" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -29997,6 +30775,76 @@
         }
       }
     },
+    "Send this to your computer" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "An deinen Computer senden"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Envíalo a tu ordenador"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Envoyer à votre ordinateur"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Kirim ke komputer Anda"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "コンピュータに送信"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Naar je computer sturen"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Enviar para o seu computador"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Отправить на компьютер"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Skicka till din dator"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Gửi tới máy tính của bạn"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "发送到你的电脑"
+          }
+        }
+      }
+    },
     "Set All Websites to Allow" : {
       "localizations" : {
         "de" : {
@@ -30277,6 +31125,76 @@
         }
       }
     },
+    "Set any location, match your VPN, or follow a route at walking, cycling, or driving pace" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Beliebigen Standort setzen, mit deinem VPN abgleichen oder einer Route in Geh-, Rad- oder Fahrtempo folgen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fija cualquier ubicación, hazla coincidir con tu VPN o sigue una ruta a ritmo de caminata, bicicleta o coche"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Définissez une position, alignez-la sur votre VPN ou suivez un itinéraire à pied, à vélo ou en voiture"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Atur lokasi apa pun, sesuaikan dengan VPN Anda, atau ikuti rute dengan kecepatan jalan, sepeda, atau mengemudi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "好きな位置を設定、VPNに合わせる、または徒歩・自転車・運転の速度でルートをたどる"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Stel elke locatie in, stem deze af op je VPN of volg een route op wandel-, fiets- of rijtempo"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Defina qualquer localização, combine com sua VPN ou siga uma rota a pé, de bicicleta ou de carro"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Задайте любое место, синхронизируйте его с VPN или двигайтесь по маршруту пешком, на велосипеде или на машине"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ange valfri plats, matcha den med ditt VPN eller följ en rutt i gång-, cykel- eller biltempo"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Đặt vị trí bất kỳ, khớp với VPN của bạn, hoặc đi theo tuyến đường với tốc độ đi bộ, đạp xe hoặc lái xe"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "设置任意位置、与你的 VPN 匹配，或以步行、骑行或驾车速度沿路线移动"
+          }
+        }
+      }
+    },
     "Set up" : {
       "localizations" : {
         "de" : {
@@ -30343,6 +31261,76 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "设置"
+          }
+        }
+      }
+    },
+    "Set your location and check it has taken effect" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Standort setzen und prüfen, dass er greift"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Fija tu ubicación y comprueba que ha surtido efecto"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Définissez votre position et vérifiez qu'elle est bien appliquée"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Setel lokasi Anda dan pastikan sudah berlaku"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "位置を設定し、反映されていることを確認する"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Stel je locatie in en controleer of die is doorgevoerd"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Defina sua localização e confirme que ela valeu"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Задайте местоположение и убедитесь, что оно применилось"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ställ in din plats och kontrollera att den slagit igenom"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Đặt vị trí của bạn và kiểm tra xem nó đã có hiệu lực"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "设置位置，并确认已经生效"
           }
         }
       }
@@ -31885,6 +32873,76 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "开始免费试用"
+          }
+        }
+      }
+    },
+    "Start Over" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Von vorn beginnen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Empezar de nuevo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Recommencer"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Mulai dari awal"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "最初から再生"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Opnieuw beginnen"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Começar de novo"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Начать заново"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Börja om"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bắt đầu lại"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "从头开始"
           }
         }
       }
@@ -35759,6 +36817,147 @@
         }
       }
     },
+    "The trade-off is that the location is now fixed. To pick a different one, restart your iPhone and set the new location with your computer nearby again." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Der Haken ist, dass der Standort damit festgelegt ist. Um einen anderen zu wählen, starte dein iPhone neu und lege den neuen Standort fest, während dein Computer wieder in der Nähe ist."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La contrapartida es que la ubicación queda fija. Para elegir otra, reinicia tu iPhone y fija la nueva con tu ordenador cerca otra vez."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La contrepartie est que la position est désormais fixe. Pour en choisir une autre, redémarrez votre iPhone et définissez la nouvelle avec votre ordinateur à nouveau à proximité."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Konsekuensinya, lokasi itu jadi terkunci. Untuk memilih lokasi lain, mulai ulang iPhone Anda dan setel lokasi baru saat komputer Anda kembali berada di dekat Anda."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ただし、その位置は固定されます。別の位置を選ぶには、iPhone を再起動し、パソコンが近くにある状態で新しい位置を設定してください。"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Het nadeel is dat de locatie nu vastligt. Wil je een andere kiezen, start dan je iPhone opnieuw op en stel de nieuwe locatie in terwijl je computer weer in de buurt is."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "A contrapartida é que a localização fica fixa. Para escolher outra, reinicie o iPhone e defina a nova com o seu computador perto de você outra vez."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Плата за это в том, что местоположение теперь зафиксировано. Чтобы выбрать другое, перезагрузите iPhone и задайте новое, когда компьютер снова окажется рядом."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nackdelen är att platsen nu ligger fast. Vill du välja en annan startar du om din iPhone och ställer in den nya platsen med datorn i närheten igen."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Đánh đổi là vị trí giờ đã bị cố định. Để chọn vị trí khác, hãy khởi động lại iPhone và đặt vị trí mới khi máy tính ở gần bạn trở lại."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "代价是这个位置已经固定下来。要换成另一个位置，需要重启 iPhone，并在电脑重新回到身边时设置新位置。"
+          }
+        }
+      }
+    },
+    "The trade-off is that the location is now fixed. To pick a different one, turn Developer Mode back on, restart your iPhone, and set the new location with your computer nearby." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Der Haken ist, dass der Standort damit festgelegt ist. Um einen anderen zu wählen, schalte den Entwicklermodus wieder ein, starte dein iPhone neu und lege den neuen Standort fest, während dein Computer in der Nähe ist."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La contrapartida es que la ubicación queda fija. Para elegir otra, vuelve a activar el Modo de desarrollador, reinicia tu iPhone y fija la nueva con tu ordenador cerca."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "La contrepartie est que la position est désormais fixe. Pour en choisir une autre, réactivez le mode développeur, redémarrez votre iPhone et définissez la nouvelle avec votre ordinateur à proximité."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Konsekuensinya, lokasi itu jadi terkunci. Untuk memilih lokasi lain, aktifkan kembali Mode Pengembang, mulai ulang iPhone Anda, lalu setel lokasi baru saat komputer Anda berada di dekat Anda."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ただし、その位置は固定されます。別の位置を選ぶには、デベロッパモードをもう一度オンにし、iPhone を再起動して、パソコンが近くにある状態で新しい位置を設定してください。"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Het nadeel is dat de locatie nu vastligt. Wil je een andere kiezen, zet dan de ontwikkelaarsmodus weer aan, start je iPhone opnieuw op en stel de nieuwe locatie in terwijl je computer in de buurt is."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "A contrapartida é que a localização fica fixa. Para escolher outra, ative o Modo de Desenvolvedor de novo, reinicie o iPhone e defina a nova com o seu computador perto de você."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Плата за это в том, что местоположение теперь зафиксировано. Чтобы выбрать другое, снова включите режим разработчика, перезагрузите iPhone и задайте новое, когда компьютер окажется рядом."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Nackdelen är att platsen nu ligger fast. Vill du välja en annan slår du på utvecklarläget igen, startar om din iPhone och ställer in den nya platsen med datorn i närheten."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Đánh đổi là vị trí giờ đã bị cố định. Để chọn vị trí khác, hãy bật lại Chế độ nhà phát triển, khởi động lại iPhone, rồi đặt vị trí mới khi máy tính ở gần bạn."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "代价是这个位置已经固定下来。要换成另一个位置，需要重新开启开发者模式、重启 iPhone，并在电脑回到身边时设置新位置。"
+          }
+        }
+      }
+    },
     "This computer isn't following your route." : {
       "localizations" : {
         "de" : {
@@ -36964,6 +38163,76 @@
         }
       }
     },
+    "Turn off Developer Mode while the location is still active" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Entwicklermodus ausschalten, während der Standort noch aktiv ist"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Desactiva el Modo de desarrollador mientras la ubicación sigue activa"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Désactivez le mode développeur pendant que la position est encore active"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Matikan Mode Pengembang saat lokasinya masih aktif"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "位置が有効なうちにデベロッパモードをオフにする"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Zet de ontwikkelaarsmodus uit terwijl de locatie nog actief is"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Desative o Modo de Desenvolvedor enquanto a localização ainda está ativa"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Выключите режим разработчика, пока местоположение ещё активно"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Stäng av utvecklarläget medan platsen fortfarande är aktiv"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tắt Chế độ nhà phát triển khi vị trí vẫn đang hoạt động"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "在位置仍然生效时关闭开发者模式"
+          }
+        }
+      }
+    },
     "Turn on Allow Extension" : {
       "localizations" : {
         "de" : {
@@ -37106,6 +38375,7 @@
       }
     },
     "Turn on Sync to start moving your iPhone." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -40817,6 +42087,76 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "你的电脑还没有确认。它可能仍在追赶进度。"
+          }
+        }
+      }
+    },
+    "Your computer sets the location this iPhone reports. No jailbreak, and nothing extra to install on the phone." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dein Computer legt den Standort fest, den dieses iPhone meldet. Ohne Jailbreak, und auf dem iPhone muss nichts zusätzlich installiert werden."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Tu ordenador fija la ubicación que comunica este iPhone. Sin jailbreak y sin nada más que instalar en el teléfono."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Votre ordinateur définit la position indiquée par cet iPhone. Sans jailbreak, et rien de plus à installer sur le téléphone."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Komputer Anda menentukan lokasi yang dilaporkan iPhone ini. Tanpa jailbreak, dan tidak ada yang perlu dipasang lagi di ponsel."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このiPhoneが報告する位置は、あなたのコンピュータが設定します。脱獄は不要で、iPhoneに追加でインストールするものもありません。"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Je computer bepaalt de locatie die deze iPhone doorgeeft. Zonder jailbreak, en je hoeft niets extra op de telefoon te installeren."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Seu computador define a localização informada por este iPhone. Sem jailbreak e sem nada mais para instalar no telefone."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Местоположение, которое сообщает этот iPhone, задаёт ваш компьютер. Без джейлбрейка, и на телефон ничего дополнительно устанавливать не нужно."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Din dator anger platsen som den här iPhonen rapporterar. Utan jailbreak, och inget extra att installera på telefonen."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Máy tính của bạn đặt vị trí mà iPhone này báo cáo. Không cần jailbreak và không phải cài thêm gì trên điện thoại."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "这台 iPhone 报告的位置由你的电脑设置。无需越狱，手机上也不用再安装任何东西。"
           }
         }
       }

@@ -71,8 +71,24 @@ describe("Safari onboarding return contract", () => {
     expect(sceneDelegate).toContain("router.requestSafariOnboardingCompletion()");
   });
 
-  it("closes onboarding immediately after verified Safari success", () => {
-    expect(onboarding).toContain("[.welcome, .location, .enable, .safariReady]");
+  it("puts nothing between enabling Safari and the verified-success screen", () => {
+    // Both routes asserted whole, because the invariant is positional: `.enable` must be
+    // followed immediately by the screen that proves the extension runs — `.grant` on the
+    // route that needs website access repaired, `.safariReady` otherwise. That handshake is
+    // the only place the app verifies anything, and inserting a step into it spends the
+    // proof to make an ask.
+    //
+    // This used to assert `[.welcome, .location, .enable, .safariReady]` as one literal,
+    // from when the flow ended there. A device-GPS step now follows, so the literal moved
+    // rather than the rule.
+    expect(onboarding).toContain(
+      "[.welcome, .location, .enable, .grant, .safariReady, .deviceGps]"
+    );
+    expect(onboarding).toContain("[.welcome, .location, .enable, .safariReady, .deviceGps]");
+
+    // Last on both routes, so the flow still ends on a screen whose primary action enters
+    // the app. `GpsMotionModelTests.deviceGpsStepIsLast` covers the same property against
+    // the real function; this catches the literal being edited by hand.
     expect(onboarding).toContain("OnboardingSafariReadyView(");
     expect(onboarding).toContain("onFinish: onDone");
     expect(onboarding).not.toContain("onLearnAboutGPS: showGPSDetails");
@@ -80,7 +96,22 @@ describe("Safari onboarding return contract", () => {
 
   it("names all three location layers on the close screen", () => {
     expect(safariReadyView).toContain('Text("Safari is ready")');
-    expect(safariReadyView).toContain('Text("Start using GeoSpoof")');
+
+    // The button's words are injected rather than literal, because this screen stopped being
+    // the end of the flow: "Start using GeoSpoof" is the truth only when the device-GPS step
+    // will be skipped, and a promise of the app followed by another screen is the specific
+    // thing that reads as a bait. So the host decides — it owns `steps` — and both the
+    // mechanism and the two words it chooses between are pinned here.
+    expect(safariReadyView).toContain("Text(continueTitle)");
+    expect(onboarding).toContain(
+      'continueTitle: isStepSatisfied(.deviceGps) ? "Start using GeoSpoof" : "Continue"'
+    );
+
+    // The flow's actual last screen keeps an unconditional way into the app. It names what is
+    // being declined rather than promising the app, for the same reason the line above exists:
+    // on a screen headed "Move this iPhone's real GPS", "Start using GeoSpoof" reads as the
+    // button that starts *that*.
+    expect(onboarding).toContain('Text("Continue without GPS")');
 
     // Customers conflate browser geolocation, device GPS, and IP location —
     // partly because the store listing sells browser spoofing as "fake your GPS

@@ -67,6 +67,7 @@
 		C0DE000000000000000000C4 /* TimezoneShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000A4 /* TimezoneShape.swift */; };
 		C0DE000000000000000000C5 /* Coordinates.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000A5 /* Coordinates.swift */; };
 		C0DE000000000000000000E1 /* cities.json in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D1 /* cities.json */; };
+		C0DE000000000000000000E8 /* Central_Park_Loop.gpx in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D8 /* Central_Park_Loop.gpx */; };
 		C0DE000000000000000000E2 /* timezones.topo.json in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D2 /* timezones.topo.json */; };
 		C0DE000000000000000000E3 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D3 /* PrivacyInfo.xcprivacy */; };
 		C0DE000000000000000000E4 /* Outfit.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C0DE000000000000000000D4 /* Outfit.ttf */; };
@@ -195,6 +196,7 @@
 		C0DE000000000000000000A4 /* TimezoneShape.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimezoneShape.swift; sourceTree = "<group>"; };
 		C0DE000000000000000000A5 /* Coordinates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Coordinates.swift; sourceTree = "<group>"; };
 		C0DE000000000000000000D1 /* cities.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = cities.json; sourceTree = "<group>"; };
+		C0DE000000000000000000D8 /* Central_Park_Loop.gpx */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Central_Park_Loop.gpx; sourceTree = "<group>"; };
 		C0DE000000000000000000D2 /* timezones.topo.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = timezones.topo.json; sourceTree = "<group>"; };
 		C0DE000000000000000000D3 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		C0DE000000000000000000D4 /* Outfit.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Outfit.ttf; sourceTree = "<group>"; };
@@ -345,6 +347,7 @@
 				9281AA812FA50690007C77A7 /* Style.css */,
 				9281AA822FA50690007C77A7 /* Script.js */,
 				C0DE000000000000000000D1 /* cities.json */,
+				C0DE000000000000000000D8 /* Central_Park_Loop.gpx */,
 				C0DE000000000000000000D2 /* timezones.topo.json */,
 				C0DE000000000000000000D4 /* Outfit.ttf */,
 				C0DE000000000000000000D6 /* Nunito-Variable.ttf */,
@@ -640,6 +643,7 @@
 				9281AABF2FA50690007C77A7 /* Script.js in Resources */,
 				9281AAC32FA50690007C77A7 /* Assets.xcassets in Resources */,
 				C0DE000000000000000000E1 /* cities.json in Resources */,
+				C0DE000000000000000000E8 /* Central_Park_Loop.gpx in Resources */,
 				C0DE000000000000000000E2 /* timezones.topo.json in Resources */,
 				C0DE000000000000000000E3 /* PrivacyInfo.xcprivacy in Resources */,
 				9281AA972FA50690007C77A7 /* Main.storyboard in Resources */,

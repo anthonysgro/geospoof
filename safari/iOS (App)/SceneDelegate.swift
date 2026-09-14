@@ -98,6 +98,16 @@ struct RootView: View {
     @AppStorage("appearanceMode") private var appearance: AppearanceMode = .system
     @AppStorage("spoofOnboardingCompleted") private var onboardingCompleted = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Whether device GPS is already set up, resolved here so onboarding can skip its GPS step for
+    /// someone who has nothing left to do there.
+    ///
+    /// Answered in `RootView` because the roster lives in `GpsStatusStore`, which is iOS-app-only,
+    /// while `OnboardingView` is shared code that must not reach for it.
+    ///
+    /// Starts `false` and stays `false` on any failure, so the step shows. A step shown to someone
+    /// who did not need it costs them one tap; a step skipped for someone who did leaves them with
+    /// no guided route to the feature they paid for.
+    @State private var deviceGpsAlreadyWorking = false
 
     /// Whether setup owns the screen. Named so the branch below and the animation
     /// keyed to it read the same expression and can't drift apart.
@@ -108,7 +118,10 @@ struct RootView: View {
     var body: some View {
         Group {
             if showingOnboarding {
-                OnboardingView(controller: controller) {
+                OnboardingView(
+                    controller: controller,
+                    deviceGpsAlreadyWorking: deviceGpsAlreadyWorking
+                ) {
                     onboardingCompleted = true
                     router.showOnboarding = false
                 }
@@ -123,8 +136,21 @@ struct RootView: View {
         // skip path, and the debug replay in Settings — and a value-keyed animation
         // covers all of them without each having to remember.
         .animation(.easeInOut(duration: 0.35), value: showingOnboarding)
+        .task {
+            // Comfortably early: the customer walks welcome, the goal question, location, the Safari
+            // handoff, and verification before the GPS step can be reached, so this one-shot read is
+            // long settled by then. Resolving it here rather than on the step itself is what avoids a
+            // screen that appears and then vanishes — the "flashed and vanished" read that
+            // `advance()` already documents for an already-satisfied Safari step.
+            await resolveDeviceGpsReadiness()
+        }
         .onAppear {
             applyInterfaceStyle(appearance)
+            // Seeded here rather than when Routes is first opened, so the GPS tab's saved-route count is
+            // already right whichever surface the customer reaches first — a badge that reads 0 and then
+            // 1 the moment you look at the list is a worse introduction than the route itself is a good
+            // one. One flagged file write on the first launch of this build, and never again.
+            GpsSampleRoute.seedIfNeeded()
             // A locked control (which can't open the app itself) may have left a
             // paywall request; surface it now.
             if WidgetPaywallRequest.consume() { router.showPaywall = true }
@@ -143,6 +169,21 @@ struct RootView: View {
             DeviceGpsSheet {}
         }
         #endif
+    }
+
+    /// Decide whether onboarding's GPS step has anything to ask this customer.
+    ///
+    /// Both halves are required. Pro without a computer still needs the step — the computer is the
+    /// outstanding half, and it is the one the step exists to hand off. A computer without Pro
+    /// likewise. Only someone holding both has finished, and only they should never see it.
+    ///
+    /// `isStale` is the freshness test: the store resolves no owner when nothing has published
+    /// inside its window, which also covers the two-computers-and-no-pick case.
+    private func resolveDeviceGpsReadiness() async {
+        guard ProStore.shared.isPro else { return }
+        let store = GpsStatusStore()
+        await store.reload(selectedId: controller.selectedControllerId)
+        deviceGpsAlreadyWorking = !store.isStale
     }
 
     /// Teach the controller how to find out where the device actually is.
@@ -165,7 +206,8 @@ struct RootView: View {
                 // yields no position, and the caller must then leave the last one alone.
                 return GpsMotionSample(
                     latitude: nil, longitude: nil, travelledM: nil, seekSupported: false,
-                    confirmedRouteStartedAt: nil, rosterWasRead: true
+                    confirmedRouteStartedAt: nil, routeFinished: nil, routePaused: nil,
+                    rosterWasRead: true
                 )
             }
             let gate = GpsEchoGate(status: status, asked: controller.motionState)
@@ -187,6 +229,12 @@ struct RootView: View {
                 // of a run genuinely under way, not one the agent merely has on file.
                 confirmedRouteStartedAt: gate.confirmedRouteProgress == nil
                     ? nil : status.route?.startedAt,
+                // Gate-guarded like the marker above it, and for the same reason: a `finished` left over
+                // from the run this one replaced would tell a fresh replay it was already over.
+                routeFinished: gate.confirmedRouteProgress == nil ? nil : status.route?.finished,
+                // Gate-guarded for the same reason again. This is the computer's answer about holding, and
+                // it is what a Pause/Resume control must read — `motionState.routePaused` is the question.
+                routePaused: gate.confirmedRouteProgress == nil ? nil : status.route?.paused,
                 rosterWasRead: true
             )
         }
@@ -1035,7 +1083,12 @@ enum GpsMotionDetail: Equatable {
 /// Derived on demand and never stored. No wire field, no persistence, nothing for a second writer to
 /// disagree with — it is a reading of state that already exists.
 enum GpsDriver: Equatable {
-    /// A route is advancing the position. `name` is display-only and may be absent.
+    /// A route is advancing the position.
+    ///
+    /// `name` is carried for identity — it is what makes two drivers playing different routes unequal —
+    /// and deliberately **not** rendered by the Source row, which answers "what is driving this" with
+    /// "Route" and leaves "which route" to the section that owns it. May be absent: a GPX need not
+    /// carry a name.
     case route(name: String?)
     /// A steering vector is being integrated.
     case steering
@@ -1100,17 +1153,11 @@ enum GpsDriver: Equatable {
         }
     }
 
-    /// A second line naming the specific thing driving, where one exists. Route names are user
-    /// data, so callers must render this with `Text(verbatim:)`.
-    var detail: String? {
-        switch self {
-        case .route(let name):
-            guard let name, !name.isEmpty else { return nil }
-            return name
-        case .steering, .still, .undelivered, .notDriving:
-            return nil
-        }
-    }
+    // No `detail`. This used to carry the route's name as a second line under the title, which made
+    // the Source row two lines tall to repeat something the Route section states directly below it —
+    // and it was the *only* two-line row in a block of one-line rows, so it set the height for all of
+    // them. Source answers "what is driving this", and "Route" is the whole of that answer; *which*
+    // route is a different question, already answered on the same screen.
 
     /// Whether this driver is a problem rather than a state. Drives tint, so the row can read as a
     /// warning without a second source of truth for "is something wrong".
@@ -1331,6 +1378,58 @@ nonisolated enum GpsGpxImportFailure: Error, Equatable {
 /// route rather than partially filled: a route with holes in its timing would replay at a pace
 /// that is neither the recorded one nor a chosen one, and the agent's own fallback flag can't
 /// describe that.
+/// Puts one route in the library the first time this build runs, so a customer opening Routes meets a
+/// real route instead of an empty screen and an Import button.
+///
+/// **Why it lives here rather than on `GpsRouteStore`.** The store is in shared code, compiled for the
+/// widget and macOS too; `GpsGpxImporter` is iOS-only, because parsing GPX is part of the iOS GPS surface.
+/// Seeding needs both, so it belongs on the iOS side of that boundary — the same split
+/// `motionPositionProvider` exists to keep, where the shared layer owns storage and the iOS layer owns the
+/// formats.
+///
+/// **Once ever, and deletion is final.** The flag guarantees that, and it is deliberately *not* a check for
+/// an empty library: someone who deletes the sample has said they don't want it, and putting it back on the
+/// next launch would be the app arguing with them. Keying off a flag rather than off "is this a fresh
+/// install" is also what delivers it to existing customers on the update that ships it — they are the ones
+/// who have already seen the empty screen.
+///
+/// **Refusals are silent and permanent.** A missing or unparseable resource is a build mistake rather than
+/// a customer problem, and a full library belongs to someone who needs no help discovering routes. The flag
+/// is set either way, so a broken bundle costs one file read rather than one on every launch.
+nonisolated enum GpsSampleRoute {
+    private static let seededKey = "gpsSampleRouteSeeded"
+    /// Bundled resource name, and the fallback title. The GPX carries its own `<name>` — "Central Park
+    /// Loop" — so the fallback is only reached if that were ever stripped.
+    private static let resource = "Central_Park_Loop"
+    private static let displayName = "Central Park Loop"
+
+    @discardableResult
+    static func seedIfNeeded(
+        defaults: UserDefaults = .standard,
+        bundle: Bundle = .main
+    ) -> Bool {
+        guard !defaults.bool(forKey: seededKey) else { return false }
+        defaults.set(true, forKey: seededKey)
+
+        guard let url = bundle.url(forResource: resource, withExtension: "gpx"),
+              let data = try? Data(contentsOf: url) else {
+            Log.bridge.warn("route library: sample route missing from the bundle")
+            return false
+        }
+        guard case .success(let route) = GpsGpxImporter.route(from: data, fallbackName: displayName) else {
+            Log.bridge.warn("route library: sample route failed to parse")
+            return false
+        }
+        let saved = GpsSavedRoute(adopting: route, source: .sample, fallbackName: displayName)
+        if let failure = GpsRouteStore.shared.save(saved) {
+            Log.bridge.warn("route library: sample route not saved (\(String(describing: failure)))")
+            return false
+        }
+        Log.bridge.info("route library: seeded sample route")
+        return true
+    }
+}
+
 nonisolated enum GpsGpxImporter {
     /// Refuse before allocating. Well above any real activity file — a 24-hour ride at one point
     /// per second is a couple of megabytes — and far below anything that would strain the AFC
@@ -1635,6 +1734,21 @@ struct GpsView: View {
     /// `SpoofController`'s published properties and a file read per render to learn something we
     /// authored is the wrong trade. Refreshed when the route identity changes.
     @State private var loadedRoute: GpsRoute?
+    /// The playing route's name **as the library currently spells it**, or `nil` when it isn't a
+    /// library route.
+    ///
+    /// Exists because a route's name has three copies and renaming only updates one of them. The
+    /// library entry is the one the customer edits. `route.json` holds a copy taken when playback
+    /// started, and the agent echoes that copy back in every report — so both of this tab's name
+    /// readers were quoting a snapshot. Nothing refreshed it either: `name` is deliberately excluded
+    /// from the content hash so a rename can't restart a run, which also means `routeId` doesn't move
+    /// and `refreshLoadedRoute`'s trigger never fires. The stale name then outlived relaunches,
+    /// because the file it came from did.
+    ///
+    /// Resolved from `savedRouteId` — the entity id, which exists precisely so "which library entry is
+    /// playing" survives the content id changing — and read off the summaries index that
+    /// `refreshLoadedRoute` already loads, so it costs nothing extra.
+    @State private var activeRouteName: String?
     /// How many routes the library holds. Refreshed on appearance and after an import, which are the
     /// only moments it can change while this tab is on screen — deleting happens on the library screen,
     /// whose own `onAppear` this tab's re-appearance follows.
@@ -1652,6 +1766,15 @@ struct GpsView: View {
     @State private var confirmFeedback = 0
     /// The accelerated poll that runs while a request is outstanding.
     @State private var burstTask: Task<Void, Never>?
+    /// Whether the "going out without your computer" explainer is up. See `offlineHoldSection`.
+    @State private var showOfflineHold = false
+    /// The route just imported, pushed so the customer lands on it.
+    ///
+    /// Driven from an optional rather than a `NavigationLink`, because the push has to happen from code —
+    /// an import can arrive from AirDrop, Mail or a share sheet with nothing on screen to have been
+    /// tapped. Mirrors `GpsRouteLibraryView.selected`, which solves the same problem for a row tap that
+    /// has to load an entry before it can navigate.
+    @State private var importedRoute: GpsSavedRoute?
     /// Whether to ask about turning Sync on before starting a route. See `syncStartDialog`.
     @State private var confirmSyncStart = false
     /// Gates the review report, same key `SpoofControlPanel` uses. Asking someone to rate the app before
@@ -1708,6 +1831,17 @@ struct GpsView: View {
             .groupedFormStyle()
             .tint(.brand)
             .navigationTitle("GPS")
+            // Where an import lands. Attached to the `Form` rather than to any row, because the push has
+            // no originating control — the file can arrive from AirDrop, Mail or a share sheet while this
+            // tab merely happens to be the one on screen.
+            //
+            // `onDeleted`-equivalent is `refreshLoadedRoute`, the same closure the tab's own route row
+            // passes, so a rename or delete made on the pushed screen is reflected here on the way back.
+            .navigationDestination(item: $importedRoute) { entry in
+                GpsRouteDetailView(controller: controller, entry: entry) {
+                    refreshLoadedRoute()
+                }
+            }
             // Two haptics, deliberately: one the moment a control is pressed, one when the agent
             // confirms it. The press one is what was missing — with a one-to-four-second gap before
             // anything on screen moved, a silent tap read as a tap that didn't land. The confirmation
@@ -1769,6 +1903,12 @@ struct GpsView: View {
             // Keyed on the route identity rather than on a timer: the file only changes when the
             // route does, and the id is derived from its content so any change moves it.
             .onChange(of: controller.motionState.routeId) { _, _ in refreshLoadedRoute() }
+            // The entity id as well as the content id. A rename moves neither — that is the whole
+            // point of `name` being outside the hash — so this does not catch the rename itself;
+            // `onAppear` does, when the tab comes back from the library the rename happened in. This
+            // catches a switch between two saved routes that happen to share content, where `routeId`
+            // is identical and only the library entry differs.
+            .onChange(of: controller.motionState.savedRouteId) { _, _ in refreshLoadedRoute() }
             // A file handed to the app while this tab is already open. `onAppear` covers the cold
             // launch and a tab switch; this covers the case where neither fires.
             .onChange(of: pendingImport.url) { _, url in
@@ -2062,7 +2202,9 @@ struct GpsView: View {
             }
             return .route(
                 GpsRouteProgress(
-                    name: route.name,
+                    // The agent echoes the name it was handed when the run began, so a rename since
+                    // then is invisible to it. The library is authoritative — see `activeRouteName`.
+                    name: activeRouteName ?? route.name,
                     travelledM: progress.travelledM,
                     totalM: progress.totalM,
                     remainingSecs: progress.remainingSecs,
@@ -2210,6 +2352,7 @@ struct GpsView: View {
     @ViewBuilder
     private var connectionZone: some View {
         controllingComputerSection
+        offlineHoldSection
         // Sets expectations about scope rather than reporting state, so it belongs at the bottom in
         // the phases where someone is still deciding whether this feature is for them.
         switch phase {
@@ -2218,6 +2361,51 @@ struct GpsView: View {
         case .notPro, .chooseController, .entitlementRejected, .ready, .spoofing, .lost:
             EmptyView()
         }
+    }
+
+    /// How to keep a location after walking away from the computer.
+    ///
+    /// **The single most valuable thing about this feature that nobody discovers.** The ordinary running
+    /// state needs the computer reachable, so customers reasonably conclude the location dies when they
+    /// leave — and the whole appeal of moving a device's real GPS is being somewhere else while you are
+    /// out. Turning Developer Mode off before disconnecting keeps it, with the phone fully off-network.
+    /// It was documented on the website and nowhere in the app, which is the wrong way round: the person
+    /// about to leave the house is holding the phone, not reading /gps.
+    ///
+    /// Lives in zone 5 because it is a fact about the *connection* — specifically about not having one —
+    /// and the zone's own remit is what governs the link between phone and computer.
+    ///
+    /// **Shown in every phase, including before setup.** It is the answer to "can I actually use this away
+    /// from my desk", which is a buying question as much as an operating one, and gating it on a running
+    /// spoof would hide it from exactly the person weighing up whether the feature is worth having. The
+    /// sheet is where the sequencing matters, so the sheet is where the sequence is spelled out.
+    private var offlineHoldSection: some View {
+        Section {
+            Button {
+                showOfflineHold = true
+            } label: {
+                HStack(spacing: 14) {
+                    Image(systemName: "figure.walk.departure")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundStyle(Color.brand)
+                        .frame(width: 24)
+                        .accessibilityHidden(true)
+                    Text("Going out without your computer")
+                        .foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                        .accessibilityHidden(true)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityElement(children: .combine)
+            .accessibilityHint("Opens how to keep a location after leaving your computer")
+        }
+        .adaptiveModalCover(isPresented: $showOfflineHold) { OfflineHoldSheet() }
     }
 
     // MARK: Sections
@@ -2536,18 +2724,12 @@ struct GpsView: View {
                     .font(.footnote)
                     .foregroundStyle(driver.isProblem ? .orange : Color.secondary)
                     .accessibilityHidden(true)
-                VStack(alignment: .trailing, spacing: 1) {
-                    Text(title)
-                        .foregroundStyle(driver.isProblem ? .orange : .secondary)
-                        .multilineTextAlignment(.trailing)
-                    // The route's own name — user data, so verbatim.
-                    if let detail = driver.detail {
-                        Text(verbatim: detail)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                }
+                // One line, and no `VStack`. See `GpsDriver`'s note where `detail` used to be: the
+                // route's name was a second line here restating what the Route section says below,
+                // and it made this the tallest row in a block of single-line rows.
+                Text(title)
+                    .foregroundStyle(driver.isProblem ? .orange : .secondary)
+                    .multilineTextAlignment(.trailing)
             }
             .accessibilityElement(children: .combine)
         }
@@ -2590,7 +2772,8 @@ struct GpsView: View {
                     Spacer()
                 }
                 .accessibilityElement(children: .combine)
-                if let name = route.name, !name.isEmpty {
+                // Library name first, `route.json`'s copy only as a fallback. See `activeRouteName`.
+                if let name = activeRouteName ?? route.name, !name.isEmpty {
                     LabeledRow(label: "Route", value: Text(verbatim: name))
                 }
                 LabeledRow(label: "Distance", value: Text(verbatim: distanceText(route.lengthMeters)))
@@ -2647,6 +2830,15 @@ struct GpsView: View {
             }
         }
         .disabled(pendingAction != nil)
+        // **`.disabled` alone does not dim these.** The GPS tab applies `.tint(.brand)` at its root and
+        // Stop Route adds `.tint(.red)`; a tinted label in a `Form` row keeps its colour when the
+        // control is disabled, so the whole block sat at full strength while refusing every tap —
+        // "Pausing…" looked like a finished state rather than a request in flight, and Stop Route
+        // looked pressable.
+        //
+        // Applied to every button rather than only the pending one, because they are all disabled and
+        // dimming just the busy one would leave the others reading as available.
+        .opacity(pendingAction != nil ? 0.45 : 1)
     }
 
     /// The one line that explains an unanswered request.
@@ -2715,7 +2907,9 @@ struct GpsView: View {
         if let entry = activeLibraryEntry {
             NavigationLink {
                 GpsRouteDetailView(controller: controller, entry: entry) {
-                    savedRouteTally = GpsRouteStore.shared.summaries().count
+                    // The whole refresh, not just the tally: this is the screen that shows the
+                    // playing route's name, and `refreshLoadedRoute` is what re-resolves it.
+                    refreshLoadedRoute()
                 }
             } label: {
                 label
@@ -3088,7 +3282,14 @@ struct GpsView: View {
     /// Re-read `route.json` into the cache. Called when the route identity changes.
     private func refreshLoadedRoute() {
         loadedRoute = controller.motionState.routeId == nil ? nil : controller.loadGpsRoute()
-        savedRouteTally = GpsRouteStore.shared.summaries().count
+        let library = GpsRouteStore.shared.summaries()
+        // Same read that feeds the tally below, so resolving the current name is free. `nil` for a
+        // route with no library entry — today the DEBUG test route — where the reported name is the
+        // only name there is and the call sites fall back to it.
+        activeRouteName = controller.motionState.savedRouteId.flatMap { saved in
+            library.first(where: { $0.id == saved })?.name
+        }
+        savedRouteTally = library.count
     }
 
     /// Read the picked file and start playback, or explain why not.
@@ -3150,10 +3351,11 @@ struct GpsView: View {
                 guard let data = try? Data(contentsOf: url) else {
                     return Result<GpsRoute, GpsGpxImportFailure>.failure(.unreadable)
                 }
-                if deleteAfterReading {
-                    // After reading, so a failed delete can never cost us the import.
-                    try? FileManager.default.removeItem(at: url)
-                }
+                // **Deletion moved to after a successful save** — see the call site below. It used to
+                // happen here, right after reading, so a route that couldn't be kept took the customer's
+                // only copy with it. Auto-start hid that: the route played once, so the loss was invisible
+                // until they looked for it in the library. With starting removed there is nothing left to
+                // mask it, and a full library would simply eat the file.
                 return GpsGpxImporter.route(
                     from: data,
                     fallbackName: url.deletingPathExtension().lastPathComponent
@@ -3162,36 +3364,54 @@ struct GpsView: View {
 
             switch outcome {
             case .success(let route):
-                // Save to the library first, then play. Import has always started playback
-                // immediately and that stays — the only change is that the route is now kept, so it
-                // doesn't have to be re-AirDropped to be used a second time.
+                // **Save and open. Deliberately no longer save and play.**
                 //
-                // A full library refuses rather than evicting, and it must not also swallow the
-                // import: playback still starts, so the file the customer just picked does what they
-                // expected while the message explains why it wasn't kept.
+                // Starting on import was inherited from before a library existed, when importing was the
+                // only way to use a route so playing was the whole interaction. Now it means opening a
+                // file moves the device's real GPS — every app, Find My included — with nothing pressed,
+                // and it lands past the pace and repeat controls whose own footer warns that changing
+                // them restarts the route. So the customer starts it, from a screen that first shows them
+                // what they imported.
+                //
+                // A full library refuses rather than evicting. That case gets the message and no push:
+                // there is no entry to open, and a detail screen for a route that was never stored would
+                // offer to delete a file that does not exist.
                 let saved = GpsSavedRoute(
                     adopting: route,
                     source: .gpxImport,
                     fallbackName: url.deletingPathExtension().lastPathComponent
                 )
-                let saveFailure = GpsRouteStore.shared.save(saved)
-                if let failure = controller.startGpsRoute(
-                    saved.playbackRoute(), savedRouteId: saveFailure == nil ? saved.id : nil
-                ) {
-                    routeImportMessage = Self.message(for: failure)
+                if let saveFailure = GpsRouteStore.shared.save(saved) {
+                    // Shared with the detail screen's own save failures rather than a second set of
+                    // sentences. The old copy here opened "It's playing, but wasn't saved…", which is
+                    // no longer true of anything — and the detail screen's wording was already the
+                    // version that doesn't claim playback.
+                    routeImportMessage = GpsRouteDetailView.message(for: saveFailure)
+                    showRouteImportAlert = true
+                    // Quiets the review ask, same as a parse failure already did. This branch didn't
+                    // before, because the route used to play anyway — a full library cost you the *saving*,
+                    // not the thing you came to do. Now that import no longer starts anything, this path
+                    // hands the customer nothing at all, which is exactly the moment not to ask for stars.
+                    noteReviewTrouble()
                 } else {
-                    routeImportMessage = Self.startedMessage(
-                        for: route,
-                        deviceGpsOff: !controller.deviceGpsEnabled,
-                        saveFailure: saveFailure
-                    )
+                    if deleteAfterReading {
+                        // Only now. The route is in the library, so the Inbox copy is redundant rather
+                        // than the last one.
+                        try? FileManager.default.removeItem(at: url)
+                    }
+                    // No alert on success. The push *is* the acknowledgement, and an alert stacked in
+                    // front of the screen it is announcing is one dismissal for no information — the
+                    // detail screen already names the route, draws it, and shows the pace the file
+                    // resolved to, which is everything the old "loaded" message carried.
+                    importedRoute = saved
                 }
             case .failure(let failure):
                 routeImportMessage = Self.message(for: failure)
+                showRouteImportAlert = true
                 noteReviewTrouble()
             }
-            showRouteImportAlert = true
             refreshStatus()
+            refreshLoadedRoute()
         }
     }
 
@@ -3208,69 +3428,14 @@ struct GpsView: View {
     // `String(localized:)` both registers the key for extraction and resolves it at runtime.
     // Interpolating into it is correct and produces `%@`-style specifiers a translator can reorder.
 
-    private static func startedMessage(
-        for route: GpsRoute,
-        deviceGpsOff: Bool,
-        saveFailure: GpsRouteSaveFailure? = nil
-    ) -> String {
-        let distance = Measurement(value: route.lengthMeters, unit: UnitLength.meters)
-            .formatted(.measurement(width: .abbreviated, usage: .road))
-        let name = route.name?.isEmpty == false ? route.name! : String(localized: "Route")
-        // Names the pace when we had to choose one, so nobody is surprised by a walking-speed
-        // replay of a cycling track.
-        let loaded: String
-        switch route.speed {
-        case .asRecorded:
-            loaded = String(localized: "\(name) loaded — \(distance), replaying at its recorded pace.")
-        case .fixed:
-            loaded = String(localized: "\(name) loaded — \(distance). This file had no timings, so it plays at walking pace.")
-        }
-        // The route plays either way; this only says whether it was *kept*. Silence here would be the
-        // worse failure — someone who imports fifty routes and finds none of them saved has been
-        // misled by an unqualified "loaded".
-        var message = loaded
-        if let saveFailure { message = joinSentences(message, Self.message(for: saveFailure)) }
-        // Without this, importing a route with Device GPS switched off reports plain success and
-        // then nothing moves — the worst kind of failure, because it looks like it worked and the
-        // toggle that would fix it is one the customer may never have seen.
-        guard deviceGpsOff else { return message }
-        return joinSentences(message, String(localized: "Turn on Sync to start moving your iPhone."))
-    }
-
-    /// Why a route couldn't be kept, said without implying it isn't playing — it is.
-    private static func message(for failure: GpsRouteSaveFailure) -> String {
-        switch failure {
-        case .libraryFull(let limit):
-            return String(localized: "It's playing, but wasn't saved — your library is full at \(limit) routes. Delete one to keep this.")
-        case .invalid:
-            // The route validates or playback would have refused it too, so this is unreachable in
-            // practice. It still needs a sentence rather than silence.
-            return String(localized: "It's playing, but couldn't be saved to your library.")
-        case .writeFailed:
-            return String(localized: "It's playing, but couldn't be saved on this device.")
-        }
-    }
-
-    /// Joins two already-localised sentences.
-    ///
-    /// Deliberately not a `"\(a) \(b)"` interpolation. Japanese and Simplified Chinese close a
-    /// sentence with `。` and put nothing after it, so an ASCII space leaves a visible gap that
-    /// reads as machine translation — small, but it is the kind of tell a customer notices before
-    /// they can say why.
-    ///
-    /// Keys off the terminator the translation actually used rather than the current locale, so it
-    /// stays correct if a translation mixes scripts, and needs no revisit when a language is added.
-    private static func joinSentences(_ first: String, _ second: String) -> String {
-        guard !first.isEmpty else { return second }
-        guard !second.isEmpty else { return first }
-        // Ideographic sentence-final punctuation. These are already full-width and carry their own
-        // trailing whitespace in the glyph.
-        let ideographicTerminators: Set<Character> = ["。", "！", "？", "、", "．"]
-        guard let last = first.last, ideographicTerminators.contains(last) else {
-            return first + " " + second
-        }
-        return first + second
-    }
+    // No `message(for: GpsRouteSaveFailure)` here, and no `startedMessage`.
+    //
+    // Both existed to describe an import that had already begun playing: one opened "<name> loaded —
+    // 4.2 km…" and appended a nudge about Sync being off, the other opened "It's playing, but wasn't
+    // saved…". Import no longer plays, so every sentence in both was a claim about something that isn't
+    // happening. Save failures now go through `GpsRouteDetailView.message(for:)`, whose wording never
+    // claimed playback and is already translated; success needs no sentence at all, because the customer
+    // is looking at the route.
 
     /// Delegated to `GpsRouteFormat`: the GPS tab and the library screen both import files and
     /// must explain a refusal the same way.
@@ -3515,29 +3680,20 @@ struct GpsRouteLibraryView: View {
             if summaries.isEmpty {
                 emptySection
             } else {
-                Section {
-                    ForEach(summaries) { summary in
-                        Button {
-                            open(summary)
-                        } label: {
-                            row(summary)
-                        }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            Button(role: .destructive) {
-                                delete(summary)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                            // `role: .destructive` does not make this red on its own. This screen
-                            // inherits `.tint(.brand)` from the GPS tab's root, and the inherited tint
-                            // wins — so a delete gesture renders brand green without this.
-                            .tint(.red)
-                        }
-                    }
-                } header: {
-                    Text("Saved")
-                } footer: {
-                    Text("\(summaries.count) of \(GpsRouteStore.maxEntries) saved.")
+                // **Two sections only once something is starred.** With no favourites the list is one
+                // group headed "Saved", exactly as before — a "Favorites" header over an empty space and
+                // an "All Routes" header over everything is two labels earning nothing.
+                //
+                // Sectioning rather than sorting silently: the library holds up to 50, so "why is this
+                // one at the top" is a real question at the size this reaches, and a header answers it
+                // where a star glyph alone only hints. The store's `libraryOrder` already puts favourites
+                // first, so the split below is a partition of an already-correct order rather than a
+                // second opinion about it.
+                if favorites.isEmpty {
+                    routeSection(summaries, header: "Saved", showsTally: true)
+                } else {
+                    routeSection(favorites, header: "Favorites", showsTally: false)
+                    routeSection(others, header: "Saved", showsTally: true)
                 }
             }
         }
@@ -3578,6 +3734,67 @@ struct GpsRouteLibraryView: View {
             Text(message ?? "")
         }
         .onAppear { reload() }
+    }
+
+    /// Starred routes, in the order the store already put them.
+    ///
+    /// Filtered rather than re-sorted — `GpsRouteStore.libraryOrder` has done the ordering, and sorting
+    /// again here would be a second place for the rule to live.
+    private var favorites: [GpsRouteSummary] { summaries.filter(\.favorite) }
+    private var others: [GpsRouteSummary] { summaries.filter { !$0.favorite } }
+
+    /// One section of rows. Shared by both groups so the swipe actions, the row, and the tap target
+    /// cannot end up differing between Favorites and Saved.
+    ///
+    /// - Parameter showsTally: only the last section carries the count, which is a fact about the whole
+    ///   library rather than about the group it sits under.
+    @ViewBuilder
+    private func routeSection(
+        _ rows: [GpsRouteSummary],
+        header: LocalizedStringKey,
+        showsTally: Bool
+    ) -> some View {
+        Section {
+            ForEach(rows) { summary in
+                Button {
+                    open(summary)
+                } label: {
+                    row(summary)
+                }
+                // Leading edge for the constructive gesture, trailing for the destructive one — the iOS
+                // convention, and it means a full swipe in either direction can't be the wrong one.
+                .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                    Button {
+                        toggleFavorite(summary)
+                    } label: {
+                        Label(
+                            summary.favorite ? "Remove from Favorites" : "Save as Favorite",
+                            systemImage: summary.favorite ? "star.slash" : "star"
+                        )
+                    }
+                    // Overrides the brand tint this screen inherits from the GPS tab's root, the same
+                    // way the delete action below has to override it to render red.
+                    .tint(Color.starAccent)
+                }
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        delete(summary)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                    // `role: .destructive` does not make this red on its own. This screen
+                    // inherits `.tint(.brand)` from the GPS tab's root, and the inherited tint
+                    // wins — so a delete gesture renders brand green without this.
+                    .tint(.red)
+                }
+            }
+        } header: {
+            Text(header)
+        } footer: {
+            if showsTally {
+                Text("\(summaries.count) of \(GpsRouteStore.maxEntries) saved.")
+            }
+        }
     }
 
     private var emptySection: some View {
@@ -3625,6 +3842,15 @@ struct GpsRouteLibraryView: View {
                 .foregroundColor(.secondary)
             }
             Spacer(minLength: 8)
+            // Kept even inside the Favorites section, where it is arguably redundant. It is what makes a
+            // starred route recognisable after it has been scrolled away from its header, and it is the
+            // only mark still visible in the sectionless single-group list.
+            if summary.favorite {
+                Image(systemName: "star.fill")
+                    .font(.caption)
+                    .foregroundColor(Color.starAccent)
+                    .accessibilityLabel("Favorites")
+            }
             if controller.motionState.savedRouteId == summary.id {
                 // Which route is loaded for playback — read from `motionState`, so it is what we asked
                 // for rather than what a report confirmed. "Active route", not "currently playing": the
@@ -3662,6 +3888,16 @@ struct GpsRouteLibraryView: View {
         selected = entry
     }
 
+    /// Star or unstar from the list, without loading the full entry into a push.
+    ///
+    /// `setFavorite` does its own read, so this stays a summary-level gesture. A `nil` result means the
+    /// file went missing or wouldn't write; `reload()` runs either way, because that is also what repairs
+    /// an index that has drifted from the directory.
+    private func toggleFavorite(_ summary: GpsRouteSummary) {
+        GpsRouteStore.shared.setFavorite(id: summary.id, !summary.favorite)
+        reload()
+    }
+
     private func delete(_ summary: GpsRouteSummary) {
         if controller.motionState.savedRouteId == summary.id {
             // Otherwise the device keeps walking a route the library no longer has, and nothing on
@@ -3672,8 +3908,15 @@ struct GpsRouteLibraryView: View {
         reload()
     }
 
-    /// Import from this screen. Saves and plays, exactly as importing from the GPS tab does — one
-    /// behaviour for the same action, wherever it is taken from.
+    /// Import from this screen. Saves and opens the route, exactly as importing from the GPS tab does —
+    /// one behaviour for the same action, wherever it is taken from.
+    ///
+    /// **It used to save and immediately play.** That was inherited from before a library existed, when
+    /// importing was the only way to use a route and playing was therefore the whole interaction. With a
+    /// library, a detail screen and a transport, starting on import means opening a file moves the
+    /// device's real GPS — every app, Find My included — without anything being pressed, and it skips the
+    /// pace and repeat controls whose own footer warns that changing them restarts the route. So the file
+    /// is saved and opened, and starting is left to the customer.
     private func importRoute(from url: URL) {
         Task { @MainActor in
             let outcome = await Task.detached(priority: .userInitiated) {
@@ -3697,15 +3940,28 @@ struct GpsRouteLibraryView: View {
                     fallbackName: url.deletingPathExtension().lastPathComponent
                 )
                 if let failure = GpsRouteStore.shared.save(saved) {
+                    // Couldn't be kept, so there is no library entry to open. The message is the whole
+                    // response — pushing a detail screen for a route that isn't in the library would
+                    // give it a Delete button for a file that was never stored.
                     message = GpsRouteDetailView.message(for: failure)
-                } else if let failure = controller.startGpsRoute(
-                    saved.playbackRoute(), savedRouteId: saved.id
-                ) {
-                    message = GpsRouteFormat.message(for: failure)
+                    // Same reasoning as the GPS tab's import: with nothing started and nothing saved, the
+                    // customer got nothing, so hold the review ask off for a while.
+                    ReviewPrompt.shared.noteTrouble()
+                    reload()
+                } else {
+                    reload()
+                    // Opening the route *is* the confirmation, which is why there is no alert on the
+                    // success path. The screen names it, draws it, and shows the pace the file resolved
+                    // to — everything the old "loaded — 4.2 km, plays at walking pace" alert said, in a
+                    // place where it can also be acted on.
+                    selected = saved
                 }
-                reload()
             case .failure(let failure):
                 message = GpsRouteFormat.message(for: failure)
+                // A file that couldn't be read or parsed is a visible failure. The GPS tab's import has
+                // always reported this; this screen's never did, so importing from the library and hitting
+                // a bad GPX left the review ask armed through a moment that plainly went wrong.
+                ReviewPrompt.shared.noteTrouble()
             }
         }
     }
@@ -3726,8 +3982,14 @@ struct GpsRouteDetailView: View {
     @ObservedObject var controller: SpoofController
     /// The entry as loaded. Local state because rename and pace both edit it in place.
     @State var entry: GpsSavedRoute
-    /// Called after a delete, so the pushing list can pop and refresh.
-    let onDeleted: () -> Void
+    /// Called whenever this screen changes the library — a delete, a rename, a pace or repeat edit.
+    ///
+    /// **Pushed up rather than left to the parent's `onAppear`**, which is the pattern `tally` already
+    /// established one level above: whether a `NavigationStack` root re-runs `onAppear` on pop is not
+    /// something either screen should be betting a wrong value on. It was called only on delete, which
+    /// is why a rename left the GPS tab quoting the old name until the next cold launch — and, because
+    /// the name it quotes came from a file a rename doesn't rewrite, past that too.
+    let onLibraryChanged: () -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var showRenameSheet = false
@@ -3739,10 +4001,23 @@ struct GpsRouteDetailView: View {
     /// Whether to ask about turning Sync on before starting. Same question the GPS tab asks, same words —
     /// see `View.syncStartDialog`.
     @State private var confirmSyncStart = false
-    /// Whether a start has been asked for and no report has confirmed it yet.
-    @State private var isStarting = false
-    /// The watch that clears `isStarting`. Cancelled on a second press so two taps can't race.
-    @State private var startWatch: Task<Void, Never>?
+    /// Gates the review report, same key every other trigger uses. Asking someone to rate the app before
+    /// they have finished setting it up is asking about something they haven't seen work.
+    @AppStorage("spoofOnboardingCompleted") private var reviewOnboardingCompleted = false
+    /// The transport action asked for, while no report has confirmed it yet.
+    ///
+    /// **An earlier version of this carried a pending state for Start and Start Over only**, on the
+    /// reasoning that Pause and Resume rewrite `motionState` synchronously so the label flipping is its own
+    /// feedback. That was wrong, and wrong in the way this codebase is most careful about: the flip was
+    /// driven by the *request*, so the control claimed "paused" before anything had confirmed it, and the
+    /// GPS tab — which reads the gate-confirmed report — went on saying the opposite until the echo landed.
+    /// Two surfaces disagreeing about one route, with this one asserting the optimistic half.
+    ///
+    /// So every transport is pending until a report agrees, and the labels come from the confirmed facts on
+    /// the controller rather than from what we asked for.
+    @State private var pending: GpsPendingAction.Kind?
+    /// The watch that clears `pending`. Cancelled on a second press so two taps can't race.
+    @State private var pendingWatch: Task<Void, Never>?
 
     private var coordinates: [CLLocationCoordinate2D] {
         entry.points.map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
@@ -3751,34 +4026,44 @@ struct GpsRouteDetailView: View {
     var body: some View {
         Form {
             Section {
-                RoutePolylineMap(coordinates: coordinates)
+                RouteMapPane(coordinates: coordinates, live: liveCoordinate)
                     .frame(height: 220)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .listRowInsets(EdgeInsets())
-                    .accessibilityHidden(true)
             }
 
             Section {
                 // **This screen used to say nothing about state at all**, which made its Play button a
-                // control whose effect was only observable on another screen. Arriving at a route that is
-                // already the active one looked identical to arriving at an idle one, and the only
-                // difference after tapping was the button's own label — which already read "Play Again"
-                // if the route was active, so tapping changed nothing visible.
+                // control whose effect was only observable on another screen. Arriving at a route that was
+                // already the active one looked identical to arriving at an idle one.
                 //
-                // Worded as **active**, not "playing". All this knows is what we asked for
-                // (`motionState`); whether the device is actually moving comes from a gate-confirmed
-                // report that lives on the GPS tab. Claiming "playing" from a request is precisely the
-                // optimistic lie the echo gate exists to prevent — and the honest word is also the more
-                // useful one, since it distinguishes "this is the route in play" from every other row in
-                // the library.
+                // Two states now, because "we asked" and "it is happening" are different facts and this
+                // screen only had a word for the first. That single "Active route" row showed while Sync
+                // was off and nothing was moving anywhere — technically true, and read by the customer as
+                // a confirmation that never came.
+                //
+                // The confirmed signal already existed and this screen was already fetching it:
+                // `currentRunConfirmed` is the agent echoing back the run marker we asked for, the same
+                // echo discipline the GPS tab gates on. `awaitConfirmation(of:)` polls it to clear a
+                // pending transport and then discarded it — so the answer was being fetched and thrown
+                // away one row above the place it was needed.
+                //
+                // Confirmed reads "Following route" rather than a new word, because that is what the
+                // Location tab's summary already calls this exact state. One term for one fact across
+                // both screens, and no new key to translate.
                 if isActive {
-                    HStack {
-                        Image(systemName: "location.fill")
-                            .foregroundColor(.brand)
+                    HStack(spacing: 8) {
+                        Image(systemName: playbackConfirmed ? "location.fill" : "circle.dashed")
                             .accessibilityHidden(true)
-                        Text("Active route")
+                        Text(playbackConfirmed ? "Following route" : "Active route")
+                            .fontWeight(playbackConfirmed ? .medium : .regular)
                         Spacer()
                     }
+                    // Brand tint only once a report has confirmed it. Unconfirmed stays secondary
+                    // grey: it is a request in flight, not a fault and not an achievement, and
+                    // colouring it would spend the one colour that means "this is working" on
+                    // something that might not be.
+                    .foregroundStyle(playbackConfirmed ? Color.brand : Color.secondary)
                     .accessibilityElement(children: .combine)
                 }
                 // The map is decorative to VoiceOver, so these rows have to carry the whole answer.
@@ -3786,7 +4071,11 @@ struct GpsRouteDetailView: View {
                 if let seconds = GpsRouteFormat.estimatedSeconds(entry.summary) {
                     LabeledRow(label: "Duration", value: Text(verbatim: GpsRouteFormat.duration(seconds)))
                 }
-                LabeledRow(label: "Points", value: Text(verbatim: entry.points.count.formatted()))
+                // No point count. It is a property of the GPX file rather than of the journey, and
+                // nobody decides anything with it: a 4,000-point and a 40-point route that cover the
+                // same ground at the same pace play identically. Distance and Duration are what the
+                // customer is actually choosing between, and they carry the VoiceOver answer the map
+                // can't — which was the only real argument for keeping a third row here.
                 pacePicker
                 Toggle(isOn: Binding(get: { entry.repeats }, set: { setRepeats($0) })) {
                     Label("Repeat", systemImage: "repeat")
@@ -3794,48 +4083,39 @@ struct GpsRouteDetailView: View {
             } header: {
                 Text("Route")
             } footer: {
-                // Only claimed when the computer can actually do it. Pace and repeat are in the shared
-                // content id, so changing either is a new route and a new run either way — whether that
-                // run begins where the device is or at the first point depends on the agent supporting
-                // `route_start_travelled_m`, which we learn from the presence of its echo.
-                if seekSupported {
-                    Text("Changing the pace or repeat keeps your place on the route.")
-                } else {
+                // **The restart warning survives, but only where it can be true.**
+                // `route-seek-agreement.md` committed to it — *"we only stop warning the customer that a
+                // pace change restarts the route once we know it doesn't"* — and it is still the honest
+                // thing to say to somebody whose computer predates `route_start_travelled_m`, because
+                // that agent ignores the seek and replays from the first point.
+                //
+                // Two conditions, and the previous version had neither right.
+                //
+                // `agentKeepsPlace` reads the echo's **presence** and nothing else, which is what
+                // amendment 2 settled. The old `seekSupported` also required `resumableTravelledM`, and
+                // that is `nil` whenever no route is loaded — so merely opening a saved route claimed the
+                // agent couldn't seek and printed the warning at customers whose agent seeks perfectly
+                // well. That is the false sentence that got reported.
+                //
+                // `isActive` is the second condition and it is independent of the contract: `persist`
+                // restarts nothing behind `guard restartIfPlaying, isActive`, so on a route that isn't the
+                // one playing, changing the pace saves a preference and touches no playback. A warning
+                // about a restart there describes an event that cannot happen.
+                //
+                // The positive counterpart is gone deliberately. "Keeps your place on the route" was true
+                // but told a customer who just watched their route carry on that it had carried on.
+                //
+                // Not to be re-litigated: pace and repeat are identical here. `canonicalBytes` hashes
+                // `speed` and `repeats` alike, `setPace` and `setRepeats` are the same call into
+                // `persist(restartIfPlaying: true)`, and both seed the same seek. Copy claiming one keeps
+                // your place and the other doesn't would be inventing a distinction.
+                if isActive, !agentKeepsPlace {
                     Text("Changing the pace or repeat starts the route again from the beginning.")
                 }
             }
 
             Section {
-                Button {
-                    tapFeedback += 1
-                    // Same dead end as the GPS tab's Start Route, and it is worse here: `play()` reports
-                    // only a *validation* failure, and there is none — the route is fine, Sync is off. So
-                    // this button gave a haptic and then nothing at all, which is the report that started
-                    // this whole thread.
-                    if controller.deviceGpsEnabled {
-                        play()
-                    } else {
-                        confirmSyncStart = true
-                    }
-                } label: {
-                    HStack(spacing: 8) {
-                        Label(
-                            isStarting
-                                ? GpsPendingAction.Kind.start.progressLabel
-                                : (isActive ? "Play Again" : "Start Route"),
-                            systemImage: "play.fill"
-                        )
-                        if isStarting {
-                            Spacer()
-                            ProgressView()
-                                .controlSize(.small)
-                                // The label already says what's happening, and VoiceOver reads it.
-                                .accessibilityHidden(true)
-                        }
-                    }
-                }
-                .disabled(isStarting)
-                .accessibilityHint("Begins this route from its start")
+                transportControls
                 Button(role: .destructive) {
                     confirmDelete = true
                 } label: {
@@ -3844,6 +4124,9 @@ struct GpsRouteDetailView: View {
                 // `role: .destructive` alone does not make this red: the GPS tab applies
                 // `.tint(.brand)` at its root and a pushed screen inherits it, which wins.
                 .tint(.red)
+                // Deliberately *not* disabled alongside the transport. Deleting a playing route is a
+                // legitimate thing to want, and `delete()` stops playback first so it can't leave the
+                // device walking a route the library no longer has.
             } footer: {
                 if !controller.deviceGpsEnabled {
                     Text("Sync is off, so starting this route will ask to turn it on first.")
@@ -3856,14 +4139,47 @@ struct GpsRouteDetailView: View {
         .onDisappear {
             // Leaving abandons the watch. The request is already written and the agent will apply it
             // regardless — this only stops polling for an answer nobody is looking at.
-            startWatch?.cancel()
-            startWatch = nil
+            pendingWatch?.cancel()
+            pendingWatch = nil
         }
-        .syncStartDialog(isPresented: $confirmSyncStart) {
-            controller.setDeviceGpsEnabled(true)
-            play()
+        // **A confirmed run on this screen is a qualifying occasion.** This screen reported nothing until
+        // now, which mattered more once it gained a transport: a paying customer who starts routes from the
+        // library never touches the GPS tab, so their success was only counted if they happened to visit
+        // it. That is a quieter version of the bug `GpsView.evaluateReviewPrompt` exists to fix.
+        //
+        // `playbackConfirmed` is the same standard, not a looser one — `currentRunConfirmed` means the agent
+        // echoed back the run marker we asked for, so a computer is genuinely driving this phone. Per
+        // `.kiro/steering/review-prompts.md`: more triggers from genuine success points, never a looser gate.
+        //
+        // No presenter attached here. `GpsView` holds one at its root, outside its navigation container, and
+        // it stays mounted while this screen is pushed — so the token it publishes is presented from there.
+        // A second presenter on a pushed screen would be inside a `NavigationStack`, which is exactly the
+        // placement the review action is reported to silently ignore.
+        .onChange(of: playbackConfirmed) { _, confirmed in
+            guard confirmed, reviewOnboardingCompleted else { return }
+            ReviewPrompt.shared.recordSignificantEvent()
         }
         .toolbar {
+            // Star before Rename, so the one-tap action sits nearest the edge. In the toolbar rather
+            // than as a row in the Route section: that section is the route's *playback* configuration
+            // — pace, repeat — and a favourite changes nothing about how it plays. It is filing, which
+            // is what a nav-bar affordance is for, and it matches the star the location card already
+            // uses on Home right down to `Color.starAccent`.
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    toggleFavorite()
+                } label: {
+                    Label(
+                        entry.favorite ? "Remove from Favorites" : "Save as Favorite",
+                        systemImage: entry.favorite ? "star.fill" : "star"
+                    )
+                }
+                .tint(entry.favorite ? Color.starAccent : Color.brand)
+                // Label styles collapse to the glyph in a toolbar, so the words have to be given to
+                // VoiceOver explicitly. Lowercase keys — the app already ships both cases, sentence for
+                // spoken labels and title for menu items.
+                .accessibilityLabel(entry.favorite ? "Remove from favorites" : "Save as favorite")
+            }
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     showRenameSheet = true
@@ -3910,18 +4226,166 @@ struct GpsRouteDetailView: View {
     /// hash moves when the pace changes and this comparison must not.
     private var isActive: Bool { controller.motionState.savedRouteId == entry.id }
 
-    /// Whether a pace or repeat change here will keep the device's place.
+    /// Whether a report has confirmed *this* route's *current* run, rather than us having merely asked.
     ///
-    /// **Both halves are required.** The agent has to apply seeks *and* we have to have a confirmed
-    /// distance to send. An earlier version of this read only the second half, which was wrong in the
-    /// direction that matters: a confirmed distance exists on an agent that ignores the field entirely, so
-    /// the copy promised continuity and the route restarted anyway.
+    /// Both halves are load-bearing. `isActive` pins it to this entry; `currentRunConfirmed` compares
+    /// the echoed run marker against the one we asked for, which is what separates a fresh replay from
+    /// the run it replaced — a replay reuses the route id, so the id alone cannot tell them apart.
+    ///
+    /// This is the signal that makes a present-tense claim defensible here. Without it the screen had
+    /// only the request, and a request is what was being shown as confirmation.
+    private var playbackConfirmed: Bool { isActive && controller.currentRunConfirmed }
+
+    /// The playback transport, matched to what the route is actually doing.
+    ///
+    /// **This screen used to offer one button reading "Play Again" whenever the route was loaded**, which
+    /// was the correct word for exactly one of the three states it covered. On a route mid-run it invited
+    /// you to restart the thing you were watching, and there was no way to pause or stop it without
+    /// leaving for the GPS tab — on a screen that names the route, draws it, and now shows a live dot
+    /// travelling along it. The file's own note about the earlier version of this applies: a control whose
+    /// effect is only observable on another screen is the problem, and so is state with no control beside
+    /// it.
+    ///
+    /// **"Start Over", never "Play Again".** The GPS tab may say "Play Again" because its status store
+    /// tells it the run finished; that word is a lie on a route still going. "Start Over" is true in every
+    /// state, which is what lets this screen offer a replay without needing to know which one it is in.
+    ///
+    /// Ordered by what a customer reaching this screen mid-run most likely wants: hold it, then send it
+    /// back to the start, then end it. Stop is last and destructive-tinted, matching the GPS tab.
+    @ViewBuilder
+    private var transportControls: some View {
+        if isActive {
+            // Pause is meaningless on a spent run — the agent has nothing left to hold — so a finished
+            // route is offered the replay instead. This is the one thing the screen cannot work out for
+            // itself, and `confirmedRouteFinished` is a report-only fact carried on the controller for
+            // exactly this: see `GpsMotionSample.routeFinished`.
+            if controller.confirmedRouteFinished {
+                EmptyView()
+            } else if controller.confirmedRoutePaused {
+                transportButton(.resume, "Resume", systemImage: "play.fill") {
+                    controller.resumeGpsRoute()
+                    awaitConfirmation(of: .resume)
+                }
+                .accessibilityHint("Continues from where the route paused")
+            } else {
+                transportButton(.pause, "Pause", systemImage: "pause.fill") {
+                    controller.pauseGpsRoute()
+                    awaitConfirmation(of: .pause)
+                }
+                .accessibilityHint("Waits here. Your phone's location stays spoofed")
+            }
+
+            transportButton(.restart, "Start Over", systemImage: "arrow.counterclockwise") {
+                controller.restartGpsRoute()
+                awaitConfirmation(of: .restart)
+            }
+            .accessibilityHint("Begins this route from its start")
+
+            transportButton(.stop, "Stop Route", systemImage: "stop.fill", role: .destructive) {
+                controller.stopGpsRoute()
+            }
+            .tint(.red)
+            .accessibilityHint("Ends the route. Your phone stays where the route left it")
+        } else {
+            transportButton(.start, "Start Route", systemImage: "play.fill") {
+                // Same dead end as the GPS tab's Start Route, and worse here: `play()` reports only a
+                // *validation* failure, and there is none — the route is fine, Sync is off. So this
+                // button used to give a haptic and then nothing at all.
+                if controller.deviceGpsEnabled {
+                    play()
+                } else {
+                    confirmSyncStart = true
+                }
+            }
+            .accessibilityHint("Begins this route from its start")
+            // **Attached to the button, not to the `Form`.** A `confirmationDialog` presents as a popover
+            // on iPad, anchored to the view carrying the modifier — so hanging it on the whole form
+            // anchored it to the form, and the sheet appeared up beside the status row instead of at the
+            // control that was pressed. A popover pointing somewhere the finger never went reads as a
+            // different button's dialog.
+            .syncStartDialog(isPresented: $confirmSyncStart) {
+                controller.setDeviceGpsEnabled(true)
+                play()
+            }
+        }
+    }
+
+    /// One transport control, with the pending treatment applied uniformly.
+    ///
+    /// A sibling of the GPS tab's `motionButton` rather than a share of it: that one resolves its pending
+    /// state from a status store this screen deliberately doesn't have, and lifting the difference into a
+    /// shared type would mean giving it a store or a second confirmation path. What is worth keeping
+    /// identical is the *presentation*, so the labels come from the same `GpsPendingAction.Kind` and the
+    /// dimming matches.
+    private func transportButton(
+        _ kind: GpsPendingAction.Kind,
+        _ title: LocalizedStringKey,
+        systemImage: String,
+        role: ButtonRole? = nil,
+        action: @escaping () -> Void
+    ) -> some View {
+        let isPending = pending == kind
+        return Button(role: role) {
+            tapFeedback += 1
+            action()
+        } label: {
+            HStack(spacing: 8) {
+                Label(isPending ? kind.progressLabel : title, systemImage: systemImage)
+                if isPending {
+                    Spacer()
+                    ProgressView()
+                        .controlSize(.small)
+                        // The label already says what's happening, and VoiceOver reads it.
+                        .accessibilityHidden(true)
+                }
+            }
+        }
+        // Every transport control, not just the pending one: while a start is unconfirmed they are all
+        // asking about the same run, and leaving the others live invites a contradictory second
+        // instruction queued behind the first.
+        .disabled(pending != nil)
+        // `.disabled` alone does not dim these — this screen inherits `.tint(.brand)` and Stop adds
+        // `.tint(.red)`, and a tinted label in a `Form` row keeps its colour when disabled. Without this
+        // the block sits at full strength while refusing every tap.
+        .opacity(pending != nil ? 0.45 : 1)
+    }
+
+    /// Where to draw the live dot, or `nil` for no dot.
+    ///
+    /// `controller.location` is the right source here and it is worth saying why, because it is also the
+    /// wrong source one condition away. `adoptMotionCoordinate` overwrites that coordinate with the
+    /// position the agent reported — that is its entire job, and it clears `locationName` for the same
+    /// reason — so during a confirmed, freshly-reported run it *is* the device. Outside one it is the
+    /// place the customer picked, and a dot drawn there would sit at the route's seed pretending to be
+    /// the device.
+    ///
+    /// `isActive` pins it to this route; `isReportingLivePosition` pins it to a run we asked for and a
+    /// report recent enough to still speak for the present. A sleeping computer stops reporting without
+    /// announcing it, and that case ages out here rather than freezing a dot that claims to be live.
+    private var liveCoordinate: CLLocationCoordinate2D? {
+        guard isActive, controller.isReportingLivePosition, let live = controller.location else {
+            return nil
+        }
+        return CLLocationCoordinate2D(latitude: live.latitude, longitude: live.longitude)
+    }
+
+    /// Whether a pace or repeat change will restart the run rather than carrying on from where the device
+    /// is — i.e. whether this computer applies `route_start_travelled_m`.
+    ///
+    /// **Presence of the echo is the whole signal**, per round two of
+    /// `.kiro/specs/device-gps-motion/route-seek-agreement.md`: *"Read the echo for 'was it honoured', read
+    /// `travelled_m` for 'where is it'."* A supporting agent always populates the field while a route
+    /// plays, `Some(0.0)` included, precisely so presence can mean "this agent seeks" — that was the gap
+    /// the app side asked to have closed, and it was closed.
+    ///
+    /// An earlier version of this ANDed in `resumableTravelledM != nil`, fusing the two questions the
+    /// amendment separated. The consequence was the copy bug this replaced: `resumableTravelledM` is `nil`
+    /// whenever no route is loaded, so simply opening a saved route reported that the agent could not seek
+    /// and printed a restart warning at somebody whose computer restarts nothing.
     ///
     /// This screen has no status store of its own, so the echo arrives via `SpoofController`, observed on
     /// the motion-sync read path — see `GpsMotionSample.seekSupported`.
-    private var seekSupported: Bool {
-        controller.agentSupportsSeek && controller.resumableTravelledM != nil
-    }
+    private var agentKeepsPlace: Bool { controller.agentSupportsSeek }
 
     @ViewBuilder
     private var pacePicker: some View {
@@ -3964,6 +4428,19 @@ struct GpsRouteDetailView: View {
         persist(updated, restartIfPlaying: true)
     }
 
+    /// Star or unstar this route.
+    ///
+    /// Goes through `persist(restartIfPlaying: false)` for the same reason `rename` does: `favorite` is
+    /// outside the content id, so starring the route you are currently running must not restart it. That
+    /// also means the parents hear about it — `persist` reports every library edit — so the list has
+    /// reordered by the time you navigate back.
+    private func toggleFavorite() {
+        tapFeedback += 1
+        var updated = entry
+        updated.favorite.toggle()
+        persist(updated, restartIfPlaying: false)
+    }
+
     private func rename(to newName: String) {
         let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, trimmed != entry.name else { return }
@@ -3982,6 +4459,10 @@ struct GpsRouteDetailView: View {
             return
         }
         entry = updated
+        // Every edit, not just the ones that restart playback. A rename deliberately changes neither
+        // the content id nor the entity id, so nothing downstream can notice it by watching state —
+        // saying so explicitly is the only way the parents find out.
+        onLibraryChanged()
         guard restartIfPlaying, isActive else { return }
         // Goes through `startGpsRoute` rather than `changeGpsRoutePace`, because the entry is already
         // saved and that method would write it a second time.
@@ -4013,15 +4494,16 @@ struct GpsRouteDetailView: View {
     /// Two parents is a normal shape for an iOS detail screen and both are kept: back returns you where you
     /// came from, and routing the active route through the list would add a tap to the commonest journey.
     ///
-    /// The feedback the dismissal was standing in for now exists properly — the "Active route" row, the
-    /// label flipping to Play Again, and `isStarting` below for the case neither covers: replaying a route
-    /// that was *already* active, where nothing about the screen would otherwise change.
+    /// The feedback the dismissal was standing in for now exists properly: the status row flipping to
+    /// "Following route", the transport swapping Start Route for the Pause/Start Over/Stop set, and
+    /// `pending` for the case neither covers — replaying a route that was *already* active, where nothing
+    /// about the screen would otherwise change.
     private func play() {
         if let failure = controller.startGpsRoute(entry.playbackRoute(), savedRouteId: entry.id) {
             failureMessage = GpsRouteFormat.message(for: failure)
             return
         }
-        watchForRunConfirmation()
+        awaitConfirmation(of: .start)
     }
 
     /// Hold the in-flight state until a report confirms the run, or long enough that it clearly won't.
@@ -4030,21 +4512,55 @@ struct GpsRouteDetailView: View {
     /// agent echoed against the one we asked for. That is the same echo discipline the GPS tab uses — this
     /// screen just reads it off the controller rather than holding a status store, because the motion sync
     /// that populates it runs at the app root regardless of which tab is on screen.
-    private func watchForRunConfirmation() {
-        startWatch?.cancel()
-        isStarting = true
-        startWatch = Task { @MainActor in
+    private func awaitConfirmation(of kind: GpsPendingAction.Kind) {
+        pendingWatch?.cancel()
+        // Nothing to wait for with Sync off: `desired.json`'s `enabled` is `deviceGpsEnabled && …`, so the
+        // agent is being correctly told to do nothing and no report will ever say otherwise. The GPS tab
+        // documents the same guard — spinning for ten seconds then blaming the computer for something the
+        // app could see at the moment of the tap is worse than not spinning.
+        guard controller.deviceGpsEnabled else { return }
+        pending = kind
+        pendingWatch = Task { @MainActor in
             let deadline = Date().addingTimeInterval(10)
             while !Task.isCancelled, Date() < deadline {
-                if controller.currentRunConfirmed {
-                    isStarting = false
+                if isConfirmed(kind) {
+                    pending = nil
                     return
                 }
                 try? await Task.sleep(nanoseconds: 400_000_000)
             }
-            // Silence rather than an error. The route may well be playing — a stale or slow report can't
-            // tell us otherwise — and the GPS tab is where an unanswered request gets named.
-            isStarting = false
+            // Silence rather than an error. The route may well be doing what was asked — a stale or slow
+            // report can't tell us otherwise — and the GPS tab is where an unanswered request gets named.
+            pending = nil
+        }
+    }
+
+    /// Whether a report now shows what the request asked for.
+    ///
+    /// Mirrors `GpsPendingAction.isConfirmed(by:)` deliberately, but reads the confirmed scalars the
+    /// controller publishes rather than a `GpsMotionDetail` — this screen has no status store, and the
+    /// motion sync that feeds those scalars runs at the app root regardless of which tab is on screen.
+    ///
+    /// One consequence worth knowing: the sync's own cadence is about three seconds and this screen has no
+    /// equivalent of the tab's `startPollBurst`, so a spinner here can sit a beat longer than the same one
+    /// on the tab. That is a slower truth, not a different one.
+    private func isConfirmed(_ kind: GpsPendingAction.Kind) -> Bool {
+        switch kind {
+        case .pause:
+            return controller.confirmedRoutePaused
+        case .resume:
+            return !controller.confirmedRoutePaused && !controller.confirmedRouteFinished
+        case .start, .restart:
+            // The marker has to be the *new* run's, which `currentRunConfirmed` enforces — so a confirmed
+            // run that is neither held nor over is this one rather than the one it replaced.
+            return controller.currentRunConfirmed
+                && !controller.confirmedRoutePaused
+                && !controller.confirmedRouteFinished
+        case .stop:
+            // Never entered. `stopGpsRoute` clears the run locally, so `isActive` goes false and this whole
+            // transport is replaced by Start Route — there is no control left to hang a spinner on. An
+            // unanswered stop is named on the GPS tab, which keeps its section through the transition.
+            return true
         }
     }
 
@@ -4053,7 +4569,7 @@ struct GpsRouteDetailView: View {
         // library no longer has — and nothing on screen would be able to name it.
         if isActive { controller.stopGpsRoute() }
         GpsRouteStore.shared.delete(id: entry.id)
-        onDeleted()
+        onLibraryChanged()
         dismiss()
     }
 
@@ -4069,6 +4585,77 @@ struct GpsRouteDetailView: View {
     }
 }
 
+/// The route map as it appears on the detail screen: a window that can be opened.
+///
+/// Mirrors `LocationMapPane`'s affordance rather than inventing a second one — the same glyph in the
+/// same glass circle in the same corner, and the same "Expand map to full screen" label — because a
+/// customer who has opened the location map on Home should not have to discover this one separately.
+///
+/// The inline map stays non-interactive; the expanded one is where panning belongs. That split is the
+/// point of having an expander at all: watching the dot move needs a map you can zoom into, and a
+/// zoomable map inside a scrolling `Form` fights the scroll for every gesture.
+private struct RouteMapPane: View {
+    let coordinates: [CLLocationCoordinate2D]
+    var live: CLLocationCoordinate2D?
+
+    @State private var fullScreen = false
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            RoutePolylineMap(coordinates: coordinates, live: live)
+            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.primary)
+                .frame(width: 36, height: 36)
+                .glassCircle()
+                .padding(10)
+                .allowsHitTesting(false)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { fullScreen = true }
+        // One element, and a button. The map itself was previously hidden from assistive technologies
+        // outright, which was right while it was a picture and wrong the moment it became a control.
+        .accessibilityElement()
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel("Expand map to full screen")
+        .fullScreenCover(isPresented: $fullScreen) {
+            RouteFullScreenMap(coordinates: coordinates, live: live)
+        }
+    }
+}
+
+/// The route map, full bleed and pannable, with the dot still on it.
+///
+/// Deliberately thin: no controls beyond Close. Everything that acts on a route — pace, repeat, play,
+/// delete — stays on the detail screen behind this, because a control that only exists in a
+/// fullscreen presentation is a control most people never find.
+private struct RouteFullScreenMap: View {
+    let coordinates: [CLLocationCoordinate2D]
+    var live: CLLocationCoordinate2D?
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            RoutePolylineMap(coordinates: coordinates, live: live, interactive: true)
+                .ignoresSafeArea()
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .frame(width: 40, height: 40)
+                    .glassCircle()
+            }
+            .padding(.trailing, 16)
+            .padding(.top, 8)
+            // Same key the location map's close control uses.
+            .accessibilityLabel("Close map")
+        }
+    }
+}
+
 /// A route drawn on a map, framed to fit.
 ///
 /// Split out so the `mapRenderSizeGate()` requirement and the camera framing live in one place rather
@@ -4076,6 +4663,22 @@ struct GpsRouteDetailView: View {
 /// zero-width drawable, which a `Form` row can briefly hand it during layout.
 struct RoutePolylineMap: View {
     let coordinates: [CLLocationCoordinate2D]
+    /// The device's position, when a recent report vouched for it. `nil` draws no dot at all.
+    ///
+    /// **Absent must stay absent.** The only other coordinate to hand is the one in
+    /// `controller.location`, which outside a confirmed run is the *chosen* place rather than where the
+    /// device is — drawing that would put a "you are here" dot at the spot the route started and leave
+    /// it there. `SpoofController.isReportingLivePosition` is the gate, and it exists so this decision
+    /// is made once rather than at every map.
+    var live: CLLocationCoordinate2D?
+    /// Whether the map responds to pan and zoom. `false` inside a `Form`, where a pannable map steals
+    /// the scroll gesture; `true` in the fullscreen presentation, which is the whole reason to open it.
+    var interactive: Bool = false
+
+    /// Turns the three-second-apart fixes into travel. See `SmoothedPosition` — MapKit re-places an
+    /// annotation the instant its coordinate changes, so without this the dot stepped along the route
+    /// instead of following it.
+    @StateObject private var smoothed = SmoothedPosition()
 
     var body: some View {
         Map(initialPosition: .rect(Self.boundingRect(coordinates))) {
@@ -4093,11 +4696,51 @@ struct RoutePolylineMap: View {
                 Marker("Finish", systemImage: "flag.checkered", coordinate: last)
                     .tint(Color.mapHighlight)
             }
+            // Last in the builder, which puts it above the **polyline** — overlays and annotations are
+            // different layers and that much is reliable.
+            //
+            // **It does not guarantee it draws above the two flags, and nothing public does.** MapKit
+            // exposes no z-index for annotations: `mapOverlayLevel` applies to overlays like the polyline
+            // above, not to `Marker` or `Annotation`. Apple's own forum answer is that annotation order
+            // follows *latitude*, southernmost on top — undocumented, and not something to build on.
+            //
+            // So at a start or finish line the dot can be covered, and the fix is deliberately not
+            // attempted here. The options were reordering by latitude (relying on undocumented
+            // behaviour), hiding a flag when the dot is near it (the threshold is metres, the overlap is
+            // pixels, so it is wrong at some zoom), or lifting the dot out of the map entirely with
+            // `MapReader` + `MapProxy.convert(_:to:)` and drawing it as a SwiftUI overlay — the only
+            // deterministic answer, and the only one that is fully public API. That last one is the
+            // upgrade path if this ever matters enough; it costs a camera-change subscription to keep
+            // the screen point current.
+            if let shown = smoothed.coordinate ?? live {
+                Annotation(coordinate: shown) {
+                    // Shared with the Location tab's map, so the two surfaces that can show a moving
+                    // device agree on what "moving right now" looks like.
+                    LivePositionDot()
+                } label: {
+                    // No callout text. The row above the map already states the status in words, and a
+                    // title here would print a label on the map beside the dot.
+                    EmptyView()
+                }
+            }
         }
-        .mapStyle(.standard(pointsOfInterest: .excludingAll))
-        // Not interactive. This is a picture of the route inside a scrolling `Form`, and a pannable map
-        // there steals the scroll gesture.
-        .allowsHitTesting(false)
+        // **Flat, always, with no 3D control anywhere on this screen.** Elevation was `.automatic` here,
+        // which lets MapKit tilt into terrain on its own judgement — so a route map could quietly become a
+        // 3D scene, and the live dot could be occluded by the mesh, for reasons no customer took an action
+        // to cause.
+        //
+        // A route is a shape a few kilometres across. Flat is simply the better view of one: the polyline
+        // reads as a line rather than as something draped over relief, and nothing about a loop in a park
+        // benefits from a curved planet. That is also why the fullscreen route map gets no globe toggle
+        // while the location map does — the location map can be showing a place on the other side of the
+        // world, and a route never is.
+        .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll))
+        .allowsHitTesting(interactive)
+        .onAppear { smoothed.track(live) }
+        // Keyed rather than on `live` directly, because `CLLocationCoordinate2D` isn't `Equatable`.
+        // Passing `nil` when the dot goes away cancels any glide in flight, so it can't keep drifting
+        // toward a fix nothing vouches for.
+        .onChange(of: CoordinateKey(live)) { _, _ in smoothed.track(live) }
         .mapRenderSizeGate()
     }
 

@@ -1398,7 +1398,7 @@ export const ptBR: Dictionary = {
           text: "Defina sua localização como sempre no GeoSpoof. O GPS no nível do sistema do iPhone a acompanha e se mantém alinhado enquanto conseguir alcançar o seu Mac pelo cabo, pela mesma rede Wi-Fi ou por um ponto de acesso.",
           bullets: [
             "Você pode desconectar o cabo, mas a conexão precisa continuar. É o app de Mac que define o GPS.",
-            "Vai sair sem o seu Mac? Desative o Modo de Desenvolvedor enquanto a localização está ativa e ela se mantém. Para trocá-la depois, reinicie o iPhone e conecte-o novamente.",
+            "Vai sair sem o seu Mac? Desative o Modo de Desenvolvedor enquanto a localização está ativa e ela se mantém. Para trocá-la depois, ative o Modo de Desenvolvedor de novo, reinicie o iPhone e conecte-o novamente.",
           ],
           link: { label: "Baixar o GeoSpoof para iPhone" },
         },
@@ -1466,7 +1466,7 @@ export const ptBR: Dictionary = {
       offlineBody:
         "Uma localização pode continuar valendo depois que a conexão termina. Com a sua localização falsificada ativa, desative o Modo de Desenvolvedor no iPhone (Ajustes ▸ Privacidade e Segurança ▸ Modo de Desenvolvedor). Dali em diante a localização se mantém, inclusive depois de você se afastar do computador.",
       offlineCaveat:
-        "A contrapartida é que a localização fica fixa. Para escolher outra, reinicie o iPhone e defina a nova com o seu computador perto de você outra vez.",
+        "A contrapartida é que a localização fica fixa. Para escolher outra, ative o Modo de Desenvolvedor de novo, reinicie o iPhone e defina a nova com o seu computador perto de você.",
       limitTitle: "O que não dá para fazer",
       limitBody:
         "Nada passa pelos nossos servidores, então o seu computador não consegue alcançar o iPhone pela internet. Uma vez separados, o telefone para de aceitar novas localizações. O passo do Modo de Desenvolvedor acima é o que mantém a atual no lugar.",

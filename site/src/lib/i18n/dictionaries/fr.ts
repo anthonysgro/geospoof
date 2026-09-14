@@ -1402,7 +1402,7 @@ export const fr: Dictionary = {
           text: "Définissez votre position comme d'habitude dans GeoSpoof. Le GPS système de votre iPhone la suit et reste aligné tant qu'il peut joindre votre Mac par le câble, sur le même réseau Wi-Fi ou via un partage de connexion.",
           bullets: [
             "Vous pouvez débrancher le câble, mais la connexion doit rester. C'est l'app Mac qui définit le GPS.",
-            "Vous sortez sans votre Mac ? Désactivez le mode développeur pendant que la position est active et elle se maintient. Pour la changer ensuite, redémarrez l'iPhone et reconnectez-le.",
+            "Vous sortez sans votre Mac ? Désactivez le mode développeur pendant que la position est active et elle se maintient. Pour la changer ensuite, réactivez le mode développeur, redémarrez l'iPhone et reconnectez-le.",
           ],
           link: { label: "Obtenir GeoSpoof pour iPhone" },
         },
@@ -1470,7 +1470,7 @@ export const fr: Dictionary = {
       offlineBody:
         "Une position peut se maintenir après la fin de la liaison. Avec votre position simulée active, désactivez le mode développeur sur l'iPhone (Réglages ▸ Confidentialité et sécurité ▸ Mode développeur). À partir de là, la position se maintient, y compris une fois loin de votre ordinateur.",
       offlineCaveat:
-        "La contrepartie est que la position est désormais fixe. Pour en choisir une autre, redémarrez votre iPhone et définissez la nouvelle avec votre ordinateur à nouveau à proximité.",
+        "La contrepartie est que la position est désormais fixe. Pour en choisir une autre, réactivez le mode développeur, redémarrez votre iPhone et définissez la nouvelle avec votre ordinateur à proximité.",
       limitTitle: "Ce qui n'est pas possible",
       limitBody:
         "Rien ne passe par nos serveurs, donc votre ordinateur ne peut pas joindre votre iPhone par internet. Une fois les deux séparés, le téléphone n'accepte plus de nouvelle position. L'étape du mode développeur ci-dessus est ce qui maintient l'actuelle en place.",

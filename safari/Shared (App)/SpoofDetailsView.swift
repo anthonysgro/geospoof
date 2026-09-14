@@ -297,8 +297,73 @@ private struct APICategory: Identifiable {
 
 /// A native activation flow that starts with a real product action, then walks
 /// the user through enabling the Safari extension.
+/// The flow is modeled as an ordered list of steps rather than index math,
+/// because it diverges by platform. `steps` is the one place the order lives.
+///
+/// Only `welcome` and `enable` are shared. The rest belong to a single
+/// platform, so they are declared per platform — that way the string catalog
+/// never carries copy for a step the running OS cannot reach, which is how
+/// "Safari is Ready" and its subtitle ended up as translatable keys that
+/// nothing rendered.
+enum StepKind: Hashable {
+    case welcome
+    case enable
+    #if os(iOS)
+    case location
+    /// Website access, which is a separate grant from the extension toggle and the
+    /// one the Settings deep link cannot deliver. Only in the flow when that deep
+    /// link is the route taken — see `steps`.
+    case grant
+    case safariReady
+    /// How to get the feature most paying customers install this app for.
+    ///
+    /// Last, and reached from all three exits of the Safari half — see `showDeviceGpsStep()`.
+    case deviceGps
+    #else
+    case permission
+    case gps
+    case done
+    #endif
+}
+
+extension StepKind {
+    #if os(iOS)
+    /// The iOS flow, in order.
+    ///
+    /// Pure, and taking its two inputs explicitly, so the order can be asserted in a test. It used
+    /// to be computed inline inside a `View`, where nothing could reach it — and the order *is* this
+    /// feature. The `.grant` skip exit that went unrewired for a whole design pass was exactly the
+    /// class of mistake a test here catches.
+    ///
+    /// - Parameters:
+    ///   - canDeepLinkToSettings: whether this OS can open GeoSpoof's row in Settings directly.
+    ///   - websiteAccessWarrantsRepair: whether the extension has confirmed it lacks broad access.
+    static func iOSFlow(
+        canDeepLinkToSettings: Bool,
+        websiteAccessWarrantsRepair: Bool
+    ) -> [StepKind] {
+        if !canDeepLinkToSettings, websiteAccessWarrantsRepair {
+            return [.welcome, .location, .enable, .grant, .safariReady, .deviceGps]
+        }
+        return [.welcome, .location, .enable, .safariReady, .deviceGps]
+    }
+    #endif
+}
+
 struct OnboardingView: View {
     @ObservedObject var controller: SpoofController
+    /// Whether device GPS is *already* set up for this customer — Pro held and a computer present.
+    ///
+    /// Resolved by the host and passed in rather than read here, because the answer needs the roster
+    /// and the roster lives in `GpsStatusStore`, which is declared in the iOS app target while this
+    /// file is shared. Reaching for it from here would compile for the app and break anywhere else
+    /// this file is built, and a body gated only at its call site still gets type-checked — the exact
+    /// failure already hit once in this codebase. `SpoofControlPanel.deviceGpsDelivering` sets the
+    /// precedent: the host that can answer does, and hands the answer over.
+    ///
+    /// Defaults to `false`, which shows the step. Showing it to someone who did not need it is
+    /// recoverable; skipping it for someone who did is not.
+    var deviceGpsAlreadyWorking: Bool = false
     let onDone: () -> Void
 
     #if os(iOS)
@@ -354,31 +419,6 @@ struct OnboardingView: View {
     @Environment(\.scenePhase) private var scenePhase
     #endif
 
-    /// The flow is modeled as an ordered list of steps rather than index math,
-    /// because it diverges by platform. `steps` is the one place the order lives.
-    ///
-    /// Only `welcome` and `enable` are shared. The rest belong to a single
-    /// platform, so they are declared per platform — that way the string catalog
-    /// never carries copy for a step the running OS cannot reach, which is how
-    /// "Safari is Ready" and its subtitle ended up as translatable keys that
-    /// nothing rendered.
-    private enum StepKind: Hashable {
-        case welcome
-        case enable
-        #if os(iOS)
-        case location
-        /// Website access, which is a separate grant from the extension toggle and the
-        /// one the Settings deep link cannot deliver. Only in the flow when that deep
-        /// link is the route taken — see `steps`.
-        case grant
-        case safariReady
-        #else
-        case permission
-        case gps
-        case done
-        #endif
-    }
-
     private var steps: [StepKind] {
         #if os(iOS)
         // The first setup action is the product's core action, not an
@@ -427,10 +467,10 @@ struct OnboardingView: View {
         //
         // `.unknown` deliberately does not qualify on either route (see `warrantsRepair`),
         // so a fresh install whose extension hasn't reported yet is not accused of a fault.
-        if !canDeepLinkToSettings, controller.safariWebsiteAccess.warrantsRepair {
-            return [.welcome, .location, .enable, .grant, .safariReady]
-        }
-        return [.welcome, .location, .enable, .safariReady]
+        return StepKind.iOSFlow(
+            canDeepLinkToSettings: canDeepLinkToSettings,
+            websiteAccessWarrantsRepair: controller.safariWebsiteAccess.warrantsRepair
+        )
         #else
         [.welcome, .enable, .permission, .gps, .done]
         #endif
@@ -574,7 +614,9 @@ struct OnboardingView: View {
             OnboardingSafariHandoffView(
                 controller: controller,
                 onOpenSetup: openSafariActivationPage,
-                onSkip: onDone,
+                // Was `onDone`. Declining Safari is not declining the product, and this is the exit
+                // the highest-intent customers take.
+                onSkip: showDeviceGpsStep,
                 // Only ever true when the user came back to a step they'd finished:
                 // on the way through, a satisfied Safari step is skipped rather than
                 // shown (see `advance`).
@@ -592,13 +634,23 @@ struct OnboardingView: View {
         case .grant:
             OnboardingGrantAccessView(
                 onOpenSafari: openSafariGrantPage,
-                onSkip: onDone
+                // The second `onSkip: onDone`, and the easy one to miss. Leaving it would reproduce
+                // the same hole for anyone who reached the website-access step and declined it.
+                onSkip: showDeviceGpsStep
             )
             .navigationBarHidden(false)
         case .safariReady:
             OnboardingSafariReadyView(
                 controller: controller,
-                onFinish: onDone
+                // No longer terminal: the flow continues to the device-GPS step. Through the funnel,
+                // so an already-set-up customer still finishes here rather than being shown a step
+                // with nothing to ask.
+                onFinish: showDeviceGpsStep,
+                // Which is also why the label is conditional. For a customer who already has device
+                // GPS working this screen really is the last one, and "Start using GeoSpoof" is the
+                // payoff it has always been. For everyone else a step follows, and the honest word
+                // is "Continue".
+                continueTitle: isStepSatisfied(.deviceGps) ? "Start using GeoSpoof" : "Continue"
             )
             .navigationBarHidden(true)
             // Terminal by decision rather than by side effect. Hiding the bar already
@@ -612,6 +664,16 @@ struct OnboardingView: View {
             // is fresh again, so it presents a finished task as unfinished) or a Safari
             // step that is now satisfied and would immediately push forward again.
             .navigationBarBackButtonHidden(true)
+        case .deviceGps:
+            OnboardingDeviceGpsView(
+                onOpenPaywall: { router.showPaywall = true },
+                onFinish: onDone
+            )
+            // A page, with a back button, unlike `.safariReady` above it. Behind it is either the
+            // verified-success screen or the Safari step, and returning to either is now harmless —
+            // `showDeviceGpsStep()` records having passed the Safari step, which is what stops the
+            // activation watcher from immediately pushing forward again.
+            .navigationBarHidden(false)
         case .welcome:
             // The welcome is the stack's root, never a pushed destination.
             EmptyView()
@@ -640,9 +702,42 @@ struct OnboardingView: View {
         // own funnel rather than appended behind its back.
         if next == .safariReady {
             showSafariReady()
+        } else if next == .deviceGps {
+            // Same reasoning as `.safariReady` above: it owns entry conditions, and three exits
+            // reach it. Routed through the funnel here too so a future caller of `advance` cannot
+            // bypass them by appending directly.
+            showDeviceGpsStep()
         } else {
             path.append(next)
         }
+    }
+
+    /// The single way onto the device-GPS step.
+    ///
+    /// Three exits converge here — skipping the Safari step, skipping the website-access step, and
+    /// finishing from the verified-success screen. Before this feature all three called `onDone`
+    /// directly, which meant anyone who declined Safari setup left onboarding without device GPS
+    /// ever being mentioned. Those are the customers most likely to be paying for it.
+    ///
+    /// Deliberately **not** reachable before verification. It sits after `.safariReady` in `steps`
+    /// and nothing calls this while a Safari round trip is outstanding, so nothing can come between
+    /// leaving for Settings and being told whether it worked.
+    private func showDeviceGpsStep() {
+        // Nothing to ask someone who already has Pro and a computer. Checked here rather than inside
+        // the screen so it never appears and vanishes — the "flashed and vanished" read `advance`
+        // already documents for an already-enabled Safari step.
+        guard !isStepSatisfied(.deviceGps) else {
+            onDone()
+            return
+        }
+        guard path.last != .deviceGps else { return }
+        // Two of the three exits here bypass `advance(from: .enable)`, which is where this is normally
+        // recorded — so without setting it the Safari watcher would treat a *return* to that step as
+        // fresh evidence and push forward again, bouncing anyone who used the back button. Being past
+        // the Safari step is a fact about the flow by the time this screen is reached, however it was
+        // reached.
+        hasAdvancedPastEnable = true
+        path.append(.deviceGps)
     }
 
     /// Whether a step can be skipped because there is nothing for the user to do on
@@ -659,6 +754,10 @@ struct OnboardingView: View {
     private func isStepSatisfied(_ kind: StepKind) -> Bool {
         switch kind {
         case .enable: return isSafariStepSatisfied
+        // Both halves, not either. Pro without a computer still needs this step, because the
+        // computer is the outstanding half and handing it over is what the step is for; a computer
+        // without Pro likewise. Resolved by the host — see `deviceGpsAlreadyWorking`.
+        case .deviceGps: return deviceGpsAlreadyWorking
         case .welcome, .location, .grant, .safariReady: return false
         }
     }
@@ -1072,6 +1171,340 @@ private struct OnboardingActionBar<Content: View>: View {
 }
 
 /// while this real app screen owns the brand, message, and action.
+#if os(iOS)
+/// Sends the desktop download to a computer.
+///
+/// **Not a QR code**, which an earlier sketch proposed and which is wrong for this direction: a code
+/// on a phone screen is scanned *by* a phone, and the transfer needed here is phone to computer.
+/// Desktops do not have a camera aimed at the user's hand.
+///
+/// So: share-to-self as the action, and the address itself as a second, visible route. `ShareLink`
+/// means the system owns the address book — this app never sees who it was sent to.
+///
+/// **Both halves are controls, and both are meant to look like it.** The first version had the share
+/// action in `glassButtonStyle()` with the address as plain secondary text underneath, and neither
+/// read as tappable: `.glass` is a *clear* material by design, so at this size on a plain
+/// `systemBackground` it is a faint outline, and grey body text is the app's universal signal for
+/// "information". On the one screen whose entire job is moving a string to another machine, the two
+/// ways of doing that were the two least visible things on it.
+///
+/// So the share action takes `.bordered` with a brand tint — a deliberate deviation from the house
+/// `glassButtonStyle()`, because a filled capsule is findable where clear glass is not, and the
+/// three-level hierarchy still holds: `glassProminent` in the action bar, tinted `.bordered` here,
+/// tinted text for the address. And the address is a real `Link`, so it is brand-coloured and
+/// tappable, which is what someone reaching for it expects.
+///
+/// Text selection is traded for that. A `Link` cannot be selected, but long-pressing one gives the
+/// system's Copy — the same outcome by a gesture people already know, rather than the drag-to-select
+/// that a one-line label makes fiddly.
+struct DesktopHandoffBlock: View {
+    let url: URL
+
+    /// Displayed without the scheme or the tracking parameters. `url` keeps them for attribution;
+    /// showing them would hand someone a string they cannot retype.
+    private var readable: String { "geospoof.com/gps" }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ShareLink(item: url) {
+                Label("Send this to your computer", systemImage: "square.and.arrow.up")
+                    .font(.subheadline.weight(.semibold))
+            }
+            .buttonStyle(.bordered)
+            .tint(.brand)
+            .controlSize(.regular)
+
+            Link(destination: url) {
+                HStack(spacing: 6) {
+                    Image(systemName: "globe")
+                        .font(.footnote)
+                        .accessibilityHidden(true)
+                    // A URL is data, not copy — `verbatim` per the catalog rule, and the shown form
+                    // omits the campaign parameters `url` carries for attribution.
+                    Text(verbatim: readable)
+                        .font(.subheadline.weight(.medium))
+                }
+                .frame(minHeight: 44, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .foregroundStyle(Color.brand)
+        }
+        // Vertical rhythm is the host's to set. This previously carried `.padding(.top, 2)` for the
+        // gap under `DeviceGpsPitch`'s claim list, which it no longer sits beneath.
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// One step of a numbered setup sequence, with an optional control belonging to that step.
+///
+/// The `detail` slot is why this exists rather than a bare `Label`: the desktop handoff is step one's
+/// action, and nesting it inside the step is what stops it from reading as a rival call to action.
+///
+/// The numeral is hidden from assistive technologies, the same treatment `PitchPoint` gives its
+/// checkmark. VoiceOver reads the steps in order already, so announcing "one, two, three" adds a
+/// token per row and no information.
+private struct OnboardingSetupStep<Detail: View>: View {
+    let number: Int
+    let text: LocalizedStringKey
+    @ViewBuilder var detail: () -> Detail
+
+    /// Scaled so the badge grows with the copy instead of shrinking into a dot beside it at the
+    /// larger accessibility sizes.
+    @ScaledMetric(relativeTo: .subheadline) private var badge: CGFloat = 24
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            // A numeral is data, not copy, so `verbatim` per the catalog rule in CONTRIBUTING —
+            // a literal here would put "1", "2" and "3" in front of translators.
+            Text(verbatim: "\(number)")
+                .font(.footnote.weight(.bold))
+                .foregroundStyle(Color.brand)
+                .frame(width: badge, height: badge)
+                .background(Color.brand.opacity(0.14), in: Circle())
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 10) {
+                Text(text)
+                    .font(.subheadline)
+                    .fixedSize(horizontal: false, vertical: true)
+                detail()
+            }
+        }
+    }
+}
+
+extension OnboardingSetupStep where Detail == EmptyView {
+    init(number: Int, text: LocalizedStringKey) {
+        self.init(number: number, text: text) { EmptyView() }
+    }
+}
+
+/// The last screen of onboarding: how to get device GPS.
+///
+/// Reached from all three exits of the Safari half, so it is the one place every customer is told
+/// this capability exists — including the ones who skipped Safari setup because they never cared
+/// about it.
+///
+/// An earlier draft asked, one screen earlier, what the customer had come for, and varied this
+/// headline from the answer. Cut on the founder's call, and correctly: a whole screen standing
+/// between someone and the product, spent choosing between three near-identical sentences, is not a
+/// trade worth making when the setup is already short.
+///
+/// **The primary action is the purchase, and that is deliberate.** An earlier version made
+/// "Start using GeoSpoof" prominent on the reasoning that a flow should not end at a paywall. The
+/// founder's call reverses it, and the reversal is defensible: device GPS is what customers buy this
+/// app for, the ask sits *after* the free tier has been set up and verified, and "Start using
+/// GeoSpoof" remains visible directly beneath — so this is a soft paywall with an unmissable exit,
+/// not a gate. Most people will take the exit, which is the documented norm rather than a failure.
+///
+/// **Layout follows the flow's existing page pattern** rather than a bespoke one: content scrolls,
+/// actions are pinned in an `OnboardingActionBar` through `safeAreaInset`, and the page margin comes
+/// from `OnboardingMetrics` so it widens on iPad exactly as the other screens do. The first draft
+/// hand-rolled a `VStack` with its buttons inside the scroll, which is why the actions drifted with
+/// the content instead of sitting where every other step in this flow puts them.
+///
+/// ## Why this is a setup path and not a pitch
+///
+/// The draft before this one embedded `DeviceGpsPitch`, on the reasonable-sounding rule that a
+/// customer must not meet two accounts of the feature. But that type is a *card* built to stand
+/// alone in a `Form` row and in a sheet, so it carries its own glyph, its own "Device GPS" heading,
+/// its own "Included with GeoSpoof Pro" subtitle and its own summary line. Dropped inside a page
+/// that already has all four, every one of them became a second copy: the same symbol twice, the
+/// subject named three times over, the Mac-or-PC requirement stated once as a precondition and again
+/// as a claim, and four checked benefits arriving before anything had told the customer what they
+/// would actually have to *do*. Nine blocks to scroll for four blocks of information, with the
+/// handoff button sitting in the middle competing with the action bar for the same tap.
+///
+/// So the claims are recast as the three things that happen, in order, and the handoff is nested
+/// inside the step it belongs to. The guarantee the composition was protecting is kept where it
+/// actually lives — the shared *strings* (`compatibilityCaveat`, `ownedNeedsComputer`,
+/// `desktopAppURL`) are still owned by `DeviceGpsPitch`, so the tab, the sheet and this screen
+/// cannot drift apart on the load-bearing sentences.
+///
+/// Three consequences, each of them the reason:
+///
+/// - **The requirement is the value content.** Step one names both platforms, which is where a
+///   Windows owner learns they are in scope, and it satisfies Requirement 4.3's "primary content,
+///   not a footnote" without a separate line that reads like a disclaimer.
+/// - **The handoff stops competing.** It is step one's control, and step one is the only step that
+///   costs nothing — which matters because the trial is 3 days on monthly and the software lives on
+///   a second machine, so the download should start before the clock does.
+/// - **Nothing repeats.** Every line is a line the customer did not already have.
+///
+/// Sequence-over-features is the shape Blinkist's transparent trial paywall is known for: replacing
+/// the feature list with what happens next reportedly lifted trial conversion around 23% and cut
+/// billing complaints by roughly half
+/// ([Purchasely](https://purchasely.com/blog/blinkist-paywall-transformation-revolutionizes-app-user-engagement)).
+/// It fits here better than it fits most screens, because what is being explained genuinely *is* a
+/// sequence spanning two devices. The general principle behind the cut is the same one RevenueCat
+/// makes about paywalls accumulating elements meant to convince, which instead produce decision
+/// fatigue ([RevenueCat](https://www.revenuecat.com/blog/growth/ugly-paywalls-conversion-testing/)).
+/// Content rephrased for compliance with licensing restrictions.
+///
+/// **Step two names the cable on purpose.** First-time pairing runs over USB and only then moves to
+/// the local network — the site says exactly this ("Cable once, then over the network"), and it is
+/// the second most refund-producing surprise after needing a computer at all. Discovering it after
+/// paying is the outcome this screen exists to prevent, so it is stated before the offer even though
+/// it costs conversions.
+private struct OnboardingDeviceGpsView: View {
+    let onOpenPaywall: () -> Void
+    let onFinish: () -> Void
+
+    /// Observed so the primary action states what this customer still needs. Someone can reach this
+    /// screen already owning Pro — a founder grant, or a second device — and for them the outstanding
+    /// half is the computer, not the purchase.
+    @ObservedObject private var pro = ProStore.shared
+    @Environment(\.horizontalSizeClass) private var hSizeClass
+
+    var body: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 24) {
+                header
+                if pro.isPro {
+                    // Orientation for someone who already paid — a founder grant, or a second
+                    // device — placed immediately above the steps so it reads into them: you are
+                    // paid up, and here is what is left. The same key the GPS tab and the close
+                    // screen's sheet use, so the three surfaces cannot disagree about entitlement.
+                    Label {
+                        Text(DeviceGpsPitch.ownedNeedsComputer)
+                    } icon: {
+                        Image(systemName: "checkmark.seal.fill")
+                    }
+                    .font(.subheadline)
+                    .foregroundStyle(.green)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+                setupPath
+                // Kept, despite being one more block on a screen this change is shortening. It is
+                // the single most common wrong expectation the store listing creates, and the
+                // product's own honesty guardrail is what the brand is differentiated on. Footnote
+                // weight, last position: present for the person who needs it, skimmable past.
+                Text(DeviceGpsPitch.compatibilityCaveat)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.horizontal, OnboardingMetrics.pageMargin(hSizeClass))
+            .padding(.top, 4)
+            .padding(.bottom, 28)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            OnboardingActionBar {
+                VStack(spacing: 2) {
+                    primaryAction
+                    // Always present, always reachable without scrolling.
+                    //
+                    // **"Continue without GPS", not "Start using GeoSpoof".** The flow's other
+                    // terminal screen keeps the latter and should — it is the true end of setup.
+                    // Here it was ambiguous in the one way that matters: on a screen headed "Move
+                    // this iPhone's real GPS", "Start using GeoSpoof" reads like it might be the
+                    // button that starts *this*, and a customer who taps it expecting the feature
+                    // finds an app that cannot deliver it until they install something on a
+                    // computer. Naming what is being declined removes the misread.
+                    //
+                    // It is a mildly negative framing, which is what Requirement 7.3's "neutral
+                    // label, no disparaging the choice" exists to police, so the line is worth
+                    // stating: it describes the outcome without editorialising about it, and there
+                    // is no "no thanks, I don't want…" self-deprecation in it. Founder's call, and
+                    // clarity is the right side to err on when the alternative is a customer
+                    // believing they already have the paid feature.
+                    Button(action: onFinish) {
+                        Text("Continue without GPS")
+                            .font(.subheadline)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Color.brand)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+            }
+        }
+        .background(Color(uiColor: .systemBackground))
+    }
+
+    /// One glyph, one headline, one sentence — the whole subject of the screen, stated once.
+    ///
+    /// The subhead is the mechanism rather than a benefit, because the mechanism is the part nobody
+    /// guesses: the computer is what sets the location, and the phone needs nothing further installed
+    /// on it. "No jailbreak" earns its place by answering the question this category always raises.
+    /// It deliberately does *not* name the Mac or the PC — that is step one's line, and saying it in
+    /// both places is how the previous draft ended up stating the requirement twice.
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Image(systemName: "location.circle.fill")
+                .font(.system(size: 52))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(Color.brand)
+                .accessibilityHidden(true)
+            Text("Move this iPhone’s real GPS")
+                .font(.title2.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
+            Text("Your computer sets the location this iPhone reports. No jailbreak, and nothing extra to install on the phone.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// The three things that happen, in order.
+    ///
+    /// This replaces four checked claims, and each of them survives inside it: the platform pairing
+    /// is step one and step two, and the location, VPN-matching and route-pacing capabilities are the
+    /// payoff in step three. Read as a sequence they answer "what will I have to do", which is the
+    /// question a benefits list leaves open and the one that decides whether a two-device setup gets
+    /// finished before a 3-day trial runs out.
+    private var setupPath: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            OnboardingSetupStep(
+                number: 1,
+                text: "Install GeoSpoof GPS on your Mac or Windows PC"
+            ) {
+                DesktopHandoffBlock(url: DeviceGpsPitch.desktopAppURL)
+            }
+            OnboardingSetupStep(
+                number: 2,
+                text: "Connect this iPhone with a cable once to pair, then it works over Wi-Fi"
+            )
+            OnboardingSetupStep(
+                number: 3,
+                text: "Set any location, match your VPN, or follow a route at walking, cycling, or driving pace"
+            )
+        }
+    }
+
+    /// What is actually outstanding for this customer.
+    ///
+    /// Neither branch states a price or a trial length. Both come from StoreKit at the paywall, which
+    /// already renders the introductory offer and its disclosure — a translated price literal is how a
+    /// stale number reaches eleven languages at once, and this product has changed price three times.
+    @ViewBuilder
+    private var primaryAction: some View {
+        if pro.isPro {
+            // Owned. The remaining half is the computer, and quoting a price here would be the worst
+            // possible read of a screen meant to help.
+            Link(destination: DeviceGpsPitch.desktopAppURL) {
+                ProminentButtonLabel(title: "Get GeoSpoof GPS", symbol: "arrow.down.circle")
+            }
+            .glassButtonStyle(prominent: true)
+            .controlSize(.large)
+        } else {
+            Button(action: onOpenPaywall) {
+                ProminentButtonLabel(title: "Upgrade to Pro", symbol: "sparkles")
+            }
+            .glassButtonStyle(prominent: true)
+            .controlSize(.large)
+            .accessibilityHint("Opens GeoSpoof Pro pricing and the free trial")
+        }
+    }
+}
+
+#endif
+
+
+
 private struct OnboardingWelcomeView: View {
     let onContinue: () -> Void
 
@@ -1960,6 +2393,13 @@ private struct OnboardingGrantAccessView: View {
 private struct OnboardingSafariReadyView: View {
     @ObservedObject var controller: SpoofController
     let onFinish: () -> Void
+    /// What the primary button says.
+    ///
+    /// This screen used to be the end of the flow, so its button read "Start using GeoSpoof" and told
+    /// the truth. A device-GPS step now follows it for anyone who does not already have that set up,
+    /// and for them the same words would promise the app and deliver another screen. The host knows
+    /// which case applies — it owns `steps` — so it supplies the word rather than this view guessing.
+    let continueTitle: LocalizedStringKey
 
     @ObservedObject private var router = AppRouter.shared
     /// Observed so the Device GPS row states what this user still needs rather
@@ -2104,7 +2544,12 @@ private struct OnboardingSafariReadyView: View {
                         SpoofMap(
                             latitude: location.latitude,
                             longitude: location.longitude,
-                            span: 5
+                            span: 5,
+                            // Asked rather than assumed. This screen has just verified Safari, so the
+                            // answer is almost always yes — but someone can reach it having skipped the
+                            // Protection switch, and a pulse over a location nothing reports would be
+                            // this screen's one piece of evidence quietly overstating itself.
+                            pulses: controller.isLocationInEffect
                         )
                         .frame(height: mapHeight)
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -2186,7 +2631,7 @@ private struct OnboardingSafariReadyView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             OnboardingActionBar {
                 Button(action: onFinish) {
-                    Text("Start using GeoSpoof")
+                    Text(continueTitle)
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                 }
@@ -2335,9 +2780,14 @@ struct DeviceGpsPitch: View {
     /// exists so a customer who meets the explanation twice gets one account of
     /// the feature, and that guarantee has to cover "do I already have this?"
     /// too. The GPS tab only renders this in its `.notPro` phase, so today the
-    /// owned branch is reached from onboarding alone — but a host that starts
-    /// showing the pitch to an owner gets the right behaviour for free instead of
-    /// re-deriving it.
+    /// owned branch is reachable only through the close screen's sheet — but a host
+    /// that starts showing the pitch to an owner gets the right behaviour for free
+    /// instead of re-deriving it.
+    ///
+    /// Onboarding's device-GPS step is not one of those hosts. It renders the same
+    /// `ownedNeedsComputer` line itself, from this type's static, because it is a
+    /// full page with its own heading and action bar and embedding a self-contained
+    /// card inside one duplicated four elements — see `OnboardingDeviceGpsView`.
     @ObservedObject private var pro = ProStore.shared
 
     var body: some View {
@@ -2364,6 +2814,10 @@ struct DeviceGpsPitch: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 PitchPoint("Location simulation for privacy and app testing")
+                // Routes shipped, and nothing in the app's own pitch said so. It is the largest
+                // capability device GPS has gained and the one a customer cannot guess from
+                // "set your location", so it is named second, above the VPN line.
+                PitchPoint("Follow a custom route at walking, cycling, or driving pace")
                 PitchPoint("Choose any location or match your VPN")
                 // Names both platforms rather than saying "computer" a second time.
                 // This is the pitch a purchase is decided on, and "a computer" leaves
@@ -2440,8 +2894,9 @@ struct DeviceGpsPitch: View {
         }
     }
 
-    /// The scope caveat both hosts show alongside this pitch — the GPS tab in its
-    /// own `Section`, the onboarding sheet directly beneath. Lives here rather
+    /// The scope caveat every surface shows alongside this pitch — the GPS tab in
+    /// its own `Section`, the close screen's sheet directly beneath, and
+    /// onboarding's device-GPS step as its closing footnote. Lives here rather
     /// than at each call site, where it was the same sentence typed out twice.
     static let compatibilityCaveat: LocalizedStringKey =
         "Not for AR games like Pokémon GO — device GPS is for privacy, browsing, and development."
@@ -2450,16 +2905,16 @@ struct DeviceGpsPitch: View {
     /// branches, and the same `gps-download` campaign the GPS tab's setup link uses,
     /// so "went to get the desktop app" stays a single number regardless of which
     /// surface sent them.
-    private static var desktopAppURL: URL { AppLink.site("/gps", campaign: "gps-download") }
+    static var desktopAppURL: URL { AppLink.site("/gps", campaign: "gps-download") }
 
     /// Shown to a user who already owns Pro, in place of "Needs Pro and a computer"
     /// and in place of the upgrade ask.
     ///
-    /// One key for both, on purpose: the onboarding row and the sheet it opens are
-    /// the same statement at two sizes, and the previous pair of near-identical
-    /// sentences is what this file has been burned by before. "Pro" rather than
-    /// "GeoSpoof Pro" because the row's other state says "Needs Pro", and the
-    /// sheet names the product in its header two lines up.
+    /// One key for all three, on purpose: the close screen's row, the sheet it opens,
+    /// and onboarding's device-GPS step are the same statement at three sizes, and the
+    /// previous set of near-identical sentences is what this file has been burned by
+    /// before. "Pro" rather than "GeoSpoof Pro" because the row's other state says
+    /// "Needs Pro", and every surface names the product within a line or two.
     static let ownedNeedsComputer: LocalizedStringKey = "You have Pro — you just need a computer"
 }
 
@@ -2545,6 +3000,119 @@ struct DeviceGpsSheet: View {
         // requirement there.
         .explainerSheetPresentation(padContentHeight: contentHeight)
         .frostedSheetBackground()
+    }
+}
+
+/// How to keep a spoofed location after leaving the computer behind.
+///
+/// **The order of the two steps is the whole thing, which is why this is a sheet and not a footnote.**
+/// Turning Developer Mode off *while the location is active* is what makes it hold; disconnecting first
+/// and then turning it off does not, because by then the location is already gone. A one-line tip cannot
+/// carry a sequence whose steps are useless in the wrong order, and someone who gets it backwards
+/// concludes the feature doesn't work.
+///
+/// **Why this is allowed to claim "no connection at all" when nothing else in the app is.** Every other
+/// persistence finding in `geospoof-gps.md` was measured with Developer Mode left on, tearing down the
+/// tunnel underneath it — session-bound, reverts in about twenty seconds. Turning Developer Mode off
+/// dismantles developer services outright, so nothing remains to clear or re-assert the fix. Validated
+/// on device by the founder and by multiple customers; recorded under *Developer-Mode-off hold* in that
+/// file, which also carries the standing rule that this exception must never be blurred into a sentence
+/// about the ordinary running state.
+///
+/// **The trade-off is not optional copy.** Once Developer Mode is off the location is frozen — no new one
+/// can be applied until it goes back on. Someone who leaves for the day believing they can still change it
+/// has been mis-sold, and a reboot reverts the whole thing regardless. Both facts ship next to the
+/// instruction, never below a fold.
+///
+/// Wording is lifted from the site's `/gps` page (`offlineTitle` / `offlineBody` / `offlineCaveat`) rather
+/// than rewritten. This is a behavioural claim about the product, and a claim stated two ways is a claim
+/// one of whose versions is wrong.
+struct OfflineHoldSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    /// Drives the iPad card's height. Unused on iPhone, where detents own the shape.
+    @State private var contentHeight: CGFloat = 0
+
+    var body: some View {
+        AdaptiveNavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    Text("A location can stay in place after the connection ends. While your spoofed location is active, turn off Developer Mode on your iPhone (Settings ▸ Privacy & Security ▸ Developer Mode). The location holds from that point on, including once you've left your computer behind.")
+                        .font(.subheadline)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    // The order, stated as an order. The prose above says it once; a numbered path is what
+                    // someone actually follows while standing in Settings.
+                    VStack(alignment: .leading, spacing: 14) {
+                        OfflineHoldStep(number: 1, text: "Set your location and check it has taken effect")
+                        OfflineHoldStep(number: 2, text: "Turn off Developer Mode while the location is still active")
+                        OfflineHoldStep(number: 3, text: "Now disconnect — Wi-Fi, hotspot, cable, all of it")
+                    }
+
+                    // Warning-tinted, because it is the part that produces a bad day if it is missed rather
+                    // than merely a smaller feature.
+                    // **Names re-enabling Developer Mode, which an earlier version left out.** It said
+                    // only "restart your iPhone and set the new location", which reads as though the
+                    // restart alone gives you back control — and a customer who followed it would restart,
+                    // reconnect, and find the location still stuck with nothing on screen explaining why.
+                    // Turning Developer Mode back on is the step that undoes the hold; the restart is a
+                    // consequence of it, not an alternative to it, so the order here is enable *then*
+                    // restart.
+                    Label {
+                        Text("The trade-off is that the location is now fixed. To pick a different one, turn Developer Mode back on, restart your iPhone, and set the new location with your computer nearby.")
+                            .fixedSize(horizontal: false, vertical: true)
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                    }
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+                }
+                .padding(20)
+                .frame(maxWidth: 600, alignment: .leading)
+                .frame(maxWidth: .infinity)
+                .measuringExplainerContentHeight(into: $contentHeight)
+            }
+            .navigationTitle("Going out without your computer")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button { dismiss() } label: { Image(systemName: "xmark") }
+                        .accessibilityLabel("Close")
+                }
+            }
+        }
+        .tint(.brand)
+        // Same presentation as the app's other explainers, so opening this feels like opening those.
+        .explainerSheetPresentation(padContentHeight: contentHeight)
+        .frostedSheetBackground()
+    }
+}
+
+/// A numbered step in `OfflineHoldSheet`.
+///
+/// A local shape rather than a reuse of onboarding's `OnboardingSetupStep`: that one is `private` to the
+/// onboarding file and carries a detail slot this has no use for. Same visual family, deliberately.
+struct OfflineHoldStep: View {
+    let number: Int
+    let text: LocalizedStringKey
+
+    @ScaledMetric(relativeTo: .subheadline) private var badge: CGFloat = 24
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            // A numeral is data, not copy — `verbatim` per the catalog rule in CONTRIBUTING. Hidden from
+            // assistive tech because reading order already carries the sequence.
+            Text(verbatim: "\(number)")
+                .font(.footnote.weight(.bold))
+                .foregroundStyle(Color.brand)
+                .frame(width: badge, height: badge)
+                .background(Color.brand.opacity(0.14), in: Circle())
+                .accessibilityHidden(true)
+            Text(text)
+                .font(.subheadline)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }
 

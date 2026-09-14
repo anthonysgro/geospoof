@@ -1400,7 +1400,7 @@ export const de: Dictionary = {
           text: "Lege deinen Standort wie gewohnt in GeoSpoof fest. Das systemweite GPS deines iPhones folgt ihm und bleibt abgeglichen, solange es deinen Mac über das Kabel, dasselbe WLAN oder einen Hotspot erreichen kann.",
           bullets: [
             "Du kannst das Kabel abziehen, aber die Verbindung muss bestehen bleiben. Das GPS wird von der Mac-App gesetzt.",
-            "Ohne deinen Mac unterwegs? Schalte den Entwicklermodus aus, während der Standort aktiv ist, dann bleibt er erhalten. Um ihn später zu ändern, starte dein iPhone neu und verbinde es wieder.",
+            "Ohne deinen Mac unterwegs? Schalte den Entwicklermodus aus, während der Standort aktiv ist, dann bleibt er erhalten. Um ihn später zu ändern, schalte den Entwicklermodus wieder ein, starte dein iPhone neu und verbinde es wieder.",
           ],
           link: { label: "GeoSpoof fürs iPhone holen" },
         },
@@ -1468,7 +1468,7 @@ export const de: Dictionary = {
       offlineBody:
         "Ein Standort kann erhalten bleiben, nachdem die Verbindung endet. Schalte bei aktivem gefälschtem Standort auf dem iPhone den Entwicklermodus aus (Einstellungen ▸ Datenschutz & Sicherheit ▸ Entwicklermodus). Ab diesem Punkt bleibt der Standort bestehen, auch wenn du dich von deinem Computer entfernst.",
       offlineCaveat:
-        "Der Haken ist, dass der Standort damit festgelegt ist. Um einen anderen zu wählen, starte dein iPhone neu und lege den neuen Standort fest, während dein Computer wieder in der Nähe ist.",
+        "Der Haken ist, dass der Standort damit festgelegt ist. Um einen anderen zu wählen, schalte den Entwicklermodus wieder ein, starte dein iPhone neu und lege den neuen Standort fest, während dein Computer in der Nähe ist.",
       limitTitle: "Was nicht geht",
       limitBody:
         "Nichts läuft über unsere Server, dein Computer kann dein iPhone also nicht über das Internet erreichen. Sind die beiden getrennt, nimmt das Telefon keine neuen Standorte mehr an. Der Schritt mit dem Entwicklermodus oben hält den aktuellen fest.",

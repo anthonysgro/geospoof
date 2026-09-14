@@ -598,7 +598,36 @@ struct SpoofControlPanel: View {
             .padding(.vertical, 6)
             .adaptiveModalCover(isPresented: $showTrustInfo) { TrustSheet() }
         } header: {
-            Text(header)
+            // **Every card is a fault card, so this needs no severity parameter.** `setupSection`
+            // renders a card for exactly four states — `warrantsRepair`, `.verifiedDisabled`,
+            // `.never` and `.unverified` — and `browserStatus` returns `.fault` for the same four.
+            // `.verifiedEnabled`, `.active` and `.idle` all produce `EmptyView()` instead. So the
+            // card cannot exist in a healthy state, and the presentation can simply be the fault
+            // presentation rather than a flag that has to be kept in step with the row above.
+            //
+            // Until now it wasn't. The card was grey and green throughout: a default section header,
+            // secondary body text, a brand-tinted button. The summary row directly above had already
+            // gone orange, so the headline said "something is wrong" and the thing offering the
+            // repair looked like an ordinary settings group — which is precisely the "oh, things are
+            // fine" reading this is meant to prevent. Same `exclamationmark.triangle.fill` the row
+            // uses, so the eye connects "Not protected" to the card that fixes it.
+            //
+            // The button below stays brand-tinted deliberately. Orange is the diagnosis and green is
+            // the way out; repainting the action as a warning too would make the fix look like more
+            // of the problem, and would leave the screen with no colour that means "press this".
+            //
+            // An explicit `HStack` rather than a `Label`, for the same reason as the "Is GeoSpoof
+            // safe?" link below: inside a `Form`, `Label` adopts list-row icon metrics and the glyph
+            // reads as having come loose from its text.
+            HStack(spacing: 6) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    // Decorative. The message immediately below states the problem in words, so
+                    // announcing the glyph would prepend noise to a sentence that is already
+                    // complete.
+                    .accessibilityHidden(true)
+                Text(header)
+            }
+            .foregroundStyle(.orange)
         }
     }
 
@@ -735,7 +764,7 @@ struct SpoofControlPanel: View {
                 label: "Browser",
                 systemImage: "globe",
                 status: browserStatus,
-                tab: .browser
+                tab: browserStatusDestination
             )
             // Always present, exactly like the browser row above it.
             //
@@ -762,7 +791,7 @@ struct SpoofControlPanel: View {
     /// Exists because the first version derived the colour by switching on the row's
     /// `LocalizedStringKey` against English literals — so rewording "Not protected" would silently
     /// have turned a warning grey. State decides the colour; copy is chosen from the same state.
-    private enum SummaryState {
+    private enum SummaryState: Equatable {
         /// Switched off by the user. Not a fault, and must not be dressed as one.
         case off
         /// Switched on, and something is genuinely wrong.
@@ -835,6 +864,29 @@ struct SpoofControlPanel: View {
         }
     }
 
+    /// Where the browser row goes when tapped, and `nil` when it should not go anywhere.
+    ///
+    /// **A fault routes nowhere, because the repair is already on this screen.** Every other state
+    /// belongs on the Browser tab: that is where the Protection switch lives, and a row reporting a
+    /// switch should lead to it. A fault is the one case where the switch is not the problem — the
+    /// extension is off in Safari, or shut out of every page — and `setupSection` puts the card that
+    /// fixes it directly beneath this section. Navigating away from that card was the whole bug:
+    /// tapping the words "Not protected" left the only screen carrying the answer, and landed on a
+    /// tab showing a Protection toggle sitting in the on position above accuracy, precision,
+    /// language and filters, none of which are in effect.
+    ///
+    /// Deliberately not "route the fault to Settings instead". That would work in one tap, and it
+    /// would make this row a control — the one thing `statusSummarySection` documents twice that it
+    /// must never be. The card owns the action; this owns the statement.
+    ///
+    /// The device-GPS row keeps its destination in every state, faults included, because the GPS tab
+    /// genuinely does carry its own remediation. The asymmetry is real rather than an oversight, so
+    /// it lives here as one expression instead of as a rule inside `statusRow` that would have to
+    /// guess which row it was drawing.
+    private var browserStatusDestination: AppRouter.RootTab? {
+        browserStatus.state == .fault ? nil : .browser
+    }
+
     private var deviceGpsStatus: (state: SummaryState, value: LocalizedStringKey) {
         guard controller.deviceGpsEnabled else { return (.off, "Off") }
         switch deviceGpsDelivering {
@@ -863,16 +915,16 @@ struct SpoofControlPanel: View {
     ///
     ///   Left untinted on purpose. It says *which subsystem*, not *how it's doing*, and colouring it
     ///   too would put two coloured glyphs in one row and blunt the only one that carries state.
+    /// - Parameter tab: `nil` renders the row inert and drops its chevron. A row that looks
+    ///   navigable and isn't is worse than either, so the affordance and the destination are the same
+    ///   decision — see `browserStatusDestination` for when that happens and why.
     private func statusRow(
         label: LocalizedStringKey,
         systemImage: String,
         status: (state: SummaryState, value: LocalizedStringKey),
-        tab: AppRouter.RootTab
+        tab: AppRouter.RootTab?
     ) -> some View {
-        Button {
-            AppRouter.shared.selectedTab = tab
-        } label: {
-            HStack {
+        let content = HStack {
                 Label(label, systemImage: systemImage)
                 Spacer()
                 // Word first, glyph second — the opposite of a `Label`, and the reason this is built
@@ -906,14 +958,28 @@ struct SpoofControlPanel: View {
                 // One tint for the pair. Applied here rather than on each so the word and its glyph
                 // can never end up different colours.
                 .foregroundStyle(status.state.tint)
-                Image(systemName: "chevron.forward")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
+                if tab != nil {
+                    Image(systemName: "chevron.forward")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+
+        return Group {
+            if let tab {
+                Button {
+                    AppRouter.shared.selectedTab = tab
+                } label: {
+                    content
+                }
+                .buttonStyle(.plain)
+            } else {
+                content
             }
         }
-        .buttonStyle(.plain)
         // Combined, or VoiceOver reads the label, the value, and the chevron as three stops and the
-        // reader has to hold them together themselves.
+        // reader has to hold them together themselves. Applied outside the branch so an inert row
+        // gets the same single-element treatment as a navigable one.
         .accessibilityElement(children: .combine)
     }
     #endif
@@ -1126,8 +1192,10 @@ struct SpoofControlPanel: View {
 /// Withholds a Metal-backed `Map` from the view tree until its container has a size
 /// MapKit can actually render into.
 ///
-/// `.mapStyle(.hybrid)` and `.hybrid(elevation:)` draw satellite imagery through a
-/// multisampled pass. Laid out at zero size, MapKit builds a render pass whose
+/// Every `Map` needs this, whatever its style. It was found through `.mapStyle(.hybrid)` and
+/// `.hybrid(elevation:)`, whose satellite imagery goes through a multisampled pass and so trips Metal's
+/// validation loudest — the app's maps have since moved to `.standard`, which changes nothing about the
+/// requirement. Laid out at zero size, MapKit builds a render pass whose
 /// `MTLStoreActionMultisampleResolve` has no resolve texture to write into, Metal's
 /// debug layer asserts, and the process traps —
 /// `_MTLDebugValidateRenderPassDescriptorAndTrackAttachments`, reached from
@@ -1187,11 +1255,29 @@ struct LocationMapPreview: View {
     let latitude: Double
     let longitude: Double
     let timezoneID: String?
+    /// Whether a report is currently vouching for this coordinate as the device's position.
+    ///
+    /// Swaps the waypoint for `LivePositionDot`. Defaults to `false` so any surface that hasn't thought
+    /// about the question gets the pin, which is the answer that can't be wrong: outside a confirmed run
+    /// this coordinate is a *chosen* place, and a pulsing dot on a setting would claim liveness the app
+    /// has no evidence for.
+    var isLive: Bool = false
+    /// Whether the dot pings — i.e. whether anything is actually reporting this coordinate.
+    /// See `LivePositionDot.pulses` and `SpoofController.isLocationInEffect`.
+    var pulses: Bool = true
 
     var body: some View {
         if #available(iOS 17.0, macOS 14.0, *) {
-            LiveMapPreview(latitude: latitude, longitude: longitude, timezoneID: timezoneID)
+            LiveMapPreview(
+                latitude: latitude,
+                longitude: longitude,
+                timezoneID: timezoneID,
+                isLive: isLive,
+                pulses: pulses
+            )
         } else {
+            // Pre-17 has no live path at all, and at a deployment target of iOS 18 / macOS 13 this is
+            // reachable only on old macOS — where the snapshot is a still image and a pulse is moot.
             MapSnapshotView(latitude: latitude, longitude: longitude)
         }
     }
@@ -1203,13 +1289,20 @@ private struct LiveMapPreview: View {
     let latitude: Double
     let longitude: Double
     let timezoneID: String?
+    let isLive: Bool
+    let pulses: Bool
     @ObservedObject private var shapes = TimezoneShapeStore.shared
+    /// Only consulted while `isLive`. A chosen location changes when someone picks one, which is a jump by
+    /// definition and already carried by the camera move.
+    @StateObject private var smoothed = SmoothedPosition()
     @State private var camera: MapCameraPosition
 
-    init(latitude: Double, longitude: Double, timezoneID: String?) {
+    init(latitude: Double, longitude: Double, timezoneID: String?, isLive: Bool, pulses: Bool) {
         self.latitude = latitude
         self.longitude = longitude
         self.timezoneID = timezoneID
+        self.isLive = isLive
+        self.pulses = pulses
         _camera = State(initialValue: .camera(MapCamera(
             centerCoordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
             distance: 2_400_000, heading: 0, pitch: 0
@@ -1224,6 +1317,10 @@ private struct LiveMapPreview: View {
         return shapes.rings(for: timezoneID)
     }
 
+    private func trackLive() {
+        smoothed.track(isLive ? coordinate : nil)
+    }
+
     var body: some View {
         // No `.id` here: re-creating the Map on every coordinate change tears
         // down tiles, the waypoint, and the polygon (a visible flash). Instead we
@@ -1235,10 +1332,37 @@ private struct LiveMapPreview: View {
                     .foregroundStyle(Color.mapHighlight.opacity(0.28))
                     .stroke(Color.mapHighlight.opacity(0.95), lineWidth: 1.0)
             }
-            Annotation(String(), coordinate: coordinate, anchor: .bottom) { SpoofMap.pin }
+            // **The anchor differs with the mark, and it has to.** A pin points at its coordinate with
+            // its tip, so it hangs from `.bottom`; a dot *is* its coordinate, so it centres on it.
+            // Anchoring the dot like the pin would sit it a half-height north of the place it claims.
+            // The dot is the mark in every state now, so the anchor is always `.center` — no pin, no
+            // tip to hang from. `isLive` has narrowed to what it always really meant: whether a report
+            // is vouching for a *moving* position, which is the only thing that licenses smoothing
+            // between fixes. Whether it *pulses* is the separate, weaker question.
+            Annotation(
+                String(),
+                coordinate: isLive ? (smoothed.coordinate ?? coordinate) : coordinate,
+                anchor: .center
+            ) {
+                LivePositionDot(pulses: pulses)
+            }
         }
-        .mapStyle(.hybrid(elevation: .realistic))
+        // **Standard and flat, where this used to be satellite with realistic elevation.** Two reasons,
+        // and the second is a bug rather than taste.
+        //
+        // Satellite at this camera distance is a brown-and-grey texture with nothing in it a customer can
+        // read, and it drowns the brand tint the timezone polygon and the dot are drawn in. The route map
+        // has been `.standard` with points of interest suppressed all along and looks far better for it.
+        //
+        // The elevation is the important half. `.realistic` places annotations *in the 3D scene*, so a
+        // ground-anchored mark can be occluded by the terrain mesh — which is what hid the dot until you
+        // pinched in close enough to clear it, and why the old pin got away with it: 28pt tall and anchored
+        // `.bottom`, it stood up and away from the surface, while a dot centred on its coordinate has half
+        // its body at or below ground. `.flat` renders annotations in screen space, always on top. Nothing
+        // on this small static window wanted a terrain mesh anyway.
+        .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll))
         .onChange(of: "\(latitude),\(longitude)") { _, _ in
+            trackLive()
             withAnimation(.easeInOut(duration: 0.6)) {
                 camera = .camera(MapCamera(
                     centerCoordinate: coordinate,
@@ -1246,7 +1370,13 @@ private struct LiveMapPreview: View {
                 ))
             }
         }
-        .onAppear { shapes.preload() }
+        // Stop gliding the moment the position stops being live, so a dot can't keep drifting toward a
+        // fix nothing is vouching for any more.
+        .onChange(of: isLive) { _, _ in trackLive() }
+        .onAppear {
+            shapes.preload()
+            trackLive()
+        }
         // This is the map that mounts as the Home tab is built for the first time,
         // inside `RootView`'s onboarding cross-dissolve. See `MapRenderSizeGate`.
         .mapRenderSizeGate()
@@ -1304,7 +1434,10 @@ struct MapSnapshotView: View {
             heading: 0
         )
         options.size = size
-        options.mapType = .hybridFlyover
+        // `.standard`, not `.hybridFlyover`. Every live map moved off satellite; leaving the one raster
+        // fallback on it is how a style inconsistency survives a sweep and turns up later as a bug report
+        // about a screen nobody remembered rendered differently.
+        options.mapType = .standard
         options.pointOfInterestFilter = .excludingAll
         #if os(iOS)
         options.traitCollection = UITraitCollection(userInterfaceStyle: colorScheme == .dark ? .dark : .light)
@@ -1337,14 +1470,23 @@ struct SpoofMap: View {
     let longitude: Double
     var span: Double = 12
     var interactive: Bool = false
+    /// Whether the dot pings. See `LivePositionDot.pulses`.
+    var pulses: Bool = true
 
     @State private var fallbackRegion: MKCoordinateRegion
 
-    init(latitude: Double, longitude: Double, span: Double = 12, interactive: Bool = false) {
+    init(
+        latitude: Double,
+        longitude: Double,
+        span: Double = 12,
+        interactive: Bool = false,
+        pulses: Bool = true
+    ) {
         self.latitude = latitude
         self.longitude = longitude
         self.span = span
         self.interactive = interactive
+        self.pulses = pulses
         _fallbackRegion = State(initialValue: MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
             span: MKCoordinateSpan(latitudeDelta: span, longitudeDelta: span)
@@ -1373,9 +1515,23 @@ struct SpoofMap: View {
     private var mapContent: some View {
         if #available(iOS 17.0, macOS 14.0, *) {
             Map(initialPosition: .region(region), interactionModes: interactive ? .all : []) {
-                Annotation(String(), coordinate: coordinate) { Self.pin }
+                // Centred, because a dot *is* its coordinate. The pin below hangs from `.bottom` because
+                // it points with its tip — see `LivePositionDot` for why the mark changed.
+                Annotation(String(), coordinate: coordinate, anchor: .center) {
+                    LivePositionDot(pulses: pulses)
+                }
             }
-            .mapStyle(.hybrid)
+            // **Standard, not hybrid.** This was satellite imagery, which is the wrong register for the
+            // onboarding close screen: a photographic globe at a five-degree span is a brown-and-grey
+            // texture with no landmarks a customer can read, and it fought the one moment on that screen
+            // that is meant to feel like a result. The route map has been on `.standard` with points of
+            // interest suppressed all along, and it is the better template — quiet, legible, and it lets
+            // the brand tint be the only colour on the map rather than competing with terrain.
+            // Elevation pinned rather than left `.automatic`, for the reason the route map spells out:
+            // automatic lets MapKit decide to tilt, so a static window on a success screen could quietly
+            // become a 3D scene. Every map in the app is now explicit about this, and the only one that
+            // renders terrain is the location map's globe toggle, which a customer has to press.
+            .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll))
         } else {
             Map(
                 coordinateRegion: interactive ? $fallbackRegion : .constant(region),
@@ -1387,6 +1543,12 @@ struct SpoofMap: View {
         }
     }
 
+    /// The pre-MapKit-17 waypoint, and the one drawn onto `MapSnapshotView`'s still image.
+    ///
+    /// Every live map uses `LivePositionDot` now. This survives for the two surfaces that cannot animate:
+    /// the `Map(coordinateRegion:)` fallback and a rasterised snapshot. At a deployment target of iOS 18
+    /// both are reachable only on macOS 13, where a static pin on a static image is the right answer
+    /// anyway — a dot whose whole character is a pulse would just be a green circle there.
     @ViewBuilder static var pin: some View {
         // A classic thin white map-pin waypoint, with a soft shadow for contrast
         // over satellite imagery.
@@ -1394,6 +1556,239 @@ struct SpoofMap: View {
             .font(.system(size: 28, weight: .semibold))
             .foregroundStyle(.white)
             .shadow(color: .black.opacity(0.5), radius: 2, y: 1)
+    }
+}
+
+/// The app's mark for a location on a map: a solid dot, a white ring, and a halo pinging outward.
+///
+/// **Now used on every live map, not only during a route.** An earlier version of this was reserved for a
+/// confirmed run, on the reasoning that a pulse claims liveness and a chosen location is only a setting.
+/// That drew the line in the wrong place. What these maps show is not "a place" but "where you appear to
+/// be", which is a *position* — and a pin is the idiom for the former. So the dot is the mark throughout,
+/// and the claim the pulse makes is handled by gating the pulse rather than by swapping the shape: see
+/// `pulses`, which follows `SpoofController.isLocationInEffect`.
+///
+/// Two separate questions, and keeping them apart is what makes the honesty tractable:
+///
+///   * **Does it pulse?** Is anything reporting this coordinate — `isLocationInEffect`.
+///   * **Does it glide between fixes?** Is a report vouching for a *moving* position —
+///     `isReportingLivePosition`, via `SmoothedPosition`.
+///
+/// **Brand green rather than Apple's blue.** The blue dot means "this is you, per Core Location". This
+/// one means "this is where the device is telling the world it is", which is sometimes the opposite
+/// claim, so borrowing the system's colour would be the app impersonating the OS about the single fact
+/// it exists to change. The *shape* is what carries the recognition, and shape is free to borrow.
+///
+/// ## Why a phase animator rather than `repeatForever`
+///
+/// The first version toggled one boolean under `withAnimation(.easeOut.repeatForever(autoreverses:
+/// false))`, expanding the halo while fading it out. That pops once per cycle, and the pop is the whole
+/// of what read as unsmooth: at the end of a cycle the ring snapped back to its small size *and* from
+/// transparent to full opacity in the same instant, so every breath began with a visible blink.
+///
+/// Three phases fix it by giving the ring somewhere invisible to restart from. It fades in quickly while
+/// still small, expands and fades out slowly, then returns to the start with a zero-duration step — which
+/// cannot be seen because the phase it leaves and the phase it enters are both fully transparent. The
+/// long leg carries `easeOut`, so the ring decelerates as it dissolves, which is the part that reads as a
+/// breath instead of a blip.
+///
+/// Phases also survive the thing `onAppear` could not. The live coordinate is re-reported every few
+/// seconds, and each report re-evaluates the enclosing map's content builder; a one-shot animation
+/// started from `onAppear` is at the mercy of that, while the phase cycle is owned by SwiftUI and simply
+/// keeps going.
+/// Slides an annotation toward each new fix instead of teleporting to it.
+///
+/// Positions arrive about every three seconds, and MapKit re-places an annotation the instant its
+/// coordinate changes — so the dot stepped between fixes rather than travelling between them. Nothing in
+/// SwiftUI's implicit animation reaches this: the dot's *placement* belongs to MapKit rather than to a
+/// layout, so animating a modifier on the dot moves nothing. The only thing that makes it travel is
+/// feeding `Annotation` a coordinate that itself passes through the in-between values, which is what this
+/// produces.
+///
+/// **It interpolates presentation, never data.** Nothing here is written back, sent to the agent, or
+/// treated as knowledge of where the device is — the in-between coordinates are frankly invented, which
+/// is exactly why they stay inside a view. `APP_CONTRACT.md`'s rule that the app must never send a
+/// distance representing its own belief about the device's position is about the wire, and this never
+/// touches it. The dot rests on a genuine reported fix between animations.
+///
+/// Two cases deliberately snap instead of sliding:
+///
+///   * **The first fix**, which has no previous position to travel from.
+///   * **A jump too far to be travel.** A restart, a fresh pick, or a route that loops back to its start
+///     are discontinuities, not movement, and gliding a dot across a continent to describe one is a
+///     worse lie than the teleport. Above `snapThresholdMeters` it simply moves.
+@MainActor
+final class SmoothedPosition: ObservableObject {
+    /// The coordinate to draw right now. `nil` when there is nothing live to show.
+    @Published private(set) var coordinate: CLLocationCoordinate2D?
+
+    /// Beyond this, a change is treated as a discontinuity and snaps.
+    private static let snapThresholdMeters: CLLocationDistance = 2_000
+    /// Kept comfortably under the report interval so the dot arrives and rests on a real fix rather than
+    /// being interrupted mid-glide by the next one — which would compound invented positions.
+    private static let glide: Duration = .milliseconds(900)
+    private static let steps = 30
+
+    private var glideTask: Task<Void, Never>?
+
+    /// Point at the newest reported position, animating there when that reads as movement.
+    func track(_ target: CLLocationCoordinate2D?) {
+        glideTask?.cancel()
+        glideTask = nil
+
+        guard let target else {
+            coordinate = nil
+            return
+        }
+        guard let from = coordinate else {
+            coordinate = target
+            return
+        }
+        let travelled = CLLocation(latitude: from.latitude, longitude: from.longitude)
+            .distance(from: CLLocation(latitude: target.latitude, longitude: target.longitude))
+        guard travelled.isFinite, travelled <= Self.snapThresholdMeters, travelled > 0 else {
+            coordinate = target
+            return
+        }
+
+        // Shortest way round, so a route crossing the antimeridian doesn't sweep the dot the long way
+        // across the globe. The latitude needs no equivalent — it doesn't wrap.
+        var deltaLon = target.longitude - from.longitude
+        if deltaLon > 180 { deltaLon -= 360 }
+        if deltaLon < -180 { deltaLon += 360 }
+        let deltaLat = target.latitude - from.latitude
+
+        glideTask = Task { @MainActor [weak self] in
+            let tick = Self.glide / Self.steps
+            for step in 1...Self.steps {
+                try? await Task.sleep(for: tick)
+                if Task.isCancelled { return }
+                let t = Double(step) / Double(Self.steps)
+                // Ease out, so it decelerates into the fix the way a tracked position does rather than
+                // arriving at full speed and stopping dead.
+                let eased = 1 - pow(1 - t, 3)
+                var lon = from.longitude + deltaLon * eased
+                if lon > 180 { lon -= 360 }
+                if lon < -180 { lon += 360 }
+                self?.coordinate = CLLocationCoordinate2D(
+                    latitude: from.latitude + deltaLat * eased,
+                    longitude: lon
+                )
+            }
+            // Land exactly on the reported fix, so what rests on screen is the real figure and not the
+            // last step of an interpolation.
+            self?.coordinate = target
+        }
+    }
+}
+
+/// A coordinate reduced to something `onChange` can compare. `CLLocationCoordinate2D` isn't `Equatable`.
+///
+/// Rounded to roughly a centimetre, which is far finer than any position this app deals in — the point is
+/// to have a stable key, not to quantise.
+struct CoordinateKey: Equatable {
+    private let lat: Int
+    private let lon: Int
+
+    init?(_ coordinate: CLLocationCoordinate2D?) {
+        guard let coordinate, coordinate.latitude.isFinite, coordinate.longitude.isFinite else {
+            return nil
+        }
+        lat = Int((coordinate.latitude * 10_000_000).rounded())
+        lon = Int((coordinate.longitude * 10_000_000).rounded())
+    }
+}
+
+@available(iOS 17.0, macOS 14.0, *)
+struct LivePositionDot: View {
+    /// Whether the halo pings.
+    ///
+    /// The dot is now the app's mark for a location on every map, because a pin is the "a place" idiom and
+    /// what these maps show is "where you appear to be" — which is a position. But the *pulse* is a claim
+    /// on top of that, so it is gated: it runs when the location is actually being reported by something,
+    /// and stops when both Protection and Sync are off. A breathing dot over a location nothing is
+    /// reporting, on a screen already saying "Not protected", would be the map contradicting the status
+    /// row beside it. Still, the unpulsed dot reads correctly on its own — the core, ring and glow are all
+    /// drawn either way, which is also what Reduce Motion falls back to.
+    var pulses: Bool = true
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// The halo's resting footprint. The phases scale within this, so the annotation's own layout never
+    /// changes size — a growing frame would nudge the dot off the coordinate it is claiming to mark.
+    private static let haloSize: CGFloat = 46
+
+    private enum Ping: CaseIterable {
+        /// Invisible, small. The seam, and the reason the loop can't be seen.
+        case armed
+        /// Faded in, still tight to the core.
+        case swelling
+        /// Full width, fully dissolved.
+        case spent
+
+        var scale: CGFloat {
+            switch self {
+            case .armed: return 0.34
+            case .swelling: return 0.5
+            case .spent: return 1
+            }
+        }
+
+        var opacity: Double {
+            switch self {
+            case .armed, .spent: return 0
+            case .swelling: return 0.55
+            }
+        }
+
+        /// The animation used to *arrive* at this phase.
+        var arrival: Animation {
+            switch self {
+            // Instant, and unseeable: `spent` and `armed` are both transparent.
+            case .armed: return .linear(duration: 0)
+            case .swelling: return .easeOut(duration: 0.4)
+            case .spent: return .easeOut(duration: 1.9)
+            }
+        }
+    }
+
+    var body: some View {
+        ZStack {
+            // A constant, gentle glow under the ping, so the dot never looks bare in the beat between
+            // pings and still reads as lit under Reduce Motion, where the ping doesn't run at all.
+            Circle()
+                .fill(Color.brand.opacity(0.18))
+                .frame(width: Self.haloSize * 0.62, height: Self.haloSize * 0.62)
+
+            if pulses, !reduceMotion {
+                Circle()
+                    .fill(Color.brand.opacity(0.55))
+                    .frame(width: Self.haloSize, height: Self.haloSize)
+                    .phaseAnimator(Ping.allCases) { halo, phase in
+                        halo
+                            .scaleEffect(phase.scale)
+                            .opacity(phase.opacity)
+                    } animation: { phase in
+                        phase.arrival
+                    }
+            }
+
+            Circle()
+                .fill(Color.brand)
+                .frame(width: 15, height: 15)
+                .overlay(Circle().strokeBorder(.white, lineWidth: 3))
+                // Lifts it off busy imagery the way the system dot does. Without it the white ring
+                // vanishes against pale terrain and the whole mark loses its edge.
+                .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
+        }
+        // One footprint in every state. Without this the stack measures its largest child, so the
+        // annotation was 46pt wide while pulsing and 28pt when not — a size that depends on `pulses` and on
+        // Reduce Motion, handed to MapKit as the thing to place. Pinning it makes the placement identical
+        // in all four combinations and gives MapKit an intrinsic size on the very first layout pass.
+        .frame(width: Self.haloSize, height: Self.haloSize)
+        // The state is carried in words by the row beside whichever map hosts this, so announcing a
+        // shape here would only add noise.
+        .accessibilityHidden(true)
     }
 }
 
@@ -1434,7 +1829,16 @@ struct LocationMapPane: View {
                 LocationMapPreview(
                     latitude: latitude,
                     longitude: longitude,
-                    timezoneID: controller.timezone?.identifier
+                    timezoneID: controller.timezone?.identifier,
+                    // The pin becomes a live dot only while a route is genuinely being driven and
+                    // freshly reported — at which point this coordinate *is* the device, because
+                    // `adoptMotionCoordinate` has been overwriting it from the agent's reports. The
+                    // rest of the time it's the place the customer picked, and it keeps the pin.
+                    isLive: controller.isReportingLivePosition,
+                    // Pulses whenever something is reporting this place, which is the common case — not
+                    // only while a route is running. Stops when both Protection and Sync are off, where
+                    // the screen is already saying "Not protected" and a breathing dot would argue with it.
+                    pulses: controller.isLocationInEffect
                 )
                 .frame(height: mapHeight)
                 .clipped()
@@ -1491,7 +1895,14 @@ struct LocationMapPane: View {
             .frame(maxWidth: .infinity)
         }
         .modifier(MapPresentation(isPresented: $fullScreen) {
-            FullScreenMapView(controller: controller, latitude: latitude, longitude: longitude, timezone: controller.timezone)
+            FullScreenMapView(
+                controller: controller,
+                latitude: latitude,
+                longitude: longitude,
+                timezone: controller.timezone,
+                isLive: controller.isReportingLivePosition,
+                pulses: controller.isLocationInEffect
+            )
         })
         .onAppear { TimezoneShapeStore.shared.preload() }
     }
@@ -1523,9 +1934,20 @@ struct FullScreenMapView: View {
     let latitude: Double
     let longitude: Double
     var timezone: SpoofTimezone?
+    /// Passed down as a value rather than read off `controller` here, because `controller` is a plain
+    /// `var` on this view — not observed — so a change to it would not redraw this map. The pane that
+    /// presents this *does* observe the controller, so the answer arrives by the same route
+    /// `latitude` and `longitude` already do.
+    var isLive: Bool = false
+    /// Whether the dot pings. Threaded for the same reason as `isLive`. See `LivePositionDot.pulses`.
+    var pulses: Bool = true
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var pro = ProStore.shared
-    @State private var is3D = true
+    /// **Opens flat.** This used to open in 3D, which made the satellite globe the first thing expanding
+    /// the card gave you — and that imagery is exactly what got called out as unreadable. The flat colour
+    /// map is the good default at every size, so it is what both the inline card and this screen start on;
+    /// the globe is a place the customer chooses to go, one tap away in the corner.
+    @State private var is3D = false
 
     /// Pro "pick a spot" placement mode: a fixed center reticle stays put while
     /// the user pans the map underneath it; confirming drops the spoofed
@@ -1561,6 +1983,8 @@ struct FullScreenMapView: View {
                         is3D: is3D,
                         isPicking: isPicking,
                         timezoneID: timezone?.identifier,
+                        isLive: isLive,
+                        pulses: pulses,
                         onCenterChange: handleCenterChange
                     )
                     // Map controls float over the map as a vertical glass
@@ -1760,9 +2184,18 @@ private struct FullScreenMap3D: View {
     let is3D: Bool
     var isPicking: Bool = false
     let timezoneID: String?
+    /// Whether a report is currently vouching for this coordinate as the device's position.
+    ///
+    /// This map was left on the pin when the inline one gained the live dot, so opening the card
+    /// mid-route swapped a moving dot for a static waypoint — the same coordinate described two different
+    /// ways one tap apart, on the screen someone opens *because* they wanted a better look at it.
+    var isLive: Bool = false
+    /// Whether the dot pings. See `LivePositionDot.pulses`.
+    var pulses: Bool = true
     var onCenterChange: ((CLLocationCoordinate2D) -> Void)? = nil
 
     @ObservedObject private var shapes = TimezoneShapeStore.shared
+    @StateObject private var smoothed = SmoothedPosition()
     @State private var camera: MapCameraPosition = .automatic
 
     private var coordinate: CLLocationCoordinate2D {
@@ -1777,6 +2210,9 @@ private struct FullScreenMap3D: View {
     private var camera3D: MapCameraPosition {
         .camera(MapCamera(centerCoordinate: coordinate, distance: 6_000_000, heading: 0, pitch: 0))
     }
+    private func trackLive() {
+        smoothed.track(isLive ? coordinate : nil)
+    }
     /// Tighter, flat region used when entering placement mode so the user starts
     /// at a usable zoom for picking a precise spot rather than continental.
     private var pickingRegion: MKCoordinateRegion {
@@ -1790,6 +2226,28 @@ private struct FullScreenMap3D: View {
         return shapes.rings(for: timezoneID)
     }
 
+    /// Three states, not two, and the 3D one is why this stopped being an inline expression.
+    ///
+    /// **The globe control has to actually produce a globe.** When the app moved off satellite, this
+    /// screen's 3D branch became `.standard(elevation: .realistic)` — terrain relief on a flat-looking
+    /// map. Pressing a button whose icon is a globe left you somewhere that looked like where you
+    /// started, even zoomed right out. `.hybrid(elevation: .realistic)` is what renders the curved,
+    /// photographic planet, and that *is* what the control is offering.
+    ///
+    /// So satellite is back, here only and behind a press. The objection it was removed for was that it
+    /// was the **default** everywhere — unreadable brown texture on a small inline card nobody asked
+    /// for. Chosen deliberately, fullscreen, at a continental camera, it is the right imagery and the
+    /// only one that reads as a planet.
+    ///
+    /// Placement mode forces flat standard regardless of the toggle: dropping a pin means aiming a
+    /// reticle at a street, and a tilted photographic globe is the worst surface for that.
+    private var style: MapStyle {
+        if is3D && !isPicking {
+            return .hybrid(elevation: .realistic)
+        }
+        return .standard(elevation: .flat, pointsOfInterest: .excludingAll)
+    }
+
     var body: some View {
         Map(position: $camera) {
             ForEach(Array(rings.enumerated()), id: \.offset) { _, ring in
@@ -1801,16 +2259,34 @@ private struct FullScreenMap3D: View {
             // centered reticle (drawn by FullScreenMapView) is the placement
             // indicator instead.
             if !isPicking {
-                Annotation(String(), coordinate: coordinate, anchor: .bottom) { SpoofMap.pin }
+                // Same swap, same anchoring rule as the inline preview: a pin points with its tip and
+                // hangs from `.bottom`, a dot *is* its coordinate and centres on it.
+                //
+                // Still inside `!isPicking`. While placing a pin the reticle is the indicator and the
+                // question "where is the device now" has been set aside — a live dot there would compete
+                // with the thing the customer is actually aiming.
+                Annotation(
+                    String(),
+                    coordinate: isLive ? (smoothed.coordinate ?? coordinate) : coordinate,
+                    anchor: .center
+                ) {
+                    LivePositionDot(pulses: pulses)
+                }
             }
         }
-        .mapStyle(.hybrid(elevation: (is3D && !isPicking) ? .realistic : .flat))
+        // Standard rather than satellite, matching the inline preview and the route map — see the note
+        // there for why, including the annotation-occlusion half of it.
+        //
+        .mapStyle(style)
+        .onChange(of: CoordinateKey(coordinate)) { _, _ in trackLive() }
+        .onChange(of: isLive) { _, _ in trackLive() }
         .onMapCameraChange(frequency: .continuous) { context in
             onCenterChange?(context.region.center)
         }
         .onAppear {
             camera = is3D ? camera3D : .region(region)
             shapes.preload()
+            trackLive()
         }
         .onChange(of: is3D) { _, newValue in
             withAnimation(.easeInOut(duration: 0.6)) {
@@ -2738,8 +3214,23 @@ struct BrowserProtectionSection: View {
             Label("GeoSpoof is running in Safari.", systemImage: "checkmark.circle.fill")
                 .foregroundStyle(Color.brand)
         case .verifiedDisabled:
-            // Carried by the setup card; saying it twice would just crowd the footer.
-            EmptyView()
+            // This used to defer to the setup card — but that card is on the Location screen, so
+            // deferring meant saying nothing at all here. It is the same mistake the
+            // `.none`/`.ownDomainOnly` branch above already caught and corrected for itself, and
+            // this branch simply never got the correction.
+            //
+            // It matters most for someone who opens this tab directly: the Protection toggle above
+            // is sitting in the on position, with accuracy, precision, language and site filters
+            // beneath it, and none of it is in effect while Safari has the extension switched off.
+            // A screen full of settings for a subsystem that isn't running is worse than a screen
+            // that admits it.
+            //
+            // Reuses the key macOS onboarding already shows for this exact state rather than
+            // minting a synonym, so it needs no new translation. It names no tab and no route:
+            // copy that describes the layout rots the next time the layout changes, and the card
+            // that carries the fix states the path itself.
+            Label("GeoSpoof's extension is currently turned off.", systemImage: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
         case .inferred(let activity):
             switch activity {
             case .active:

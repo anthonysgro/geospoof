@@ -1363,6 +1363,14 @@ nonisolated enum GpsRouteSource: String, Codable, Equatable, Hashable {
     /// Drawn or authored in the app. Not built yet; the case exists so a stored route from a later
     /// build decodes in this one rather than being discarded.
     case builder
+    /// Seeded from the app bundle so the library is never empty on a first visit. See
+    /// `GpsSampleRoute.seedIfNeeded()`.
+    ///
+    /// Recorded rather than filed under `gpxImport` because provenance is what this field is *for*, and
+    /// "the app put this here" and "the customer brought this in" are different facts. It also keeps the
+    /// door open to treating it differently later — the sample is the one entry we can safely reason about
+    /// the origin of.
+    case sample
     case unknown
 
     /// Tolerant by hand rather than by the synthesized decoder, which throws on an unrecognised raw
@@ -1405,9 +1413,16 @@ nonisolated struct GpsSavedRoute: Codable, Equatable, Hashable, Identifiable {
     var points: [GpsRoutePoint]
     var speed: GpsRouteSpeed
     var repeats: Bool
+    /// Pinned to the top of the library by the customer.
+    ///
+    /// Purely presentational — it changes ordering and draws a star, and deliberately touches nothing
+    /// about playback. It is also **excluded from the content id** for the same reason `name` is: a
+    /// favourite is a fact about how somebody files a route, not about the route, and letting it move
+    /// the hash would make starring something restart it mid-run.
+    var favorite: Bool
 
     enum CodingKeys: String, CodingKey {
-        case id, name, source, points, speed
+        case id, name, source, points, speed, favorite
         case createdAt = "created_at"
         case repeats = "repeat"
     }
@@ -1425,6 +1440,10 @@ nonisolated struct GpsSavedRoute: Codable, Equatable, Hashable, Identifiable {
         points = try c.decodeIfPresent([GpsRoutePoint].self, forKey: .points) ?? []
         speed = try c.decodeIfPresent(GpsRouteSpeed.self, forKey: .speed) ?? .asRecorded
         repeats = try c.decodeIfPresent(Bool.self, forKey: .repeats) ?? false
+        // Absent on every route saved before favourites existed, which is the case this whole decoder
+        // is shaped around: `false` is the right answer for them, and a non-optional decode here would
+        // have thrown and taken the entry with it.
+        favorite = try c.decodeIfPresent(Bool.self, forKey: .favorite) ?? false
     }
 
     init(
@@ -1434,7 +1453,8 @@ nonisolated struct GpsSavedRoute: Codable, Equatable, Hashable, Identifiable {
         source: GpsRouteSource,
         points: [GpsRoutePoint],
         speed: GpsRouteSpeed,
-        repeats: Bool
+        repeats: Bool,
+        favorite: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -1443,6 +1463,7 @@ nonisolated struct GpsSavedRoute: Codable, Equatable, Hashable, Identifiable {
         self.points = points
         self.speed = speed
         self.repeats = repeats
+        self.favorite = favorite
     }
 
     /// Adopt an imported `GpsRoute` as a new library entry.
@@ -1499,7 +1520,8 @@ nonisolated struct GpsSavedRoute: Codable, Equatable, Hashable, Identifiable {
             ).lengthMeters,
             speed: speed,
             repeats: repeats,
-            hasTimings: hasTimings
+            hasTimings: hasTimings,
+            favorite: favorite
         )
     }
 }
@@ -1518,6 +1540,51 @@ nonisolated struct GpsRouteSummary: Codable, Equatable, Identifiable {
     var speed: GpsRouteSpeed
     var repeats: Bool
     var hasTimings: Bool
+    var favorite: Bool
+
+    init(
+        id: UUID,
+        name: String,
+        createdAt: Double,
+        source: GpsRouteSource,
+        pointCount: Int,
+        lengthMeters: Double,
+        speed: GpsRouteSpeed,
+        repeats: Bool,
+        hasTimings: Bool,
+        favorite: Bool = false
+    ) {
+        self.id = id
+        self.name = name
+        self.createdAt = createdAt
+        self.source = source
+        self.pointCount = pointCount
+        self.lengthMeters = lengthMeters
+        self.speed = speed
+        self.repeats = repeats
+        self.hasTimings = hasTimings
+        self.favorite = favorite
+    }
+
+    /// Tolerant of a key this build added, like `GpsSavedRoute`'s.
+    ///
+    /// This one is only a cache — a throw here falls back to `rebuildIndex()`, which is correct — but
+    /// that path re-parses every entry, so the whole library would pay a full rebuild on the first
+    /// launch after this shipped just to learn a Boolean that defaults to `false`. Decoding it as
+    /// absent is the same answer for nothing.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        name = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
+        createdAt = try c.decodeIfPresent(Double.self, forKey: .createdAt) ?? 0
+        source = try c.decodeIfPresent(GpsRouteSource.self, forKey: .source) ?? .unknown
+        pointCount = try c.decodeIfPresent(Int.self, forKey: .pointCount) ?? 0
+        lengthMeters = try c.decodeIfPresent(Double.self, forKey: .lengthMeters) ?? 0
+        speed = try c.decodeIfPresent(GpsRouteSpeed.self, forKey: .speed) ?? .asRecorded
+        repeats = try c.decodeIfPresent(Bool.self, forKey: .repeats) ?? false
+        hasTimings = try c.decodeIfPresent(Bool.self, forKey: .hasTimings) ?? false
+        favorite = try c.decodeIfPresent(Bool.self, forKey: .favorite) ?? false
+    }
 }
 
 /// Why a route couldn't be saved to the library.
@@ -1618,9 +1685,22 @@ nonisolated struct GpsRouteStore {
     func summaries() -> [GpsRouteSummary] {
         let onDisk = storedIDs()
         if let cached = readIndex(), Set(cached.map(\.id)) == onDisk {
-            return cached.sorted { $0.createdAt > $1.createdAt }
+            return cached.sorted(by: Self.libraryOrder)
         }
         return rebuildIndex()
+    }
+
+    /// Favourites first, then newest first within each group.
+    ///
+    /// One comparator because two call sites sort — `summaries()` on the cached index and
+    /// `rebuildIndex()` on freshly parsed entries — and a list whose order depends on whether the cache
+    /// happened to be valid is the kind of bug that only shows up on somebody else's phone.
+    ///
+    /// Recency stays the tiebreak rather than name: a route is usually wanted because it was just
+    /// imported, and alphabetical would bury a fresh import under whatever is called "Airport Run".
+    nonisolated static func libraryOrder(_ a: GpsRouteSummary, _ b: GpsRouteSummary) -> Bool {
+        if a.favorite != b.favorite { return a.favorite }
+        return a.createdAt > b.createdAt
     }
 
     private func readIndex() -> [GpsRouteSummary]? {
@@ -1640,7 +1720,7 @@ nonisolated struct GpsRouteStore {
     func rebuildIndex() -> [GpsRouteSummary] {
         let summaries = storedIDs()
             .compactMap { load(id: $0)?.summary }
-            .sorted { $0.createdAt > $1.createdAt }
+            .sorted(by: Self.libraryOrder)
         writeIndex(summaries)
         return summaries
     }
@@ -1712,6 +1792,19 @@ nonisolated struct GpsRouteStore {
         guard !trimmed.isEmpty else { return false }
         route.name = trimmed
         return save(route) == nil
+    }
+
+    /// Star or unstar an entry. Returns the resulting state, or `nil` if it couldn't be read or written.
+    ///
+    /// Goes through `save`, so the index is rebuilt and the library reorders itself — which is the whole
+    /// visible effect. Like `rename`, it keeps the id, so nothing about playback notices: `favorite` is
+    /// outside the content hash, and starring the route you are running must not restart it.
+    @discardableResult
+    func setFavorite(id: UUID, _ favorite: Bool) -> Bool? {
+        guard var route = load(id: id) else { return nil }
+        guard route.favorite != favorite else { return favorite }
+        route.favorite = favorite
+        return save(route) == nil ? favorite : nil
     }
 }
 
@@ -1789,6 +1882,22 @@ nonisolated struct GpsMotionSample {
     /// pushed from the library and deliberately has none — tell "asked" from "actually happening", which is
     /// the difference between a spinner that means something and one that is decoration.
     var confirmedRouteStartedAt: Double?
+    /// Whether the report says the run reached the end, when it described the run we asked about.
+    ///
+    /// Report-only, and there is no local substitute: the app knows what it asked for and how far the
+    /// agent last said it had come, but "the route is over" is a conclusion only the thing playing it can
+    /// reach. Carried here for the same reason as `confirmedRouteStartedAt` — so a screen without the
+    /// roster can still tell a playing route from a spent one, which is the difference between offering
+    /// Pause and offering it pointlessly.
+    var routeFinished: Bool?
+    /// Whether the report says the run is holding, when it described the run we asked about.
+    ///
+    /// **Not the same fact as `GpsMotionState.routePaused`, and the difference is the whole reason this
+    /// exists.** That one is what the app *asked for* and flips the instant a control is pressed; this is
+    /// what the computer has *done*, and lags it by a report. A screen driving a Pause/Resume control from
+    /// the request relabels itself immediately and then disagrees with every other surface until the echo
+    /// lands — which is the optimistic claim the gate exists to refuse, arrived at from the other side.
+    var routePaused: Bool?
     /// Whether the roster was actually read this pass, regardless of what it said.
     ///
     /// This — not the presence of a position — is what releases the write gate. A user whose
@@ -1798,7 +1907,7 @@ nonisolated struct GpsMotionSample {
 
     static let unread = GpsMotionSample(
         latitude: nil, longitude: nil, travelledM: nil, seekSupported: false,
-        confirmedRouteStartedAt: nil, rosterWasRead: false
+        confirmedRouteStartedAt: nil, routeFinished: nil, routePaused: nil, rosterWasRead: false
     )
 
     var coordinate: (latitude: Double, longitude: Double)? {
@@ -3846,6 +3955,35 @@ final class SpoofController: ObservableObject {
     /// Compare against `motionState.routeStartedAt` through `currentRunConfirmed`.
     @Published private(set) var confirmedRouteStartedAt: Double?
 
+    /// When a report last carried a position we trusted.
+    ///
+    /// Exists because `currentRunConfirmed` is a *latch*: it goes true on the first echo of a run and
+    /// stays true for the rest of it, which is correct for "is this the run we asked for" and wrong for
+    /// "is this position current". A computer that sleeps mid-route stops reporting without saying so, so
+    /// on the strength of the latch alone the app would keep presenting the last known coordinate as a
+    /// live one — the same optimistic read the echo gate exists to prevent, one level further out.
+    ///
+    /// In memory only, and deliberately so, for the same reason `lastConfirmedTravelledM` is: after a
+    /// relaunch this would describe a report from a previous process, which is a belief about the device
+    /// rather than a confirmed fact about it.
+    @Published private(set) var lastMotionReportAt: Date?
+
+    /// Whether a report has said the current run reached the end.
+    ///
+    /// `false` until one does, which is the right default: a run nobody has reported on is not finished,
+    /// it is unknown, and the surfaces reading this offer a *replay* on `true` rather than withholding
+    /// anything on `false`. Cleared wherever `confirmedRouteStartedAt` is, because a stale `true` would
+    /// tell a fresh run it was already over.
+    @Published private(set) var confirmedRouteFinished = false
+
+    /// Whether a report has said the computer is holding the run, as opposed to us having asked it to.
+    ///
+    /// Pair this with `motionState.routePaused`, never substitute one for the other: the request is what a
+    /// control *sends* and the confirmation is what it may *claim*. A surface that labels itself from the
+    /// request flips instantly and then contradicts every other surface for a report's worth of time,
+    /// which is how the route detail screen and the GPS tab came to disagree about the same route.
+    @Published private(set) var confirmedRoutePaused = false
+
     /// Whether the run we most recently asked for is one a report has confirmed.
     ///
     /// The honest test for "is it actually playing", as opposed to "did we ask". Keyed on the run marker
@@ -3856,6 +3994,39 @@ final class SpoofController: ObservableObject {
             return false
         }
         return asked == confirmed
+    }
+
+    /// How long a reported position may go unrefreshed before the app stops calling it current.
+    ///
+    /// Generous against the report cadence rather than tight to it. Motion is re-read every few seconds,
+    /// so this allows several missed passes before withdrawing the claim — a single slow read is ordinary,
+    /// and flickering a live indicator off and back on for one is worse than a beat of lag.
+    static let motionPositionFreshness: TimeInterval = 20
+
+    /// Whether the coordinate in `location` is a device position a recent report vouched for.
+    ///
+    /// The gate anything drawing a live position must pass. Three conditions and all of them matter:
+    /// motion has to be running (otherwise `location` is the *chosen* place, not the device's), the run
+    /// has to be the one we asked for, and a report has to have landed recently enough to still speak for
+    /// where the device is now.
+    var isReportingLivePosition: Bool {
+        guard hasActiveMotion, currentRunConfirmed, let seen = lastMotionReportAt else { return false }
+        return Date().timeIntervalSince(seen) < Self.motionPositionFreshness
+    }
+
+    /// Whether the chosen location is actually being reported by anything.
+    ///
+    /// A weaker claim than `isReportingLivePosition` and a different one. That answers "is the device
+    /// moving and freshly confirmed", which is what licenses *smoothing* a dot between fixes. This answers
+    /// "is this coordinate in use at all", which is what licenses the dot *pulsing* — the pulse says
+    /// something is reporting this place, not that anything is moving.
+    ///
+    /// Read from the switches rather than from a confirmation on purpose: both consumers are the customer's
+    /// own settings, and a map is the wrong surface to relitigate whether Safari has checked in. The
+    /// screens that own that question state it in words a row away, and the map should not disagree with
+    /// the plain reading of the two toggles.
+    var isLocationInEffect: Bool {
+        location != nil && (enabled || deviceGpsEnabled)
     }
 
     /// The distance a pace change should resume from, or `nil` to start over.
@@ -3957,7 +4128,22 @@ final class SpoofController: ObservableObject {
         if let confirmed = sample.confirmedRouteStartedAt, confirmed != confirmedRouteStartedAt {
             confirmedRouteStartedAt = confirmed
         }
+        // Only when the report described the run we asked about — `routeFinished` is `nil` otherwise, and
+        // absence must leave the last real answer alone rather than resetting it to "not finished" on
+        // every pass that happened to arrive mid-handover.
+        if let finished = sample.routeFinished, finished != confirmedRouteFinished {
+            confirmedRouteFinished = finished
+        }
+        if let paused = sample.routePaused, paused != confirmedRoutePaused {
+            confirmedRoutePaused = paused
+        }
         guard sample.coordinate != nil else { return }
+        // Stamped only on a pass that actually carried a position, which is the whole point — a roster
+        // read that yielded nothing must not refresh the claim that we know where the device is. Set
+        // before the throttle below, because the throttle governs pushing to the *extension bridge* and
+        // this is about what the UI may say; suppressing the stamp for a throttled pass would age out a
+        // position that had in fact just been confirmed.
+        lastMotionReportAt = Date()
         let now = Date()
         let due = lastMotionBridgePush.map {
             now.timeIntervalSince($0) >= Self.motionBridgeThrottle
@@ -4124,6 +4310,11 @@ final class SpoofController: ObservableObject {
         lastConfirmedTravelledM = state.routeStartTravelledM
         // Belongs to the previous run. Carrying it would make a fresh play look instantly confirmed.
         confirmedRouteStartedAt = nil
+        // Same reasoning: a `true` from the run that just ended would tell this one it was over before it
+        // had moved, and the surfaces reading it would offer a replay instead of a pause.
+        confirmedRouteFinished = false
+        // Belongs to the previous run too. A stale `true` would make a fresh play offer Resume.
+        confirmedRoutePaused = false
         updateMotionState(state)
         // Playback has its own position from here on, so start following it — and reset the
         // throttle so the first observation pushes to the bridge immediately rather than waiting
@@ -4252,6 +4443,8 @@ final class SpoofController: ObservableObject {
         state.routeStartTravelledM = nil
         lastConfirmedTravelledM = nil
         confirmedRouteStartedAt = nil
+        confirmedRouteFinished = false
+        confirmedRoutePaused = false
         updateMotionState(state)
     }
 
@@ -4321,6 +4514,13 @@ final class SpoofController: ObservableObject {
         state.routeRepeats = false
         state.routeStartTravelledM = nil
         lastConfirmedTravelledM = nil
+        // Every confirmed fact belonged to the run that just ended, and `stopMotionSync()` below means no
+        // further report will arrive to correct them. Left set, they would describe a finished-and-held
+        // route to whatever gets started next.
+        confirmedRouteStartedAt = nil
+        confirmedRouteFinished = false
+        confirmedRoutePaused = false
+        lastMotionReportAt = nil
         updateMotionState(state)
         // Nothing left to follow. The coordinate stands where playback left it, which is what
         // keeps the device from snapping back to its real location on stop.

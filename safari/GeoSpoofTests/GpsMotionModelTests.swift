@@ -671,8 +671,17 @@ struct GpsPresentationRuleTests {
     @Test("a playing route supersedes the provenance the coordinate came from")
     func routeSupersedesProvenance() {
         let driver = GpsDriver(motion: .route(Self.progress), provenance: .vpnSync)
+        // The name still rides along in the case, and this equality is what guards that. What is gone
+        // is `detail`, the second line the Source row used to render from it: it restated the Route
+        // section sitting directly below on the same screen, and being the only two-line row in that
+        // block it set the height for all of them. Carrying the name is a model fact; rendering it
+        // twice was a presentation mistake.
         #expect(driver == .route(name: "Morning Run"))
-        #expect(driver.detail == "Morning Run")
+        // Only that there *is* something to say. The words are a `LocalizedStringKey`, and comparing one
+        // to a literal needs SwiftUI imported here — which this file avoids on purpose, and which is a
+        // bad trade for pinning one string. Every other title assertion in this file is a nil check for
+        // the same reason.
+        #expect(driver.title != nil)
     }
 
     @Test("a steering vector supersedes provenance too")
@@ -987,6 +996,84 @@ struct GpsRouteLibraryTests {
         #expect(store.load(id: saved.id)?.name == "Morning Run")
     }
 
+    /// Favouriting must not restart a route somebody is running.
+    ///
+    /// The guard is that `favorite` stays out of the content hash, exactly as `name` does. If it ever
+    /// leaked in, the agent would see a new `route_id` the moment a star was tapped and replay from the
+    /// first point — the same failure `renameChangesNeitherID` exists to prevent, reached by a new field.
+    @Test("favouriting changes neither id")
+    func favoriteChangesNeitherID() {
+        var saved = Self.sample()
+        let entityID = saved.id
+        let contentID = saved.playbackRoute().id
+        saved.favorite = true
+        #expect(saved.id == entityID)
+        #expect(saved.playbackRoute().id == contentID)
+    }
+
+    @Test("favourites sort ahead of everything, newest first within each group")
+    func favoritesSortFirst() throws {
+        let store = try Self.temporaryStore()
+        // Saved oldest to newest, so plain recency alone would invert this order.
+        let old = GpsSavedRoute(
+            name: "Old", createdAt: 100, source: .gpxImport,
+            points: Self.points, speed: .fixed(mps: 1.4), repeats: false
+        )
+        let mid = GpsSavedRoute(
+            name: "Mid", createdAt: 200, source: .gpxImport,
+            points: Self.points, speed: .fixed(mps: 1.4), repeats: false, favorite: true
+        )
+        let new = GpsSavedRoute(
+            name: "New", createdAt: 300, source: .gpxImport,
+            points: Self.points, speed: .fixed(mps: 1.4), repeats: false
+        )
+        for route in [old, mid, new] { #expect(store.save(route) == nil) }
+        // `mid` is starred so it leads despite being neither newest nor oldest; the rest fall back to
+        // recency.
+        #expect(store.summaries().map(\.name) == ["Mid", "New", "Old"])
+    }
+
+    @Test("starring reorders the library without touching the entry's identity")
+    func setFavoriteReorders() throws {
+        let store = try Self.temporaryStore()
+        let older = GpsSavedRoute(
+            name: "Older", createdAt: 100, source: .gpxImport,
+            points: Self.points, speed: .fixed(mps: 1.4), repeats: false
+        )
+        let newer = GpsSavedRoute(
+            name: "Newer", createdAt: 200, source: .gpxImport,
+            points: Self.points, speed: .fixed(mps: 1.4), repeats: false
+        )
+        #expect(store.save(older) == nil)
+        #expect(store.save(newer) == nil)
+        #expect(store.summaries().map(\.name) == ["Newer", "Older"])
+
+        #expect(store.setFavorite(id: older.id, true) == true)
+        #expect(store.summaries().map(\.name) == ["Older", "Newer"])
+        // Same entry, not a second one — the whole point of the entity id.
+        #expect(store.summaries().count == 2)
+        #expect(store.load(id: older.id)?.favorite == true)
+
+        #expect(store.setFavorite(id: older.id, false) == false)
+        #expect(store.summaries().map(\.name) == ["Newer", "Older"])
+    }
+
+    /// A route saved before favourites existed has no `favorite` key at all.
+    ///
+    /// It must decode as not-favourited rather than throwing, which for this store means being dropped
+    /// from the library entirely — the failure mode the whole tolerant decoder exists to avoid.
+    @Test("a route stored without the favourite key decodes as not favourited")
+    func favoriteAbsentDecodesFalse() throws {
+        let json = """
+        {"id":"\(UUID().uuidString)","name":"Legacy","created_at":100,"source":"gpx",
+         "points":[{"lat":1,"lon":2},{"lat":1.001,"lon":2.001}],
+         "speed":{"kind":"fixed","mps":1.4},"repeat":false}
+        """
+        let decoded = try JSONDecoder().decode(GpsSavedRoute.self, from: Data(json.utf8))
+        #expect(decoded.name == "Legacy")
+        #expect(!decoded.favorite)
+    }
+
     /// A store whose directory can't be resolved behaves as an empty, unwritable library rather than
     /// crashing — the same direction `GpsMotionStateStore.load` fails in.
     @Test("a store with no resolvable root degrades instead of crashing")
@@ -1190,6 +1277,58 @@ struct GpsPendingActionTests {
             speedDefaulted: false,
             repeats: false
         )
+    }
+
+
+    // MARK: Onboarding flow order and the goal question
+
+    /// Why the order is pinned: this whole feature is about *where* a step sits. The device-GPS step
+    /// has to come after Safari verification and be last, and nothing may be inserted between the
+    /// Safari handoff and the screen that proves it worked — that screen is the only place the app
+    /// demonstrates the extension actually runs, and interrupting it spends the one asset that earns
+    /// the right to ask for money.
+    ///
+    /// This was unreachable from a test until now: the order was computed inline inside a `View`.
+    /// During implementation a second skip exit went unrewired for a full design pass, which is
+    /// precisely the class of mistake these cases catch.
+    @Test("The device GPS step is last on both routes")
+    func deviceGpsStepIsLast() {
+        for warrantsRepair in [true, false] {
+            for canDeepLink in [true, false] {
+                let flow = StepKind.iOSFlow(
+                    canDeepLinkToSettings: canDeepLink,
+                    websiteAccessWarrantsRepair: warrantsRepair
+                )
+                #expect(flow.last == .deviceGps)
+            }
+        }
+    }
+
+    @Test("Nothing sits between the Safari handoff and the verified-success screen except the grant repair")
+    func nothingInterruptsVerification() {
+        for warrantsRepair in [true, false] {
+            for canDeepLink in [true, false] {
+                let flow = StepKind.iOSFlow(
+                    canDeepLinkToSettings: canDeepLink,
+                    websiteAccessWarrantsRepair: warrantsRepair
+                )
+                let enable = flow.firstIndex(of: .enable)!
+                let ready = flow.firstIndex(of: .safariReady)!
+                #expect(enable < ready)
+                let between = Array(flow[(enable + 1)..<ready])
+                // `.grant` predates this feature and is a repair step on the one route that needs it.
+                #expect(between == [] || between == [.grant])
+            }
+        }
+    }
+
+    /// The grant step exists only where it is the actual mechanism — below the OS version that can
+    /// deep-link to Settings, and only once the extension has confirmed access is missing.
+    @Test("The grant repair appears only on the route that needs it")
+    func grantOnlyWhereItApplies() {
+        #expect(StepKind.iOSFlow(canDeepLinkToSettings: false, websiteAccessWarrantsRepair: true).contains(.grant))
+        #expect(!StepKind.iOSFlow(canDeepLinkToSettings: true, websiteAccessWarrantsRepair: true).contains(.grant))
+        #expect(!StepKind.iOSFlow(canDeepLinkToSettings: false, websiteAccessWarrantsRepair: false).contains(.grant))
     }
 
 }

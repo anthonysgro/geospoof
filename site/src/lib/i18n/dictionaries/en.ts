@@ -1381,7 +1381,7 @@ export const en = {
           text: "Set your location as usual in GeoSpoof. Your iPhone's system-level GPS follows it and stays aligned as long as it can reach your Mac over the cable, the same Wi-Fi network, or a hotspot.",
           bullets: [
             "You can unplug the cable, but the connection has to stay. The Mac app is what sets the GPS.",
-            "Going out without your Mac? Turn off Developer Mode while the location is active and it stays put. To change it later, restart your iPhone and connect it again.",
+            "Going out without your Mac? Turn off Developer Mode while the location is active and it stays put. To change it later, turn Developer Mode back on, restart your iPhone, and connect it again.",
           ],
           link: { label: "Get GeoSpoof for iPhone" },
         },
@@ -1449,7 +1449,7 @@ export const en = {
       offlineBody:
         "A location can stay in place after the connection ends. While your spoofed location is active, turn off Developer Mode on your iPhone (Settings ▸ Privacy & Security ▸ Developer Mode). The location holds from that point on, including once you've left your computer behind.",
       offlineCaveat:
-        "The trade-off is that the location is now fixed. To pick a different one, restart your iPhone and set the new location with your computer nearby again.",
+        "The trade-off is that the location is now fixed. To pick a different one, turn Developer Mode back on, restart your iPhone, and set the new location with your computer nearby.",
       limitTitle: "What it can't do",
       limitBody:
         "Nothing routes through our servers, so your computer can't reach your iPhone over the internet. Once the two are apart, your phone stops accepting new locations. The Developer Mode step above is what keeps the current one in place.",

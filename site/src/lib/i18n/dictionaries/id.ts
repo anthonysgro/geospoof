@@ -1386,7 +1386,7 @@ export const id: Dictionary = {
           text: "Setel lokasi Anda seperti biasa di GeoSpoof. GPS tingkat sistem iPhone Anda mengikutinya dan tetap selaras selama masih bisa menjangkau Mac Anda lewat kabel, jaringan Wi-Fi yang sama, atau hotspot.",
           bullets: [
             "Anda boleh mencabut kabelnya, tapi koneksinya harus tetap ada. Yang menyetel GPS adalah aplikasi di Mac.",
-            "Pergi tanpa Mac Anda? Matikan Mode Pengembang saat lokasi sedang aktif, maka lokasi itu bertahan. Untuk menggantinya nanti, mulai ulang iPhone dan hubungkan kembali.",
+            "Pergi tanpa Mac Anda? Matikan Mode Pengembang saat lokasi sedang aktif, maka lokasi itu bertahan. Untuk menggantinya nanti, aktifkan kembali Mode Pengembang, mulai ulang iPhone, lalu hubungkan kembali.",
           ],
           link: { label: "Dapatkan GeoSpoof untuk iPhone" },
         },
@@ -1454,7 +1454,7 @@ export const id: Dictionary = {
       offlineBody:
         "Sebuah lokasi bisa tetap bertahan setelah koneksinya berakhir. Saat lokasi palsu Anda aktif, matikan Mode Pengembang di iPhone (Pengaturan ▸ Privasi & Keamanan ▸ Mode Pengembang). Sejak saat itu lokasinya bertahan, termasuk setelah Anda menjauh dari komputer.",
       offlineCaveat:
-        "Konsekuensinya, lokasi itu jadi terkunci. Untuk memilih lokasi lain, mulai ulang iPhone Anda dan setel lokasi baru saat komputer Anda kembali berada di dekat Anda.",
+        "Konsekuensinya, lokasi itu jadi terkunci. Untuk memilih lokasi lain, aktifkan kembali Mode Pengembang, mulai ulang iPhone Anda, lalu setel lokasi baru saat komputer Anda berada di dekat Anda.",
       limitTitle: "Yang tidak bisa dilakukan",
       limitBody:
         "Tidak ada yang melewati server kami, jadi komputer Anda tidak bisa menjangkau iPhone lewat internet. Begitu keduanya terpisah, ponsel berhenti menerima lokasi baru. Langkah Mode Pengembang di atas itulah yang menahan lokasi saat ini.",
