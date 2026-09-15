@@ -5,7 +5,7 @@ import vectors from "../../fixtures/coordinate-vectors.json";
 /**
  * Cross-language parity: `parseCoordinates` (TypeScript) must match every vector
  * in the shared fixture. The same fixture is consumed by the native Swift
- * parser's parity test (safari/GeoSpoofTests/CoordinateParserParityTests.swift),
+ * parser's parity test (geospoof-ios:app/GeoSpoofTests/CoordinateParserParityTests.swift),
  * so both the extension and the iOS/macOS app read pasted coordinates
  * identically and cannot silently drift apart.
  *

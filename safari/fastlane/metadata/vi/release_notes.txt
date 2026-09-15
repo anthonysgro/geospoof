@@ -1,3 +1,0 @@
-Xin chào các GeoSpoofer! iPhone của bạn giờ có thể đi theo một tuyến đường.
-Nhập tệp GPX từ Strava, Garmin hay bất kỳ ứng dụng theo dõi nào, rồi đi bộ, đạp xe hoặc lái xe theo tuyến đó — kèm một điểm trực tiếp cho biết iPhone của bạn đang ở đâu. Lưu tuyến đường, đánh dấu yêu thích và bấm phát khi bạn sẵn sàng. Ngoài ra, bản đồ gọn gàng hơn, thiết lập mượt hơn, và một mẹo mới giúp giữ vị trí sau khi bạn rời khỏi máy tính.
-Không cần tài khoản. Không theo dõi. Nguồn mở.

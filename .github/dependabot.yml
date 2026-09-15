@@ -33,11 +33,3 @@ updates:
       # once the linter toolchain ships TS 7 support, then upgrade deliberately.
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
-
-  - package-ecosystem: swift
-    directory: "/safari"
-    schedule:
-      interval: daily
-      timezone: Etc/UTC
-    cooldown:
-      default-days: 7

@@ -1,3 +1,0 @@
-Hello GeoSpoofers! Your iPhone can now follow a route.
-Import a GPX from Strava, Garmin or any tracking app, then walk, cycle or drive it — with a live dot showing where your iPhone is. Save routes, star your favorites, and press play when you're ready. Maps are cleaner, setup is smoother, and there's a new tip for keeping your location after you leave your computer.
-No account. No tracking. Open source.

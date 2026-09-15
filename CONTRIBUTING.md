@@ -128,139 +128,25 @@ Add the string to `_locales/en/messages.json` with a `message` and a
 `data-i18n-placeholder` / `data-i18n-title` / `data-i18n-aria-label`) rather than
 hardcoding English. See [`_locales/README.md`](_locales/README.md).
 
-### Native Safari app
+### Native app
 
-The app uses an Xcode String Catalog at
-`safari/Shared (App)/Resources/Localizable.xcstrings`, shared by the iOS app, the
-macOS app, and the widget. You don't add keys to it by hand — the compiler
-extracts them.
+The native iOS and macOS apps live in a separate private repository,
+`geospoof-ios`, together with their String Catalog and the SwiftUI rules for
+adding strings to it. See `CONTRIBUTING.md` and `TRANSLATION.md` there.
 
-**The rule that matters:** SwiftUI localizes string _literals_, because they bind
-to `LocalizedStringKey`. A `String`-typed value binds to the `StringProtocol`
-overload instead and renders **verbatim** — no lookup, no catalog entry, and no
-compiler warning. So this translates:
-
-```swift
-Text("Match Location")
-```
-
-and this silently never will:
-
-```swift
-var label: String { "Match Location" }   // wrong type
-Text(label)
-```
-
-Guidelines:
-
-- A helper returning display text must return `LocalizedStringKey`, not `String`.
-- Data is the opposite: city names, IANA timezone ids, IP addresses, coordinates,
-  SF Symbol names, version strings, and StoreKit `displayPrice` must render with
-  `Text(verbatim:)` and a one-line comment saying why.
-- A helper that returns _both_ — copy in one branch, data in another — should
-  return a built `Text` so each branch states its own treatment. `LabeledRow`,
-  `infoRow`, and `detailRow` all do this.
-- Never interpolate a `LocalizedStringKey` into another one. It hits a deprecated
-  overload that substitutes the value's _debug description_, and derives a
-  context-free key. Concatenate `Text` values instead.
-- Interpolation _inside_ a literal is fine: `Text("±\(m) m")` derives the key
-  `"±%lld m"` automatically, and Xcode adds positional specifiers (`%1$lld`)
-  when there are several so translators can reorder them.
-
-To populate the catalog after adding strings, build both schemes and sync:
-
-```bash
-cd safari
-xcodebuild -project GeoSpoof.xcodeproj -scheme GeoSpoof-iOS \
-  -configuration Release -destination 'generic/platform=iOS Simulator' \
-  -derivedDataPath /tmp/dd-ios CODE_SIGNING_ALLOWED=NO build
-xcodebuild -project GeoSpoof.xcodeproj -scheme GeoSpoof-macOS \
-  -configuration Release -destination 'platform=macOS' \
-  -derivedDataPath /tmp/dd-mac CODE_SIGNING_ALLOWED=NO build
-
-# Merge the discovered strings into the catalog. Pass all three app targets in
-# one invocation, or strings present on only one platform get marked stale.
-#
-# Null-delimited, and run under bash: the target directories are named
-# "GeoSpoof (iOS).build" and friends, so a `$(find ... -exec printf '%s ')`
-# pipeline splits every path on its space. That failure is quiet and
-# convincing — xcstringstool prints "Couldn't read stringsdata file at ..."
-# for each mangled path, then exits 0 having merged nothing at all.
-bash -c '
-args=()
-while IFS= read -r -d "" f; do args+=(--stringsdata "$f"); done < <(
-  find /tmp/dd-ios /tmp/dd-mac -name "*.stringsdata" \
-    \( -path "*GeoSpoof (iOS).build*" -o -path "*GeoSpoof (macOS).build*" \
-       -o -path "*GeoSpoof WidgetExtension.build*" \) -print0
-)
-echo "stringsdata files: $(( ${#args[@]} / 2 ))"   # expect ~60, never 0
-xcrun xcstringstool sync "Shared (App)/Resources/Localizable.xcstrings" "${args[@]}"
-'
-```
-
-Notes on that:
-
-- Build **Release**, not Debug. A Debug build extracts `#if DEBUG` UI into the
-  catalog, which then gets translated into 12 languages for nothing.
-- `xcodebuild` alone does **not** write the catalog — it emits `.stringsdata` and
-  leaves the file untouched. Either run `xcstringstool sync` as above, or build
-  once in the Xcode IDE, which does the merge for you.
-- **Check the catalog actually changed.** `xcstringstool sync` exits 0 whether it
-  merged 60 files or none, so the only reliable confirmation is
-  `git diff --stat` on the catalog, or grepping for a string you know is new.
-- `xcstringstool` is not on `PATH` by default; invoke it via `xcrun`.
-- Always pass `-derivedDataPath`; the shared DerivedData is locked whenever the
-  project is open in Xcode.
+The two aren't independent. The app's catalog must cover exactly the languages
+`_locales` covers here, and the app's glossary is _derived from_ these
+translations — so changing an established feature term in this repo means
+changing it there too, or the popup and the app end up with two words for one
+thing. That constraint is enforced from the app side: it reads this repo's
+`SUPPORTED_UI_LOCALES` through a submodule and checks the catalog against it
+daily.
 
 ### Validation
 
-`npm test` covers both systems:
+`npm test` covers the extension side:
 
 - `tests/unit/locales.unit.test.ts` — `_locales` key and placeholder parity.
-- `tests/unit/native-catalog-parity.unit.test.ts` — the String Catalog's language
-  set must equal `SUPPORTED_UI_LOCALES` (via `toAppleLocaleCode`), format
-  specifiers must match the source key, load-bearing whitespace must survive, and
-  no translation may be empty. Untranslated and stale keys warn rather than fail,
-  since a missing translation falls back to the source text.
-
-### Swift tests
-
-`npm test` does not cover the Swift app. Those live in `safari/GeoSpoofTests/` and
-run through the `GeoSpoofTests` target on the `GeoSpoof-iOS` scheme:
-
-```bash
-cd safari
-xcodebuild -project GeoSpoof.xcodeproj -scheme GeoSpoof-iOS \
-  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
-  -configuration Debug test CODE_SIGNING_ALLOWED=NO
-```
-
-A simulator destination is required — `generic/platform=iOS` builds but cannot run
-tests. Debug is required too: `@testable import GeoSpoof` needs
-`ENABLE_TESTABILITY`, which is only set for Debug.
-
-To read the result as numbers rather than scrolling the log:
-
-```bash
-RESULT=$(ls -td ~/Library/Developer/Xcode/DerivedData/GeoSpoof-*/Logs/Test/*.xcresult | head -1)
-xcrun xcresulttool get test-results summary --path "$RESULT"
-```
-
-Two things to know before adding a test file:
-
-- **Add it to the `GeoSpoofTests` target.** The target uses explicit file
-  references, not a synchronized folder, so a new file in the directory is not
-  picked up automatically. It will simply never run, with nothing to indicate it.
-  In Xcode: select the file, File Inspector, tick `GeoSpoofTests` under Target
-  Membership.
-- **`#expect`'s second argument is a `Comment`, not a `String`.** It is expressible
-  by string literal, so `"saw \(value)"` works, but a `String` variable or a
-  `a + b` concatenation will not compile. Build the message into one interpolated
-  literal.
-
-Fixtures shared with the agent (`tests/fixtures/*.json`) are read from the source
-tree via `#filePath`, not from the test bundle, so they need no resource phase and
-stay byte-identical with the copy `geospoof-gps` checks.
 
 ## Project Configuration
 
@@ -380,11 +266,11 @@ git log --oneline --decorate # see commits with tags
 
 ## License & Contribution Terms
 
-GeoSpoof (the browser extension, site, docs, and assets in this repository) is licensed under [MIT](LICENSE). The `safari/` directory — the native iOS and macOS apps — is an exception: it is source-available but proprietary, under [safari/LICENSE](safari/LICENSE). Contributions are welcome in both scopes; the terms below cover both.
+Everything in this repository — the browser extension, site, docs, and assets — is licensed under [MIT](LICENSE). The native iOS and macOS apps are developed separately, are proprietary, and are not part of this repository, so contributions here are MIT throughout.
 
 By submitting a contribution (a pull request, patch, or any code, docs, or other material), you agree that:
 
-1. Your contribution is licensed under the [MIT License](LICENSE) if it targets an MIT-licensed part of the repository, or under [safari/LICENSE](safari/LICENSE) if it targets `safari/`.
+1. Your contribution is licensed under the [MIT License](LICENSE).
 2. You have the right to submit the work under that license, and you grant the maintainer the rights described below.
 3. You sign off on the [Developer Certificate of Origin](https://developercertificate.org/) for each commit (add a `Signed-off-by:` line with `git commit -s`), certifying you authored the contribution or otherwise have the right to submit it under these terms.
 

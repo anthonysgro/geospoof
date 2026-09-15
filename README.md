@@ -192,16 +192,12 @@ Using location spoofing may violate terms of service of streaming, financial, or
 
 ## License
 
-This repository is split-licensed:
+Everything in this repository — the browser extension, site, docs, and assets — is **MIT**. See [LICENSE](LICENSE). Use, modify, and redistribute freely, including commercially.
 
-| Scope                                                                        | License                                                                  | What you can do                                                                                                 |
-| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
-| The browser extension, site, docs, and assets — everything outside `safari/` | **MIT** — see [LICENSE](LICENSE)                                         | Use, modify, and redistribute freely, including commercially                                                    |
-| `safari/` — the native iOS and macOS apps                                    | **Proprietary, source-available** — see [safari/LICENSE](safari/LICENSE) | Read, study, audit, and contribute back. No copying into other products, no redistribution, no derivative works |
+Two GeoSpoof products are developed separately, are closed-source, and are not part of this repository:
 
-The `safari/` source stays public so the app can be audited, but it isn't open source. The MIT terms above applied to that directory before 2026-09-13, and copies obtained under MIT before then keep those rights.
-
-The native GeoSpoof GPS desktop core (the Rust/Swift device product) is developed separately as a closed-source product and is not part of this repository.
+- The **native iOS and macOS apps**. These previously lived in a `safari/` directory here, MIT-licensed until 2026-09-13. Copies obtained under MIT before that date keep those rights; that history is still in this repository and is tagged `pre-safari-extraction`.
+- The **GeoSpoof GPS desktop core** (the Rust/Swift device product).
 
 **Trademarks:** The MIT license covers the source code only, not the brand. **GeoSpoof™ is a trademark of GeoSpoof LLC.** You're free to use and fork the code under MIT, but the GeoSpoof name and logo aren't licensed with it — please don't brand a fork or derivative product as "GeoSpoof" in a way that could confuse users about its source.
 
