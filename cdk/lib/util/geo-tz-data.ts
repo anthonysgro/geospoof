@@ -30,15 +30,22 @@ const FILES: [string, string] = ["timezones.geojson.geo.dat", "timezones.geojson
  * version actually agrees across the extension and the uploaded data.
  */
 export function resolveGeoTzData(): GeoTzDataSource {
-  // cdk/lib/util -> repo root is three levels up.
+  // cdk/lib/util -> cdk root is two levels up, repo root three.
+  //
+  // `geo-tz` is a direct dependency of this CDK package, pinned exact to match
+  // `src/shared/geo-tz-data.json`. It used to be read out of `site/node_modules`,
+  // which broke when the marketing site moved to its own repository — and was
+  // always the wrong shape: a stack that uploads this data should declare it
+  // rather than reach into a sibling project's install tree.
+  const cdkRoot = resolve(__dirname, "../..");
   const repoRoot = resolve(__dirname, "../../..");
-  const pkgPath = resolve(repoRoot, "site/node_modules/geo-tz/package.json");
-  const dataDir = resolve(repoRoot, "site/node_modules/geo-tz/data");
+  const pkgPath = resolve(cdkRoot, "node_modules/geo-tz/package.json");
+  const dataDir = resolve(cdkRoot, "node_modules/geo-tz/data");
   const canonicalPath = resolve(repoRoot, "src/shared/geo-tz-data.json");
 
   if (!existsSync(pkgPath)) {
     throw new Error(
-      `geo-tz is not installed at ${pkgPath}.\n` + "Run `npm install` in site/ before synthesizing."
+      `geo-tz is not installed at ${pkgPath}.\n` + "Run `npm install` in cdk/ before synthesizing."
     );
   }
 
