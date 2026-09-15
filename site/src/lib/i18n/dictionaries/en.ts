@@ -383,12 +383,18 @@ export const en = {
     eyebrow: "How GeoSpoof compares",
     heading: "More than a coordinate swap",
     subhead:
-      "Most location spoofers do one thing: drop a fake latitude and longitude into the browser. GeoSpoof covers the whole signal, so your location, timezone, and IP all tell the same story.",
+      "Most location spoofers do one thing: drop a fake latitude and longitude into the browser. GeoSpoof covers the whole signal, so your location, timezone, and IP all tell the same story — and the core of it is free.",
     featureHeader: "Feature",
     typicalHeader: "Typical",
+    // Three columns: a typical single-purpose spoofer, GeoSpoof free, and
+    // GeoSpoof Pro. `desktopOnly` is the Free-column mark for the two rows
+    // that are free in the browser extensions but Pro on iPhone/iPad — see
+    // `proNote`, which the legend renders alongside it.
+    freeHeader: "Free",
+    proHeader: "Pro",
     yesAria: "Yes",
-    limited: "Limited",
     noAria: "No",
+    desktopOnly: "Desktop",
     features: {
       coordinates: "Spoof geolocation by coordinates",
       oneIdentity: "One consistent identity across dozens of browser APIs",
@@ -398,10 +404,13 @@ export const en = {
       verification: "Built-in verification page",
       vpnSync: "VPN Sync with automatic re-sync",
       perSite: "Per-site rules & saved favorites",
+      deviceGps: "Your iPhone's real system GPS",
+      routes: "Follow GPX routes at a real pace",
+      offlineHold: "Keeps the location after you leave your computer",
     },
     legend: {
-      fullSupport: "Full support",
-      limitedDetail: ": partial or basic",
+      includedFree: "Included free",
+      proOnly: "Pro only",
       notSupported: "Not supported",
     },
     proAria: "Pro on iPhone and iPad",

@@ -367,12 +367,14 @@ export const de: Dictionary = {
     eyebrow: "So schneidet GeoSpoof ab",
     heading: "Mehr als nur ein Koordinatentausch",
     subhead:
-      "Die meisten Standortfälscher tun nur eines: eine falsche Breiten- und Längenangabe in den Browser einspeisen. GeoSpoof deckt das gesamte Signal ab, damit dein Standort, deine Zeitzone und deine IP dieselbe Geschichte erzählen.",
+      "Die meisten Standortfälscher tun nur eines: eine falsche Breiten- und Längenangabe in den Browser einspeisen. GeoSpoof deckt das gesamte Signal ab, damit dein Standort, deine Zeitzone und deine IP dieselbe Geschichte erzählen — und der Kern davon ist kostenlos.",
     featureHeader: "Funktion",
     typicalHeader: "Üblich",
+    freeHeader: "Gratis",
+    proHeader: "Pro",
     yesAria: "Ja",
-    limited: "Eingeschränkt",
     noAria: "Nein",
+    desktopOnly: "Desktop",
     features: {
       coordinates: "Geolocation über Koordinaten fälschen",
       oneIdentity:
@@ -383,10 +385,13 @@ export const de: Dictionary = {
       verification: "Integrierte Überprüfungsseite",
       vpnSync: "VPN-Synchronisierung mit automatischer Neusynchronisierung",
       perSite: "Regeln pro Website und gespeicherte Favoriten",
+      deviceGps: "Das echte System-GPS deines iPhones",
+      routes: "GPX-Routen in realistischem Tempo abfahren",
+      offlineHold: "Behält den Standort, wenn du den Computer verlässt",
     },
     legend: {
-      fullSupport: "Volle Unterstützung",
-      limitedDetail: ": teilweise oder grundlegend",
+      includedFree: "Kostenlos enthalten",
+      proOnly: "Nur Pro",
       notSupported: "Nicht unterstützt",
     },
     proAria: "Pro auf iPhone und iPad",

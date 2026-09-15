@@ -368,12 +368,14 @@ export const ptBR: Dictionary = {
     eyebrow: "Como o GeoSpoof se compara",
     heading: "Mais do que uma troca de coordenadas",
     subhead:
-      "A maioria dos falsificadores de localização faz uma coisa só: colocar uma latitude e longitude falsas no navegador. O GeoSpoof cobre todo o sinal, para que a sua localização, o seu fuso horário e o seu IP contem a mesma história.",
+      "A maioria dos falsificadores de localização faz uma coisa só: colocar uma latitude e longitude falsas no navegador. O GeoSpoof cobre todo o sinal, para que a sua localização, o seu fuso horário e o seu IP contem a mesma história — e o núcleo é grátis.",
     featureHeader: "Recurso",
     typicalHeader: "Comum",
+    freeHeader: "Grátis",
+    proHeader: "Pro",
     yesAria: "Sim",
-    limited: "Limitado",
     noAria: "Não",
+    desktopOnly: "Desktop",
     features: {
       coordinates: "Falsificar a geolocalização por coordenadas",
       oneIdentity: "Uma identidade consistente em dezenas de APIs do navegador",
@@ -384,10 +386,14 @@ export const ptBR: Dictionary = {
       verification: "Página de verificação integrada",
       vpnSync: "Sincronização com VPN e ressincronização automática",
       perSite: "Regras por site e favoritos salvos",
+      deviceGps: "O GPS real do sistema do seu iPhone",
+      routes: "Percorra rotas GPX em ritmo real",
+      offlineHold:
+        "Mantém a localização depois que você sai de perto do computador",
     },
     legend: {
-      fullSupport: "Suporte completo",
-      limitedDetail: ": parcial ou básico",
+      includedFree: "Incluído grátis",
+      proOnly: "Só no Pro",
       notSupported: "Não suportado",
     },
     proAria: "Pro no iPhone e iPad",
