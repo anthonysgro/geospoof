@@ -10,22 +10,39 @@ export interface GpsDownloadsProps {
   /** The existing CloudFront distribution fronting the bucket. */
   readonly distribution: cloudfront.IDistribution;
   /**
-   * "owner/repo" of every GitHub repo allowed to publish. Normally one entry.
+   * `sub` claim patterns whose GitHub Actions tokens may assume the publish
+   * role, matched with StringLike (so a list is OR, and `*` is a wildcard).
+   * Written out in full rather than assembled from an "owner/repo" string,
+   * because the shape of this claim is NOT what you would guess.
    *
-   * A LIST, not a string, so that transferring the GPS repo between owners has
-   * no window in which publishing is broken: add the new "owner/repo" and
-   * deploy BEFORE moving the repo, then drop the old entry after the first
-   * successful release under the new name. GitHub's OIDC `sub` claim carries
-   * the repo's full name, so a transfer changes it and a single-valued trust
-   * policy stops matching the moment the repo moves.
+   * DO NOT WRITE `repo:<owner>/<repo>:*` FROM MEMORY. GitHub now issues an
+   * IMMUTABLE subject that embeds the numeric owner and repo ids:
    *
-   * Deliberately exact strings rather than an owner wildcard pinned to
-   * `repository_id`, which is how the Entra side solves the same problem: AWS
+   *   repo:GeoSpoof@320249603/geospoof-gps@1291874641:ref:refs/tags/gps-v0.2.2
+   *
+   * Repos created after 2026-07-15, and any repo RENAMED OR TRANSFERRED after
+   * that date, use this format; older untouched repos keep the classic
+   * name-based one until opted in. Transferring geospoof-gps to the GeoSpoof
+   * org flipped it, and a name-based policy silently stopped matching - the
+   * failure is an unassumable role at publish time, long after the build.
+   *
+   * Get the current value from the repo itself rather than reconstructing it:
+   *
+   *   gh api repos/OWNER/REPO/actions/oidc/customization/sub \
+   *     --jq .sub_claim_prefix
+   *
+   * The owner segment is wildcarded here so a future transfer needs no change
+   * (a transfer alters the owner id, never the repo id). That is safe WITHOUT
+   * any `repository_id` condition precisely because the immutable subject
+   * embeds the repo id: only tokens minted for repo 1291874641 can match, and
+   * repo ids are globally unique and never reused. Which matters, because AWS
    * has only reliably honored `sub` and `aud` from GitHub tokens, so a policy
-   * leaning on `repository_id` risks either denying every publish or, worse,
-   * trusting any account that happens to own a repo with a matching name.
+   * leaning on a custom `repository_id` claim risks denying every publish.
+   *
+   * A LIST because a format migration or an owner move can need two entries
+   * trusted at once; keep it at one whenever nothing is in flight.
    */
-  readonly githubRepos: readonly string[];
+  readonly githubSubjectPatterns: readonly string[];
   /**
    * ARN of an existing GitHub Actions OIDC provider to import. If omitted, one
    * is created. (Only ONE provider for token.actions.githubusercontent.com may
@@ -81,29 +98,36 @@ export class GpsDownloads extends Construct {
     // nothing and so fails closed rather than open - but it fails closed at
     // release time, on a tag push, which is the worst moment to discover it.
     // Fail at synth instead.
-    if (props.githubRepos.length === 0) {
+    if (props.githubSubjectPatterns.length === 0) {
       throw new Error(
-        "GpsDownloads: githubRepos must name at least one owner/repo allowed to publish"
+        "GpsDownloads: githubSubjectPatterns must contain at least one sub pattern allowed to publish"
       );
     }
 
-    // Trust: only tokens minted for these repos' workflows may assume the role.
-    // `:*` covers tag pushes (gps-v*) and manual dispatch; tighten to
-    // `repo:<owner/repo>:ref:refs/tags/gps-v*` if you want tag-only publishes.
-    //
-    // StringLike with a list is OR, so each entry is independently sufficient.
+    // A pattern not anchored on "repo:" cannot match a GitHub Actions token and
+    // would be a silently dead entry - or, if someone wrote a bare "*", a wide
+    // open role. Neither is worth discovering later.
+    const malformed = props.githubSubjectPatterns.filter((pattern) => !pattern.startsWith("repo:"));
+    if (malformed.length > 0) {
+      throw new Error(
+        `GpsDownloads: githubSubjectPatterns entries must start with "repo:" - got ${malformed.join(", ")}`
+      );
+    }
+
+    // Trust: only tokens whose `sub` matches one of these patterns may assume
+    // the role. StringLike with a list is OR, so each entry is independently
+    // sufficient. Tighten a pattern's trailing `:*` to `:ref:refs/tags/gps-v*`
+    // if you ever want tag-only publishes.
     const publishRole = new iam.Role(this, "PublishRole", {
       assumedBy: new iam.OpenIdConnectPrincipal(provider, {
         StringEquals: {
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
         },
         StringLike: {
-          "token.actions.githubusercontent.com:sub": props.githubRepos.map(
-            (repo) => `repo:${repo}:*`
-          ),
+          "token.actions.githubusercontent.com:sub": [...props.githubSubjectPatterns],
         },
       }),
-      description: `GitHub Actions publish role for ${props.githubRepos.join(", ")} (GPS DMG -> CDN)`,
+      description: `GitHub Actions publish role for GPS DMG -> CDN (${props.githubSubjectPatterns.length} trusted subject pattern(s))`,
     });
 
     // Least privilege: write only under the gps/ prefix.
