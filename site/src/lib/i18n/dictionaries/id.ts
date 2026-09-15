@@ -76,10 +76,10 @@ export const id: Dictionary = {
   },
   pro: {
     meta: {
-      title: "GeoSpoof Pro — Harga & Fitur | GeoSpoof",
+      title: "GeoSpoof Pro — Gratis vs Pro, Harga & Fitur | GeoSpoof",
       description:
-        "GeoSpoof Pro membuka GPS tingkat perangkat di iPhone, sinkronisasi VPN otomatis, widget, pemilih MapKit, filter per situs, dan lainnya. Mulai $1.99 per bulan, atau $24.99 sekali bayar — ditagih melalui App Store.",
-      ogTitle: "GeoSpoof Pro — Harga & Fitur",
+        "Bandingkan GeoSpoof gratis dengan GeoSpoof Pro. Pro membuka GPS sistem asli iPhone Anda, rute GPX, sinkronisasi ulang VPN otomatis, aturan per situs, widget, dan lainnya. $1.99/bln, $9.99/thn, atau $24.99 sekali bayar — ditagih melalui App Store.",
+      ogTitle: "GeoSpoof Pro — Gratis vs Pro, Harga & Fitur",
     },
     hero: {
       breadcrumbHome: "Beranda",
@@ -87,17 +87,95 @@ export const id: Dictionary = {
       badge: "GeoSpoof Pro",
       heading: "Semua kemampuan GeoSpoof, terbuka",
       subhead:
-        "Satu langganan membuka semua alat canggih GeoSpoof di iPhone dan iPad — termasuk GeoSpoof GPS, yang mengatur lokasi asli tingkat sistem perangkat Anda.",
+        "Memalsukan lokasi, zona waktu, dan WebRTC itu gratis. Pro menambahkan alat-alat canggih di iPhone dan iPad — dimulai dari GPS asli tingkat sistem perangkat Anda.",
+      ctaPrimary: "Dapatkan GeoSpoof Pro",
+      ctaSecondary: "Bandingkan Gratis dan Pro",
+      trust: "Tanpa akun · Tanpa pelacakan · Sumber terbuka",
+    },
+    plans: {
+      eyebrow: "Gratis vs Pro",
+      heading: "Yang Anda dapat, apa pun pilihannya",
+      subhead:
+        "Inti pemalsuan lokasi tetap gratis: semua situs, zona waktu yang cocok, dan tanpa kebocoran WebRTC. Pro soal kemampuan dan kepraktisan, bukan soal menahan privasi Anda.",
+      featureHeader: "Fitur",
+      freeHeader: "Gratis",
+      proHeader: "Pro",
+      bothValue: "Gratis dan Pro",
+      proOnlyValue: "Hanya Pro",
+      rows: {
+        spoofing: "Pemalsuan lokasi di semua situs",
+        timezoneWebrtc: "Zona waktu yang cocok dan perlindungan WebRTC",
+        vpnSync: "Sinkron VPN, pencarian kota, koordinat presisi",
+        deviceGps: "GPS sistem asli iPhone Anda",
+        routes: "Ikuti rute GPX dengan kecepatan nyata",
+        offlineHold: "Mempertahankan lokasi setelah Anda meninggalkan komputer",
+        autoResync: "Sinkronisasi ulang VPN otomatis",
+        perSite: "Aturan per situs, akurasi, dan bahasa",
+        widgets: "Widget dan Kontrol",
+      },
+      legend: {
+        both: "Ada di kedua paket",
+        proOnly: "Hanya Pro",
+      },
+      scopeNote:
+        "Perbandingan ini untuk aplikasi iPhone dan iPad. Ekstensi untuk Chrome, Firefox, Edge, dan Brave gratis, begitu juga GeoSpoof GPS untuk Mac dan Windows.",
+    },
+    unlocks: {
+      eyebrow: "Yang dibuka Pro",
+      heading: "Rincian setiap tambahannya",
+      subhead:
+        "Semuanya ada justru karena jalur gratisnya sudah bekerja. Inilah alasan orang meningkatkan ke Pro.",
+      items: {
+        gps: {
+          title: "GPS perangkat",
+          body: "Atur lokasi asli tingkat sistem yang dilaporkan iPhone Anda — ke Maps, ke Weather, ke aplikasi apa pun yang meminta. Perlu aplikasi gratis GeoSpoof GPS di Mac atau PC Windows.",
+        },
+        routes: {
+          title: "Rute GPX",
+          body: "Impor rute lalu ikuti dengan kecepatan realistis, dengan posisi langsung yang bergerak sepanjang jalur. Jeda, lanjutkan, mulai ulang, atau ulangi terus.",
+        },
+        offlineHold: {
+          title: "Tinggalkan komputernya",
+          body: "Matikan Mode Pengembang saat lokasi sedang aktif, dan iPhone Anda tetap mempertahankannya setelah sambungan ke komputer berakhir. Selama bertahan, lokasinya terkunci di titik itu.",
+        },
+        autoResync: {
+          title: "Sinkronisasi ulang VPN otomatis",
+          body: "Lokasi Anda mengikuti wilayah keluar VPN di latar belakang, setiap kali simpul keluarnya berganti, tanpa Anda melakukan apa pun.",
+        },
+        perSite: {
+          title: "Aturan per situs dan penyetelan halus",
+          body: "Daftar izinkan dan tolak agar hanya situs pilihan Anda yang dipalsukan, plus akurasi, lokasi perkiraan, dan bahasa.",
+        },
+        mapPicker: {
+          title: "Pemilih pada peta",
+          body: "Jatuhkan pin di mana saja pada peta dan pakai sebagai lokasi Anda, tanpa mengetik koordinat.",
+        },
+        widgets: {
+          title: "Widget dan Kontrol",
+          body: "Ganti lokasi dari Layar Utama, Layar Terkunci, atau Pusat Kontrol, tanpa membuka aplikasi.",
+        },
+        future: {
+          title: "Dan masih ada lagi",
+          body: "Fitur Pro baru masuk ke pembelian yang sama, begitu dirilis.",
+        },
+      },
     },
     pricing: {
-      heading: "Harga sederhana",
+      eyebrow: "Harga",
+      heading: "Satu pembelian, semua perangkat Apple",
+      subhead:
+        "Pilih paket di dalam aplikasi. Pro terbuka di iPhone, iPad, dan Mac dengan Akun Apple yang sama — tidak ada akun yang perlu dibuat, tidak ada yang perlu dimasuki.",
       cta: "Dapatkan GeoSpoof Pro",
+      universal: "Satu pembelian membuka iPhone, iPad, dan Mac.",
       fineprint:
-        "Ditagih melalui App Store. Harga dapat berbeda menurut wilayah. Batalkan kapan saja.",
+        "Ditagih melalui App Store. Harga ditampilkan dalam USD; Apple menagih harga lokal Anda termasuk pajak. Batalkan kapan saja.",
+      lifetimeNote:
+        "Seumur hidup adalah pembelian sekali bayar. Bukan langganan dan tidak diperpanjang.",
       monthly: {
         name: "Bulanan",
         price: "$1.99",
         period: "/bln",
+        subNote: "",
         note: "",
         badge: "",
       },
@@ -105,6 +183,7 @@ export const id: Dictionary = {
         name: "Tahunan",
         price: "$9.99",
         period: "/thn",
+        subNote: "sekitar $0.83/bln",
         note: "Hemat 58% dibanding bulanan",
         badge: "Terpopuler",
       },
@@ -112,24 +191,51 @@ export const id: Dictionary = {
         name: "Seumur hidup",
         price: "$24.99",
         period: "sekali",
+        subNote: "",
         note: "Tanpa langganan",
         badge: "Nilai terbaik",
       },
     },
-    features: {
-      heading: "Yang termasuk",
-      items: {
-        everythingFree:
-          "Semua yang ada di ekstensi GeoSpoof gratis — pemalsuan lokasi & zona waktu, perlindungan WebRTC, di semua browser utama",
-        gps: "GeoSpoof GPS — atur GPS asli tingkat sistem iPhone Anda (dengan aplikasi untuk Mac atau Windows)",
-        vpnSync:
-          "Sinkronisasi VPN otomatis — lokasi Anda mengikuti wilayah keluar VPN di latar belakang",
-        widgets: "Widget Layar Utama dan kontrol Pusat Kontrol",
-        mapkit: "Pemilih lokasi MapKit — jatuhkan pin di mana saja pada peta",
-        filters: "Filter izinkan dan tolak per situs",
-        advanced: "Kontrol lanjutan dan penyetelan halus",
-        futureUpdates: "Setiap pembaruan mendatang, termasuk begitu dirilis",
-      },
+    requirements: {
+      heading: "Sebelum membeli",
+      computer:
+        "GPS perangkat memerlukan Mac atau PC Windows — disandingkan sekali dengan kabel, lalu berjalan lewat Wi-Fi. Semua fitur Pro lainnya berjalan di ponsel saja.",
+      arGames:
+        "Bukan untuk gim AR seperti Pokémon GO — GPS perangkat ditujukan untuk privasi, penjelajahan web, dan pengembangan.",
+      extensions:
+        "Ekstensi browser untuk Chrome, Firefox, Edge, dan Brave gratis dan bukan bagian dari Pro.",
+    },
+    faq: {
+      heading: "Pertanyaan tentang Pro",
+      items: [
+        {
+          q: "Apakah GeoSpoof gratis?",
+          a: "Ya. Ekstensi browsernya gratis di semua browser utama, dan aplikasi iPhone serta iPad memalsukan lokasi, zona waktu, dan WebRTC secara gratis — termasuk sinkron VPN sekali tekan, pencarian kota, dan koordinat presisi. Pro menambahkan GPS perangkat serta kontrol lanjutan.",
+        },
+        {
+          q: "Apakah saya perlu Mac atau PC untuk memakai Pro?",
+          a: "Hanya untuk GPS perangkat. GeoSpoof GPS adalah aplikasi pendamping gratis untuk Mac dan Windows: disandingkan sekali dengan kabel, lalu berjalan lewat Wi-Fi. Fitur Pro lainnya berjalan di ponsel sendiri.",
+        },
+        {
+          q: "Satu pembelian berlaku untuk berapa perangkat?",
+          a: "Ini Universal Purchase: iPhone, iPad, dan Mac tercakup dengan Akun Apple yang sama. Haknya mengikuti Akun Apple Anda — tanpa login, tanpa ritual pemulihan di perangkat kedua.",
+        },
+        {
+          q: "Bisakah saya bayar sekali saja daripada berlangganan?",
+          a: "Bisa. Pembukaan seumur hidup $24.99 adalah pembelian sekali bayar. Bukan langganan dan tidak pernah diperpanjang.",
+        },
+        {
+          q: "Apakah GPS perangkat bisa untuk Pokémon GO?",
+          a: "Tidak. GPS perangkat dibuat untuk privasi, penjelajahan web, dan pengembangan, dan kami tidak mendukung gim AR.",
+        },
+        {
+          q: "Bagaimana cara membatalkan?",
+          a: "Di aplikasi Pengaturan, pada Akun Apple Anda, lalu Langganan. Pro tetap berjalan sampai akhir periode yang sudah Anda bayar.",
+        },
+      ],
+      gpsLead: "Ingin rincian GPS perangkat lebih dulu? ",
+      gpsLink: "Baca tentang GeoSpoof GPS",
+      gpsTail: " — aplikasi desktop gratis yang menjalankannya.",
     },
   },
   footer: {
