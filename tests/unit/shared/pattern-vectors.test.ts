@@ -6,7 +6,7 @@ import vectors from "../../fixtures/pattern-vectors.json";
  * Cross-language parity: `parsePattern` (the TypeScript Pattern_Parser) must
  * match every vector in the shared fixture (Req 2, 3). The same fixture is
  * consumed by the native Swift parser's parity test
- * (safari/GeoSpoofTests/PatternParserParityTests.swift), so both parsers are
+ * (geospoof-ios:app/GeoSpoofTests/PatternParserParityTests.swift), so both parsers are
  * pinned to one hand-authored contract and cannot silently drift apart — a
  * requirement because scope lists round-trip across the App Group bridge and
  * are deduped against each other's canonical form.

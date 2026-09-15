@@ -43,15 +43,20 @@ to English at runtime, so the popup is functional but partly untranslated.
 ## Relationship to the native app
 
 The Safari **app** (as opposed to the extension popup) is localized separately,
-through an Xcode String Catalog at
-`safari/Shared (App)/Resources/Localizable.xcstrings`. Different format, different
+through an Xcode String Catalog in the private `geospoof-ios` repo at
+`app/Shared (App)/Resources/Localizable.xcstrings`. Different format, different
 runtime, same product — so the two must agree on terminology.
 
-`TRANSLATION.md` at the repo root holds the shared glossary. It is derived _from_
+`TRANSLATION.md` in that repo holds the shared glossary. It is derived _from_
 this directory: where a term already has a translation here, the native app reuses
 it verbatim rather than re-deriving it. If you change an established term here,
 update the glossary and the catalog to match, or a user moving between the popup
 and the app will see two different words for one feature.
+
+That direction of dependency is why this file is the one to change first. The app
+side checks its catalog against `SUPPORTED_UI_LOCALES` from this repo daily, so
+adding or removing a language here will surface there on its own — but a reworded
+term will not. Terminology changes have to be carried across by hand.
 
 For the 23 keys above there is nothing to reuse, so the native app is setting the
 precedent for that vocabulary. Once it has translations, backfill them into this

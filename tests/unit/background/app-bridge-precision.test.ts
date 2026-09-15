@@ -3,7 +3,7 @@
  * passthrough.
  *
  * The native app encodes the precision setting as a compact JSON string
- * (`SpoofLocationPrecision.toJSON()` in safari/Shared (App)/SpoofModel.swift)
+ * (`SpoofLocationPrecision.toJSON()` in geospoof-ios:app/Shared (App)/SpoofModel.swift)
  * and shuttles it verbatim through the App Group store. On adoption the
  * extension (`adoptPendingSettingsFromApp` in src/background/app-bridge.ts) does:
  *

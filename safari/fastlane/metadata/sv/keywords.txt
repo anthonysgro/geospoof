@@ -1,1 +1,0 @@
-fake,falsk,geolokalisering,vpn,teleport,region,virtuell,koordinater,integritet,karta,dölj,ändra

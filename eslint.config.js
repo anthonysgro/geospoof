@@ -19,7 +19,6 @@ export default [
       "content/**",
       "popup/**",
       "site/**", // site/ has its own eslint config
-      "safari/**", // Safari Xcode wrapper — Apple boilerplate, not part of TS project
     ],
   },
 

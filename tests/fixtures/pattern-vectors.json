@@ -2,7 +2,7 @@
   "_comment": [
     "Cross-language parity fixture for the Advanced Filtering Pattern_Parser.",
     "Single source of truth shared by the TypeScript parser (src/shared/utils/scope.ts",
-    "parsePattern) and the native Swift parser (safari/Shared (App)/SpoofModel.swift",
+    "parsePattern) and the native Swift parser (geospoof-ios:app/Shared (App)/SpoofModel.swift",
     "normalizePatternInput). Both MUST produce byte-identical canonical output for every",
     "vector so that scope lists round-trip losslessly across the App Group bridge.",
     "",
@@ -13,7 +13,7 @@
     "",
     "Consumed by:",
     "  - tests/unit/shared/pattern-vectors.test.ts (TypeScript, runs under `npm test`)",
-    "  - safari/GeoSpoofTests/PatternParserParityTests.swift (Swift, runs under Xcode)",
+    "  - geospoof-ios:app/GeoSpoofTests/PatternParserParityTests.swift (Swift, runs under Xcode)",
     "",
     "Internationalized domain names (IDNs) are accepted and stored in their Unicode form",
     "(NFC-normalized + lowercased), NOT Punycode — both parsers canonicalize with native",

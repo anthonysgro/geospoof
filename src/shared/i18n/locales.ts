@@ -39,7 +39,7 @@ const LOCALE_CODES: readonly string[] = SUPPORTED_UI_LOCALES.map((l) => l.code);
 
 /**
  * Map a `_locales` code to the language code Apple uses in the native app's
- * String Catalog (`safari/Shared (App)/Resources/Localizable.xcstrings`).
+ * String Catalog (`geospoof-ios:app/Shared (App)/Resources/Localizable.xcstrings`).
  *
  * The two platforms spell the same languages differently: WebExtensions use
  * underscore region tags, while Apple uses hyphens and keys Chinese by *script*

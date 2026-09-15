@@ -237,11 +237,11 @@ for search. Only three fields feed App Store search ranking:
 | **Promotional text** | 170 chars  | Above the description; updatable without review. Not indexed.                                                                     |
 | **Description**      | 4000 chars | Conversion copy only — NOT indexed. Do not keyword-stuff.                                                                         |
 
-> **Source of truth for the App Store listing is now `safari/fastlane/metadata/<locale>/`**,
-> not this file. `fastlane deliver` uploads that tree directly, so the hand-paste step is
-> gone. Twelve locales ship: `en-US`, `de-DE`, `es-ES`, `fr-FR`, `id`, `ja`, `nl-NL`,
-> `pt-BR`, `ru`, `sv`, `vi`, `zh-Hans`. Field limits are enforced by
-> `tests/unit/appstore-metadata-parity.unit.test.ts`.
+> **Source of truth for the App Store listing is `app/fastlane/metadata/<locale>/` in the
+> private `geospoof-ios` repo**, not this file. `fastlane deliver` uploads that tree
+> directly, so the hand-paste step is gone. Twelve locales ship: `en-US`, `de-DE`,
+> `es-ES`, `fr-FR`, `id`, `ja`, `nl-NL`, `pt-BR`, `ru`, `sv`, `vi`, `zh-Hans`. Field
+> limits are enforced by `tests/unit/appstore-metadata-parity.unit.test.ts` there.
 >
 > The sections below keep the **English ASO reasoning** — why each token was chosen — which
 > the `.txt` files have nowhere to record. Chrome and AMO above have no automation path and
@@ -348,9 +348,9 @@ NEW Auto Background Sync: switch VPN servers and your Safari location follows au
 
 ## Description
 
-**Lives in `safari/fastlane/metadata/en-US/description.txt`** — edit it there, not
-here, so the uploaded copy and the reviewed copy can't diverge. 2654 of 4000 chars;
-German, the longest translation, lands at 3115.
+**Lives in `app/fastlane/metadata/en-US/description.txt` in the private `geospoof-ios`
+repo** — edit it there, not here, so the uploaded copy and the reviewed copy can't
+diverge. 2654 of 4000 chars; German, the longest translation, lands at 3115.
 
 Structural notes for whoever edits it next:
 
@@ -379,7 +379,7 @@ burned into the screenshot images, in all 12 locales.
 
 ## macOS listing
 
-Not written yet. `safari/fastlane/metadata/` holds the iOS copy at its root.
+Not written yet. `app/fastlane/metadata/` in `geospoof-ios` holds the iOS copy at its root.
 
 The iOS description can't be reused as-is: it casts the Mac app as the companion
 ("requires the free GeoSpoof GPS companion app for Mac"), which is backwards on the

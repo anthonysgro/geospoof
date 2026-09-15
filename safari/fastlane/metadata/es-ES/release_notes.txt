@@ -1,3 +1,0 @@
-¡Hola, GeoSpoofers! Tu iPhone ya puede seguir una ruta.
-Importa un GPX de Strava, Garmin o cualquier app de seguimiento y recórrelo a pie, en bici o en coche, con un punto en vivo que muestra dónde está tu iPhone. Guarda rutas, marca tus favoritas y dale a play cuando quieras. Además, mapas más limpios, una configuración más fluida y un nuevo consejo para mantener tu ubicación al alejarte del ordenador.
-Sin cuenta. Sin seguimiento. Código abierto.

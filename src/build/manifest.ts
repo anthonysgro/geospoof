@@ -231,7 +231,7 @@ export function generateManifest(target: BrowserTarget, version: string): Record
     // quietly rather than loudly if origins come back:
     //
     //   1. Onboarding's Settings step instructs the user to "Set All Websites to Allow"
-    //      by name (`settingsChecklist` in `safari/Shared (App)/SpoofDetailsView.swift`).
+    //      by name (`settingsChecklist` in `geospoof-ios:app/Shared (App)/SpoofDetailsView.swift`).
     //      With declared origins that row is titled "Other Websites" instead, so the
     //      instruction would name a row that isn't on the screen.
     //   2. That step is also where website access is now asked for at all. It replaced a

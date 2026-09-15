@@ -231,7 +231,8 @@ export function TermsPage() {
 
             <TermsSection title="5. Source Code and Licensing">
               <p>
-                The complete source code is published at{" "}
+                The browser extension, website, and documentation are open
+                source. Their complete source code is published at{" "}
                 <a
                   href="https://github.com/anthonysgro/geospoof"
                   target="_blank"
@@ -239,11 +240,7 @@ export function TermsPage() {
                 >
                   github.com/anthonysgro/geospoof
                 </a>{" "}
-                so that anyone can audit it. The repository is split-licensed.
-              </p>
-              <p>
-                The browser extension, website, and documentation are open
-                source under the{" "}
+                so that anyone can audit it, under the{" "}
                 <a
                   href="https://github.com/anthonysgro/geospoof/blob/main/LICENSE"
                   target="_blank"
@@ -255,19 +252,12 @@ export function TermsPage() {
                 that code.
               </p>
               <p>
-                The native iOS and macOS applications (the{" "}
-                <code>safari/</code> directory) are source-available but
-                proprietary — all rights reserved by GeoSpoof LLC. You may read,
-                study, and audit that code, but it is not licensed for copying,
-                redistribution, or derivative works. See{" "}
-                <a
-                  href="https://github.com/anthonysgro/geospoof/blob/main/safari/LICENSE"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  safari/LICENSE
-                </a>{" "}
-                for the full terms.
+                The native iOS and macOS applications are proprietary and their
+                source code is not published — all rights reserved by GeoSpoof
+                LLC. Your rights to use those applications come from the App
+                Store terms under which you obtained them, including Apple&rsquo;s
+                Licensed Application End User License Agreement, and not from the
+                MIT License above.
               </p>
             </TermsSection>
 

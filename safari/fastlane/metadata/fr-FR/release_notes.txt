@@ -1,3 +1,0 @@
-Bonjour les GeoSpoofers ! Votre iPhone peut désormais suivre un itinéraire.
-Importez un GPX depuis Strava, Garmin ou toute autre app de suivi, puis parcourez-le à pied, à vélo ou en voiture — avec un point en direct qui montre où se trouve votre iPhone. Enregistrez des itinéraires, marquez vos favoris et lancez-les quand vous voulez. Avec en plus des cartes plus lisibles, une configuration plus fluide et une nouvelle astuce pour conserver votre position après avoir quitté votre ordinateur.
-Aucun compte. Aucun suivi. Open source.
