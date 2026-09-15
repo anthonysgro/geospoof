@@ -76,10 +76,11 @@ export const fr: Dictionary = {
   },
   pro: {
     meta: {
-      title: "GeoSpoof Pro — Tarifs et fonctionnalités | GeoSpoof",
+      title:
+        "GeoSpoof Pro — Gratuit vs Pro, tarifs et fonctionnalités | GeoSpoof",
       description:
-        "GeoSpoof Pro débloque le GPS au niveau de l’appareil sur iPhone, la synchronisation VPN automatique, des widgets, le sélecteur MapKit, des filtres par site et plus encore. Dès $1.99 par mois, ou $24.99 une fois — facturé via l’App Store.",
-      ogTitle: "GeoSpoof Pro — Tarifs et fonctionnalités",
+        "Comparez GeoSpoof gratuit et GeoSpoof Pro. Pro débloque le GPS système réel de votre iPhone, les itinéraires GPX, la resynchronisation VPN automatique, les règles par site, les widgets et plus encore. $1.99/mois, $9.99/an ou $24.99 une fois — facturé via l’App Store.",
+      ogTitle: "GeoSpoof Pro — Gratuit vs Pro, tarifs et fonctionnalités",
     },
     hero: {
       breadcrumbHome: "Accueil",
@@ -87,17 +88,95 @@ export const fr: Dictionary = {
       badge: "GeoSpoof Pro",
       heading: "Tout ce que GeoSpoof sait faire, débloqué",
       subhead:
-        "Un seul abonnement débloque les outils avancés de GeoSpoof sur iPhone et iPad — dont GeoSpoof GPS, qui définit la position réelle et système de votre appareil.",
+        "Simuler votre position, votre fuseau horaire et WebRTC est gratuit. Pro ajoute les outils avancés sur iPhone et iPad — en commençant par le GPS système réel de votre appareil.",
+      ctaPrimary: "Obtenir GeoSpoof Pro",
+      ctaSecondary: "Comparer Gratuit et Pro",
+      trust: "Sans compte · Sans suivi · Open source",
+    },
+    plans: {
+      eyebrow: "Gratuit vs Pro",
+      heading: "Ce que vous obtenez dans les deux cas",
+      subhead:
+        "Le cœur de la simulation est gratuit : tous les sites, un fuseau horaire assorti et aucune fuite WebRTC. Pro, c’est de la puissance et du confort, jamais de la confidentialité retenue.",
+      featureHeader: "Fonctionnalité",
+      freeHeader: "Gratuit",
+      proHeader: "Pro",
+      bothValue: "Gratuit et Pro",
+      proOnlyValue: "Pro uniquement",
+      rows: {
+        spoofing: "Localisation simulée sur tous les sites",
+        timezoneWebrtc: "Fuseau horaire assorti et protection WebRTC",
+        vpnSync: "Sync VPN, recherche de villes, coordonnées exactes",
+        deviceGps: "Le GPS système réel de votre iPhone",
+        routes: "Suivez des itinéraires GPX à un rythme réaliste",
+        offlineHold: "Conserve la position après avoir quitté votre ordinateur",
+        autoResync: "Resynchronisation VPN automatique",
+        perSite: "Règles par site, précision et langue",
+        widgets: "Widgets et commandes",
+      },
+      legend: {
+        both: "Dans les deux formules",
+        proOnly: "Pro uniquement",
+      },
+      scopeNote:
+        "Cette comparaison concerne l’app iPhone et iPad. Les extensions pour Chrome, Firefox, Edge et Brave sont gratuites, tout comme GeoSpoof GPS pour Mac et Windows.",
+    },
+    unlocks: {
+      eyebrow: "Ce que Pro débloque",
+      heading: "Les ajouts, en détail",
+      subhead:
+        "Chacun existe parce que la voie gratuite fonctionne déjà. Voilà les raisons pour lesquelles on passe à Pro.",
+      items: {
+        gps: {
+          title: "GPS de l’appareil",
+          body: "Définissez la position réelle, au niveau système, que votre iPhone communique — à Plans, à Météo, à toute app qui la demande. Nécessite l’app gratuite GeoSpoof GPS sur un Mac ou un PC Windows.",
+        },
+        routes: {
+          title: "Itinéraires GPX",
+          body: "Importez un itinéraire et suivez-le à un rythme réaliste, avec une position en direct qui avance le long du tracé. Pause, reprise, redémarrage ou boucle.",
+        },
+        offlineHold: {
+          title: "Laissez l’ordinateur derrière vous",
+          body: "Désactivez le mode développeur pendant qu’une position est active et votre iPhone la conserve après la fin de la liaison avec l’ordinateur. Tant qu’elle tient, la position reste figée.",
+        },
+        autoResync: {
+          title: "Resynchronisation VPN automatique",
+          body: "Votre position suit la région de sortie de votre VPN en arrière-plan, à chaque changement de serveur de sortie, sans que vous touchiez à rien.",
+        },
+        perSite: {
+          title: "Règles par site et réglage fin",
+          body: "Listes d’autorisation et de blocage pour ne simuler que les sites choisis, plus la précision, la position approximative et la langue.",
+        },
+        mapPicker: {
+          title: "Sélecteur sur la carte",
+          body: "Placez un repère n’importe où sur la carte et utilisez-le comme position, au lieu de saisir des coordonnées.",
+        },
+        widgets: {
+          title: "Widgets et commandes",
+          body: "Changez de position depuis l’écran d’accueil, l’écran verrouillé ou le centre de contrôle, sans ouvrir l’app.",
+        },
+        future: {
+          title: "Et ce n’est pas tout",
+          body: "Les nouvelles fonctionnalités Pro sont incluses dans le même achat, dès leur sortie.",
+        },
+      },
     },
     pricing: {
-      heading: "Des tarifs simples",
+      eyebrow: "Tarifs",
+      heading: "Un achat, tous vos appareils Apple",
+      subhead:
+        "Choisissez la formule dans l’app. Pro débloque iPhone, iPad et Mac sur le même compte Apple — aucun compte à créer, rien à connecter.",
       cta: "Obtenir GeoSpoof Pro",
+      universal: "Un achat débloque iPhone, iPad et Mac.",
       fineprint:
-        "Facturé via l’App Store. Les prix peuvent varier selon la région. Annulable à tout moment.",
+        "Facturé via l’App Store. Prix affichés en USD ; Apple facture votre prix local, taxes comprises. Annulable à tout moment.",
+      lifetimeNote:
+        "À vie est un achat unique. Ce n’est pas un abonnement et il ne se renouvelle pas.",
       monthly: {
         name: "Mensuel",
         price: "$1.99",
         period: "/mois",
+        subNote: "",
         note: "",
         badge: "",
       },
@@ -105,6 +184,7 @@ export const fr: Dictionary = {
         name: "Annuel",
         price: "$9.99",
         period: "/an",
+        subNote: "environ $0.83/mois",
         note: "Économisez 58% vs mensuel",
         badge: "Le plus populaire",
       },
@@ -112,27 +192,51 @@ export const fr: Dictionary = {
         name: "À vie",
         price: "$24.99",
         period: "une fois",
+        subNote: "",
         note: "Sans abonnement",
         badge: "Meilleur rapport",
       },
     },
-    features: {
-      heading: "Ce qui est inclus",
-      items: {
-        everythingFree:
-          "Tout ce que propose l’extension GeoSpoof gratuite — simulation de position et de fuseau horaire, protection WebRTC, sur tous les grands navigateurs",
-        gps: "GeoSpoof GPS — définissez le vrai GPS système de votre iPhone (avec l’app pour Mac ou Windows)",
-        vpnSync:
-          "Synchronisation VPN automatique — votre position suit la région de sortie de votre VPN en arrière-plan",
-        widgets:
-          "Widgets de l’écran d’accueil et commandes du centre de contrôle",
-        mapkit:
-          "Sélecteur de position MapKit — placez un repère n’importe où sur la carte",
-        filters: "Filtres d’autorisation et de blocage par site",
-        advanced: "Réglages avancés et personnalisation fine",
-        futureUpdates:
-          "Toutes les futures mises à jour, incluses dès leur sortie",
-      },
+    requirements: {
+      heading: "Avant d’acheter",
+      computer:
+        "Le GPS de l’appareil nécessite un Mac ou un PC Windows : un jumelage par câble, puis tout passe par le Wi-Fi. Toutes les autres fonctionnalités Pro tournent sur le téléphone seul.",
+      arGames:
+        "Pas destiné aux jeux en RA comme Pokémon GO : le GPS de l’appareil sert à la confidentialité, à la navigation et au développement.",
+      extensions:
+        "Les extensions pour Chrome, Firefox, Edge et Brave sont gratuites et ne font pas partie de Pro.",
+    },
+    faq: {
+      heading: "Questions sur Pro",
+      items: [
+        {
+          q: "GeoSpoof est-il gratuit ?",
+          a: "Oui. L’extension est gratuite sur tous les grands navigateurs, et l’app iPhone et iPad simule votre position, votre fuseau horaire et WebRTC gratuitement — y compris la sync VPN en un geste, la recherche de villes et les coordonnées exactes. Pro ajoute le GPS de l’appareil et les réglages avancés.",
+        },
+        {
+          q: "Faut-il un Mac ou un PC pour utiliser Pro ?",
+          a: "Uniquement pour le GPS de l’appareil. GeoSpoof GPS est une app compagnon gratuite pour Mac et Windows : un jumelage par câble, puis tout passe par le Wi-Fi. Toutes les autres fonctionnalités Pro tournent sur le téléphone seul.",
+        },
+        {
+          q: "Combien d’appareils couvre un achat ?",
+          a: "C’est un achat universel : iPhone, iPad et Mac sont couverts avec le même compte Apple. Le droit d’accès suit votre compte Apple — pas de connexion, pas de restauration sur le second appareil.",
+        },
+        {
+          q: "Puis-je payer une seule fois au lieu de m’abonner ?",
+          a: "Oui. Le déblocage à vie à $24.99 est un achat unique. Ce n’est pas un abonnement et il ne se renouvelle jamais.",
+        },
+        {
+          q: "Le GPS de l’appareil fonctionne-t-il pour Pokémon GO ?",
+          a: "Non. Le GPS de l’appareil est conçu pour la confidentialité, la navigation et le développement, et nous ne prenons pas en charge les jeux en RA.",
+        },
+        {
+          q: "Comment résilier ?",
+          a: "Dans l’app Réglages, sous votre compte Apple, puis Abonnements. Pro continue de fonctionner jusqu’à la fin de la période déjà payée.",
+        },
+      ],
+      gpsLead: "Vous voulez d’abord les détails du GPS de l’appareil ? ",
+      gpsLink: "En savoir plus sur GeoSpoof GPS",
+      gpsTail: " — l’app de bureau gratuite qui le pilote.",
     },
   },
   footer: {

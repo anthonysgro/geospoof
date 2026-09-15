@@ -76,10 +76,10 @@ export const ja: Dictionary = {
   },
   pro: {
     meta: {
-      title: "GeoSpoof Pro — 料金と機能 | GeoSpoof",
+      title: "GeoSpoof Pro — 無料版と Pro の比較・料金・機能 | GeoSpoof",
       description:
-        "GeoSpoof Pro は、iPhone のデバイスレベル GPS、自動 VPN 同期、ウィジェット、MapKit ピッカー、サイトごとのフィルターなどを解放します。月額 $1.99、または買い切り $24.99 — App Store 経由で課金。",
-      ogTitle: "GeoSpoof Pro — 料金と機能",
+        "無料の GeoSpoof と GeoSpoof Pro を比較。Pro では iPhone の実際のシステム GPS、GPX ルート、VPN の自動再同期、サイトごとのルール、ウィジェットなどが使えます。月額 $1.99、年額 $9.99、または買い切り $24.99 — App Store 経由で課金。",
+      ogTitle: "GeoSpoof Pro — 無料版と Pro の比較・料金・機能",
     },
     hero: {
       breadcrumbHome: "ホーム",
@@ -87,17 +87,95 @@ export const ja: Dictionary = {
       badge: "GeoSpoof Pro",
       heading: "GeoSpoof のすべてを、解き放つ",
       subhead:
-        "ひとつのサブスクで、iPhone と iPad の GeoSpoof の高度なツールがすべて使えます。デバイスの実際のシステム位置を設定する GeoSpoof GPS も含まれます。",
+        "位置情報・タイムゾーン・WebRTC の偽装は無料です。Pro は iPhone と iPad に高度なツールを追加します。まずはデバイスの実際のシステム GPS から。",
+      ctaPrimary: "GeoSpoof Pro を入手",
+      ctaSecondary: "無料版と Pro を比較",
+      trust: "アカウント不要 · トラッキングなし · オープンソース",
+    },
+    plans: {
+      eyebrow: "無料版と Pro",
+      heading: "どちらでも使えるもの",
+      subhead:
+        "偽装の中心となる機能は無料です。すべてのサイトで、一致するタイムゾーンで、WebRTC の漏れもなく。Pro が足すのは自由度と手軽さで、プライバシーを人質に取ることはしません。",
+      featureHeader: "機能",
+      freeHeader: "無料",
+      proHeader: "Pro",
+      bothValue: "無料版と Pro",
+      proOnlyValue: "Pro のみ",
+      rows: {
+        spoofing: "すべてのサイトで位置情報を偽装",
+        timezoneWebrtc: "一致するタイムゾーンとWebRTC保護",
+        vpnSync: "VPN同期、都市検索、正確な座標",
+        deviceGps: "iPhoneの実際のシステムGPS",
+        routes: "GPXルートを実際のペースで再現",
+        offlineHold: "コンピュータから離れても位置情報を維持",
+        autoResync: "VPNの自動再同期",
+        perSite: "サイトごとのルール、精度、言語",
+        widgets: "ウィジェットとコントロール",
+      },
+      legend: {
+        both: "どちらのプランにも含まれる",
+        proOnly: "Pro のみ",
+      },
+      scopeNote:
+        "この比較は iPhone・iPad アプリのものです。Chrome、Firefox、Edge、Brave の拡張機能は無料で、Mac / Windows 用の GeoSpoof GPS も無料です。",
+    },
+    unlocks: {
+      eyebrow: "Pro で使えるもの",
+      heading: "追加される機能の詳細",
+      subhead:
+        "どれも、無料版だけで十分に成立しているからこそ存在する機能です。ここにアップグレードする理由があります。",
+      items: {
+        gps: {
+          title: "デバイス GPS",
+          body: "iPhone が報告する実際のシステムレベルの位置を設定します。マップ、天気、位置情報を求めるあらゆるアプリに届きます。Mac または Windows PC 上の無料アプリ GeoSpoof GPS が必要です。",
+        },
+        routes: {
+          title: "GPX ルート",
+          body: "ルートを読み込み、現実的なペースで進みます。現在位置がコース上を移動し、一時停止・再開・やり直し・繰り返しにも対応します。",
+        },
+        offlineHold: {
+          title: "コンピュータを置いていく",
+          body: "位置を設定したままデベロッパモードをオフにすると、コンピュータとの接続が終わったあとも iPhone がその位置を保持します。保持中は位置が固定されます。",
+        },
+        autoResync: {
+          title: "VPN の自動再同期",
+          body: "出口サーバーが切り替わるたびに、位置情報がバックグラウンドで VPN の出口リージョンに追従します。操作は不要です。",
+        },
+        perSite: {
+          title: "サイトごとのルールと微調整",
+          body: "許可・拒否リストで選んだサイトだけを偽装。さらに精度、おおよその位置、言語も調整できます。",
+        },
+        mapPicker: {
+          title: "地図で選択",
+          body: "座標を入力する代わりに、地図上の好きな場所にピンを置いてそのまま位置として使えます。",
+        },
+        widgets: {
+          title: "ウィジェットとコントロール",
+          body: "ホーム画面、ロック画面、コントロールセンターから、アプリを開かずに位置を切り替えられます。",
+        },
+        future: {
+          title: "今後もさらに追加",
+          body: "新しい Pro 機能も、同じ購入に含まれた形でリリースされます。",
+        },
+      },
     },
     pricing: {
-      heading: "シンプルな料金",
+      eyebrow: "料金",
+      heading: "1 回の購入で、Apple のすべてのデバイスに",
+      subhead:
+        "プランはアプリ内で選びます。同じ Apple アカウントなら iPhone、iPad、Mac で Pro が有効になります。アカウント作成もログインも不要です。",
       cta: "GeoSpoof Pro を入手",
+      universal: "1 回の購入で iPhone、iPad、Mac が解放されます。",
       fineprint:
-        "App Store 経由で課金されます。価格は地域によって異なる場合があります。いつでもキャンセルできます。",
+        "App Store 経由で課金されます。表示は米ドルで、実際は税込みの現地価格が請求されます。いつでもキャンセルできます。",
+      lifetimeNote:
+        "買い切りは 1 回だけの購入です。サブスクリプションではなく、自動更新もされません。",
       monthly: {
         name: "月額",
         price: "$1.99",
         period: "/月",
+        subNote: "",
         note: "",
         badge: "",
       },
@@ -105,6 +183,7 @@ export const ja: Dictionary = {
         name: "年額",
         price: "$9.99",
         period: "/年",
+        subNote: "月あたり約 $0.83",
         note: "月額より58%お得",
         badge: "人気",
       },
@@ -112,24 +191,51 @@ export const ja: Dictionary = {
         name: "買い切り",
         price: "$24.99",
         period: "1回",
+        subNote: "",
         note: "サブスク不要",
         badge: "最もお得",
       },
     },
-    features: {
-      heading: "含まれるもの",
-      items: {
-        everythingFree:
-          "無料の GeoSpoof 拡張機能のすべて — 位置情報・タイムゾーンの偽装、WebRTC 保護、主要ブラウザすべてで",
-        gps: "GeoSpoof GPS — iPhone の実際のシステム GPS を設定（Mac / Windows 用アプリと併用）",
-        vpnSync:
-          "自動 VPN 同期 — 位置情報がバックグラウンドで VPN の出口リージョンに追従",
-        widgets: "ホーム画面ウィジェットとコントロールセンターのコントロール",
-        mapkit: "MapKit ロケーションピッカー — 地図上の好きな場所にピンを配置",
-        filters: "サイトごとの許可・拒否フィルター",
-        advanced: "高度なコントロールと微調整",
-        futureUpdates: "今後のすべてのアップデートを、リリース時に無料で",
-      },
+    requirements: {
+      heading: "購入前に",
+      computer:
+        "デバイス GPS には Mac または Windows PC が必要です。ケーブルで一度ペアリングすれば、その後は Wi-Fi で動作します。ほかの Pro 機能はすべて iPhone 単体で使えます。",
+      arGames:
+        "Pokémon GOのようなARゲーム向けではありません。デバイスのGPSはプライバシー、Web閲覧、開発のための機能です。",
+      extensions:
+        "Chrome、Firefox、Edge、Brave 用のブラウザ拡張機能は無料で、Pro には含まれません。",
+    },
+    faq: {
+      heading: "Pro についてのよくある質問",
+      items: [
+        {
+          q: "GeoSpoof は無料ですか？",
+          a: "はい。ブラウザ拡張機能は主要ブラウザすべてで無料です。iPhone・iPad アプリでも、位置情報・タイムゾーン・WebRTC の偽装は無料で、ワンタップの VPN 同期、都市検索、正確な座標も含まれます。Pro はデバイス GPS と高度なコントロールを追加します。",
+        },
+        {
+          q: "Pro を使うには Mac か PC が必要ですか？",
+          a: "デバイス GPS だけに必要です。GeoSpoof GPS は Mac / Windows 用の無料の相棒アプリで、ケーブルで一度ペアリングすればあとは Wi-Fi で動きます。ほかの Pro 機能は iPhone だけで使えます。",
+        },
+        {
+          q: "1 回の購入で何台まで使えますか？",
+          a: "ユニバーサル購入なので、同じ Apple アカウントの iPhone、iPad、Mac が対象です。権利は Apple アカウントに紐づくため、2 台目でのログインや復元の手間はありません。",
+        },
+        {
+          q: "サブスクではなく買い切りにできますか？",
+          a: "はい。$24.99 の買い切りは 1 回だけの購入で、サブスクリプションではなく、更新されることもありません。",
+        },
+        {
+          q: "デバイス GPS は Pokémon GO で使えますか？",
+          a: "いいえ。デバイス GPS はプライバシー、Web 閲覧、開発のための機能で、AR ゲームはサポートしていません。",
+        },
+        {
+          q: "解約はどうしますか？",
+          a: "「設定」アプリの Apple アカウントから「サブスクリプション」を開いてください。支払い済みの期間が終わるまで Pro はそのまま使えます。",
+        },
+      ],
+      gpsLead: "先にデバイス GPS の詳細を知りたい場合は、",
+      gpsLink: "GeoSpoof GPS の解説",
+      gpsTail: "をご覧ください。無料のデスクトップアプリが動かしています。",
     },
   },
   footer: {

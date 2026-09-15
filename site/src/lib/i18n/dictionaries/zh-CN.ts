@@ -89,10 +89,10 @@ export const zhCN: Dictionary = {
   },
   pro: {
     meta: {
-      title: "GeoSpoof Pro — 价格与功能 | GeoSpoof",
+      title: "GeoSpoof Pro — 免费版与 Pro 对比、价格与功能 | GeoSpoof",
       description:
-        "GeoSpoof Pro 解锁 iPhone 的设备级 GPS、自动 VPN 同步、小组件、MapKit 选择器、按站点过滤等功能。$1.99/月起，或 $24.99 一次性买断——通过 App Store 计费。",
-      ogTitle: "GeoSpoof Pro — 价格与功能",
+        "对比免费版 GeoSpoof 与 GeoSpoof Pro。Pro 解锁 iPhone 的真实系统 GPS、GPX 路线、自动重新同步 VPN、按站点规则、小组件等功能。$1.99/月、$9.99/年，或 $24.99 一次性买断——通过 App Store 计费。",
+      ogTitle: "GeoSpoof Pro — 免费版与 Pro 对比、价格与功能",
     },
     hero: {
       breadcrumbHome: "首页",
@@ -100,16 +100,94 @@ export const zhCN: Dictionary = {
       badge: "GeoSpoof Pro",
       heading: "解锁 GeoSpoof 的全部功能",
       subhead:
-        "一个订阅即可解锁 GeoSpoof 在 iPhone 和 iPad 上的所有高级工具——包括可设置设备真实系统级位置的 GeoSpoof GPS。",
+        "伪装位置、时区和 WebRTC 一直免费。Pro 在 iPhone 和 iPad 上补齐进阶工具——从设备真实的系统级 GPS 开始。",
+      ctaPrimary: "获取 GeoSpoof Pro",
+      ctaSecondary: "对比免费版与 Pro",
+      trust: "无需账号 · 不做追踪 · 开源",
+    },
+    plans: {
+      eyebrow: "免费版与 Pro",
+      heading: "两者都能给你的",
+      subhead:
+        "核心的伪装能力是免费的：覆盖所有网站、时区随之匹配、不泄露 WebRTC。Pro 提供的是更强的控制和便利，而不是把隐私扣下来当筹码。",
+      featureHeader: "功能",
+      freeHeader: "免费",
+      proHeader: "Pro",
+      bothValue: "免费版和 Pro",
+      proOnlyValue: "仅 Pro",
+      rows: {
+        spoofing: "在所有网站伪装位置",
+        timezoneWebrtc: "匹配时区与 WebRTC 保护",
+        vpnSync: "VPN 同步、城市搜索、精确坐标",
+        deviceGps: "iPhone 的真实系统 GPS",
+        routes: "以真实速度沿 GPX 路线移动",
+        offlineHold: "离开电脑后仍保持位置",
+        autoResync: "自动重新同步 VPN",
+        perSite: "按站点规则、精度与语言",
+        widgets: "小组件与控制",
+      },
+      legend: {
+        both: "两种方案都有",
+        proOnly: "仅 Pro",
+      },
+      scopeNote:
+        "此对比针对 iPhone 和 iPad 应用。Chrome、Firefox、Edge 和 Brave 扩展均为免费，Mac 与 Windows 版 GeoSpoof GPS 也是免费的。",
+    },
+    unlocks: {
+      eyebrow: "Pro 解锁什么",
+      heading: "逐项说明",
+      subhead:
+        "这些功能之所以存在，是因为免费路径本身已经好用。它们才是人们升级的理由。",
+      items: {
+        gps: {
+          title: "设备 GPS",
+          body: "设置 iPhone 对外报告的真实系统级位置——地图、天气，以及任何请求位置的应用。需要在 Mac 或 Windows 电脑上运行免费的 GeoSpoof GPS。",
+        },
+        routes: {
+          title: "GPX 路线",
+          body: "导入路线并以真实速度沿线前进，实时位置会跟着轨迹移动。可暂停、继续、重新开始或循环。",
+        },
+        offlineHold: {
+          title: "把电脑留在原地",
+          body: "在位置生效时关闭开发者模式，与电脑的连接结束后 iPhone 仍会保持该位置。保持期间位置固定不变。",
+        },
+        autoResync: {
+          title: "自动重新同步 VPN",
+          body: "你的位置在后台跟随 VPN 出口区域，每次出口节点切换都会自动跟上，无需你操作。",
+        },
+        perSite: {
+          title: "按站点规则与精细调节",
+          body: "用允许和拒绝列表只伪装你选择的站点，另有精度、模糊位置和语言可调。",
+        },
+        mapPicker: {
+          title: "地图选点",
+          body: "在地图上任意位置放置图钉并直接用作你的位置，不必手输坐标。",
+        },
+        widgets: {
+          title: "小组件与控制",
+          body: "从主屏幕、锁定屏幕或控制中心切换位置，无需打开应用。",
+        },
+        future: {
+          title: "更多功能陆续推出",
+          body: "新的 Pro 功能随发布计入同一次购买。",
+        },
+      },
     },
     pricing: {
-      heading: "简单定价",
+      eyebrow: "价格",
+      heading: "一次购买，覆盖你的所有 Apple 设备",
+      subhead:
+        "在应用内选择方案。同一个 Apple 账户下的 iPhone、iPad 和 Mac 都会解锁 Pro——无需注册账号，也不用登录。",
       cta: "获取 GeoSpoof Pro",
-      fineprint: "通过 App Store 计费。价格可能因地区而异。可随时取消。",
+      universal: "一次购买即可解锁 iPhone、iPad 和 Mac。",
+      fineprint:
+        "通过 App Store 计费。价格以美元显示；Apple 会按你所在地区的含税价格收费。可随时取消。",
+      lifetimeNote: "永久版是一次性购买，不是订阅，也不会自动续期。",
       monthly: {
         name: "按月",
         price: "$1.99",
         period: "/月",
+        subNote: "",
         note: "",
         badge: "",
       },
@@ -117,6 +195,7 @@ export const zhCN: Dictionary = {
         name: "按年",
         price: "$9.99",
         period: "/年",
+        subNote: "约合 $0.83/月",
         note: "比按月省 58%",
         badge: "最受欢迎",
       },
@@ -124,23 +203,51 @@ export const zhCN: Dictionary = {
         name: "永久",
         price: "$24.99",
         period: "一次性",
+        subNote: "",
         note: "无需订阅",
         badge: "超值",
       },
     },
-    features: {
-      heading: "包含内容",
-      items: {
-        everythingFree:
-          "免费版 GeoSpoof 扩展的全部功能——位置和时区伪造、WebRTC 保护，支持所有主流浏览器",
-        gps: "GeoSpoof GPS——设置 iPhone 的真实系统级 GPS（配合 Mac 或 Windows 应用）",
-        vpnSync: "自动 VPN 同步——你的位置在后台跟随 VPN 出口区域",
-        widgets: "主屏幕小组件和控制中心控件",
-        mapkit: "MapKit 位置选择器——在地图上任意位置放置图钉",
-        filters: "按站点的允许/拒绝过滤",
-        advanced: "高级控制与精细调节",
-        futureUpdates: "所有未来更新，随发布即含",
-      },
+    requirements: {
+      heading: "购买前须知",
+      computer:
+        "设备 GPS 需要一台 Mac 或 Windows 电脑——用数据线配对一次，之后通过 Wi-Fi 使用。其余所有 Pro 功能只用手机即可。",
+      arGames:
+        "不适用于 Pokémon GO 等 AR 游戏，设备 GPS 面向的是隐私保护、网页浏览和开发调试。",
+      extensions:
+        "Chrome、Firefox、Edge 和 Brave 的浏览器扩展是免费的，不属于 Pro。",
+    },
+    faq: {
+      heading: "关于 Pro 的常见问题",
+      items: [
+        {
+          q: "GeoSpoof 免费吗？",
+          a: "免费。浏览器扩展在所有主流浏览器上免费，iPhone 和 iPad 应用也免费伪装位置、时区并防止 WebRTC 泄露，其中包括一键 VPN 同步、城市搜索和精确坐标。Pro 增加的是设备 GPS 和进阶控制。",
+        },
+        {
+          q: "使用 Pro 需要 Mac 或电脑吗？",
+          a: "只有设备 GPS 需要。GeoSpoof GPS 是 Mac 和 Windows 上的免费配套应用：用数据线配对一次，之后通过 Wi-Fi 使用。其他 Pro 功能只用手机就能运行。",
+        },
+        {
+          q: "一次购买能用于几台设备？",
+          a: "这是通用购买：同一个 Apple 账户下的 iPhone、iPad 和 Mac 都包含在内。权益跟随 Apple 账户，第二台设备无需登录，也不用折腾恢复购买。",
+        },
+        {
+          q: "可以一次性付费而不订阅吗？",
+          a: "可以。$24.99 的永久解锁是一次性购买，不是订阅，永远不会续期。",
+        },
+        {
+          q: "设备 GPS 能用于 Pokémon GO 吗？",
+          a: "不能。设备 GPS 是为隐私保护、网页浏览和开发调试设计的，我们不支持 AR 游戏。",
+        },
+        {
+          q: "如何取消？",
+          a: "打开“设置”应用，进入你的 Apple 账户，然后选择“订阅”。在已付费的周期结束前，Pro 仍可正常使用。",
+        },
+      ],
+      gpsLead: "想先了解设备 GPS 的细节？",
+      gpsLink: "阅读 GeoSpoof GPS 介绍",
+      gpsTail: "——驱动它的免费桌面应用。",
     },
   },
   footer: {
