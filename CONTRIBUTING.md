@@ -250,8 +250,10 @@ The update manifest is currently published to **two** homes on purpose. This is 
 **Measuring it.** Auto-updates download the XPI via `update_link`, so a release's signed-asset download count is the migration counter:
 
 ```bash
+# Note the camelCase: `gh release view --json` uses downloadCount, while the REST
+# API uses download_count. Getting it wrong returns null rather than an error.
 gh release view v2.2.1 --json assets \
-  --jq '.assets[] | select(.name|test("-signed")) | .download_count'
+  --jq '.assets[] | select(.name|test("-signed")) | .downloadCount'
 ```
 
 Expect a fast climb, then a plateau. For scale, v2.1.5 reached 139.
