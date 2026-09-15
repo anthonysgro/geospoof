@@ -143,7 +143,23 @@ export function generateManifest(target: BrowserTarget, version: string): Record
       gecko: {
         id: "{a8f7e9c2-4d3b-4a1e-9f8c-7b6d5e4a3c2b}",
         strict_min_version: "140.0",
-        update_url: "https://anthonysgro.github.io/geospoof/update.json",
+        // THIS URL IS EFFECTIVELY PERMANENT ONCE SHIPPED, so it deliberately
+        // names a domain we own rather than a github.io path.
+        //
+        // Firefox keeps polling whatever update_url was compiled into the copy a
+        // user installed; an existing install CANNOT be told about a new one. So
+        // changing this only affects future installs and whoever updates through
+        // the OLD url first. It reached the wrong host historically
+        // (anthonysgro.github.io/geospoof/update.json, served from gh-pages),
+        // which tied every self-hosted install's update path to a personal GitHub
+        // username - and GitHub does not redirect Pages when a repo is
+        // transferred, so moving the repo would have stranded those installs
+        // silently, a failed update check being invisible to the user.
+        //
+        // Both URLs are published during the migration; see the release workflow.
+        // The AMO-listed build has this key stripped entirely, so AMO users never
+        // consult it.
+        update_url: "https://cdn.geospoof.com/firefox/update.json",
         data_collection_permissions: {
           required: ["none"],
         },
