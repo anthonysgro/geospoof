@@ -9,8 +9,23 @@ export interface GpsDownloadsProps {
   readonly bucket: s3.IBucket;
   /** The existing CloudFront distribution fronting the bucket. */
   readonly distribution: cloudfront.IDistribution;
-  /** "owner/repo" of the private GPS repo allowed to publish. */
-  readonly githubRepo: string;
+  /**
+   * "owner/repo" of every GitHub repo allowed to publish. Normally one entry.
+   *
+   * A LIST, not a string, so that transferring the GPS repo between owners has
+   * no window in which publishing is broken: add the new "owner/repo" and
+   * deploy BEFORE moving the repo, then drop the old entry after the first
+   * successful release under the new name. GitHub's OIDC `sub` claim carries
+   * the repo's full name, so a transfer changes it and a single-valued trust
+   * policy stops matching the moment the repo moves.
+   *
+   * Deliberately exact strings rather than an owner wildcard pinned to
+   * `repository_id`, which is how the Entra side solves the same problem: AWS
+   * has only reliably honored `sub` and `aud` from GitHub tokens, so a policy
+   * leaning on `repository_id` risks either denying every publish or, worse,
+   * trusting any account that happens to own a repo with a matching name.
+   */
+  readonly githubRepos: readonly string[];
   /**
    * ARN of an existing GitHub Actions OIDC provider to import. If omitted, one
    * is created. (Only ONE provider for token.actions.githubusercontent.com may
@@ -62,19 +77,33 @@ export class GpsDownloads extends Construct {
           clientIds: ["sts.amazonaws.com"],
         });
 
-    // Trust: only tokens minted for this repo's workflows may assume the role.
+    // An empty list would render a StringLike with no values, which matches
+    // nothing and so fails closed rather than open - but it fails closed at
+    // release time, on a tag push, which is the worst moment to discover it.
+    // Fail at synth instead.
+    if (props.githubRepos.length === 0) {
+      throw new Error(
+        "GpsDownloads: githubRepos must name at least one owner/repo allowed to publish"
+      );
+    }
+
+    // Trust: only tokens minted for these repos' workflows may assume the role.
     // `:*` covers tag pushes (gps-v*) and manual dispatch; tighten to
     // `repo:<owner/repo>:ref:refs/tags/gps-v*` if you want tag-only publishes.
+    //
+    // StringLike with a list is OR, so each entry is independently sufficient.
     const publishRole = new iam.Role(this, "PublishRole", {
       assumedBy: new iam.OpenIdConnectPrincipal(provider, {
         StringEquals: {
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
         },
         StringLike: {
-          "token.actions.githubusercontent.com:sub": `repo:${props.githubRepo}:*`,
+          "token.actions.githubusercontent.com:sub": props.githubRepos.map(
+            (repo) => `repo:${repo}:*`
+          ),
         },
       }),
-      description: `GitHub Actions publish role for ${props.githubRepo} (GPS DMG -> CDN)`,
+      description: `GitHub Actions publish role for ${props.githubRepos.join(", ")} (GPS DMG -> CDN)`,
     });
 
     // Least privilege: write only under the gps/ prefix.
