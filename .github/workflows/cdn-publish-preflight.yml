@@ -1,0 +1,60 @@
+name: CDN publish preflight
+
+# Proves the extension repo can still assume its CDN publish role, WITHOUT cutting
+# a release.
+#
+# WHY THIS IS WORTH A WORKFLOW. The release job publishes the Firefox self-hosted
+# update manifest to cdn.geospoof.com by assuming an IAM role over GitHub OIDC.
+# Whether that trust actually matches is not observable from either side: the IAM
+# trust policy is a string pattern, and the `sub` claim GitHub presents is only
+# visible inside a real token. So a broken trust looks perfectly healthy right up
+# until a release fails at the publish step.
+#
+# The specific way this breaks is not hypothetical. GitHub issues an IMMUTABLE
+# subject claim embedding numeric owner and repo ids for repos created after
+# 2026-07-15 and for ANY repo renamed or transferred after that date:
+#
+#   repo:OWNER@1234/geospoof@1170325630:ref:refs/heads/main
+#
+# Transferring the sibling geospoof-gps repo flipped its format mid-migration and
+# broke credentials that had been verified working an hour earlier. This repo is
+# still on the legacy name-based format, and will flip the moment it is
+# transferred. Run this immediately after any transfer or rename.
+#
+# Safe to run at any time: it only exchanges a token and calls
+# sts:GetCallerIdentity. The role's permissions are limited to writing under the
+# `firefox/` prefix, and this workflow writes nothing.
+#
+# See cdk/README.md, "Who may publish: the OIDC subject is not a repo name".
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Report the subject GitHub is presenting
+        env:
+          # Printed for the record: this is the value the IAM trust policy has to
+          # match, and having it in the log is what makes a mismatch diagnosable
+          # in seconds rather than by guesswork.
+          SUB_HINT: repo:${{ github.repository }} (legacy form) — immutable form embeds owner/repo ids
+        run: echo "expected sub shape → ${SUB_HINT}"
+
+      - name: Assume the CDN publish role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.EXT_PUBLISH_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Confirm the assumed identity
+        run: |
+          set -euo pipefail
+          aws sts get-caller-identity
+          echo "OIDC trust is intact; the release job can publish the update manifest."

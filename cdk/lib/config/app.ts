@@ -50,6 +50,27 @@ export interface GpsReleaseConfig {
   readonly oidcProviderArn?: string;
 }
 
+/**
+ * Lets the extension repo's release workflow publish the Firefox self-hosted
+ * update manifest to the CDN (under the `firefox/` prefix) via GitHub OIDC.
+ *
+ * This exists so `update_url` names a domain we own instead of a personal
+ * github.io path. See `ExtensionUpdates` for why that matters: the URL is
+ * compiled into every installed copy, an install cannot be told about a new one,
+ * and GitHub does not redirect Pages on a repo transfer.
+ */
+export interface ExtensionUpdatesConfig {
+  /**
+   * OIDC `sub` claim patterns allowed to publish the update manifest. Same
+   * caveat as `GpsReleaseConfig.githubSubjectPatterns` - these are full `sub`
+   * patterns, not "owner/repo".
+   */
+  readonly githubSubjectPatterns: readonly string[];
+  // No oidcProviderArn here on purpose: the stack threads the GPS publisher's
+  // provider object through instead, since an account may hold only one provider
+  // for token.actions.githubusercontent.com.
+}
+
 export interface GeoTzCdnEnv {
   readonly name: EnvName;
   readonly account: string;
@@ -66,6 +87,12 @@ export interface GeoTzCdnEnv {
    * practice (the public /gps page downloads from prod).
    */
   readonly gpsRelease?: GpsReleaseConfig;
+  /**
+   * When set, the stack provisions a scoped IAM role the extension's release
+   * workflow assumes to publish the Firefox update manifest. PROD ONLY in
+   * practice: `update_url` in shipped extensions points at prod.
+   */
+  readonly extensionUpdates?: ExtensionUpdatesConfig;
   /**
    * Email for the 5xx alarm + cost-budget notifications. Sourced from the
    * GEOSPOOF_ALARM_EMAIL env var so it stays out of this public repo. If unset,
@@ -145,6 +172,24 @@ export const environments: Record<EnvName, GeoTzCdnEnv> = {
       //   gh api repos/GeoSpoof/geospoof-gps/actions/oidc/customization/sub \
       //     --jq .sub_claim_prefix
       githubSubjectPatterns: ["repo:*/geospoof-gps@1291874641:*"],
+    },
+    // The extension repo publishes the Firefox self-hosted update manifest here,
+    // so `update_url` names a domain we own rather than a github.io path that
+    // dies when the repo moves. Two patterns while the repo is still under
+    // `anthonysgro`:
+    //
+    //   - the NAME form is what GitHub presents today (that repo has not been
+    //     renamed or transferred, so it is still on the legacy subject format)
+    //   - the IMMUTABLE form, pinned to repo id 1170325630 with the owner
+    //     wildcarded, is what it will present the instant it is transferred
+    //
+    // Trusting both means the transfer needs no change here and has no window.
+    // Drop the name form once a release has published under the new owner. Verify
+    // which format is live with:
+    //   gh api repos/OWNER/geospoof/actions/oidc/customization/sub \
+    //     --jq '{immutable:.use_immutable_subject,prefix:.sub_claim_prefix}'
+    extensionUpdates: {
+      githubSubjectPatterns: ["repo:anthonysgro/geospoof:*", "repo:*/geospoof@1170325630:*"],
     },
   },
 };

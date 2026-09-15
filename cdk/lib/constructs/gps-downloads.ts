@@ -3,6 +3,7 @@ import { CfnOutput, Stack } from "aws-cdk-lib";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
+import { githubActionsPrincipal, githubOidcProvider, grantCdnPublish } from "./github-oidc";
 
 export interface GpsDownloadsProps {
   /** The existing CDN origin bucket (shared with the geo-tz data). */
@@ -76,78 +77,42 @@ export interface GpsDownloadsProps {
 export class GpsDownloads extends Construct {
   readonly publishRole: iam.Role;
   readonly prefix: string;
+  /**
+   * This account's GitHub Actions OIDC provider, exposed so a SECOND publisher
+   * (e.g. the extension update manifest) can import it. An account may hold only
+   * one provider for `token.actions.githubusercontent.com`, so a second
+   * publisher must reuse this one rather than create its own.
+   */
+  readonly oidcProvider: iam.IOpenIdConnectProvider;
 
   constructor(scope: Construct, id: string, props: GpsDownloadsProps) {
     super(scope, id);
     this.prefix = props.prefix ?? "gps";
 
-    // Create or import the GitHub Actions OIDC provider. `sts.amazonaws.com` is
-    // the audience the official aws-actions/configure-aws-credentials uses.
-    const provider = props.oidcProviderArn
-      ? iam.OpenIdConnectProvider.fromOpenIdConnectProviderArn(
-          this,
-          "GithubOidc",
-          props.oidcProviderArn
-        )
-      : new iam.OpenIdConnectProvider(this, "GithubOidc", {
-          url: "https://token.actions.githubusercontent.com",
-          clientIds: ["sts.amazonaws.com"],
-        });
+    // Construct ids below ("GithubOidc", "PublishRole") are load-bearing: a CDK
+    // logical id derives from the construct path, and this role's ARN is recorded
+    // in the geospoof-gps repo variable GPS_PUBLISH_ROLE_ARN. Renaming either id,
+    // or nesting them under a new parent, replaces the role and breaks publishing
+    // silently at release time.
+    const provider = githubOidcProvider(this, "GithubOidc", {
+      existingArn: props.oidcProviderArn,
+    });
+    this.oidcProvider = provider;
 
-    // An empty list would render a StringLike with no values, which matches
-    // nothing and so fails closed rather than open - but it fails closed at
-    // release time, on a tag push, which is the worst moment to discover it.
-    // Fail at synth instead.
-    if (props.githubSubjectPatterns.length === 0) {
-      throw new Error(
-        "GpsDownloads: githubSubjectPatterns must contain at least one sub pattern allowed to publish"
-      );
-    }
-
-    // A pattern not anchored on "repo:" cannot match a GitHub Actions token and
-    // would be a silently dead entry - or, if someone wrote a bare "*", a wide
-    // open role. Neither is worth discovering later.
-    const malformed = props.githubSubjectPatterns.filter((pattern) => !pattern.startsWith("repo:"));
-    if (malformed.length > 0) {
-      throw new Error(
-        `GpsDownloads: githubSubjectPatterns entries must start with "repo:" - got ${malformed.join(", ")}`
-      );
-    }
-
-    // Trust: only tokens whose `sub` matches one of these patterns may assume
-    // the role. StringLike with a list is OR, so each entry is independently
-    // sufficient. Tighten a pattern's trailing `:*` to `:ref:refs/tags/gps-v*`
-    // if you ever want tag-only publishes.
     const publishRole = new iam.Role(this, "PublishRole", {
-      assumedBy: new iam.OpenIdConnectPrincipal(provider, {
-        StringEquals: {
-          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-        },
-        StringLike: {
-          "token.actions.githubusercontent.com:sub": [...props.githubSubjectPatterns],
-        },
-      }),
+      // Tighten a pattern's trailing `:*` to `:ref:refs/tags/gps-v*` if you ever
+      // want tag-only publishes.
+      assumedBy: githubActionsPrincipal("GpsDownloads", provider, props.githubSubjectPatterns),
       description: `GitHub Actions publish role for GPS DMG -> CDN (${props.githubSubjectPatterns.length} trusted subject pattern(s))`,
     });
 
-    // Least privilege: write only under the gps/ prefix.
-    publishRole.addToPolicy(
-      new iam.PolicyStatement({
-        actions: ["s3:PutObject"],
-        resources: [props.bucket.arnForObjects(`${this.prefix}/*`)],
-      })
-    );
-
-    // Allow invalidating the moving pointers (latest.dmg / latest.json) so a
-    // new release is visible immediately instead of after the short TTL.
-    publishRole.addToPolicy(
-      new iam.PolicyStatement({
-        actions: ["cloudfront:CreateInvalidation"],
-        resources: [
-          `arn:aws:cloudfront::${Stack.of(this).account}:distribution/${props.distribution.distributionId}`,
-        ],
-      })
-    );
+    // Least privilege: write only under the gps/ prefix, and invalidate only
+    // this distribution, so the moving pointers (latest.dmg / latest.json) go
+    // live immediately instead of after their TTL.
+    grantCdnPublish(publishRole, {
+      bucketArnForPrefix: props.bucket.arnForObjects(`${this.prefix}/*`),
+      distributionArn: `arn:aws:cloudfront::${Stack.of(this).account}:distribution/${props.distribution.distributionId}`,
+    });
 
     this.publishRole = publishRole;
 

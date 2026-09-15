@@ -125,6 +125,74 @@ jobs:
           cp update.json pages-dist/update.json
           touch pages-dist/.nojekyll
 
+      # ── Update manifest, second home: cdn.geospoof.com ──
+      #
+      # WHY BOTH. `update_url` is compiled into every shipped copy of the
+      # extension, and Mozilla is explicit that an installed extension keeps
+      # polling the URL it was built with — an existing install cannot be told
+      # about a new one. Serving from anthonysgro.github.io ties every self-hosted
+      # install's update path to a personal GitHub username, and GitHub does NOT
+      # redirect Pages when a repo is transferred. So a repo move would strand
+      # those installs on their current version, silently, because a failed update
+      # check is invisible to the user.
+      #
+      # Publishing the identical manifest to a domain we own removes GitHub from
+      # the update path. Both homes are maintained on purpose during the
+      # migration: gh-pages stays authoritative for everyone already installed,
+      # while newly shipped builds point at the CDN. Once the installed base has
+      # rolled forward, the gh-pages steps above can go.
+      #
+      # Publishing AFTER the GitHub Release step is deliberate: the manifest's
+      # `update_link` points at that release's assets, so publishing earlier would
+      # briefly advertise a version whose download does not exist yet.
+      #
+      # No stored AWS credentials — this assumes an IAM role scoped to the
+      # `firefox/` prefix via the `id-token: write` permission above. See
+      # cdk/README.md, "Who may publish", before touching the role or its trust.
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.EXT_PUBLISH_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Publish update manifest to CDN
+        env:
+          BUCKET: ${{ vars.EXT_CDN_BUCKET }}
+          DISTRIBUTION_ID: ${{ vars.EXT_CDN_DISTRIBUTION_ID }}
+        run: |
+          set -euo pipefail
+          # max-age=300 matches gps/latest.json and is REQUIRED: the distribution's
+          # default behaviour is CACHING_OPTIMIZED and honours the origin header, so
+          # uploading this with the long immutable header used for versioned geo-tz
+          # data would pin a stale version pointer at the edge for up to a year.
+          aws s3 cp update.json "s3://${BUCKET}/firefox/update.json" \
+            --cache-control "public, max-age=300" \
+            --content-type "application/json"
+          aws cloudfront create-invalidation \
+            --distribution-id "${DISTRIBUTION_ID}" \
+            --paths "/firefox/update.json"
+
+      - name: Verify both manifests agree
+        run: |
+          set -euo pipefail
+          # A release that publishes two update manifests which disagree is worse
+          # than one that publishes neither, so fail loudly here rather than let
+          # half the installed base see a different version from the other half.
+          # Compares the CDN copy against what was just generated; gh-pages is
+          # checked on the next run, since Pages takes time to go live.
+          for attempt in 1 2 3 4 5; do
+            if curl -fsS "https://cdn.geospoof.com/firefox/update.json" -o cdn-update.json; then
+              break
+            fi
+            echo "CDN manifest not visible yet (attempt ${attempt}); retrying..."
+            sleep 15
+          done
+          if ! diff -u update.json cdn-update.json; then
+            echo "::error::CDN update manifest does not match the generated one"
+            exit 1
+          fi
+          echo "CDN manifest matches the generated manifest"
+
       - name: Deploy update manifest to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
