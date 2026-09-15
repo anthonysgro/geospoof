@@ -20,7 +20,7 @@ export class GeoTzCdnStack extends Stack {
       new GpsDownloads(this, "GpsDownloads", {
         bucket: cdn.bucket,
         distribution: cdn.distribution,
-        githubRepo: props.envConfig.gpsRelease.githubRepo,
+        githubRepos: props.envConfig.gpsRelease.githubRepos,
         oidcProviderArn: props.envConfig.gpsRelease.oidcProviderArn,
       });
     }

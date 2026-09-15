@@ -35,8 +35,12 @@ export interface CustomDomainConfig {
  * When set, the stack provisions a scoped IAM role the release workflow assumes.
  */
 export interface GpsReleaseConfig {
-  /** "owner/repo" of the private GPS repo whose Actions may publish. */
-  readonly githubRepo: string;
+  /**
+   * "owner/repo" of every private GPS repo whose Actions may publish. Normally
+   * one entry; carries two only while the repo is being moved between owners.
+   * See `GpsDownloadsProps.githubRepos` for why this is a list.
+   */
+  readonly githubRepos: readonly string[];
   /**
    * ARN of an EXISTING GitHub Actions OIDC provider in this account, if one is
    * already present. Leave undefined to have CDK create it. Note: an account
@@ -132,7 +136,11 @@ export const environments: Record<EnvName, GeoTzCdnEnv> = {
     // notarized DMG to this (prod) CDN under gps/. If the account already has a
     // GitHub OIDC provider, add its ARN as `oidcProviderArn` to import it.
     gpsRelease: {
-      githubRepo: "anthonysgro/geospoof-gps",
+      // Both owners are trusted while the repo moves to the GeoSpoof org, so
+      // there is no window in which a release cannot publish. Drop
+      // "anthonysgro/geospoof-gps" once a release has shipped under the new
+      // name.
+      githubRepos: ["anthonysgro/geospoof-gps", "GeoSpoof/geospoof-gps"],
     },
   },
 };
