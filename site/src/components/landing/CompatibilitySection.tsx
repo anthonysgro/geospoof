@@ -113,11 +113,14 @@ export function CompatibilitySection({ className }: { className?: string }) {
         {/* Legend */}
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-(--color-canvas-border) bg-canvas-border/20 px-6 py-4">
           <span className="flex items-center gap-2 text-xs text-(--color-canvas-muted)">
-            <CheckIcon
-              className="size-3.5 text-(--color-brand)"
-              strokeWidth={3}
+            {/* The same chip the table renders, at legend scale — a bare tick
+                here would be describing a mark that isn't in the table. */}
+            <span
+              className="inline-flex size-4 items-center justify-center rounded-full bg-brand/12 text-(--color-brand)"
               aria-hidden="true"
-            />{" "}
+            >
+              <CheckIcon className="size-2.5" strokeWidth={3} />
+            </span>
             {t.compatibility.legend.supported}
           </span>
           <span className="flex items-center gap-2 text-xs text-(--color-canvas-muted)">
