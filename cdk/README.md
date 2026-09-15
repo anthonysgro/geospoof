@@ -189,6 +189,56 @@ To wire it up after a prod deploy:
 > `gpsRelease.oidcProviderArn` in `lib/config/app.ts` to the existing provider's
 > ARN and redeploy.
 
+### Who may publish: the OIDC subject is not a repo name
+
+`gpsRelease.githubSubjectPatterns` in `lib/config/app.ts` decides whose workflow
+may write to the CDN. It looks like it should hold `repo:GeoSpoof/geospoof-gps:*`.
+**That value cannot match.** GitHub issues an _immutable_ subject claim that embeds
+numeric owner and repo ids:
+
+```
+repo:GeoSpoof@320249603/geospoof-gps@1291874641:ref:refs/tags/gps-v0.2.2
+```
+
+Repos created after 2026-07-15 — and **any repo renamed or transferred after that
+date** — use this format. Untouched older repos keep the classic name-based one
+until an admin opts in. See
+[GitHub's OIDC docs](https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-google-cloud-platform).
+
+Never reconstruct the string. Read it from the repo:
+
+```sh
+gh api repos/OWNER/REPO/actions/oidc/customization/sub --jq .sub_claim_prefix
+```
+
+The configured pattern wildcards the **owner** segment and pins the **repo**
+segment, so a future transfer needs no change here: a move changes the owner id,
+never the repo id. That is safe with no `repository_id` condition, because the repo
+id is inside the subject and repo ids are globally unique and never reused — only
+tokens minted for that one repo can match. Which matters, because AWS has only
+reliably honored `sub` and `aud` from GitHub tokens, so a trust policy leaning on a
+custom claim is a good way to deny every publish.
+
+> **Transferring or renaming the GPS repo is a two-provider change.** Entra holds
+> the matching federated credentials for Windows code signing
+> (`geospoof-gps:scripts/setup-windows-signing.ps1`) and they must agree with this
+> policy. Nothing compiles both. When `geospoof-gps` moved to the GeoSpoof org, the
+> transfer itself flipped the subject format and broke credentials that had been
+> verified working an hour earlier — invisibly to both AWS and Entra, because the
+> format is only observable in a real token.
+>
+> Prove it before trusting a release to it. The GPS Windows workflow's preflight
+> step exchanges the real subject in seconds, ahead of the ~13-minute build:
+>
+> ```sh
+> gh workflow run release-windows.yml --repo GeoSpoof/geospoof-gps --ref main \
+>   -f sign=true -f publish_release=false
+> ```
+>
+> A green preflight means the subject matched. That only covers Entra, though —
+> `Configure AWS credentials (OIDC)` is skipped unless `publish_release` is on, so
+> the trust policy above is exercised only by a real `gps-v*` tag. It fails closed.
+
 ## First-time account bootstrap
 
 Each account/region must be CDK-bootstrapped once before the first deploy:
