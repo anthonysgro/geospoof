@@ -17,7 +17,7 @@ const FILES: [string, string] = ["timezones.geojson.geo.dat", "timezones.geojson
 
 /**
  * Resolve the geo-tz data version + on-disk location, enforcing the SAME
- * cross-file version invariant as site/scripts/copy-geo-tz-data.mjs:
+ * cross-file version invariant as geospoof-site:scripts/copy-geo-tz-data.mjs:
  *
  *   the installed `geo-tz` npm package version (what we upload)
  *   MUST equal the canonical version in src/shared/geo-tz-data.json

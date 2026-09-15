@@ -31,7 +31,7 @@
  * (`pt_BR`, `zh_CN`) while the site uses BCP-47 hyphen segments (`pt-BR`,
  * `zh-CN`), so this can't be a naive string transform — it's an explicit map.
  *
- * Source of truth for the site side: site/src/lib/i18n/locale-data.mjs
+ * Source of truth for the site side: geospoof-site:src/lib/i18n/locale-data.mjs
  * (`localeList`). Keep this in sync when the website gains or drops a locale.
  */
 const SITE_LOCALE_SEGMENT: Readonly<Record<string, string | null>> = {
@@ -55,7 +55,7 @@ const SITE_LOCALE_SEGMENT: Readonly<Record<string, string | null>> = {
  * bare (English) path so we never prefix a page that isn't actually localized.
  *
  * Mirrors the subset of `localizedBasePaths` in
- * site/src/lib/i18n/locale-data.mjs that the popup actually links to. Add an
+ * geospoof-site:src/lib/i18n/locale-data.mjs that the popup actually links to. Add an
  * entry here when the popup gains a link to another localized site page.
  */
 const SITE_LOCALIZED_PATHS: ReadonlySet<string> = new Set(["/verify", "/support"]);

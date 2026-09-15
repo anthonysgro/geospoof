@@ -16,16 +16,6 @@ import {
   isActivationPage,
   type ActivationMessageContext,
 } from "@/content/activation-responder";
-import {
-  ACTIVATION_EXTENSION_SOURCE as SITE_EXTENSION_SOURCE,
-  ACTIVATION_PAGE_SOURCE as SITE_PAGE_SOURCE,
-  ACTIVATION_PING_EVENT as SITE_PING_EVENT,
-  ACTIVATION_PING_TYPE as SITE_PING_TYPE,
-  ACTIVATION_PROTOCOL_VERSION as SITE_PROTOCOL_VERSION,
-  ACTIVATION_READY_EVENT as SITE_READY_EVENT,
-  ACTIVATION_READY_TYPE as SITE_READY_TYPE,
-} from "../../../site/src/lib/activation/protocol";
-
 const NONCE = "7fd3662d-f447-4a73-bc04-3f3fceae5762";
 
 function ping(overrides: Partial<ActivationPingMessage> = {}): ActivationPingMessage {
@@ -149,14 +139,15 @@ describe("Safari DOM-event transport", () => {
   });
 });
 
-describe("activation wire-format parity", () => {
-  it("keeps the extension and hosted page protocol constants identical", () => {
-    expect(ACTIVATION_PROTOCOL_VERSION).toBe(SITE_PROTOCOL_VERSION);
-    expect(ACTIVATION_PAGE_SOURCE).toBe(SITE_PAGE_SOURCE);
-    expect(ACTIVATION_EXTENSION_SOURCE).toBe(SITE_EXTENSION_SOURCE);
-    expect(ACTIVATION_PING_EVENT).toBe(SITE_PING_EVENT);
-    expect(ACTIVATION_PING_TYPE).toBe(SITE_PING_TYPE);
-    expect(ACTIVATION_READY_EVENT).toBe(SITE_READY_EVENT);
-    expect(ACTIVATION_READY_TYPE).toBe(SITE_READY_TYPE);
-  });
-});
+// The wire-format parity check — asserting these constants match the hosted
+// activation page's copy — is NOT here. It lives in the geospoof-site repo, in
+// src/lib/activation/protocol.parity.test.ts, which reads this file's constants
+// through a submodule and runs on every push plus daily.
+//
+// It moved because the marketing site is now a private repo, and a public repo
+// cannot consume a private submodule. The dependency direction had to flip.
+//
+// Changing any constant in @/shared/activation-protocol is therefore a
+// cross-repo change: the page and the extension talk across a
+// postMessage/DOM-event boundary, nothing compiles both halves, and a mismatch
+// fails activation silently rather than failing a build.

@@ -2,7 +2,7 @@
  * Public, data-minimal handshake used by geospoof.com/activate to confirm that
  * the GeoSpoof MAIN-world spoofing engine is installed, configured, and active
  * on that page. Keep these wire values in parity with
- * site/src/lib/activation/protocol.ts.
+ * geospoof-site:src/lib/activation/protocol.ts.
  */
 export const ACTIVATION_PROTOCOL_VERSION = 2 as const;
 export const ACTIVATION_PAGE_SOURCE = "com.geospoof.activation-page" as const;
