@@ -192,12 +192,15 @@ Using location spoofing may violate terms of service of streaming, financial, or
 
 ## License
 
-Everything in this repository — the browser extension, site, docs, and assets — is **MIT**. See [LICENSE](LICENSE). Use, modify, and redistribute freely, including commercially.
+Everything in this repository — the browser extension, its docs, and its assets — is **MIT**. See [LICENSE](LICENSE). Use, modify, and redistribute freely, including commercially.
 
-Two GeoSpoof products are developed separately, are closed-source, and are not part of this repository:
+Three GeoSpoof products are developed separately, are closed-source, and are not part of this repository:
 
-- The **native iOS and macOS apps**. These previously lived in a `safari/` directory here, MIT-licensed until 2026-09-13. Copies obtained under MIT before that date keep those rights; that history is still in this repository and is tagged `pre-safari-extraction`.
+- The **native iOS and macOS apps**. These previously lived in a `safari/` directory here, MIT-licensed until 2026-09-13. That history remains, tagged `pre-safari-extraction`.
+- The **geospoof.com website**, including its marketing copy, translations, and imagery. This previously lived in a `site/` directory here; that history remains, tagged `pre-site-extraction`.
 - The **GeoSpoof GPS desktop core** (the Rust/Swift device product).
+
+In each case, copies obtained under MIT before the directory was removed keep those rights — nothing here revokes a grant already made.
 
 **Trademarks:** The MIT license covers the source code only, not the brand. **GeoSpoof™ is a trademark of GeoSpoof LLC.** You're free to use and fork the code under MIT, but the GeoSpoof name and logo aren't licensed with it — please don't brand a fork or derivative product as "GeoSpoof" in a way that could confuse users about its source.
 

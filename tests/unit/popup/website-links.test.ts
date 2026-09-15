@@ -11,7 +11,7 @@
  *     repeatedly must always resolve from English, never re-prefix an already
  *     localized URL.
  *
- * Guards against drift with site/src/lib/i18n/locale-data.mjs — if the website
+ * Guards against drift with geospoof-site:src/lib/i18n/locale-data.mjs — if the website
  * gains or drops a locale, the map here (and these expectations) should move
  * with it.
  */
