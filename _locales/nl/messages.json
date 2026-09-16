@@ -354,20 +354,8 @@
     "description": "Footer link that opens a short modal asking the user to leave a store review."
   },
   "iosPromo_text": {
-    "message": "Nieuw: GeoSpoof GPS voor iPhone, Mac & Windows",
-    "description": "Footer cross-link label announcing the GeoSpoof app is now available across Apple platforms, linking to the App Store."
-  },
-  "iosPromo_textMac": {
-    "message": "Nieuw: GeoSpoof GPS voor iPhone & Mac",
-    "description": "Variant of iosPromo_text swapped in at runtime for users on macOS, naming only the desktop platform they have."
-  },
-  "iosPromo_textWindows": {
-    "message": "Nieuw: GeoSpoof GPS voor iPhone & Windows",
-    "description": "Variant of iosPromo_text swapped in at runtime for users on Windows, naming only the desktop platform they have."
-  },
-  "iosPromo_ariaLabel": {
-    "message": "Nieuw — GeoSpoof GPS: locatie op apparaatniveau op iPhone, Mac en Windows",
-    "description": "Accessible label for the footer cross-link to the GeoSpoof Apple app (the visible text sits next to an Apple logo glyph)."
+    "message": "Wijzig de echte iPhone-GPS met GeoSpoof",
+    "description": "Footer cross-link to the GeoSpoof app on the App Store. Leads with what the app does - move the iPhone's real, system-level GPS - rather than with the product name, because the name alone does not say what you get. Names no desktop platform on purpose: the Mac and Windows companions are discovered on the store page, and leaving them out keeps the label on one line at the popup's 350px width."
   },
   "vpnPromo_text": {
     "message": "Combineer met Proton VPN",
